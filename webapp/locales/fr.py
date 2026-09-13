@@ -983,9 +983,9 @@ MESSAGES: dict[str, str] = {
     # -------------------------------------------------------------------- AI
     "ai.title": "Pour les agents IA",
     "ai.description": (
-        "Tout ce dont un logiciel a besoin pour utiliser ce scanner sans "
-        "avoir été conçu pour lui : le document de découverte, le schéma "
-        "OpenAPI, les flux de travail Arazzo et le point de terminaison MCP."
+        "Tout ce dont un logiciel a besoin pour utiliser ce scanner : le "
+        "document de découverte, le schéma OpenAPI, les flux de travail Arazzo "
+        "et le point de terminaison MCP."
     ),
     "ai.kicker": "Invités machines",
     "ai.lede": (

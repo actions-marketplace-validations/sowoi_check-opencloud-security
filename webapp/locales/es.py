@@ -945,9 +945,9 @@ MESSAGES: dict[str, str] = {
     # -------------------------------------------------------------------- AI
     "ai.title": "Para agentes de IA",
     "ai.description": (
-        "Todo lo que un software necesita para usar este escáner sin haber "
-        "sido escrito pensando en él: el documento de descubrimiento, el "
-        "esquema OpenAPI, los flujos de trabajo Arazzo y el endpoint MCP."
+        "Todo lo que un software necesita para usar este escáner: el documento "
+        "de descubrimiento, el esquema OpenAPI, los flujos de trabajo Arazzo y "
+        "el endpoint MCP."
     ),
     "ai.kicker": "Huéspedes automatizados",
     "ai.lede": (

@@ -59,6 +59,15 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ### Changed
 
+- **Web: page titles no longer repeat the site name.** A title that already
+  says "OpenCloud Security Scanner" - most documentation guides - is no longer
+  followed by `· OpenCloud Security Scan`, so a search result shows the part
+  that tells the pages apart. Every page also declares its language as
+  `og:locale`, and the `/ai` description is short enough not to be cut off.
+  An address with a trailing slash (`/about/`) now redirects permanently
+  (308) instead of temporarily (307), so a crawler keeps one address per
+  page, and `/favicon.ico` redirects to the site icon instead of answering 404.
+
 - **The Docker setup wizard is easier to read.** A question opens with its
   first sentence, and `?` shows the rest with a link to the page documenting
   the setting, at the release the wizard came from. Text wraps to the width of
