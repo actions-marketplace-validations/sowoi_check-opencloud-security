@@ -699,6 +699,10 @@ def test_asking_for_automatic_updates_adds_watchtower_scoped_to_this_stack(
     watchtower = document["services"]["watchtower"]
     assert watchtower["image"] == wizard_module.WATCHTOWER_IMAGE
     assert watchtower["environment"]["WATCHTOWER_LABEL_ENABLE"] == "true"
+    # Not the archived image, which speaks API 1.25 and panics on Docker 29 -
+    # and no pinned API version, which the fork negotiates instead.
+    assert not watchtower["image"].startswith("containrrr/")
+    assert "DOCKER_API_VERSION" not in watchtower["environment"]
     mount = watchtower["volumes"][0]
     assert mount.endswith(":/var/run/docker.sock")
     assert mount.startswith("/")

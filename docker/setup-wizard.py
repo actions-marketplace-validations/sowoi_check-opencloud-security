@@ -213,7 +213,15 @@ EXTERNAL_ROTATION = "external"
 # The updater a deployment gets when it asks for automatic updates. Unlike
 # the identity provider it follows 'latest': the thing that applies updates
 # should not be the one thing that never receives one.
-WATCHTOWER_IMAGE = "containrrr/watchtower:latest"
+#
+# The maintained fork, not containrrr/watchtower. That image was archived in
+# December 2025 and always speaks Docker API 1.25, which Docker 29 refuses -
+# 29.0 wants 1.44, 29.3 and later 1.40 - so it panics on start unless
+# DOCKER_API_VERSION is pinned by hand. The fork negotiates the version with
+# the daemon, which is why no version is pinned here either: a pin is correct
+# for exactly the daemons that happen to accept it, until the next one raises
+# the minimum again. Its variables and enable label are the same.
+WATCHTOWER_IMAGE = "nickfedor/watchtower:latest"
 
 # Compose files that ship with the project. Writing over one of them would put
 # a deployment's own settings in the way of the next update, so the wizard

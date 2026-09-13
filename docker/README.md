@@ -240,6 +240,14 @@ detected for the user running the wizard: a rootless Docker serves it under
 `/run/user/<uid>` rather than `/var/run`, and the detected path is the default
 of a question, so a different daemon is an edit rather than a discovery.
 
+The image is [`nickfedor/watchtower`](https://github.com/nicholas-fedor/watchtower),
+the maintained fork, rather than `containrrr/watchtower`. The original was
+archived in December 2025 and always speaks Docker API 1.25, which Docker 29
+refuses (`client version 1.25 is too old`) unless `DOCKER_API_VERSION` is
+pinned by hand. The fork negotiates the version with the daemon and reads the
+same variables and label, so a stack generated with the old image needs only
+its `image:` line changed - and any `DOCKER_API_VERSION` workaround removed.
+
 **A sign-in and an identity provider are two answers, not one**, and neither
 implies the other:
 

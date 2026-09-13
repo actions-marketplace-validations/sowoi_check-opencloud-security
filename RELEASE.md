@@ -33,6 +33,17 @@
 
 ### Fixed
 
+- **Automatic updates work on Docker 29 again.** The Watchtower the Docker
+  setup wizard adds with `--auto-updates` was `containrrr/watchtower`, which
+  was archived in December 2025 and always speaks Docker API 1.25. Docker 29.0
+  raised the daemon's minimum to 1.44 and 29.3 to 1.40, so the container
+  panicked on start with `client version 1.25 is too old` unless
+  `DOCKER_API_VERSION` was pinned by hand. The wizard now writes
+  `nickfedor/watchtower`, the maintained fork, which negotiates the API
+  version with the daemon and reads the same variables and enable label - so
+  no version is pinned, and none goes stale when a daemon raises its minimum
+  again. Reproduced and verified against Docker 29.6.
+
 - **The Docker setup wizard no longer lets the audit trail and Redis share a
   host directory.** The web image writes as uid 10001 and Redis as uid 999,
   and a directory has one owner, so whichever was chowned last kept the other
