@@ -78,6 +78,7 @@ import re
 import secrets
 import stat
 import sys
+import uuid
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field, fields
 from pathlib import Path
@@ -104,6 +105,15 @@ BLUEPRINT_RELATIVE = BLUEPRINT_DIRECTORY / "opencloud-scanner.yaml"
 # directory is one more thing that can be bound to the wrong application.
 ADMIN_BLUEPRINT_SOURCE = REPO_ROOT / BLUEPRINT_DIRECTORY / "opencloud-admin.yaml"
 ADMIN_BLUEPRINT_RELATIVE = BLUEPRINT_DIRECTORY / "opencloud-admin.yaml"
+
+# The two that make the provider usable without its admin interface, copied
+# wherever the stack brings Authentik: a second factor required at every
+# sign-in, and the invitation-only flow in which a listed person picks a
+# password and enrols that factor.
+MFA_BLUEPRINT_SOURCE = REPO_ROOT / BLUEPRINT_DIRECTORY / "opencloud-mfa.yaml"
+MFA_BLUEPRINT_RELATIVE = BLUEPRINT_DIRECTORY / "opencloud-mfa.yaml"
+ENROLLMENT_BLUEPRINT_SOURCE = REPO_ROOT / BLUEPRINT_DIRECTORY / "opencloud-enrollment.yaml"
+ENROLLMENT_BLUEPRINT_RELATIVE = BLUEPRINT_DIRECTORY / "opencloud-enrollment.yaml"
 
 # Where an outpost ends the session it started. A local path, because the
 # reverse proxy that routes `/outpost.goauthentik.io/` for the forward auth is
@@ -135,9 +145,16 @@ ADMIN_PATH = "/admin"
 # is a second, separate list, and both have to name the same person.
 AUTHENTIK_OPERATOR_GROUP = "opencloud-scanner-operators"
 
-# Where Authentik asks for the password of the one account it starts with.
-# The trailing slash matters: without it the flow answers 404.
-AUTHENTIK_INITIAL_SETUP_PATH = "/if/flow/initial-setup/"
+# Where a listed person creates their account, with the invitation token as
+# `itoken`. The enrollment blueprint fixes the slug. The trailing slash
+# matters: without it the flow interface answers 404.
+AUTHENTIK_ENROLLMENT_PATH = "/if/flow/opencloud-scanner-enrollment/"
+
+# The account Authentik bootstraps itself with. The wizard gives it a random
+# password in .env, which closes the initial-setup flow - otherwise whoever
+# reached it first would become the administrator - and leaves a way back in
+# for somebody who lost their second factor.
+AUTHENTIK_BOOTSTRAP_USER = "akadmin"
 
 # The MCP endpoint, which is the one path here that answers with an event
 # stream and therefore the one a proxy must not buffer.
@@ -343,6 +360,15 @@ class Setup:
     authentik_pg_password: str = ""
     authentik_client_id: str = ""
     authentik_client_secret: str = ""
+    # Who may create an account through the enrollment link, by username and
+    # separated by semicolons. Everybody on the operator's guest list is on it
+    # whether named here or not, because an operator without an account is a
+    # guest list nobody can satisfy.
+    authentik_accounts: str = ""
+    # The bootstrap administrator's password, and the token the enrollment
+    # link carries. Both generated, both in .env and nowhere else.
+    authentik_bootstrap_password: str = ""
+    authentik_enrollment_token: str = ""
 
     # Mail, which only Authentik sends: a password recovery, an invitation, an
     # expiring-password notice. The scan service itself sends none.
@@ -464,6 +490,8 @@ SECRET_VARIABLES: dict[str, str] = {
     "authentik_pg_password": "AUTHENTIK_PG_PASS",
     "authentik_client_id": "AUTHENTIK_CLIENT_ID",
     "authentik_client_secret": "AUTHENTIK_CLIENT_SECRET",
+    "authentik_bootstrap_password": "AUTHENTIK_BOOTSTRAP_PASSWORD",
+    "authentik_enrollment_token": "AUTHENTIK_ENROLLMENT_TOKEN",
     "smtp_password": "AUTHENTIK_EMAIL_PASSWORD",
 }
 
@@ -523,6 +551,16 @@ def _optional_url(value: str) -> str | None:
         return None
     if not value.startswith(("http://", "https://")):
         return "A URL starts with http:// or https://."
+    return None
+
+
+def _usernames(value: str) -> str | None:
+    for name in value.split(";"):
+        if name.strip() and not re.fullmatch(r"[\w.@+-]+", name.strip()):
+            return (
+                f"'{name.strip()}' is not a username Authentik accepts. Letters, "
+                "digits and . @ + - _ only; separate several with semicolons."
+            )
     return None
 
 
@@ -1368,6 +1406,22 @@ def build_sections(setup: Setup) -> list[Section]:
                     validate=_optional_url,
                 ),
                 Question(
+                    key="authentik_accounts",
+                    prompt="Who signs in, by username",
+                    explain=(
+                        "Separated by semicolons. Nobody has to create these in "
+                        "Authentik: each person opens the enrollment link the wizard "
+                        "prints at the end, types their username, chooses a password "
+                        "and enrols an authenticator app or security key - a second "
+                        "factor is required for every account. Only the names listed "
+                        "here can be claimed, each exactly once. Everybody on the "
+                        "operator's guest list is added whether or not you repeat "
+                        "them, and joins the operator group on the way."
+                    ),
+                    example="alice;bob",
+                    validate=_usernames,
+                ),
+                Question(
                     key="authentik_slug",
                     prompt="Application slug in Authentik",
                     explain=(
@@ -1391,7 +1445,7 @@ def build_sections(setup: Setup) -> list[Section]:
                     key="authentik_http_port",
                     prompt="Host port for Authentik's HTTP listener",
                     explain=(
-                        "Where the sign-in and the initial-setup flow are reached, on "
+                        "Where the sign-in and the enrollment link are reached, on "
                         "the loopback address. Behind a reverse proxy this is the port "
                         "it forwards to."
                     ),
@@ -2189,6 +2243,37 @@ def check_errors(setup: Setup, base_dir: Path | None = None) -> list[str]:
     return [conflict] if conflict else []
 
 
+def _authentik_release(tag: str) -> tuple[int, int, int] | None:
+    """``2026.8.2`` as a comparable tuple, or ``None`` for anything else."""
+    match = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", tag.strip())
+    return (int(match[1]), int(match[2]), int(match[3])) if match else None
+
+
+def follow_authentik_patch(setup: Setup) -> str | None:
+    """Move a remembered Authentik pin up to this wizard's patch release.
+
+    The pin is remembered with every other answer, which is right for a
+    decision and wrong for a patch: re-running a newer wizard against an
+    existing deployment used to keep writing the release it was first set up
+    with, security fixes and all. Within one ``YYYY.M`` series a newer patch
+    is only fixes, so it is taken. A different series is not - Authentik
+    upgrades across releases can carry migrations and breaking changes worth
+    reading first - and :func:`check_consistency` says so instead.
+    """
+    remembered = _authentik_release(setup.authentik_tag)
+    shipped = _authentik_release(AUTHENTIK_TAG)
+    if not remembered or not shipped:
+        return None
+    if remembered[:2] == shipped[:2] and remembered < shipped:
+        previous = setup.authentik_tag
+        setup.authentik_tag = AUTHENTIK_TAG
+        return (
+            f"Authentik {previous} is moved to {AUTHENTIK_TAG}, the patch "
+            "release this wizard ships."
+        )
+    return None
+
+
 def _rootless(setup: Setup) -> bool:
     """Whether the stack is generated for a rootless Docker daemon."""
     return setup.docker_mode == "rootless"
@@ -2374,6 +2459,26 @@ def check_consistency(setup: Setup) -> list[str]:
             "submission."
         )
 
+    if _uses_authentik(setup):
+        pinned = _authentik_release(setup.authentik_tag)
+        shipped = _authentik_release(AUTHENTIK_TAG)
+        if pinned and shipped and pinned[:2] < shipped[:2]:
+            warnings.append(
+                f"Authentik is pinned to {setup.authentik_tag}, and this wizard "
+                f"ships {AUTHENTIK_TAG}. Releases in a newer series can carry "
+                "migrations and breaking changes, so it is not moved for you: "
+                "read Authentik's release notes, then answer the image tag "
+                "question with the newer release."
+            )
+    if _uses_authentik(setup) and not _merge_usernames(
+        setup.authentik_accounts, setup.admin_users if setup.admin_enabled else ""
+    ):
+        warnings.append(
+            "Authentik is in the stack but names nobody who signs in, so the "
+            "enrollment link admits nobody and the only account is "
+            f"{AUTHENTIK_BOOTSTRAP_USER}. Name the people who should get one "
+            "under 'Who signs in'."
+        )
     if _uses_authentik(setup) and not setup.mcp_auth_enabled:
         warnings.append(
             "Authentik is in the stack but /mcp does not require a token, so "
@@ -2625,6 +2730,17 @@ def _finalise(setup: Setup) -> None:
         setup.authentik_client_secret = (
             setup.authentik_client_secret or secrets.token_urlsafe(30)
         )
+        setup.authentik_bootstrap_password = (
+            setup.authentik_bootstrap_password or secrets.token_urlsafe(30)
+        )
+        # The token becomes an invitation's primary key, so a value that is no
+        # UUID - edited by hand, say - would fail the whole blueprint rather
+        # than one field of it. Replaced, which retires whatever link it was.
+        if not _is_uuid(setup.authentik_enrollment_token):
+            setup.authentik_enrollment_token = str(uuid.uuid4())
+        setup.authentik_accounts = _merge_usernames(
+            setup.authentik_accounts, setup.admin_users if setup.admin_enabled else ""
+        )
         if not setup.smtp_auth:
             # Said to need no account, so it keeps none. A username left over
             # from an earlier answer would make Authentik authenticate to a
@@ -2640,12 +2756,39 @@ def _finalise(setup: Setup) -> None:
         setup.authentik_pg_password = ""
         setup.authentik_client_id = ""
         setup.authentik_client_secret = ""
+        setup.authentik_bootstrap_password = ""
+        setup.authentik_enrollment_token = ""
         setup.smtp_host = ""
         setup.smtp_password = ""
     if _writes_proxy(setup) and not setup.reverse_proxy_hostname:
         # Recorded rather than recomputed at every use, so the summary shows
         # the name the file will actually carry.
         setup.reverse_proxy_hostname = _proxy_hostname(setup)
+
+
+def _is_uuid(value: str) -> bool:
+    try:
+        return str(uuid.UUID(value)) == value
+    except ValueError:
+        return False
+
+
+def _merge_usernames(*lists: str) -> str:
+    """Semicolon-separated names, each once, in the order first given."""
+    names: list[str] = []
+    for listed in lists:
+        for name in listed.split(";"):
+            if name.strip() and name.strip() not in names:
+                names.append(name.strip())
+    return ";".join(names)
+
+
+def authentik_enrollment_link(setup: Setup) -> str:
+    """The address a listed person opens to create their account."""
+    return (
+        f"{setup.authentik_url.rstrip('/')}{AUTHENTIK_ENROLLMENT_PATH}"
+        f"?itoken={setup.authentik_enrollment_token}"
+    )
 
 
 def _authentik_environment(setup: Setup) -> list[EnvEntry]:
@@ -2680,6 +2823,26 @@ def _authentik_environment(setup: Setup) -> list[EnvEntry]:
             f'"{_env_reference("authentik_client_secret")}"',
         ),
         _entry("AUTHENTIK_SCANNER_REDIRECT_URI", f'"{setup.authentik_redirect_uri}"'),
+        _entry(
+            "AUTHENTIK_BOOTSTRAP_PASSWORD",
+            f'"{_env_reference("authentik_bootstrap_password")}"',
+            f"The password of {AUTHENTIK_BOOTSTRAP_USER}, applied on the very first start",
+            "only. Setting it closes the initial-setup flow, which would otherwise",
+            "make whoever reached it first the administrator. Kept for recovery:",
+            "sign in as it to remove somebody's lost second factor.",
+        ),
+        _entry(
+            "COS_AUTHENTIK_ENROLLMENT_TOKEN",
+            f'"{_env_reference("authentik_enrollment_token")}"',
+            "Read by the enrollment blueprint: the invitation behind the link",
+            "each person below opens to choose a password and a second factor.",
+        ),
+        _entry(
+            "COS_AUTHENTIK_ACCOUNTS",
+            f'"{setup.authentik_accounts}"',
+            "Who may create an account with that link, each name once. Anybody",
+            "else is refused at the form.",
+        ),
     ]
     if _guards_the_admin_area(setup):
         entries.append(
@@ -2699,6 +2862,14 @@ def _authentik_environment(setup: Setup) -> list[EnvEntry]:
                 "Read by the same blueprint, for the embedded outpost that answers",
                 "the forward auth: it is where the outpost sends a browser to sign",
                 "in. Left unset, that redirect goes to http://localhost instead.",
+            )
+        )
+        entries.append(
+            _entry(
+                "COS_WEB_ADMIN_USERS",
+                f'"{setup.admin_users}"',
+                "Read by the enrollment flow: an account created under one of these",
+                f"names joins {AUTHENTIK_OPERATOR_GROUP}, the group /admin is bound to.",
             )
         )
     entries.extend(_mail_environment(setup))
@@ -3182,6 +3353,11 @@ def _nginx_locations(setup: Setup, upstream: str) -> str:
         proxy_set_header @@groups_header@@   $authentik_groups;
         proxy_set_header @@email_header@@    $authentik_email;
         include @@secret_file@@;
+        # The outpost answers with a session cookie and identity headers that
+        # outgrow nginx's default buffers, which fails as "upstream sent too
+        # big header" - a 502 for a sign-in that worked.
+        proxy_buffers     8 16k;
+        proxy_buffer_size 32k;
         # The audit view is an event stream too, so this block may no more be
         # buffered than /mcp may.
         proxy_buffering off;
@@ -3200,6 +3376,8 @@ def _nginx_locations(setup: Setup, upstream: str) -> str:
         add_header       Set-Cookie     $auth_cookie;
         proxy_pass_request_body off;
         proxy_set_header Content-Length "";
+        proxy_buffers     8 16k;
+        proxy_buffer_size 32k;
     }
 
     location @goauthentik_signin {
@@ -4515,8 +4693,12 @@ def render_compose_file(setup: Setup, name: str = "docker-compose.yml") -> str:
             "# rate limits, the cooldown and the SSRF guard are identical for an\n"
             "# agent that signed in.\n"
             "#\n"
-            f"#   open {setup.authentik_url}/if/flow/initial-setup/"
-            "   (the trailing slash matters)\n"
+            "# Nobody is created in Authentik's interface. Every sign-in requires a\n"
+            "# second factor, and each name in COS_AUTHENTIK_ACCOUNTS creates its own\n"
+            "# account - password and authenticator - at the enrollment link the\n"
+            "# wizard printed, which carries AUTHENTIK_ENROLLMENT_TOKEN from .env:\n"
+            "#\n"
+            f"#   {setup.authentik_url.rstrip('/')}{AUTHENTIK_ENROLLMENT_PATH}?itoken=<token>\n"
         )
     return f"""{header}
 name: {setup.project_name}
@@ -4667,14 +4849,18 @@ def _copy_blueprints(setup: Setup, output_dir: Path) -> list[str]:
     a checkout, and a stack whose blueprint is missing starts and then refuses
     every token with nothing in the log to say why.
 
-    Two of them, for the two things a provider can guard here: the OAuth2
-    provider that issues the tokens ``/mcp`` verifies, and the proxy provider
-    that signs an operator in before ``/admin`` is served. The second is
-    copied only where there is an area to guard.
+    The OAuth2 provider that issues the tokens ``/mcp`` verifies; the second
+    factor every sign-in requires; the enrollment flow that lets a listed
+    person create their own account; and, only where there is an area to
+    guard, the proxy provider that signs an operator in before ``/admin``.
     """
     if not _uses_authentik(setup):
         return []
-    wanted = [(BLUEPRINT_SOURCE, BLUEPRINT_RELATIVE)]
+    wanted = [
+        (BLUEPRINT_SOURCE, BLUEPRINT_RELATIVE),
+        (MFA_BLUEPRINT_SOURCE, MFA_BLUEPRINT_RELATIVE),
+        (ENROLLMENT_BLUEPRINT_SOURCE, ENROLLMENT_BLUEPRINT_RELATIVE),
+    ]
     if _guards_the_admin_area(setup):
         wanted.append((ADMIN_BLUEPRINT_SOURCE, ADMIN_BLUEPRINT_RELATIVE))
 
@@ -4699,6 +4885,47 @@ def _step(index: int, text: str, *commands: str) -> list[str]:
     lines = [f"    {index}. {wrapped[0]}"]
     lines += [f"       {line}" for line in wrapped[1:]]
     lines += [f"         {command}" for command in commands]
+    return lines
+
+
+def enrollment_instructions(setup: Setup) -> list[str]:
+    """How the people named get in: one link, and nothing in the admin UI.
+
+    The link carries the invitation token, so it is printed here, to the
+    operator who ran the wizard, and never written into the compose file.
+    """
+    if not _uses_authentik(setup):
+        return []
+    lines = ["", "  Then everybody who signs in creates their own account:", ""]
+    if setup.authentik_accounts:
+        lines.append(f"    open {authentik_enrollment_link(setup)}")
+        lines.append("")
+        for text in _wrap(
+            "Send that link to each of "
+            f"{', '.join(setup.authentik_accounts.split(';'))}. It asks for "
+            "one of those usernames, an email address and a password, and then "
+            "for a second factor - an authenticator app or a security key - "
+            "which every sign-in requires from then on. Each name can be "
+            "claimed once, and nobody else's at all. Treat it like a password "
+            "until everybody has used it.",
+            64,
+        ):
+            lines.append(f"  {text}")
+    else:
+        for text in _wrap(
+            "Nobody is listed yet, so the enrollment link admits nobody. Run "
+            "the wizard again and name who signs in.",
+            64,
+        ):
+            lines.append(f"  {text}")
+    lines.append("")
+    for text in _wrap(
+        f"Authentik's own administrator is {AUTHENTIK_BOOTSTRAP_USER}; its password "
+        f"is {SECRET_VARIABLES['authentik_bootstrap_password']} in .env. "
+        "Keep it for recovery - it is how a lost second factor is removed.",
+        64,
+    ):
+        lines.append(f"  {text}")
     return lines
 
 
@@ -4730,18 +4957,11 @@ def admin_walkthrough(setup: Setup) -> list[str]:
     if _uses_authentik(setup):
         lines += _step(
             index,
-            "Set the first Authentik password. The account you create here "
-            "is the only one that exists, and the provider itself is already "
-            "provisioned - there is nothing to click beyond this.",
-            f"open {setup.authentik_url}{AUTHENTIK_INITIAL_SETUP_PATH}",
-        )
-        index += 1
-        lines += _step(
-            index,
-            "Put that account in the operator group, under Directory > "
-            f"Groups: {AUTHENTIK_OPERATOR_GROUP}. The blueprint binds the "
-            "area's application to that group and to nothing else, so an "
-            "account outside it never reaches the sign-in's other side.",
+            "Create your account at the enrollment link printed above: your "
+            "username from the guest list, a password and a second factor. "
+            f"It joins {AUTHENTIK_OPERATOR_GROUP}, the only group the area's "
+            "application is bound to, on the way - there is nothing to click "
+            "in Authentik.",
         )
         index += 1
     else:
@@ -5391,6 +5611,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         setup, compose_path.parent / answers_filename(compose_path.name)
     )
     _apply_preset(setup, args.preset)
+    upgraded = follow_authentik_patch(setup) if remembered else None
     reused = _read_existing_env(setup, env_path)
     _apply_flags(setup, args)
     setup.build_context = _default_build_context(output_dir)
@@ -5430,6 +5651,9 @@ def main(argv: Sequence[str] | None = None) -> int:
                 f"  and {env_path} keeps the credentials it already holds"
             )
             wizard.say("  rather than generating them anew.")
+        if upgraded:
+            for line in _wrap(upgraded, 68):
+                wizard.say(f"  {line}")
     wizard.say()
     wizard.say(
         "  This is not the plugin's --configure wizard, which sets up a"
@@ -5488,13 +5712,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     build = " --build" if setup.image_source == "build" else ""
     wizard.say(f"    docker compose -f {args.compose_file} up -d{build}")
     wizard.say(f"    open http://{setup.bind_address}:{setup.host_port}")
-    # The first-password step belongs to the walkthrough when there is one,
-    # rather than being said twice in two different orders.
-    if _uses_authentik(setup) and not setup.admin_enabled:
-        wizard.say()
-        wizard.say("  Then set the first Authentik password, which is the one")
-        wizard.say("  account it starts with - the OAuth2 provider is already there:")
-        wizard.say(f"    open {setup.authentik_url}{AUTHENTIK_INITIAL_SETUP_PATH}")
+    for line in enrollment_instructions(setup):
+        wizard.say(line)
     for line in admin_walkthrough(setup):
         wizard.say(line)
     if _uses_authentik(setup) and not setup.smtp_host:

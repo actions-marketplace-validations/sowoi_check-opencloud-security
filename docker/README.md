@@ -301,6 +301,7 @@ what each failure means:
 
 | What you see | What is missing |
 |:--|:--|
+| A 500 instead of a sign-in | The forward auth reached Authentik but no outpost answered it: the operator-area blueprint did not apply, or the embedded outpost does not carry its provider. Re-run the wizard, `docker compose up -d`, then `docker compose exec authentik_worker ak apply_blueprint /blueprints/custom/opencloud-admin.yaml` |
 | No sign-in at all, just 404 | The `X-COS-Admin-Proxy` header never arrived — the proxy in front is not adding it |
 | Signed in, then 404 | That account is not in `COS_WEB_ADMIN_USERS` |
 | The sign-in loops | The provider's public address is not the one the browser used |

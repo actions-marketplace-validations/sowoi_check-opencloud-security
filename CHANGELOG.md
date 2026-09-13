@@ -36,7 +36,27 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   which no visitor can reach. The blueprint now sets it from
   `COS_AUTHENTIK_URL`, which `docker-compose.authentik.yml` passes to the
   server and worker from `AUTHENTIK_URL`, and which the Docker setup wizard
-  writes into `.env`.
+  writes into the compose file it generates.
+
+- **Re-running the Docker setup wizard moves Authentik to its newer patch
+  release.** The image tag is remembered with every other answer, so a newer
+  wizard run against an existing deployment kept writing the release that
+  deployment was first set up with - which is how a stack stayed on 2026.8.0
+  after the wizard moved to 2026.8.2. A remembered pin in the same `YYYY.M`
+  series is now moved up and the wizard says so; a pin in an older series is
+  left alone with a warning, because an upgrade across series can carry
+  migrations worth reading first.
+- **The generated nginx configuration gives the forward auth room for
+  Authentik's headers.** The `/admin` and `/outpost.goauthentik.io` locations
+  now set `proxy_buffers 8 16k` and `proxy_buffer_size 32k`, as Authentik's own
+  nginx example does: its session cookie and identity headers outgrow nginx's
+  defaults and fail as "upstream sent too big header", a 502 for a sign-in that
+  worked.
+- **Verified end to end.** A generated stack with Authentik 2026.8.2 and the
+  generated nginx configuration signs an operator in and serves `/admin`, and
+  keeps an account outside the operator group out. A test now fails if the
+  blueprint creates an outpost of its own again or stops setting the embedded
+  outpost's address.
 
 ## [1.22.1] - 2026-09-13
 
