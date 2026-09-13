@@ -373,6 +373,12 @@ a proxy that forwards a client's own <code>X-Forwarded-Host</code> it is a stran
 chooses. It means the instance was never told its public address and derives
 one from each request - set <code>OC_URL</code>, and set the forwarded headers from the
 proxy's configuration rather than passing the client's through.</p>
+<p>When only <code>Host</code> comes back, as the address it redirects to, look at the proxy
+before the instance: with no default server, a name the proxy has no site for
+is answered by whichever site it loaded first for that port, and a redirect
+there built from <code>$host</code> repeats the probe host whatever <code>OC_URL</code> says. An
+explicit default server that refuses unknown names fixes it - see
+<a href="/documentation/reverse-proxy#mistakes-that-cost-a-grade">No default server</a>.</p>
 <p>Only a URL a client would be <em>sent</em> to counts. A default virtual host that
 refuses an unrecognised name commonly prints that name in its error page, and
 reading the body for it would report the correct behaviour as the finding.

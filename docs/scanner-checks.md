@@ -229,6 +229,13 @@ chooses. It means the instance was never told its public address and derives
 one from each request - set `OC_URL`, and set the forwarded headers from the
 proxy's configuration rather than passing the client's through.
 
+When only `Host` comes back, as the address it redirects to, look at the proxy
+before the instance: with no default server, a name the proxy has no site for
+is answered by whichever site it loaded first for that port, and a redirect
+there built from `$host` repeats the probe host whatever `OC_URL` says. An
+explicit default server that refuses unknown names fixes it - see
+[No default server](reverse-proxy.md#mistakes-that-cost-a-grade).
+
 Only a URL a client would be *sent* to counts. A default virtual host that
 refuses an unrecognised name commonly prints that name in its error page, and
 reading the body for it would report the correct behaviour as the finding.

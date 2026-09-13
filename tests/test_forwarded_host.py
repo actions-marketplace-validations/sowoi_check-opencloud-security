@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import requests
 
+from opencloud_local_scan import hardening
 from opencloud_local_scan import scanner as scanner_module
 from opencloud_local_scan.scanner import FORWARDED_HOST_PROBE, failed_extra_checks
 from tests.fake_opencloud import InstanceBehaviour
@@ -141,3 +142,22 @@ def test_the_probe_host_can_never_name_a_real_site():
     misconfigured instance sends.
     """
     assert FORWARDED_HOST_PROBE.endswith(".invalid")
+
+
+def test_the_explanation_names_a_missing_default_server_as_a_cause():
+    """
+    OC_URL is not the only way to fail this check, and saying it is misleads.
+
+    A proxy with no default server answers an unknown Host from another site,
+    whose redirect built from $host repeats the probe while the instance itself
+    is configured correctly. An operator told only to set OC_URL sets it, scans
+    again and gets the same finding - so the explanation has to name the other
+    cause and the remediation the fix, and OC_URL must stay in both places.
+    """
+    described = hardening.describe("forwardedHostIgnored")
+
+    assert "no default server" in described.meaning
+    assert "default_server" in described.remediation
+    assert "ssl_reject_handshake on;" in described.remediation
+    assert "OC_URL" in described.meaning
+    assert described.remediation.startswith("Set OC_URL")

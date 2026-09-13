@@ -49,6 +49,17 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   remediation gives an explicit nginx default server that refuses unknown names
   (and the Apache equivalent) plus how to tell which server answered, and
   `docs/reverse-proxy.md` and `docs/scanner-checks.md` describe the same.
+- **`forwardedHostIgnored` names a missing default server on the reverse proxy
+  as a cause.** The explanation used to trace every failure to an instance
+  that was never told its address, so an operator with `OC_URL` set correctly
+  was sent back to it. A proxy with no default server answers a `Host` it has
+  no site for from whichever site it loaded first for that port - often
+  another application on the same machine - and a redirect there built from
+  `$host` repeats the probe host without OpenCloud ever seeing the request.
+  The explanation now says so when only `Host` comes back as a redirect, the
+  remediation gives an explicit nginx default server that refuses unknown names
+  (and the Apache equivalent) plus how to tell which server answered, and
+  `docs/reverse-proxy.md` and `docs/scanner-checks.md` describe the same.
 
 ### Fixed
 

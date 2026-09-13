@@ -1053,9 +1053,16 @@ CHECKS: dict[str, Hardening] = {
             "authentication request goes. On its own it misleads only the "
             "caller who sent the header; behind a cache it becomes the answer "
             "everybody gets, and behind a proxy that forwards a client's own "
-            "X-Forwarded-Host it is a stranger who chooses. It means the "
+            "X-Forwarded-Host it is a stranger who chooses. Usually it means the "
             "instance was never told its public address and is deriving one "
-            "from each request instead."
+            "from each request instead. When only the Host header comes back, "
+            "and as the address it redirects to, the answer may not come from "
+            "the instance at all: a reverse proxy with no default server hands "
+            "a name it has no site for to whichever site it loaded first for "
+            "that port - often another application on the same machine - and "
+            "a redirect written there as 'return 301 https://$host...' names "
+            "the caller's host back. OC_URL can be set correctly and the "
+            "finding stays."
         ),
         remediation=(
             "Set OC_URL to the public address of the instance so that every "
@@ -1063,9 +1070,16 @@ CHECKS: dict[str, Hardening] = {
             "whatever is in front, set the forwarded headers from the proxy's "
             "own configuration rather than passing the client's through - "
             "'proxy_set_header X-Forwarded-Host $host;' in Nginx, "
-            "'RequestHeader set X-Forwarded-Host' in Apache - and give the "
-            "server a default virtual host that refuses a Host it does not "
-            "recognise instead of serving the instance for any name at all."
+            "'RequestHeader set X-Forwarded-Host' in Apache. Then give the "
+            "proxy an explicit default server that refuses a Host it does not "
+            "recognise, so no other site answers for it: in Nginx a server "
+            "block with 'listen 443 ssl default_server;', 'server_name _;', "
+            "'ssl_reject_handshake on;' and 'return 444;' (and the same for "
+            "port 80), in Apache a first <VirtualHost> that answers 421 or "
+            "403. A redirect in any other site should name that site's own "
+            "host rather than $host. To confirm which server answers, request "
+            "the discovery document with a made-up Host header and compare the "
+            "certificate and headers with the instance's own."
         ),
         reference=DOCS_REVERSE_PROXY,
         setting="OC_URL",
