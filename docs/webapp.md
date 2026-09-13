@@ -658,6 +658,18 @@ mkdir -p /srv/opencloud-scan/audit
 sudo chown 10001 /srv/opencloud-scan/audit
 ```
 
+On a **rootless** Docker, uid 10001 in the container is a subordinate uid on the
+host, so run the `chown` inside a container instead - as the user namespace's
+root, which is you, and without sudo:
+
+```bash
+docker run --rm --user 0 --entrypoint chown \
+  -v /srv/opencloud-scan/audit:/target redis:8.10-alpine 10001 /target
+```
+
+Keep it apart from a Redis data directory: Redis writes as uid 999, and one
+directory can only belong to one of them.
+
 #### Letting the host's logrotate keep it
 
 A file on the host's filesystem is something the host already knows how to

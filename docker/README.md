@@ -222,7 +222,8 @@ line still overrides what it remembers.
 | `--smtp-security starttls\|ssl\|none` | Default: `starttls` |
 | `--smtp-timeout SECONDS` | Default: `10` |
 | `--non-interactive` | Ask nothing, take every default, generate the credentials |
-| `--force` | Overwrite existing files without asking |
+| `--image-source dockerhub\|build` | Pull the published image (the default) or build it from this checkout |
+| `--force` | Overwrite existing files without asking - including `docker-compose.yml` and the other compose files shipped in `docker/`, which are otherwise refused, so the stack a checkout already runs can be reconfigured in place |
 
 There is deliberately no `--smtp-password`: a password on a command line is a
 password in `ps` and in the shell history. The wizard takes it from
@@ -239,6 +240,14 @@ those with `docker compose up -d --build`. The Docker socket it mounts is
 detected for the user running the wizard: a rootless Docker serves it under
 `/run/user/<uid>` rather than `/var/run`, and the detected path is the default
 of a question, so a different daemon is an edit rather than a discovery.
+
+The image is [`nickfedor/watchtower`](https://github.com/nicholas-fedor/watchtower),
+the maintained fork, rather than `containrrr/watchtower`. The original was
+archived in December 2025 and always speaks Docker API 1.25, which Docker 29
+refuses (`client version 1.25 is too old`) unless `DOCKER_API_VERSION` is
+pinned by hand. The fork negotiates the version with the daemon and reads the
+same variables and label, so a stack generated with the old image needs only
+its `image:` line changed - and any `DOCKER_API_VERSION` workaround removed.
 
 **A sign-in and an identity provider are two answers, not one**, and neither
 implies the other:
@@ -326,6 +335,14 @@ Each one is a working configuration rather than a sketch:
   is passed on, carrying the identity the outpost established and the shared
   secret that makes those headers worth believing. The audit view is an event
   stream too, so that block is not buffered either.
+- **A site for Authentik**, when the stack brings it: a second server block,
+  virtual host or router in the same file, answering to the host name of
+  Authentik's public address and proxying to its published port, WebSocket
+  included. That address is where every sign-in sends a browser, so a proxy
+  that served only the scanner would install cleanly and sign nobody in. nginx
+  and Apache are asked for a certificate for that name as well - the scanner's
+  own works if it carries both names. An address that is `localhost`, a bare
+  IP, or the scanner's own host name gets no site, and the wizard says so.
 
 **Apache gets no `/admin` block**, because it has no forward auth of its own.
 The area is proxied by the catch-all like every other path but without
@@ -407,6 +424,30 @@ command in its next steps:
 mkdir -p ./audit && sudo chown 10001 ./audit
 mkdir -p ./data  && sudo chown 999 ./data
 ```
+
+**The two are always different directories**, and neither may be inside the
+other: the web image writes as uid 10001 and Redis as uid 999, and a directory
+has one owner. The wizard refuses the answer at the question, and an unattended
+run with such answers writes nothing.
+
+**On a rootless Docker those commands are wrong**, because uid 10001 in a
+container is your subordinate uid at that offset on the host (the start of your
+range in `/etc/subuid`, plus 10000), not host uid 10001. The wizard asks which
+kind of daemon it is generating for - detected from the socket, which a
+rootless daemon serves under `/run/user/<uid>` - and prints the rootless form
+instead, which runs the `chown` inside a container and needs no sudo:
+
+```bash
+mkdir -p ./audit && docker run --rm --user 0 --entrypoint chown -v "$(realpath ./audit)":/target redis:8.10-alpine 10001 /target
+mkdir -p ./data  && docker run --rm --user 0 --entrypoint chown -v "$(realpath ./data)":/target redis:8.10-alpine 999 /target
+```
+
+Your own account cannot read those directories afterwards; read them through a
+container the same way. A logrotate policy generated for a rootless daemon
+names the mapped host ids on its `create` line, and says so if `/etc/subuid`
+has no range for you. The default rootless port driver also hides the client
+address from a port published beyond `127.0.0.1`, so the wizard points out
+that the rate limit then needs a reverse proxy on the host in front.
 
 **Which directory is asked for, and it defaults to one beside the compose
 file** - `./data` for Redis, `./audit` for the trail. The leading `./` is not

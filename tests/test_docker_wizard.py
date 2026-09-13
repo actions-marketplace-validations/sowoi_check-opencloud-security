@@ -168,23 +168,51 @@ def test_an_audit_salt_is_generated_only_when_the_audit_log_is_on(tmp_path: Path
 
 
 def test_the_wizard_refuses_to_overwrite_a_compose_file_that_ships_with_the_project(
-    tmp_path: Path,
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """The next git pull would take a hand-made deployment with it."""
     shipped = wizard_module.SCRIPT_DIR / "docker-compose.yml"
     before = shipped.read_bytes()
 
     exit_code = wizard_module.main(
-        [
-            "--output-dir",
-            str(wizard_module.SCRIPT_DIR),
-            "--non-interactive",
-            "--force",
-        ]
+        ["--output-dir", str(wizard_module.SCRIPT_DIR), "--non-interactive"]
     )
 
     assert exit_code == 2
     assert shipped.read_bytes() == before
+    # And it says how to do it anyway, rather than only that it will not.
+    assert "--force" in capsys.readouterr().err
+
+
+def test_force_replaces_a_shipped_compose_file_in_place(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """
+    Reconfiguring the stack a checkout already runs should not mean moving it.
+
+    Somebody who started with `docker compose up` in docker/ has a live
+    deployment there; --force replaces its compose file where it is, and says
+    on stderr - which an unattended run still shows - that the checkout now
+    carries a modified tracked file.
+    """
+    checkout = tmp_path / "docker"
+    checkout.mkdir()
+    (checkout / "docker-compose.yml").write_text("# shipped\n", encoding="utf-8")
+    monkeypatch.setattr(wizard_module, "SCRIPT_DIR", checkout.resolve())
+
+    assert _run(checkout) == 2
+    assert (checkout / "docker-compose.yml").read_text(encoding="utf-8") == "# shipped\n"
+    capsys.readouterr()
+
+    assert _run(checkout, "--force") == 0
+    assert "services:" in (checkout / "docker-compose.yml").read_text(encoding="utf-8")
+    assert (checkout / ".env").is_file()
+    assert "git checkout -- docker/docker-compose.yml" in capsys.readouterr().err
+
+    # A file that does not ship there is no reason to mention the checkout.
+    elsewhere = tmp_path / "elsewhere"
+    assert _run(elsewhere, "--force") == 0
+    assert "ships with the project" not in capsys.readouterr().err
 
 
 def test_an_existing_file_is_kept_when_the_operator_declines(
@@ -210,29 +238,39 @@ def test_force_overwrites_without_asking(tmp_path: Path) -> None:
     assert "services:" in (tmp_path / "docker-compose.yml").read_text(encoding="utf-8")
 
 
-def test_the_published_image_replaces_the_build_section(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+def test_the_published_image_is_the_default_and_carries_no_build_section(
+    tmp_path: Path,
 ) -> None:
-    """Answering 'dockerhub' has to remove the build context, not sit beside it."""
-    answers = iter(["dockerhub"])
+    """
+    The wizard is one file meant for a host with nothing but Docker on it.
 
-    def read(self, prompt: str) -> str:
-        return next(answers, "")
-
-    monkeypatch.setattr(wizard_module.Wizard, "_read", read)
-
-    assert wizard_module.main(["--output-dir", str(tmp_path)]) == 0
+    A build needs a checkout such a host does not have, so the default pulls
+    the published image - and the build context is not left beside it.
+    """
+    assert wizard_module.Setup().image_source == "dockerhub"
+    assert _run(tmp_path) == 0
 
     web = _compose(tmp_path)["services"]["web_app"]
     assert web["image"] == wizard_module.DOCKERHUB_IMAGE
     assert "build" not in web
 
+    # And a checkout can still ask for its own code without being asked.
+    local = tmp_path / "local"
+    assert _run(local, "--image-source", "build") == 0
+    assert "build" in _compose(local)["services"]["web_app"]
 
-def test_the_local_build_points_at_the_repository_root(tmp_path: Path) -> None:
+
+def test_the_local_build_points_at_the_repository_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Both images need webapp/ and frontend/, which live above docker/."""
-    assert _run(tmp_path) == 0
+    answers = iter(["build"])
+    monkeypatch.setattr(wizard_module.Wizard, "_read", lambda self, prompt: next(answers, ""))
+    assert wizard_module.main(["--output-dir", str(tmp_path)]) == 0
 
-    build = _compose(tmp_path)["services"]["web_app"]["build"]
+    web = _compose(tmp_path)["services"]["web_app"]
+    assert web.get("image") != wizard_module.DOCKERHUB_IMAGE
+    build = web["build"]
     assert build["dockerfile"] == "docker/Dockerfile.web"
     context = (tmp_path / build["context"]).resolve()
     assert (context / "webapp").is_dir()
@@ -281,6 +319,9 @@ def test_a_question_that_no_longer_applies_is_not_asked(tmp_path: Path) -> None:
     assert not wizard_module._relevant("mcp_auth_issuer", setup)
     assert not wizard_module._relevant("deploy_authentik", setup)
     assert not wizard_module._relevant("authentik_slug", setup)
+    assert wizard_module._relevant("image_ref", setup)
+    assert not wizard_module._relevant("build_context", setup)
+    setup.image_source = "build"
     assert not wizard_module._relevant("image_ref", setup)
     assert wizard_module._relevant("build_context", setup)
 
@@ -699,6 +740,10 @@ def test_asking_for_automatic_updates_adds_watchtower_scoped_to_this_stack(
     watchtower = document["services"]["watchtower"]
     assert watchtower["image"] == wizard_module.WATCHTOWER_IMAGE
     assert watchtower["environment"]["WATCHTOWER_LABEL_ENABLE"] == "true"
+    # Not the archived image, which speaks API 1.25 and panics on Docker 29 -
+    # and no pinned API version, which the fork negotiates instead.
+    assert not watchtower["image"].startswith("containrrr/")
+    assert "DOCKER_API_VERSION" not in watchtower["environment"]
     mount = watchtower["volumes"][0]
     assert mount.endswith(":/var/run/docker.sock")
     assert mount.startswith("/")
@@ -758,7 +803,9 @@ def test_the_socket_question_only_applies_when_updates_do() -> None:
 
 def test_automatic_updates_with_a_local_build_are_pointed_out() -> None:
     """Watchtower pulls; it cannot rebuild an image the stack builds itself."""
-    warnings = wizard_module.check_consistency(wizard_module.Setup(auto_updates=True))
+    warnings = wizard_module.check_consistency(
+        wizard_module.Setup(auto_updates=True, image_source="build")
+    )
     assert any("build" in warning.lower() for warning in warnings)
 
     pulled = wizard_module.Setup(auto_updates=True, image_source="dockerhub")
@@ -1622,6 +1669,118 @@ def test_a_provider_only_this_host_can_reach_is_pointed_out() -> None:
     )
 
 
+def test_the_generated_proxy_serves_authentik_at_its_public_address() -> None:
+    """
+    Every sign-in sends a browser to Authentik's public address.
+
+    A stack that brings the provider but a proxy configuration that only
+    serves the scanner leaves that redirect arriving nowhere, so the same file
+    carries a site for Authentik - one that proxies to its published port and
+    carries the WebSocket its interface keeps open.
+    """
+    expected = {
+        "nginx": "server_name sso.example.com;",
+        "apache": "ServerName sso.example.com",
+        "caddy": "sso.example.com {",
+        "traefik": "Host(`sso.example.com`)",
+    }
+    for flavour, site in expected.items():
+        # Without /admin as well: the provider needs a site whether or not
+        # there is an area for it to guard.
+        setup = wizard_module.Setup(
+            reverse_proxy=flavour,
+            deploy_authentik=True,
+            public_base_url="https://scan.example.com",
+            authentik_url="https://sso.example.com",
+        )
+        wizard_module._finalise(setup)
+        content = wizard_module.render_proxy_file(setup)
+        assert site in content, flavour
+        assert "127.0.0.1:9000" in content, flavour
+        assert not any(
+            "browser can reach" in warning
+            for warning in wizard_module.check_consistency(setup)
+        ), flavour
+
+    websocket = {"nginx": "Upgrade", "apache": "upgrade=websocket"}
+    for flavour, directive in websocket.items():
+        setup = wizard_module.Setup(
+            reverse_proxy=flavour,
+            deploy_authentik=True,
+            public_base_url="https://scan.example.com",
+            authentik_url="https://sso.example.com",
+        )
+        wizard_module._finalise(setup)
+        site = wizard_module.render_proxy_file(setup).split("sso.example.com", 1)[1]
+        assert directive in site, flavour
+
+    # No provider in the stack, no site for one.
+    plain = wizard_module.Setup(
+        reverse_proxy="nginx",
+        public_base_url="https://scan.example.com",
+        authentik_url="https://sso.example.com",
+    )
+    wizard_module._finalise(plain)
+    assert "sso.example.com" not in wizard_module.render_proxy_file(plain)
+
+
+def test_authentik_without_a_name_of_its_own_gets_no_site_and_a_warning() -> None:
+    """
+    A site for localhost, or a second one for the scanner's own name, would
+    be a configuration that installs cleanly and signs nobody in.
+    """
+    for address in ("", "http://localhost:9000", "https://scan.example.com", "http://10.0.0.5"):
+        setup = wizard_module.Setup(
+            reverse_proxy="nginx",
+            deploy_authentik=True,
+            public_base_url="https://scan.example.com",
+            authentik_url=address,
+        )
+        wizard_module._finalise(setup)
+        content = wizard_module.render_proxy_file(setup)
+        assert content.count("server_name ") == 2, address  # redirect + scanner
+        assert "127.0.0.1:9000;" not in content, address
+        assert any(
+            "browser can reach" in warning
+            for warning in wizard_module.check_consistency(setup)
+        ), address
+
+
+def test_authentiks_certificate_is_asked_for_only_where_the_proxy_needs_one() -> None:
+    """Caddy and Traefik fetch their own; nginx and Apache have to be told."""
+    questions = ("reverse_proxy_authentik_certificate", "reverse_proxy_authentik_private_key")
+
+    def setup_for(**overrides: Any) -> Any:
+        values: dict[str, Any] = {
+            "reverse_proxy": "nginx",
+            "deploy_authentik": True,
+            "public_base_url": "https://scan.example.com",
+            "authentik_url": "https://sso.example.com",
+        }
+        values.update(overrides)
+        return wizard_module.Setup(**values)
+
+    for key in questions:
+        assert wizard_module._relevant(key, setup_for())
+        assert wizard_module._relevant(key, setup_for(reverse_proxy="apache"))
+        assert not wizard_module._relevant(key, setup_for(reverse_proxy="caddy"))
+        assert not wizard_module._relevant(key, setup_for(reverse_proxy_tls=False))
+        assert not wizard_module._relevant(key, setup_for(deploy_authentik=False))
+        assert not wizard_module._relevant(key, setup_for(authentik_url=""))
+
+    chosen = setup_for(
+        reverse_proxy_authentik_certificate="/etc/letsencrypt/live/sso/fullchain.pem",
+        reverse_proxy_authentik_private_key="/etc/letsencrypt/live/sso/privkey.pem",
+        reverse_proxy_certificate="/etc/letsencrypt/live/scan/fullchain.pem",
+    )
+    wizard_module._finalise(chosen)
+    content = wizard_module.render_proxy_file(chosen)
+    scanner, authentik = content.split("server_name sso.example.com;", 1)
+    assert "/etc/letsencrypt/live/scan/fullchain.pem" in scanner
+    assert "/etc/letsencrypt/live/sso/fullchain.pem" in authentik
+    assert "/etc/letsencrypt/live/sso/fullchain.pem" not in scanner
+
+
 def test_turning_the_operators_area_on_prints_what_to_do_next() -> None:
     """
     /admin refuses rather than asking, so the steps have to be written down.
@@ -1727,17 +1886,17 @@ def test_a_choice_can_be_answered_with_the_number_beside_it(
 
     wizard_module.run_questions(wizard_module.Wizard(setup))
 
-    assert setup.image_source == "dockerhub"
+    assert setup.image_source == "build"
     # The options are listed with their numbers, and the current one marked.
-    assert any(line.strip() == "* 1) build" for line in printed)
-    assert any(line.strip() == "2) dockerhub" for line in printed)
+    assert any(line.strip() == "* 1) dockerhub" for line in printed)
+    assert any(line.strip() == "2) build" for line in printed)
 
     # The word still works, and a number outside the list is refused rather
     # than quietly taken as something.
     other = wizard_module.Setup()
-    _typed(monkeypatch, ["9", "dockerhub", "rest"])
+    _typed(monkeypatch, ["9", "build", "rest"])
     wizard_module.run_questions(wizard_module.Wizard(other))
-    assert other.image_source == "dockerhub"
+    assert other.image_source == "build"
 
 
 def test_an_answer_already_given_can_be_gone_back_to(
@@ -1757,7 +1916,7 @@ def test_an_answer_already_given_can_be_gone_back_to(
 
     assert setup.image_source == "build"
     # The question it went back to was asked again, not skipped over.
-    asked = [line for line in printed if "pull the published one?" in line]
+    asked = [line for line in printed if "Pull the published image, or build it here?" in line]
     assert len(asked) == 2
 
     # There is nothing behind the first question, and saying so beats
@@ -2003,3 +2162,205 @@ def test_a_derived_value_named_at_the_summary_says_it_is_derived(
 
     assert any("is derived from the answers above" in line for line in printed)
     assert any("Nothing called 'nonsense'" in line for line in printed)
+
+
+def _both_on_the_filesystem(audit: str, redis: str) -> Any:
+    return wizard_module.Setup(
+        audit_log=True,
+        audit_storage="filesystem",
+        audit_log_path=audit,
+        redis_persistence="filesystem",
+        redis_data_path=redis,
+    )
+
+
+def test_the_audit_trail_and_redis_never_share_a_host_directory(tmp_path: Path) -> None:
+    """
+    The web image writes as uid 10001 and Redis as uid 999.
+
+    A directory has one owner, so whichever chown ran last would decide which
+    of the two containers can write - and one directory inside the other fails
+    the same way one level down. Spelling the same directory two ways is still
+    the same directory.
+    """
+    for audit, redis in (
+        ("./data", "./data"),
+        ("./data/", "./data"),
+        ("./storage", "./storage/redis"),
+        ("./storage/audit", "./storage"),
+        (str(tmp_path / "shared"), "./shared"),
+    ):
+        setup = _both_on_the_filesystem(audit, redis)
+        errors = wizard_module.check_errors(setup, tmp_path)
+        assert len(errors) == 1, (audit, redis)
+        assert str(wizard_module.WEB_IMAGE_UID) in errors[0]
+        assert str(wizard_module.REDIS_IMAGE_UID) in errors[0]
+
+    # Side by side is what the defaults already are, and is fine.
+    assert not wizard_module.check_errors(_both_on_the_filesystem("./audit", "./data"), tmp_path)
+    assert not wizard_module.check_errors(
+        _both_on_the_filesystem("./storage/audit", "./storage/redis"), tmp_path
+    )
+    # A named volume on either side is no host directory to collide with.
+    volume = _both_on_the_filesystem("./data", "./data")
+    volume.redis_persistence = "volume"
+    assert not wizard_module.check_errors(volume, tmp_path)
+
+
+def test_a_shared_directory_is_refused_when_it_is_typed(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Said at the question, where it can be fixed, rather than after an `up`."""
+    setup = _both_on_the_filesystem("./data", "./redis")
+    wizard = wizard_module.Wizard(setup, base_dir=tmp_path)
+    question = next(
+        item
+        for section in wizard_module.build_sections(setup)
+        for item in section.questions
+        if item.key == "redis_data_path"
+    )
+
+    said = _typed(monkeypatch, ["./data", "./data/redis", "./redis-data"])
+    wizard.ask(question)
+
+    assert setup.redis_data_path == "./redis-data"
+    # Once for the same directory, once for one inside the other.
+    assert any("would both be kept in" in line for line in said)
+    assert any("is inside" in line for line in said)
+
+
+def test_an_unattended_run_writes_nothing_for_a_shared_directory(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A run that asks nothing must not quietly write a stack that cannot start."""
+    answers = tmp_path / wizard_module.answers_filename("docker-compose.yml")
+    answers.write_text(
+        json.dumps(
+            {
+                "audit_log": True,
+                "audit_storage": "filesystem",
+                "audit_log_path": "./data",
+                "redis_persistence": "filesystem",
+                "redis_data_path": "./data",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert _run(tmp_path) == 1
+    assert not (tmp_path / "docker-compose.yml").exists()
+    assert "different users" in capsys.readouterr().err
+
+
+def test_a_rootless_daemon_is_recognised_by_its_socket(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A rootless Docker serves its socket from the user's runtime directory."""
+    monkeypatch.setenv("XDG_RUNTIME_DIR", "/run/user/1000")
+    assert wizard_module.detect_docker_mode("/run/user/1000/docker.sock") == "rootless"
+    assert wizard_module.detect_docker_mode("/var/run/docker.sock") == "rootful"
+
+    monkeypatch.setenv("XDG_RUNTIME_DIR", "/tmp/runtime-okko")
+    assert wizard_module.detect_docker_mode("/tmp/runtime-okko/docker.sock") == "rootless"
+    # A prefix of the runtime directory's name is not inside it.
+    assert wizard_module.detect_docker_mode("/tmp/runtime-okko2/docker.sock") == "rootful"
+
+
+def test_a_rootless_daemon_is_handed_its_directories_without_sudo() -> None:
+    """
+    On a rootless daemon, uid 10001 in a container is not uid 10001 on the host.
+
+    `sudo chown 10001` would hand the directory to a host account the container
+    never runs as. The chown runs inside a container instead, as the user
+    namespace's root - which is the user themself, and needs no sudo.
+    """
+    rootless = _both_on_the_filesystem("./audit", "./data")
+    rootless.docker_mode = "rootless"
+    rootful = _both_on_the_filesystem("./audit", "./data")
+    wizard_module._finalise(rootful)
+    assert rootful.docker_mode == "rootful"
+
+    for uid, path in (
+        (wizard_module.WEB_IMAGE_UID, "./audit"),
+        (wizard_module.REDIS_IMAGE_UID, "./data"),
+    ):
+        command = wizard_module._ownership_command(rootless, path, uid)
+        assert "sudo" not in command
+        assert "docker run --rm --user 0 --entrypoint chown" in command
+        assert f'"$(realpath {path})":/target {wizard_module.REDIS_IMAGE} {uid} /target' in command
+
+        plain = wizard_module._ownership_command(rootful, path, uid)
+        assert plain == f"mkdir -p {path} && sudo chown {uid} {path}"
+
+    warnings = wizard_module.check_consistency(rootless)
+    assert any("docker run --rm --user 0" in warning for warning in warnings)
+    assert not any("sudo chown" in warning for warning in warnings)
+    assert not any(
+        "docker run --rm --user 0" in warning
+        for warning in wizard_module.check_consistency(rootful)
+    )
+
+
+def test_a_rootless_logrotate_policy_creates_the_file_as_the_mapped_user(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """
+    logrotate runs on the host and creates the replacement file itself.
+
+    On a rootless daemon it has to name the host ids the container's uid maps
+    to, or the service cannot write to the file the first night it rotates -
+    and the path has to be absolute, because cron does not run logrotate from
+    the directory the compose file is in.
+    """
+    subuid = tmp_path / "subuid"
+    subgid = tmp_path / "subgid"
+    subuid.write_text("someone:100000:65536\nokko:165536:65536\n", encoding="utf-8")
+    subgid.write_text("okko:231072:65536\n", encoding="utf-8")
+    monkeypatch.setattr(wizard_module, "SUBUID_FILE", subuid)
+    monkeypatch.setattr(wizard_module, "SUBGID_FILE", subgid)
+    monkeypatch.setenv("USER", "okko")
+
+    setup = wizard_module.Setup(
+        audit_log=True,
+        audit_storage="filesystem",
+        audit_log_path="./audit",
+        audit_rotation="logrotate",
+        docker_mode="rootless",
+    )
+    policy = wizard_module.render_logrotate_file(setup, tmp_path)
+
+    uid = 165536 + wizard_module.WEB_IMAGE_UID - 1
+    gid = 231072 + wizard_module.WEB_IMAGE_UID - 1
+    assert f"create 0600 {uid} {gid}" in policy
+    assert f"{os.path.realpath(tmp_path)}/audit/audit.log {{" in policy
+    assert "./audit/audit.log {" not in policy
+    assert not any(
+        str(subuid) in warning for warning in wizard_module.check_consistency(setup)
+    )
+
+    # A user with no range is told, rather than handed a policy that
+    # silently names the wrong owner.
+    monkeypatch.setenv("USER", "nobody-here")
+    monkeypatch.setenv("LOGNAME", "nobody-here")
+    monkeypatch.setattr(os, "getuid", lambda: 4242)
+    assert any(str(subuid) in warning for warning in wizard_module.check_consistency(setup))
+
+    setup.docker_mode = "rootful"
+    assert f"create 0600 {wizard_module.WEB_IMAGE_UID} {wizard_module.WEB_IMAGE_UID}" in (
+        wizard_module.render_logrotate_file(setup, tmp_path)
+    )
+
+
+def test_a_rootless_port_that_hides_the_client_address_is_pointed_out() -> None:
+    """The default rootless port driver makes every visitor the same address."""
+    exposed = wizard_module.Setup(docker_mode="rootless", bind_address="0.0.0.0")  # nosec B104
+    assert any(
+        "slirp4netns" in warning for warning in wizard_module.check_consistency(exposed)
+    )
+    # Behind a proxy on the host that sets X-Forwarded-For, nothing is lost.
+    local = wizard_module.Setup(docker_mode="rootless", bind_address="127.0.0.1")
+    assert not any("slirp4netns" in warning for warning in wizard_module.check_consistency(local))
+    rootful = wizard_module.Setup(docker_mode="rootful", bind_address="0.0.0.0")  # nosec B104
+    assert not any(
+        "slirp4netns" in warning for warning in wizard_module.check_consistency(rootful)
+    )

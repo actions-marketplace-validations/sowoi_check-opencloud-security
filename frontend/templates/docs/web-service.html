@@ -910,6 +910,14 @@ unprivileged user the image runs as, before the stack starts:</p>
 <pre><code class="language-bash">mkdir -p /srv/opencloud-scan/audit
 sudo chown 10001 /srv/opencloud-scan/audit
 </code></pre>
+<p>On a <strong>rootless</strong> Docker, uid 10001 in the container is a subordinate uid on the
+host, so run the <code>chown</code> inside a container instead - as the user namespace's
+root, which is you, and without sudo:</p>
+<pre><code class="language-bash">docker run --rm --user 0 --entrypoint chown \
+  -v /srv/opencloud-scan/audit:/target redis:8.10-alpine 10001 /target
+</code></pre>
+<p>Keep it apart from a Redis data directory: Redis writes as uid 999, and one
+directory can only belong to one of them.</p>
 <h4 id="letting-the-hosts-logrotate-keep-it">Letting the host's logrotate keep it</h4>
 <p>A file on the host's filesystem is something the host already knows how to
 look after, and an estate with a retention policy would rather express it
