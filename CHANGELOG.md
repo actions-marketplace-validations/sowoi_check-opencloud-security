@@ -12,6 +12,8 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+## [1.22.2] - 2026-09-13
+
 ### Added
 
 - **The bundled Authentik requires a second factor at every sign-in.**
