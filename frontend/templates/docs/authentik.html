@@ -23,6 +23,7 @@
   <a href="#what-the-blueprint-created" lang="en">What the blueprint created</a>
   <a href="#a-second-factor-for-everybody" lang="en">A second factor for everybody</a>
   <a href="#accounts-without-the-admin-interface" lang="en">Accounts without the admin interface</a>
+  <a href="#an-operator-for-admin" lang="en">An operator for /admin</a>
   <a href="#pointing-the-scanner-at-it" lang="en">Pointing the scanner at it</a>
   <a href="#adding-somebody-who-may-use-the-endpoint" lang="en">Adding somebody who may use the endpoint</a>
   <a href="#getting-a-token" lang="en">Getting a token</a>
@@ -58,8 +59,18 @@ way around it.</p>
 <li><a href="#running-the-stack">Running the stack</a></li>
 <li><a href="#sending-mail">Sending mail</a></li>
 <li><a href="#what-the-blueprint-created">What the blueprint created</a></li>
-<li><a href="#a-second-factor-for-everybody">A second factor for everybody</a></li>
+<li><a href="#a-second-factor-for-everybody">A second factor for everybody</a><ul>
+<li><a href="#what-the-person-sees">What the person sees</a></li>
+<li><a href="#how-it-is-enforced">How it is enforced</a></li>
+</ul>
+</li>
 <li><a href="#accounts-without-the-admin-interface">Accounts without the admin interface</a></li>
+<li><a href="#an-operator-for-admin">An operator for /admin</a><ul>
+<li><a href="#with-the-wizard">With the wizard</a></li>
+<li><a href="#by-hand-in-the-authentik-interface">By hand, in the Authentik interface</a></li>
+<li><a href="#checking-it">Checking it</a></li>
+</ul>
+</li>
 <li><a href="#pointing-the-scanner-at-it">Pointing the scanner at it</a></li>
 <li><a href="#adding-somebody-who-may-use-the-endpoint">Adding somebody who may use the endpoint</a><ul>
 <li><a href="#a-group-and-the-binding-that-makes-it-mean-something">A group, and the binding that makes it mean something</a></li>
@@ -414,6 +425,23 @@ blueprint sets that same stage to <em>configure</em>:</p>
 </tr>
 </tbody>
 </table>
+<h3 id="what-the-person-sees">What the person sees</h3>
+<ol>
+<li><strong>The first sign-in after the password</strong> stops at <em>Configure an
+   authenticator</em> and offers the two kinds.</li>
+<li><strong>An authenticator app</strong> (TOTP): scan the QR code with any authenticator
+   app, then type the six-digit code it shows to confirm.</li>
+<li><strong>A security key or passkey</strong> (WebAuthn): the browser asks to touch the key,
+   or to use the device's own passkey, and names it.</li>
+<li><strong>Every sign-in after that</strong> asks for a code or a touch after the password.</li>
+<li><strong>Recovery codes</strong> are worth creating straight away: under the user's own
+   settings - the avatar, then <strong>Settings → MFA Devices → Enroll → Static
+   tokens</strong> - Authentik shows a set of one-time codes. Keep them where the phone
+   is not.</li>
+</ol>
+<p>More than one factor can be enrolled from the same page, and a second
+device - a key as well as an app - is the cheapest recovery there is.</p>
+<h3 id="how-it-is-enforced">How it is enforced</h3>
 <p>It changes the default flow's own stage rather than binding a second one, so a
 person with an authenticator is asked once, not twice. To lift the
 requirement, remove the file from the blueprint directory; the stage keeps its
@@ -493,6 +521,104 @@ used; accounts there are made as described under
 <p>The link is not printed by <code>--non-interactive</code>, which prints nothing; build it
 from the public address of Authentik and <code>AUTHENTIK_ENROLLMENT_TOKEN</code> in <code>.env</code>,
 as the comment at the top of the generated compose file shows.</p>
+<h2 id="an-operator-for-admin">An operator for /admin</h2>
+<p>The operator's area needs two things to agree about one person, and they live
+on different sides of the forward auth:</p>
+<table>
+<thead>
+<tr>
+<th>Where</th>
+<th>What it decides</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Authentik: membership of <code>opencloud-scanner-operators</code></td>
+<td>Whether the sign-in is allowed to reach <code>scan.example.com</code> at all. The <code>/admin</code> application is bound to that group, so anybody outside it is stopped at Authentik</td>
+</tr>
+<tr>
+<td>The scan service: <code>COS_WEB_ADMIN_USERS</code></td>
+<td>Whether the username the outpost forwards is an operator of <em>this</em> deployment</td>
+</tr>
+</tbody>
+</table>
+<p>A person needs both: the same username in the group and on the list. What
+follows is the same result reached two ways, and the check at the end applies
+to either.</p>
+<h3 id="with-the-wizard">With the wizard</h3>
+<p>Run <code>docker/setup-wizard.py</code>, turn the operator's area on, and answer:</p>
+<ul>
+<li><strong>the operator's guest list</strong> (<code>admin_users</code>) with the username, for example
+  <code>scanokko</code>;</li>
+<li><strong>who signs in</strong> (<code>authentik_accounts</code>) - the guest list is added to it
+  anyway, so there is nothing to repeat.</li>
+</ul>
+<p>Bring the stack up, build the enrollment link from <code>.env</code> with the command the
+wizard printed (see <a href="#accounts-without-the-admin-interface">accounts without the admin
+interface</a>), and send it to that person.
+They open it and:</p>
+<ol>
+<li>type the username exactly as it is on the guest list, an email address and
+   a password;</li>
+<li>enrol a second factor - scan the QR code with an authenticator app, or
+   register a security key or passkey (see <a href="#what-the-person-sees">what the person
+   sees</a>);</li>
+<li>are signed in, already in <code>opencloud-scanner-operators</code>.</li>
+</ol>
+<p>They can then open <code>https://scan.example.com/admin</code>. To add an operator later,
+run the wizard again against the same directory, add the name to the guest
+list, restart the Authentik containers so they read the new list, and send the
+same link.</p>
+<h3 id="by-hand-in-the-authentik-interface">By hand, in the Authentik interface</h3>
+<p>For an account that already existed before it was put on the guest list, a
+database the enrollment flow never ran against, or an Authentik you run
+yourself.</p>
+<p><strong>1. Get into <code>akadmin</code>.</strong> On a stack the wizard wrote, the password is
+<code>AUTHENTIK_BOOTSTRAP_PASSWORD</code> in <code>.env</code> - but only if the database was created
+by that stack. The variable is applied on the very first start and ignored on a
+database that already has <code>akadmin</code>, so a regenerated <code>.env</code> next to an older
+volume has a password nothing accepts. Mint a one-time way in instead:</p>
+<pre><code class="language-bash">docker compose exec authentik_worker ak create_recovery_key 10 akadmin
+</code></pre>
+<p>It prints a path, valid for ten minutes. Open it on Authentik's public
+address - <code>https://sso.example.com</code> followed by that path - and you are signed
+in as <code>akadmin</code> without a password; set one under the user settings. The
+first sign-in asks <code>akadmin</code> to enrol a second factor like everybody else.</p>
+<p><strong>2. Create the person.</strong> <strong>Directory → Users → New User → Internal User</strong>. The
+username must be spelled exactly as it is in <code>COS_WEB_ADMIN_USERS</code> - the
+service compares the forwarded name, not the email or the display name. Give
+it an email address, so a password recovery has somewhere to go.</p>
+<p><strong>3. Give them a password.</strong> On the user's page, <strong>Set password</strong>, or better
+<strong>Email recovery link</strong> if <a href="#sending-mail">mail</a> is configured, or <strong>Create
+recovery link</strong> to hand the link over some other way. A link means the
+password never passes through your clipboard.</p>
+<p><strong>4. Put them in the group.</strong> On the user's page, <strong>Groups → Add to existing
+group → <code>opencloud-scanner-operators</code></strong>. Or from the group's side:
+<strong>Directory → Groups → opencloud-scanner-operators → Users → Add existing
+user</strong>. Do not tick <em>Superuser</em> anywhere: an Authentik superuser administers
+Authentik, which is not what being an operator of the scanner means.</p>
+<p><strong>5. They sign in.</strong> They open <code>https://scan.example.com/admin</code>, are sent to
+Authentik, sign in, enrol a second factor, and are sent back.</p>
+<p>Steps 2 and 4 can be done from a shell instead - each command on one line, as
+written, because <code>ak shell -c</code> runs the string as a script and a pasted
+indentation is a syntax error:</p>
+<pre><code class="language-bash"># Create the account with no usable password; hand them a recovery link after.
+docker compose exec authentik_worker ak shell -c &quot;from authentik.core.models import User; u = User(username='scanokko', email='scanokko@example.com', name='scanokko'); u.set_unusable_password(); u.save(); print('CREATED')&quot; 2&gt;&amp;1 | grep -E 'CREATED|Error'
+docker compose exec authentik_worker ak create_recovery_key 60 scanokko
+
+# Put it in the operator group.
+docker compose exec authentik_worker ak shell -c &quot;from authentik.core.models import Group, User; Group.objects.get(name='opencloud-scanner-operators').users.add(User.objects.get(username='scanokko')); print('ADDED')&quot; 2&gt;&amp;1 | grep -E 'ADDED|Error|DoesNotExist'
+</code></pre>
+<p>The recovery link from <code>create_recovery_key</code> is how that person sets their own
+password; it expires after the minutes given.</p>
+<h3 id="checking-it">Checking it</h3>
+<p>Membership is the part that fails silently - the person signs in, and Authentik
+shows an error instead of sending them back:</p>
+<pre><code class="language-bash">docker compose exec authentik_worker ak shell -c &quot;from authentik.core.models import Group; g = Group.objects.get(name='opencloud-scanner-operators'); print('IN_GROUP', g.users.filter(username='scanokko').exists())&quot; 2&gt;&amp;1 | grep -E 'IN_GROUP|Error|DoesNotExist'
+</code></pre>
+<p>And the negative case, which is worth the minute: an account that is <em>not</em> in
+the group must get Authentik's error, not the area. <strong>Events → Logs</strong> records
+every refusal with the account and the application it was refused.</p>
 <h2 id="pointing-the-scanner-at-it">Pointing the scanner at it</h2>
 <p>The stack above does this for you - the values below are already in
 <code>docker-compose.authentik.yml</code>, read from <code>.env</code>. This section is for pointing
@@ -969,6 +1095,22 @@ fetched again on the first request.</p>
 <tr>
 <td>Somebody lost their authenticator</td>
 <td>Sign in as <code>akadmin</code> (password <code>AUTHENTIK_BOOTSTRAP_PASSWORD</code> in <code>.env</code>) and delete their device under <strong>Directory → Users</strong></td>
+</tr>
+<tr>
+<td><code>AUTHENTIK_BOOTSTRAP_PASSWORD</code> is refused for <code>akadmin</code></td>
+<td>The database is older than that <code>.env</code> - the variable is applied on the first start only. <code>docker compose exec authentik_worker ak create_recovery_key 10 akadmin</code> prints a one-time sign-in; see <a href="#by-hand-in-the-authentik-interface">an operator for /admin</a></td>
+</tr>
+<tr>
+<td>Signing in to <code>/admin</code> works at Authentik, which then shows an error instead of sending you back</td>
+<td>The account is not in <code>opencloud-scanner-operators</code>. See <a href="#checking-it">checking it</a></td>
+</tr>
+<tr>
+<td>Authentik is in the group and <code>/admin</code> still refuses</td>
+<td>The username is not in <code>COS_WEB_ADMIN_USERS</code>, or is spelled differently there</td>
+</tr>
+<tr>
+<td><code>password authentication failed for user "authentik"</code> in the Authentik log</td>
+<td><code>AUTHENTIK_PG_PASS</code> in <code>.env</code> is not the password the database volume was created with - PostgreSQL reads <code>POSTGRES_PASSWORD</code> only when it initialises an empty volume. Set the old value back, or change the database user's password to the new one with <code>ALTER USER authentik WITH PASSWORD '...'</code> through <code>docker compose exec authentik_postgresql psql -U authentik</code></td>
 </tr>
 <tr>
 <td>The password recovery mail never arrives</td>

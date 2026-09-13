@@ -471,6 +471,13 @@ COS_WEB_ADMIN_USERS=okko;sam
 The wizard asks for all three (`docker/setup-wizard.py`, the "operator's area"
 section) and generates the secret into `.env`.
 
+**An operator is a username in two places**: in `COS_WEB_ADMIN_USERS`, and in
+Authentik's `opencloud-scanner-operators` group, which the `/admin` application
+is bound to. The wizard's enrollment link does both; creating the account and
+adding it to the group by hand, getting into `akadmin` with a recovery key, and
+the second factor every sign-in requires are in
+[`docs/authentik.md`](docs/authentik.md#an-operator-for-admin).
+
 **Off means absent, not protected.** With `COS_WEB_ADMIN_ENABLED` unset the
 routes are never registered and `/admin` answers the same 404 as any other
 unknown path, so a deployment that does not use the area does not disclose

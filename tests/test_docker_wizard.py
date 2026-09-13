@@ -2577,6 +2577,38 @@ def test_the_bundled_provider_leaves_a_person_only_a_password_and_a_second_facto
     assert "AUTHENTIK_ENROLLMENT_TOKEN" not in (elsewhere / ".env").read_text(encoding="utf-8")
 
 
+def test_the_enrollment_link_stands_apart_and_reads_right_for_one_name() -> None:
+    """It is the output that has to reach somebody else, and was scrolled past."""
+    one = wizard_module.Setup(
+        enable_mcp=True, deploy_authentik=True, authentik_accounts="scanokko"
+    )
+    wizard_module._generate_unattended(one)
+    wizard_module._finalise(one)
+    lines = wizard_module.enrollment_instructions(one)
+    text = " ".join(line.strip() for line in lines)
+
+    assert any("ENROLLMENT LINK" in line for line in lines)
+    assert sum(1 for line in lines if set(line.strip()) == {"="}) == 3
+    # The command comes before the placeholder it replaces.
+    command = next(i for i, line in enumerate(lines) if "sed -n" in line)
+    placeholder = next(i for i, line in enumerate(lines) if "<AUTHENTIK_ENROLLMENT_TOKEN>" in line)
+    assert command < placeholder
+    assert "Send it to scanokko. It asks for that username" in text
+    assert "each of" not in text
+    assert "one of those usernames" not in text
+
+    several = wizard_module.Setup(
+        enable_mcp=True, deploy_authentik=True, authentik_accounts="alice;sam;okko"
+    )
+    wizard_module._generate_unattended(several)
+    wizard_module._finalise(several)
+    text = " ".join(
+        line.strip() for line in wizard_module.enrollment_instructions(several)
+    )
+    assert "Send it to alice, sam and okko. It asks for one of those usernames" in text
+    assert "Each name can be claimed once" in text
+
+
 def test_an_operator_is_always_someone_who_can_enrol() -> None:
     """
     The guest list for /admin is useless to a name the enrollment link refuses.
