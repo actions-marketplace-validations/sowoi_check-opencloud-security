@@ -104,13 +104,40 @@ entries:
     attrs:
       enabled: true
 
-  # The outpost that serves the forward-auth endpoint for it.
+  # The outpost that answers the forward-auth subrequest: authentik's own
+  # embedded one, which listens on the server's port 9000 - the address the
+  # generated reverse proxy sends `/outpost.goauthentik.io/` to - and routes a
+  # request there only for a host belonging to a provider assigned to it.
+  # Without this entry the core answers that path with 404, and nginx turns
+  # a 404 from `auth_request` into a 500 for every request to /admin.
+  #
+  # `state: present`, and that has a cost worth knowing: blueprints are
+  # re-applied every hour, and `providers` is replaced rather than merged, so
+  # a provider assigned to the embedded outpost by hand is taken off it again.
+  # This authentik is the one this stack brings; give any other application a
+  # blueprint of its own that lists every provider, or an outpost of its own.
+  #
+  # An earlier version created a separate proxy outpost here instead. Nothing
+  # in this stack runs one, and the entry itself was invalid - it named no
+  # `config`, so authentik refused it and, a blueprint being applied as a
+  # whole, rolled back the provider, application and binding above with it.
   - model: authentik_outposts.outpost
-    state: created
+    state: present
     identifiers:
-      name: check-opencloud-security - admin outpost
+      managed: goauthentik.io/outposts/embedded
     attrs:
-      name: check-opencloud-security - admin outpost
-      type: proxy
       providers:
         - !KeyOf admin-provider
+      # Where the outpost sends a browser to sign in. Left empty, the embedded
+      # outpost redirects to http://localhost/application/o/authorize/, which
+      # is nowhere a visitor can reach. A full URL - a bare host name is not
+      # accepted. This replaces the whole outpost configuration on every
+      # apply; unnamed keys keep their defaults.
+      config:
+        authentik_host: !Env [COS_AUTHENTIK_URL, "http://localhost:9000"]
+
+  # Removed again where that earlier version did manage to create it.
+  - model: authentik_outposts.outpost
+    state: absent
+    identifiers:
+      name: check-opencloud-security - admin outpost

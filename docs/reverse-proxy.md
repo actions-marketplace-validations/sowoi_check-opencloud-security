@@ -277,6 +277,38 @@ backend opencloud
   own configuration (`proxy_set_header X-Forwarded-Host $host;`) rather than
   forwarding whatever arrived. A default virtual host that refuses a name it
   does not recognise closes the same door for the `Host` header.
+- **No default server.** Without one, nginx answers a `Host` it has no
+  `server_name` for from whichever `server` block it loaded first for that
+  port - often a different application on the same machine - and Apache from
+  the first `<VirtualHost>`. When that site redirects with `$host`, the probe
+  host comes back in the `Location`, and `forwardedHostIgnored` fails with
+  `Host comes back as the address it redirects to` although OpenCloud never
+  saw the request and `OC_URL` is set correctly. A different certificate or a
+  different set of headers on a request with a made-up `Host` is the tell:
+
+  ```bash
+  curl -sI -H "Host: unknown.invalid" https://opencloud.example.com/.well-known/openid-configuration
+  ```
+
+  Give the proxy an explicit default server that refuses every name it does
+  not serve, and write redirects in other sites with their own name rather
+  than `$host`:
+
+  ```nginx
+  server {
+      listen 80 default_server;
+      listen [::]:80 default_server;
+      listen 443 ssl default_server;
+      listen [::]:443 ssl default_server;
+      server_name _;
+      ssl_reject_handshake on;   # nginx 1.19.4 and later; no certificate needed
+      return 444;
+  }
+  ```
+
+  In Apache, make the first `<VirtualHost>` for each port one that serves
+  nothing (`Redirect 403 /`). Caddy and Traefik answer an unknown name
+  without routing it to a site, so they need nothing here.
 - **HTTP left open.** A redirect is enough; this check follows it and grades
   the destination. What it will not forgive is a plain-HTTP listener that
   serves the interface as well - that is the `httpsEnforced` flag

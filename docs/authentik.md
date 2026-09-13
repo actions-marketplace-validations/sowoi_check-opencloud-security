@@ -23,6 +23,8 @@ way around it.
   * [Running the stack](#running-the-stack)
   * [Sending mail](#sending-mail)
   * [What the blueprint created](#what-the-blueprint-created)
+  * [A second factor for everybody](#a-second-factor-for-everybody)
+  * [Accounts without the admin interface](#accounts-without-the-admin-interface)
   * [Pointing the scanner at it](#pointing-the-scanner-at-it)
   * [Adding somebody who may use the endpoint](#adding-somebody-who-may-use-the-endpoint)
     * [A group, and the binding that makes it mean something](#a-group-and-the-binding-that-makes-it-mean-something)
@@ -83,6 +85,10 @@ docker compose -f docker-compose.authentik.yml up -d
 Then open **<http://127.0.0.1:9000/if/flow/initial-setup/>** - the trailing
 slash is required, without it you get a 404 - and set the password for the
 `akadmin` account. That flow is offered once.
+
+The first sign-in after that asks `akadmin` to enrol a second factor - an
+authenticator app or a security key - before it completes; see
+[a second factor for everybody](#a-second-factor-for-everybody).
 
 That is the whole setup. There is no provider to create, no client ID to copy
 between two windows, and nothing to switch on afterwards: **the sign-in
@@ -261,6 +267,100 @@ To do it by hand instead - against an Authentik you already run, say - the
 wizard under **Applications → Applications → Create with wizard** asks for the
 same things in the same order, and the table above is the answer sheet.
 
+## A second factor for everybody
+
+`authentik/blueprints/opencloud-mfa.yaml` is mounted with the others, and it
+makes a second factor part of every sign-in. Authentik's default
+authentication flow already contains a stage that checks one -
+`default-authentication-mfa-validation` - but it ships set to *skip* an
+account that has none, which on a new directory is every account. The
+blueprint sets that same stage to *configure*:
+
+| | Value |
+|:--|:-----|
+| **Account without a factor** | Taken through enrolling one before the sign-in completes |
+| **Offered** | TOTP (an authenticator app) and WebAuthn (a security key or passkey) |
+| **Accepted afterwards** | TOTP, WebAuthn, and static recovery codes created from the user's own settings |
+| **Re-applied** | Every hour (`state: present`), so it cannot be switched off in the interface and forgotten |
+
+It changes the default flow's own stage rather than binding a second one, so a
+person with an authenticator is asked once, not twice. To lift the
+requirement, remove the file from the blueprint directory; the stage keeps its
+last setting until you change it.
+
+Two things it does not touch. **Agents** using `client_credentials` sign in
+with an app password and never run a flow, so a token for `/mcp` needs no code
+from anybody's phone. And **a lost authenticator** is recovered by an
+administrator: sign in as `akadmin`, open **Directory → Users**, and delete
+the person's device under *MFA Authenticators*; their next sign-in enrols a
+new one.
+
+## Accounts without the admin interface
+
+A stack written by `docker/setup-wizard.py` goes one step further, and nobody
+creates an account by hand at all. The wizard asks **who signs in**, by
+username - everybody on the operator's guest list, `COS_WEB_ADMIN_USERS`, is on
+it whether repeated or not - and writes three things:
+
+| Where | What |
+|:------|:-----|
+| `.env` | `AUTHENTIK_ENROLLMENT_TOKEN`, a random UUID, and `AUTHENTIK_BOOTSTRAP_PASSWORD` for `akadmin` |
+| The compose file | `COS_AUTHENTIK_ACCOUNTS`, the usernames, and `COS_WEB_ADMIN_USERS`, for both Authentik containers |
+| `authentik/blueprints/` | `opencloud-enrollment.yaml` and `opencloud-mfa.yaml`, beside the other two |
+
+and it ends by printing one link:
+
+```
+https://sso.example.com/if/flow/opencloud-scanner-enrollment/?itoken=<AUTHENTIK_ENROLLMENT_TOKEN>
+```
+
+The token is a credential, so the wizard prints the placeholder rather than
+the value, and beside it the command that assembles the real link from `.env`:
+
+```
+echo "https://sso.example.com/if/flow/opencloud-scanner-enrollment/?itoken=$(sed -n 's/^AUTHENTIK_ENROLLMENT_TOKEN=//p' .env)"
+```
+
+Each person named opens it, types their username, an email address and a
+password, enrols an authenticator app or a security key, and is signed in.
+Somebody on the operator's guest list lands in `opencloud-scanner-operators`,
+the group `/admin` is bound to, on the way. Nothing is clicked in Authentik -
+by them or by you.
+
+The link is a way in, so three things bound it:
+
+- **Only the listed names.** A username not in `COS_AUTHENTIK_ACCOUNTS` is
+  refused at the form, and an empty list admits nobody.
+- **Each name once.** The username field refuses a name that already exists,
+  so a name that has enrolled cannot be claimed again, and the link is useless
+  once everybody on the list has used it.
+- **Only with the token.** Without it - or with any other - the flow answers
+  *access denied* before showing a field.
+
+Treat it like a password until everybody has used it. To add somebody later,
+run the wizard again, add the name, and send the same link; to retire the
+link, replace `AUTHENTIK_ENROLLMENT_TOKEN` in `.env` with a new UUID and
+restart the Authentik containers, and the invitation is re-applied under the
+new token. A person who stops after the password and before the second factor
+has an account already: signing in normally takes them through enrolling the
+factor then.
+
+**`akadmin` is kept for recovery.** `AUTHENTIK_BOOTSTRAP_PASSWORD` gives it a
+random password on the very first start, which also closes the
+`/if/flow/initial-setup/` flow - otherwise the first person to reach it would
+become the administrator. It too is asked to enrol a second factor on its
+first sign-in. The variable has no effect on a database that already has
+`akadmin`.
+
+`docker-compose.authentik.yml`, run by hand, mounts the enrollment blueprint
+as well but has no token, so no invitation is created and the flow cannot be
+used; accounts there are made as described under
+[adding somebody](#adding-somebody-who-may-use-the-endpoint).
+
+The link is not printed by `--non-interactive`, which prints nothing; build it
+from the public address of Authentik and `AUTHENTIK_ENROLLMENT_TOKEN` in `.env`,
+as the comment at the top of the generated compose file shows.
+
 ## Pointing the scanner at it
 
 The stack above does this for you - the values below are already in
@@ -368,12 +468,10 @@ client takes them through Authentik, they log in, and the client gets a token.
 Nothing has to be copied, and there is no per-user configuration on the
 scanner side at all.
 
-**Multi-factor authentication is worth the two minutes here.** The endpoint
-executes scans against systems the person is responsible for, and a password
-alone is a password alone. The user enrols an authenticator from their own
-settings page at `/if/user/#/settings`; requiring it for everybody is a
-matter of adding an authenticator validation stage to the authentication
-flow, which is Authentik's business rather than this project's.
+**A second factor is already required.** The person is taken through
+enrolling one on their first sign-in - see
+[a second factor for everybody](#a-second-factor-for-everybody) - so there is
+nothing to switch on for them.
 
 ### The agent that is nobody
 
@@ -674,6 +772,10 @@ fetched again on the first request.
 | The token request itself is refused, before `/mcp` is ever reached | The account is not bound to the application. **Events → Logs** records it as a denied authorization, naming the account |
 | It worked until a group binding was added, using only the client secret | That path runs as the service account Authentik generated, `ak-check-opencloud-security-client_credentials`, and it is not in the group either. Add it, or move to a service account of your own |
 | `invalid_grant` on a `client_credentials` request | The `password` is an **app password**, not the user's login password and not an API token. Create one under **Directory → Tokens and App passwords** |
+| The enrollment link answers *access denied* | The token is not the one in `.env`, or the stack was started without `AUTHENTIK_ENROLLMENT_TOKEN`. Check **Customisation → Blueprints** for `check-opencloud-security - enrollment` |
+| "This username is not one this invitation was issued for." | The name is not in `COS_AUTHENTIK_ACCOUNTS`. Run the wizard again and add it; the list is read when the form is submitted, after a restart of the Authentik containers |
+| "Username is already taken." on the enrollment link | That name has enrolled already. Sign in normally instead |
+| Somebody lost their authenticator | Sign in as `akadmin` (password `AUTHENTIK_BOOTSTRAP_PASSWORD` in `.env`) and delete their device under **Directory → Users** |
 | The password recovery mail never arrives | No mail server, so Authentik delivered it locally. See [sending mail](#sending-mail) |
 | No `WWW-Authenticate` on the 401 | Something in front is stripping it. The header is how a client finds the provider |
 | The endpoint is open when it should not be | `COS_WEB_MCP_AUTH_ENABLED` did not reach the container. `/.well-known/ai.json` reports what the service actually believes: `mcp.authentication.type` |

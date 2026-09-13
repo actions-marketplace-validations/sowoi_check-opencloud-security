@@ -162,8 +162,10 @@ example answer, then writes into whichever directory you point it at:
 - the **Redis password**, generated into that same `.env`;
 - when you ask it to bring an identity provider, the **Authentik
   blueprints**, in `authentik/blueprints/` beside the compose file that mounts
-  them — the OAuth2 one that issues tokens for `/mcp`, and, where there is an
-  operator's area to guard, the proxy one that signs somebody into `/admin`;
+  them — the OAuth2 one that issues tokens for `/mcp`, the one that requires a
+  second factor at every sign-in, the invitation-only enrollment flow, and,
+  where there is an operator's area to guard, the proxy one that signs
+  somebody into `/admin`;
 - when you name one, a **reverse proxy configuration** — nginx, Apache,
   Caddy or Traefik — see [The reverse proxy](#the-reverse-proxy);
 - and `.<compose-file>.answers.json`, the **wizard's own notebook** of what it
@@ -278,6 +280,16 @@ blueprint, `opencloud-admin.yaml`, is copied beside the compose file too: it
 provisions the proxy provider, the operator group and the outpost that the
 generated reverse proxy then asks about every request to the area.
 
+**Nobody clicks anything in Authentik.** The wizard asks who signs in, by
+username, and prints one enrollment link at the end. Each person named opens
+it, chooses a password and enrols an authenticator app or a security key -
+every sign-in requires a second factor - and an operator lands in the group
+`/admin` is bound to on the way. The link carries `AUTHENTIK_ENROLLMENT_TOKEN`
+from `.env`, admits only the listed names, each once, and `akadmin` gets a
+generated `AUTHENTIK_BOOTSTRAP_PASSWORD` for recovery, which also closes the
+initial-setup flow. See
+[`../docs/authentik.md`](../docs/authentik.md#accounts-without-the-admin-interface).
+
 **The mail questions are asked in full.** Naming a server is what brings the
 rest of the session into play - the port, whether it is STARTTLS, implicit TLS
 or neither, whether the server wants an account and which - so that a
@@ -292,15 +304,15 @@ message.
 refuses rather than asking - there is no login page to arrive at and no
 password prompt to get wrong, so a request missing any part of the
 arrangement meets the same 404 as any unknown path. The wizard therefore ends
-with the steps in order, filled in with this deployment's own addresses: set
-the first Authentik password, put that account in the
-`opencloud-scanner-operators` group, install the generated proxy
+with the steps in order, filled in with this deployment's own addresses:
+create the account at the enrollment link, install the generated proxy
 configuration, give Caddy or Traefik the shared secret in its environment,
 check `COS_WEB_ADMIN_USERS` names the same person, and open the area. Then
 what each failure means:
 
 | What you see | What is missing |
 |:--|:--|
+| A 500 instead of a sign-in | The forward auth reached Authentik but no outpost answered it: the operator-area blueprint did not apply, or the embedded outpost does not carry its provider. Re-run the wizard, `docker compose up -d`, then `docker compose exec authentik_worker ak apply_blueprint /blueprints/custom/opencloud-admin.yaml` |
 | No sign-in at all, just 404 | The `X-COS-Admin-Proxy` header never arrived — the proxy in front is not adding it |
 | Signed in, then 404 | That account is not in `COS_WEB_ADMIN_USERS` |
 | The sign-in loops | The provider's public address is not the one the browser used |

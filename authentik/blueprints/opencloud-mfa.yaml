@@ -1,0 +1,85 @@
+# A second factor for every account that signs in, from the first sign-in.
+#
+# Authentik's default authentication flow already has a stage that checks a
+# second factor - `default-authentication-mfa-validation` - but it ships
+# configured to *skip* anybody who has none, which on a fresh directory is
+# everybody. This changes that one stage to *configure* instead: an account
+# without an authenticator is taken through enrolling one, TOTP or WebAuthn,
+# before the sign-in completes, and asked for it on every sign-in after that.
+#
+# It is the default flow's own stage that changes, rather than a second one
+# bound beside it, so an account with an authenticator is asked once and not
+# twice - and the enrollment flow in `opencloud-enrollment.yaml` binds the
+# same stage, so an account created there has a second factor before it has
+# a session.
+#
+# `state: present`, deliberately. Blueprints are re-applied every hour, so the
+# requirement cannot quietly be switched off in the admin interface and
+# forgotten. To lift it, remove this file from the blueprint directory; the
+# stage keeps its last setting until somebody changes it.
+#
+# What it does not reach: an agent using the client_credentials grant signs in
+# with an app password and never runs a flow, which is correct - a cron job
+# has no phone to read a code from. Recovery when a person loses their
+# authenticator is the `akadmin` account, whose password the setup wizard
+# writes into `.env` as AUTHENTIK_BOOTSTRAP_PASSWORD: sign in as it (it is
+# asked to enrol a factor too) and delete the lost device under
+# Directory > Users.
+
+version: 1
+
+metadata:
+  name: check-opencloud-security - multi-factor authentication
+  labels:
+    blueprints.goauthentik.io/instantiate: "true"
+    blueprints.goauthentik.io/description: >-
+      Requires every account to enrol and use a second factor when it signs
+      in.
+
+entries:
+  # The stage and the two setup stages below are Authentik's own, and the
+  # order blueprints are applied in is not guaranteed. Without these a first
+  # start could look the setup stages up a moment before they exist.
+  - model: authentik_blueprints.metaapplyblueprint
+    attrs:
+      identifiers:
+        name: Default - Authentication flow
+      required: true
+  - model: authentik_blueprints.metaapplyblueprint
+    attrs:
+      identifiers:
+        name: Default - TOTP MFA setup flow
+      required: true
+  - model: authentik_blueprints.metaapplyblueprint
+    attrs:
+      identifiers:
+        name: Default - WebAuthn MFA setup flow
+      required: true
+
+  - model: authentik_stages_authenticator_validate.authenticatorvalidatestage
+    state: present
+    identifiers:
+      name: default-authentication-mfa-validation
+    attrs:
+      # Enrol rather than skip, and deny nobody for lacking one yet: the
+      # person is shown the choice below and completes the sign-in afterwards.
+      not_configured_action: configure
+      # Offered in this order. An authenticator app works everywhere; a
+      # security key or passkey is the stronger of the two.
+      configuration_stages:
+        - !Find [
+          authentik_stages_authenticator_totp.authenticatortotpstage,
+          [name, default-authenticator-totp-setup],
+        ]
+        - !Find [
+          authentik_stages_authenticator_webauthn.authenticatorwebauthnstage,
+          [name, default-authenticator-webauthn-setup],
+        ]
+      # What counts as a second factor once enrolled. Static recovery codes
+      # are accepted because a person can create them from their own settings
+      # as a fallback; nothing here can enrol SMS, Duo or email, so they are
+      # left out rather than advertised.
+      device_classes:
+        - totp
+        - webauthn
+        - static

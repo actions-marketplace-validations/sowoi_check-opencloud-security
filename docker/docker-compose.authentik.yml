@@ -231,6 +231,12 @@ services:
   # and secret from `.env`. That is the difference between this stack and a
   # page of instructions: there is nothing to click, and the issuer and the
   # audience above are already right.
+  #
+  # The same directory carries `opencloud-mfa.yaml`, which makes every sign-in
+  # require a second factor: the first one enrols an authenticator app or a
+  # security key. `opencloud-enrollment.yaml` is there too, but creates no
+  # invitation here - that needs AUTHENTIK_ENROLLMENT_TOKEN, which only the
+  # setup wizard generates.
 
   authentik_postgresql:
     image: docker.io/library/postgres:18.6-alpine
@@ -261,7 +267,7 @@ services:
       - no-new-privileges:true
 
   authentik_server:
-    image: "${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2026.8.0}"
+    image: "${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2026.8.2}"
     container_name: opencloud-scan-authentik
     restart: unless-stopped
     command: server
@@ -316,6 +322,10 @@ services:
       AUTHENTIK_SCANNER_CLIENT_ID: "${AUTHENTIK_CLIENT_ID}"
       AUTHENTIK_SCANNER_CLIENT_SECRET: "${AUTHENTIK_CLIENT_SECRET:?run ./authentik-env.sh, or set AUTHENTIK_CLIENT_SECRET in docker/.env}"
       AUTHENTIK_SCANNER_REDIRECT_URI: "${AUTHENTIK_REDIRECT_URI:-http://localhost:8811/}"
+      # Read by the operator-area blueprint: where the embedded outpost sends a
+      # browser to sign in, and the address /admin is served at.
+      COS_AUTHENTIK_URL: "${AUTHENTIK_URL:-http://localhost:9000}"
+      COS_WEB_ADMIN_URL: "${COS_WEB_PUBLIC_BASE_URL:-http://localhost:8811}"
     ports:
       - "127.0.0.1:${AUTHENTIK_PORT_HTTP:-9000}:9000"
       - "127.0.0.1:${AUTHENTIK_PORT_HTTPS:-9443}:9443"
@@ -336,7 +346,7 @@ services:
       - no-new-privileges:true
 
   authentik_worker:
-    image: "${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2026.8.0}"
+    image: "${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2026.8.2}"
     container_name: opencloud-scan-authentik-worker
     restart: unless-stopped
     command: worker
@@ -391,6 +401,10 @@ services:
       AUTHENTIK_SCANNER_CLIENT_ID: "${AUTHENTIK_CLIENT_ID}"
       AUTHENTIK_SCANNER_CLIENT_SECRET: "${AUTHENTIK_CLIENT_SECRET}"
       AUTHENTIK_SCANNER_REDIRECT_URI: "${AUTHENTIK_REDIRECT_URI:-http://localhost:8811/}"
+      # Read by the operator-area blueprint: where the embedded outpost sends a
+      # browser to sign in, and the address /admin is served at.
+      COS_AUTHENTIK_URL: "${AUTHENTIK_URL:-http://localhost:9000}"
+      COS_WEB_ADMIN_URL: "${COS_WEB_PUBLIC_BASE_URL:-http://localhost:8811}"
     # The upstream compose file gives this container the Docker socket so it
     # can manage outpost containers. This stack runs no outposts, so it does
     # not: handing a container the daemon socket is handing it the host.

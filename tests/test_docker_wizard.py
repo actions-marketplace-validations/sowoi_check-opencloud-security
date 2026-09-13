@@ -15,7 +15,9 @@ import importlib.util
 import json
 import os
 import stat
+import subprocess  # nosec B404 - runs the command the wizard prints
 import sys
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -1280,6 +1282,12 @@ def test_the_area_gets_the_blueprint_that_provisions_its_way_in(
     document = yaml.safe_load((tmp_path / "docker-compose.yml").read_text(encoding="utf-8"))
     server = document["services"]["authentik_server"]["environment"]
     assert server["COS_WEB_ADMIN_URL"] == "https://scan.example.com"
+    # And where the embedded outpost sends a browser to sign in, for both
+    # containers - the worker is the one that applies the blueprint.
+    for name in ("authentik_server", "authentik_worker"):
+        environment = document["services"][name]["environment"]
+        assert environment["COS_AUTHENTIK_URL"] == setup.authentik_url
+    assert "localhost" in setup.authentik_url
 
     # A deployment with no area gets no proxy provider to leave lying around.
     plain = wizard_module.Setup(enable_mcp=True, deploy_authentik=True)
@@ -1543,6 +1551,10 @@ def test_only_a_proxy_that_can_ask_the_outpost_is_given_an_admin_block(
         for header in wizard_module.ADMIN_IDENTITY_HEADERS:
             assert header in content, (flavour, header)
 
+    # authentik's cookie and identity headers outgrow nginx's default buffers.
+    nginx = wizard_module.render_proxy_file(_admin_setup("nginx"))
+    assert nginx.count("proxy_buffer_size 32k;") == 2
+
     apache = _admin_setup("apache")
     content = wizard_module.render_proxy_file(apache)
     assert "forward" in content.lower()
@@ -1798,14 +1810,17 @@ def test_turning_the_operators_area_on_prints_what_to_do_next() -> None:
     walkthrough = "\n".join(wizard_module.admin_walkthrough(setup))
 
     # Every step somebody has to take in a browser or as root, in order.
-    assert wizard_module.AUTHENTIK_INITIAL_SETUP_PATH in walkthrough
+    assert "enrollment link" in walkthrough
     assert wizard_module.AUTHENTIK_OPERATOR_GROUP in walkthrough
+    # Joining the group is done by the enrollment flow, not by a click.
+    assert "Directory > Groups" not in walkthrough
     assert "COS_WEB_ADMIN_USERS" in walkthrough
     assert "https://scan.example.com/admin" in walkthrough
     # And what the 404 it may answer with actually means.
     assert wizard_module.ADMIN_PROXY_HEADER in walkthrough
     assert "404" in walkthrough
-    assert [line for line in walkthrough.splitlines() if line.strip().startswith("6.")]
+    assert [line for line in walkthrough.splitlines() if line.strip().startswith("5.")]
+    assert not [line for line in walkthrough.splitlines() if line.strip().startswith("6.")]
 
     # An area nobody turned on has nothing to explain.
     assert wizard_module.admin_walkthrough(wizard_module.Setup()) == []
@@ -1830,7 +1845,7 @@ def test_the_walkthrough_describes_the_deployment_it_was_written_for() -> None:
     walkthrough = "\n".join(wizard_module.admin_walkthrough(own))
 
     assert wizard_module.AUTHENTIK_OPERATOR_GROUP not in walkthrough
-    assert wizard_module.AUTHENTIK_INITIAL_SETUP_PATH not in walkthrough
+    assert "enrollment link" not in walkthrough
     assert wizard_module.ADMIN_IDENTITY_HEADERS[0] in walkthrough
     assert "COS_WEB_ADMIN_SIGN_OUT_URL" in walkthrough
 
@@ -2364,3 +2379,157 @@ def test_a_rootless_port_that_hides_the_client_address_is_pointed_out() -> None:
     assert not any(
         "slirp4netns" in warning for warning in wizard_module.check_consistency(rootful)
     )
+
+
+def test_a_rerun_moves_a_remembered_authentik_pin_to_the_newer_patch(tmp_path: Path) -> None:
+    """
+    The pin is remembered like every other answer, and a patch is not a decision.
+
+    Re-running a newer wizard against an existing deployment used to keep
+    writing the Authentik release it was first set up with, security fixes
+    and all. A newer patch of the same series is taken; a newer series is
+    only pointed out, because it can carry migrations worth reading first.
+    """
+    year, month, patch = wizard_module._authentik_release(wizard_module.AUTHENTIK_TAG)
+    answers = tmp_path / wizard_module.answers_filename("docker-compose.yml")
+
+    if patch:
+        older_patch = f"{year}.{month}.{patch - 1}"
+        answers.write_text(
+            json.dumps({"deploy_authentik": True, "authentik_tag": older_patch}),
+            encoding="utf-8",
+        )
+        assert _run(tmp_path, "--force") == 0
+        server = _compose(tmp_path)["services"]["authentik_server"]
+        assert server["image"].endswith(f":{wizard_module.AUTHENTIK_TAG}")
+
+    older_series = f"{year}.{month - 1 if month > 1 else 12}.5"
+    setup = wizard_module.Setup(deploy_authentik=True, authentik_tag=older_series)
+    assert wizard_module.follow_authentik_patch(setup) is None
+    assert setup.authentik_tag == older_series
+    assert any(older_series in warning for warning in wizard_module.check_consistency(setup))
+
+    # A pin somebody moved *ahead* of the wizard, or named oddly, is theirs.
+    for tag in (f"{year}.{month}.{patch + 1}", "latest"):
+        ahead = wizard_module.Setup(deploy_authentik=True, authentik_tag=tag)
+        assert wizard_module.follow_authentik_patch(ahead) is None
+        assert ahead.authentik_tag == tag
+
+
+def test_the_bundled_provider_leaves_a_person_only_a_password_and_a_second_factor_to_choose(
+    tmp_path: Path,
+) -> None:
+    """
+    Nothing about the bundled Authentik is set up by clicking in its interface.
+
+    It used to end in instructions: set akadmin's password at the initial-setup
+    flow - which whoever reached it first could do instead - create each
+    account, put the operator in the right group, and turn on a second factor
+    by editing a flow. The wizard now closes the initial-setup flow with a
+    generated bootstrap password, copies the blueprints that require a second
+    factor and provide an invitation-only enrollment flow, and prints the link
+    each listed person opens to choose a password and enrol an authenticator.
+    """
+    setup = wizard_module.Setup(
+        enable_mcp=True,
+        mcp_auth_enabled=True,
+        admin_enabled=True,
+        admin_users="okko",
+        authentik_accounts="alice;okko",
+        deploy_authentik=True,
+        public_base_url="https://scan.example.com",
+    )
+    wizard_module._generate_unattended(setup)
+    wizard_module._finalise(setup)
+    wizard_module.write_files(setup, tmp_path / "docker-compose.yml", tmp_path / ".env")
+
+    blueprints = tmp_path / "authentik" / "blueprints"
+    assert (blueprints / "opencloud-mfa.yaml").is_file()
+    assert (blueprints / "opencloud-enrollment.yaml").is_file()
+
+    env = _env(tmp_path)
+    token = env["AUTHENTIK_ENROLLMENT_TOKEN"]
+    assert str(uuid.UUID(token)) == token
+    assert len(env["AUTHENTIK_BOOTSTRAP_PASSWORD"]) >= 32
+
+    compose_text = (tmp_path / "docker-compose.yml").read_text(encoding="utf-8")
+    # Both credentials by reference only.
+    assert token not in compose_text
+    assert env["AUTHENTIK_BOOTSTRAP_PASSWORD"] not in compose_text
+    assert "/if/flow/initial-setup/" not in compose_text
+
+    document = yaml.safe_load(compose_text)
+    for name in ("authentik_server", "authentik_worker"):
+        environment = document["services"][name]["environment"]
+        assert environment["COS_AUTHENTIK_ENROLLMENT_TOKEN"] == "${AUTHENTIK_ENROLLMENT_TOKEN:-}"
+        assert environment["AUTHENTIK_BOOTSTRAP_PASSWORD"] == "${AUTHENTIK_BOOTSTRAP_PASSWORD:-}"
+        assert environment["COS_AUTHENTIK_ACCOUNTS"] == "alice;okko"
+        # What puts an enrolled operator into the group /admin is bound to.
+        assert environment["COS_WEB_ADMIN_USERS"] == "okko"
+
+    lines = wizard_module.enrollment_instructions(setup)
+    instructions = "\n".join(lines)
+    # The token is a credential: printed, it outlives the run in scrollback
+    # and CI logs. What is printed assembles the link from .env instead.
+    assert token not in instructions
+    assert "?itoken=<AUTHENTIK_ENROLLMENT_TOKEN>" in instructions
+    command = next(line.strip() for line in lines if "sed -n" in line)
+    link = subprocess.run(  # nosec B602 - the command the wizard prints, run as printed
+        command, shell=True, cwd=tmp_path, capture_output=True, text=True, check=True
+    ).stdout.strip()
+    assert link == (
+        f"{setup.authentik_url.rstrip('/')}{wizard_module.AUTHENTIK_ENROLLMENT_PATH}?itoken={token}"
+    )
+    assert "second factor" in instructions
+    assert "alice" in instructions and "okko" in instructions
+
+    # A re-run is an edit: the link that was already sent keeps working.
+    assert _run(tmp_path, "--force") == 0
+    assert _env(tmp_path)["AUTHENTIK_ENROLLMENT_TOKEN"] == token
+
+    # A deployment without Authentik carries none of it.
+    plain = wizard_module.Setup(enable_mcp=True)
+    wizard_module._generate_unattended(plain)
+    wizard_module._finalise(plain)
+    assert plain.authentik_enrollment_token == ""
+    assert plain.authentik_bootstrap_password == ""
+    assert wizard_module.enrollment_instructions(plain) == []
+    elsewhere = tmp_path / "plain"
+    wizard_module.write_files(plain, elsewhere / "docker-compose.yml", elsewhere / ".env")
+    assert not (elsewhere / "authentik").exists()
+    assert "AUTHENTIK_ENROLLMENT_TOKEN" not in (elsewhere / ".env").read_text(encoding="utf-8")
+
+
+def test_an_operator_is_always_someone_who_can_enrol() -> None:
+    """
+    The guest list for /admin is useless to a name the enrollment link refuses.
+
+    Everybody on COS_WEB_ADMIN_USERS is added to the accounts that may enrol,
+    once, so the two lists cannot disagree in the direction that locks an
+    operator out. A token that is no UUID - it becomes an invitation's primary
+    key - is replaced rather than failing the whole blueprint, and a stack that
+    names nobody is warned about.
+    """
+    setup = wizard_module.Setup(
+        admin_enabled=True,
+        admin_users="okko;carol",
+        authentik_accounts="alice;okko",
+        deploy_authentik=True,
+        authentik_enrollment_token="not-a-uuid",
+    )
+    wizard_module._finalise(setup)
+    assert setup.authentik_accounts == "alice;okko;carol"
+    assert str(uuid.UUID(setup.authentik_enrollment_token)) == setup.authentik_enrollment_token
+    assert not any("admits nobody" in w for w in wizard_module.check_consistency(setup))
+
+    # Only an area that exists contributes its guest list.
+    no_area = wizard_module.Setup(
+        enable_mcp=True, admin_users="okko", deploy_authentik=True
+    )
+    wizard_module._finalise(no_area)
+    assert no_area.authentik_accounts == ""
+    assert any("admits nobody" in w for w in wizard_module.check_consistency(no_area))
+
+    assert wizard_module._usernames("alice; bob.smith@example.com") is None
+    assert wizard_module._usernames("alice bob") is not None
+    assert wizard_module._usernames("alice;'); drop") is not None
