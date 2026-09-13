@@ -437,7 +437,9 @@ def test_the_wizard_names_no_real_host(tmp_path: Path) -> None:
     """Placeholders only, in the questions as well as in the generated files."""
     import re
 
-    source = WIZARD_PATH.read_text(encoding="utf-8")
+    # Without escapes: the embedded blueprints carry redirect URIs as regular
+    # expressions, and `127\.0\.0\.1` is still the loopback address.
+    source = WIZARD_PATH.read_text(encoding="utf-8").replace("\\", "")
     allowed = {
         "127.0.0.1",
         "0.0.0.0",
@@ -579,6 +581,81 @@ def test_the_blueprint_travels_beside_the_compose_file_that_mounts_it(
 
     assert _run(tmp_path / "plain") == 0
     assert not (tmp_path / "plain" / "authentik").exists()
+
+
+def test_a_wizard_downloaded_on_its_own_still_writes_every_blueprint(
+    tmp_path: Path,
+) -> None:
+    """The README says to curl the one file; the blueprints must not need a checkout."""
+    download = tmp_path / "download"
+    download.mkdir()
+    lone_wizard = download / "setup-wizard.py"
+    lone_wizard.write_bytes(WIZARD_PATH.read_bytes())
+    assert not (tmp_path / "authentik").exists()
+
+    spec = importlib.util.spec_from_file_location("lone_setup_wizard", lone_wizard)
+    assert spec and spec.loader
+    lone = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = lone
+    try:
+        spec.loader.exec_module(lone)
+        setup = lone.Setup(
+            enable_mcp=True,
+            mcp_auth_enabled=True,
+            admin_enabled=True,
+            admin_users="okko",
+            deploy_authentik=True,
+            public_base_url="https://scan.example.com",
+        )
+        lone._generate_unattended(setup)
+        lone._finalise(setup)
+        output = tmp_path / "deployment"
+        written = lone.write_files(
+            setup, output / "docker-compose.yml", output / ".env"
+        )
+    finally:
+        del sys.modules[spec.name]
+
+    repository_blueprints = WIZARD_PATH.parent.parent / "authentik" / "blueprints"
+    blueprints = output / "authentik" / "blueprints"
+    names = sorted(path.name for path in blueprints.iterdir())
+    assert names == [
+        "opencloud-admin.yaml",
+        "opencloud-enrollment.yaml",
+        "opencloud-mfa.yaml",
+        "opencloud-scanner.yaml",
+    ]
+    for name in names:
+        assert (blueprints / name).read_text(encoding="utf-8") == (
+            repository_blueprints / name
+        ).read_text(encoding="utf-8")
+        assert any(item.endswith(name) for item in written)
+    # Nothing was read from, or written to, where a checkout would have been.
+    assert not (tmp_path / "authentik").exists()
+
+
+def test_the_embedded_blueprints_are_the_ones_in_the_repository() -> None:
+    """A blueprint edited without re-embedding would ship the old one to every download."""
+    spec = importlib.util.spec_from_file_location(
+        "embed_wizard_blueprints",
+        WIZARD_PATH.parent.parent / "scripts" / "embed_wizard_blueprints.py",
+    )
+    assert spec and spec.loader
+    embed = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(embed)
+
+    assert embed.is_current(), "run python scripts/embed_wizard_blueprints.py"
+
+    # And the check does notice a block that has fallen behind: an edit inside
+    # it is what regenerating puts right, and nothing outside it is touched.
+    source = WIZARD_PATH.read_text(encoding="utf-8")
+    block_start = source.index(embed.START_MARKER)
+    stale = source[:block_start] + source[block_start:].replace(
+        "authentik_", "stale_", 1
+    )
+    assert stale != source
+    assert embed.render_wizard(stale) == source
+    assert set(wizard_module.EMBEDDED_BLUEPRINTS) == set(embed.BLUEPRINT_NAMES)
 
 
 def test_a_mail_server_is_configured_without_its_password_reaching_the_compose_file(
