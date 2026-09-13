@@ -4896,26 +4896,41 @@ def enrollment_instructions(setup: Setup, env_file: str = ".env") -> list[str]:
     """
     if not _uses_authentik(setup):
         return []
-    lines = ["", "  Then everybody who signs in creates their own account:", ""]
-    if setup.authentik_accounts:
+    # Set apart from the rest of the closing output: it is the one thing on
+    # the screen that has to reach somebody else, and between the proxy
+    # commands and the /admin steps it used to be scrolled past.
+    rule = "  " + "=" * 64
+    lines = ["", rule, "  ENROLLMENT LINK - how everybody who signs in gets an account", rule, ""]
+    names = [name.strip() for name in setup.authentik_accounts.split(";") if name.strip()]
+    if names:
         variable = ENROLLMENT_LINK_VARIABLE
         base = f"{setup.authentik_url.rstrip('/')}{AUTHENTIK_ENROLLMENT_PATH}"
-        lines.append(f"    {base}?itoken=<{variable}>")
-        lines.append("")
-        lines.append(f"  with {variable} from {env_file}:")
+        lines.append(f"  Build it from {env_file} - the token is not printed here:")
         lines.append("")
         lines.append(
             f"    echo \"{base}?itoken=$(sed -n 's/^{variable}=//p' {env_file})\""
         )
         lines.append("")
+        lines.append("  It looks like this, with the token in place of the placeholder:")
+        lines.append("")
+        lines.append(f"    {base}?itoken=<{variable}>")
+        lines.append("")
+        if len(names) == 1:
+            recipients = f"Send it to {names[0]}. It asks for that username"
+            claimed = "The name can be claimed once, and no other name at all."
+            until = "until it has been used."
+        else:
+            recipients = (
+                f"Send it to {', '.join(names[:-1])} and {names[-1]}. It asks "
+                "for one of those usernames"
+            )
+            claimed = "Each name can be claimed once, and no other name at all."
+            until = "until everybody has used it."
         for text in _wrap(
-            "Send that link to each of "
-            f"{', '.join(setup.authentik_accounts.split(';'))}. It asks for "
-            "one of those usernames, an email address and a password, and then "
-            "for a second factor - an authenticator app or a security key - "
-            "which every sign-in requires from then on. Each name can be "
-            "claimed once, and nobody else's at all. Treat it like a password "
-            "until everybody has used it.",
+            f"{recipients}, an email address and a password, and then for a "
+            "second factor - an authenticator app or a security key - which "
+            f"every sign-in requires from then on. {claimed} Treat the link "
+            f"like a password {until}",
             64,
         ):
             lines.append(f"  {text}")
@@ -4926,6 +4941,7 @@ def enrollment_instructions(setup: Setup, env_file: str = ".env") -> list[str]:
             64,
         ):
             lines.append(f"  {text}")
+    lines.append(rule)
     lines.append("")
     for text in _wrap(
         f"Authentik's own administrator is {AUTHENTIK_BOOTSTRAP_USER}; its password "
