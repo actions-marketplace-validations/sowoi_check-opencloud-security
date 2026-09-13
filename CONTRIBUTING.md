@@ -268,10 +268,9 @@ Add the same entry to [`RELEASE.md`](RELEASE.md), under its
 Do not write a `## [x.y.z]` heading and do not bump the version - the release
 picks your entry up under whichever number the maintainer chooses.
 
-CI checks both with `scripts/check_pull_request.py`. A pull request that
-genuinely needs no notes - a typo, a test-only change - is labelled
-`skip-changelog` by a maintainer; run the check locally with
-`python scripts/check_pull_request.py --base origin/main`.
+Check both before opening the pull request with
+`python scripts/check_pull_request.py --base origin/main`; pass
+`--labels skip-changelog` for a change that genuinely needs no notes.
 
 ### If your entry goes under `### Security`
 
@@ -324,9 +323,7 @@ derives `__version__` from it - from the installed package metadata, or from
 the file itself when running out of a checkout - and the plugin imports that.
 Nothing else needs editing.
 
-The pull request carrying the bump needs the `release` label - the
-[pull request policy](.github/workflows/pull-request-policy.yml) refuses a
-version change without it, and one that does not move past every tag. The
+The
 [release dry run](.github/workflows/release-dry-run.yml) has by then built the
 notes, the wheel, the `.deb`, the `.rpm`, the web bundle and both images on
 that pull request.

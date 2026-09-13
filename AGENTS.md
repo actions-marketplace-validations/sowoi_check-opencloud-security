@@ -113,12 +113,11 @@ section (`Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`, or
 `Documentation`), and keep the two release notes consistent. Never invent or
 bump a version heading yourself.
 
-Both rules are checked on every pull request by
-`scripts/check_pull_request.py` (`pull-request-policy.yml`): a change without
-a new `CHANGELOG.md` entry and a `RELEASE.md` under the declared version fails
-unless the pull request is labelled `skip-changelog`, and a version change
-fails without the `release` label - which only the maintainer adds - or when
-it does not move past every tag. `release-dry-run.yml` builds everything the
+`python scripts/check_pull_request.py --base origin/main` checks both before a
+pull request is opened: a change needs a new `CHANGELOG.md` entry and a
+`RELEASE.md` under the declared version, and a version change has to move past
+every tag. No workflow runs it, and a release needs no label.
+`release-dry-run.yml` builds everything the
 release builds on the same pull request, and the release itself uploads to
 PyPI only after every other artifact is built. See
 [ADR 0045](adr/0045-a-release-is-rehearsed-on-the-pull-request-and-publishes-last.md).

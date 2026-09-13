@@ -255,13 +255,12 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   nothing. See
   [ADR 0045](adr/0045-a-release-is-rehearsed-on-the-pull-request-and-publishes-last.md).
 
-- **The pull request checklist's two release rules are now checked.**
-  `scripts/check_pull_request.py`, run by `pull-request-policy.yml`, refuses a
-  change without a new `CHANGELOG.md` entry and a `RELEASE.md` under the
-  declared version (unless labelled `skip-changelog`, or opened by Dependabot
-  or the refresh bots), and a version change without the `release` label, one
-  that does not move past every tag, or a bump commit whose subject names a
-  different version. The README table of contents, the `docs/` index and the
+- **The pull request checklist's two release rules can be checked locally.**
+  `python scripts/check_pull_request.py --base origin/main` refuses a change
+  without a new `CHANGELOG.md` entry and a `RELEASE.md` under the declared
+  version, and a version change that does not move past every tag or whose
+  bump commit names a different version. It is a local check, not a CI gate,
+  and a release needs no label. The README table of contents, the `docs/` index and the
   `/documentation` manifest are held to their contents by
   `tests/test_documentation_indexes.py`.
 

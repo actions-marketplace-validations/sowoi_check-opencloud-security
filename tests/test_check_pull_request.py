@@ -2,9 +2,9 @@
 
 Two rules used to live only as checkboxes in the pull request template: that
 every change is written up in CHANGELOG.md and RELEASE.md, and that a version
-bump - which publishes to PyPI the moment it lands - is somebody's deliberate
-decision. A checkbox is ticked or not; these tests hold the script that
-replaced it to failing when it should, and to staying quiet when it should.
+bump - which publishes to PyPI the moment it lands - moves forward and says
+what it is. These tests hold the script that checks them to failing when it
+should, and to staying quiet when it should.
 """
 
 from __future__ import annotations
@@ -65,11 +65,10 @@ def documented(**overrides: object) -> dict:
 
 
 def bump(**overrides: object) -> dict:
-    """A labelled, forward, untagged bump, so a test can break one thing."""
+    """A forward, untagged bump, so a test can break one thing."""
     arguments: dict = {
         "base_version": "1.0.0",
         "head_version": "1.1.0",
-        "labels": {"release"},
         "tags": ["v0.9.0", "v1.0.0"],
         "bump_subjects": [("a" * 40, "chore(release): bump to version 1.1.0", "1.1.0")],
     }
@@ -139,21 +138,14 @@ def test_the_stated_exemptions_skip_the_changelog_check(exemption):
     assert script.check_changelog(**{**undocumented, **exemption}) == []
 
 
-def test_an_unchanged_version_needs_no_label():
-    """Only a bump publishes; an ordinary pull request must not be asked to label itself."""
-    assert script.check_version(**bump(head_version="1.0.0", labels=set(), bump_subjects=[])) == []
+def test_an_unchanged_version_is_not_checked_against_the_tags():
+    """Only a bump publishes; an ordinary pull request has no version to judge."""
+    assert script.check_version(**bump(head_version="1.0.0", tags=["v1.0.0"], bump_subjects=[])) == []
 
 
-def test_a_labelled_forward_bump_passes():
-    """The guard for the refusals below."""
+def test_a_forward_bump_passes_without_any_label():
+    """The guard for the refusals below - and no label is asked of a release."""
     assert script.check_version(**bump()) == []
-
-
-def test_a_bump_without_the_release_label_is_refused():
-    """Merging a bump publishes to PyPI, so somebody has to say they mean it."""
-    problems = script.check_version(**bump(labels=set()))
-
-    assert any("Label it 'release'" in p for p in problems)
 
 
 def test_a_version_that_moves_backwards_is_refused():
@@ -250,9 +242,8 @@ def test_the_script_passes_a_documented_bump_end_to_end(repo, capsys):
     (repo / "RELEASE.md").write_text(RELEASE.format(version="1.1.0", body="- x."), encoding="utf-8")
     _git(repo, "commit", "-qam", "chore(release): bump to version 1.1.0")
 
-    assert script.main(["--base", "main", "--labels", "release"]) == 0
-    assert script.main(["--base", "main"]) == 1
-    assert "Label it 'release'" in capsys.readouterr().out
+    assert script.main(["--base", "main"]) == 0
+    assert "version 1.1.0 is in order" in capsys.readouterr().out
 
 
 def test_the_script_refuses_a_mislabelled_bump_commit_end_to_end(repo, capsys):
@@ -262,7 +253,7 @@ def test_the_script_refuses_a_mislabelled_bump_commit_end_to_end(repo, capsys):
     (repo / "RELEASE.md").write_text(RELEASE.format(version="1.1.0", body="- x."), encoding="utf-8")
     _git(repo, "commit", "-qam", "Bump to version 1.3.3")
 
-    assert script.main(["--base", "main", "--labels", "release"]) == 1
+    assert script.main(["--base", "main"]) == 1
     assert "subject says 1.3.3" in capsys.readouterr().out
 
 

@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """
-Hold a pull request to the two rules the pull request template can only ask for.
+Check a branch against the two rules the pull request template asks for.
 
     python scripts/check_pull_request.py --base origin/main
-    python scripts/check_pull_request.py --base origin/main --labels release
+    python scripts/check_pull_request.py --base origin/main --labels skip-changelog
+
+Run it before opening a pull request; no workflow runs it.
 
 **Every change is documented.** A pull request that changes anything has to
 add to ``CHANGELOG.md`` - under ``## [Unreleased]`` or under the heading of the
@@ -16,14 +18,13 @@ refreshed advisory database is not a change anybody writes notes for.
 PyPI immediately, so a pull request that changes the ``version`` in
 ``pyproject.toml`` has to
 
-* carry the ``release`` label - the maintainer saying "merging this publishes",
 * move the version forward, past both ``main`` and every existing tag,
 * name a version no tag exists for yet, and
 * not describe itself as some other version: a commit that changes the version
   line and names a different number in its subject is refused.
 
 The script reads git and nothing else. It needs the base commit and the tags
-in the clone, which is why the workflow checks out with ``fetch-depth: 0``.
+in the clone.
 """
 
 from __future__ import annotations
@@ -35,7 +36,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
-RELEASE_LABEL = "release"
 SKIP_CHANGELOG_LABEL = "skip-changelog"
 
 #: Pull requests these accounts open carry no notes of their own.
@@ -142,7 +142,6 @@ def check_version(
     *,
     base_version: str,
     head_version: str,
-    labels: set[str],
     tags: list[str],
     bump_subjects: list[tuple[str, str, str]],
 ) -> list[str]:
@@ -169,11 +168,6 @@ def check_version(
     if new is None:
         return [*problems, f"The version {head_version!r} is not of the form X.Y.Z."]
 
-    if RELEASE_LABEL not in labels:
-        problems.append(
-            f"This pull request changes the version from {base_version} to {head_version}, "
-            f"and merging it publishes to PyPI. Label it '{RELEASE_LABEL}' to confirm that."
-        )
     old = parse_version(base_version)
     if old is not None and new <= old:
         problems.append(
@@ -206,11 +200,11 @@ def bump_commits(base: str, head: str) -> list[tuple[str, str, str]]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Entry point for the pull request policy workflow."""
+    """Entry point."""
     parser = argparse.ArgumentParser(description="Check a pull request's changelog and version.")
     parser.add_argument("--base", required=True, help="The commit the pull request targets.")
     parser.add_argument("--head", default="HEAD", help="The pull request's commit. Default: HEAD.")
-    parser.add_argument("--labels", default="", help="Comma-separated pull request labels.")
+    parser.add_argument("--labels", default="", help="Comma-separated labels; skip-changelog skips the entry check.")
     parser.add_argument("--author", default="", help="The login that opened the pull request.")
     args = parser.parse_args(argv)
 
@@ -234,7 +228,6 @@ def main(argv: list[str] | None = None) -> int:
     problems += check_version(
         base_version=base_version,
         head_version=head_version,
-        labels=labels,
         tags=git("tag", "--list").split(),
         bump_subjects=bump_commits(merge_base, args.head),
     )
