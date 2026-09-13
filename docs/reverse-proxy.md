@@ -296,7 +296,8 @@ for a scan to finish.
 [`docker/setup-wizard.py`](../docker/setup-wizard.py) writes the nginx, Apache,
 Caddy or Traefik configuration for a generated deployment, following the notes
 below and filling in the host name, the port and - where the stack brings its
-own identity provider - the forward auth in front of `/admin`. These sections
+own identity provider - the forward auth in front of `/admin` and a site for
+Authentik itself at the host name of its public address. These sections
 are what it generates, and the reference for a deployment it did not write.
 
 ### What the service needs from a proxy

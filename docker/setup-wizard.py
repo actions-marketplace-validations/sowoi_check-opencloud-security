@@ -34,7 +34,9 @@ Name a reverse proxy and it writes that configuration too: nginx, Apache,
 Caddy or Traefik, in the directory beside the compose file, with TLS, the
 unbuffered ``/mcp`` stream, an ``X-Forwarded-For`` the client cannot choose
 and - for the three that can ask an outpost before serving a request - the
-forward auth in front of ``/admin``.
+forward auth in front of ``/admin``. When the stack brings Authentik, the same
+file carries a second site for it, at the host name of its public address,
+because that is where every sign-in sends a browser.
 
 That split is the whole point of the wizard. A compose file is something an
 operator commits, pastes into a ticket and copies between hosts; a purge token
@@ -158,6 +160,23 @@ REDIS_VOLUME = "redis_data"
 WEB_IMAGE_UID = 10001
 REDIS_IMAGE_UID = 999
 
+# The Redis image the stack runs. Named once because it is also what fixes the
+# ownership of a bind mount on a rootless Docker: it is pulled anyway, so the
+# command costs no download of an image nobody asked for.
+REDIS_IMAGE = "redis:8.10-alpine"
+
+# How the Docker daemon runs. It matters for exactly one thing here, and it is
+# the thing that decides whether a bind mount is writable: on a rootless
+# daemon, uid 10001 in a container is not uid 10001 on the host but the
+# user's subordinate uid at that offset, so `chown 10001` on the host hands
+# the directory to somebody the container never is.
+DOCKER_MODES = ("rootful", "rootless")
+
+# Where the host records which subordinate ids each user may map. Read, never
+# written; module constants so a test can point them at a file of its own.
+SUBUID_FILE = Path("/etc/subuid")
+SUBGID_FILE = Path("/etc/subgid")
+
 # Where a deployment keeps things, when it keeps them at all.
 STORAGE_CHOICES = ("none", "volume", "filesystem")
 
@@ -242,6 +261,11 @@ class Setup:
     image_ref: str = DOCKERHUB_IMAGE
     build_context: str = ".."
     project_name: str = "opencloud-scan"
+    # Rootful or rootless. Empty until detected from the socket this user
+    # talks to, which is the only reliable signal a standard-library script
+    # has; a deployment built for one and run on the other gets containers
+    # that cannot write to their own bind mounts.
+    docker_mode: str = ""
 
     # Automatic updates of the pulled images. On, and Watchtower joins the
     # stack; the socket is detected for the user running the wizard, because
@@ -332,6 +356,12 @@ class Setup:
     reverse_proxy_certificate: str = ""
     reverse_proxy_private_key: str = ""
     reverse_proxy_acme_email: str = ""
+    # The certificate for Authentik's own site, when the stack brings Authentik
+    # and the proxy is one that is handed its certificates. Asked separately
+    # because it is a different name: a certificate for scan.example.com is
+    # refused by every browser that arrives at sso.example.com.
+    reverse_proxy_authentik_certificate: str = ""
+    reverse_proxy_authentik_private_key: str = ""
 
     # What is kept, and who may delete it.
     audit_log: bool = False
@@ -442,6 +472,10 @@ class Question:
     generate: int = 0
     """Offer to generate a value of this many random bytes instead of typing
     one. Used for the credentials nobody should invent by hand."""
+    conflicts: Callable[[Setup, Path], str | None] | None = None
+    """Checked after an answer is taken, against the other answers: returns
+    why it cannot stand, and the previous value is put back. For the
+    checks a single value cannot fail on its own."""
 
 
 @dataclass
@@ -599,9 +633,23 @@ def _hex_key(value: str) -> str | None:
 class Wizard:
     """Asks the questions and remembers the answers."""
 
-    def __init__(self, setup: Setup, *, interactive: bool = True) -> None:
+    def __init__(
+        self, setup: Setup, *, interactive: bool = True, base_dir: Path | None = None
+    ) -> None:
         self.setup = setup
         self.interactive = interactive
+        # Where the compose file goes, which is what a relative host path in
+        # an answer is relative to.
+        self.base_dir = base_dir or Path(".")
+
+    def _conflict(self, question: Question, value: Any) -> str | None:
+        """Take a value, unless it contradicts an answer already given."""
+        previous = getattr(self.setup, question.key)
+        setattr(self.setup, question.key, value)
+        error = question.conflicts(self.setup, self.base_dir) if question.conflicts else None
+        if error:
+            setattr(self.setup, question.key, previous)
+        return error
 
     # -- output ------------------------------------------------------------
     def say(self, text: str = "") -> None:
@@ -703,11 +751,10 @@ class Wizard:
                     continue
                 # Validated like any other answer: some of these are refused
                 # empty, and '-' must not be the way around that.
-                error = question.validate("")
+                error = question.validate("") or self._conflict(question, "")
                 if error:
                     self.say(f"      {error}")
                     continue
-                setattr(self.setup, question.key, "")
                 return None
             if question.generate and lowered == "generate":
                 setattr(self.setup, question.key, secrets.token_hex(question.generate))
@@ -739,11 +786,10 @@ class Wizard:
                     continue
                 setattr(self.setup, question.key, choice)
                 return None
-            error = question.validate(answer)
+            error = question.validate(answer) or self._conflict(question, answer)
             if error:
                 self.say(f"      {error}")
                 continue
-            setattr(self.setup, question.key, answer)
             return None
 
     def _hints(self, question: Question, *, can_go_back: bool, offer_rest: bool) -> str:
@@ -853,6 +899,22 @@ def build_sections(setup: Setup) -> list[Section]:
                         "deployments on one host stay out of each other's way."
                     ),
                     example="opencloud-scan",
+                ),
+                Question(
+                    key="docker_mode",
+                    prompt="Does the Docker daemon run as root, or rootless?",
+                    explain=(
+                        "Detected from the socket this user talks to: a rootless "
+                        "daemon serves one under /run/user/<uid>. It decides how a "
+                        "host directory is handed to a container. On a rootless "
+                        "daemon, uid 10001 inside a container is your subordinate "
+                        "uid at that offset on the host, so the ownership commands "
+                        "run through a container rather than as sudo, and a "
+                        "logrotate policy names the mapped ids."
+                    ),
+                    example="rootless",
+                    kind="choice",
+                    choices=DOCKER_MODES,
                 ),
                 Question(
                     key="auto_updates",
@@ -1557,10 +1619,14 @@ def build_sections(setup: Setup) -> list[Section]:
                         "against; an absolute path works too, and a name with no "
                         "'./' in front of it would be read as a named volume "
                         "rather than a directory. A named volume needs none of "
-                        "this, which is why it is the other answer."
+                        "this, which is why it is the other answer. It cannot be "
+                        "the Redis directory, or inside it, or around it: the two "
+                        "containers run as different users, and one directory can "
+                        "only be owned by one of them."
                     ),
                     example=DEFAULT_AUDIT_LOG_PATH,
                     validate=_host_directory,
+                    conflicts=_storage_conflict,
                 ),
                 Question(
                     key="audit_rotation",
@@ -1679,10 +1745,14 @@ def build_sections(setup: Setup) -> list[Section]:
                         "you ran it from. An absolute path works too; a name "
                         "with no './' in front of it does not, because Compose "
                         "would read it as a named volume. A named volume needs "
-                        "none of this, which is the other answer above."
+                        "none of this, which is the other answer above. It has "
+                        "to be a different directory from the audit trail's, "
+                        "and not one inside the other, because the two "
+                        "containers write as different users."
                     ),
                     example=DEFAULT_REDIS_DATA_PATH,
                     validate=_host_directory,
+                    conflicts=_storage_conflict,
                 ),
             ],
         ),
@@ -1701,7 +1771,8 @@ def build_sections(setup: Setup) -> list[Section]:
                         "event stream unbuffered. Name what you run and the file is "
                         "written beside the compose file, ready to install - "
                         "including the forward auth in front of /admin when this "
-                        "deployment has one. 'none' writes nothing, which is right "
+                        "deployment has one, and a site of its own for Authentik "
+                        "when the stack brings it. 'none' writes nothing, which is right "
                         "when the proxy is already configured or lives on another "
                         "host."
                     ),
@@ -1755,6 +1826,27 @@ def build_sections(setup: Setup) -> list[Section]:
                         "proxy and by nobody else."
                     ),
                     example="/etc/ssl/scan/privkey.pem",
+                    validate=_certificate_path,
+                ),
+                Question(
+                    key="reverse_proxy_authentik_certificate",
+                    prompt="Certificate chain file for Authentik's site",
+                    explain=(
+                        "The generated configuration serves Authentik too, at the "
+                        "host name of its public address, because that is where "
+                        "every sign-in is sent and a provider nobody's browser can "
+                        "reach signs nobody in. It is a second name, so it needs a "
+                        "certificate that covers it - the same file as above works "
+                        "if that one carries both names or a wildcard."
+                    ),
+                    example="/etc/ssl/sso/fullchain.pem",
+                    validate=_certificate_path,
+                ),
+                Question(
+                    key="reverse_proxy_authentik_private_key",
+                    prompt="Private key file for Authentik's site",
+                    explain="The key belonging to that certificate.",
+                    example="/etc/ssl/sso/privkey.pem",
                     validate=_certificate_path,
                 ),
                 Question(
@@ -1877,6 +1969,42 @@ def _proxy_forwards_auth(setup: Setup) -> bool:
     )
 
 
+def _authentik_proxy_hostname(setup: Setup) -> str:
+    """The name Authentik's own site answers to, or ``""`` when there is none.
+
+    Taken from the public address of Authentik, because that is the address
+    every token names as its issuer and every sign-in redirects a browser to -
+    a site answering to anything else is one the redirect never arrives at.
+    Nothing is returned for an address that is no public name at all: the
+    ``localhost`` the stack falls back to, a bare IP address, or the very name
+    this service answers to, which Authentik cannot share without being moved
+    to a path of its own.
+    """
+    host = _url_hostname(setup.authentik_url)
+    if not host or host == "localhost" or re.fullmatch(r"[0-9.]+|\[.*", host):
+        return ""
+    if host == _proxy_hostname(setup).lower():
+        return ""
+    return host
+
+
+def _url_hostname(url: str) -> str:
+    """The host part of a URL, lower-cased and without a port."""
+    host = url.strip().split("://", 1)[-1].split("/", 1)[0].rsplit("@", 1)[-1]
+    if host.startswith("["):  # an IPv6 literal keeps its brackets
+        return host.split("]", 1)[0].lower() + "]"
+    return host.split(":", 1)[0].lower()
+
+
+def _proxy_serves_authentik(setup: Setup) -> bool:
+    """Whether the generated proxy carries a site for Authentik's interface."""
+    return (
+        _writes_proxy(setup)
+        and _uses_authentik(setup)
+        and bool(_authentik_proxy_hostname(setup))
+    )
+
+
 def _relevant(key: str, setup: Setup) -> bool:
     """Whether a question still has a point, given the answers so far."""
     if key == "image_ref":
@@ -1920,6 +2048,15 @@ def _relevant(key: str, setup: Setup) -> bool:
         if key == "reverse_proxy_acme_email":
             # Only the two that go and fetch a certificate themselves.
             return setup.reverse_proxy in {"caddy", "traefik"}
+        if key in {
+            "reverse_proxy_authentik_certificate",
+            "reverse_proxy_authentik_private_key",
+        }:
+            return (
+                setup.reverse_proxy in {"nginx", "apache"}
+                and setup.reverse_proxy_tls
+                and _proxy_serves_authentik(setup)
+            )
         if key in {
             "reverse_proxy_tls",
             "reverse_proxy_certificate",
@@ -1981,6 +2118,136 @@ def _mount_source(storage: str, host_path: str, volume: str) -> str:
     if _binds_a_directory(storage, host_path):
         return host_path.strip()
     return volume
+
+
+def _host_path(path: str, base_dir: Path) -> Path:
+    """A host directory as Compose will resolve it: relative to the compose file."""
+    candidate = Path(path.strip()).expanduser()
+    if not candidate.is_absolute():
+        candidate = base_dir / candidate
+    return Path(os.path.realpath(candidate))
+
+
+def _storage_conflict(setup: Setup, base_dir: Path) -> str | None:
+    """Why the audit trail and Redis cannot share the directories they were given.
+
+    They write as different users - the web image as uid 10001, Redis as uid
+    999 - and a directory has one owner. Whichever ``chown`` ran last would
+    decide which of the two containers can write, and the other one would
+    refuse to start or, worse for Redis, start and lose its append-only file.
+    One directory inside the other fails the same way one level down, and
+    hands the container that mounts the outer one the other's data as well.
+    """
+    if not (
+        _keeps_audit_file(setup)
+        and _binds_a_directory(setup.audit_storage, setup.audit_log_path)
+        and _binds_a_directory(setup.redis_persistence, setup.redis_data_path)
+    ):
+        return None
+    audit = _host_path(setup.audit_log_path, base_dir)
+    redis = _host_path(setup.redis_data_path, base_dir)
+    if audit == redis:
+        return (
+            f"The audit trail and Redis would both be kept in {audit}. They "
+            f"write as different users - uid {WEB_IMAGE_UID} and uid "
+            f"{REDIS_IMAGE_UID} - and one directory can only belong to one of "
+            f"them. Give each its own, e.g. {DEFAULT_AUDIT_LOG_PATH} and "
+            f"{DEFAULT_REDIS_DATA_PATH}."
+        )
+    if audit in redis.parents or redis in audit.parents:
+        outer, inner = (audit, redis) if audit in redis.parents else (redis, audit)
+        return (
+            f"{inner} is inside {outer}. The audit trail and Redis write as "
+            f"different users - uid {WEB_IMAGE_UID} and uid {REDIS_IMAGE_UID} - "
+            "and the container mounting the outer directory would see the "
+            "other one's data. Use two directories side by side, e.g. "
+            f"{DEFAULT_AUDIT_LOG_PATH} and {DEFAULT_REDIS_DATA_PATH}."
+        )
+    return None
+
+
+def check_errors(setup: Setup, base_dir: Path | None = None) -> list[str]:
+    """What has to change before anything is written.
+
+    Unlike :func:`check_consistency`, none of these is a matter of opinion:
+    each one is a stack that cannot work as generated.
+    """
+    conflict = _storage_conflict(setup, base_dir or Path("."))
+    return [conflict] if conflict else []
+
+
+def _rootless(setup: Setup) -> bool:
+    """Whether the stack is generated for a rootless Docker daemon."""
+    return setup.docker_mode == "rootless"
+
+
+def _ownership_command(setup: Setup, path: str, uid: int) -> str:
+    """How to create a host directory and give it to a container's user.
+
+    On a rootful daemon a container uid is the host uid, and ``sudo chown``
+    is the whole job. On a rootless one it is not: uid 10001 in a container
+    is the invoking user's subordinate uid at that offset, which only the
+    user namespace the daemon runs in can name without arithmetic. So the
+    chown runs *in* a container, as that namespace's root - which is the
+    invoking user, owns the fresh directory, and needs no sudo at all.
+    """
+    path = path.strip()
+    if not _rootless(setup):
+        return f"mkdir -p {path} && sudo chown {uid} {path}"
+    return (
+        f"mkdir -p {path} && docker run --rm --user 0 --entrypoint chown "
+        f'-v "$(realpath {path})":/target {REDIS_IMAGE} {uid} /target'
+    )
+
+
+def _as_the_container_sees_it(setup: Setup) -> str:
+    """The qualifier a rootless uid needs, with its trailing space, or nothing."""
+    return "as the container sees it " if _rootless(setup) else ""
+
+
+def detect_docker_mode(socket: str | None = None) -> str:
+    """``rootless`` when the socket this user talks to is a rootless daemon's.
+
+    A rootless daemon serves its socket from the user's runtime directory,
+    ``/run/user/<uid>`` on every distribution that has systemd, and a rootful
+    one from ``/var/run``. That is a heuristic, which is why it only decides
+    the default of a question rather than the answer.
+    """
+    socket = detect_docker_socket() if socket is None else socket
+    runtime = os.environ.get("XDG_RUNTIME_DIR", "").rstrip("/")
+    if socket.startswith("/run/user/") or (runtime and socket.startswith(runtime + "/")):
+        return "rootless"
+    return "rootful"
+
+
+def _mapped_id(table: Path, container_id: int) -> int | None:
+    """The host id a rootless daemon maps ``container_id`` to, if it can be read.
+
+    Container id 0 is the user themself; ids from 1 onwards are taken from the
+    first subordinate range ``/etc/subuid`` (or ``subgid``) grants them, so id
+    *n* is ``start + n - 1`` - provided the range is long enough to hold it,
+    which the default 65536 is.
+    """
+    names = set()
+    getuid = getattr(os, "getuid", None)
+    if getuid is not None:
+        names.add(str(getuid()))
+    names.update(filter(None, (os.environ.get("USER"), os.environ.get("LOGNAME"))))
+    try:
+        lines = table.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return None
+    for line in lines:
+        parts = line.strip().split(":")
+        if len(parts) != 3 or parts[0] not in names:
+            continue
+        try:
+            start, count = int(parts[1]), int(parts[2])
+        except ValueError:
+            continue
+        if 1 <= container_id <= count:
+            return start + container_id - 1
+    return None
 
 
 def check_consistency(setup: Setup) -> list[str]:
@@ -2047,14 +2314,25 @@ def check_consistency(setup: Setup) -> list[str]:
             f"{ADMIN_PATH} answers 404 - which is the failure you want, and "
             "it will look like a bug."
         )
-    if _proxy_forwards_auth(setup) and "localhost" in setup.authentik_url:
+    if (
+        _writes_proxy(setup)
+        and _uses_authentik(setup)
+        and not _authentik_proxy_hostname(setup)
+    ):
+        address = setup.authentik_url or "unset"
+        host = _url_hostname(setup.authentik_url)
+        reason = (
+            "names the same host as this service, and Authentik wants a host "
+            "name of its own"
+            if host not in {"", "localhost"} and host == _proxy_hostname(setup).lower()
+            else "is no name a browser anywhere else can reach"
+        )
         warnings.append(
-            "The sign-in in front of /admin sends the operator to "
-            f"{setup.authentik_url}, which is a name only this host resolves. "
-            "The generated proxy routes the outpost's own endpoints, not "
-            "Authentik's interface, so give the provider an address a browser "
-            "can reach - its own vhost in front of the port published above - "
-            "and set it as the public address of Authentik."
+            f"The public address of Authentik ({address}) {reason}, so the "
+            "generated proxy configuration carries no site for it - and every "
+            "sign-in redirects a browser there. Give Authentik an address a "
+            "browser can reach, such as https://sso.example.com, and the "
+            "configuration serves it too."
         )
     if _writes_proxy(setup) and _proxy_hostname(setup) == "localhost":
         warnings.append(
@@ -2150,10 +2428,11 @@ def check_consistency(setup: Setup) -> list[str]:
     ):
         warnings.append(
             f"{setup.audit_log_path} has to exist and be owned by uid "
-            f"{WEB_IMAGE_UID} before the stack starts, or the web service "
-            "refuses to come up rather than report an audit trail it cannot "
-            f"write:  mkdir -p {setup.audit_log_path} && chown "
-            f"{WEB_IMAGE_UID} {setup.audit_log_path}"
+            f"{WEB_IMAGE_UID} {_as_the_container_sees_it(setup)}before the "
+            "stack starts, or the web service refuses to come up rather than "
+            "report an audit trail it cannot write. From the directory of the "
+            "compose file:  "
+            + _ownership_command(setup, setup.audit_log_path, WEB_IMAGE_UID)
         )
     if _uses_logrotate(setup):
         warnings.append(
@@ -2161,6 +2440,20 @@ def check_consistency(setup: Setup) -> list[str]:
             "is installed into /etc/logrotate.d as root - and until it is, "
             "nothing rotates the audit trail, because the service was told "
             "the host would. The next steps print the command."
+        )
+    if (
+        _uses_logrotate(setup)
+        and _rootless(setup)
+        and _mapped_id(SUBUID_FILE, WEB_IMAGE_UID) is None
+    ):
+        warnings.append(
+            f"On a rootless Docker, uid {WEB_IMAGE_UID} in the container is a "
+            f"subordinate uid on the host, and {SUBUID_FILE} names no range for "
+            "the user running this wizard - so the generated logrotate policy "
+            f"creates the new file as host uid {WEB_IMAGE_UID}, which the "
+            "container cannot write to. Replace the ids on its 'create' line "
+            "with <start of your subuid range> + "
+            f"{WEB_IMAGE_UID - 1} before installing it."
         )
     if setup.redis_persistence == "filesystem" and not setup.redis_data_path.strip():
         warnings.append(
@@ -2174,9 +2467,38 @@ def check_consistency(setup: Setup) -> list[str]:
     if _binds_a_directory(setup.redis_persistence, setup.redis_data_path):
         warnings.append(
             f"{setup.redis_data_path} has to exist and be owned by uid "
-            f"{REDIS_IMAGE_UID}, the user the Redis image runs as:  mkdir -p "
-            f"{setup.redis_data_path} && chown {REDIS_IMAGE_UID} "
-            f"{setup.redis_data_path}"
+            f"{REDIS_IMAGE_UID} {_as_the_container_sees_it(setup)}- the user "
+            "the Redis image runs as. From the directory of the compose file:  "
+            + _ownership_command(setup, setup.redis_data_path, REDIS_IMAGE_UID)
+        )
+    if _rootless(setup) and (
+        _binds_a_directory(setup.redis_persistence, setup.redis_data_path)
+        or (
+            _keeps_audit_file(setup)
+            and _binds_a_directory(setup.audit_storage, setup.audit_log_path)
+        )
+    ):
+        warnings.append(
+            "On a rootless Docker the host directories end up owned by your "
+            "subordinate uids rather than by you, so your own account can no "
+            "longer read or delete what is in them. That is the arrangement "
+            "working, not a fault: read them through a container the same way "
+            "the ownership was set, e.g. docker run --rm --user 0 -v "
+            f'"$(realpath <dir>)":/target {REDIS_IMAGE} ls -l /target.'
+        )
+    if (
+        _rootless(setup)
+        and not setup.trust_forwarded_for
+        and setup.bind_address.strip() not in {"127.0.0.1", "::1", "localhost"}
+    ):
+        warnings.append(
+            "A rootless Docker's default port driver does not pass the client "
+            "address on: every connection to a published port reaches the "
+            "container from the daemon's own namespace, so the per-client "
+            "rate limit counts the whole internet as one address. Put a "
+            "reverse proxy on the host in front of 127.0.0.1 and trust the "
+            "X-Forwarded-For it sets, or run the daemon with "
+            "DOCKERD_ROOTLESS_ROOTLESSKIT_PORT_DRIVER=slirp4netns."
         )
     if _persists_redis(setup) and not setup.encrypt_results:
         warnings.append(
@@ -2268,6 +2590,8 @@ def _finalise(setup: Setup) -> None:
     the slug, the redirect back from the address this service is reached at,
     the credentials from a random number generator. Asking would be a quiz.
     """
+    if setup.docker_mode not in DOCKER_MODES:
+        setup.docker_mode = "rootful"
     if not setup.public_base_url:
         setup.public_base_url = f"http://localhost:{setup.host_port}"
     # No question for this one: there is no answer an operator could give that
@@ -2619,7 +2943,7 @@ def logrotate_filename(setup: Setup) -> str:
     return f"{setup.project_name}-audit.logrotate"
 
 
-def render_logrotate_file(setup: Setup) -> str:
+def render_logrotate_file(setup: Setup, base_dir: Path | None = None) -> str:
     """
     A logrotate policy for the audit trail, for the host to install.
 
@@ -2638,7 +2962,21 @@ def render_logrotate_file(setup: Setup) -> str:
       underneath a writer instead trades that for a race, and this is a file
       whose entire purpose is to be complete.
     """
-    path = f"{setup.audit_log_path.rstrip('/')}/{AUDIT_LOG_FILENAME}"
+    # Absolute, whatever the answer was: Compose resolves `./audit` against
+    # the compose file, logrotate resolves it against wherever cron happens to
+    # run it from, which is `/`.
+    path = f"{_host_path(setup.audit_log_path, base_dir or Path('.'))}/{AUDIT_LOG_FILENAME}"
+    owner, group = WEB_IMAGE_UID, WEB_IMAGE_UID
+    ownership_note = ""
+    if _rootless(setup):
+        owner = _mapped_id(SUBUID_FILE, WEB_IMAGE_UID) or WEB_IMAGE_UID
+        group = _mapped_id(SUBGID_FILE, WEB_IMAGE_UID) or WEB_IMAGE_UID
+        ownership_note = (
+            "    #\n"
+            "    # The Docker daemon is rootless, so these are the host ids that uid\n"
+            f"    # and gid {WEB_IMAGE_UID} in the container map to: the start of this user's\n"
+            f"    # range in {SUBUID_FILE} and {SUBGID_FILE}, plus {WEB_IMAGE_UID - 1}.\n"
+        )
     return f"""# Audit trail of the check-opencloud-security web application.
 #
 # Written by docker/setup-wizard.py. Install it as root, once:
@@ -2671,7 +3009,7 @@ def render_logrotate_file(setup: Setup) -> str:
     # container has to be able to write to it. The service notices the inode
     # changed and reopens - no signal, no restart, no copytruncate, and no
     # record written to a file nobody can find any more.
-    create 0600 {WEB_IMAGE_UID} {WEB_IMAGE_UID}
+{ownership_note}    create 0600 {owner} {group}
 }}
 """
 
@@ -2861,11 +3199,12 @@ def _nginx_locations(setup: Setup, upstream: str) -> str:
     return "\n\n".join(blocks)
 
 
-def _render_nginx(setup: Setup) -> str:
-    upstream = f"http://{_upstream_address(setup)}"
-    redirect = (
-        _fill(
-            """server {
+def _nginx_redirect(setup: Setup, host: str) -> str:
+    """The port-80 server that sends a visitor back over TLS, when there is TLS."""
+    if not setup.reverse_proxy_tls:
+        return ""
+    return _fill(
+        """server {
     listen 80;
     listen [::]:80;
     server_name @@host@@;
@@ -2881,24 +3220,26 @@ def _render_nginx(setup: Setup) -> str:
 }
 
 """,
-            host=_proxy_hostname(setup),
-        )
-        if setup.reverse_proxy_tls
-        else ""
+        host=host,
     )
-    listen = (
-        """    listen 443 ssl;
+
+
+def _nginx_listen(setup: Setup) -> str:
+    if setup.reverse_proxy_tls:
+        return """    listen 443 ssl;
     listen [::]:443 ssl;
     # nginx 1.25 and newer. On anything older, write the two lines above as
     # `listen 443 ssl http2;` and delete this one.
     http2 on;"""
-        if setup.reverse_proxy_tls
-        else """    listen 80;
+    return """    listen 80;
     listen [::]:80;"""
-    )
-    tls = (
-        _fill(
-            """
+
+
+def _nginx_tls(setup: Setup, certificate: str, private_key: str) -> str:
+    if not setup.reverse_proxy_tls:
+        return ""
+    return _fill(
+        """
     ssl_certificate     @@certificate@@;
     ssl_certificate_key @@private_key@@;
     ssl_protocols       TLSv1.2 TLSv1.3;
@@ -2906,11 +3247,61 @@ def _render_nginx(setup: Setup) -> str:
     ssl_session_timeout 1d;
     ssl_prefer_server_ciphers off;
 """,
-            certificate=setup.reverse_proxy_certificate or "/etc/ssl/scan/fullchain.pem",
-            private_key=setup.reverse_proxy_private_key or "/etc/ssl/scan/privkey.pem",
-        )
-        if setup.reverse_proxy_tls
-        else ""
+        certificate=certificate,
+        private_key=private_key,
+    )
+
+
+def _authentik_certificate(setup: Setup) -> tuple[str, str]:
+    """The certificate and key Authentik's site is served with, on the proxy host."""
+    return (
+        setup.reverse_proxy_authentik_certificate or "/etc/ssl/sso/fullchain.pem",
+        setup.reverse_proxy_authentik_private_key or "/etc/ssl/sso/privkey.pem",
+    )
+
+
+def _nginx_authentik_site(setup: Setup) -> str:
+    """The server blocks for Authentik's own interface, or nothing."""
+    if not _proxy_serves_authentik(setup):
+        return ""
+    host = _authentik_proxy_hostname(setup)
+    certificate, private_key = _authentik_certificate(setup)
+    return _fill(
+        """
+
+# Authentik's own interface, at the host name of its public address: where
+# every sign-in is sent, and the address every token names as its issuer.
+# Authentik keeps a WebSocket open from its interface, hence the upgrade, and
+# believes X-Forwarded-For from the Docker network the published port arrives
+# through - so it is set here, never appended, for the same reason as above.
+@@redirect@@server {
+@@listen@@
+    server_name @@host@@;
+@@tls@@
+    location / {
+@@headers@@
+        proxy_set_header Upgrade           $http_upgrade;
+        proxy_set_header Connection        $connection_upgrade;
+        proxy_pass @@authentik@@;
+    }
+}""",
+        redirect=_nginx_redirect(setup, host),
+        listen=_nginx_listen(setup),
+        host=host,
+        tls=_nginx_tls(setup, certificate, private_key),
+        headers=_indent(_NGINX_PROXY_HEADERS, "        "),
+        authentik=_authentik_host_url(setup),
+    )
+
+
+def _render_nginx(setup: Setup) -> str:
+    upstream = f"http://{_upstream_address(setup)}"
+    redirect = _nginx_redirect(setup, _proxy_hostname(setup))
+    listen = _nginx_listen(setup)
+    tls = _nginx_tls(
+        setup,
+        setup.reverse_proxy_certificate or "/etc/ssl/scan/fullchain.pem",
+        setup.reverse_proxy_private_key or "/etc/ssl/scan/privkey.pem",
     )
     return _fill(
         """# nginx for the check-opencloud-security web application.
@@ -2949,7 +3340,7 @@ map $http_upgrade $connection_upgrade {
     server_name @@host@@;
 @@tls@@
 @@locations@@
-}
+}@@authentik_site@@
 """,
         file=proxy_filename(setup),
         project=setup.project_name,
@@ -2959,6 +3350,7 @@ map $http_upgrade $connection_upgrade {
         tls=tls,
         host=_proxy_hostname(setup),
         locations=_nginx_locations(setup, upstream),
+        authentik_site=_nginx_authentik_site(setup),
     )
 
 
@@ -3012,35 +3404,11 @@ def _render_apache(setup: Setup) -> str:
         if setup.admin_enabled
         else ""
     )
-    redirect = (
-        _fill(
-            """<VirtualHost *:80>
-    ServerName @@host@@
-
-    RewriteEngine On
-    RewriteCond %{REQUEST_URI} !^/\\.well-known/acme-challenge/
-    RewriteRule ^ https://%{SERVER_NAME}%{REQUEST_URI} [R=308,L]
-</VirtualHost>
-
-""",
-            host=_proxy_hostname(setup),
-        )
-        if setup.reverse_proxy_tls
-        else ""
-    )
-    tls = (
-        _fill(
-            """
-    SSLEngine on
-    SSLCertificateFile    @@certificate@@
-    SSLCertificateKeyFile @@private_key@@
-    SSLProtocol -all +TLSv1.2 +TLSv1.3
-""",
-            certificate=setup.reverse_proxy_certificate or "/etc/ssl/scan/fullchain.pem",
-            private_key=setup.reverse_proxy_private_key or "/etc/ssl/scan/privkey.pem",
-        )
-        if setup.reverse_proxy_tls
-        else ""
+    redirect = _apache_redirect(setup, _proxy_hostname(setup))
+    tls = _apache_tls(
+        setup,
+        setup.reverse_proxy_certificate or "/etc/ssl/scan/fullchain.pem",
+        setup.reverse_proxy_private_key or "/etc/ssl/scan/privkey.pem",
     )
     return _fill(
         """# Apache httpd for the check-opencloud-security web application.
@@ -3072,7 +3440,7 @@ def _render_apache(setup: Setup) -> str:
 @@mcp@@@@admin@@
     ProxyPass        / @@upstream@@/ timeout=300
     ProxyPassReverse / @@upstream@@/
-</VirtualHost>
+</VirtualHost>@@authentik_site@@
 """,
         file=proxy_filename(setup),
         project=setup.project_name,
@@ -3084,6 +3452,73 @@ def _render_apache(setup: Setup) -> str:
         tls=tls,
         mcp=mcp,
         admin=admin,
+        authentik_site=_apache_authentik_site(setup),
+    )
+
+
+def _apache_redirect(setup: Setup, host: str) -> str:
+    """The port-80 virtual host that sends a visitor back over TLS."""
+    if not setup.reverse_proxy_tls:
+        return ""
+    return _fill(
+        """<VirtualHost *:80>
+    ServerName @@host@@
+
+    RewriteEngine On
+    RewriteCond %{REQUEST_URI} !^/\\.well-known/acme-challenge/
+    RewriteRule ^ https://%{SERVER_NAME}%{REQUEST_URI} [R=308,L]
+</VirtualHost>
+
+""",
+        host=host,
+    )
+
+
+def _apache_tls(setup: Setup, certificate: str, private_key: str) -> str:
+    if not setup.reverse_proxy_tls:
+        return ""
+    return _fill(
+        """
+    SSLEngine on
+    SSLCertificateFile    @@certificate@@
+    SSLCertificateKeyFile @@private_key@@
+    SSLProtocol -all +TLSv1.2 +TLSv1.3
+""",
+        certificate=certificate,
+        private_key=private_key,
+    )
+
+
+def _apache_authentik_site(setup: Setup) -> str:
+    """The virtual hosts for Authentik's own interface, or nothing."""
+    if not _proxy_serves_authentik(setup):
+        return ""
+    host = _authentik_proxy_hostname(setup)
+    certificate, private_key = _authentik_certificate(setup)
+    return _fill(
+        """
+
+# Authentik's own interface, at the host name of its public address: where
+# every sign-in is sent, and the address every token names as its issuer.
+# Authentik keeps a WebSocket open from its interface; `upgrade=websocket`
+# is what carries it, and it needs Apache 2.4.47 or newer.
+@@redirect@@<VirtualHost *:@@port@@>
+    ServerName @@host@@
+@@tls@@
+    ProxyPreserveHost On
+    ProxyRequests Off
+    RequestHeader set X-Forwarded-Proto "@@scheme@@"
+    RequestHeader set X-Forwarded-For "%{REMOTE_ADDR}e"
+
+    ProxyPass        / @@authentik@@/ upgrade=websocket timeout=300
+    ProxyPassReverse / @@authentik@@/
+</VirtualHost>""",
+        redirect=_apache_redirect(setup, host),
+        port="443" if setup.reverse_proxy_tls else "80",
+        host=host,
+        tls=_apache_tls(setup, certificate, private_key),
+        scheme=_proxy_scheme(setup),
+        authentik=_authentik_host_url(setup),
     )
 
 
@@ -3203,11 +3638,35 @@ def _render_caddy(setup: Setup) -> str:
 @@secret_note@@
 @@host@@ {
 @@blocks@@}
-""",
+@@authentik_site@@""",
         file=proxy_filename(setup),
         secret_note=secret_note,
         host=_proxy_hostname(setup),
         blocks="\n".join(blocks),
+        authentik_site=_caddy_authentik_site(setup),
+    )
+
+
+def _caddy_authentik_site(setup: Setup) -> str:
+    """The site block for Authentik's own interface, or nothing."""
+    if not _proxy_serves_authentik(setup):
+        return ""
+    tls = (
+        f"\ttls {setup.reverse_proxy_acme_email}\n" if setup.reverse_proxy_acme_email else ""
+    )
+    return _fill(
+        """
+# Authentik's own interface, at the host name of its public address: where
+# every sign-in is sent, and the address every token names as its issuer.
+# Caddy carries the WebSocket Authentik's interface keeps open without being
+# told, and sets X-Forwarded-For from the connection here as well.
+@@host@@ {
+@@tls@@	reverse_proxy @@authentik@@
+}
+""",
+        host=_authentik_proxy_hostname(setup),
+        tls=tls,
+        authentik=f"127.0.0.1:{setup.authentik_http_port}",
     )
 
 
@@ -3253,6 +3712,27 @@ def _render_traefik(setup: Setup) -> str:
         if _proxy_forwards_auth(setup)
         else ""
     )
+    authentik_routers = (
+        _fill(
+            """
+    @@name@@-authentik:
+      # Authentik's own interface, at the host name of its public address:
+      # where every sign-in is sent, and the address every token names as its
+      # issuer. Traefik carries the WebSocket it keeps open by default.
+      rule: "Host(`@@authentik_host@@`)"
+      priority: 10
+      entryPoints:
+        - websecure
+      service: @@name@@-authentik
+      tls:
+        certResolver: letsencrypt
+""",
+            name=name,
+            authentik_host=_authentik_proxy_hostname(setup),
+        )
+        if _proxy_serves_authentik(setup)
+        else ""
+    )
     admin_services = (
         _fill(
             """
@@ -3264,7 +3744,7 @@ def _render_traefik(setup: Setup) -> str:
             name=name,
             authentik=authentik,
         )
-        if _proxy_forwards_auth(setup)
+        if _proxy_forwards_auth(setup) or _proxy_serves_authentik(setup)
         else ""
     )
     middlewares = (
@@ -3345,7 +3825,7 @@ http:
       service: @@name@@
       tls:
         certResolver: letsencrypt
-@@admin_routers@@
+@@admin_routers@@@@authentik_routers@@
   services:
     @@name@@:
       loadBalancer:
@@ -3361,6 +3841,7 @@ http:
         upstream=upstream,
         email=setup.reverse_proxy_acme_email or "ops@example.com",
         admin_routers=admin_routers,
+        authentik_routers=authentik_routers,
         admin_services=admin_services,
         middlewares=middlewares,
     )
@@ -4073,7 +4554,7 @@ services:
       - ALL
 {_update_label(setup)}
   redis:
-    image: redis:8.10-alpine
+    image: {REDIS_IMAGE}
     container_name: {setup.project_name}-redis
     restart: unless-stopped
 {_redis_storage_comment(setup)}    #
@@ -4137,7 +4618,9 @@ def write_files(
     # is one an operator cannot run to see what it would do.
     if _uses_logrotate(setup):
         policy = compose_path.parent / logrotate_filename(setup)
-        policy.write_text(render_logrotate_file(setup), encoding="utf-8")
+        policy.write_text(
+            render_logrotate_file(setup, compose_path.parent), encoding="utf-8"
+        )
         os.chmod(policy, 0o644)
         written.append(f"{policy} (install it into /etc/logrotate.d)")
 
@@ -4430,14 +4913,29 @@ def review(wizard: Wizard, setup: Setup) -> bool:
                 for index, line in enumerate(_wrap(warning, 68)):
                     wizard.say(f"    {'-' if index == 0 else ' '} {line}")
 
+        errors = check_errors(setup, wizard.base_dir)
+        if errors:
+            wizard.say()
+            wizard.say("  Has to change before anything is written:")
+            for error in errors:
+                for index, line in enumerate(_wrap(error, 68)):
+                    wizard.say(f"    {'!' if index == 0 else ' '} {line}")
+
         if not wizard.interactive:
-            return True
+            # Nothing was printed above, and this is the one thing a run that
+            # asks nothing must not keep to itself.
+            for error in errors:
+                print(error, file=sys.stderr)
+            return not errors
 
         wizard.say()
         answer = wizard._read(
             "  Write it all out now? [Y/n], or name a setting to change > "
         ).strip()
         if not answer or answer.lower() in YES:
+            if errors:
+                wizard.say("  Not with the problem above: name the setting to change.")
+                continue
             return True
         if answer.lower() in NO:
             return False
@@ -4564,7 +5062,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
         "X-Forwarded-For so the rate limit counts clients rather than itself, "
         "and leaves the /mcp event stream unbuffered. Name one and a working "
         "configuration file is written beside the compose file, including the "
-        "forward auth in front of /admin where the stack can provide it.",
+        "forward auth in front of /admin where the stack can provide it, and a "
+        "site for Authentik's public address when --with-authentik adds it.",
     )
     proxy.add_argument(
         "--reverse-proxy",
@@ -4839,8 +5338,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     _apply_flags(setup, args)
     setup.build_context = _default_build_context(output_dir)
     setup.watchtower_socket = setup.watchtower_socket or detect_docker_socket()
+    setup.docker_mode = setup.docker_mode or detect_docker_mode()
 
-    wizard = Wizard(setup, interactive=not args.non_interactive)
+    wizard = Wizard(setup, interactive=not args.non_interactive, base_dir=output_dir)
     wizard.say("Docker setup for the check-opencloud-security web application")
     wizard.say()
     for line in _wrap(
@@ -4914,13 +5414,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         setup.audit_storage, setup.audit_log_path
     ):
         wizard.say(
-            f"    mkdir -p {setup.audit_log_path} && "
-            f"sudo chown {WEB_IMAGE_UID} {setup.audit_log_path}"
+            f"    {_ownership_command(setup, setup.audit_log_path, WEB_IMAGE_UID)}"
         )
     if _binds_a_directory(setup.redis_persistence, setup.redis_data_path):
         wizard.say(
-            f"    mkdir -p {setup.redis_data_path} && "
-            f"sudo chown {REDIS_IMAGE_UID} {setup.redis_data_path}"
+            f"    {_ownership_command(setup, setup.redis_data_path, REDIS_IMAGE_UID)}"
         )
     if _uses_logrotate(setup):
         name = logrotate_filename(setup)

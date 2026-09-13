@@ -326,6 +326,14 @@ Each one is a working configuration rather than a sketch:
   is passed on, carrying the identity the outpost established and the shared
   secret that makes those headers worth believing. The audit view is an event
   stream too, so that block is not buffered either.
+- **A site for Authentik**, when the stack brings it: a second server block,
+  virtual host or router in the same file, answering to the host name of
+  Authentik's public address and proxying to its published port, WebSocket
+  included. That address is where every sign-in sends a browser, so a proxy
+  that served only the scanner would install cleanly and sign nobody in. nginx
+  and Apache are asked for a certificate for that name as well - the scanner's
+  own works if it carries both names. An address that is `localhost`, a bare
+  IP, or the scanner's own host name gets no site, and the wizard says so.
 
 **Apache gets no `/admin` block**, because it has no forward auth of its own.
 The area is proxied by the catch-all like every other path but without
@@ -407,6 +415,30 @@ command in its next steps:
 mkdir -p ./audit && sudo chown 10001 ./audit
 mkdir -p ./data  && sudo chown 999 ./data
 ```
+
+**The two are always different directories**, and neither may be inside the
+other: the web image writes as uid 10001 and Redis as uid 999, and a directory
+has one owner. The wizard refuses the answer at the question, and an unattended
+run with such answers writes nothing.
+
+**On a rootless Docker those commands are wrong**, because uid 10001 in a
+container is your subordinate uid at that offset on the host (the start of your
+range in `/etc/subuid`, plus 10000), not host uid 10001. The wizard asks which
+kind of daemon it is generating for - detected from the socket, which a
+rootless daemon serves under `/run/user/<uid>` - and prints the rootless form
+instead, which runs the `chown` inside a container and needs no sudo:
+
+```bash
+mkdir -p ./audit && docker run --rm --user 0 --entrypoint chown -v "$(realpath ./audit)":/target redis:8.10-alpine 10001 /target
+mkdir -p ./data  && docker run --rm --user 0 --entrypoint chown -v "$(realpath ./data)":/target redis:8.10-alpine 999 /target
+```
+
+Your own account cannot read those directories afterwards; read them through a
+container the same way. A logrotate policy generated for a rootless daemon
+names the mapped host ids on its `create` line, and says so if `/etc/subuid`
+has no range for you. The default rootless port driver also hides the client
+address from a port published beyond `127.0.0.1`, so the wizard points out
+that the rate limit then needs a reverse proxy on the host in front.
 
 **Which directory is asked for, and it defaults to one beside the compose
 file** - `./data` for Redis, `./audit` for the trail. The leading `./` is not

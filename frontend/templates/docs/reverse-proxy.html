@@ -329,7 +329,8 @@ for a scan to finish.</p>
 <a href="https://github.com/sowoi/check-opencloud-security/blob/main/docker/setup-wizard.py"><code>docker/setup-wizard.py</code></a> writes the nginx, Apache,
 Caddy or Traefik configuration for a generated deployment, following the notes
 below and filling in the host name, the port and - where the stack brings its
-own identity provider - the forward auth in front of <code>/admin</code>. These sections
+own identity provider - the forward auth in front of <code>/admin</code> and a site for
+Authentik itself at the host name of its public address. These sections
 are what it generates, and the reference for a deployment it did not write.</p>
 <h3 id="what-the-service-needs-from-a-proxy">What the service needs from a proxy</h3>
 <ul>
