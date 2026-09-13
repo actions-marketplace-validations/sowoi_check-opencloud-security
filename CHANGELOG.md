@@ -12,6 +12,8 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+## [1.22.1] - 2026-09-13
+
 ### Added
 
 - **The Docker setup wizard generates for rootless Docker too.** Under a
