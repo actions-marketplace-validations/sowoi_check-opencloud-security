@@ -12,6 +12,8 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+## [1.22.0] - 2026-09-13
+
 ### Added
 
 - **The browser can ask whether the fixes worked.** Three surfaces already
