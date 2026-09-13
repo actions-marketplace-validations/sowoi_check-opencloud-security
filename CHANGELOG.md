@@ -12,6 +12,8 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+## [1.22.4] - 2026-09-13
+
 ### Changed
 
 - **A pull request documents itself in `CHANGELOG.md` alone.**
