@@ -9,10 +9,12 @@ Run it before opening a pull request; no workflow runs it.
 
 **Every change is documented.** A pull request that changes anything has to
 add to ``CHANGELOG.md`` - under ``## [Unreleased]`` or under the heading of the
-version in ``pyproject.toml`` - and to ``RELEASE.md``, whose heading has to
-name that same version. The ``skip-changelog`` label is the stated exception,
-and a pull request opened by one of this repository's bots is exempt: a
-refreshed advisory database is not a change anybody writes notes for.
+version in ``pyproject.toml``. ``RELEASE.md`` is not asked for: the release
+workflow writes it from that section with ``scripts/release_notes.py`` and
+overwrites whatever a pull request put there. The ``skip-changelog`` label is
+the stated exception, and a pull request opened by one of this repository's
+bots is exempt: a refreshed advisory database is not a change anybody writes
+notes for.
 
 **A version bump is deliberate.** A bump that lands on ``main`` publishes to
 PyPI immediately, so a pull request that changes the ``version`` in
@@ -92,12 +94,6 @@ def changelog_section(changelog: str, heading: str) -> str:
     return match.group("body").strip() if match else ""
 
 
-def release_heading_version(release: str) -> str | None:
-    """The version ``RELEASE.md`` is written for."""
-    match = re.search(r"^## check-opencloud-security (\S+)\s*$", release, re.MULTILINE)
-    return match.group(1) if match else None
-
-
 def check_changelog(
     *,
     changed_files: list[str],
@@ -106,7 +102,6 @@ def check_changelog(
     version: str,
     base_changelog: str,
     head_changelog: str,
-    head_release: str,
 ) -> list[str]:
     """Every problem with how this pull request documents itself."""
     if not changed_files or SKIP_CHANGELOG_LABEL in labels or author in AUTOMATED_AUTHORS:
@@ -123,17 +118,6 @@ def check_changelog(
             f"CHANGELOG.md has no new entry under '## [Unreleased]' or '## [{version}]'. "
             f"Describe the change there, or label the pull request '{SKIP_CHANGELOG_LABEL}' "
             "if it genuinely needs no notes."
-        )
-    if "RELEASE.md" not in changed_files:
-        problems.append(
-            "RELEASE.md is unchanged. Add the same entry there as in CHANGELOG.md."
-        )
-    heading = release_heading_version(head_release)
-    if heading != version:
-        problems.append(
-            f"RELEASE.md is written for {heading or 'no version'}, but pyproject.toml "
-            f"declares {version}. Its entries belong under "
-            f"'## check-opencloud-security {version}'."
         )
     return problems
 
@@ -223,7 +207,6 @@ def main(argv: list[str] | None = None) -> int:
         version=head_version,
         base_changelog=file_at(merge_base, "CHANGELOG.md"),
         head_changelog=file_at(args.head, "CHANGELOG.md"),
-        head_release=file_at(args.head, "RELEASE.md"),
     )
     problems += check_version(
         base_version=base_version,

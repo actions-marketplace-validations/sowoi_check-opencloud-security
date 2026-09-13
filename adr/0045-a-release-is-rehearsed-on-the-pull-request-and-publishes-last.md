@@ -1,6 +1,6 @@
 # ADR 0045: A release is rehearsed on the pull request and publishes last
 
-- Status: Accepted; its pull request policy superseded by ADR 0046
+- Status: Accepted; its pull request policy superseded by ADR 0046, its `RELEASE.md` requirement by ADR 0048
 - Date: 2026-09-13
 
 ## Context
