@@ -454,6 +454,10 @@ it whether repeated or not - and writes three things:</p>
 <p>and it ends by printing one link:</p>
 <pre><code>https://sso.example.com/if/flow/opencloud-scanner-enrollment/?itoken=&lt;AUTHENTIK_ENROLLMENT_TOKEN&gt;
 </code></pre>
+<p>The token is a credential, so the wizard prints the placeholder rather than
+the value, and beside it the command that assembles the real link from <code>.env</code>:</p>
+<pre><code>echo &quot;https://sso.example.com/if/flow/opencloud-scanner-enrollment/?itoken=$(sed -n 's/^AUTHENTIK_ENROLLMENT_TOKEN=//p' .env)&quot;
+</code></pre>
 <p>Each person named opens it, types their username, an email address and a
 password, enrols an authenticator app or a security key, and is signed in.
 Somebody on the operator's guest list lands in <code>opencloud-scanner-operators</code>,

@@ -314,6 +314,13 @@ and it ends by printing one link:
 https://sso.example.com/if/flow/opencloud-scanner-enrollment/?itoken=<AUTHENTIK_ENROLLMENT_TOKEN>
 ```
 
+The token is a credential, so the wizard prints the placeholder rather than
+the value, and beside it the command that assembles the real link from `.env`:
+
+```
+echo "https://sso.example.com/if/flow/opencloud-scanner-enrollment/?itoken=$(sed -n 's/^AUTHENTIK_ENROLLMENT_TOKEN=//p' .env)"
+```
+
 Each person named opens it, types their username, an email address and a
 password, enrols an authenticator app or a security key, and is signed in.
 Somebody on the operator's guest list lands in `opencloud-scanner-operators`,

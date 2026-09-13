@@ -15,6 +15,7 @@ import importlib.util
 import json
 import os
 import stat
+import subprocess  # nosec B404 - runs the command the wizard prints
 import sys
 import uuid
 from pathlib import Path
@@ -2466,9 +2467,19 @@ def test_the_bundled_provider_leaves_a_person_only_a_password_and_a_second_facto
         # What puts an enrolled operator into the group /admin is bound to.
         assert environment["COS_WEB_ADMIN_USERS"] == "okko"
 
-    instructions = "\n".join(wizard_module.enrollment_instructions(setup))
-    assert wizard_module.authentik_enrollment_link(setup) in instructions
-    assert f"?itoken={token}" in instructions
+    lines = wizard_module.enrollment_instructions(setup)
+    instructions = "\n".join(lines)
+    # The token is a credential: printed, it outlives the run in scrollback
+    # and CI logs. What is printed assembles the link from .env instead.
+    assert token not in instructions
+    assert "?itoken=<AUTHENTIK_ENROLLMENT_TOKEN>" in instructions
+    command = next(line.strip() for line in lines if "sed -n" in line)
+    link = subprocess.run(  # nosec B602 - the command the wizard prints, run as printed
+        command, shell=True, cwd=tmp_path, capture_output=True, text=True, check=True
+    ).stdout.strip()
+    assert link == (
+        f"{setup.authentik_url.rstrip('/')}{wizard_module.AUTHENTIK_ENROLLMENT_PATH}?itoken={token}"
+    )
     assert "second factor" in instructions
     assert "alice" in instructions and "okko" in instructions
 

@@ -14,7 +14,9 @@
   included), and prints one enrollment link. Each person named chooses a
   password and enrols a second factor there; an operator joins
   `opencloud-scanner-operators` on the way. The link is an invitation keyed by
-  a generated `AUTHENTIK_ENROLLMENT_TOKEN` in `.env`
+  a generated `AUTHENTIK_ENROLLMENT_TOKEN` in `.env` - the wizard prints the
+  link with a placeholder and a command that fills the token in from `.env`,
+  never the token itself, so it stays out of scrollback and CI logs
   (`authentik/blueprints/opencloud-enrollment.yaml`), admits only the listed
   names, each once, and creates nothing without the token. `akadmin` gets a
   generated `AUTHENTIK_BOOTSTRAP_PASSWORD` for recovery, which also closes the

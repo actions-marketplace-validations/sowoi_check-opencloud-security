@@ -2783,14 +2783,6 @@ def _merge_usernames(*lists: str) -> str:
     return ";".join(names)
 
 
-def authentik_enrollment_link(setup: Setup) -> str:
-    """The address a listed person opens to create their account."""
-    return (
-        f"{setup.authentik_url.rstrip('/')}{AUTHENTIK_ENROLLMENT_PATH}"
-        f"?itoken={setup.authentik_enrollment_token}"
-    )
-
-
 def _authentik_environment(setup: Setup) -> list[EnvEntry]:
     """What both Authentik containers read. The worker is what sends mail."""
     entries = [
@@ -4888,17 +4880,27 @@ def _step(index: int, text: str, *commands: str) -> list[str]:
     return lines
 
 
-def enrollment_instructions(setup: Setup) -> list[str]:
+def enrollment_instructions(setup: Setup, env_file: str = ".env") -> list[str]:
     """How the people named get in: one link, and nothing in the admin UI.
 
-    The link carries the invitation token, so it is printed here, to the
-    operator who ran the wizard, and never written into the compose file.
+    The link carries the invitation token, which is a credential: it is
+    neither written into the compose file nor printed here, where it would
+    outlive the run in scrollback and CI logs. What is printed is the command
+    that assembles the link from the secrets file.
     """
     if not _uses_authentik(setup):
         return []
     lines = ["", "  Then everybody who signs in creates their own account:", ""]
     if setup.authentik_accounts:
-        lines.append(f"    open {authentik_enrollment_link(setup)}")
+        variable = SECRET_VARIABLES["authentik_enrollment_token"]
+        base = f"{setup.authentik_url.rstrip('/')}{AUTHENTIK_ENROLLMENT_PATH}"
+        lines.append(f"    {base}?itoken=<{variable}>")
+        lines.append("")
+        lines.append(f"  with {variable} from {env_file}:")
+        lines.append("")
+        lines.append(
+            f"    echo \"{base}?itoken=$(sed -n 's/^{variable}=//p' {env_file})\""
+        )
         lines.append("")
         for text in _wrap(
             "Send that link to each of "
@@ -5712,7 +5714,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     build = " --build" if setup.image_source == "build" else ""
     wizard.say(f"    docker compose -f {args.compose_file} up -d{build}")
     wizard.say(f"    open http://{setup.bind_address}:{setup.host_port}")
-    for line in enrollment_instructions(setup):
+    for line in enrollment_instructions(setup, args.env_file):
         wizard.say(line)
     for line in admin_walkthrough(setup):
         wizard.say(line)
