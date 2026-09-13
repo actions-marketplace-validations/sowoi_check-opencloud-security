@@ -55,6 +55,7 @@ project. Read the accepted records that affect an area before changing it.
 | [0046](0046-a-release-needs-no-label-and-the-pull-request-policy-is-local.md) | A release needs no label, and the pull request policy is local | Accepted; its `RELEASE.md` requirement superseded by ADR 0048 |
 | [0047](0047-the-bundled-provider-requires-a-second-factor-and-provisions-its-accounts.md) | The bundled provider requires a second factor and provisions its accounts | Accepted |
 | [0048](0048-release-md-is-written-by-the-release-not-by-a-pull-request.md) | RELEASE.md is written by the release, not by a pull request | Accepted |
+| [0049](0049-the-docker-wizard-is-downloaded-from-a-release-and-knows-its-version.md) | The Docker wizard is downloaded from a release, and knows its version | Accepted |
 
 ## Writing a new record
 

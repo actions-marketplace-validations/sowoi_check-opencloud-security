@@ -42,6 +42,8 @@ def test_pypi_is_published_only_after_every_other_artifact_is_built():
         "Attest the distribution packages",
         "Build the web application bundle",
         "Attest the web application bundle",
+        "Build the Docker setup wizard",
+        "Attest the Docker setup wizard",
     ):
         assert _index(steps, build) < publish, f"{build!r} runs after the upload"
     assert publish < _index(steps, "Create Git tag and GitHub release")
@@ -64,6 +66,7 @@ def test_the_dry_run_builds_what_the_release_builds():
         "Install nfpm",
         "Build the .deb and the .rpm",
         "Build the web application bundle",
+        "Build the Docker setup wizard",
     ):
         assert name in rehearsed
 
@@ -88,3 +91,11 @@ def test_the_dry_run_can_publish_nothing():
         assert forbidden not in text
     assert "push: false" in text
 
+
+
+def test_the_release_attaches_the_wizard_it_built():
+    """A wizard built and attested but never uploaded leaves the documented download a 404."""
+    steps = _steps("publish-pypi.yml")
+    release = steps[_index(steps, "Create Git tag and GitHub release")]
+
+    assert "wizard-release/*" in release["run"]

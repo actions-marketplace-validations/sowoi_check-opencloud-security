@@ -31,6 +31,7 @@ uv run mypy --config-file mypy.ini                  # type checking
 cd ansible && ansible-lint                          # must be run from ansible/
 uv run nox                                          # full suite on Python 3.10-3.14
 python scripts/build_web_bundle.py                  # builds the web release tarball
+python scripts/build_wizard_release.py              # builds the stamped setup-wizard.py a release attaches
 uv build && python scripts/build_distro_packages.py # builds the .deb and .rpm (needs nfpm)
 python scripts/embed_wizard_blueprints.py           # after editing authentik/blueprints/ (--check verifies)
 python scripts/check_documentation_links.py         # re-checks documented OpenCloud links

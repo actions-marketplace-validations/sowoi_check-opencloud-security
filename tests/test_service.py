@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import threading
 import urllib.error
+import urllib.parse
 import urllib.request
 
 import pytest
@@ -160,6 +161,30 @@ def test_failed_scan_is_reported_as_a_bad_request(server):
 
     assert excinfo.value.code == 400
     assert "status document" in json.loads(excinfo.value.read())["error"]
+
+
+def test_a_newline_in_a_failed_host_cannot_forge_a_log_line(server, monkeypatch, caplog):
+    """The host comes from the request body, and the log is evidence an operator reads."""
+    base, _ = server()
+
+    def _scan(host, settings=None, release_settings=None):
+        raise ScanError(f"Could not resolve {host}.")
+
+    monkeypatch.setattr(service_module, "scan", _scan)
+    forged = "INFO opencloud_local_scan.service: Scan of admin succeeded"
+    caplog.set_level("INFO", logger=service_module.LOGGER.name)
+
+    with pytest.raises(urllib.error.HTTPError) as excinfo:
+        _request(
+            f"{base}/api/queue",
+            data=urllib.parse.urlencode({"url": f"bad.example.com\n{forged}"}),
+        )
+
+    assert excinfo.value.code == 400
+    messages = [r.getMessage() for r in caplog.records if "failed" in r.getMessage()]
+    assert messages, "the failed scan is still logged"
+    assert all("\n" not in message for message in messages)
+    assert any("bad.example.com\\n" in message for message in messages)
 
 
 def test_unknown_uuid_is_a_not_found(server):

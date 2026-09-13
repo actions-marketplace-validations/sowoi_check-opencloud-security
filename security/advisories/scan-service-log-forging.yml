@@ -1,0 +1,27 @@
+# A security advisory record. See AGENTS.md, "Security advisories".
+#
+# One file per bullet under a `### Security` heading in CHANGELOG.md.
+# `state` is the decision; `verified` is the evidence it rests on.
+
+slug: scan-service-log-forging
+state: declined
+changelog_version: "1.22.5"
+changelog_entry: "The scan service no longer lets a submitted host write its own log lines."
+shipped: true
+declined_because: |
+  Hardening. The line is written only after `_authorized()` has passed, and
+  the service refuses to listen beyond loopback without a token
+  (`ensure_listen_is_safe`), so the only caller who can inject is one already
+  trusted to submit scans. What they gain is a misleading INFO line in the
+  operator's own log - no disclosure, no execution, no privilege crossed.
+  Worth closing, not something to tell operators to upgrade away from.
+summary: >-
+  The scan service logged a failed scan's host verbatim from the request
+  body, so a newline in it forged a further log line
+verified: |
+  git show v1.0.1:opencloud_local_scan/service.py | grep -n 'Scan of %s failed'
+  git show v1.22.5:opencloud_local_scan/service.py | grep -n 'Scan of %s failed\|if not self._authorized'
+  Both show `LOGGER.info("Scan of %s failed: %s", host, exc)` with `host` from
+  `_read_host`, which only strips surrounding whitespace. v1.0.1 is the first
+  tag carrying that line (checked by walking `git tag --sort=v:refname`), and
+  v1.22.5 shows do_POST checking `_authorized()` before `_read_host()`.

@@ -18,13 +18,21 @@
   <meta name="robots" content="{{ robots|default('noindex, nofollow', true) }}">
   {# `tab_title` is the browser tab alone. A page may say more there than in
      the `title` block, which is also its og:title and structured data - the
-     parts a link preview would show to everyone in a channel. #}
-  <title>{% block tab_title %}{% block title %}{{ t('index.title') }}{% endblock %}{% endblock %} &middot; {{ site_name|default('OpenCloud Security Scan', true) }}</title>
+     parts a link preview would show to everyone in a channel.
+     A title that already names the site does not get the name again: the
+     guides are called "OpenCloud Security Scanner in Checkmk", and a search
+     result cuts off long before a repeated brand has said anything new. #}
+  {% set brand = site_name|default('OpenCloud Security Scan', true) %}
+  <title>{% block tab_title %}{% block title %}{{ t('index.title') }}{% endblock %}{% endblock %}{% if brand not in self.tab_title() %} &middot; {{ brand }}{% endif %}</title>
   <meta name="description" content="{% block description %}{{ t('index.description') }}{% endblock %}">
   {% if canonical_url %}
   <link rel="canonical" href="{{ canonical_url }}">
   {% endif %}
   <meta property="og:type" content="website">
+  {# The protocol wants language_TERRITORY. The language is negotiated on the
+     same URL, so there is no alternate to point at - only which one this
+     response happens to be in. #}
+  <meta property="og:locale" content="{{ {'en': 'en_US', 'de': 'de_DE', 'es': 'es_ES', 'fr': 'fr_FR'}.get(locale, 'en_US') }}">
   <meta property="og:site_name" content="{{ site_name|default('OpenCloud Security Scan', true) }}">
   <meta property="og:title" content="{{ self.title() }}">
   <meta property="og:description" content="{{ self.description() }}">

@@ -83,6 +83,9 @@ jobs:
       - name: Build the web application bundle
         run: python scripts/build_web_bundle.py --output-dir web-bundle
 
+      - name: Build the Docker setup wizard
+        run: python scripts/build_wizard_release.py --output-dir wizard-release
+
   install:
     name: Install the ${{ matrix.packager }} on ${{ matrix.image }}
     needs: artifacts

@@ -389,6 +389,56 @@ def test_every_page_has_a_title_and_a_description_of_its_own():
     assert len(descriptions) == len(CONTENT_PAGES)
 
 
+def test_a_title_that_already_names_the_site_does_not_name_it_twice():
+    """A search result truncates the title, and a repeated brand spends that space on nothing."""
+    test_client = client()
+
+    guide = test_client.get("/documentation/checkmk").text
+    title = re.search(r"<title>(.*?)</title>", guide, re.DOTALL).group(1)
+    assert title.count("OpenCloud Security Scan") == 1
+    assert "&middot;" not in title
+
+    # The negative half: a title that does not name the site still gets it.
+    grades = test_client.get("/grades").text
+    title = re.search(r"<title>(.*?)</title>", grades, re.DOTALL).group(1)
+    assert title.endswith(" &middot; OpenCloud Security Scan")
+
+
+def test_a_trailing_slash_redirects_permanently_to_the_canonical_page():
+    """A temporary redirect leaves a crawler keeping two addresses for one page."""
+    test_client = client()
+
+    response = test_client.get("/about/", follow_redirects=False)
+    assert response.status_code == 308
+    assert response.headers["location"].endswith("/about")
+
+    # The negative half: the canonical address itself is served, not redirected.
+    assert test_client.get("/about", follow_redirects=False).status_code == 200
+
+
+def test_the_favicon_path_leads_to_the_icon_rather_than_a_404():
+    """Clients ask for /favicon.ico whatever the page says, and a 404 is log noise."""
+    test_client = client()
+
+    response = test_client.get("/favicon.ico", follow_redirects=False)
+    assert response.status_code == 301
+    assert response.headers["location"] == "/static/img/logo.svg"
+    assert test_client.get("/favicon.ico").headers["content-type"].startswith("image/svg+xml")
+
+    # The negative half: an unknown path is still an honest 404.
+    assert test_client.get("/favicon.png").status_code == 404
+
+
+def test_a_page_tells_a_link_preview_which_language_it_is_in():
+    """og:locale follows the negotiated language, not a fixed English default."""
+    english = client().get("/", headers={"Accept-Language": "en"}).text
+    german = client().get("/", headers={"Accept-Language": "de"}).text
+
+    assert '<meta property="og:locale" content="en_US">' in english
+    assert '<meta property="og:locale" content="de_DE">' in german
+    assert 'content="en_US"' not in german
+
+
 def test_the_header_nav_collapses_behind_a_button_on_a_narrow_screen():
     """
     Six links and a brand line do not fit across a phone.

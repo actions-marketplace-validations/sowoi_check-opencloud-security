@@ -951,6 +951,19 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
             response.headers["Content-Security-Policy"] = DOCS_CSP
         return response
 
+    @app.middleware("http")
+    async def _permanent_slash_redirects(request: Request, call_next: Any) -> Response:
+        # The router answers `/about/` with a 307 to `/about`, and a crawler
+        # reads a 307 as "for now" - it keeps both addresses and splits what
+        # links to the page between them. The slash is never coming back, so
+        # say so. 308 rather than 301, so a POST is still repeated as a POST.
+        response = await call_next(request)
+        if response.status_code == 307:
+            location = urlsplit(response.headers.get("location", "")).path
+            if location and location.rstrip("/") == request.url.path.rstrip("/"):
+                response.status_code = 308
+        return response
+
     def translator_for(request: Request) -> Translator:
         """The catalogue this visitor reads, cookie first, then the browser."""
         return Translator(locale_for_request(request))
@@ -1293,6 +1306,13 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
     @app.get("/cli", include_in_schema=False)
     async def cli_page() -> Response:
         return RedirectResponse("/documentation#oneliner", status_code=301)
+
+    # Browsers, feed readers and crawlers ask for this path whether or not a
+    # page names an icon, and a 404 on every first visit is noise in every log.
+    # The SVG is the only icon there is; everything that asks here reads it.
+    @app.get("/favicon.ico", include_in_schema=False)
+    async def favicon() -> Response:
+        return RedirectResponse("/static/img/logo.svg", status_code=301)
 
     @app.get("/about", response_class=HTMLResponse, include_in_schema=False)
     async def about(request: Request) -> Response:

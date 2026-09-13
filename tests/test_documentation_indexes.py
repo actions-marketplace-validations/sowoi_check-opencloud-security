@@ -80,6 +80,38 @@ def test_every_guide_is_listed_in_the_docs_index():
     assert [guide.name for guide in GUIDES if f"{guide.name})" not in index] == []
 
 
+def _test_modules() -> list[str]:
+    """Every Python file under tests/, relative to it, as the index links to it."""
+    tests = ROOT / "tests"
+    return sorted(
+        path.relative_to(tests).as_posix()
+        for path in tests.rglob("*.py")
+        if "__pycache__" not in path.parts and path.name != "__init__.py"
+    )
+
+
+def _test_index_links() -> list[str]:
+    """The files tests/README.md links to."""
+    index = (ROOT / "tests" / "README.md").read_text(encoding="utf-8")
+    return re.findall(r"\]\(([^)#]+\.py)\)", index)
+
+
+def test_every_test_module_is_listed_in_the_test_index():
+    """A test file missing from tests/README.md is one a contributor cannot find by purpose."""
+    listed = set(_test_index_links())
+
+    assert _test_modules()
+    assert [module for module in _test_modules() if module not in listed] == []
+
+
+def test_the_test_index_lists_no_module_that_does_not_exist():
+    """A renamed or deleted test file leaves a dead link in the index."""
+    modules = set(_test_modules())
+
+    assert _test_index_links()
+    assert [link for link in _test_index_links() if link not in modules] == []
+
+
 def test_every_guide_is_browsable_under_documentation():
     """A guide absent from the manifest is never rendered and never searchable."""
     manifest = (ROOT / "webapp" / "documentation.py").read_text(encoding="utf-8")

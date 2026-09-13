@@ -49,9 +49,19 @@ It needs no checkout of its own: it is one file, uses the standard library
 alone, and runs on a host that has Docker and nothing else installed yet.
 
 ```bash
-curl -fsSLO https://raw.githubusercontent.com/sowoi/check-opencloud-security/main/docker/setup-wizard.py
-chmod +x setup-wizard.py && ./setup-wizard.py
+base=https://github.com/sowoi/check-opencloud-security/releases/latest/download
+curl -fsSLO "$base/setup-wizard.py" -O "$base/setup-wizard.py.sha256"
+sha256sum --check setup-wizard.py.sha256    # macOS: shasum -a 256 --check
+chmod +x setup-wizard.py
+./setup-wizard.py --version
+./setup-wizard.py
 ```
+
+That is the copy attached to the latest release, not whatever `main` holds
+this minute: it reports that release with `--version`, the checksum beside it
+says the download arrived intact, and `gh attestation verify setup-wizard.py
+--repo sowoi/check-opencloud-security` shows it was built by this project's
+release workflow.
 
 [The flags, the presets and the Authentik answers](#the-setup-wizard) are
 below.
@@ -178,6 +188,22 @@ and warns before writing about the combinations the service itself refuses to
 start on, such as a sign-in on `/mcp` with a provider it was told nothing
 about.
 
+**Switching on `/admin` or the sign-in on `/mcp` makes the bundled Authentik
+the default.** The provider question that follows then offers *yes* in
+brackets, because a deployment asking for either usually has no identity
+provider of its own yet; answer `no` to keep checking tokens against the one
+you run. Only switching one on moves the default - re-running over a
+deployment that already said `no` keeps it. The flags are unchanged:
+`--sign-in` alone still means a provider you already run.
+
+**It is easier to follow in a terminal.** Each section opens with a rule,
+`Step 3 of 12` and a progress bar, questions and their current value stand
+out from the explanation under them, and refusals are marked. The colour is
+plain ANSI from the standard library - no Rich or questionary to install on a
+host that has only Docker - and it switches itself off when the output is not
+a terminal, when `NO_COLOR` is set or when `TERM=dumb`, so a piped or logged
+run is the same plain text as before. `FORCE_COLOR=1` turns it on regardless.
+
 **At any question**, besides answering it:
 
 | Type | What happens |
@@ -188,12 +214,31 @@ about.
 | `-` | Empties a text setting, which an empty line cannot: that keeps the default. Still refused where the setting may not be empty |
 | `rest` | Takes every remaining default and jumps to the summary |
 | `generate` | Makes a strong random value, at the questions that say so |
+| `?` | Shows the whole explanation and the page that documents the setting. A question opens with its first sentence only |
+
+**It asks how much to ask, first.** `quick` - the default on a first run -
+asks only what a deployment cannot be right without: the image, the port and
+public address, `/mcp` and its sign-in, `/admin`, the identity provider and
+its mail, and the reverse proxy, with whatever those answers bring into play.
+`private` asks the same, starting from the private preset. `full` asks every
+question, and is the default when the wizard is editing a deployment that is
+already there. A section passed over is named as skipped, so `Step 7 of 12`
+after `Step 2` is explained rather than a surprise. `--mode` answers this in
+advance.
+
+Each question wraps to the terminal it is shown in, and credentials are typed
+without an echo. A credential already in `.env` is offered back as `[set,
+hidden - Enter keeps it]`, never as its value.
 
 **The summary is somewhere you can work.** It lists the answers grouped under
-the headings they were asked under, then what was derived or generated for
-you, then anything worth a second look — and it asks `Write it all out now?
-[Y/n], or name a setting to change`. Typing `host_port`, or enough of a name
-to be unambiguous, re-asks that one question and comes straight back. So the
+the headings they were asked under - each by its question's wording, with the
+name to type in `[brackets]` and a `*` in front of every answer that differs
+from the default - then what was derived or generated for you, then anything
+worth a second look. That includes what this host says: Docker or the Compose
+plugin missing, the host port already in use, a certificate the proxy
+configuration names that does not exist yet. Then it asks `Write it all out
+now? [Y/n], or name a setting to change`. Typing `host_port`, or enough of a
+name to be unambiguous, re-asks that one question and comes straight back. So the
 short path through the whole thing is `rest` at the first question, then the
 three or four settings you actually care about, by name.
 
@@ -205,6 +250,24 @@ answer is offered back as the default too. Changing the port on a live
 deployment is a re-run, `rest`, `host_port`, and done. The notebook holds no
 credentials, is safe to delete, and a preset or a flag named on this command
 line still overrides what it remembers.
+
+**Nothing is replaced unseen.** Before asking whether to overwrite, a re-run
+shows a diff of the compose file - and of the proxy and logrotate files it
+would rewrite - against what is there; `.env` and the proxy's secret include
+are never diffed, because that would print a credential. Every file it
+replaces is kept beside the new one as `<name>.<UTC time>.bak`, the copy of
+`.env` owner-readable like the original. `*.bak` is in `.gitignore`.
+
+**It can check and start what it wrote.** Where Docker is installed it offers
+`docker compose config` on the new files, and then - only when you say yes,
+and only when nothing has to be done as root first - `docker compose up -d`,
+waiting for `/healthz` to answer.
+
+**The same deployment on another host** is `--print-answers` on the first,
+which prints every non-credential answer as JSON and writes nothing, and
+`--answers that.json` on the second. The file is read as untrusted, exactly
+as the notebook is, and an answers file with nothing usable in it is refused
+rather than quietly ignored.
 
 | Flag | What it does |
 |:-----|:-------------|
@@ -224,6 +287,10 @@ line still overrides what it remembers.
 | `--smtp-security starttls\|ssl\|none` | Default: `starttls` |
 | `--smtp-timeout SECONDS` | Default: `10` |
 | `--non-interactive` | Ask nothing, take every default, generate the credentials |
+| `--mode quick\|private\|full` | How much to ask, instead of asking that first |
+| `--answers FILE` | Start from the answers in this JSON file, for example one written by `--print-answers` |
+| `--print-answers` | Print the answers this run starts from as JSON - no credentials - and exit without writing |
+| `--version` | Print the release this wizard came from: stamped into the release download, read from `pyproject.toml` in a checkout or the web bundle |
 | `--image-source dockerhub\|build` | Pull the published image (the default) or build it from this checkout |
 | `--force` | Overwrite existing files without asking - including `docker-compose.yml` and the other compose files shipped in `docker/`, which are otherwise refused, so the stack a checkout already runs can be reconfigured in place |
 
