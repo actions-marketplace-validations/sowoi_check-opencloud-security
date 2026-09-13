@@ -55,6 +55,7 @@ for a remote scan service.
 | `frontend/static/llms.txt`, `frontend/static/js/webmcp.js` | Agent discovery and page-scoped browser tools |
 | `frontend/` | Everything the browser sees: templates, CSS, JavaScript, SVG |
 | `scripts/build_web_bundle.py` | Builds the GitHub release tarball of the web application |
+| `scripts/build_wizard_release.py` | Builds the Docker setup wizard a release attaches: version stamped, checksum beside it |
 | `packaging/` | The nfpm recipe and the launchers behind the `.deb` and the `.rpm` |
 | `scripts/build_distro_packages.py` | Builds both of those from the already-built wheel |
 | `tests/` | Test suite, including `tests/fake_opencloud.py` |
@@ -777,6 +778,22 @@ as environment variables (ADR 0047). Keep it independent of
 `opencloud_local_scan.wizard`, which sets up a monitoring check against one
 instance - no imports, no shared configuration.
 `tests/test_docker_wizard.py` asserts all of that.
+
+**Its version is stamped, never written.** The repository copy keeps
+`RELEASE_VERSION = ""`; `scripts/build_wizard_release.py` fills it in for the
+copy a release attaches, and `--version` otherwise reads `pyproject.toml`
+beside it. Never commit a number into that line - `tests/test_wizard_release.py`
+fails if you do - and keep the documented download on
+`releases/latest/download`, never on `main` (ADR 0049).
+
+**It never prints a credential and never replaces a file unseen.** A value in
+`CREDENTIALS` is typed without an echo and offered back masked; a re-run shows
+a diff of the non-secret files only, and keeps every replaced file as
+`<name>.<UTC time>.bak` (an `.env` copy `0600`). Anything that reads the host -
+Docker, the port, the certificates - lives in `check_host`, apart from
+`check_consistency`, which must give the same verdict on every machine; and
+the only things it runs are `docker compose config` and `up -d`, each after
+the operator said yes.
 
 ## Validation
 

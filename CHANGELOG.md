@@ -26,8 +26,46 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   audience, the key set and resource URLs - are still shown, so they can be
   checked.
 
+### Added
+
+- **The Docker setup wizard is downloaded from a release, checksummed, and
+  knows its version.** Every release now attaches `setup-wizard.py` with a
+  `setup-wizard.py.sha256` beside it, built and attested by the release
+  workflow, and the guides download that copy instead of whatever `main` held.
+  `setup-wizard.py --version` names the release it came from: stamped into the
+  download, and read from `pyproject.toml` in a checkout or the web bundle.
+  See ADR 0049. The release asset first exists with the next release.
+- **The Docker setup wizard asks how much to ask.** `quick`, the default on a
+  first run, asks only the image, the port and public address, `/mcp` and its
+  sign-in, `/admin`, the identity provider and its mail, and the reverse proxy;
+  `private` asks the same from the private preset; `full` asks everything and
+  is the default when editing an existing deployment. `--mode` answers it in
+  advance, and a section passed over is now named as skipped so the step
+  counter adds up.
+- **The Docker setup wizard shows what a re-run would change, and keeps what
+  it replaces.** Before asking to overwrite, it prints a diff of the compose
+  file and the proxy and logrotate files - never of `.env` - and every replaced
+  file is kept as `<name>.<UTC time>.bak`, the `.env` copy owner-readable only.
+- **The Docker setup wizard checks the host and can start the stack.** The
+  summary points out Docker or the Compose plugin missing, the host port
+  already in use, and a certificate the proxy configuration names that does
+  not exist. After writing it offers `docker compose config`, then
+  `docker compose up -d` and a wait for `/healthz` - each only when asked, and
+  `up` only when nothing has to be done as root first.
+- **Answers can travel between hosts.** `--print-answers` prints every
+  non-credential answer as JSON and writes nothing; `--answers FILE` starts a
+  run from such a file, read as untrusted, and refuses one with nothing usable
+  in it.
+
 ### Changed
 
+- **The Docker setup wizard is easier to read.** A question opens with its
+  first sentence, and `?` shows the rest with a link to the page documenting
+  the setting, at the release the wizard came from. Text wraps to the width of
+  the terminal. The summary labels each answer with its question, gives the
+  name to type in brackets and marks every answer that differs from the
+  default, and the enrollment link block uses the same rules as the rest of
+  the output.
 - **The Docker setup wizard offers the bundled Authentik once a sign-in is
   wanted.** Switching on the operator's area at `/admin` or the sign-in on
   `/mcp` now makes *yes* the default at the identity provider question, because

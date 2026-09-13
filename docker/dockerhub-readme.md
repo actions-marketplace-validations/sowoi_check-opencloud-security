@@ -23,8 +23,11 @@ It is one Python file, uses the standard library alone, and needs no checkout:
 ```bash
 mkdir opencloud-scanner && cd opencloud-scanner
 
-curl -fsSLO https://raw.githubusercontent.com/sowoi/check-opencloud-security/main/docker/setup-wizard.py
+base=https://github.com/sowoi/check-opencloud-security/releases/latest/download
+curl -fsSLO "$base/setup-wizard.py" -O "$base/setup-wizard.py.sha256"
+sha256sum --check setup-wizard.py.sha256    # macOS: shasum -a 256 --check
 chmod +x setup-wizard.py
+./setup-wizard.py --version
 ./setup-wizard.py
 
 docker compose up -d

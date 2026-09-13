@@ -170,6 +170,7 @@ is needed.
 | [`test_github_action.py`](test_github_action.py) | The published GitHub Action uses only flags and variables the plugin accepts. |
 | [`test_contrib_assets.py`](test_contrib_assets.py) | The Grafana dashboard, Prometheus rules and Checkmk check match the exporter. |
 | [`test_docker_wizard.py`](test_docker_wizard.py) | `docker/setup-wizard.py` writes a valid compose file, keeps credentials in `.env` only, and never overwrites an existing deployment. |
+| [`test_wizard_release.py`](test_wizard_release.py) | The Docker wizard attached to a release reports its version and ships with a checksum. |
 
 ## Repository, CI and release process
 

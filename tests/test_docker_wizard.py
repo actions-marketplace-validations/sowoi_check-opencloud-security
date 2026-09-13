@@ -40,6 +40,26 @@ def _load_wizard():
 wizard_module = _load_wizard()
 
 
+# The real ones, before the fixture below stands them in for every test.
+REAL_CHOOSE_MODE = wizard_module.Wizard.choose_mode
+REAL_CHECK_HOST = wizard_module.check_host
+REAL_OFFER_TO_START = wizard_module.offer_to_start
+
+
+@pytest.fixture(autouse=True)
+def _the_host_stays_out_of_it(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep the machine running the tests out of the wizard's behaviour.
+
+    A full walk is what almost every test here drives, so the mode question
+    answers "full"; the checks against Docker, the port and the certificates
+    say nothing; and nothing is started. The tests for those three undo this
+    for themselves.
+    """
+    monkeypatch.setattr(wizard_module.Wizard, "choose_mode", lambda self, **_: "full")
+    monkeypatch.setattr(wizard_module, "check_host", lambda setup: [])
+    monkeypatch.setattr(wizard_module, "offer_to_start", lambda *args, **kwargs: None)
+
+
 def _run(tmp_path: Path, *extra: str) -> int:
     return wizard_module.main(["--output-dir", str(tmp_path), "--non-interactive", *extra])
 
@@ -2091,7 +2111,9 @@ def test_the_summary_is_grouped_the_way_the_questions_were_asked() -> None:
     assert "  The reverse proxy" in lines
     # The answers sit under their heading, indented past it.
     images = lines.index("  Images")
-    assert lines[images + 1].startswith("    image_source")
+    assert lines[images + 1].endswith("[image_source]")
+    # Labelled with the question's own words, cut to the column.
+    assert lines[images + 1].strip().startswith("Pull the published image")
     # What nobody was asked for is listed apart from what they decided.
     assert "  Derived, and generated for you" in lines
     assert any("redis_password" in line for line in lines)
@@ -2588,7 +2610,8 @@ def test_the_enrollment_link_stands_apart_and_reads_right_for_one_name() -> None
     text = " ".join(line.strip() for line in lines)
 
     assert any("ENROLLMENT LINK" in line for line in lines)
-    assert sum(1 for line in lines if set(line.strip()) == {"="}) == 3
+    # Set between two rules: one carrying the title, one closing the block.
+    assert sum(1 for line in lines if "\u2501\u2501\u2501\u2501" in line) == 2
     # The command comes before the placeholder it replaces.
     command = next(i for i, line in enumerate(lines) if "sed -n" in line)
     placeholder = next(i for i, line in enumerate(lines) if "<AUTHENTIK_ENROLLMENT_TOKEN>" in line)
@@ -2860,3 +2883,395 @@ def test_a_credential_is_typed_without_an_echo_at_a_terminal(
     wizard.ask(_question("smtp_password"))
 
     assert hidden and setup.smtp_password == "typed"
+
+
+
+# --- how much is asked --------------------------------------------------------
+def test_a_quick_setup_asks_only_what_a_deployment_cannot_be_right_without(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Fifty questions is where people give up; the summary still reaches the rest."""
+    asked = _questions_asked(monkeypatch, {"admin_enabled": True, "admin_users": "okko"})
+
+    assert wizard_module.main(["--output-dir", str(tmp_path), "--mode", "quick"]) == 0
+
+    assert {"host_port", "public_base_url", "admin_enabled", "reverse_proxy"} <= set(asked)
+    # What the answers bring into play still comes with them.
+    assert "authentik_accounts" in asked
+    for key in ("result_ttl", "max_workers", "allow_indexing", "audit_log", "redis_maxmemory"):
+        assert key not in asked, key
+
+
+def test_a_private_setup_starts_from_the_private_answers(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The estate scanning its own network should not have to find six settings by name."""
+    asked = _questions_asked(monkeypatch, {})
+
+    assert wizard_module.main(["--output-dir", str(tmp_path), "--mode", "private"]) == 0
+
+    worker = _compose(tmp_path)["services"]["arq_worker"]["environment"]
+    assert worker["COS_WEB_ALLOW_PRIVATE_TARGETS"] == "true"
+    assert "allow_private_targets" not in asked
+
+    public = tmp_path / "public"
+    _questions_asked(monkeypatch, {})
+    assert wizard_module.main(["--output-dir", str(public), "--mode", "quick"]) == 0
+    assert _compose(public)["services"]["arq_worker"]["environment"][
+        "COS_WEB_ALLOW_PRIVATE_TARGETS"
+    ] == "false"
+
+
+def test_the_first_run_defaults_to_quick_and_an_edit_to_full(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Somebody re-running over a deployment came to change something off the short list."""
+    answers = iter(["", "", "3", "nonsense", "private"])
+    printed: list[str] = []
+    monkeypatch.setattr(wizard_module.Wizard, "_read", lambda self, prompt: next(answers))
+    monkeypatch.setattr(wizard_module.Wizard, "say", lambda self, text="": printed.append(text))
+    wizard = wizard_module.Wizard(wizard_module.Setup(), style=wizard_module.Style(False))
+
+    assert REAL_CHOOSE_MODE(wizard) == "quick"
+    assert REAL_CHOOSE_MODE(wizard, editing=True) == "full"
+    assert REAL_CHOOSE_MODE(wizard) == "full"
+    assert REAL_CHOOSE_MODE(wizard) == "private"
+    assert any("Answer with the number or the word" in line for line in printed)
+    assert wizard_module.Wizard(wizard_module.Setup(), interactive=False).choose_mode() == "full"
+
+
+def test_a_section_nothing_needs_is_named_as_skipped(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A step counter that jumps from 9 to 11 leaves the operator wondering what they missed."""
+    printed = _typed(monkeypatch, [])
+    wizard = wizard_module.Wizard(wizard_module.Setup(), style=wizard_module.Style(False))
+
+    wizard_module.run_questions(wizard)
+
+    skipped = [line for line in printed if "Skipped" in line]
+    assert any("Mail" in line for line in skipped)
+    assert any("Step 11 of 12" in line for line in printed)
+    assert not any("Step 10 of 12" in line for line in printed)
+    # A section that was asked is never reported as skipped.
+    assert not any("Images" in line for line in skipped)
+
+
+# --- reading a question -------------------------------------------------------
+def test_a_question_opens_with_one_sentence_and_the_rest_is_a_question_mark_away(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A paragraph under every question is a wall; the one who wants it types '?'."""
+    printed = _typed(monkeypatch, ["?", ""])
+    wizard = wizard_module.Wizard(wizard_module.Setup(), style=wizard_module.Style(False))
+    question = next(
+        q for section in wizard_module.build_sections(wizard.setup)
+        for q in section.questions if q.key == "smtp_password"
+    )
+    _, more = wizard_module._first_sentence(question.explain)
+    assert more
+
+    wizard.ask(question)
+
+    first_explanation = printed.index(next(line for line in printed if "Password" in line)) + 1
+    assert more.split()[-1] not in printed[first_explanation]
+    assert any("'?' explains more" in line for line in printed)
+    text = " ".join(line.strip() for line in printed)
+    assert more.split()[-1] in text
+    assert any("docs/authentik.md" in line for line in printed)
+
+
+def test_a_setting_is_documented_on_the_page_that_explains_it() -> None:
+    """A link to the wrong page is a second search the operator did not ask for."""
+    assert wizard_module.docs_for("smtp_host").endswith("docs/authentik.md")
+    assert wizard_module.docs_for("reverse_proxy_tls").endswith("docs/reverse-proxy.md")
+    assert wizard_module.docs_for("redis_password").endswith("docs/redis.md")
+    assert wizard_module.docs_for("result_ttl").endswith("docs/webapp.md")
+    assert f"/blob/v{wizard_module.wizard_version()}/" in wizard_module.docs_for("result_ttl")
+
+
+def test_text_is_wrapped_to_a_narrow_terminal(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Text wrapped for 80 columns re-wraps into a staircase in a 50-column pane."""
+    monkeypatch.setattr(
+        wizard_module.shutil, "get_terminal_size", lambda fallback=(80, 24): os.terminal_size((50, 24))
+    )
+    printed = _typed(monkeypatch, ["?", ""])
+    wizard = wizard_module.Wizard(wizard_module.Setup(), style=wizard_module.Style(False))
+    question = wizard_module.build_sections(wizard.setup)[0].questions[0]
+
+    wizard.ask(question)
+    wizard_module.Wizard.heading(wizard, wizard_module.build_sections(wizard.setup)[0], 1, 12)
+
+    assert all(len(line) <= 50 for line in printed if "http" not in line)
+    monkeypatch.setattr(
+        wizard_module.shutil, "get_terminal_size", lambda fallback=(80, 24): os.terminal_size((200, 24))
+    )
+    assert wizard_module.text_width() == 72
+    assert wizard_module.frame_width() == 66
+
+
+# --- the summary ----------------------------------------------------------------
+def test_the_summary_marks_what_differs_from_the_default() -> None:
+    """Those are the decisions this deployment made, and the ones worth a second look."""
+    setup = wizard_module.Setup(host_port=9443, docker_mode="rootful")
+    wizard_module._generate_unattended(setup)
+    wizard_module._finalise(setup)
+
+    lines = wizard_module.summarise(setup)
+    port = next(line for line in lines if "[host_port]" in line)
+    bind = next(line for line in lines if "[bind_address]" in line)
+    token = next(line for line in lines if "redis_password" in line)
+
+    assert port.startswith("  * ")
+    assert not bind.startswith("  * ")
+    # Detected on this host rather than chosen.
+    mode = next(line for line in lines if "[docker_mode]" in line)
+    assert not mode.startswith("  * ")
+    # A generated credential is not a decision, and its value is never shown.
+    assert not token.startswith("  * ")
+    assert setup.redis_password not in token
+
+
+# --- before writing -------------------------------------------------------------
+def test_a_rerun_shows_what_would_change_and_never_a_credential(tmp_path: Path) -> None:
+    """'Overwrite it?' is only answerable by somebody who can see what would change."""
+    assert _run(tmp_path) == 0
+    compose = tmp_path / "docker-compose.yml"
+    setup = wizard_module.Setup()
+    wizard_module._read_previous_answers(setup, tmp_path / ".docker-compose.yml.answers.json")
+    wizard_module._read_existing_env(setup, tmp_path / ".env")
+    wizard_module._finalise(setup)
+
+    assert any("unchanged" in line for line in wizard_module.render_diffs(setup, compose))
+
+    setup.host_port = 9443
+    diff = wizard_module.render_diffs(setup, compose)
+    assert any(line.strip().startswith("+") and "9443" in line for line in diff)
+    assert any(line.strip().startswith("-") and "8811" in line for line in diff)
+    env = (tmp_path / ".env").read_text(encoding="utf-8")
+    for line in env.splitlines():
+        if "=" in line and not line.startswith("#"):
+            value = line.split("=", 1)[1]
+            assert not any(value in shown for shown in diff)
+
+
+def test_every_replaced_file_is_kept_and_a_credential_stays_private(tmp_path: Path) -> None:
+    """A re-run that goes wrong must be one `mv` away from the deployment that worked."""
+    setup = wizard_module.Setup()
+    compose, env = tmp_path / "docker-compose.yml", tmp_path / ".env"
+    assert wizard_module.backup_existing(setup, compose, env, "first") == []
+
+    assert _run(tmp_path) == 0
+    before = env.read_text(encoding="utf-8")
+    saved = wizard_module.backup_existing(setup, compose, env, "20260913-120000")
+
+    names = {Path(path).name for path in saved}
+    assert "docker-compose.yml.20260913-120000.bak" in names
+    assert ".env.20260913-120000.bak" in names
+    backup = tmp_path / ".env.20260913-120000.bak"
+    assert backup.read_text(encoding="utf-8") == before
+    assert stat.S_IMODE(backup.stat().st_mode) == 0o600
+
+    # And the command does it on its own, before replacing anything.
+    assert _run(tmp_path, "--force") == 0
+    assert list(tmp_path.glob("docker-compose.yml.*.bak"))
+
+
+# --- the host -------------------------------------------------------------------
+def test_a_port_already_in_use_is_pointed_out(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A stack that cannot publish its port fails at `up`, long after the questions."""
+    import socket
+
+    held = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    held.bind(("127.0.0.1", 0))
+    held.listen(1)
+    try:
+        port = held.getsockname()[1]
+        busy = wizard_module.Setup(bind_address="127.0.0.1", host_port=port)
+        assert "already in use" in (wizard_module._port_problem(busy) or "")
+    finally:
+        held.close()
+
+    free = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    free.bind(("127.0.0.1", 0))
+    port = free.getsockname()[1]
+    free.close()
+    assert wizard_module._port_problem(wizard_module.Setup(host_port=port)) is None
+
+    monkeypatch.setattr(wizard_module, "_docker_problem", lambda: "no docker")
+    busy_host = REAL_CHECK_HOST(wizard_module.Setup(host_port=port))
+    assert busy_host == ["no docker"]
+
+
+def test_a_missing_docker_or_compose_plugin_is_pointed_out(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The files are still worth writing; the operator should know `up` will not run."""
+    monkeypatch.setattr(wizard_module.shutil, "which", lambda name: None)
+    assert "not installed" in (wizard_module._docker_problem() or "")
+
+    monkeypatch.setattr(wizard_module.shutil, "which", lambda name: "/usr/bin/docker")
+
+    class Result:
+        def __init__(self, code: int) -> None:
+            self.returncode = code
+
+    monkeypatch.setattr(wizard_module.subprocess, "run", lambda *a, **k: Result(1))
+    assert "Compose plugin" in (wizard_module._docker_problem() or "")
+    monkeypatch.setattr(wizard_module.subprocess, "run", lambda *a, **k: Result(0))
+    assert wizard_module._docker_problem() is None
+
+
+def test_a_certificate_that_is_not_there_is_pointed_out(tmp_path: Path) -> None:
+    """The proxy refuses to start without it, and says so far from the wizard."""
+    present = tmp_path / "fullchain.pem"
+    present.write_text("certificate", encoding="utf-8")
+    setup = wizard_module.Setup(
+        reverse_proxy="nginx",
+        reverse_proxy_hostname="scan.example.com",
+        reverse_proxy_tls=True,
+        reverse_proxy_certificate=str(present),
+        reverse_proxy_private_key=str(tmp_path / "missing.pem"),
+    )
+
+    problems = wizard_module._certificate_problems(setup)
+
+    assert len(problems) == 1
+    assert "missing.pem" in problems[0]
+    assert str(present) not in problems[0]
+
+
+# --- after writing --------------------------------------------------------------
+class _Compose:
+    """Stands in for `docker compose`, recording what it was asked to do."""
+
+    def __init__(self, config_code: int = 0) -> None:
+        self.calls: list[list[str]] = []
+        self.config_code = config_code
+
+    def __call__(self, command, **_):
+        self.calls.append(list(command))
+
+        class Result:
+            returncode = self.config_code if "config" in command else 0
+            stdout = ""
+            stderr = "services.web_app: invalid" if "config" in command else ""
+
+        return Result()
+
+
+def _start_offer(monkeypatch: pytest.MonkeyPatch, answers: list[str], compose: _Compose) -> list[str]:
+    printed = _typed(monkeypatch, answers)
+    monkeypatch.setattr(wizard_module.shutil, "which", lambda name: "/usr/bin/docker")
+    monkeypatch.setattr(wizard_module.subprocess, "run", compose)
+    monkeypatch.setattr(wizard_module, "_wait_until_healthy", lambda url: True)
+    return printed
+
+
+def test_the_written_stack_is_checked_and_started_only_when_asked(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Starting containers is the first thing done outside the directory it was given."""
+    compose = _Compose()
+    printed = _start_offer(monkeypatch, ["y", "y"], compose)
+    wizard = wizard_module.Wizard(wizard_module.Setup(), style=wizard_module.Style(False))
+
+    REAL_OFFER_TO_START(wizard, wizard.setup, tmp_path / "docker-compose.yml")
+
+    assert any("config" in call for call in compose.calls)
+    assert any("up" in call for call in compose.calls)
+    assert any("The service is up" in line for line in printed)
+
+    declined = _Compose()
+    _start_offer(monkeypatch, ["y", ""], declined)
+    REAL_OFFER_TO_START(wizard, wizard.setup, tmp_path / "docker-compose.yml")
+    assert not any("up" in call for call in declined.calls)
+
+
+def test_a_rejected_file_or_a_pending_step_starts_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A stack started before its bind mount is handed over fails on its first write."""
+    rejected = _Compose(config_code=1)
+    printed = _start_offer(monkeypatch, ["y", "y"], rejected)
+    wizard = wizard_module.Wizard(wizard_module.Setup(), style=wizard_module.Style(False))
+    REAL_OFFER_TO_START(wizard, wizard.setup, tmp_path / "docker-compose.yml")
+    assert not any("up" in call for call in rejected.calls)
+    assert any("invalid" in line for line in printed)
+
+    waiting = _Compose()
+    printed = _start_offer(monkeypatch, ["y", "y"], waiting)
+    bound = wizard_module.Setup(redis_persistence="filesystem")
+    REAL_OFFER_TO_START(
+        wizard_module.Wizard(bound, style=wizard_module.Style(False)),
+        bound,
+        tmp_path / "docker-compose.yml",
+    )
+    assert not any("up" in call for call in waiting.calls)
+    assert any("ownership commands" in line for line in printed)
+
+    silent = _Compose()
+    _start_offer(monkeypatch, ["y", "y"], silent)
+    unattended = wizard_module.Wizard(wizard_module.Setup(), interactive=False)
+    REAL_OFFER_TO_START(unattended, unattended.setup, tmp_path / "docker-compose.yml")
+    assert silent.calls == []
+
+
+# --- answers carried between hosts ------------------------------------------------
+def test_answers_printed_on_one_host_reproduce_the_deployment_on_another(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The same deployment twice should not mean answering fifty questions twice."""
+    first = tmp_path / "first"
+    assert _run(first, "--reverse-proxy", "caddy", "--proxy-hostname", "scan.example.com") == 0
+    capsys.readouterr()
+
+    assert wizard_module.main(["--output-dir", str(first), "--print-answers"]) == 0
+    printed = capsys.readouterr().out
+    answers = json.loads(printed)
+    assert answers["reverse_proxy"] == "caddy"
+    assert not set(answers) & set(wizard_module.SECRET_VARIABLES)
+    env = (first / ".env").read_text(encoding="utf-8")
+    for line in env.splitlines():
+        if "=" in line and not line.startswith("#"):
+            assert line.split("=", 1)[1] not in printed
+
+    exported = tmp_path / "answers.json"
+    exported.write_text(printed, encoding="utf-8")
+    second = tmp_path / "second"
+    assert _run(second, "--answers", str(exported)) == 0
+    assert _compose(second)["services"]["web_app"]["ports"] == _compose(first)["services"]["web_app"]["ports"]
+    assert (second / "opencloud-scan-caddyfile").is_file() or list(second.glob("*caddy*"))
+
+    # Printing writes nothing at all.
+    empty = tmp_path / "empty"
+    assert wizard_module.main(["--output-dir", str(empty), "--print-answers"]) == 0
+    assert not empty.exists()
+
+
+def test_an_answers_file_with_nothing_in_it_is_refused(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A typo in the path would otherwise start quietly from the defaults."""
+    assert _run(tmp_path, "--answers", str(tmp_path / "missing.json")) == 2
+    assert "Nothing usable" in capsys.readouterr().err
+    foreign = tmp_path / "foreign.json"
+    foreign.write_text('{"not_a_setting": 1, "host_port": true}', encoding="utf-8")
+    assert _run(tmp_path, "--answers", str(foreign)) == 2
+    assert not (tmp_path / "docker-compose.yml").exists()
+
+
+# --- the version ------------------------------------------------------------------
+def test_a_checkout_reports_the_version_in_its_pyproject(tmp_path: Path) -> None:
+    """The version has one source; a checkout and the web bundle both carry it."""
+    import re
+
+    text = (WIZARD_PATH.parent.parent / "pyproject.toml").read_text(encoding="utf-8")
+    expected = re.search(r'^version\s*=\s*"([^"]+)"', text, re.MULTILINE)
+    assert expected
+    assert wizard_module.wizard_version() == expected.group(1)
+    assert wizard_module.version_line() == f"setup-wizard.py {expected.group(1)}"
+
+    # Somebody else's project beside a copied wizard is not this one's version.
+    foreign = tmp_path / "pyproject.toml"
+    foreign.write_text('[project]\nname = "other"\nversion = "9.9.9"\n', encoding="utf-8")
+    assert wizard_module._pyproject_version(foreign) == ""
+    assert wizard_module._pyproject_version(tmp_path / "absent.toml") == ""

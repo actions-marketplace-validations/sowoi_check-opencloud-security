@@ -102,8 +102,11 @@ to let the setup wizard write them. It is one Python file, uses the standard
 library alone, and needs no checkout:</p>
 <pre><code class="language-bash">mkdir opencloud-scanner &amp;&amp; cd opencloud-scanner
 
-curl -fsSLO https://raw.githubusercontent.com/sowoi/check-opencloud-security/main/docker/setup-wizard.py
+base=https://github.com/sowoi/check-opencloud-security/releases/latest/download
+curl -fsSLO &quot;$base/setup-wizard.py&quot; -O &quot;$base/setup-wizard.py.sha256&quot;
+sha256sum --check setup-wizard.py.sha256    # macOS: shasum -a 256 --check
 chmod +x setup-wizard.py
+./setup-wizard.py --version
 ./setup-wizard.py
 
 docker compose up -d

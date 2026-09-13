@@ -173,6 +173,20 @@ jobs:
         with:
           subject-path: "web-bundle/*.tar.gz"
 
+      # The Docker setup wizard, as the one file an operator downloads: stamped
+      # with this version so `--version` names the release, with a checksum
+      # beside it, and attested like every other artifact. The documented
+      # download points here rather than at main.
+      - name: Build the Docker setup wizard
+        if: steps.check_tag.outputs.exists != 'true'
+        run: python scripts/build_wizard_release.py --output-dir wizard-release
+
+      - name: Attest the Docker setup wizard
+        if: steps.check_tag.outputs.exists != 'true'
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
+        with:
+          subject-path: "wizard-release/setup-wizard.py"
+
       # Last of the builds, not first: PyPI never takes a version back, so
       # everything that can still fail - the .deb and the .rpm, the web
       # bundle, the attestations - has already succeeded by the time anything
@@ -197,7 +211,7 @@ jobs:
           # --notes-file provides the body, --generate-notes appends GitHub's
           # own "What's Changed" section below it.
           gh release create "v${VERSION}" \
-            dist/* sbom/* web-bundle/* distro-packages/* \
+            dist/* sbom/* web-bundle/* distro-packages/* wizard-release/* \
             --title "v${VERSION}" \
             --notes-file RELEASE.md \
             --generate-notes

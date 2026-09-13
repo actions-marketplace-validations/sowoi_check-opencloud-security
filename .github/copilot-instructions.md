@@ -209,7 +209,12 @@ it under `/run/user/<uid>`, not `/var/run`. Switching on `/admin` or the
 sign-in on `/mcp` interactively makes the bundled Authentik the default at the
 provider question (only on that change; `--sign-in` alone adds no provider).
 Its colour is hand-written ANSI, never Rich or questionary, and never reaches
-a pipe, a test or a `NO_COLOR` terminal. Keep it independent of
+a pipe, a test or a `NO_COLOR` terminal. It never prints a credential (masked
+on a re-run, typed without an echo), diffs only non-secret files and backs up
+whatever it replaces. Its version is stamped into the release download by
+`scripts/build_wizard_release.py` - the repository copy keeps
+`RELEASE_VERSION = ""` - and the documented download is
+`releases/latest/download`, never `main` (ADR 0049). Keep it independent of
 `opencloud_local_scan.wizard`, which sets up a monitoring check;
 `tests/test_docker_wizard.py` asserts both the split and the independence.
 

@@ -72,21 +72,36 @@ Non-interactive use, for a test or an unattended install:
 from __future__ import annotations
 
 import argparse
+import difflib
 import getpass
 import json
 import os
 import re
 import secrets
+import shutil
+import socket
 import stat
+import subprocess  # nosec B404 - runs `docker compose`, only when the operator agrees
 import sys
+import time
+import urllib.error
+import urllib.request
 import uuid
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field, fields
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_DIR = Path(__file__).resolve().parent
+
+# The release this copy of the wizard was published with. Empty here, on
+# purpose: pyproject.toml is the only place a version is written by hand, and
+# scripts/build_wizard_release.py stamps this line into the copy a release
+# attaches for download. A checkout or the web bundle has pyproject.toml beside
+# it instead, and `--version` reads it from there.
+RELEASE_VERSION = ""
 
 PROJECT_URL = "https://github.com/sowoi/check-opencloud-security"
 DOCKERHUB_IMAGE = "okxo/opencloud-scanner:latest"
@@ -258,6 +273,7 @@ NO = {"n", "no", "nein", "0", "false", "off"}
 BACK_WORDS = {"b", "back"}
 REST_WORD = "rest"
 CLEAR_WORD = "-"
+HELP_WORD = "?"
 
 #: Returned by :meth:`Wizard.ask` instead of an answer: go back one question,
 #: or stop asking and take every remaining default.
@@ -267,6 +283,47 @@ REST = "rest"
 
 class SetupAborted(RuntimeError):
     """Raised when the operator interrupts the wizard."""
+
+
+# --- the version ------------------------------------------------------------
+def _pyproject_version(path: Path) -> str:
+    """The version of this project in a pyproject.toml, or ``""``.
+
+    Read with a regular expression rather than tomllib, which Python 3.10 does
+    not have - and only from the ``[project]`` table of a file that names this
+    project, so a wizard copied into somebody else's repository does not
+    report that repository's version as its own.
+    """
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+    table = re.search(r"^\[project\]\s*$(.*?)(?=^\[|\Z)", text, re.MULTILINE | re.DOTALL)
+    if not table:
+        return ""
+    body = table.group(1)
+    name = re.search(r'^name\s*=\s*"([^"]+)"', body, re.MULTILINE)
+    version = re.search(r'^version\s*=\s*"([^"]+)"', body, re.MULTILINE)
+    if not (name and version) or name.group(1) != "check-opencloud-security":
+        return ""
+    return version.group(1)
+
+
+def wizard_version() -> str:
+    """The release this wizard came from, as ``--version`` prints it."""
+    if RELEASE_VERSION:
+        return RELEASE_VERSION
+    return _pyproject_version(REPO_ROOT / "pyproject.toml")
+
+
+def version_line() -> str:
+    version = wizard_version()
+    if version:
+        return f"setup-wizard.py {version}"
+    return (
+        "setup-wizard.py (version unknown: not a release download, and no "
+        "pyproject.toml of this project beside it)"
+    )
 
 
 # --- presentation -----------------------------------------------------------
@@ -292,10 +349,26 @@ _ANSI = {
     "cyan": "36",
 }
 
-# The width every drawn element is laid out to. Fixed rather than measured:
-# the explanations are already wrapped to 72 columns, and a frame that is
-# wider than the text inside it only draws attention to the gap.
+# The widest any drawn element or wrapped paragraph gets. Narrower when the
+# terminal is: an SSH session in a split pane is often 60 columns, and text
+# wrapped for 80 re-wraps into a staircase there.
 _FRAME_WIDTH = 66
+_TEXT_WIDTH = 72
+_NARROWEST = 40
+
+
+def _columns() -> int:
+    """The terminal's width, or 80 when there is no terminal to ask."""
+    return shutil.get_terminal_size((80, 24)).columns
+
+
+def frame_width() -> int:
+    return max(_NARROWEST, min(_FRAME_WIDTH, _columns() - 4))
+
+
+def text_width(indent: int = 6) -> int:
+    """How wide a paragraph indented by ``indent`` may be."""
+    return max(_NARROWEST - indent, min(_TEXT_WIDTH, _columns() - indent - 2))
 
 
 def _colour_wanted(stream: Any = None) -> bool:
@@ -367,9 +440,9 @@ def progress_bar(done: int, total: int, width: int = 24) -> str:
     return f"{_BAR_FULL * filled}{_BAR_EMPTY * (width - filled)} {percent:>3}%"
 
 
-def banner(title: str, subtitle: str, style: Style, width: int = _FRAME_WIDTH) -> list[str]:
+def banner(title: str, subtitle: str, style: Style, width: int = 0) -> list[str]:
     """A rounded frame around the wizard's name, for the top of the run."""
-    inner = width - 2
+    inner = (width or frame_width()) - 2
     rows = [(title, style.bold)] + [(line, style.dim) for line in _wrap(subtitle, inner - 4)]
     lines = [style.accent(f"  {_TOP_LEFT}{_LIGHT * inner}{_TOP_RIGHT}")]
     for text, paint in rows:
@@ -379,9 +452,9 @@ def banner(title: str, subtitle: str, style: Style, width: int = _FRAME_WIDTH) -
     return lines
 
 
-def rule(title: str, style: Style, width: int = _FRAME_WIDTH) -> str:
+def rule(title: str, style: Style, width: int = 0) -> str:
     """A heavy horizontal rule with a title set into it."""
-    fill = _HEAVY * max(4, width - len(title) - 5)
+    fill = _HEAVY * max(4, (width or frame_width()) - len(title) - 5)
     return f"  {style.accent(_HEAVY * 2)} {style.bold(title)} {style.accent(fill)}"
 
 
@@ -869,6 +942,66 @@ class Wizard:
             self.say(f"  {step}  {style.dim(progress_bar(number - 1, total))}")
         self.say(f"  {style.dim(section.summary)}")
 
+    def skipped(self, sections: Sequence[Section], mode: str = "full") -> None:
+        """Say which sections were passed over, so the step counter adds up.
+
+        Without it the heading jumps from step 9 to step 11 and leaves the
+        operator wondering what they missed.
+        """
+        if not sections:
+            return
+        reason = (
+            "quick setup keeps their defaults"
+            if mode != "full"
+            else "nothing answered so far needs them"
+        )
+        names = ", ".join(section.title for section in sections)
+        self.say()
+        for line in _wrap(f"Skipped {names} - {reason}.", text_width(2)):
+            self.say(f"  {self.style.dim(line)}")
+
+    def choose_mode(self, *, editing: bool = False) -> str:
+        """Ask how much of the walk to take, before the first question.
+
+        A first run defaults to quick: five or six decisions and a summary is a
+        deployment, and the summary still reaches every setting by name. An
+        edit of an existing deployment defaults to full, because somebody
+        re-running the wizard over one usually came to change something that
+        is not among the essentials.
+        """
+        if not self.interactive:
+            return "full"
+        style = self.style
+        default = "full" if editing else "quick"
+        descriptions = {
+            "quick": "only what a deployment cannot be right without - the address, "
+            "the sign-in, the proxy - and defaults for the rest",
+            "private": "the same few questions, starting from the answers an estate "
+            "scanning its own network wants: private targets allowed, out of "
+            "search engines, an audit trail kept",
+            "full": "every question, section by section",
+        }
+        self.say()
+        self.say(rule("How much to ask", style))
+        for number, name in enumerate(MODES, start=1):
+            marker = style.good("*") if name == default else " "
+            lines = _wrap(descriptions[name], text_width(18))
+            self.say(f"    {marker} {number}) {style.bold(f'{name:<8}')}  {lines[0]}")
+            for line in lines[1:]:
+                self.say(f"                   {line}")
+        while True:
+            answer = self._read(
+                f"      {style.dim('[')}{style.accent(default)}{style.dim(']')} "
+                f"{style.accent('>')} "
+            ).strip().lower()
+            if not answer:
+                return default
+            if answer in MODES:
+                return answer
+            if answer.isdigit() and 1 <= int(answer) <= len(MODES):
+                return MODES[int(answer) - 1]
+            self.notice(f"Answer with the number or the word: {', '.join(MODES)}")
+
     def notice(self, text: str, kind: str = "warn") -> None:
         """A line the operator has to act on: a refusal, or a correction."""
         marker = "!" if kind == "bad" else _POINTER
@@ -941,7 +1074,8 @@ class Wizard:
         read = self._read_secret if secret else self._read
         self.say()
         self.say(f"  {style.accent(_POINTER)} {style.bold(question.prompt)}")
-        for line in _wrap(question.explain):
+        brief, more = _first_sentence(question.explain)
+        for line in _wrap(brief, text_width()):
             self.say(f"      {style.dim(line)}")
         if question.choices:
             for number, choice in enumerate(question.choices, start=1):
@@ -957,8 +1091,10 @@ class Wizard:
             self.say(
                 style.dim("      Enter 'generate' and a strong random value is created for you.")
             )
-        hints = self._hints(question, can_go_back=can_go_back, offer_rest=offer_rest)
-        for line in _wrap(hints, 70) if hints else []:
+        hints = self._hints(
+            question, can_go_back=can_go_back, offer_rest=offer_rest, has_more=bool(more)
+        )
+        for line in _wrap(hints, text_width()) if hints else []:
             self.say(f"      {style.dim(line)}")
 
         while True:
@@ -969,6 +1105,9 @@ class Wizard:
             if not answer:
                 return None
             lowered = answer.lower()
+            if lowered == HELP_WORD:
+                self.explain_in_full(question)
+                continue
             if lowered in BACK_WORDS:
                 if can_go_back:
                     return BACK
@@ -1028,7 +1167,22 @@ class Wizard:
                 continue
             return None
 
-    def _hints(self, question: Question, *, can_go_back: bool, offer_rest: bool) -> str:
+    def explain_in_full(self, question: Question) -> None:
+        """The whole explanation, and where the setting is documented."""
+        style = self.style
+        self.say()
+        for line in _wrap(question.explain, text_width()):
+            self.say(f"      {line}")
+        self.say(f"      {style.dim('Documented in')} {style.accent(docs_for(question.key))}")
+
+    def _hints(
+        self,
+        question: Question,
+        *,
+        can_go_back: bool,
+        offer_rest: bool,
+        has_more: bool = False,
+    ) -> str:
         """The one line that says what can be typed here besides an answer.
 
         On every question rather than once at the start, because the moment
@@ -1036,6 +1190,8 @@ class Wizard:
         not at something they read four sections ago.
         """
         hints = []
+        if has_more:
+            hints.append("'?' explains more")
         if can_go_back:
             hints.append("'b' goes back")
         if question.kind == "str" and self.current(question.key):
@@ -1064,6 +1220,41 @@ class Wizard:
             # Saying so beats re-printing the same prompt at somebody who has
             # just typed something they thought was an answer.
             self.say("  Answer yes or no - true and false work as well.")
+
+
+def _first_sentence(text: str) -> tuple[str, str]:
+    """The opening sentence of an explanation, and whatever follows it.
+
+    Shown on its own first, because a paragraph under every one of fifty
+    questions is a wall people stop reading - and the one who wants the rest
+    types '?'. A sentence ends at a full stop followed by a capital, so the
+    'e.g.' and the quoted values inside one do not cut it short.
+    """
+    parts = re.split(r"(?<=[.!?])\s+(?=[A-Z])", " ".join(text.split()), maxsplit=1)
+    return parts[0], parts[1] if len(parts) > 1 else ""
+
+
+# Where each group of settings is written up in full. A prefix match, most
+# specific first; everything else is in the web application's own reference.
+_DOCUMENTATION = (
+    (("authentik_", "smtp_", "mcp_auth_", "deploy_authentik", "admin_"), "docs/authentik.md"),
+    (("reverse_proxy", "trust_forwarded_for"), "docs/reverse-proxy.md"),
+    (("redis_",), "docs/redis.md"),
+    (("image_", "build_context", "auto_updates", "watchtower_", "docker_mode"), "docker/README.md"),
+)
+
+
+def docs_for(key: str) -> str:
+    """The page an operator reads for one setting, as a link that opens."""
+    page = next(
+        (page for prefixes, page in _DOCUMENTATION if key.startswith(prefixes)),
+        "docs/webapp.md",
+    )
+    version = wizard_version()
+    # The page as it was when this wizard was released: a setting described
+    # on main may already have been renamed.
+    ref = f"v{version}" if version else "main"
+    return f"{PROJECT_URL}/blob/{ref}/{page}"
 
 
 def _format_default(value: Any) -> str:
@@ -2122,7 +2313,7 @@ def build_sections(setup: Setup) -> list[Section]:
     ]
 
 
-def run_questions(wizard: Wizard) -> None:
+def run_questions(wizard: Wizard, mode: str = "full") -> None:
     """Ask everything, skipping the questions the previous answers settled.
 
     Relevance is decided one question at a time, as the answers arrive, and
@@ -2133,6 +2324,10 @@ def run_questions(wizard: Wizard) -> None:
     filtered once before the section starts can only ever *lose* questions,
     which is how a mail server used to be configured with nothing but a host
     name.
+
+    In a quick setup only the questions in :data:`QUICK_QUESTIONS` are asked,
+    under the same relevance rules; every other answer keeps its default, and
+    the summary is still where any of them can be changed.
     """
     setup = wizard.setup
     sections = build_sections(setup)
@@ -2140,12 +2335,14 @@ def run_questions(wizard: Wizard) -> None:
         (number, section, question)
         for number, section in enumerate(sections, start=1)
         for question in section.questions
+        if mode == "full" or _is_quick(question.key)
     ]
     # Where each answered question sat, so that 'b' can go back to the last
     # one actually asked rather than to the last one defined - the questions
     # in between were skipped for a reason that still holds.
     answered: list[int] = []
     heading_shown: Section | None = None
+    last_number = 0
     position = 0
     while position < len(plan):
         number, section, question = plan[position]
@@ -2153,8 +2350,13 @@ def run_questions(wizard: Wizard) -> None:
             position += 1
             continue
         if section is not heading_shown:
+            if number > last_number + 1:
+                wizard.skipped(sections[last_number:number - 1], mode)
             wizard.heading(section, number, len(sections))
             heading_shown = section
+            # Lower again after a 'b' into an earlier section, so walking
+            # forward from there reports the same skips it reported before.
+            last_number = number
         before = _sign_in_wanted(setup)
         movement = wizard.ask(question, can_go_back=bool(answered))
         _offer_authentik(setup, before)
@@ -2167,6 +2369,37 @@ def run_questions(wizard: Wizard) -> None:
             continue
         answered.append(position)
         position += 1
+    if last_number < len(sections):
+        wizard.skipped(sections[last_number:], mode)
+
+
+# What a quick setup asks: the decisions a deployment cannot be right without,
+# and whatever those answers bring into play. Where the service is reached,
+# what signs people in, and what stands in front of it. Everything else - the
+# limits, the load, the audit trail - has a default that suits a first run.
+QUICK_QUESTIONS = (
+    "image_source",
+    "image_ref",
+    "build_context",
+    "host_port",
+    "public_base_url",
+    "enable_mcp",
+    "mcp_auth_",
+    "admin_enabled",
+    "admin_users",
+    "deploy_authentik",
+    "authentik_url",
+    "authentik_accounts",
+    "smtp_",
+    "reverse_proxy",
+)
+
+# How much the run asks, chosen before the first question.
+MODES = ("quick", "private", "full")
+
+
+def _is_quick(key: str) -> bool:
+    return key.startswith(QUICK_QUESTIONS)
 
 
 def _signs_in(setup: Setup) -> bool:
@@ -5095,7 +5328,9 @@ def _step(index: int, text: str, *commands: str) -> list[str]:
     return lines
 
 
-def enrollment_instructions(setup: Setup, env_file: str = ".env") -> list[str]:
+def enrollment_instructions(
+    setup: Setup, env_file: str = ".env", style: Style | None = None
+) -> list[str]:
     """How the people named get in: one link, and nothing in the admin UI.
 
     The link carries the invitation token, which is a credential: it is
@@ -5108,8 +5343,14 @@ def enrollment_instructions(setup: Setup, env_file: str = ".env") -> list[str]:
     # Set apart from the rest of the closing output: it is the one thing on
     # the screen that has to reach somebody else, and between the proxy
     # commands and the /admin steps it used to be scrolled past.
-    rule = "  " + "=" * 64
-    lines = ["", rule, "  ENROLLMENT LINK - how everybody who signs in gets an account", rule, ""]
+    style = style or Style(enabled=False)
+    closing = style.accent("  " + _HEAVY * (frame_width() - 2))
+    lines = [
+        "",
+        rule("ENROLLMENT LINK", style),
+        f"  {style.bold('How everybody who signs in gets an account')}",
+        "",
+    ]
     names = [name.strip() for name in setup.authentik_accounts.split(";") if name.strip()]
     if names:
         variable = ENROLLMENT_LINK_VARIABLE
@@ -5117,7 +5358,8 @@ def enrollment_instructions(setup: Setup, env_file: str = ".env") -> list[str]:
         lines.append(f"  Build it from {env_file} - the token is not printed here:")
         lines.append("")
         lines.append(
-            f"    echo \"{base}?itoken=$(sed -n 's/^{variable}=//p' {env_file})\""
+            "    "
+            + style.accent(f"echo \"{base}?itoken=$(sed -n 's/^{variable}=//p' {env_file})\"")
         )
         lines.append("")
         lines.append("  It looks like this, with the token in place of the placeholder:")
@@ -5150,7 +5392,7 @@ def enrollment_instructions(setup: Setup, env_file: str = ".env") -> list[str]:
             64,
         ):
             lines.append(f"  {text}")
-    lines.append(rule)
+    lines.append(closing)
     lines.append("")
     for text in _wrap(
         f"Authentik's own administrator is {AUTHENTIK_BOOTSTRAP_USER}; its password "
@@ -5296,69 +5538,115 @@ def admin_walkthrough(setup: Setup) -> list[str]:
     return lines
 
 
-def _summary_row(setup: Setup, name: str) -> str:
+@dataclass
+class SummaryRow:
+    """One setting as the summary shows it."""
+
+    label: str
+    value: str
+    key: str = ""
+    """The name to type to change it; empty for a derived value."""
+    changed: bool = False
+    secret: bool = False
+
+
+# How wide the label column is. Long prompts are cut rather than wrapped: the
+# setting's name at the end of the line is what identifies it, and a summary
+# that takes two lines per setting is one nobody reads to the end.
+_LABEL_WIDTH = 36
+
+
+def _summary_value(setup: Setup, name: str) -> tuple[str, bool]:
     value = getattr(setup, name)
     if name in SECRET_VARIABLES and value:
-        value = "set (written to .env)"
-    return f"    {name:<26} {_format_default(value)}"
+        return "set (written to .env)", True
+    return _format_default(value), False
 
 
-def _styled_summary_line(line: str, style: Style) -> str:
-    """One line of :func:`summarise`, painted for a terminal.
+def _label(question: Question) -> str:
+    label = question.prompt.rstrip("?").strip()
+    if len(label) > _LABEL_WIDTH:
+        label = label[: _LABEL_WIDTH - 3].rstrip() + "..."
+    return label
 
-    Painted here rather than there, so the summary itself stays the plain
-    text a test or a log compares against.
+
+def summary_rows(setup: Setup) -> list[tuple[str, list[SummaryRow]]]:
+    """The answers grouped under the headings they were asked under.
+
+    Each asked setting carries its question's wording, which is what an
+    operator recognises, and its name, which is what they type to change it.
+    A setting that differs from the default is marked: those are the
+    decisions this deployment made, and the ones worth a second look.
     """
-    if not style.enabled:
-        return line
-    if not line.startswith("    "):
-        return f"  {style.accent(style.bold(line.strip()))}"
-    name, _, value = line.strip().partition(" ")
-    value = value.strip()
-    padding = " " * max(1, 27 - len(name))
-    if value.startswith("set (written to .env)"):
-        shown = style.good(value)
-    elif value in {"no", "unset", "none"}:
-        shown = style.dim(value)
-    else:
-        shown = style.bold(value)
-    return f"    {style.dim(name)}{padding}{shown}"
-
-
-def summarise(setup: Setup) -> list[str]:
-    """The answers, for the confirmation before anything is written.
-
-    Grouped under the headings they were asked under. A flat list of sixty
-    field names is a thing an operator scrolls past rather than reads, and
-    this is the last chance anybody has to notice that the audit trail is
-    going somewhere they did not mean.
-    """
-    lines: list[str] = []
+    # The default as this host would have it: detected and derived the same
+    # way, so the Docker mode found on the socket or the public URL that
+    # follows the port is not marked as somebody's decision.
+    defaults = Setup(
+        docker_mode=setup.docker_mode,
+        watchtower_socket=setup.watchtower_socket,
+        build_context=setup.build_context,
+    )
+    _finalise(defaults)
+    groups: list[tuple[str, list[SummaryRow]]] = []
     asked: set[str] = set()
     for section in build_sections(setup):
-        rows = [
-            _summary_row(setup, question.key)
-            for question in section.questions
-            if _relevant(question.key, setup)
-        ]
+        rows = []
+        for question in section.questions:
+            if not _relevant(question.key, setup):
+                continue
+            value, secret = _summary_value(setup, question.key)
+            changed = not secret and getattr(setup, question.key) != getattr(
+                defaults, question.key
+            )
+            rows.append(SummaryRow(_label(question), value, question.key, changed, secret))
         if rows:
-            lines.append(f"  {section.title}")
-            lines.extend(rows)
+            groups.append((section.title, rows))
         asked.update(question.key for question in section.questions)
 
     # What nobody was asked for: the credentials and the URLs the answers
     # imply. They still belong in the summary - they are what the deployment
     # will hold - but not among the decisions somebody made.
-    derived = [
-        item.name
-        for item in fields(setup)
-        if item.name not in asked
-        and _relevant(item.name, setup)
-        and getattr(setup, item.name) not in ("", False)
-    ]
+    derived = []
+    for item in fields(setup):
+        if (
+            item.name in asked
+            or not _relevant(item.name, setup)
+            or getattr(setup, item.name) in ("", False)
+        ):
+            continue
+        value, secret = _summary_value(setup, item.name)
+        derived.append(SummaryRow(item.name, value, secret=secret))
     if derived:
-        lines.append("  Derived, and generated for you")
-        lines.extend(_summary_row(setup, name) for name in derived)
+        groups.append(("Derived, and generated for you", derived))
+    return groups
+
+
+def _render_row(row: SummaryRow, style: Style) -> str:
+    marker = style.warn("*") if row.changed else " "
+    if row.secret:
+        value = style.good(row.value)
+    elif row.value in {"no", "unset", "none"}:
+        value = style.dim(row.value)
+    else:
+        value = style.bold(row.value)
+    handle = f"  {style.dim(f'[{row.key}]')}" if row.key else ""
+    padding = " " * max(1, _LABEL_WIDTH + 1 - len(row.label))
+    return f"  {marker} {row.label}{padding}{value}{handle}"
+
+
+def summarise(setup: Setup, style: Style | None = None) -> list[str]:
+    """The answers, for the confirmation before anything is written.
+
+    Grouped under the headings they were asked under. A flat list of sixty
+    field names is a thing an operator scrolls past rather than reads, and
+    this is the last chance anybody has to notice that the audit trail is
+    going somewhere they did not mean. Plain text unless a style is given.
+    """
+    style = style or Style(enabled=False)
+    lines: list[str] = []
+    for title, rows in summary_rows(setup):
+        lines.append(f"  {style.accent(style.bold(title))}")
+        lines.extend(_render_row(row, style) for row in rows)
     return lines
 
 
@@ -5403,8 +5691,11 @@ def review(wizard: Wizard, setup: Setup) -> bool:
         wizard.say(
             f"  {style.accent('Ready to write')}  {style.dim(progress_bar(total, total))}"
         )
-        for line in summarise(setup):
-            wizard.say(_styled_summary_line(line, style))
+        for line in summarise(setup, style):
+            wizard.say(line)
+        wizard.say(
+            f"  {style.warn('*')} {style.dim('differs from the default; type a [name] to change it')}"
+        )
 
         warnings = check_consistency(setup)
         if warnings:
@@ -5413,6 +5704,15 @@ def review(wizard: Wizard, setup: Setup) -> bool:
             for warning in warnings:
                 for index, line in enumerate(_wrap(warning, 68)):
                     wizard.say(f"    {style.warn('-') if index == 0 else ' '} {line}")
+
+        if wizard.interactive:
+            host = check_host(setup)
+            if host:
+                wizard.say()
+                wizard.say(f"  {style.warn(style.bold('On this host:'))}")
+                for problem in host:
+                    for index, line in enumerate(_wrap(problem, text_width(6))):
+                        wizard.say(f"    {style.warn('-') if index == 0 else ' '} {line}")
 
         errors = check_errors(setup, wizard.base_dir)
         if errors:
@@ -5473,6 +5773,292 @@ def review(wizard: Wizard, setup: Setup) -> bool:
         questions = _editable(setup)
 
 
+# --- the host this runs on -------------------------------------------------
+def _docker_problem() -> str | None:
+    """Why ``docker compose`` will not run here, or ``None`` when it will."""
+    docker = shutil.which("docker")
+    if docker is None:
+        return (
+            "Docker is not installed, or not on the PATH of the user running "
+            "this wizard. The files are written anyway; `docker compose up` "
+            "needs it."
+        )
+    try:
+        result = subprocess.run(  # nosec B603 - fixed arguments, no shell
+            [docker, "compose", "version"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return "`docker compose version` did not answer, so Compose could not be checked."
+    if result.returncode != 0:
+        return (
+            "Docker is here but the Compose plugin is not: `docker compose "
+            "version` failed. The generated file needs Compose v2 - the "
+            "docker-compose-plugin package on most distributions."
+        )
+    return None
+
+
+def _port_problem(setup: Setup) -> str | None:
+    """Whether the host port is already taken, or not an address of this host."""
+    address = setup.bind_address.strip("[]") or "0.0.0.0"  # nosec B104 - only probed, never served
+    family = socket.AF_INET6 if ":" in address else socket.AF_INET
+    probe = socket.socket(family, socket.SOCK_STREAM)
+    try:
+        probe.bind((address, setup.host_port))
+    except PermissionError:
+        return None  # a privileged port: Docker binds it, this user cannot
+    except OSError as error:
+        if error.errno in {98, 48, 10048}:  # EADDRINUSE on Linux, macOS, Windows
+            return (
+                f"Port {setup.host_port} on {setup.bind_address} is already in use - "
+                "by this stack, if it is running, and otherwise `docker compose up` "
+                "will fail to publish it. Choose another with host_port."
+            )
+        return (
+            f"{setup.bind_address} is not an address of this host, so the port "
+            "cannot be published on it. Change bind_address."
+        )
+    finally:
+        probe.close()
+    return None
+
+
+def _certificate_problems(setup: Setup) -> list[str]:
+    """Certificates the generated proxy configuration names that are not there.
+
+    Only a file that is definitely missing is reported. One this user may not
+    look at - /etc/letsencrypt/live is root's - is the normal case and says
+    nothing either way.
+    """
+    wanted = [
+        key
+        for key in (
+            "reverse_proxy_certificate",
+            "reverse_proxy_private_key",
+            "reverse_proxy_authentik_certificate",
+            "reverse_proxy_authentik_private_key",
+        )
+        if _relevant(key, setup) and getattr(setup, key)
+    ]
+    problems = []
+    for key in wanted:
+        path = getattr(setup, key)
+        try:
+            Path(path).stat()
+        except FileNotFoundError:
+            problems.append(
+                f"{path} does not exist yet ({key}). The proxy refuses to start "
+                "without it - fine if the certificate is issued before then."
+            )
+        except OSError:
+            continue
+    return problems
+
+
+def check_host(setup: Setup) -> list[str]:
+    """What this host says about the answers: Docker, the port, the certificates.
+
+    Kept apart from :func:`check_consistency`, which judges the answers
+    alone and gives the same verdict on every machine. These depend on where
+    the wizard happens to run - which is usually, but not always, where the
+    stack will.
+    """
+    problems = [_docker_problem(), _port_problem(setup)]
+    return [problem for problem in problems if problem] + _certificate_problems(setup)
+
+
+# --- before and after writing -----------------------------------------------
+def _plain_files(setup: Setup, compose_path: Path) -> list[tuple[Path, str]]:
+    """The generated files that hold no credential, with what they would contain."""
+    files = [(compose_path, render_compose_file(setup, compose_path.name))]
+    if _uses_logrotate(setup):
+        files.append(
+            (
+                compose_path.parent / logrotate_filename(setup),
+                render_logrotate_file(setup, compose_path.parent),
+            )
+        )
+    if _writes_proxy(setup):
+        files.append((compose_path.parent / proxy_filename(setup), render_proxy_file(setup)))
+    return files
+
+
+# A diff longer than this is a rewrite, and the summary already said what
+# changed; the rest is elided rather than scrolled past.
+_DIFF_LINES = 80
+
+
+def render_diffs(setup: Setup, compose_path: Path, style: Style | None = None) -> list[str]:
+    """What writing would change in the files already there.
+
+    The credentials are never diffed: `.env` and the proxy's secret include
+    would put the old value and the new one side by side on the screen.
+    """
+    style = style or Style(enabled=False)
+    lines: list[str] = []
+    for path, content in _plain_files(setup, compose_path):
+        try:
+            before = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        if before == content:
+            lines.append(f"  {style.dim(f'{path.name}: unchanged')}")
+            continue
+        diff = list(
+            difflib.unified_diff(
+                before.splitlines(),
+                content.splitlines(),
+                fromfile=f"{path.name} (now)",
+                tofile=f"{path.name} (after writing)",
+                lineterm="",
+            )
+        )
+        for line in diff[:_DIFF_LINES]:
+            if line.startswith(("+++", "---")):
+                lines.append(f"  {style.bold(line)}")
+            elif line.startswith("+"):
+                lines.append(f"  {style.good(line)}")
+            elif line.startswith("-"):
+                lines.append(f"  {style.paint(line, 'red')}")
+            elif line.startswith("@@"):
+                lines.append(f"  {style.accent(line)}")
+            else:
+                lines.append(f"  {line}")
+        if len(diff) > _DIFF_LINES:
+            lines.append(f"  {style.dim(f'... {len(diff) - _DIFF_LINES} more lines')}")
+    return lines
+
+
+def backup_existing(
+    setup: Setup, compose_path: Path, env_path: Path, stamp: str | None = None
+) -> list[str]:
+    """Copy every file about to be replaced to ``<name>.<time>.bak`` beside it.
+
+    Timestamped rather than a single ``.bak``, so two runs in a row do not
+    replace the only copy of what was there before the first. A backup of a
+    credential file is created owner-readable only, exactly as the original.
+    """
+    # UTC, and said so in the name: a backup read on another host, or after a
+    # clock change, should not be an hour out of order.
+    stamp = stamp or datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    directory = compose_path.parent
+    candidates = [(path, False) for path, _ in _plain_files(setup, compose_path)]
+    candidates.append((env_path, True))
+    candidates.append((directory / answers_filename(compose_path.name), False))
+    if _proxy_forwards_auth(setup) and setup.reverse_proxy == "nginx":
+        candidates.append((directory / admin_secret_filename(setup), True))
+
+    saved: list[str] = []
+    for path, secret in candidates:
+        if not path.is_file():
+            continue
+        backup = path.with_name(f"{path.name}.{stamp}.bak")
+        if secret:
+            descriptor = os.open(
+                backup, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, stat.S_IRUSR | stat.S_IWUSR
+            )
+            with os.fdopen(descriptor, "wb") as handle:
+                handle.write(path.read_bytes())
+            os.chmod(backup, stat.S_IRUSR | stat.S_IWUSR)
+        else:
+            shutil.copy2(path, backup)
+        saved.append(str(backup))
+    return saved
+
+
+def _waits_for_steps(setup: Setup) -> bool:
+    """Whether something has to happen as root before the stack can start."""
+    return (
+        (_keeps_audit_file(setup) and _binds_a_directory(setup.audit_storage, setup.audit_log_path))
+        or _binds_a_directory(setup.redis_persistence, setup.redis_data_path)
+    )
+
+
+def _health_url(setup: Setup) -> str:
+    address = setup.bind_address
+    if address in {"0.0.0.0", "", "::", "[::]"}:  # nosec B104 - a URL to ask, not a bind
+        address = "127.0.0.1"
+    return f"http://{address}:{setup.host_port}/healthz"
+
+
+def _wait_until_healthy(url: str, timeout: float = 90, interval: float = 3) -> bool:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            with urllib.request.urlopen(url, timeout=5) as response:  # nosec B310 - http to this host
+                if response.status == 200:
+                    return True
+        except (OSError, urllib.error.URLError):
+            pass
+        time.sleep(interval)
+    return False
+
+
+def offer_to_start(wizard: Wizard, setup: Setup, compose_path: Path) -> None:
+    """Check the written stack with Compose, and start it if the operator says so.
+
+    Asked, never assumed: starting containers and binding a port is the first
+    thing this wizard does outside the directory it was given. Nothing is
+    offered where Docker is missing, and `up` is not offered where a
+    directory has to be handed to the container's user first - a stack
+    started before that is one that fails on its first write.
+    """
+    if not wizard.interactive:
+        return
+    docker = shutil.which("docker")
+    if docker is None:
+        return
+    style = wizard.style
+    directory = compose_path.parent
+    command = [docker, "compose", "-f", compose_path.name]
+    wizard.say()
+    if not wizard.confirm("Check the written files with `docker compose config` now?"):
+        return
+    result = subprocess.run(  # nosec B603 - fixed arguments, no shell
+        [*command, "config", "--quiet"],
+        cwd=directory,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        wizard.say(f"  {style.bad('!')} Compose rejected the file:")
+        for line in (result.stderr or result.stdout).strip().splitlines()[:20]:
+            wizard.say(f"      {line}")
+        return
+    wizard.say(f"  {style.good('+')} Compose accepts the file.")
+
+    if _waits_for_steps(setup):
+        wizard.say("  Start it once the ownership commands under Next have run.")
+        return
+    if _writes_proxy(setup):
+        wizard.say(
+            f"  {style.dim('The proxy configuration still has to be installed - see Next.')}"
+        )
+    build = ["--build"] if setup.image_source == "build" else []
+    if not wizard.confirm("Start the stack now with `docker compose up -d`?", default=False):
+        return
+    started = subprocess.run(  # nosec B603 - fixed arguments, no shell
+        [*command, "up", "-d", *build], cwd=directory, check=False
+    )
+    if started.returncode != 0:
+        wizard.say(f"  {style.bad('!')} `docker compose up -d` failed; its output is above.")
+        return
+    url = _health_url(setup)
+    wizard.say(f"  Waiting for {url} to answer ...")
+    if _wait_until_healthy(url):
+        wizard.say(f"  {style.good('+')} The service is up.")
+    else:
+        wizard.say(
+            f"  {style.warn('!')} No answer yet. `docker compose logs web_app` "
+            "says why - a first start that pulls images can take a while."
+        )
+
+
 # --- the command ------------------------------------------------------------
 def _refuse_shipped(path: Path) -> str | None:
     """Whether the target is one of the project's own compose files."""
@@ -5513,6 +6099,12 @@ def build_arg_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--version",
+        action="version",
+        version=version_line(),
+        help="Print the release this wizard came from, and exit.",
+    )
+    parser.add_argument(
         "--output-dir",
         default=".",
         help="Where to write both files. Default: the current directory.",
@@ -5543,6 +6135,35 @@ def build_arg_parser() -> argparse.ArgumentParser:
         "--non-interactive",
         action="store_true",
         help="Ask nothing and take every default, generating the credentials.",
+    )
+    parser.add_argument(
+        "--mode",
+        choices=MODES,
+        default=None,
+        help=(
+            "How much to ask, instead of asking that first. 'quick' asks only "
+            "what a deployment cannot be right without; 'private' asks the same "
+            "starting from the private preset; 'full' asks everything."
+        ),
+    )
+    parser.add_argument(
+        "--answers",
+        metavar="FILE",
+        default=None,
+        help=(
+            "Start from the answers in this JSON file - one written by "
+            "--print-answers, or the .<compose-file>.answers.json of another "
+            "deployment. Read as untrusted: unknown names and values of the "
+            "wrong type are ignored, and it never holds a credential."
+        ),
+    )
+    parser.add_argument(
+        "--print-answers",
+        action="store_true",
+        help=(
+            "Print the answers this run starts from as JSON, and exit without "
+            "asking or writing anything. No credentials are included."
+        ),
     )
     parser.add_argument(
         "--image-source",
@@ -5860,7 +6481,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     compose_path = output_dir / args.compose_file
     env_path = output_dir / args.env_file
 
-    refusal = _refuse_shipped(compose_path)
+    refusal = None if args.print_answers else _refuse_shipped(compose_path)
     if refusal and not args.force:
         print(f"Refusing to write it: {refusal}", file=sys.stderr)
         return 2
@@ -5878,6 +6499,20 @@ def main(argv: Sequence[str] | None = None) -> int:
     remembered = _read_previous_answers(
         setup, compose_path.parent / answers_filename(compose_path.name)
     )
+    # Another deployment's answers, named on purpose, outrank this directory's
+    # notebook - and are refused loudly when there is nothing in them, because
+    # a typo in the path would otherwise quietly start from the defaults.
+    imported = 0
+    if args.answers:
+        answers_path = Path(args.answers).expanduser()
+        imported = _read_previous_answers(setup, answers_path)
+        if not imported:
+            print(
+                f"Nothing usable in {answers_path}: it is missing, is not a JSON "
+                "object, or names no setting this wizard knows.",
+                file=sys.stderr,
+            )
+            return 2
     _apply_preset(setup, args.preset)
     upgraded = follow_authentik_patch(setup) if remembered else None
     reused = _read_existing_env(setup, env_path)
@@ -5886,11 +6521,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     setup.watchtower_socket = setup.watchtower_socket or detect_docker_socket()
     setup.docker_mode = setup.docker_mode or detect_docker_mode()
 
+    if args.print_answers:
+        print(render_answers_file(setup), end="")
+        return 0
+
     wizard = Wizard(setup, interactive=not args.non_interactive, base_dir=output_dir)
     style = wizard.style
+    version = wizard_version()
     wizard.say()
     for line in banner(
-        "check-opencloud-security  -  Docker setup",
+        f"check-opencloud-security  -  Docker setup {version}".rstrip(),
         "A container deployment of the web application: the stack, its "
         "secrets, and whatever you ask for in front of it.",
         style,
@@ -5924,6 +6564,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         ("b", "goes back one question"),
         ("-", "empties a text setting"),
         ("rest", "accepts every remaining default"),
+        ("?", "explains the question in full"),
     ):
         wizard.say(f"    {style.accent(f'{key:<6}')} {meaning}")
     wizard.say("  You can change any answer at the summary, by name, before")
@@ -5950,7 +6591,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     wizard.say("  monitoring check against one instance.")
 
     try:
-        run_questions(wizard)
+        mode = args.mode or wizard.choose_mode(editing=bool(remembered or reused or imported))
+        if mode == "private":
+            _apply_preset(setup, "private")
+        run_questions(wizard, mode)
         _generate_unattended(setup)
         _finalise(setup)
 
@@ -5959,6 +6603,15 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 1
 
         wizard.say()
+        if compose_path.exists():
+            # Before the question, not after: "overwrite it?" is only an
+            # answerable question for somebody who can see what would change.
+            diff = render_diffs(setup, compose_path, style)
+            if diff:
+                wizard.say(rule("What writing changes", style))
+                for line in diff:
+                    wizard.say(line)
+                wizard.say()
         for path in (compose_path, env_path):
             if path.exists() and not args.force and not wizard.confirm(
                 f"{path} exists. Overwrite it?", default=False
@@ -5969,12 +6622,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"\nSetup aborted: {error}", file=sys.stderr)
         return 1
 
+    saved = backup_existing(setup, compose_path, env_path)
     written = write_files(setup, compose_path, env_path)
 
     wizard.say()
     wizard.say(rule("Written", style))
+    for path in saved:
+        wizard.say(f"  {style.dim('~')} Kept the previous file as {path}")
     for path in written:
         wizard.say(f"  {style.good('+')} Wrote {path}")
+    offer_to_start(wizard, setup, compose_path)
     wizard.say()
     wizard.say(rule("Next", style))
     wizard.say(f"    cd {output_dir}")
@@ -6002,7 +6659,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     build = " --build" if setup.image_source == "build" else ""
     wizard.say(f"    {style.accent(f'docker compose -f {args.compose_file} up -d{build}')}")
     wizard.say(f"    {style.accent(f'open http://{setup.bind_address}:{setup.host_port}')}")
-    for line in enrollment_instructions(setup, args.env_file):
+    for line in enrollment_instructions(setup, args.env_file, style):
         wizard.say(line)
     for line in admin_walkthrough(setup):
         wizard.say(line)
