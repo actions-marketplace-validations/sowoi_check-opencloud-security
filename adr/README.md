@@ -51,9 +51,10 @@ project. Read the accepted records that affect an area before changing it.
 | [0042](0042-every-resolved-address-is-compared-only-when-the-operator-asks.md) | Every resolved address is compared only when the operator asks | Accepted |
 | [0043](0043-an-operators-exclusion-outranks-every-allowance.md) | An operator's exclusion outranks every allowance | Accepted |
 | [0044](0044-the-operator-area-may-write-the-exclusions.md) | The operator's area may write the exclusions, and nothing else | Accepted |
-| [0045](0045-a-release-is-rehearsed-on-the-pull-request-and-publishes-last.md) | A release is rehearsed on the pull request and publishes last | Accepted; its pull request policy superseded by ADR 0046 |
-| [0046](0046-a-release-needs-no-label-and-the-pull-request-policy-is-local.md) | A release needs no label, and the pull request policy is local | Accepted |
+| [0045](0045-a-release-is-rehearsed-on-the-pull-request-and-publishes-last.md) | A release is rehearsed on the pull request and publishes last | Accepted; its pull request policy superseded by ADR 0046, its `RELEASE.md` requirement by ADR 0048 |
+| [0046](0046-a-release-needs-no-label-and-the-pull-request-policy-is-local.md) | A release needs no label, and the pull request policy is local | Accepted; its `RELEASE.md` requirement superseded by ADR 0048 |
 | [0047](0047-the-bundled-provider-requires-a-second-factor-and-provisions-its-accounts.md) | The bundled provider requires a second factor and provisions its accounts | Accepted |
+| [0048](0048-release-md-is-written-by-the-release-not-by-a-pull-request.md) | RELEASE.md is written by the release, not by a pull request | Accepted |
 
 ## Writing a new record
 

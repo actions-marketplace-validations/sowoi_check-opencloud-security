@@ -39,8 +39,8 @@ Fixes #
 - [ ] `uv run mypy --config-file mypy.ini` passes.
 - [ ] `ansible-lint` passes, run from inside `ansible/` - only if you touched
       that directory.
-- [ ] I added an entry under `## [Unreleased]` in `CHANGELOG.md` and the same
-      entry in `RELEASE.md`
+- [ ] I added an entry under `## [Unreleased]` in `CHANGELOG.md`, and left
+      `RELEASE.md` to the release
       (`python scripts/check_pull_request.py --base origin/main` checks it).
 - [ ] If that entry is under `### Security`, I added a matching record in
       `security/advisories/` and

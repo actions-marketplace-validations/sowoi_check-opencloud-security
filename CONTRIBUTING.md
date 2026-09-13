@@ -9,8 +9,11 @@
     * [Exporting a requirements.txt](#exporting-a-requirementstxt)
   * [Running Tests](#running-tests)
     * [End-to-end tests](#end-to-end-tests)
+    * [The bundled release schedule](#the-bundled-release-schedule)
+  * [The documented OpenCloud links](#the-documented-opencloud-links)
   * [Linting](#linting)
   * [Changelog entries](#changelog-entries)
+    * [If your entry goes under `### Security`](#if-your-entry-goes-under--security)
   * [Releasing](#releasing)
 <!-- TOC -->
 
@@ -261,14 +264,13 @@ it:
 - What you added, and why it matters to an operator.
 ```
 
-Add the same entry to [`RELEASE.md`](RELEASE.md), under its
-`## check-opencloud-security <version>` heading - the version currently in
-`pyproject.toml`.
+Leave [`RELEASE.md`](RELEASE.md) alone: the release writes it from this
+section and overwrites it, so until then it describes the previous release.
 
 Do not write a `## [x.y.z]` heading and do not bump the version - the release
 picks your entry up under whichever number the maintainer chooses.
 
-Check both before opening the pull request with
+Check it before opening the pull request with
 `python scripts/check_pull_request.py --base origin/main`; pass
 `--labels skip-changelog` for a change that genuinely needs no notes.
 

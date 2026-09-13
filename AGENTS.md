@@ -106,17 +106,18 @@ a patch, a minor or a major release is a judgement call about the project, not
 a mechanical step - and a bump that lands on `main` publishes to PyPI
 immediately.
 
-**Every change must be documented in both `CHANGELOG.md` and `RELEASE.md`
-under the version currently declared in `pyproject.toml`.** Read that version
-before editing either file, add the entry to the matching Keep a Changelog
-section (`Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`, or
-`Documentation`), and keep the two release notes consistent. Never invent or
-bump a version heading yourself.
+**Every change must be documented in `CHANGELOG.md` under
+`## [Unreleased]`.** Add the entry to the matching Keep a Changelog section
+(`Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`, or
+`Documentation`). Never invent or bump a version heading yourself. Do not edit
+`RELEASE.md`: the release workflow writes it from that section and overwrites
+it on every release, so between releases it names the last one - see
+[ADR 0048](adr/0048-release-md-is-written-by-the-release-not-by-a-pull-request.md).
 
-`python scripts/check_pull_request.py --base origin/main` checks both before a
-pull request is opened: a change needs a new `CHANGELOG.md` entry and a
-`RELEASE.md` under the declared version, and a version change has to move past
-every tag. No workflow runs it, and a release needs no label.
+`python scripts/check_pull_request.py --base origin/main` checks this before a
+pull request is opened: a change needs a new `CHANGELOG.md` entry, and a
+version change has to move past every tag. No workflow runs it, and a release
+needs no label.
 `release-dry-run.yml` builds everything the
 release builds on the same pull request, and the release itself uploads to
 PyPI only after every other artifact is built. See
@@ -127,7 +128,7 @@ An entry under `Security` needs one more thing: a record in
 
 When the user bumps the version, `scripts/release_notes.py` prepares the notes
 for that `pyproject.toml` version and writes `RELEASE.md` for the GitHub
-release. Keep the release documents synchronized before that workflow runs.
+release.
 
 Preview what the next release would look like. It rewrites `CHANGELOG.md` and
 `RELEASE.md`, so do it on a scratch copy or revert afterwards:
@@ -831,8 +832,7 @@ and its frontend - the API, Swagger, the input restrictions and the template
 contract. `docs/webapp.md` is the operator's view of the same service; keep
 the two from contradicting each other. Every new option needs a row in the CLI
 option table, an entry in `config/check-opencloud-security.example.yml`, and
-matching entries in `CHANGELOG.md` and `RELEASE.md` under the version in
-`pyproject.toml`; see [Versioning and releases](#versioning-and-releases).
+a matching entry under `## [Unreleased]` in `CHANGELOG.md`; see [Versioning and releases](#versioning-and-releases).
 
 The web application is documented in [`docs/webapp.md`](docs/webapp.md):
 every `COS_WEB_*` setting, the request pipeline, the isolation model and the

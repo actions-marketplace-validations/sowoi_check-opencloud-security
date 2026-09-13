@@ -94,8 +94,7 @@ CLI flags    ───┘        (flat COS_ names)     (builds)       (dataclass
   `check_opencloud_security.py`, the subcommand in
   `opencloud_local_scan/cli.py`, the question in `wizard.py`, the CLI option
   table in `README.md`, `config/check-opencloud-security.example.yml`, plus
-  matching entries in `CHANGELOG.md` and `RELEASE.md` under the version in
-  `pyproject.toml`.
+  a matching entry under `## [Unreleased]` in `CHANGELOG.md`.
 
 ### Conventions easy to get wrong
 
@@ -117,8 +116,9 @@ CLI flags    ───┘        (flat COS_ names)     (builds)       (dataclass
 - **The release schedule table in `README.md` is generated** between
   `<!-- release-schedule:start -->` / `<!-- release-schedule:end -->` by
   `scripts/update_release_schedule.py` — never edit it by hand.
-- Every change needs entries in both `CHANGELOG.md` and `RELEASE.md` under the
-  version currently in `pyproject.toml`.
+- Every change needs an entry under `## [Unreleased]` in `CHANGELOG.md`. Never
+  edit `RELEASE.md` — the release workflow writes it from that section, so it
+  names the last release until the next one (ADR 0048).
 - **A `### Security` changelog entry also needs a record in
   `security/advisories/`**, written in the same pull request;
   `scripts/security_advisories.py --check` fails without one and CI runs it.

@@ -1,6 +1,6 @@
 # ADR 0046: A release needs no label, and the pull request policy is local
 
-- Status: Accepted
+- Status: Accepted; its `RELEASE.md` requirement superseded by ADR 0048
 - Date: 2026-09-13
 - Supersedes: the pull request policy in ADR 0045
 

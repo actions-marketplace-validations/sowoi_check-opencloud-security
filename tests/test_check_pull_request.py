@@ -1,7 +1,7 @@
 """Tests for scripts/check_pull_request.py.
 
 Two rules used to live only as checkboxes in the pull request template: that
-every change is written up in CHANGELOG.md and RELEASE.md, and that a version
+every change is written up in CHANGELOG.md, and that a version
 bump - which publishes to PyPI the moment it lands - moves forward and says
 what it is. These tests hold the script that checks them to failing when it
 should, and to staying quiet when it should.
@@ -52,13 +52,12 @@ RELEASE = "## check-opencloud-security {version}\n\n{body}\n"
 def documented(**overrides: object) -> dict:
     """A pull request that documents itself, so a test can break one thing."""
     arguments: dict = {
-        "changed_files": ["webapp/app.py", "CHANGELOG.md", "RELEASE.md"],
+        "changed_files": ["webapp/app.py", "CHANGELOG.md"],
         "labels": set(),
         "author": "a-contributor",
         "version": "1.1.0",
         "base_changelog": CHANGELOG.format(unreleased=""),
         "head_changelog": CHANGELOG.format(unreleased="### Fixed\n\n- A thing."),
-        "head_release": RELEASE.format(version="1.1.0", body="- A thing."),
     }
     arguments.update(overrides)
     return arguments
@@ -108,21 +107,18 @@ def test_an_entry_under_the_declared_version_counts():
     assert script.check_changelog(**documented(base_changelog=base, head_changelog=head)) == []
 
 
-def test_a_change_missing_from_release_md_is_refused():
-    """AGENTS.md asks for both files; the release body comes from the second."""
-    problems = script.check_changelog(**documented(changed_files=["webapp/app.py", "CHANGELOG.md"]))
-
-    assert any("RELEASE.md is unchanged" in p for p in problems)
-    assert not any("CHANGELOG.md" in p and "no new entry" in p for p in problems)
-
-
-def test_release_md_written_for_another_version_is_refused():
-    """Entries under a stale heading are notes for a release that already went out."""
+def test_release_md_is_not_asked_of_a_pull_request():
+    """The release workflow writes RELEASE.md from the changelog and overwrites it."""
+    assert script.check_changelog(**documented()) == []
+    # Touching it is not a substitute for the changelog entry it is written from.
     problems = script.check_changelog(
-        **documented(head_release=RELEASE.format(version="1.0.0", body="- A thing."))
+        **documented(
+            changed_files=["webapp/app.py", "RELEASE.md"],
+            head_changelog=CHANGELOG.format(unreleased=""),
+        )
     )
-
-    assert any("RELEASE.md is written for 1.0.0" in p for p in problems)
+    assert any("CHANGELOG.md has no new entry" in p for p in problems)
+    assert not any("RELEASE.md" in p for p in problems)
 
 
 @pytest.mark.parametrize(
@@ -196,14 +192,6 @@ def test_the_project_version_ignores_other_tables():
     assert script.project_version(PYPROJECT.format(version="1.2.3")) == "1.2.3"
 
 
-def test_the_repository_documents_releases_under_the_heading_the_check_reads():
-    """Checked against the real files, so a renamed heading fails here, not on every pull request."""
-    pyproject = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
-    release = (REPO_ROOT / "RELEASE.md").read_text(encoding="utf-8")
-
-    assert script.release_heading_version(release) == script.project_version(pyproject)
-
-
 # --- the whole script, against a real repository -----------------------------
 
 
@@ -236,11 +224,13 @@ def test_the_script_passes_a_documented_bump_end_to_end(repo, capsys):
     """Everything wired together: diff, versions, tags and commit subjects."""
     (repo / "app.py").write_text("x = 2\n", encoding="utf-8")
     (repo / "CHANGELOG.md").write_text(CHANGELOG.format(unreleased="### Fixed\n\n- x."), encoding="utf-8")
-    (repo / "RELEASE.md").write_text(RELEASE.format(version="1.0.0", body="- First.\n- x."), encoding="utf-8")
     _git(repo, "commit", "-qam", "fix: x")
     (repo / "pyproject.toml").write_text(PYPROJECT.format(version="1.1.0"), encoding="utf-8")
-    (repo / "RELEASE.md").write_text(RELEASE.format(version="1.1.0", body="- x."), encoding="utf-8")
     _git(repo, "commit", "-qam", "chore(release): bump to version 1.1.0")
+    # RELEASE.md still describes 1.0.0, as it does until the release rewrites it.
+    assert (repo / "RELEASE.md").read_text(encoding="utf-8").startswith(
+        "## check-opencloud-security 1.0.0"
+    )
 
     assert script.main(["--base", "main"]) == 0
     assert "version 1.1.0 is in order" in capsys.readouterr().out
@@ -250,7 +240,6 @@ def test_the_script_refuses_a_mislabelled_bump_commit_end_to_end(repo, capsys):
     """The subject check reads the version each commit actually set, from git."""
     (repo / "CHANGELOG.md").write_text(CHANGELOG.format(unreleased="### Fixed\n\n- x."), encoding="utf-8")
     (repo / "pyproject.toml").write_text(PYPROJECT.format(version="1.1.0"), encoding="utf-8")
-    (repo / "RELEASE.md").write_text(RELEASE.format(version="1.1.0", body="- x."), encoding="utf-8")
     _git(repo, "commit", "-qam", "Bump to version 1.3.3")
 
     assert script.main(["--base", "main"]) == 1
