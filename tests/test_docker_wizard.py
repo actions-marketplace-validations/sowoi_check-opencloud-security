@@ -2761,3 +2761,102 @@ def test_a_section_heading_shows_how_far_through_the_walk_it_is(
     assert wizard_module.progress_bar(0, 12).endswith("  0%")
     assert wizard_module.progress_bar(12, 12).endswith("100%")
     assert wizard_module.progress_bar(6, 12, width=10).startswith("█" * 5 + "░" * 5)
+
+
+# --- credentials offered back ------------------------------------------------
+def _question(key: str):
+    setup = wizard_module.Setup()
+    return next(
+        question
+        for section in wizard_module.build_sections(setup)
+        for question in section.questions
+        if question.key == key
+    )
+
+
+def test_a_second_run_offers_the_smtp_password_back_masked(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Re-running reads .env back, and a screen share must not show what it holds."""
+    password = "correct-horse-battery-staple"
+    (tmp_path / ".env").write_text(f"AUTHENTIK_EMAIL_PASSWORD={password}\n", encoding="utf-8")
+    setup = wizard_module.Setup()
+    wizard_module._read_existing_env(setup, tmp_path / ".env")
+    printed: list[str] = []
+    prompts: list[str] = []
+    monkeypatch.setattr(wizard_module.Wizard, "say", lambda self, text="": printed.append(text))
+
+    def read(self, prompt: str) -> str:
+        prompts.append(prompt)
+        return ""
+
+    monkeypatch.setattr(wizard_module.Wizard, "_read", read)
+    wizard = wizard_module.Wizard(setup, style=wizard_module.Style(False))
+
+    wizard.ask(_question("smtp_password"))
+
+    assert not any(password in line for line in printed + prompts)
+    assert wizard_module.MASKED in prompts[0]
+    # Enter keeps the credential it could not see.
+    assert setup.smtp_password == password
+
+    # And typing replaces it, still without the new one being repeated.
+    monkeypatch.setattr(wizard_module.Wizard, "_read", lambda self, prompt: "a-new-app-password")
+    wizard.ask(_question("smtp_password"))
+    assert setup.smtp_password == "a-new-app-password"
+    assert not any("a-new-app-password" in line for line in printed)
+
+
+def test_every_credential_is_masked_and_nothing_that_is_not_one(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An issuer URL hidden behind a mask is one nobody can check before writing it."""
+    prompts: list[str] = []
+
+    def read(self, prompt: str) -> str:
+        prompts.append(prompt)
+        return ""
+
+    monkeypatch.setattr(wizard_module.Wizard, "say", lambda self, text="": None)
+    monkeypatch.setattr(wizard_module.Wizard, "_read", read)
+    for key in ("smtp_password", "purge_token", "encryption_key", "admin_proxy_secret"):
+        assert key in wizard_module.CREDENTIALS
+    assert "mcp_auth_issuer" not in wizard_module.CREDENTIALS
+
+    setup = wizard_module.Setup(
+        purge_token="f" * 64, mcp_auth_issuer="https://sso.example.com/application/o/scan/"
+    )
+    wizard = wizard_module.Wizard(setup, style=wizard_module.Style(False))
+    wizard.ask(_question("purge_token"))
+    wizard.ask(_question("mcp_auth_issuer"))
+
+    assert "f" * 64 not in prompts[0] and wizard_module.MASKED in prompts[0]
+    assert "https://sso.example.com/application/o/scan/" in prompts[1]
+    # Nothing set yet is nothing to hide: the prompt still says so.
+    empty = wizard_module.Wizard(wizard_module.Setup(), style=wizard_module.Style(False))
+    empty.ask(_question("smtp_password"))
+    assert "[unset]" in prompts[2]
+
+
+def test_a_credential_is_typed_without_an_echo_at_a_terminal(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """What is typed at a password prompt lands in the scrollback otherwise."""
+    hidden: list[str] = []
+    monkeypatch.setattr(wizard_module.sys.stdin, "isatty", lambda: True, raising=False)
+
+    def getpass(prompt: str) -> str:
+        hidden.append(prompt)
+        return "typed"
+
+    monkeypatch.setattr(wizard_module.getpass, "getpass", getpass)
+    monkeypatch.setattr(
+        wizard_module.Wizard, "_read", lambda self, prompt: pytest.fail("echoed read")
+    )
+    monkeypatch.setattr(wizard_module.Wizard, "say", lambda self, text="": None)
+    setup = wizard_module.Setup()
+    wizard = wizard_module.Wizard(setup, style=wizard_module.Style(False))
+
+    wizard.ask(_question("smtp_password"))
+
+    assert hidden and setup.smtp_password == "typed"

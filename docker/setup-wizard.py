@@ -72,6 +72,7 @@ Non-interactive use, for a test or an unattended install:
 from __future__ import annotations
 
 import argparse
+import getpass
 import json
 import os
 import re
@@ -618,6 +619,22 @@ SECRET_VARIABLES: dict[str, str] = {
     "smtp_password": "AUTHENTIK_EMAIL_PASSWORD",
 }
 
+# The ones that are credentials in the plain sense: shown by nobody, typed
+# without an echo, and offered back on a re-run as a mask rather than as the
+# value `.env` holds. The rest of the mapping lives in `.env` for another
+# reason - an issuer URL or an audience both sides must agree on - and hiding
+# those would only stop an operator checking them.
+CREDENTIALS = frozenset(
+    key
+    for key in SECRET_VARIABLES
+    if not key.startswith("mcp_auth_") and key != "authentik_client_id"
+)
+
+# What a prompt shows in brackets for a credential that is already set. It
+# says nothing about the value - not its length, not its first characters -
+# because a scrollback or a screen share is exactly where those end up.
+MASKED = "set, hidden - Enter keeps it"
+
 
 # --- prompting --------------------------------------------------------------
 @dataclass
@@ -867,6 +884,21 @@ class Wizard:
         except KeyboardInterrupt as error:
             raise SetupAborted("Interrupted.") from error
 
+    def _read_secret(self, prompt: str) -> str:
+        """Read a credential without echoing it.
+
+        Only at a terminal: ``getpass`` insists on one, and a credential piped
+        in by an unattended run has no screen to be seen on anyway.
+        """
+        if not sys.stdin.isatty():
+            return self._read(prompt)
+        try:
+            return getpass.getpass(prompt)
+        except EOFError as error:
+            raise SetupAborted("No more input.") from error
+        except KeyboardInterrupt as error:
+            raise SetupAborted("Interrupted.") from error
+
     def current(self, key: str) -> Any:
         return getattr(self.setup, key)
 
@@ -902,7 +934,11 @@ class Wizard:
 
         style = self.style
         current = self.current(question.key)
-        shown = _format_default(current)
+        secret = question.key in CREDENTIALS
+        # A re-run reads `.env` back, so this is the real credential: never
+        # printed, in the prompt or anywhere else.
+        shown = MASKED if secret and current else _format_default(current)
+        read = self._read_secret if secret else self._read
         self.say()
         self.say(f"  {style.accent(_POINTER)} {style.bold(question.prompt)}")
         for line in _wrap(question.explain):
@@ -926,7 +962,7 @@ class Wizard:
             self.say(f"      {style.dim(line)}")
 
         while True:
-            answer = self._read(
+            answer = read(
                 f"      {style.dim('[')}{style.accent(shown)}{style.dim(']')} "
                 f"{style.accent('>')} "
             ).strip()

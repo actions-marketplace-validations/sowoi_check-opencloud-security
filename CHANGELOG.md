@@ -12,6 +12,20 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+### Security
+
+- **The Docker setup wizard no longer shows a stored credential when it is
+  run again.** A re-run reads `.env` back so that its credentials survive, and
+  every question then offered the value in brackets as the default - the SMTP
+  password, the erasure token, the signing keys, the audit salt, the
+  encryption key, the `/admin` proxy secret and the releases token, in plain
+  text on the screen and in the scrollback. Those prompts now say `[set,
+  hidden - Enter keeps it]` instead, Enter still keeps the stored value, and
+  what is typed at them is read without an echo when the wizard runs in a
+  terminal. Settings kept in `.env` that are not credentials - the issuer, the
+  audience, the key set and resource URLs - are still shown, so they can be
+  checked.
+
 ### Changed
 
 - **The Docker setup wizard offers the bundled Authentik once a sign-in is
