@@ -178,6 +178,22 @@ and warns before writing about the combinations the service itself refuses to
 start on, such as a sign-in on `/mcp` with a provider it was told nothing
 about.
 
+**Switching on `/admin` or the sign-in on `/mcp` makes the bundled Authentik
+the default.** The provider question that follows then offers *yes* in
+brackets, because a deployment asking for either usually has no identity
+provider of its own yet; answer `no` to keep checking tokens against the one
+you run. Only switching one on moves the default - re-running over a
+deployment that already said `no` keeps it. The flags are unchanged:
+`--sign-in` alone still means a provider you already run.
+
+**It is easier to follow in a terminal.** Each section opens with a rule,
+`Step 3 of 12` and a progress bar, questions and their current value stand
+out from the explanation under them, and refusals are marked. The colour is
+plain ANSI from the standard library - no Rich or questionary to install on a
+host that has only Docker - and it switches itself off when the output is not
+a terminal, when `NO_COLOR` is set or when `TERM=dumb`, so a piped or logged
+run is the same plain text as before. `FORCE_COLOR=1` turns it on regardless.
+
 **At any question**, besides answering it:
 
 | Type | What happens |

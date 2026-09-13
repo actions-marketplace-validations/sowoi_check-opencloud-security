@@ -166,8 +166,11 @@ values are derived from the answers, and the blueprint is written beside the
 compose file that mounts it. The two are independent: provisioning a provider
 does not close the endpoint, so the ordinary way in is to bring Authentik up
 with `/mcp` still open, get a token, and turn the guard on once it works.
-Neither is a default, and nothing of Authentik is written into a deployment
-that did not ask for it. When it is asked for, so are its mail settings
+Neither flag implies the other, and nothing of Authentik is written into a
+deployment that did not ask for it. Asked interactively, though, switching on
+`/admin` or the sign-in on `/mcp` makes *yes* the default at the provider
+question that follows, since most deployments asking for either have no
+provider yet. When it is asked for, so are its mail settings
 (`--smtp-host`, `--smtp-from`, `--smtp-security` and the rest), since an
 identity provider that cannot send a password recovery locks out the one
 account it starts with; the password comes from `AUTHENTIK_EMAIL_PASSWORD` in

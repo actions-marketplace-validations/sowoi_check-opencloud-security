@@ -268,6 +268,122 @@ class SetupAborted(RuntimeError):
     """Raised when the operator interrupts the wizard."""
 
 
+# --- presentation -----------------------------------------------------------
+# Colour and a little structure, written by hand. Rich, questionary, InquirerPy
+# and prompt_toolkit all draw a nicer prompt than this, and every one of them
+# is a package to install first - on a host that, by design, has Docker and a
+# Python interpreter and nothing else. A wizard that begins with `pip install`
+# has already failed the operator it exists for.
+#
+# So it is ANSI escapes, and only where they are wanted: a terminal on the
+# other end, no NO_COLOR, no TERM=dumb. Piped, redirected or under a test, not
+# one escape is written and every line is exactly the plain text it was
+# before, which is what the tests and anybody grepping a log read.
+_ANSI = {
+    "reset": "0",
+    "bold": "1",
+    "dim": "2",
+    "red": "31",
+    "green": "32",
+    "yellow": "33",
+    "blue": "34",
+    "magenta": "35",
+    "cyan": "36",
+}
+
+# The width every drawn element is laid out to. Fixed rather than measured:
+# the explanations are already wrapped to 72 columns, and a frame that is
+# wider than the text inside it only draws attention to the gap.
+_FRAME_WIDTH = 66
+
+
+def _colour_wanted(stream: Any = None) -> bool:
+    """Whether escapes would reach a terminal that renders them."""
+    if os.environ.get("NO_COLOR"):
+        return False
+    if os.environ.get("FORCE_COLOR"):
+        return True
+    if os.environ.get("TERM") == "dumb":
+        return False
+    stream = stream if stream is not None else sys.stdout
+    isatty = getattr(stream, "isatty", None)
+    if not (callable(isatty) and isatty()):
+        return False
+    # The classic Windows console prints the escapes as text; Windows
+    # Terminal, which sets WT_SESSION, renders them.
+    return os.name != "nt" or bool(os.environ.get("WT_SESSION"))
+
+
+class Style:
+    """Paints text when the terminal can show it, and leaves it alone otherwise."""
+
+    def __init__(self, enabled: bool | None = None) -> None:
+        self.enabled = _colour_wanted() if enabled is None else enabled
+
+    def paint(self, text: str, *names: str) -> str:
+        if not self.enabled or not text or not names:
+            return text
+        codes = ";".join(_ANSI[name] for name in names)
+        return f"\033[{codes}m{text}\033[0m"
+
+    def bold(self, text: str) -> str:
+        return self.paint(text, "bold")
+
+    def dim(self, text: str) -> str:
+        return self.paint(text, "dim")
+
+    def accent(self, text: str) -> str:
+        return self.paint(text, "cyan")
+
+    def good(self, text: str) -> str:
+        return self.paint(text, "green")
+
+    def warn(self, text: str) -> str:
+        return self.paint(text, "yellow")
+
+    def bad(self, text: str) -> str:
+        return self.paint(text, "red", "bold")
+
+
+# Box-drawing characters, named once. Not inside the f-strings below: a
+# backslash in an f-string expression is a syntax error before Python 3.12.
+_BAR_FULL = "█"
+_BAR_EMPTY = "░"
+_LIGHT = "─"
+_HEAVY = "━"
+_SIDE = "│"
+_TOP_LEFT, _TOP_RIGHT = "╭", "╮"
+_BOTTOM_LEFT, _BOTTOM_RIGHT = "╰", "╯"
+_POINTER = "›"
+
+
+def progress_bar(done: int, total: int, width: int = 24) -> str:
+    """A bar of ``width`` cells, filled in proportion, and the percentage."""
+    total = max(total, 1)
+    done = min(max(done, 0), total)
+    filled = round(width * done / total)
+    percent = round(100 * done / total)
+    return f"{_BAR_FULL * filled}{_BAR_EMPTY * (width - filled)} {percent:>3}%"
+
+
+def banner(title: str, subtitle: str, style: Style, width: int = _FRAME_WIDTH) -> list[str]:
+    """A rounded frame around the wizard's name, for the top of the run."""
+    inner = width - 2
+    rows = [(title, style.bold)] + [(line, style.dim) for line in _wrap(subtitle, inner - 4)]
+    lines = [style.accent(f"  {_TOP_LEFT}{_LIGHT * inner}{_TOP_RIGHT}")]
+    for text, paint in rows:
+        padding = " " * max(0, inner - 2 - len(text))
+        lines.append(f"  {style.accent(_SIDE)}  {paint(text)}{padding}{style.accent(_SIDE)}")
+    lines.append(style.accent(f"  {_BOTTOM_LEFT}{_LIGHT * inner}{_BOTTOM_RIGHT}"))
+    return lines
+
+
+def rule(title: str, style: Style, width: int = _FRAME_WIDTH) -> str:
+    """A heavy horizontal rule with a title set into it."""
+    fill = _HEAVY * max(4, width - len(title) - 5)
+    return f"  {style.accent(_HEAVY * 2)} {style.bold(title)} {style.accent(fill)}"
+
+
 # --- what the wizard collects ----------------------------------------------
 @dataclass
 class Setup:
@@ -341,10 +457,12 @@ class Setup:
     mcp_auth_scopes: str = ""
     mcp_auth_client_secret: str = ""
 
-    # Whether the stack brings its own identity provider. Off: a sign-in is
-    # normally checked against one an estate already runs, and two extra
-    # containers plus a database to back up is a decision rather than a
-    # default. The settings below are read only when it is on.
+    # Whether the stack brings its own identity provider. Off until something
+    # needs a sign-in: an interactive run turns it on the moment /admin or the
+    # sign-in on /mcp is, because most deployments asking for either have no
+    # provider of their own, and says so at the question that follows. The
+    # flags do not - `--sign-in` alone still means "the provider I run". The
+    # settings below are read only when it is on.
     deploy_authentik: bool = False
     authentik_url: str = ""
     authentik_slug: str = "opencloud-scanner"
@@ -689,13 +807,19 @@ class Wizard:
     """Asks the questions and remembers the answers."""
 
     def __init__(
-        self, setup: Setup, *, interactive: bool = True, base_dir: Path | None = None
+        self,
+        setup: Setup,
+        *,
+        interactive: bool = True,
+        base_dir: Path | None = None,
+        style: Style | None = None,
     ) -> None:
         self.setup = setup
         self.interactive = interactive
         # Where the compose file goes, which is what a relative host path in
         # an answer is relative to.
         self.base_dir = base_dir or Path(".")
+        self.style = style or Style()
 
     def _conflict(self, question: Question, value: Any) -> str | None:
         """Take a value, unless it contradicts an answer already given."""
@@ -711,17 +835,28 @@ class Wizard:
         if self.interactive:
             print(text)
 
-    def heading(self, section: Section, position: str = "") -> None:
+    def heading(self, section: Section, number: int = 0, total: int = 0) -> None:
         """The section's title, and where it falls in the run.
 
-        The position is worth the eight characters it costs: this is a long
-        walk, and a section heading that says nothing about how much is left
-        is the reason somebody abandons one halfway through.
+        The position is worth the line it costs: this is a long walk, and a
+        section heading that says nothing about how much is left is the reason
+        somebody abandons one halfway through. The bar counts the sections
+        already behind this one, so the first reads empty and the last does
+        not yet read full - it fills when the summary arrives.
         """
-        title = f"{section.title} ({position})" if position else section.title
+        style = self.style
         self.say()
-        self.say(f"\u2500\u2500 {title} " + "\u2500" * max(4, 60 - len(title)))
-        self.say(f"   {section.summary}")
+        self.say(rule(section.title, style))
+        if total:
+            step = style.accent(f"Step {number} of {total}")
+            self.say(f"  {step}  {style.dim(progress_bar(number - 1, total))}")
+        self.say(f"  {style.dim(section.summary)}")
+
+    def notice(self, text: str, kind: str = "warn") -> None:
+        """A line the operator has to act on: a refusal, or a correction."""
+        marker = "!" if kind == "bad" else _POINTER
+        paint = self.style.bad if kind == "bad" else self.style.warn
+        self.say(f"      {paint(marker)} {paint(text) if kind == 'bad' else text}")
 
     # -- input -------------------------------------------------------------
     def _read(self, prompt: str) -> str:
@@ -765,55 +900,65 @@ class Wizard:
         if not self.interactive:
             return None
 
+        style = self.style
         current = self.current(question.key)
         shown = _format_default(current)
         self.say()
-        self.say(f"  {question.prompt}")
+        self.say(f"  {style.accent(_POINTER)} {style.bold(question.prompt)}")
         for line in _wrap(question.explain):
-            self.say(f"      {line}")
+            self.say(f"      {style.dim(line)}")
         if question.choices:
             for number, choice in enumerate(question.choices, start=1):
-                marker = "*" if choice == current else " "
-                self.say(f"      {marker} {number}) {choice}")
+                if choice == current:
+                    self.say(f"      {style.good('*')} {style.bold(f'{number}) {choice}')}")
+                else:
+                    self.say(f"        {number}) {choice}")
         else:
-            self.say(f"      Example: {question.example}")
+            self.say(f"      {style.dim('Example:')} {style.accent(question.example)}")
         if question.kind == "bool":
-            self.say("      Answer yes or no; true and false are accepted too.")
+            self.say(style.dim("      Answer yes or no; true and false are accepted too."))
         if question.generate:
-            self.say("      Enter 'generate' and a strong random value is created for you.")
+            self.say(
+                style.dim("      Enter 'generate' and a strong random value is created for you.")
+            )
         hints = self._hints(question, can_go_back=can_go_back, offer_rest=offer_rest)
         for line in _wrap(hints, 70) if hints else []:
-            self.say(f"      {line}")
+            self.say(f"      {style.dim(line)}")
 
         while True:
-            answer = self._read(f"      [{shown}] > ").strip()
+            answer = self._read(
+                f"      {style.dim('[')}{style.accent(shown)}{style.dim(']')} "
+                f"{style.accent('>')} "
+            ).strip()
             if not answer:
                 return None
             lowered = answer.lower()
             if lowered in BACK_WORDS:
                 if can_go_back:
                     return BACK
-                self.say("      This is the first question - there is nothing behind it.")
+                self.notice("This is the first question - there is nothing behind it.")
                 continue
             if lowered == REST_WORD:
                 if offer_rest:
                     return REST
-                self.say("      Every question has been asked; there is no rest.")
+                self.notice("Every question has been asked; there is no rest.")
                 continue
             if lowered == CLEAR_WORD:
                 if question.kind != "str":
-                    self.say("      Only a text setting can be emptied.")
+                    self.notice("Only a text setting can be emptied.")
                     continue
                 # Validated like any other answer: some of these are refused
                 # empty, and '-' must not be the way around that.
                 error = question.validate("") or self._conflict(question, "")
                 if error:
-                    self.say(f"      {error}")
+                    self.notice(error, "bad")
                     continue
                 return None
             if question.generate and lowered == "generate":
                 setattr(self.setup, question.key, secrets.token_hex(question.generate))
-                self.say("      Generated, and written to .env rather than shown here.")
+                self.say(
+                    f"      {style.good('Generated')}, and written to .env rather than shown here."
+                )
                 return None
             if question.kind == "bool":
                 if lowered in YES:
@@ -822,20 +967,20 @@ class Wizard:
                 if lowered in NO:
                     setattr(self.setup, question.key, False)
                     return None
-                self.say("      Answer yes or no - true and false work as well.")
+                self.notice("Answer yes or no - true and false work as well.")
                 continue
             if question.kind == "int":
                 error = question.validate(answer)
                 if error:
-                    self.say(f"      {error}")
+                    self.notice(error, "bad")
                     continue
                 setattr(self.setup, question.key, int(answer))
                 return None
             if question.kind == "choice":
                 choice = self._chosen(question, answer)
                 if choice is None:
-                    self.say(
-                        "      Answer with the number or the word: "
+                    self.notice(
+                        "Answer with the number or the word: "
                         f"{', '.join(question.choices)}"
                     )
                     continue
@@ -843,7 +988,7 @@ class Wizard:
                 return None
             error = question.validate(answer) or self._conflict(question, answer)
             if error:
-                self.say(f"      {error}")
+                self.notice(error, "bad")
                 continue
             return None
 
@@ -871,7 +1016,9 @@ class Wizard:
             return default
         shown = "Y/n" if default else "y/N"
         while True:
-            answer = self._read(f"  {prompt} [{shown}] ").strip().lower()
+            answer = self._read(
+                f"  {self.style.warn(_POINTER)} {prompt} {self.style.accent(f'[{shown}]')} "
+            ).strip().lower()
             if not answer:
                 return default
             if answer in YES:
@@ -1382,19 +1529,19 @@ def build_sections(setup: Setup) -> list[Section]:
                     explain=(
                         "Two things above can want one: a sign-in on /mcp, and the "
                         "operator's area at /admin, which has no other way in. Say "
-                        "no - the default - and each is checked against a provider "
-                        "you already run: you are asked for the issuer, the audience "
-                        "and the keys, and you put your own proxy in front of /admin. "
-                        "Say yes and Authentik and its PostgreSQL join this compose "
+                        "yes and Authentik and its PostgreSQL join this compose "
                         "file and provision themselves, so those values are already "
-                        "right and there is nothing to click. Two more containers and "
-                        "a database to back up, for an estate that has no identity "
-                        "provider yet. This does not close /mcp on its own - the "
+                        "right and there is nothing to click - which is why yes is "
+                        "the default once either of them is switched on. Say no and "
+                        "each is checked against a provider you already run: you are "
+                        "asked for the issuer, the audience and the keys, and you put "
+                        "your own proxy in front of /admin. Yes costs two more "
+                        "containers and a database to back up. This does not close /mcp on its own - the "
                         "sign-in question does that, and bringing the provider up "
                         "first is a good way to try a token before anybody is turned "
                         "away."
                     ),
-                    example="no",
+                    example="yes",
                     kind="bool",
                 ),
                 Question(
@@ -1970,9 +2117,11 @@ def run_questions(wizard: Wizard) -> None:
             position += 1
             continue
         if section is not heading_shown:
-            wizard.heading(section, f"{number} of {len(sections)}")
+            wizard.heading(section, number, len(sections))
             heading_shown = section
+        before = _sign_in_wanted(setup)
         movement = wizard.ask(question, can_go_back=bool(answered))
+        _offer_authentik(setup, before)
         if movement == REST:
             return
         if movement == BACK:
@@ -1987,6 +2136,30 @@ def run_questions(wizard: Wizard) -> None:
 def _signs_in(setup: Setup) -> bool:
     """Whether this deployment asked for a sign-in on ``/mcp`` at all."""
     return setup.enable_mcp and setup.mcp_auth_enabled
+
+
+def _sign_in_wanted(setup: Setup) -> bool:
+    """Whether anything asked for so far needs somebody to sign in."""
+    return _signs_in(setup) or setup.admin_enabled
+
+
+def _offer_authentik(setup: Setup, before: bool) -> bool:
+    """Make the bundled Authentik the default the moment a sign-in is wanted.
+
+    Switching on ``/admin`` or the sign-in on ``/mcp`` is, for nearly every
+    deployment that runs this wizard, also the moment it needs a provider -
+    and one that already runs its own can say no at the very next question.
+    The reverse is a default that sends the operator on to issuer, audience
+    and key questions they have no answers for.
+
+    Only on the change from nothing-to-sign-in-to to something, so that an
+    earlier *no* - in this run, or remembered from the last one - is not
+    overturned by walking past an answer that did not change.
+    """
+    if before or not _sign_in_wanted(setup) or setup.deploy_authentik:
+        return False
+    setup.deploy_authentik = True
+    return True
 
 
 def _wants_a_provider(setup: Setup) -> bool:
@@ -5094,6 +5267,28 @@ def _summary_row(setup: Setup, name: str) -> str:
     return f"    {name:<26} {_format_default(value)}"
 
 
+def _styled_summary_line(line: str, style: Style) -> str:
+    """One line of :func:`summarise`, painted for a terminal.
+
+    Painted here rather than there, so the summary itself stays the plain
+    text a test or a log compares against.
+    """
+    if not style.enabled:
+        return line
+    if not line.startswith("    "):
+        return f"  {style.accent(style.bold(line.strip()))}"
+    name, _, value = line.strip().partition(" ")
+    value = value.strip()
+    padding = " " * max(1, 27 - len(name))
+    if value.startswith("set (written to .env)"):
+        shown = style.good(value)
+    elif value in {"no", "unset", "none"}:
+        shown = style.dim(value)
+    else:
+        shown = style.bold(value)
+    return f"    {style.dim(name)}{padding}{shown}"
+
+
 def summarise(setup: Setup) -> list[str]:
     """The answers, for the confirmation before anything is written.
 
@@ -5165,26 +5360,31 @@ def review(wizard: Wizard, setup: Setup) -> bool:
     """
     questions = _editable(setup)
     while True:
+        style = wizard.style
         wizard.say()
-        wizard.say("── Summary " + "─" * 53)
+        wizard.say(rule("Summary", style))
+        total = len(build_sections(setup))
+        wizard.say(
+            f"  {style.accent('Ready to write')}  {style.dim(progress_bar(total, total))}"
+        )
         for line in summarise(setup):
-            wizard.say(line)
+            wizard.say(_styled_summary_line(line, style))
 
         warnings = check_consistency(setup)
         if warnings:
             wizard.say()
-            wizard.say("  Worth a second look:")
+            wizard.say(f"  {style.warn(style.bold('Worth a second look:'))}")
             for warning in warnings:
                 for index, line in enumerate(_wrap(warning, 68)):
-                    wizard.say(f"    {'-' if index == 0 else ' '} {line}")
+                    wizard.say(f"    {style.warn('-') if index == 0 else ' '} {line}")
 
         errors = check_errors(setup, wizard.base_dir)
         if errors:
             wizard.say()
-            wizard.say("  Has to change before anything is written:")
+            wizard.say(f"  {style.bad('Has to change before anything is written:')}")
             for error in errors:
                 for index, line in enumerate(_wrap(error, 68)):
-                    wizard.say(f"    {'!' if index == 0 else ' '} {line}")
+                    wizard.say(f"    {style.bad('!') if index == 0 else ' '} {line}")
 
         if not wizard.interactive:
             # Nothing was printed above, and this is the one thing a run that
@@ -5195,7 +5395,8 @@ def review(wizard: Wizard, setup: Setup) -> bool:
 
         wizard.say()
         answer = wizard._read(
-            "  Write it all out now? [Y/n], or name a setting to change > "
+            f"  {style.accent(_POINTER)} Write it all out now? {style.accent('[Y/n]')}, "
+            f"or name a setting to change {style.accent('>')} "
         ).strip()
         if not answer or answer.lower() in YES:
             if errors:
@@ -5220,7 +5421,15 @@ def review(wizard: Wizard, setup: Setup) -> bool:
                 wizard.say(f"  Nothing called '{answer}' is in the summary above.")
                 wizard.say("  Type a name exactly as it is listed, or enough of one.")
             continue
+        before = _sign_in_wanted(setup)
         wizard.ask(question, offer_rest=False)
+        if _offer_authentik(setup, before):
+            # Said, because nobody was asked: the summary below now carries a
+            # provider this question did not mention.
+            wizard.say(
+                "  Authentik joins the stack as the provider for that sign-in; "
+                "name deploy_authentik to change it."
+            )
         # An answer changed here can imply the rest all over again: a provider
         # that now needs credentials, a URL that no longer has one.
         _generate_unattended(setup)
@@ -5642,7 +5851,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     setup.docker_mode = setup.docker_mode or detect_docker_mode()
 
     wizard = Wizard(setup, interactive=not args.non_interactive, base_dir=output_dir)
-    wizard.say("Docker setup for the check-opencloud-security web application")
+    style = wizard.style
+    wizard.say()
+    for line in banner(
+        "check-opencloud-security  -  Docker setup",
+        "A container deployment of the web application: the stack, its "
+        "secrets, and whatever you ask for in front of it.",
+        style,
+    ):
+        wizard.say(line)
     wizard.say()
     for line in _wrap(
         "This writes a compose file with the whole stack and a .env holding the "
@@ -5654,14 +5871,27 @@ def main(argv: Sequence[str] | None = None) -> int:
     ):
         wizard.say(f"  {line}")
     wizard.say()
-    wizard.say(f"  Compose file: {compose_path}")
-    wizard.say(f"  Secrets file: {env_path}")
-    wizard.say(f"  Preset:       {args.preset or 'public'}")
+    wizard.say(f"  {style.dim('Compose file:')} {style.accent(str(compose_path))}")
+    wizard.say(f"  {style.dim('Secrets file:')} {style.accent(str(env_path))}")
+    wizard.say(f"  {style.dim('Preset:      ')} {style.accent(args.preset or 'public')}")
     wizard.say()
-    wizard.say("  At any question: Enter takes the value in brackets, 'b' goes")
-    wizard.say("  back one, '-' empties a text setting, and 'rest' accepts every")
-    wizard.say("  remaining default. You can change any of them at the summary,")
-    wizard.say("  by name, before anything is written.")
+    # The whole walk up front, so the step counter on every heading has
+    # something to count against.
+    wizard.say(f"  {style.bold('The steps ahead')}")
+    titles = [section.title for section in build_sections(setup)]
+    for index, title in enumerate(titles, start=1):
+        wizard.say(f"    {style.accent(f'{index:>2}')}  {title}")
+    wizard.say()
+    wizard.say(f"  {style.bold('At any question')}")
+    for key, meaning in (
+        ("Enter", "takes the value in brackets"),
+        ("b", "goes back one question"),
+        ("-", "empties a text setting"),
+        ("rest", "accepts every remaining default"),
+    ):
+        wizard.say(f"    {style.accent(f'{key:<6}')} {meaning}")
+    wizard.say("  You can change any answer at the summary, by name, before")
+    wizard.say("  anything is written.")
     if remembered or reused:
         wizard.say()
         wizard.say("  This deployment is already here, so this is an edit of it:")
@@ -5706,10 +5936,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     written = write_files(setup, compose_path, env_path)
 
     wizard.say()
+    wizard.say(rule("Written", style))
     for path in written:
-        wizard.say(f"  Wrote {path}")
+        wizard.say(f"  {style.good('+')} Wrote {path}")
     wizard.say()
-    wizard.say("  Next:")
+    wizard.say(rule("Next", style))
     wizard.say(f"    cd {output_dir}")
     # Before `up`, not after: a bind mount Docker has to invent is created
     # owned by root, and the container that then cannot write to it is the
@@ -5733,8 +5964,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     for line in _proxy_install_commands(setup):
         wizard.say(f"    {line}")
     build = " --build" if setup.image_source == "build" else ""
-    wizard.say(f"    docker compose -f {args.compose_file} up -d{build}")
-    wizard.say(f"    open http://{setup.bind_address}:{setup.host_port}")
+    wizard.say(f"    {style.accent(f'docker compose -f {args.compose_file} up -d{build}')}")
+    wizard.say(f"    {style.accent(f'open http://{setup.bind_address}:{setup.host_port}')}")
     for line in enrollment_instructions(setup, args.env_file):
         wizard.say(line)
     for line in admin_walkthrough(setup):

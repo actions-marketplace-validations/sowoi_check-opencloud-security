@@ -761,7 +761,13 @@ proxy's environment, never into the file an operator would commit. **A
 question's relevance is decided as the answers arrive, never per section**:
 naming an SMTP server is what brings the rest of the mail session into play,
 and asking for the bundled provider is what brings its address and ports in.
-With the bundled Authentik
+Switching on `/admin` or the
+sign-in on `/mcp` during an interactive run makes the bundled Authentik the
+default at the provider question - only on that change, so a remembered *no*
+survives a re-run - while `--sign-in` alone still adds no provider. Its colour
+and progress bars are hand-written ANSI rather than Rich or questionary,
+because of the standard-library rule, and never reach a pipe, a test or a
+`NO_COLOR` terminal. With the bundled Authentik
 **nobody clicks anything in its interface**: the wizard asks who signs in,
 generates `AUTHENTIK_ENROLLMENT_TOKEN` and `AUTHENTIK_BOOTSTRAP_PASSWORD` into
 `.env`, and prints the one enrollment link where a listed person chooses a

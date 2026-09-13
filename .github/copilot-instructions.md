@@ -205,7 +205,11 @@ overwrite the compose files that ship in `docker/`, and reads an existing
 re-run edits a deployment. Asked for automatic
 updates, it adds Watchtower scoped by label to the stack's own containers and
 detects the Docker socket for the user running it - a rootless Docker serves
-it under `/run/user/<uid>`, not `/var/run`. Keep it independent of
+it under `/run/user/<uid>`, not `/var/run`. Switching on `/admin` or the
+sign-in on `/mcp` interactively makes the bundled Authentik the default at the
+provider question (only on that change; `--sign-in` alone adds no provider).
+Its colour is hand-written ANSI, never Rich or questionary, and never reaches
+a pipe, a test or a `NO_COLOR` terminal. Keep it independent of
 `opencloud_local_scan.wizard`, which sets up a monitoring check;
 `tests/test_docker_wizard.py` asserts both the split and the independence.
 

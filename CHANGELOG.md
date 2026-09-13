@@ -12,6 +12,28 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+### Changed
+
+- **The Docker setup wizard offers the bundled Authentik once a sign-in is
+  wanted.** Switching on the operator's area at `/admin` or the sign-in on
+  `/mcp` now makes *yes* the default at the identity provider question, because
+  nearly every deployment asking for either has no provider of its own and was
+  otherwise sent on to issuer, audience and key questions it could not answer.
+  Answering `no` still checks tokens against a provider you run. The default
+  moves only when a sign-in is switched on, so re-running over a deployment
+  that already declined Authentik keeps it out, and `--sign-in` on its own
+  still adds no provider.
+- **The Docker setup wizard is easier to follow.** It opens with a framed
+  title, the list of steps ahead and a table of what can be typed at a
+  question; every section heading shows `Step N of 12` with a progress bar;
+  the question, its current value and a refused answer stand out from the
+  explanation; and the summary and closing screens are grouped under rules.
+  The styling is plain ANSI from the standard library - Rich, questionary and
+  InquirerPy were considered and would each need installing on a host that
+  has only Docker - and it is left out entirely when the output is not a
+  terminal, `NO_COLOR` is set or `TERM=dumb`, so piped and logged runs print
+  exactly the plain text they did before.
+
 ## [1.22.5] - 2026-09-13
 
 ### Changed

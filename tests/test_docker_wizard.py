@@ -2642,3 +2642,122 @@ def test_an_operator_is_always_someone_who_can_enrol() -> None:
     assert wizard_module._usernames("alice; bob.smith@example.com") is None
     assert wizard_module._usernames("alice bob") is not None
     assert wizard_module._usernames("alice;'); drop") is not None
+
+
+# --- the bundled provider follows the sign-in -------------------------------
+def _provider_default_when_asked(
+    monkeypatch: pytest.MonkeyPatch, answers: dict[str, object]
+) -> list[bool]:
+    """Answer only what is named, and record what the provider question offered."""
+    offered: list[bool] = []
+
+    def ask(self, question, **_) -> None:
+        if question.key == "deploy_authentik":
+            offered.append(self.setup.deploy_authentik)
+        if question.key in answers:
+            setattr(self.setup, question.key, answers[question.key])
+
+    monkeypatch.setattr(wizard_module.Wizard, "ask", ask)
+    monkeypatch.setattr(wizard_module.Wizard, "_read", lambda self, prompt: "")
+    return offered
+
+
+@pytest.mark.parametrize("switched_on", ["admin_enabled", "mcp_auth_enabled"])
+def test_switching_on_a_sign_in_offers_the_bundled_provider_by_default(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, switched_on: str
+) -> None:
+    """Most deployments asking for /admin or a sign-in on /mcp have no provider yet."""
+    offered = _provider_default_when_asked(
+        monkeypatch, {switched_on: True, "admin_users": "okko"}
+    )
+
+    assert wizard_module.main(["--output-dir", str(tmp_path)]) == 0
+
+    assert offered == [True]
+    assert [name for name in _compose(tmp_path)["services"] if name.startswith("authentik")]
+
+
+def test_no_sign_in_leaves_the_provider_question_at_no(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Two containers and a database are not a default for a stack nobody signs in to."""
+    offered = _provider_default_when_asked(monkeypatch, {})
+
+    assert wizard_module.main(["--output-dir", str(tmp_path)]) == 0
+
+    assert offered == [False]
+    assert not [name for name in _compose(tmp_path)["services"] if name.startswith("authentik")]
+
+
+def test_an_earlier_no_to_the_provider_is_not_overturned_by_an_unchanged_answer(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Re-running over a deployment with its own provider must not add Authentik to it."""
+    (tmp_path / wizard_module.answers_filename("docker-compose.yml")).write_text(
+        json.dumps({"admin_enabled": True, "admin_users": "okko", "deploy_authentik": False}),
+        encoding="utf-8",
+    )
+    offered = _provider_default_when_asked(monkeypatch, {})
+
+    wizard_module.main(["--output-dir", str(tmp_path), "--force"])
+
+    assert offered == [False]
+
+    # And the positive half: the same area switched on in this run does.
+    setup = wizard_module.Setup()
+    assert wizard_module._offer_authentik(setup, before=False) is False
+    setup.admin_enabled = True
+    assert wizard_module._offer_authentik(setup, before=False) is True
+    assert setup.deploy_authentik
+
+
+# --- presentation -----------------------------------------------------------
+def test_no_escape_reaches_a_pipe_a_log_or_a_no_color_terminal(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A captured run is read by tests and grep, which compare the plain text."""
+
+    class Terminal:
+        def isatty(self) -> bool:
+            return True
+
+    class Pipe:
+        def isatty(self) -> bool:
+            return False
+
+    monkeypatch.delenv("NO_COLOR", raising=False)
+    monkeypatch.delenv("FORCE_COLOR", raising=False)
+    monkeypatch.setenv("TERM", "xterm-256color")
+    monkeypatch.setattr(wizard_module.os, "name", "posix")
+
+    assert wizard_module._colour_wanted(Terminal())
+    assert not wizard_module._colour_wanted(Pipe())
+    monkeypatch.setenv("NO_COLOR", "1")
+    assert not wizard_module._colour_wanted(Terminal())
+    monkeypatch.delenv("NO_COLOR")
+    monkeypatch.setenv("TERM", "dumb")
+    assert not wizard_module._colour_wanted(Terminal())
+
+    plain = wizard_module.Style(enabled=False)
+    painted = wizard_module.Style(enabled=True)
+    assert plain.bold("Images") == "Images"
+    assert painted.bold("Images") == "\033[1mImages\033[0m"
+    for line in wizard_module.banner("Title", "A subtitle.", plain):
+        assert "\033" not in line
+
+
+def test_a_section_heading_shows_how_far_through_the_walk_it_is(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A long walk that says nothing about how much is left is abandoned halfway."""
+    printed = _typed(monkeypatch, ["rest"])
+    wizard = wizard_module.Wizard(wizard_module.Setup(), style=wizard_module.Style(False))
+    section = wizard_module.build_sections(wizard.setup)[2]
+
+    wizard.heading(section, 3, 12)
+
+    assert any(section.title in line for line in printed)
+    assert any("Step 3 of 12" in line for line in printed)
+    assert wizard_module.progress_bar(0, 12).endswith("  0%")
+    assert wizard_module.progress_bar(12, 12).endswith("100%")
+    assert wizard_module.progress_bar(6, 12, width=10).startswith("█" * 5 + "░" * 5)
