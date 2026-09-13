@@ -25,6 +25,11 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   terminal. Settings kept in `.env` that are not credentials - the issuer, the
   audience, the key set and resource URLs - are still shown, so they can be
   checked.
+- **The scan service no longer lets a submitted host write its own log
+  lines.** `opencloud-local-scan serve` logged a failed scan with the host
+  exactly as the request body held it, so a newline in `url=` started a new
+  line in the service log that looked like any other. The host and the error
+  are now logged in quoted, escaped form. Found by CodeQL.
 
 ### Added
 

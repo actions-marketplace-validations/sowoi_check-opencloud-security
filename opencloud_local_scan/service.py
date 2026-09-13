@@ -137,7 +137,7 @@ class ScanStore:
             cached_uuid = self._by_host.get(host)
             entry = self._by_uuid.get(cached_uuid) if cached_uuid else None
             if entry and not force and self._fresh(entry):
-                LOGGER.debug("Serving cached result for %s", host)
+                LOGGER.debug("Serving cached result for %r", host)
                 return entry
 
         result = scan(
@@ -216,7 +216,9 @@ class _Handler(BaseHTTPRequestHandler):
         try:
             entry = self.store.scan(host, force=force)
         except ScanError as exc:
-            LOGGER.info("Scan of %s failed: %s", host, exc)
+            # Repr, not str: the host is whatever the request body held, and a
+            # newline in it would otherwise write a log line of its own.
+            LOGGER.info("Scan of %r failed: %r", host, str(exc))
             self._send_error(HTTPStatus.BAD_REQUEST, str(exc))
             return
         self._send_json(entry.result if full else {"uuid": entry.uuid})
