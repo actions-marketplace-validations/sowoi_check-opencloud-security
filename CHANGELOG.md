@@ -12,6 +12,8 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+## [1.22.6] - 2026-09-13
+
 ### Security
 
 - **The Docker setup wizard no longer shows a stored credential when it is
