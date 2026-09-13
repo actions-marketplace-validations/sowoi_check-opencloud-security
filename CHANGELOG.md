@@ -12,6 +12,8 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+## [1.22.5] - 2026-09-13
+
 ### Changed
 
 - **The Docker setup wizard sets the enrollment link apart.** It was one

@@ -1,28 +1,28 @@
-## check-opencloud-security 1.22.4
+## check-opencloud-security 1.22.5
 
 ### Changed
 
-- **A pull request documents itself in `CHANGELOG.md` alone.**
-  `scripts/check_pull_request.py` no longer requires `RELEASE.md` to change or
-  its heading to name the version in `pyproject.toml`, and the test that
-  compared the two in the repository is gone. The release workflow writes
-  `RELEASE.md` from `## [Unreleased]` and overwrites it, so an entry copied
-  there by hand was discarded, and between a bump and its release the file
-  rightly still names the last release - which failed the suite on a branch
-  with nothing wrong in it. `AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md` and the
-  pull request template now say to leave it to the release. See ADR 0048.
+- **The Docker setup wizard sets the enrollment link apart.** It was one
+  paragraph among the proxy commands and the `/admin` steps at the end of a
+  long run, and easy to scroll past - leaving an operator to create accounts
+  and group memberships by hand in Authentik that the link would have made.
+  It now closes under its own `ENROLLMENT LINK` heading, with the command that
+  builds the link from `.env` first, and says "Send it to scanokko. It asks for
+  that username" for one name rather than "Send that link to each of
+  scanokko".
 
-### Fixed
+### Documentation
 
-- **A Docker setup wizard downloaded on its own writes the Authentik
-  blueprints.** `docker/README.md` says to `curl` just `setup-wizard.py`, but
-  the wizard copied the blueprints from a checkout beside it and skipped any
-  it could not find without a word. The generated stack mounted
-  `./authentik/blueprints` anyway, Docker created it empty, and Authentik
-  started with no provider: `/mcp` refused every token, and the forward auth
-  in front of `/admin` answered 404, which nginx turns into a 500. The wizard
-  now carries the four blueprints itself, generated into it from
-  `authentik/blueprints/` by `scripts/embed_wizard_blueprints.py`, and a test
-  fails when the embedded copies differ from those files. A deployment set up
-  with an earlier download gets them by re-running the wizard.
-- Fixed version bump.
+- **Setting up an operator for `/admin`, by the wizard or by hand.**
+  `docs/authentik.md` has a new section on the two places an operator has to
+  be named - `COS_WEB_ADMIN_USERS` and Authentik's
+  `opencloud-scanner-operators` group - and reaches it both ways: through the
+  wizard's enrollment link, and in the Authentik interface or from a shell,
+  including getting into `akadmin` with `ak create_recovery_key` when
+  `AUTHENTIK_BOOTSTRAP_PASSWORD` is refused by a database older than `.env`.
+  The second-factor section now says what a person sees when enrolling an
+  authenticator app, a security key or recovery codes. The troubleshooting
+  table gains the refused bootstrap password, a sign-in Authentik stops
+  because the account is not in the group, and `password authentication
+  failed for user "authentik"` from a database volume created under another
+  `AUTHENTIK_PG_PASS`. `ADMIN.md` points there.
