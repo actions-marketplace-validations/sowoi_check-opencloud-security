@@ -5804,7 +5804,13 @@ def _docker_problem() -> str | None:
 
 def _port_problem(setup: Setup) -> str | None:
     """Whether the host port is already taken, or not an address of this host."""
-    address = setup.bind_address.strip("[]") or "0.0.0.0"  # nosec B104 - only probed, never served
+    address = setup.bind_address.strip("[]")
+    # The probe never binds every interface itself: a port published on all of
+    # them is taken on loopback too, so loopback stands in for the wildcard.
+    if address in {"", "0.0.0.0", "*"}:  # nosec B104 - compared, never bound
+        address = "127.0.0.1"
+    elif address == "::":
+        address = "::1"
     family = socket.AF_INET6 if ":" in address else socket.AF_INET
     probe = socket.socket(family, socket.SOCK_STREAM)
     try:

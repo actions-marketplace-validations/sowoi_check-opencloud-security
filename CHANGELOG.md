@@ -59,6 +59,12 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ### Changed
 
+- **The Docker setup wizard no longer binds every interface to check a
+  port.** When `bind_address` publishes on all interfaces (`0.0.0.0`, `::` or
+  empty), the check that the host port is free now probes loopback - a port
+  taken on every interface is taken there too - instead of briefly binding the
+  wildcard address itself.
+
 - **Web: page titles no longer repeat the site name.** A title that already
   says "OpenCloud Security Scanner" - most documentation guides - is no longer
   followed by `· OpenCloud Security Scan`, so a search result shows the part

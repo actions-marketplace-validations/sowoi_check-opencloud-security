@@ -3101,6 +3101,33 @@ def test_a_port_already_in_use_is_pointed_out(monkeypatch: pytest.MonkeyPatch) -
     assert busy_host == ["no docker"]
 
 
+def test_the_port_probe_never_binds_every_interface(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Checking a port must not open it on all interfaces, even for a moment."""
+    import socket
+
+    bound: list[tuple[str, int]] = []
+    real_socket = socket.socket
+
+    class RecordingSocket(real_socket):  # type: ignore[misc,valid-type]
+        def bind(self, address):  # type: ignore[no-untyped-def]
+            bound.append(address)
+            return super().bind(address)
+
+    held = real_socket(socket.AF_INET, socket.SOCK_STREAM)
+    held.bind(("127.0.0.1", 0))
+    held.listen(1)
+    try:
+        port = held.getsockname()[1]
+        monkeypatch.setattr(wizard_module.socket, "socket", RecordingSocket)
+        wildcard = wizard_module.Setup(bind_address="0.0.0.0", host_port=port)  # nosec B104
+        assert "already in use" in (wizard_module._port_problem(wildcard) or "")
+    finally:
+        held.close()
+
+    assert bound == [("127.0.0.1", port)]
+    assert ("0.0.0.0", port) not in bound  # nosec B104
+
+
 def test_a_missing_docker_or_compose_plugin_is_pointed_out(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
