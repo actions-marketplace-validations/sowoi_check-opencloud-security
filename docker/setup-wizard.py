@@ -461,6 +461,15 @@ PRIVATE_PRESET: dict[str, Any] = {
     "target_cooldown": 60,
 }
 
+# The variable names the closing instructions print. Only names, never values,
+# but they are plain constants rather than lookups in SECRET_VARIABLES below:
+# code scanning takes anything read out of a mapping called that for the
+# secret itself, and a false alarm on the output is one somebody eventually
+# learns to dismiss - including the day it is real.
+ENROLLMENT_LINK_VARIABLE = "AUTHENTIK_ENROLLMENT_TOKEN"
+RECOVERY_ADMIN_VARIABLE = "AUTHENTIK_BOOTSTRAP_PASSWORD"
+ADMIN_PROXY_VARIABLE = "COS_WEB_ADMIN_PROXY_SECRET"
+
 # Which answers are secrets: they go to `.env` and are referenced from the
 # compose file, never written into it. The value is the environment variable
 # name both files agree on.
@@ -472,7 +481,7 @@ SECRET_VARIABLES: dict[str, str] = {
     # readable copy of everybody's scans.
     "redis_password": "COS_REDIS_PASSWORD",
     "releases_token": "COS_WEB_RELEASES_TOKEN",
-    "admin_proxy_secret": "COS_WEB_ADMIN_PROXY_SECRET",
+    "admin_proxy_secret": ADMIN_PROXY_VARIABLE,
     "purge_token": "COS_WEB_PURGE_TOKEN",
     "purge_signing_key": "COS_WEB_PURGE_SIGNING_KEY",
     "export_signing_key": "COS_WEB_EXPORT_SIGNING_KEY",
@@ -490,8 +499,8 @@ SECRET_VARIABLES: dict[str, str] = {
     "authentik_pg_password": "AUTHENTIK_PG_PASS",
     "authentik_client_id": "AUTHENTIK_CLIENT_ID",
     "authentik_client_secret": "AUTHENTIK_CLIENT_SECRET",
-    "authentik_bootstrap_password": "AUTHENTIK_BOOTSTRAP_PASSWORD",
-    "authentik_enrollment_token": "AUTHENTIK_ENROLLMENT_TOKEN",
+    "authentik_bootstrap_password": RECOVERY_ADMIN_VARIABLE,
+    "authentik_enrollment_token": ENROLLMENT_LINK_VARIABLE,
     "smtp_password": "AUTHENTIK_EMAIL_PASSWORD",
 }
 
@@ -4892,7 +4901,7 @@ def enrollment_instructions(setup: Setup, env_file: str = ".env") -> list[str]:
         return []
     lines = ["", "  Then everybody who signs in creates their own account:", ""]
     if setup.authentik_accounts:
-        variable = SECRET_VARIABLES["authentik_enrollment_token"]
+        variable = ENROLLMENT_LINK_VARIABLE
         base = f"{setup.authentik_url.rstrip('/')}{AUTHENTIK_ENROLLMENT_PATH}"
         lines.append(f"    {base}?itoken=<{variable}>")
         lines.append("")
@@ -4923,7 +4932,7 @@ def enrollment_instructions(setup: Setup, env_file: str = ".env") -> list[str]:
     lines.append("")
     for text in _wrap(
         f"Authentik's own administrator is {AUTHENTIK_BOOTSTRAP_USER}; its password "
-        f"is {SECRET_VARIABLES['authentik_bootstrap_password']} in .env. "
+        f"is {RECOVERY_ADMIN_VARIABLE} in .env. "
         "Keep it for recovery - it is how a lost second factor is removed.",
         64,
     ):
@@ -4949,7 +4958,6 @@ def admin_walkthrough(setup: Setup) -> list[str]:
         return []
 
     address = setup.public_base_url.rstrip("/") + ADMIN_PATH
-    secret_variable = SECRET_VARIABLES["admin_proxy_secret"]
     lines = [
         "",
         f"  Opening the operator's area at {ADMIN_PATH}:",
@@ -4979,7 +4987,7 @@ def admin_walkthrough(setup: Setup) -> list[str]:
         lines += _step(
             index,
             "Have that same thing add the shared secret as "
-            f"{ADMIN_PROXY_HEADER}, with the value of {secret_variable} "
+            f"{ADMIN_PROXY_HEADER}, with the value of {ADMIN_PROXY_VARIABLE} "
             "from the generated .env. It is the only reason the identity "
             "header above is worth believing, and the service refuses "
             "anything arriving without it.",
@@ -5002,7 +5010,7 @@ def admin_walkthrough(setup: Setup) -> list[str]:
             lines += _step(
                 index,
                 f"Give {setup.reverse_proxy} the shared secret in its own "
-                f"environment: it reads {secret_variable} from there rather "
+                f"environment: it reads {ADMIN_PROXY_VARIABLE} from there rather "
                 "than holding it in a file you might commit. An "
                 "EnvironmentFile pointing at the generated .env is the usual "
                 "way, and without it the header goes out empty and the area "
