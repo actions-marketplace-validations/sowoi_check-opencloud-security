@@ -25,6 +25,7 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   `authentik/blueprints/` by `scripts/embed_wizard_blueprints.py`, and a test
   fails when the embedded copies differ from those files. A deployment set up
   with an earlier download gets them by re-running the wizard.
+- Fixed version bump.
 
 ## [1.22.2] - 2026-09-13
 
