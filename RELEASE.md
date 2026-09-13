@@ -1,73 +1,27 @@
-## check-opencloud-security 1.22.1
-
-### Added
-
-- **The Docker setup wizard generates for rootless Docker too.** Under a
-  rootless daemon, uid 10001 in a container is the user's subordinate uid at
-  that offset on the host, so the `sudo chown 10001` the wizard printed for a
-  bind-mounted audit or Redis directory handed it to an account the container
-  never runs as, and the container could not write to it. The wizard now asks
-  whether the daemon is rootful or rootless - detected from the socket, which a
-  rootless daemon serves under `/run/user/<uid>` - and for a rootless one
-  prints a `chown` that runs inside a container instead and needs no sudo. A
-  logrotate policy names the mapped host ids from `/etc/subuid` and
-  `/etc/subgid`, and the wizard says so when there is no range to read. It
-  also points out that the default rootless port driver hides the client
-  address from a port published beyond `127.0.0.1`. Verified end to end on
-  `docker:dind-rootless`: both containers write to their directories.
-
-- **The Docker setup wizard writes Authentik's site into the proxy
-  configuration too.** `docker/setup-wizard.py` already wrote nginx, Apache,
-  Caddy or Traefik for the scan service, including the forward auth in front
-  of `/admin` - but a stack that brought Authentik still left its sign-in page
-  to be proxied by hand, and every sign-in redirects a browser there. When the
-  stack brings Authentik, the same file now carries a second server block,
-  virtual host or router answering to the host name of Authentik's public
-  address and proxying to its published port, with the WebSocket its
-  interface keeps open and `X-Forwarded-For` set rather than appended. nginx
-  and Apache are asked for a certificate for that name, since it is not the
-  scanner's; Caddy and Traefik fetch their own. An address that is
-  `localhost`, a bare IP or the scanner's own host name gets no site, and the
-  warning that used to cover only `/admin` now says so for any stack with
-  Authentik behind a generated proxy.
+## check-opencloud-security 1.22.2
 
 ### Changed
 
-- **The Docker setup wizard pulls the published image by default.** It is one
-  file meant to be downloaded onto a host with nothing but Docker, and the
-  former default, `build`, needed a checkout of this repository such a host
-  does not have. `dockerhub` is now the default and listed first; answer
-  `build`, or pass the new `--image-source build`, to build the code in a
-  checkout instead - the local-testing recipe in `ADMIN.md` now does.
-- **`--force` lets the Docker setup wizard replace a shipped compose file in
-  place.** `docker/docker-compose.yml` and the other compose files in
-  `docker/` were refused as targets even with `--force`, so reconfiguring the
-  stack a checkout already runs meant moving it to a directory of its own.
-  They are still refused without the flag, and the refusal now names it; with
-  it they are overwritten, and the wizard says on stderr - where an unattended
-  run shows it too - that the checkout now carries a modified tracked file and
-  how to put the shipped one back.
+- **The Authentik stack runs Authentik 2026.8.2.** `docker-compose.authentik.yml`
+  and the image the Docker setup wizard writes move from 2026.8.0 together, so
+  a generated stack and the file next to the wizard still pin the same version.
 
 ### Fixed
 
-- **Automatic updates work on Docker 29 again.** The Watchtower the Docker
-  setup wizard adds with `--auto-updates` was `containrrr/watchtower`, which
-  was archived in December 2025 and always speaks Docker API 1.25. Docker 29.0
-  raised the daemon's minimum to 1.44 and 29.3 to 1.40, so the container
-  panicked on start with `client version 1.25 is too old` unless
-  `DOCKER_API_VERSION` was pinned by hand. The wizard now writes
-  `nickfedor/watchtower`, the maintained fork, which negotiates the API
-  version with the daemon and reads the same variables and enable label - so
-  no version is pinned, and none goes stale when a daemon raises its minimum
-  again. Reproduced and verified against Docker 29.6.
-
-- **The Docker setup wizard no longer lets the audit trail and Redis share a
-  host directory.** The web image writes as uid 10001 and Redis as uid 999,
-  and a directory has one owner, so whichever was chowned last kept the other
-  container from writing. The same directory - however it is spelled - or one
-  inside the other is now refused at the question, blocks the summary, and
-  makes an unattended run write nothing.
-- **A generated logrotate policy names the audit file by its absolute path.**
-  The default `./audit` was written into the policy as it was, and logrotate
-  resolves a relative path against wherever cron runs it from rather than
-  against the compose file, so the policy rotated nothing.
+- **Signing in to `/admin` through Authentik works.** The operator-area
+  blueprint created a proxy outpost of its own, but named no configuration for
+  it, so Authentik refused the entry - and, a blueprint being applied as a
+  whole, rolled back the provider, application and binding with it. Nothing in
+  the stack ran that outpost either, so the forward-auth path answered 404,
+  which nginx turns into a 500 for every request to `/admin`. The provider is
+  now assigned to Authentik's embedded outpost, which the server already serves
+  on port 9000, and the old outpost is removed where an earlier version did
+  create it. The embedded outpost is re-applied every hour with exactly the
+  providers the blueprint lists, so a provider assigned to it by hand is taken
+  off again.
+- **The embedded outpost sends a browser to Authentik's public address.** Left
+  unconfigured it redirects to `http://localhost/application/o/authorize/`,
+  which no visitor can reach. The blueprint now sets it from
+  `COS_AUTHENTIK_URL`, which `docker-compose.authentik.yml` passes to the
+  server and worker from `AUTHENTIK_URL`, and which the Docker setup wizard
+  writes into `.env`.
