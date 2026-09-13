@@ -56,8 +56,10 @@ settings. It deliberately uses the standard library only, so it runs on a
 freshly installed host that has Docker and nothing else.
 
 Nothing is overwritten by surprise: an existing file has to be confirmed, and
-the compose files that ship with this project are refused outright, because
-the next ``git pull`` would take a hand-made deployment with it. A ``.env``
+the compose files that ship with this project are refused, because the next
+``git pull`` would take a hand-made deployment with it - unless ``--force``
+says to replace them in place, which reconfigures the stack a checkout already
+runs without moving it to a directory of its own. A ``.env``
 that is already there is read back instead: its values become the defaults
 the questions offer, so re-running the wizard against a live deployment edits
 it rather than regenerating every credential it holds.
@@ -264,8 +266,10 @@ class Setup:
     scanning its own instances needs instead.
     """
 
-    # Where and how the images come from.
-    image_source: str = "build"
+    # Where and how the images come from. The published image by default: the
+    # wizard is one file meant to be downloaded onto a host with nothing but
+    # Docker, and a build needs a checkout that such a host does not have.
+    image_source: str = "dockerhub"
     image_ref: str = DOCKERHUB_IMAGE
     build_context: str = ".."
     project_name: str = "opencloud-scan"
@@ -869,16 +873,17 @@ def build_sections(setup: Setup) -> list[Section]:
             [
                 Question(
                     key="image_source",
-                    prompt="Build the image here, or pull the published one?",
+                    prompt="Pull the published image, or build it here?",
                     explain=(
-                        "'build' builds both application services from this checkout, "
-                        "which is what you want while changing the code or when you "
-                        "would rather run something you compiled yourself. "
-                        "'dockerhub' pulls the published image and needs no source at all."
+                        "'dockerhub' - the default - pulls the published image and needs "
+                        "no source at all, which is what a host that only has Docker "
+                        "wants. 'build' builds both application services from a checkout "
+                        "of this repository, which is what you want while changing the "
+                        "code or when you would rather run something you compiled yourself."
                     ),
                     example="dockerhub",
                     kind="choice",
-                    choices=("build", "dockerhub"),
+                    choices=("dockerhub", "build"),
                 ),
                 Question(
                     key="image_ref",
@@ -4978,9 +4983,26 @@ def _refuse_shipped(path: Path) -> str | None:
         return (
             f"{path.name} in {SCRIPT_DIR} ships with the project, and the next "
             "update would overwrite your deployment. Choose another name with "
-            "--compose-file, or another directory with --output-dir."
+            "--compose-file, or another directory with --output-dir - or pass "
+            "--force to replace it in place anyway."
         )
     return None
+
+
+def _shipped_overwrite_note(path: Path) -> str:
+    """What replacing a shipped compose file in place costs, said once.
+
+    Printed to stderr rather than through the wizard, so an unattended run
+    that asked for it hears it too: the checkout now carries a modified
+    tracked file, and it is the operator's to keep out of the next pull.
+    """
+    return (
+        f"Replacing {path.name} in {SCRIPT_DIR}, which ships with the project, "
+        "because --force was given. The checkout now has a modified tracked "
+        "file: a `git pull` that changes it stops with a conflict rather than "
+        "taking your deployment with it, `git stash` carries it across one, and "
+        f"`git checkout -- docker/{path.name}` puts the shipped file back."
+    )
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
@@ -5026,6 +5048,15 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="Ask nothing and take every default, generating the credentials.",
     )
     parser.add_argument(
+        "--image-source",
+        choices=("dockerhub", "build"),
+        default=None,
+        help=(
+            "'dockerhub' - the default - pulls the published image; 'build' "
+            "builds it from this checkout, for running the code in front of you."
+        ),
+    )
+    parser.add_argument(
         "--auto-updates",
         action="store_true",
         help=(
@@ -5036,7 +5067,10 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--force",
         action="store_true",
-        help="Overwrite existing files without asking.",
+        help=(
+            "Overwrite existing files without asking - including a compose "
+            "file that ships in docker/, which is otherwise refused."
+        ),
     )
 
     sign_in = parser.add_argument_group(
@@ -5137,6 +5171,7 @@ def _apply_flags(setup: Setup, args: argparse.Namespace) -> None:
         setup.deploy_authentik = True
 
     for flag, key in (
+        ("image_source", "image_source"),
         ("reverse_proxy", "reverse_proxy"),
         ("proxy_hostname", "reverse_proxy_hostname"),
         ("smtp_host", "smtp_host"),
@@ -5329,9 +5364,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     env_path = output_dir / args.env_file
 
     refusal = _refuse_shipped(compose_path)
-    if refusal:
+    if refusal and not args.force:
         print(f"Refusing to write it: {refusal}", file=sys.stderr)
         return 2
+    if refusal:
+        # Replacing the stack this checkout already runs, deliberately: an
+        # operator who started from `docker compose up` in docker/ should not
+        # have to move a live deployment to another directory to reconfigure it.
+        print(_shipped_overwrite_note(compose_path), file=sys.stderr)
 
     setup = Setup()
     # Weakest first: what the last run answered, then a preset if one was

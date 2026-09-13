@@ -43,6 +43,23 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   warning that used to cover only `/admin` now says so for any stack with
   Authentik behind a generated proxy.
 
+### Changed
+
+- **The Docker setup wizard pulls the published image by default.** It is one
+  file meant to be downloaded onto a host with nothing but Docker, and the
+  former default, `build`, needed a checkout of this repository such a host
+  does not have. `dockerhub` is now the default and listed first; answer
+  `build`, or pass the new `--image-source build`, to build the code in a
+  checkout instead - the local-testing recipe in `ADMIN.md` now does.
+- **`--force` lets the Docker setup wizard replace a shipped compose file in
+  place.** `docker/docker-compose.yml` and the other compose files in
+  `docker/` were refused as targets even with `--force`, so reconfiguring the
+  stack a checkout already runs meant moving it to a directory of its own.
+  They are still refused without the flag, and the refusal now names it; with
+  it they are overwritten, and the wizard says on stderr - where an unattended
+  run shows it too - that the checkout now carries a modified tracked file and
+  how to put the shipped one back.
+
 ### Fixed
 
 - **Automatic updates work on Docker 29 again.** The Watchtower the Docker

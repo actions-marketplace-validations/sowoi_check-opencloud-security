@@ -415,6 +415,7 @@ uses the standard library only, and shares nothing with the plugin's
 ./setup-wizard.py \
     --non-interactive \
     --preset private \
+    --image-source build \
     --output-dir ~/scan-test \
     --compose-file docker-compose.local.yml \
     --env-file .env.local
@@ -437,19 +438,23 @@ uses the standard library only, and shares nothing with the plugin's
 <td>Takes every default and generates the credentials. Drop it to be asked question by question, with an explanation and an example answer for each</td>
 </tr>
 <tr>
+<td><code>--image-source build</code></td>
+<td>Builds the code in this checkout. Without it the stack pulls the published Docker Hub image, which is the default and not what you are testing</td>
+</tr>
+<tr>
 <td><code>--output-dir ~/scan-test</code></td>
 <td><strong>Write outside the repository.</strong> See the warning below</td>
 </tr>
 <tr>
 <td><code>--compose-file</code> / <code>--env-file</code></td>
-<td>Any name but the four that ship. The wizard refuses <code>docker-compose.yml</code>, <code>docker-compose.dockerhub.yml</code>, <code>docker-compose.authentik.yml</code> and <code>docker-compose.monitoring.yml</code> outright, because the next <code>git pull</code> would take a hand-made deployment with it</td>
+<td>Any name but the four that ship. The wizard refuses <code>docker-compose.yml</code>, <code>docker-compose.dockerhub.yml</code>, <code>docker-compose.authentik.yml</code> and <code>docker-compose.monitoring.yml</code> unless <code>--force</code> is given, because the next <code>git pull</code> would take a hand-made deployment with it</td>
 </tr>
 </tbody>
 </table>
-<p>The image source defaults to <code>build</code>, not to the published Docker Hub image,
-and the wizard resolves the build context to the repository root as an
-<strong>absolute</strong> path. That is what makes <code>--output-dir</code> anywhere work while still
-building the code in front of you.</p>
+<p>The image source defaults to the published Docker Hub image, so this recipe
+asks for <code>build</code> explicitly. For a build, the wizard resolves the context to
+the repository root as an <strong>absolute</strong> path. That is what makes <code>--output-dir</code>
+anywhere work while still building the code in front of you.</p>
 <p>Then:</p>
 <pre><code class="language-bash">cd ~/scan-test
 docker compose -f docker-compose.local.yml up -d --build

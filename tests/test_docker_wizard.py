@@ -168,23 +168,51 @@ def test_an_audit_salt_is_generated_only_when_the_audit_log_is_on(tmp_path: Path
 
 
 def test_the_wizard_refuses_to_overwrite_a_compose_file_that_ships_with_the_project(
-    tmp_path: Path,
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """The next git pull would take a hand-made deployment with it."""
     shipped = wizard_module.SCRIPT_DIR / "docker-compose.yml"
     before = shipped.read_bytes()
 
     exit_code = wizard_module.main(
-        [
-            "--output-dir",
-            str(wizard_module.SCRIPT_DIR),
-            "--non-interactive",
-            "--force",
-        ]
+        ["--output-dir", str(wizard_module.SCRIPT_DIR), "--non-interactive"]
     )
 
     assert exit_code == 2
     assert shipped.read_bytes() == before
+    # And it says how to do it anyway, rather than only that it will not.
+    assert "--force" in capsys.readouterr().err
+
+
+def test_force_replaces_a_shipped_compose_file_in_place(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """
+    Reconfiguring the stack a checkout already runs should not mean moving it.
+
+    Somebody who started with `docker compose up` in docker/ has a live
+    deployment there; --force replaces its compose file where it is, and says
+    on stderr - which an unattended run still shows - that the checkout now
+    carries a modified tracked file.
+    """
+    checkout = tmp_path / "docker"
+    checkout.mkdir()
+    (checkout / "docker-compose.yml").write_text("# shipped\n", encoding="utf-8")
+    monkeypatch.setattr(wizard_module, "SCRIPT_DIR", checkout.resolve())
+
+    assert _run(checkout) == 2
+    assert (checkout / "docker-compose.yml").read_text(encoding="utf-8") == "# shipped\n"
+    capsys.readouterr()
+
+    assert _run(checkout, "--force") == 0
+    assert "services:" in (checkout / "docker-compose.yml").read_text(encoding="utf-8")
+    assert (checkout / ".env").is_file()
+    assert "git checkout -- docker/docker-compose.yml" in capsys.readouterr().err
+
+    # A file that does not ship there is no reason to mention the checkout.
+    elsewhere = tmp_path / "elsewhere"
+    assert _run(elsewhere, "--force") == 0
+    assert "ships with the project" not in capsys.readouterr().err
 
 
 def test_an_existing_file_is_kept_when_the_operator_declines(
@@ -210,29 +238,39 @@ def test_force_overwrites_without_asking(tmp_path: Path) -> None:
     assert "services:" in (tmp_path / "docker-compose.yml").read_text(encoding="utf-8")
 
 
-def test_the_published_image_replaces_the_build_section(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+def test_the_published_image_is_the_default_and_carries_no_build_section(
+    tmp_path: Path,
 ) -> None:
-    """Answering 'dockerhub' has to remove the build context, not sit beside it."""
-    answers = iter(["dockerhub"])
+    """
+    The wizard is one file meant for a host with nothing but Docker on it.
 
-    def read(self, prompt: str) -> str:
-        return next(answers, "")
-
-    monkeypatch.setattr(wizard_module.Wizard, "_read", read)
-
-    assert wizard_module.main(["--output-dir", str(tmp_path)]) == 0
+    A build needs a checkout such a host does not have, so the default pulls
+    the published image - and the build context is not left beside it.
+    """
+    assert wizard_module.Setup().image_source == "dockerhub"
+    assert _run(tmp_path) == 0
 
     web = _compose(tmp_path)["services"]["web_app"]
     assert web["image"] == wizard_module.DOCKERHUB_IMAGE
     assert "build" not in web
 
+    # And a checkout can still ask for its own code without being asked.
+    local = tmp_path / "local"
+    assert _run(local, "--image-source", "build") == 0
+    assert "build" in _compose(local)["services"]["web_app"]
 
-def test_the_local_build_points_at_the_repository_root(tmp_path: Path) -> None:
+
+def test_the_local_build_points_at_the_repository_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Both images need webapp/ and frontend/, which live above docker/."""
-    assert _run(tmp_path) == 0
+    answers = iter(["build"])
+    monkeypatch.setattr(wizard_module.Wizard, "_read", lambda self, prompt: next(answers, ""))
+    assert wizard_module.main(["--output-dir", str(tmp_path)]) == 0
 
-    build = _compose(tmp_path)["services"]["web_app"]["build"]
+    web = _compose(tmp_path)["services"]["web_app"]
+    assert web.get("image") != wizard_module.DOCKERHUB_IMAGE
+    build = web["build"]
     assert build["dockerfile"] == "docker/Dockerfile.web"
     context = (tmp_path / build["context"]).resolve()
     assert (context / "webapp").is_dir()
@@ -281,6 +319,9 @@ def test_a_question_that_no_longer_applies_is_not_asked(tmp_path: Path) -> None:
     assert not wizard_module._relevant("mcp_auth_issuer", setup)
     assert not wizard_module._relevant("deploy_authentik", setup)
     assert not wizard_module._relevant("authentik_slug", setup)
+    assert wizard_module._relevant("image_ref", setup)
+    assert not wizard_module._relevant("build_context", setup)
+    setup.image_source = "build"
     assert not wizard_module._relevant("image_ref", setup)
     assert wizard_module._relevant("build_context", setup)
 
@@ -762,7 +803,9 @@ def test_the_socket_question_only_applies_when_updates_do() -> None:
 
 def test_automatic_updates_with_a_local_build_are_pointed_out() -> None:
     """Watchtower pulls; it cannot rebuild an image the stack builds itself."""
-    warnings = wizard_module.check_consistency(wizard_module.Setup(auto_updates=True))
+    warnings = wizard_module.check_consistency(
+        wizard_module.Setup(auto_updates=True, image_source="build")
+    )
     assert any("build" in warning.lower() for warning in warnings)
 
     pulled = wizard_module.Setup(auto_updates=True, image_source="dockerhub")
@@ -1843,17 +1886,17 @@ def test_a_choice_can_be_answered_with_the_number_beside_it(
 
     wizard_module.run_questions(wizard_module.Wizard(setup))
 
-    assert setup.image_source == "dockerhub"
+    assert setup.image_source == "build"
     # The options are listed with their numbers, and the current one marked.
-    assert any(line.strip() == "* 1) build" for line in printed)
-    assert any(line.strip() == "2) dockerhub" for line in printed)
+    assert any(line.strip() == "* 1) dockerhub" for line in printed)
+    assert any(line.strip() == "2) build" for line in printed)
 
     # The word still works, and a number outside the list is refused rather
     # than quietly taken as something.
     other = wizard_module.Setup()
-    _typed(monkeypatch, ["9", "dockerhub", "rest"])
+    _typed(monkeypatch, ["9", "build", "rest"])
     wizard_module.run_questions(wizard_module.Wizard(other))
-    assert other.image_source == "dockerhub"
+    assert other.image_source == "build"
 
 
 def test_an_answer_already_given_can_be_gone_back_to(
@@ -1873,7 +1916,7 @@ def test_an_answer_already_given_can_be_gone_back_to(
 
     assert setup.image_source == "build"
     # The question it went back to was asked again, not skipped over.
-    asked = [line for line in printed if "pull the published one?" in line]
+    asked = [line for line in printed if "Pull the published image, or build it here?" in line]
     assert len(asked) == 2
 
     # There is nothing behind the first question, and saying so beats

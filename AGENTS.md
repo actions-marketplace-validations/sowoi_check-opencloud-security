@@ -741,7 +741,9 @@ the non-secret answers inline and a `.env` holding every credential that file
 refers to as `${NAME}`. The split is the rule: a secret never lands in the
 compose file, `.env` is created `0600`, and the compose files that ship in
 `docker/` are refused as targets, because the next update would take a
-hand-made deployment with it. An existing `.env` is read back and so is
+hand-made deployment with it - unless `--force` is given, which replaces them
+in place and says on stderr that the checkout now carries a modified tracked
+file. An existing `.env` is read back and so is
 `.<compose-file>.answers.json`, the notebook it writes of every non-secret
 answer, so a re-run edits a deployment rather than re-describing it or
 regenerating its credentials. That notebook is untrusted input: a value is

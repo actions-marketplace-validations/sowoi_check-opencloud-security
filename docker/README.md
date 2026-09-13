@@ -222,7 +222,8 @@ line still overrides what it remembers.
 | `--smtp-security starttls\|ssl\|none` | Default: `starttls` |
 | `--smtp-timeout SECONDS` | Default: `10` |
 | `--non-interactive` | Ask nothing, take every default, generate the credentials |
-| `--force` | Overwrite existing files without asking |
+| `--image-source dockerhub\|build` | Pull the published image (the default) or build it from this checkout |
+| `--force` | Overwrite existing files without asking - including `docker-compose.yml` and the other compose files shipped in `docker/`, which are otherwise refused, so the stack a checkout already runs can be reconfigured in place |
 
 There is deliberately no `--smtp-password`: a password on a command line is a
 password in `ps` and in the shell history. The wizard takes it from

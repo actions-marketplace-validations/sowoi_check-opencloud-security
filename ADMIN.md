@@ -304,6 +304,7 @@ cd docker
 ./setup-wizard.py \
     --non-interactive \
     --preset private \
+    --image-source build \
     --output-dir ~/scan-test \
     --compose-file docker-compose.local.yml \
     --env-file .env.local
@@ -315,13 +316,14 @@ What each part is doing, and why:
 |:--|:--|
 | `--preset private` | Sets `COS_WEB_ALLOW_PRIVATE_TARGETS=true`, so a scan of a local instance is allowed at all. Also turns indexing off and the audit log on |
 | `--non-interactive` | Takes every default and generates the credentials. Drop it to be asked question by question, with an explanation and an example answer for each |
+| `--image-source build` | Builds the code in this checkout. Without it the stack pulls the published Docker Hub image, which is the default and not what you are testing |
 | `--output-dir ~/scan-test` | **Write outside the repository.** See the warning below |
-| `--compose-file` / `--env-file` | Any name but the four that ship. The wizard refuses `docker-compose.yml`, `docker-compose.dockerhub.yml`, `docker-compose.authentik.yml` and `docker-compose.monitoring.yml` outright, because the next `git pull` would take a hand-made deployment with it |
+| `--compose-file` / `--env-file` | Any name but the four that ship. The wizard refuses `docker-compose.yml`, `docker-compose.dockerhub.yml`, `docker-compose.authentik.yml` and `docker-compose.monitoring.yml` unless `--force` is given, because the next `git pull` would take a hand-made deployment with it |
 
-The image source defaults to `build`, not to the published Docker Hub image,
-and the wizard resolves the build context to the repository root as an
-**absolute** path. That is what makes `--output-dir` anywhere work while still
-building the code in front of you.
+The image source defaults to the published Docker Hub image, so this recipe
+asks for `build` explicitly. For a build, the wizard resolves the context to
+the repository root as an **absolute** path. That is what makes `--output-dir`
+anywhere work while still building the code in front of you.
 
 Then:
 
