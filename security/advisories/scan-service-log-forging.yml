@@ -5,7 +5,7 @@
 
 slug: scan-service-log-forging
 state: declined
-changelog_version: "1.22.5"
+changelog_version: "1.22.6"
 changelog_entry: "The scan service no longer lets a submitted host write its own log lines."
 shipped: true
 declined_because: |
