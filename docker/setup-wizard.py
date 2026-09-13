@@ -93,7 +93,7 @@ DOCKERHUB_IMAGE = "okxo/opencloud-scanner:latest"
 # `docker-compose.authentik.yml` pins. Keep the two together: a wizard that
 # generates a different version from the file next to it is a support case.
 AUTHENTIK_IMAGE = "ghcr.io/goauthentik/server"
-AUTHENTIK_TAG = "2026.8.0"
+AUTHENTIK_TAG = "2026.8.2"
 BLUEPRINT_DIRECTORY = Path("authentik") / "blueprints"
 BLUEPRINT_SOURCE = REPO_ROOT / BLUEPRINT_DIRECTORY / "opencloud-scanner.yaml"
 BLUEPRINT_RELATIVE = BLUEPRINT_DIRECTORY / "opencloud-scanner.yaml"
@@ -2690,6 +2690,15 @@ def _authentik_environment(setup: Setup) -> list[EnvEntry]:
                 "provider in front of /admin. A forward-auth provider is bound to",
                 "the origin of the application it protects, so this is the address",
                 "visitors use rather than the container's own.",
+            )
+        )
+        entries.append(
+            _entry(
+                "COS_AUTHENTIK_URL",
+                f'"{setup.authentik_url}"',
+                "Read by the same blueprint, for the embedded outpost that answers",
+                "the forward auth: it is where the outpost sends a browser to sign",
+                "in. Left unset, that redirect goes to http://localhost instead.",
             )
         )
     entries.extend(_mail_environment(setup))
