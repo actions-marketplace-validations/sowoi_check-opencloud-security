@@ -59,7 +59,7 @@ for a remote scan service.
 | `scripts/build_distro_packages.py` | Builds both of those from the already-built wheel |
 | `tests/` | Test suite, including `tests/fake_opencloud.py` |
 | `docker/` | Every Dockerfile and compose file; the build context is the repository root |
-| `authentik/blueprints/` | The provider the signed-in stack provisions for itself |
+| `authentik/blueprints/` | What the signed-in stack provisions for itself: providers, a required second factor, invitation-only enrollment |
 | `ansible/`, `contrib/`, `config/` | Deployment role, Icinga definitions, example config |
 | `docs/` | Deployment guides and worked examples, indexed by `docs/README.md` |
 
@@ -760,7 +760,13 @@ proxy's environment, never into the file an operator would commit. **A
 question's relevance is decided as the answers arrive, never per section**:
 naming an SMTP server is what brings the rest of the mail session into play,
 and asking for the bundled provider is what brings its address and ports in.
-Keep it independent of
+With the bundled Authentik
+**nobody clicks anything in its interface**: the wizard asks who signs in,
+generates `AUTHENTIK_ENROLLMENT_TOKEN` and `AUTHENTIK_BOOTSTRAP_PASSWORD` into
+`.env`, and prints the one enrollment link where a listed person chooses a
+password and enrols the second factor every sign-in requires. Never put the
+token, a password or a username into blueprint source - they reach Authentik
+as environment variables (ADR 0047). Keep it independent of
 `opencloud_local_scan.wizard`, which sets up a monitoring check against one
 instance - no imports, no shared configuration.
 `tests/test_docker_wizard.py` asserts all of that.

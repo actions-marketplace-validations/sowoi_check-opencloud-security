@@ -1,0 +1,264 @@
+# The one link a person needs: choose a password, enrol a second factor, done.
+#
+# The Docker setup wizard asks who signs in to this stack, by username, and
+# generates a secret invitation token into `.env`. This blueprint turns those
+# two into an enrollment flow behind that token:
+#
+#   <authentik>/if/flow/opencloud-scanner-enrollment/?itoken=<token>
+#
+# The person opening it types one of the listed usernames, an email address
+# and a password, enrols an authenticator app or a security key - the same
+# stage `opencloud-mfa.yaml` puts in front of every sign-in - and is signed
+# in. Somebody who is also on the operator's guest list lands in the operator
+# group the `/admin` application is bound to. Nothing is clicked in the admin
+# interface, by anybody.
+#
+# Three things keep the link from being a way in for whoever reads it:
+#
+# - **Only the listed names.** COS_AUTHENTIK_ACCOUNTS is the whole list, and a
+#   username not on it is refused at the form. An empty list admits nobody.
+# - **Only once per name.** The username field refuses a name that already
+#   exists, so a name that has enrolled cannot be claimed a second time, and
+#   the link stops being useful the moment everybody on the list has used it.
+# - **Only with the token.** It is a random UUID from `.env`, and a flow
+#   without it answers "Invalid invite" before showing a single field.
+#
+# The invitation is re-applied with the token in `.env`, so rotating
+# AUTHENTIK_ENROLLMENT_TOKEN there and restarting retires the old link. On a
+# stack started without a token - `docker-compose.authentik.yml` run by hand -
+# no invitation is created, and the flow is unreachable.
+#
+# No secret is written here: the token and both lists are read from the
+# environment when the blueprint is applied or the flow runs.
+
+version: 1
+
+metadata:
+  name: check-opencloud-security - enrollment
+  labels:
+    blueprints.goauthentik.io/instantiate: "true"
+    blueprints.goauthentik.io/description: >-
+      An invitation-only enrollment flow for the accounts the setup wizard
+      named, with a second factor enrolled before the first session.
+
+entries:
+  - model: authentik_blueprints.metaapplyblueprint
+    attrs:
+      identifiers:
+        name: check-opencloud-security - multi-factor authentication
+      required: true
+
+  - model: authentik_flows.flow
+    id: flow
+    identifiers:
+      slug: opencloud-scanner-enrollment
+    attrs:
+      name: OpenCloud scanner - enrollment
+      title: Set up your account
+      designation: enrollment
+      # Somebody already signed in has an account, and a flow that attached a
+      # new password to *that* session is not one to offer.
+      authentication: require_unauthenticated
+
+  - model: authentik_stages_invitation.invitationstage
+    id: invitation-stage
+    identifiers:
+      name: opencloud-scanner-enrollment-invitation
+    attrs:
+      continue_flow_without_invitation: false
+
+  - model: authentik_stages_invitation.invitation
+    state: present
+    conditions:
+      - !If [!Env [COS_AUTHENTIK_ENROLLMENT_TOKEN, ""]]
+    identifiers:
+      pk: !Env [COS_AUTHENTIK_ENROLLMENT_TOKEN, ""]
+    attrs:
+      name: opencloud-scanner-enrollment
+      flow: !KeyOf flow
+      # Used once per *name*, which the username field enforces; deleting the
+      # invitation after the first person would leave everybody else on the
+      # list without a way in.
+      single_use: false
+      fixed_data: {}
+
+  - model: authentik_stages_prompt.prompt
+    id: field-username
+    identifiers:
+      name: opencloud-scanner-enrollment-username
+    attrs:
+      field_key: username
+      label: Username
+      # `username` rather than `text`: Authentik refuses a name that already
+      # exists, which is what makes each name claimable exactly once.
+      type: username
+      required: true
+      placeholder: The username you were given
+      placeholder_expression: false
+      order: 0
+
+  - model: authentik_stages_prompt.prompt
+    id: field-email
+    identifiers:
+      name: opencloud-scanner-enrollment-email
+    attrs:
+      field_key: email
+      label: Email
+      type: email
+      required: true
+      placeholder: Where a password recovery is sent
+      placeholder_expression: false
+      order: 1
+
+  - model: authentik_stages_prompt.prompt
+    id: field-password
+    identifiers:
+      name: opencloud-scanner-enrollment-password
+    attrs:
+      field_key: password
+      label: Password
+      type: password
+      required: true
+      placeholder: Password
+      placeholder_expression: false
+      order: 2
+
+  - model: authentik_stages_prompt.prompt
+    id: field-password-repeat
+    identifiers:
+      name: opencloud-scanner-enrollment-password-repeat
+    attrs:
+      field_key: password_repeat
+      label: Password (repeat)
+      type: password
+      required: true
+      placeholder: Password (repeat)
+      placeholder_expression: false
+      order: 3
+
+  - model: authentik_policies_expression.expressionpolicy
+    id: policy-listed-username
+    identifiers:
+      name: opencloud-scanner-enrollment-listed-username
+    attrs:
+      expression: |
+        # Read when the form is submitted rather than baked in when the
+        # blueprint is applied, so a username never becomes Python source.
+        import os
+
+        listed = {
+            name.strip()
+            for name in os.environ.get("COS_AUTHENTIK_ACCOUNTS", "").split(";")
+            if name.strip()
+        }
+        username = (request.context.get("prompt_data") or {}).get("username", "")
+        if username in listed:
+            return True
+        ak_message("This username is not one this invitation was issued for.")
+        return False
+
+  - model: authentik_stages_prompt.promptstage
+    id: prompt-stage
+    identifiers:
+      name: opencloud-scanner-enrollment-prompt
+    attrs:
+      fields:
+        - !KeyOf field-username
+        - !KeyOf field-email
+        - !KeyOf field-password
+        - !KeyOf field-password-repeat
+      validation_policies:
+        - !KeyOf policy-listed-username
+
+  - model: authentik_policies_expression.expressionpolicy
+    id: policy-operator-group
+    identifiers:
+      name: opencloud-scanner-enrollment-operator-group
+    attrs:
+      expression: |
+        # Somebody on the operator's guest list joins the group the /admin
+        # application is bound to. The user write stage adds whatever groups
+        # the plan carries under "groups" once the account is saved.
+        import os
+
+        from authentik.core.models import Group
+
+        operators = {
+            name.strip()
+            for name in os.environ.get("COS_WEB_ADMIN_USERS", "").split(";")
+            if name.strip()
+        }
+        plan = request.context.get("flow_plan")
+        if not plan:
+            return True
+        username = (plan.context.get("prompt_data") or {}).get("username", "")
+        name = os.environ.get("AUTHENTIK_ADMIN_GROUP", "opencloud-scanner-operators")
+        group = Group.objects.filter(name=name).first()
+        if username in operators and group is not None:
+            plan.context.setdefault("groups", []).append(group)
+        return True
+
+  - model: authentik_stages_user_write.userwritestage
+    id: write-stage
+    identifiers:
+      name: opencloud-scanner-enrollment-write
+    attrs:
+      user_creation_mode: always_create
+      user_type: internal
+      create_users_as_inactive: false
+
+  - model: authentik_flows.flowstagebinding
+    identifiers:
+      target: !KeyOf flow
+      stage: !KeyOf invitation-stage
+      order: 0
+    attrs:
+      evaluate_on_plan: true
+      re_evaluate_policies: false
+
+  - model: authentik_flows.flowstagebinding
+    identifiers:
+      target: !KeyOf flow
+      stage: !KeyOf prompt-stage
+      order: 10
+
+  - model: authentik_flows.flowstagebinding
+    id: write-binding
+    identifiers:
+      target: !KeyOf flow
+      stage: !KeyOf write-stage
+      order: 20
+    attrs:
+      # Evaluated when the stage is reached, after the form, so the policy
+      # below sees the username that was typed.
+      evaluate_on_plan: false
+      re_evaluate_policies: true
+
+  - model: authentik_policies.policybinding
+    identifiers:
+      target: !KeyOf write-binding
+      policy: !KeyOf policy-operator-group
+      order: 0
+    attrs:
+      failure_result: true
+
+  # The second factor, before there is a session: the default flow's own
+  # validation stage, which `opencloud-mfa.yaml` sets to enrol an account that
+  # has none.
+  - model: authentik_flows.flowstagebinding
+    identifiers:
+      target: !KeyOf flow
+      stage: !Find [
+        authentik_stages_authenticator_validate.authenticatorvalidatestage,
+        [name, default-authentication-mfa-validation],
+      ]
+      order: 30
+
+  - model: authentik_flows.flowstagebinding
+    identifiers:
+      target: !KeyOf flow
+      stage: !Find [
+        authentik_stages_user_login.userloginstage,
+        [name, default-authentication-login],
+      ]
+      order: 100

@@ -102,9 +102,10 @@ Done. Next:
   docker compose -f docker-compose.authentik.yml up -d
   open http://localhost:9000/if/flow/initial-setup/   (the trailing slash matters)
 
-That sets the first Authentik password. The OAuth2 provider and application
-are already there - the blueprint created them - so there is nothing to
-configure before an agent can sign in.
+That sets the first Authentik password; the next sign-in asks you to enrol
+a second factor, which every account needs. The OAuth2 provider and
+application are already there - the blueprint created them - so there is
+nothing to configure before an agent can sign in.
 
 docs/authentik.md has the rest: getting a token, pointing an agent at it,
 running this on a real hostname, and the backup.

@@ -1,10 +1,42 @@
 ## check-opencloud-security 1.22.2
 
+### Added
+
+- **The bundled Authentik requires a second factor at every sign-in.**
+  `authentik/blueprints/opencloud-mfa.yaml` sets Authentik's own
+  `default-authentication-mfa-validation` stage to enrol an account that has
+  no authenticator - TOTP or WebAuthn - before the sign-in completes, instead
+  of skipping it, and is re-applied so the requirement stays on. It is mounted
+  by `docker-compose.authentik.yml` and copied by the Docker setup wizard.
+  Agents using `client_credentials` run no flow and are unaffected.
+- **The Docker setup wizard configures Authentik without its admin interface.**
+  It asks who signs in, by username (the operator guest list is always
+  included), and prints one enrollment link. Each person named chooses a
+  password and enrols a second factor there; an operator joins
+  `opencloud-scanner-operators` on the way. The link is an invitation keyed by
+  a generated `AUTHENTIK_ENROLLMENT_TOKEN` in `.env`
+  (`authentik/blueprints/opencloud-enrollment.yaml`), admits only the listed
+  names, each once, and creates nothing without the token. `akadmin` gets a
+  generated `AUTHENTIK_BOOTSTRAP_PASSWORD` for recovery, which also closes the
+  initial-setup flow that would otherwise make whoever reached it first the
+  administrator. See ADR 0047.
+
 ### Changed
 
 - **The Authentik stack runs Authentik 2026.8.2.** `docker-compose.authentik.yml`
   and the image the Docker setup wizard writes move from 2026.8.0 together, so
   a generated stack and the file next to the wizard still pin the same version.
+- **`forwardedHostIgnored` names a missing default server on the reverse proxy
+  as a cause.** The explanation used to trace every failure to an instance
+  that was never told its address, so an operator with `OC_URL` set correctly
+  was sent back to it. A proxy with no default server answers a `Host` it has
+  no site for from whichever site it loaded first for that port - often
+  another application on the same machine - and a redirect there built from
+  `$host` repeats the probe host without OpenCloud ever seeing the request.
+  The explanation now says so when only `Host` comes back as a redirect, the
+  remediation gives an explicit nginx default server that refuses unknown names
+  (and the Apache equivalent) plus how to tell which server answered, and
+  `docs/reverse-proxy.md` and `docs/scanner-checks.md` describe the same.
 
 ### Fixed
 

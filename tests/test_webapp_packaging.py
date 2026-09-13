@@ -20,6 +20,7 @@ import sys
 import tarfile
 import zipfile
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -658,13 +659,14 @@ def test_the_enrollment_link_admits_only_the_listed_names_and_enrols_a_factor_fi
         source = "def result():\n" + "".join(
             f"    {line}\n" for line in policy["attrs"]["expression"].splitlines()
         )
-        scope = {
+        scope: dict[str, Any] = {
             "request": SimpleNamespace(context={"prompt_data": {"username": name}}),
             "ak_message": lambda _message: None,
         }
         with mock.patch.dict(os.environ, {"COS_AUTHENTIK_ACCOUNTS": listed}):
-            exec(compile(source, "policy", "exec"), scope)  # nosec B102 - the file under test
-            return scope["result"]()
+            # The expression under test, run the way authentik runs it.
+            exec(compile(source, "policy", "exec"), scope)  # noqa: S102  # nosec B102
+            return bool(scope["result"]())
 
     assert allowed("alice", "alice;okko")
     assert allowed("okko", " alice ; okko ")
