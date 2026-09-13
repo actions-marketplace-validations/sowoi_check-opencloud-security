@@ -1,4 +1,4 @@
-## check-opencloud-security 1.22.3
+## check-opencloud-security 1.22.4
 
 ### Fixed
 
