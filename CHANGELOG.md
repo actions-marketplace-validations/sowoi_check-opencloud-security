@@ -48,6 +48,14 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   terminal, `NO_COLOR` is set or `TERM=dumb`, so piped and logged runs print
   exactly the plain text they did before.
 
+### Documentation
+
+- **`tests/README.md` indexes the test suite.** Every test module is listed by
+  area with a line on what it protects, alongside the shared fixtures, how to
+  run the suite and its conventions. `tests/test_documentation_indexes.py`
+  fails when a test module is added, renamed or removed without the index
+  following.
+
 ## [1.22.5] - 2026-09-13
 
 ### Changed

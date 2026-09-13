@@ -1,0 +1,186 @@
+# Test suite
+
+An index of every test module and what it protects. Each module's own
+docstring explains the reasoning in full; this page is for finding the right
+file. `tests/test_documentation_indexes.py` fails when a module is added,
+renamed or removed without updating this page.
+
+## Running
+
+```bash
+uv run pytest                                   # full suite
+uv run pytest tests/test_waivers.py             # one file
+uv run pytest tests/test_waivers.py::test_name  # one test
+uv run pytest -k "waiver and not rating"        # by expression
+uv run nox                                      # Python 3.10-3.14
+```
+
+`pytest` is only available under `uv run`. The web application tests need the
+`web` extra and the `test` dependency group, and skip themselves when FastAPI
+is not installed. They use the in-process `memory://` Redis, so no Redis server
+is needed.
+
+## Conventions
+
+- Test names are sentences that describe the behaviour they protect, and each
+  test has a one-line docstring saying why it matters.
+- Assert the negative case as well as the positive one.
+- Scan `fake_opencloud.py` rather than mocking `requests`, and take
+  expectations from a real scan of it. Hardcoded lists go stale.
+- TLS, CAA and DNSSEC tests run against real servers on loopback, not mocks of
+  `ssl` or `socket`.
+
+## Shared support
+
+| File | Purpose |
+|---|---|
+| [`conftest.py`](conftest.py) | Autouse fixtures: strip every `COS_` environment variable, keep machine-wide configuration files out, and stub retry sleeps. Also passes coverage settings to subprocesses. |
+| [`fake_opencloud.py`](fake_opencloud.py) | A real HTTP server that plays an OpenCloud instance, driven by an `InstanceBehaviour` dataclass. |
+| [`webapp_support.py`](webapp_support.py) | Web test plumbing: an isolated in-process Redis per test, an offline resolver, and skipping when the web extra is missing. |
+| [`integration/test_real_opencloud.py`](integration/test_real_opencloud.py) | Opt-in (`-m integration`): scans a real OpenCloud container. Needs a container runtime. |
+
+## Scanner (`opencloud_local_scan/`)
+
+| File | Purpose |
+|---|---|
+| [`test_local_scanner.py`](test_local_scanner.py) | The whole scan pipeline against the fake instance: status, capabilities, headers, exposed paths, protected endpoints, extra checks. |
+| [`test_concurrency.py`](test_concurrency.py) | Concurrency only affects speed. Any worker count gives the same result, and one worker stays single-threaded. |
+| [`test_ssrf_pinning.py`](test_ssrf_pinning.py) | Connections stay pinned to the address that passed validation. |
+| [`test_address_parity.py`](test_address_parity.py) | Every address a name resolves to is scanned, so a pool node that missed a rollout is not hidden behind a healthy one. |
+| [`test_tls.py`](test_tls.py) | What the TLS layer shows, and what the scanner refuses to claim. Uses a real TLS server with a generated certificate. |
+| [`test_dns.py`](test_dns.py) | The DNS wire format shared by the CAA and DNSSEC lookups (synthetic bytes, no network). |
+| [`test_caa.py`](test_caa.py) | CAA record parsing, and the lookup against a real UDP server on loopback. |
+| [`test_dnssec.py`](test_dnssec.py) | The DNSSEC check. It must not report a resolver that strips EDNS0 as an unsigned zone. |
+| [`test_cross_origin.py`](test_cross_origin.py) | CORS and the other checks of what an instance grants a foreign origin. |
+| [`test_forwarded_host.py`](test_forwarded_host.py) | Whether an instance builds its public URLs from a `Host` or `X-Forwarded-Host` the caller picked. |
+| [`test_companions.py`](test_companions.py) | The collaboration (office) backend published on the same origin. |
+| [`test_advisory_headers.py`](test_advisory_headers.py) | Headers that are reported but never counted against a deployment. |
+| [`test_advisory_checks.py`](test_advisory_checks.py) | Non-header observations (e.g. `security.txt`) that are reported but never counted. |
+| [`test_hardening.py`](test_hardening.py) | Every check the scanner can report appears in the hardening catalogue. |
+| [`test_waivers.py`](test_waivers.py) | Waiving hardening findings, and declaring an instance's release track. |
+| [`test_remediation.py`](test_remediation.py) | The remediation planner never promises a grade that its fixes would not reach. |
+| [`test_snippets.py`](test_snippets.py) | Configuration fragments for fixes, and that they match the prose describing them. |
+| [`test_explain.py`](test_explain.py) | Debug mode: why a rating is what it is, and what each hardening identifier means. |
+| [`test_cli_explain.py`](test_cli_explain.py) | Looking up a finding identifier from the catalogue without running a scan. |
+| [`test_diff_command.py`](test_diff_command.py) | `check-opencloud-scanner diff`: the changes between two saved scans, and refusing to compare different instances. |
+| [`test_service.py`](test_service.py) | The HTTP scan service that runs in the container, including its result cache. |
+| [`test_config.py`](test_config.py) | Layered configuration (file, environment, flags) and the secret providers. |
+| [`test_settings_completeness.py`](test_settings_completeness.py) | A setting is present in the dataclass, `factory.py`, the example config and its flag, with none missing. |
+
+## Releases, versions and advisories
+
+| File | Purpose |
+|---|---|
+| [`test_release_schedule.py`](test_release_schedule.py) | Version parsing, comparison and the release schedule. |
+| [`test_releases.py`](test_releases.py) | The update check: GitHub feed, pinned version, bundled data, `off`, and awareness of release tracks. |
+| [`test_vulndb.py`](test_vulndb.py) | The advisory database and its three input formats. |
+| [`test_refresh_data.py`](test_refresh_data.py) | The command that refreshes reference data on a monitoring host. |
+| [`test_data_signing.py`](test_data_signing.py) | Sigstore attestation of refreshed reference data, and still working without `sigstore` installed. |
+| [`test_reference_data_limits.py`](test_reference_data_limits.py) | Size limits on the daily reference-data fetches, so an oversized response cannot crash the worker. |
+| [`test_version.py`](test_version.py) | `pyproject.toml` is the only source of the version. |
+
+## Plugin (`check_opencloud_security.py`)
+
+| File | Purpose |
+|---|---|
+| [`test_rating_thresholds.py`](test_rating_thresholds.py) | How ratings and thresholds map to Nagios exit codes. |
+| [`test_perfdata.py`](test_perfdata.py) | Plugin output: perfdata, hardening reporting, formatting. |
+| [`test_output_formats.py`](test_output_formats.py) | `--format json/sarif/junit` for one host and for several. |
+| [`test_prometheus.py`](test_prometheus.py) | Prometheus rendering and the native `/metrics` exporter. |
+| [`test_webhook.py`](test_webhook.py) | The optional webhook notification. |
+| [`test_baseline.py`](test_baseline.py) | `--baseline` and `--warn-on-new`: report only what changed. |
+| [`test_multi_host.py`](test_multi_host.py) | Host parsing, target validation, retries and runs across several hosts. |
+| [`test_env_config.py`](test_env_config.py) | `COS_` environment variables and the config file as argparse defaults. |
+| [`test_e2e_cli.py`](test_e2e_cli.py) | End to end: both CLIs run as subprocesses over real HTTP against the fake instance. |
+| [`test_completion.py`](test_completion.py) | Shell completion, and a host without `argcomplete` running exactly as before. |
+| [`test_selfupdate.py`](test_selfupdate.py) | `--upgrade-self` uses the right tool (pip, pipx, uv) for the installation. |
+| [`test_wizard.py`](test_wizard.py) | The interactive setup behind `--configure`. |
+
+## Web application (`webapp/` + `frontend/`)
+
+### API, security boundary and limits
+
+| File | Purpose |
+|---|---|
+| [`test_webapp_api.py`](test_webapp_api.py) | The public API: accepted and refused fields, SSRF refusals, no leaking of other scans, no third parties. |
+| [`test_webapp_workflows.py`](test_webapp_workflows.py) | The workflow layer: async scans, polling, 404 vs 409, not resubmitting refused targets. |
+| [`test_webapp_worker.py`](test_webapp_worker.py) | The worker turns a queued uuid into a scan and a rendered dashboard. |
+| [`test_webapp_batch.py`](test_webapp_batch.py) | Batch submissions, with each target still checked against every limit. |
+| [`test_webapp_rescan.py`](test_webapp_rescan.py) | Rescans go through the normal submission path, and reading the cooldown does not use it up. |
+| [`test_webapp_blocked_targets.py`](test_webapp_blocked_targets.py) | Operator-excluded addresses stay blocked at submission, in the worker and on redirect. |
+| [`test_webapp_client_identity.py`](test_webapp_client_identity.py) | Behind a proxy, the address a request is counted as cannot be chosen by the client. |
+| [`test_webapp_request_provenance.py`](test_webapp_request_provenance.py) | Where a request really comes from (`X-Forwarded-For`), and whether it was meant (cross-site checks). |
+| [`test_webapp_encryption.py`](test_webapp_encryption.py) | Results are encrypted at rest, with no way to fall back to plaintext silently. |
+| [`test_webapp_purge.py`](test_webapp_purge.py) | Erasure on request: the data is gone, nothing else is touched, and the receipt remains. |
+| [`test_webapp_audit.py`](test_webapp_audit.py) | The audit trail records events and pseudonymises addresses and targets. |
+| [`test_redis_contract.py`](test_redis_contract.py) | The real Redis client and `MemoryRedis` behave the same. |
+
+### Operator area
+
+| File | Purpose |
+|---|---|
+| [`test_webapp_admin.py`](test_webapp_admin.py) | The `/admin` area and the refusals that keep it closed to everyone but the operator. |
+| [`test_webapp_admin_exclusions.py`](test_webapp_admin_exclusions.py) | The one admin control that writes: exclusions apply at once, with no restart. |
+
+### Contracts and agents
+
+| File | Purpose |
+|---|---|
+| [`test_webapp_openapi.py`](test_webapp_openapi.py) | The OpenAPI document matches what the real endpoints do. |
+| [`test_webapp_arazzo.py`](test_webapp_arazzo.py) | The Arazzo workflow description stays consistent with the OpenAPI schema. |
+| [`test_contract_documents.py`](test_contract_documents.py) | External validation of the published API contract. |
+| [`test_webapp_discovery.py`](test_webapp_discovery.py) | An agent that only has the address can find the contract, with nothing switched on by the operator. |
+| [`test_webapp_mcp.py`](test_webapp_mcp.py) | MCP tools call the ordinary API, and destructive tools require the operator's credential. |
+| [`test_webapp_mcp_auth.py`](test_webapp_mcp_auth.py) | The optional sign-in in front of `/mcp` refuses as firmly as it accepts. |
+| [`test_webapp_webmcp.py`](test_webapp_webmcp.py) | Browser WebMCP registration and the public LLM discovery file. |
+
+### Reports and pages
+
+| File | Purpose |
+|---|---|
+| [`test_webapp_pages.py`](test_webapp_pages.py) | The informational pages can be reached, describe themselves, and link back. |
+| [`test_webapp_exports.py`](test_webapp_exports.py) | Exporting a scan as a file, and refusing malformed export requests. |
+| [`test_webapp_compare.py`](test_webapp_compare.py) | The comparison page between two scans agrees with `compare_scans`. |
+| [`test_webapp_result_continuity.py`](test_webapp_result_continuity.py) | The tab title follows the scan, later scans offer a comparison, and the page warns before a report expires. |
+| [`test_webapp_fragment.py`](test_webapp_fragment.py) | The configuration fragment on a report page, in every flavour and within the CSP. |
+| [`test_webapp_tls_overview.py`](test_webapp_tls_overview.py) | TLS facts shown next to the grade, without the web layer judging them. |
+| [`test_webapp_catalogue_links.py`](test_webapp_catalogue_links.py) | Every finding links to a catalogue anchor that exists, and every catalogue entry can be linked to. |
+| [`test_webapp_frontend_controls.py`](test_webapp_frontend_controls.py) | Report and form controls work without scripting, which only enhances them. |
+| [`test_webapp_print.py`](test_webapp_print.py) | The printed or PDF report, including dark mode not printing a blank page. |
+| [`test_webapp_share.py`](test_webapp_share.py) | Sharing a report never contacts a third party or leaks the capability link. |
+| [`test_webapp_seo.py`](test_webapp_seo.py) | Docs pages are indexable, results never are, there is no third-party card metadata, and the mobile nav fits. |
+| [`test_webapp_i18n.py`](test_webapp_i18n.py) | The frontend is translated without changing API contracts. |
+| [`test_webapp_search.py`](test_webapp_search.py) | The browser search built at release, and what result data it may contain. |
+| [`test_frontend_documentation.py`](test_frontend_documentation.py) | Browser documentation generated from the Markdown guides. |
+
+### Self-refreshing data
+
+| File | Purpose |
+|---|---|
+| [`test_webapp_schedule.py`](test_webapp_schedule.py) | The daily lifecycle refresh only adds knowledge, and a failed fetch changes nothing. |
+| [`test_webapp_advisories.py`](test_webapp_advisories.py) | The daily advisory refresh under the same rules. |
+
+## Packaging, distribution and deployment
+
+| File | Purpose |
+|---|---|
+| [`test_webapp_packaging.py`](test_webapp_packaging.py) | The wheel and sdist contain the plugin and scanner, but no web application. |
+| [`test_distro_packaging.py`](test_distro_packaging.py) | What the `.deb` and `.rpm` install, and where. |
+| [`test_homebrew_formula.py`](test_homebrew_formula.py) | The Homebrew formula matches its generator and the runtime imports. |
+| [`test_github_action.py`](test_github_action.py) | The published GitHub Action uses only flags and variables the plugin accepts. |
+| [`test_contrib_assets.py`](test_contrib_assets.py) | The Grafana dashboard, Prometheus rules and Checkmk check match the exporter. |
+| [`test_docker_wizard.py`](test_docker_wizard.py) | `docker/setup-wizard.py` writes a valid compose file, keeps credentials in `.env` only, and never overwrites an existing deployment. |
+
+## Repository, CI and release process
+
+| File | Purpose |
+|---|---|
+| [`test_check_pull_request.py`](test_check_pull_request.py) | `scripts/check_pull_request.py`: a changelog entry is present, and version bumps only move forward. |
+| [`test_release_notes.py`](test_release_notes.py) | `scripts/release_notes.py` turns `## [Unreleased]` into the release section. |
+| [`test_release_dry_run.py`](test_release_dry_run.py) | The release rehearsal matches the release, and publishing to PyPI happens last. |
+| [`test_security_advisories.py`](test_security_advisories.py) | Every `### Security` changelog entry has a decided record in `security/advisories/`. |
+| [`test_update_script.py`](test_update_script.py) | `scripts/update_release_schedule.py` and the generated README schedule. |
+| [`test_workflow_hardening.py`](test_workflow_hardening.py) | GitHub workflows use least-privilege tokens and pinned action references. |
+| [`test_documentation_indexes.py`](test_documentation_indexes.py) | The hand-maintained indexes (README contents, `docs/README.md`, the documentation manifest, this page) match what they index. |
+| [`test_documentation_links.py`](test_documentation_links.py) | Which documented OpenCloud links the post-merge check verifies. |
+| [`test_render_architecture_diagrams.py`](test_render_architecture_diagrams.py) | Each Mermaid diagram in `ARCHITECTURE.md` has a matching PNG. |
