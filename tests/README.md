@@ -122,6 +122,7 @@ is needed.
 | File | Purpose |
 |---|---|
 | [`test_webapp_admin.py`](test_webapp_admin.py) | The `/admin` area and the refusals that keep it closed to everyone but the operator. |
+| [`test_webapp_admin_configuration.py`](test_webapp_admin_configuration.py) | The admin Configuration tab: every `COS_WEB_*` variable listed and documented, and no credential ever rendered. |
 | [`test_webapp_admin_exclusions.py`](test_webapp_admin_exclusions.py) | The one admin control that writes: exclusions apply at once, with no restart. |
 
 ### Contracts and agents
