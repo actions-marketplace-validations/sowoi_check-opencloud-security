@@ -12,6 +12,8 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+## [1.23.0] - 2026-09-14
+
 ### Added
 
 - **The operator area has a Rules tab.** `/admin/rules` documents how a grade
