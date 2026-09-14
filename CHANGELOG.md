@@ -12,6 +12,8 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+## [1.22.7] - 2026-09-14
+
 ### Fixed
 
 - **The two refresh buttons in the operator area work again.** Each of those
