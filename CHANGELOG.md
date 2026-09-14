@@ -12,6 +12,16 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The two refresh buttons in the operator area work again.** Each of those
+  forms carries a hidden `action` field naming the source to refresh, and a
+  control of that name is reachable as `form.action` - so the script read the
+  input element instead of the path and posted to
+  `/[object HTMLInputElement]`, which answered 404 and left the page saying
+  nothing. It now reads the form's `action` attribute. The dry-run probe
+  beside them, which has no such field, was unaffected.
+
 ## [1.22.6] - 2026-09-13
 
 ### Security

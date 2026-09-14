@@ -940,6 +940,28 @@ def _usable_sources(monkeypatch):
     )
 
 
+def test_the_action_buttons_post_to_the_path_the_form_names():
+    """A named control shadows the form property of the same name.
+
+    Every one of these forms carries `<input name="action">` to say which
+    source to refresh, and a control named `action` is reachable as
+    `form.action` - so the property is that input element, not the path, and
+    `fetch(form.action)` posted to `/[object HTMLInputElement]` and answered
+    404. The attribute is the only reading of these forms that survives the
+    hidden field they need.
+    """
+    with TestClient(create_app(_admin_settings())) as client:
+        page = client.get("/admin", headers=FORWARDED).text
+        script = client.get("/static/js/admin.js").text
+
+    # The hidden field that causes the shadowing is still how the form speaks.
+    assert '<input type="hidden" name="action" value="schedule">' in page
+    assert '<input type="hidden" name="action" value="advisories">' in page
+    # And the script reads the attribute, never the clobbered property.
+    assert 'form.getAttribute("action")' in script
+    assert "fetch(form.action" not in script
+
+
 def test_the_dry_run_reads_both_sources_and_stores_none_of_it(monkeypatch):
     """The whole difference between the probe and the button beside it.
 

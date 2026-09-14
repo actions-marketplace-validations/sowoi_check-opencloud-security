@@ -462,6 +462,11 @@
     }
 
     function posts(form, show) {
+        // The attribute, not the property: every one of these forms carries a
+        // hidden control named "action", and a named control shadows the
+        // property of the same name - `form.action` would be that input
+        // element, and the POST would go to "[object HTMLInputElement]".
+        var where = form.getAttribute("action");
         form.addEventListener("submit", function (event) {
             event.preventDefault();
             var button = form.querySelector("button");
@@ -469,7 +474,7 @@
                 button.disabled = true;
             }
             busy(true);
-            window.fetch(form.action, {
+            window.fetch(where, {
                 method: "POST",
                 body: new FormData(form),
                 headers: { Accept: "application/json" },
