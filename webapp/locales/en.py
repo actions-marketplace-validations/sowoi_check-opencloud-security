@@ -1376,6 +1376,12 @@ MESSAGES: dict[str, str] = {
         "That is a lot of scans from your network in a short time. Give it a "
         "minute and try again."
     ),
+    "error.rate_limit.probe": (
+        "Several of the addresses scanned from your network recently did not "
+        "turn out to be OpenCloud, so this service is taking a break from your "
+        "scans for a while. If you meant to check your own instance, the "
+        "scanner runs on your machine too."
+    ),
     "error.rate_limit.target": (
         "That instance was scanned very recently. Please give it a few minutes."
     ),

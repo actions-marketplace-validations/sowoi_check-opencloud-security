@@ -1,11 +1,16 @@
 """
-Two rate limits, both kept in Redis and both expiring on their own.
+Rate limits, all kept in Redis and all expiring on their own.
 
 The client limit protects the service from one visitor; the target limit
 protects an OpenCloud instance from the service. They are separate on purpose:
 a busy but well-behaved client should not be able to make one instance the
 target of a scan every second, and a popular instance should not lock out
 everybody who wants to scan something else.
+
+The probe guard is the third, and the only one decided after the fact: a
+client whose submissions keep turning out not to be OpenCloud at all is using
+the service to find out what answers where, which is not what it is for. The
+worker counts those hosts and imposes the block; the API only reads it.
 
 Client addresses are never stored in the clear. The key holds a truncated
 HMAC of the address under a pepper, which is enough to count and useless
@@ -60,6 +65,26 @@ def credential_key(client: str, salt: str | None = None) -> str:
     return f"cos:web:rl:auth:{_fingerprint(client, salt)}"
 
 
+def prober_fingerprint(client: str, salt: str | None = None) -> str:
+    """The fingerprint a submission hands to the worker for the probe guard.
+
+    The worker learns whether a host was OpenCloud and the API knows who
+    asked; neither can derive the other's key while the pepper is per
+    process, so the fingerprint itself travels with the scan instead.
+    """
+    return _fingerprint(client, salt)
+
+
+def probe_count_key(prober: str) -> str:
+    """How many scans of one client found no OpenCloud, in the window."""
+    return f"cos:web:rl:probe:{prober}"
+
+
+def probe_block_key(prober: str) -> str:
+    """The block a client earned by scanning too many hosts that were not OpenCloud."""
+    return f"cos:web:rl:blocked:{prober}"
+
+
 # An erasure request is rare and its credential belongs to the operator, so
 # there is no legitimate caller who needs a sixth attempt inside five minutes.
 # Only *failures* are counted: an operator working through a list of erasure
@@ -90,6 +115,10 @@ class RateLimiter:
     Two processes with different peppers do not share a counter, so this is
     what makes the client limit hold for a deployment that runs more than
     one."""
+    probe_limit: int = 0
+    """Scans that found no OpenCloud before a block; ``0`` switches it off.
+    The API only reads the block - the worker, which learns the outcome,
+    is what counts and imposes it (:func:`record_non_opencloud`)."""
 
     async def check_client(self, client: str) -> LimitDecision:
         """Count one request from this client and decide whether it may run."""
@@ -210,6 +239,27 @@ class RateLimiter:
         if count == 1:
             await self.backend.expire(key, CREDENTIAL_ATTEMPT_WINDOW_SECONDS)
 
+    async def check_probe_block(self, client: str) -> LimitDecision:
+        """
+        Whether this client is serving a block for probing, spending nothing.
+
+        Asked before the client limit, so a blocked client's refusals do not
+        also run down an allowance it will want back when the block ends.
+        """
+        if self.probe_limit <= 0:
+            return LimitDecision(True)
+        prober = prober_fingerprint(client, self.salt)
+        remaining = await self.backend.ttl(probe_block_key(prober))
+        if remaining <= 0:
+            return LimitDecision(True)
+        return LimitDecision(False, remaining, "probe")
+
+    def prober_for(self, client: str) -> str | None:
+        """The fingerprint to store with a scan, or ``None`` with the guard off."""
+        if self.probe_limit <= 0:
+            return None
+        return prober_fingerprint(client, self.salt)
+
     async def release_target(self, host: str) -> None:
         """Give the slot back when the request is rejected for another reason."""
         if self.target_cooldown > 0:
@@ -224,3 +274,42 @@ class RateLimiter:
         too, and the receipt counts it.
         """
         return await self.backend.delete(target_key(host, self.salt))
+
+
+@dataclass(frozen=True)
+class ProbeOutcome:
+    """What one non-OpenCloud answer did to the client that asked for it."""
+
+    strikes: int
+    blocked: bool
+    """Whether this answer is the one that started a block."""
+
+
+async def record_non_opencloud(
+    backend: RedisBackend,
+    prober: str,
+    *,
+    limit: int,
+    window: int,
+    block: int,
+) -> ProbeOutcome:
+    """
+    Count a scan whose host turned out not to be OpenCloud, and block at the limit.
+
+    Every such scan counts, the same host again as much as a new one: a list
+    of addresses that answer with something else - or nothing - is the shape
+    of using this service to find out what runs where, and so is asking one
+    address over and over whether it has started answering yet. The window is
+    fixed from the first strike; the block is claimed with ``SET NX`` so a
+    second worker reaching the limit at the same moment does not extend it.
+    """
+    if limit <= 0 or not prober:
+        return ProbeOutcome(0, False)
+    key = probe_count_key(prober)
+    strikes = await backend.incr(key)
+    if strikes == 1 or await backend.ttl(key) <= 0:
+        await backend.expire(key, window)
+    if strikes < limit:
+        return ProbeOutcome(strikes, False)
+    started = await backend.set(probe_block_key(prober), "1", ex=block, nx=True)
+    return ProbeOutcome(strikes, bool(started))

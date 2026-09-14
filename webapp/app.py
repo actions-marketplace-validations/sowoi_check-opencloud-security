@@ -7,11 +7,13 @@ side, and the request never gets a vote.
 
 Requests are checked in this order:
 
-1. the client rate limit, because it is one Redis ``INCR`` and it protects
-   the resolver behind step 2 from being used as an amplifier;
-2. the target itself, against the SSRF guard;
-3. the waiver list, against the allow-list, dropping anything unknown;
-4. the target cooldown, claimed with ``SET NX`` so two simultaneous requests
+1. the probe block, a single read, because a client that has been scanning
+   hosts that are not OpenCloud is refused before it spends anything;
+2. the client rate limit, because it is one Redis ``INCR`` and it protects
+   the resolver behind step 3 from being used as an amplifier;
+3. the target itself, against the SSRF guard;
+4. the waiver list, against the allow-list, dropping anything unknown;
+5. the target cooldown, claimed with ``SET NX`` so two simultaneous requests
    for the same instance cannot both win.
 
 Only then does a uuid exist. Overload never changes any of this: when every
@@ -80,6 +82,7 @@ from .audit import (
     REASON_EXCLUSIONS_UNREADABLE,
     REASON_PURGE_UNAUTHORISED,
     REASON_RATE_LIMIT_CLIENT,
+    REASON_RATE_LIMIT_PROBE,
     REASON_RATE_LIMIT_PURGE,
     REASON_RATE_LIMIT_TARGET,
     REASON_TARGET_REJECTED,
@@ -918,6 +921,7 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
         # while there is one. A deployment behind several web processes sets
         # the same value in each, or every client gets one allowance apiece.
         salt=settings.rate_limit_salt,
+        probe_limit=settings.probe_limit,
     )
     app.state.queue = None
     app.state.audit = AuditLog.from_settings(settings)
@@ -1053,9 +1057,11 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
         about a target you do not hold a uuid for.
         """
         limiter: RateLimiter = app.state.limiter
-        client = await limiter.peek_client(client_address(request, settings))
+        address = client_address(request, settings)
+        blocked = await limiter.check_probe_block(address)
+        client = await limiter.peek_client(address)
         target = await limiter.peek_target(target_hostname(record.metadata.get("target")))
-        return max(client.retry_after, target.retry_after)
+        return max(blocked.retry_after, client.retry_after, target.retry_after)
 
     async def accept_submission(
         request: Request,
@@ -1085,6 +1091,26 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
                 status=422,
                 key="error.unsupported_fields",
                 params={"fields": ", ".join(sorted(extra_fields))},
+            )
+
+        # Before the client limit, so the hour a block lasts does not also
+        # empty the allowance the visitor comes back to afterwards.
+        probing = await limiter.check_probe_block(address)
+        if not probing.allowed:
+            audit.rate_limited(
+                client=address,
+                scope=REASON_RATE_LIMIT_PROBE,
+                retry_after=probing.retry_after,
+            )
+            raise _Rejected(
+                "Several of the addresses scanned from your network recently "
+                "did not turn out to be OpenCloud, so this service is taking "
+                "a break from your scans for a while. If you meant to check "
+                "your own instance, the scanner runs on your machine too.",
+                status=429,
+                retry_after=probing.retry_after,
+                self_host=True,
+                key="error.rate_limit.probe",
             )
 
         client = await limiter.check_client(address)
@@ -1177,6 +1203,7 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
             ignore_hardenings=waivers,
             output_format=chosen_format,
             release_track=chosen_track,
+            prober=limiter.prober_for(address),
         )
         await (await queue()).enqueue(identifier)
         LOGGER.info("scan_created %s", identifier)

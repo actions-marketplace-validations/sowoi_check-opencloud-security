@@ -1483,6 +1483,12 @@ MESSAGES: dict[str, str] = {
         "C'est beaucoup d'analyses depuis votre réseau en peu de temps. "
         "Patientez une minute et réessayez."
     ),
+    "error.rate_limit.probe": (
+        "Plusieurs des adresses analysées récemment depuis votre réseau ne se "
+        "sont pas révélées être OpenCloud, ce service fait donc une pause avec "
+        "vos analyses pendant un moment. Si vous vouliez vérifier votre propre "
+        "instance, le scanner fonctionne aussi sur votre machine."
+    ),
     "error.rate_limit.target": (
         "Cette instance a été analysée très récemment. Merci de patienter "
         "quelques minutes."

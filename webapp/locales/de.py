@@ -1440,6 +1440,12 @@ MESSAGES: dict[str, str] = {
         "Das sind viele Scans aus deinem Netzwerk in kurzer Zeit. Warte eine "
         "Minute und versuche es erneut."
     ),
+    "error.rate_limit.probe": (
+        "Mehrere der Adressen, die zuletzt aus deinem Netz gescannt wurden, "
+        "waren keine OpenCloud-Instanzen, deshalb pausiert dieser Dienst deine "
+        "Scans für eine Weile. Wenn du deine eigene Instanz prüfen wolltest: "
+        "Der Scanner läuft auch auf deinem Rechner."
+    ),
     "error.rate_limit.target": (
         "Diese Instanz wurde erst vor kurzem gescannt. Bitte gib ihr ein "
         "paar Minuten."

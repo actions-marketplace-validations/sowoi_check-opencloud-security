@@ -661,6 +661,7 @@ before the first deployment:
 | `COS_WEB_SCAN_CONCURRENCY` | `4` | Probes in flight within one scan |
 | `COS_WEB_IP_RATE_LIMIT` / `_WINDOW` | `10` / `60` | The client limit. `0` disables |
 | `COS_WEB_TARGET_COOLDOWN` | `300` | Seconds before the same instance may be scanned again |
+| `COS_WEB_PROBE_LIMIT` / `_WINDOW` / `_BLOCK` | `5` / `300` / `3600` | Scans from one client that found no OpenCloud before it is blocked, the window, and the block. Web service and worker alike. `0` disables |
 | `COS_WEB_MAX_BATCH_TARGETS` | `10` | Targets one batch may carry; each still spends a scan from every limit |
 | `COS_WEB_TRUST_FORWARDED_FOR` | `false` | Only behind a proxy that **overwrites** the header, or the limit is decorative |
 | `COS_WEB_PUBLIC_BASE_URL` | *(required)* | The stable origin in canonical links, `sitemap.xml`, and agent discovery. Startup refuses an unset value rather than trusting an incoming `Host` header |

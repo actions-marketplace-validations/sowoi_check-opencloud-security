@@ -128,6 +128,21 @@ empty Redis loses nothing except results whose owners can run the scan again.</p
 <td><code>COS_WEB_TARGET_COOLDOWN</code></td>
 </tr>
 <tr>
+<td><code>scan:{uuid}:prober</code></td>
+<td>The client fingerprint a scan's outcome counts against, until a worker starts it</td>
+<td><code>COS_WEB_RESULT_TTL</code> at most</td>
+</tr>
+<tr>
+<td><code>cos:web:rl:probe:{fingerprint}</code></td>
+<td>Scans of one client that found no OpenCloud</td>
+<td><code>COS_WEB_PROBE_WINDOW</code></td>
+</tr>
+<tr>
+<td><code>cos:web:rl:blocked:{fingerprint}</code></td>
+<td>A client blocked for probing</td>
+<td><code>COS_WEB_PROBE_BLOCK</code></td>
+</tr>
+<tr>
 <td><code>cos:web:schedule:document</code>, <code>cos:web:schedule:checked</code></td>
 <td>The release lifecycle re-read once a day</td>
 <td>Until the next refresh</td>

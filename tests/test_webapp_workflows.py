@@ -133,6 +133,32 @@ def test_a_rate_limited_submission_waits_and_tries_again():
     assert waited == [7]
 
 
+def test_a_probe_block_is_handed_back_rather_than_slept_through():
+    """
+    An hour-long Retry-After is a block, and an agent waiting it out looks hung.
+
+    The short wait above must still be taken, or this would pass for a
+    workflow that never waits at all.
+    """
+    long_wait = str(wf.SUBMIT_MAX_WAIT_SECONDS + 1)
+    api = ScriptedApi(
+        wf.ApiResponse(status=429, headers={"retry-after": long_wait}, body={"detail": "no"}),
+        _accepted(),
+    )
+    waited: list[float] = []
+
+    async def record(seconds: float) -> None:
+        waited.append(seconds)
+
+    with pytest.raises(wf.WorkflowError) as caught:
+        asyncio.run(wf.submit_scan(api, target_url="opencloud.example.com", sleep=record))
+
+    assert caught.value.status == 429
+    assert caught.value.retryable is False
+    assert waited == []
+    assert len(api.calls) == 1
+
+
 def test_a_refused_target_is_not_submitted_a_second_time():
     """400 will not become 202 by asking again, and a public service notices."""
     api = ScriptedApi(wf.ApiResponse(status=400, body={"detail": "That is private."}))

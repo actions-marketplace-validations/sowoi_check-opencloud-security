@@ -62,6 +62,9 @@ empty Redis loses nothing except results whose owners can run the scan again.
 | `cos:web:worker:heartbeat` | That a worker is alive, for `/healthz` | Refreshed by the worker |
 | `cos:web:rl:client:{fingerprint}` | The per-client request count | `COS_WEB_IP_RATE_WINDOW` |
 | `cos:web:rl:target:{fingerprint}` | The per-target cooldown | `COS_WEB_TARGET_COOLDOWN` |
+| `scan:{uuid}:prober` | The client fingerprint a scan's outcome counts against, until a worker starts it | `COS_WEB_RESULT_TTL` at most |
+| `cos:web:rl:probe:{fingerprint}` | Scans of one client that found no OpenCloud | `COS_WEB_PROBE_WINDOW` |
+| `cos:web:rl:blocked:{fingerprint}` | A client blocked for probing | `COS_WEB_PROBE_BLOCK` |
 | `cos:web:schedule:document`, `cos:web:schedule:checked` | The release lifecycle re-read once a day | Until the next refresh |
 | `cos:web:advisories:document`, `cos:web:advisories:checked` | The advisory database re-read once a day | Until the next refresh |
 

@@ -29,7 +29,8 @@ from .blocklist import effective_exclusions
 from .catalog import sanitize_release_track
 from .encryption import ensure_encryption_ready
 from .queue import redis_settings
-from .redis_backend import RedisBackend, create_backend
+from .ratelimit import record_non_opencloud
+from .redis_backend import RedisBackend, RedisUnavailable, create_backend
 from .runner import execute_scan
 from .schedule import refresh_schedule, stored_schedule
 from .settings import WebSettings
@@ -72,6 +73,9 @@ async def run_scan(ctx: dict[str, Any], uuid: str) -> str:
         return "expired"
 
     await store.mark_running(uuid)
+    # Taken now rather than when the scan ends, so the fingerprint is gone
+    # from the scan's namespace for however long the scan itself takes.
+    prober = await store.take_prober(uuid)
     LOGGER.info("scan_started %s", uuid)
 
     try:
@@ -117,10 +121,12 @@ async def run_scan(ctx: dict[str, Any], uuid: str) -> str:
     except asyncio.TimeoutError:
         await store.mark_failed(uuid, "The instance took too long to answer.")
         LOGGER.info("scan_timeout %s", uuid)
+        await _count_non_opencloud(store, settings, prober, uuid)
         return "failed"
     except ScanError as exc:
         await store.mark_failed(uuid, str(exc))
         LOGGER.info("scan_failed %s", uuid)
+        await _count_non_opencloud(store, settings, prober, uuid)
         return "failed"
     except Exception:  # pragma: no cover - defensive; a crash must not leak
         await store.mark_failed(uuid, "The scan could not be completed.")
@@ -130,6 +136,36 @@ async def run_scan(ctx: dict[str, Any], uuid: str) -> str:
     await store.mark_completed(uuid, result)
     LOGGER.info("scan_completed %s", uuid)
     return "completed"
+
+
+async def _count_non_opencloud(
+    store: ScanStore, settings: WebSettings, prober: str | None, uuid: str
+) -> None:
+    """
+    Hold a scan that found no OpenCloud against the client that asked for it.
+
+    Only a :class:`ScanError` or a timeout gets here - the scanner reached for
+    ``status.php`` and found nothing, something else, or silence. A target the
+    guard refused is not counted: that is this deployment's own list talking,
+    not a stranger's probe. A store that cannot count leaves the scan's
+    outcome as it was; the guard is a deterrent, and losing one strike is
+    better than losing the visitor's answer.
+    """
+    if not prober:
+        return
+    try:
+        outcome = await record_non_opencloud(
+            store.backend,
+            prober,
+            limit=settings.probe_limit,
+            window=settings.probe_window,
+            block=settings.probe_block,
+        )
+    except RedisUnavailable:  # pragma: no cover - defensive; see the docstring
+        LOGGER.info("probe_guard_unavailable %s", uuid)
+        return
+    if outcome.blocked:
+        LOGGER.info("probe_block_started %s", uuid)
 
 
 async def refresh_release_schedule(ctx: dict[str, Any]) -> str:

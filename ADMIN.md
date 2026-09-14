@@ -735,7 +735,7 @@ The optional audit log (`COS_WEB_AUDIT_LOG*`, salted via
 | Grades look generous | Advisory refresh rejected or stale — check `advisories` in `/healthz` |
 | An instance is graded unknown instead of EOL | Schedule refresh rejected or stale |
 | Agents can reach `/mcp` unauthenticated | `COS_WEB_MCP_AUTH_ENABLED` plus an issuer must both be set; a deployment that asked for a sign-in it cannot enforce refuses to start |
-| Rate limits hitting legitimate users | `COS_WEB_IP_RATE_LIMIT` / `COS_WEB_IP_RATE_WINDOW` / `COS_WEB_TARGET_COOLDOWN`; behind a proxy also `COS_WEB_TRUST_FORWARDED_FOR` and `COS_WEB_TRUSTED_PROXY_HOPS` |
+| Rate limits hitting legitimate users | `COS_WEB_IP_RATE_LIMIT` / `COS_WEB_IP_RATE_WINDOW` / `COS_WEB_TARGET_COOLDOWN`; a one-hour 429 is the probe block (`COS_WEB_PROBE_LIMIT` / `COS_WEB_PROBE_WINDOW` / `COS_WEB_PROBE_BLOCK`, `rate_limit_probe` in the audit trail); behind a proxy also `COS_WEB_TRUST_FORWARDED_FOR` and `COS_WEB_TRUSTED_PROXY_HOPS` |
 | Scans of internal hosts refused | That is the SSRF guard. `COS_WEB_ALLOW_PRIVATE_TARGETS` exists but think hard before a public deployment sets it |
 
 For the plugin rather than the service, `docs/troubleshooting.md` covers

@@ -883,7 +883,7 @@ with the uuid the reporter gives you, within the result TTL.</p>
 </tr>
 <tr>
 <td>Rate limits hitting legitimate users</td>
-<td><code>COS_WEB_IP_RATE_LIMIT</code> / <code>COS_WEB_IP_RATE_WINDOW</code> / <code>COS_WEB_TARGET_COOLDOWN</code>; behind a proxy also <code>COS_WEB_TRUST_FORWARDED_FOR</code> and <code>COS_WEB_TRUSTED_PROXY_HOPS</code></td>
+<td><code>COS_WEB_IP_RATE_LIMIT</code> / <code>COS_WEB_IP_RATE_WINDOW</code> / <code>COS_WEB_TARGET_COOLDOWN</code>; a one-hour 429 is the probe block (<code>COS_WEB_PROBE_LIMIT</code> / <code>COS_WEB_PROBE_WINDOW</code> / <code>COS_WEB_PROBE_BLOCK</code>, <code>rate_limit_probe</code> in the audit trail); behind a proxy also <code>COS_WEB_TRUST_FORWARDED_FOR</code> and <code>COS_WEB_TRUSTED_PROXY_HOPS</code></td>
 </tr>
 <tr>
 <td>Scans of internal hosts refused</td>

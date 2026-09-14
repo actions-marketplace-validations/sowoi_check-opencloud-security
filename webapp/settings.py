@@ -27,6 +27,12 @@ DEFAULT_JOB_TIMEOUT_SECONDS = 180
 DEFAULT_IP_RATE_LIMIT = 10
 DEFAULT_IP_RATE_WINDOW_SECONDS = 60
 DEFAULT_TARGET_COOLDOWN_SECONDS = 300
+# Five scans that found no OpenCloud inside five minutes is not somebody
+# checking their own instance, it is somebody using this one to map what
+# answers where - and an hour is long enough to make that pointless.
+DEFAULT_PROBE_LIMIT = 5
+DEFAULT_PROBE_WINDOW_SECONDS = 300
+DEFAULT_PROBE_BLOCK_SECONDS = 3600
 DEFAULT_MAX_BATCH_TARGETS = 10
 # One reverse proxy, which is what a deployment that turns
 # COS_WEB_TRUST_FORWARDED_FOR on almost always has.
@@ -229,6 +235,16 @@ class WebSettings:
     ip_rate_limit: int = DEFAULT_IP_RATE_LIMIT
     ip_rate_window: int = DEFAULT_IP_RATE_WINDOW_SECONDS
     target_cooldown: int = DEFAULT_TARGET_COOLDOWN_SECONDS
+
+    probe_limit: int = DEFAULT_PROBE_LIMIT
+    """Scans from one client address that may find no OpenCloud - an
+    unreachable host, something other than JSON on ``status.php``, another
+    product - inside ``probe_window`` before that address is blocked for
+    ``probe_block``. The same host scanned again counts again. ``0`` disables.
+    The worker counts and the API refuses, so both processes read it."""
+
+    probe_window: int = DEFAULT_PROBE_WINDOW_SECONDS
+    probe_block: int = DEFAULT_PROBE_BLOCK_SECONDS
 
     trust_forwarded_for: bool = False
     """Read the client address from ``X-Forwarded-For``. Only behind a proxy
@@ -540,6 +556,11 @@ class WebSettings:
                 "IP_RATE_WINDOW", DEFAULT_IP_RATE_WINDOW_SECONDS, minimum=1
             ),
             target_cooldown=_env_int("TARGET_COOLDOWN", DEFAULT_TARGET_COOLDOWN_SECONDS),
+            probe_limit=_env_int("PROBE_LIMIT", DEFAULT_PROBE_LIMIT),
+            probe_window=_env_int(
+                "PROBE_WINDOW", DEFAULT_PROBE_WINDOW_SECONDS, minimum=1
+            ),
+            probe_block=_env_int("PROBE_BLOCK", DEFAULT_PROBE_BLOCK_SECONDS, minimum=1),
             trust_forwarded_for=_env_bool("TRUST_FORWARDED_FOR", False),
             trusted_proxy_hops=_env_int(
                 "TRUSTED_PROXY_HOPS", DEFAULT_TRUSTED_PROXY_HOPS, minimum=1

@@ -350,6 +350,21 @@ somebody could.</p>
 <td>Seconds before the same instance may be scanned again. <code>0</code> disables</td>
 </tr>
 <tr>
+<td><code>COS_WEB_PROBE_LIMIT</code></td>
+<td><code>5</code></td>
+<td>Scans from one client address that may find no OpenCloud within <code>COS_WEB_PROBE_WINDOW</code> before that address is blocked. The same host scanned again counts again. Set on the web service <strong>and</strong> the worker. <code>0</code> disables</td>
+</tr>
+<tr>
+<td><code>COS_WEB_PROBE_WINDOW</code></td>
+<td><code>300</code></td>
+<td>The window those scans are counted in, in seconds</td>
+</tr>
+<tr>
+<td><code>COS_WEB_PROBE_BLOCK</code></td>
+<td><code>3600</code></td>
+<td>How long the block lasts, in seconds</td>
+</tr>
+<tr>
 <td><code>COS_WEB_MAX_BATCH_TARGETS</code></td>
 <td><code>10</code></td>
 <td>Targets one <code>POST /api/scans/batch</code> may carry. Each still counts against every limit</td>
@@ -796,15 +811,35 @@ has an <em>Exclusions</em> card that adds and withdraws entries, and:</p>
 four properties that made it acceptable there, and
 <a href="https://github.com/sowoi/check-opencloud-security/blob/main/ADMIN.md#the-operators-area-at-admin">ADMIN.md</a> for the area itself.</p>
 <h2 id="rate-limiting">Rate limiting</h2>
-<p>Two independent limits, both in Redis, both expiring on their own:</p>
+<p>Three independent limits, all in Redis, all expiring on their own:</p>
 <ul>
 <li><strong>per client address</strong> - <code>COS_WEB_IP_RATE_LIMIT</code> scans per
   <code>COS_WEB_IP_RATE_WINDOW</code>. Protects the service from one visitor;</li>
 <li><strong>per target</strong> - one scan per <code>COS_WEB_TARGET_COOLDOWN</code>. Protects an
   OpenCloud instance from the service. Claimed with <code>SET NX</code>, so two
-  simultaneous requests for the same instance cannot both win.</li>
+  simultaneous requests for the same instance cannot both win;</li>
+<li><strong>the probe block</strong> - <code>COS_WEB_PROBE_LIMIT</code> scans that found no OpenCloud
+  within <code>COS_WEB_PROBE_WINDOW</code> block the client address for
+  <code>COS_WEB_PROBE_BLOCK</code>. Protects everybody else's hosts from this service
+  being used to find out what answers where.</li>
 </ul>
-<p>Both answer <strong>429</strong> with a <code>Retry-After</code>. The client address is never stored:
+<p>All three answer <strong>429</strong> with a <code>Retry-After</code>.</p>
+<p><strong>The probe block is decided after the fact.</strong> Only the worker learns whether
+a host was OpenCloud, so the submission hands it the client's rate-limit
+fingerprint - never the address - under <code>scan:{uuid}:prober</code>, which the worker
+reads and deletes the moment the scan starts. A scan that ends with the
+scanner's own verdict of <em>no OpenCloud here</em> - <code>status.php</code> unreachable, not
+JSON, or another product - or that runs out of time is a strike; the same host
+scanned again is another one, because asking one address over and over whether
+it answers yet is probing too. A finished scan never counts, whatever its
+grade, and neither does a target this deployment's own guard or exclusions
+refused. At the limit the worker sets the block; the API reads it before the
+client limit, so an hour of refusals does not also spend the allowance the
+visitor comes back to. MCP and the workflows wait out a <code>Retry-After</code> of up to
+five minutes by themselves and hand anything longer back to the caller.</p>
+<p>A legitimate operator whose own instance is down can meet this too, after
+five attempts. That is the trade: the message says why, and points at running
+the scanner locally, which has no such limit. The client address is never stored:
 the key holds a truncated HMAC under a pepper generated at startup, which is
 enough to count and useless afterwards.</p>
 <p><strong>A report page counts the wait down.</strong> A finished report carries a <strong>Scan
@@ -851,7 +886,8 @@ routed and retained on its own:</p>
 {&quot;client&quot;: &quot;3c80d5f21ab94e77&quot;, &quot;event&quot;: &quot;submission_rejected&quot;, &quot;fields&quot;: [&quot;workers&quot;], &quot;reason&quot;: &quot;unsupported_fields&quot;, &quot;status&quot;: 422, &quot;timestamp&quot;: &quot;2026-08-19T10:15:09+00:00&quot;}
 </code></pre>
 <p>Three events: <code>scan_requested</code> for an accepted submission, <code>rate_limited</code> for
-a client limit or target cooldown that actually triggered, and
+a client limit, target cooldown or probe block (<code>rate_limit_probe</code>) that
+actually triggered, and
 <code>submission_rejected</code> for one that never became a scan - <code>unsupported_fields</code>,
 <code>target_rejected</code>.</p>
 <p>The point of the design is what it still does not write down:</p>

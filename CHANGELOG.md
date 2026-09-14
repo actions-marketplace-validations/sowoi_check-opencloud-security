@@ -12,6 +12,24 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+### Added
+
+- **The web service blocks a client that keeps scanning hosts that are not
+  OpenCloud.** Five scans from one client address that find no OpenCloud -
+  nothing answering on `status.php`, something that is not JSON, another
+  product, or no answer in time - within five minutes block that address for
+  an hour; the same host scanned again counts again. A blocked submission
+  answers 429 with a `Retry-After` of the rest of the block, the usual pointer
+  to running the scanner locally, and `rate_limit_probe` in the audit trail.
+  Only the worker learns the outcome, so a submission hands it the client's
+  rate-limit fingerprint, never the address, under `scan:{uuid}:prober`, and
+  the worker deletes it as soon as it starts the scan. Tuned with
+  `COS_WEB_PROBE_LIMIT`, `COS_WEB_PROBE_WINDOW` and `COS_WEB_PROBE_BLOCK`,
+  which the web service and the worker both read; `COS_WEB_PROBE_LIMIT=0`
+  turns it off. MCP and the workflows now wait out a `Retry-After` of at most
+  five minutes by themselves and hand a longer one back to the caller instead
+  of sleeping through it. See ADR 0051.
+
 ## [1.22.7] - 2026-09-14
 
 ### Fixed

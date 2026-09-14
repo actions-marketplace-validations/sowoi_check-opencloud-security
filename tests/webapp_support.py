@@ -30,11 +30,12 @@ MEMORY_URL = "memory://tests"
 
 
 def settings(**overrides: Any) -> WebSettings:
-    """Web settings for a test: no cooldown and no client limit unless asked."""
+    """Web settings for a test: no cooldown, client limit or probe block unless asked."""
     defaults: dict[str, Any] = {
         "redis_url": MEMORY_URL,
         "ip_rate_limit": 0,
         "target_cooldown": 0,
+        "probe_limit": 0,
         "result_ttl": 3600,
         "public_base_url": "http://testserver",
     }

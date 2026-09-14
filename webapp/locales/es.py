@@ -1428,6 +1428,12 @@ MESSAGES: dict[str, str] = {
         "Son muchos análisis desde tu red en poco tiempo. Espera un minuto e "
         "inténtalo de nuevo."
     ),
+    "error.rate_limit.probe": (
+        "Varias de las direcciones analizadas recientemente desde tu red no "
+        "resultaron ser OpenCloud, así que este servicio hace una pausa con "
+        "tus análisis durante un rato. Si querías comprobar tu propia "
+        "instancia, el escáner también funciona en tu equipo."
+    ),
     "error.rate_limit.target": (
         "Esa instancia se analizó hace muy poco. Por favor, espera unos minutos."
     ),

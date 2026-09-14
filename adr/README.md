@@ -57,6 +57,7 @@ project. Read the accepted records that affect an area before changing it.
 | [0048](0048-release-md-is-written-by-the-release-not-by-a-pull-request.md) | RELEASE.md is written by the release, not by a pull request | Accepted |
 | [0049](0049-the-docker-wizard-is-downloaded-from-a-release-and-knows-its-version.md) | The Docker wizard is downloaded from a release, and knows its version | Accepted |
 | [0050](0050-every-pull-request-to-main-rebuilds-the-search-index.md) | Every pull request to main rebuilds the search index | Accepted |
+| [0051](0051-a-client-that-keeps-scanning-hosts-that-are-not-opencloud-is-blocked.md) | A client that keeps scanning hosts that are not OpenCloud is blocked | Accepted |
 
 ## Writing a new record
 

@@ -239,6 +239,9 @@ Every setting is an environment variable, read once at startup.
 | `COS_WEB_IP_RATE_LIMIT` | `10` | Scans per client address per window. `0` disables |
 | `COS_WEB_IP_RATE_WINDOW` | `60` | The window, in seconds |
 | `COS_WEB_TARGET_COOLDOWN` | `300` | Seconds before the same instance may be scanned again. `0` disables |
+| `COS_WEB_PROBE_LIMIT` | `5` | Scans from one client address that may find no OpenCloud within `COS_WEB_PROBE_WINDOW` before that address is blocked. The same host scanned again counts again. Set on the web service **and** the worker. `0` disables |
+| `COS_WEB_PROBE_WINDOW` | `300` | The window those scans are counted in, in seconds |
+| `COS_WEB_PROBE_BLOCK` | `3600` | How long the block lasts, in seconds |
 | `COS_WEB_MAX_BATCH_TARGETS` | `10` | Targets one `POST /api/scans/batch` may carry. Each still counts against every limit |
 | `COS_WEB_TRUST_FORWARDED_FOR` | `false` | Read the client address from `X-Forwarded-For` |
 | `COS_WEB_TRUSTED_PROXY_HOPS` | `1` | How many proxies of your own sit in front. The header is read from the **right**, this many entries in, because that end is the only part a proxy writes |
@@ -522,15 +525,37 @@ four properties that made it acceptable there, and
 
 ## Rate limiting
 
-Two independent limits, both in Redis, both expiring on their own:
+Three independent limits, all in Redis, all expiring on their own:
 
 - **per client address** - `COS_WEB_IP_RATE_LIMIT` scans per
   `COS_WEB_IP_RATE_WINDOW`. Protects the service from one visitor;
 - **per target** - one scan per `COS_WEB_TARGET_COOLDOWN`. Protects an
   OpenCloud instance from the service. Claimed with `SET NX`, so two
-  simultaneous requests for the same instance cannot both win.
+  simultaneous requests for the same instance cannot both win;
+- **the probe block** - `COS_WEB_PROBE_LIMIT` scans that found no OpenCloud
+  within `COS_WEB_PROBE_WINDOW` block the client address for
+  `COS_WEB_PROBE_BLOCK`. Protects everybody else's hosts from this service
+  being used to find out what answers where.
 
-Both answer **429** with a `Retry-After`. The client address is never stored:
+All three answer **429** with a `Retry-After`.
+
+**The probe block is decided after the fact.** Only the worker learns whether
+a host was OpenCloud, so the submission hands it the client's rate-limit
+fingerprint - never the address - under `scan:{uuid}:prober`, which the worker
+reads and deletes the moment the scan starts. A scan that ends with the
+scanner's own verdict of *no OpenCloud here* - `status.php` unreachable, not
+JSON, or another product - or that runs out of time is a strike; the same host
+scanned again is another one, because asking one address over and over whether
+it answers yet is probing too. A finished scan never counts, whatever its
+grade, and neither does a target this deployment's own guard or exclusions
+refused. At the limit the worker sets the block; the API reads it before the
+client limit, so an hour of refusals does not also spend the allowance the
+visitor comes back to. MCP and the workflows wait out a `Retry-After` of up to
+five minutes by themselves and hand anything longer back to the caller.
+
+A legitimate operator whose own instance is down can meet this too, after
+five attempts. That is the trade: the message says why, and points at running
+the scanner locally, which has no such limit. The client address is never stored:
 the key holds a truncated HMAC under a pepper generated at startup, which is
 enough to count and useless afterwards.
 
@@ -590,7 +615,8 @@ routed and retained on its own:
 ```
 
 Three events: `scan_requested` for an accepted submission, `rate_limited` for
-a client limit or target cooldown that actually triggered, and
+a client limit, target cooldown or probe block (`rate_limit_probe`) that
+actually triggered, and
 `submission_rejected` for one that never became a scan - `unsupported_fields`,
 `target_rejected`.
 

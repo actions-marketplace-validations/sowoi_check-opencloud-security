@@ -8,6 +8,13 @@ a TTL::
     scan:{uuid}:result      the result document produced by the scanner
     scan:{uuid}:metadata    what was asked for, and when
 
+and a fourth while the scan waits, when the probe guard is on::
+
+    scan:{uuid}:prober      the client's rate-limit fingerprint, never its address
+
+The worker takes that one and deletes it the moment the scan starts, so it
+lives no longer than the scan waits in the queue.
+
 The uuid is a capability: knowing it is the only way to reach the scan, and
 there is deliberately no way to enumerate the namespace. Nothing outside this
 module builds a key, so the isolation is one function wide and can be tested
@@ -77,6 +84,11 @@ def result_key(uuid: str) -> str:
 def metadata_key(uuid: str) -> str:
     """Redis key holding what the visitor asked for."""
     return f"scan:{uuid}:metadata"
+
+
+def prober_key(uuid: str) -> str:
+    """Redis key holding whom a non-OpenCloud answer counts against."""
+    return f"scan:{uuid}:prober"
 
 
 @dataclass(frozen=True)
@@ -154,8 +166,14 @@ class ScanStore:
         ignore_hardenings: tuple[str, ...],
         output_format: str,
         release_track: str = DEFAULT_RELEASE_TRACK,
+        prober: str | None = None,
     ) -> None:
-        """Register a new scan as ``queued`` and put it at the back of the line."""
+        """Register a new scan as ``queued`` and put it at the back of the line.
+
+        ``prober`` is kept apart from the metadata on purpose: the metadata is
+        what the holder of the uuid reads back, and a fingerprint of their
+        own address is nothing they need to be handed.
+        """
         metadata = {
             "target": target,
             "ignoreHardenings": list(ignore_hardenings),
@@ -166,11 +184,19 @@ class ScanStore:
             "finishedAt": None,
         }
         await self.backend.set(metadata_key(uuid), _dump(metadata), ex=self.ttl)
+        if prober:
+            await self.backend.set(prober_key(uuid), prober, ex=self.ttl)
         await self.backend.set(status_key(uuid), _dump({"state": STATE_QUEUED}), ex=self.ttl)
         await self.backend.rpush(QUEUE_KEY, uuid)
         # The queue is a display aid, not a job store; it must not outlive the
         # scans it refers to if a worker dies.
         await self.backend.expire(QUEUE_KEY, max(self.ttl, 3600))
+
+    async def take_prober(self, uuid: str) -> str | None:
+        """Read and forget who asked for this scan, for the probe guard."""
+        prober = await self.backend.get(prober_key(uuid))
+        await self.backend.delete(prober_key(uuid))
+        return prober
 
     async def mark_running(self, uuid: str) -> None:
         """A worker picked this scan up."""
@@ -267,7 +293,10 @@ class ScanStore:
         queue_entries = 0
         for identifier in identifiers:
             keys_deleted += await self.backend.delete(
-                status_key(identifier), result_key(identifier), metadata_key(identifier)
+                status_key(identifier),
+                result_key(identifier),
+                metadata_key(identifier),
+                prober_key(identifier),
             )
             queue_entries += await self.backend.lrem(QUEUE_KEY, 0, identifier)
         remaining = len(await self._identifiers_for(wanted))
