@@ -1227,10 +1227,11 @@ inside <code>frontend/</code>; the running service neither parses Markdown nor n
 source files. ADR 0018 records the boundary.</p>
 <p><code>/search</code> filters a checked-in, same-origin JSON index in the browser. Its
 manifest names public templates explicitly and cannot see Redis, the API,
-result pages, exports, UUIDs or submitted addresses. The release workflow
-rebuilds that file when a new version is published; ordinary CI deliberately
-does not, so one deployed release has one immutable search index. ADR 0019
-records the boundary.</p>
+result pages, exports, UUIDs or submitted addresses. Every pull request to
+<code>main</code> rebuilds that file and commits it to the branch, and the release
+workflow rebuilds it again before building artefacts, so one deployed release
+has one immutable search index. ADR 0019 records the boundary and ADR 0050
+when it is rebuilt.</p>
 <p>When <code>COS_WEB_ENABLE_MCP</code> is on, the landing and result pages also expose
 their existing actions to supporting browsers through the
 <a href="https://webmachinelearning.github.io/webmcp/">WebMCP draft</a>. The landing

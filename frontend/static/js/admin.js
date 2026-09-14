@@ -256,6 +256,11 @@
         }
         put("index-state", verdict, state);
         put("index-detail", describeIndex(index, state));
+        // How to fix it is only worth reading when there is something to fix.
+        var remedy = document.querySelector("[data-admin-index-remedy]");
+        if (remedy) {
+            remedy.hidden = state === "fresh";
+        }
 
         flash(before);
         painted = true;
@@ -270,29 +275,34 @@
         if (index.unreadable) {
             return text("index-unreadable");
         }
+        // Every reason, not the first one found: fixing the release stamp
+        // and then discovering a missing language is two deployments where
+        // one would have done.
+        var reasons = [];
         if (index.builtFor && index.builtFor !== index.running) {
-            return fill(text("index-release"), {
+            reasons.push(fill(text("index-release"), {
                 built: index.builtFor,
                 running: index.running
-            });
+            }));
         }
         var missing = (index.missingPaths || []).concat(index.missingLocales || []);
         if (missing.length) {
-            return fill(text("index-missing"), { list: missing.join(", ") });
+            reasons.push(fill(text("index-missing"), { list: missing.join(", ") }));
         }
-        // A page the index holds and this build does not serve. It is a
-        // reason the index is not current, it is reported in the document,
-        // and until now nothing here read it - so an index stale for this
-        // reason alone said "out of date" over "everything is indexed".
+        // A page the index holds and this build does not serve: a search
+        // result leading to a page that is not there.
         if ((index.extraPaths || []).length) {
-            return fill(text("index-extra"), {
+            reasons.push(fill(text("index-extra"), {
                 list: index.extraPaths.join(", ")
-            });
+            }));
         }
         if ((index.changedPaths || []).length) {
-            return fill(text("index-changed"), {
+            reasons.push(fill(text("index-changed"), {
                 count: index.changedPaths.length
-            });
+            }));
+        }
+        if (reasons.length) {
+            return reasons.join(" ");
         }
         if (state === "unknown") {
             return text("index-unstamped");

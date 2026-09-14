@@ -798,6 +798,42 @@ def test_the_search_index_is_reported_and_never_rebuilt():
     assert offered == {"schedule", "advisories", "add"}
 
 
+def test_a_stale_index_says_how_to_fix_it_and_a_current_one_does_not():
+    """The card named who fixes a stale index, never what an operator can do.
+
+    The remedy is rendered by the server, so it is in the page's language
+    and on the page without scripting, and hidden until the script has a
+    verdict - a current index with instructions under it reads as a broken one.
+    """
+    with TestClient(create_app(_admin_settings())) as client:
+        page = client.get("/admin", headers=FORWARDED).text
+        script = client.get("/static/js/admin.js").text
+
+    remedy = re.search(r"<div[^>]*data-admin-index-remedy[^>]*>(.*?)</div>", page, re.DOTALL)
+    assert remedy is not None
+    assert " hidden" in remedy.group(0).split(">", 1)[0]
+    assert "python scripts/build_search_index.py" in remedy.group(1)
+    # Revealed for every verdict but "current", and never for that one.
+    assert 'remedy.hidden = state === "fresh";' in script
+    # And still nothing to press: the remedy is a command, not a form.
+    assert "<form" not in remedy.group(1)
+
+
+def test_the_index_detail_names_every_reason_rather_than_the_first():
+    """A stamp mismatch hid a missing language behind it: two deployments where one would do."""
+    with TestClient(create_app(_admin_settings())) as client:
+        script = client.get("/static/js/admin.js").text
+
+    describe = script[script.index("function describeIndex"):]
+    describe = describe[: describe.index("\n    }\n")]
+    assert 'reasons.join(" ")' in describe
+    for reason in ("index-release", "index-missing", "index-extra", "index-changed"):
+        assert f'reasons.push(fill(text("{reason}")' in describe
+    # Only the unreadable index still answers early, since nothing else can
+    # be said about a file that did not parse.
+    assert describe.count("return ") == 4
+
+
 def _shipped_index(root, *, built_for, extra=()):
     """An index this build would call current, plus whatever is added to it.
 

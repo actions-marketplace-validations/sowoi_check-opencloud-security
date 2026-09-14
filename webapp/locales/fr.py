@@ -214,9 +214,20 @@ MESSAGES: dict[str, str] = {
     ),
     "admin.search.detail.changed": "{count} titres ou résumés ont changé depuis sa génération.",
     "admin.search.detail.unreadable": "L'index n'a pas pu être lu.",
+    "admin.search.remedy": (
+        "Une version publiée livre toujours un index généré pour elle ; ce "
+        "build n'est donc pas une version telle que publiée - le plus souvent "
+        "une image ou un bundle construit depuis un checkout entre deux "
+        "versions. Déployez une version publiée, ou régénérez l'index dans ce "
+        "checkout et reconstruisez ce que vous déployez :"
+    ),
+    "admin.search.remedy.commit": (
+        "Rien à valider à la main : chaque pull request vers main régénère "
+        "l'index et le valide dans sa branche."
+    ),
     "admin.search.fix": (
-        "Un index périmé est repris par le workflow de publication, qui le "
-        "régénère et le valide. Il n'y a rien à presser ici."
+        "Chaque pull request vers main et le workflow de publication "
+        "régénèrent l'index et le valident. Il n'y a rien à presser ici."
     ),
     "admin.audit.kicker": "Audit",
     "admin.audit.heading": "Le journal, au fil de son écriture",

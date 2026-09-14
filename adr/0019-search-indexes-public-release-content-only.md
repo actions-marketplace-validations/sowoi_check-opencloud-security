@@ -1,6 +1,6 @@
 # ADR 0019: Search indexes public release content only
 
-- Status: Accepted
+- Status: Accepted; its release-only refresh superseded by ADR 0050
 - Date: 2026-08-25
 
 ## Context

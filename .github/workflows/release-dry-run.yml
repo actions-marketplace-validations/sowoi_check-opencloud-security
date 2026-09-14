@@ -6,8 +6,9 @@ name: Release dry run
 # already under way. See adr/0045.
 #
 # It builds and checks; it publishes, tags, attests and pushes nothing, so the
-# token is read-only. The search index is deliberately not rebuilt here: only
-# the release workflow may refresh it (tests/test_webapp_search.py).
+# token is read-only. The search index is not rebuilt here: search-index.yml
+# does that on the same pull request, and the release workflow does it again
+# (adr/0050, tests/test_webapp_search.py).
 
 on:
   pull_request:

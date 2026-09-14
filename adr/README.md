@@ -25,7 +25,7 @@ project. Read the accepted records that affect an area before changing it.
 | [0016](0016-the-release-schedule-refreshes-itself.md) | The release schedule refreshes itself, and only ever gains knowledge | Accepted |
 | [0017](0017-the-advisory-database-refreshes-itself.md) | The advisory database refreshes itself, and only ever gains advisories | Accepted |
 | [0018](0018-cli-documentation-is-generated-at-build-time.md) | CLI documentation is generated at build time | Accepted |
-| [0019](0019-search-indexes-public-release-content-only.md) | Search indexes public release content only | Accepted |
+| [0019](0019-search-indexes-public-release-content-only.md) | Search indexes public release content only | Accepted; its release-only refresh superseded by ADR 0050 |
 | [0020](0020-frontend-language-is-request-scoped.md) | Frontend language is request scoped | Accepted |
 | [0021](0021-webmcp-is-a-page-scoped-api-client.md) | WebMCP is a page-scoped API client | Accepted |
 | [0022](0022-identity-provider-versions-require-public-evidence.md) | Identity provider versions require public evidence | Accepted |
@@ -56,6 +56,7 @@ project. Read the accepted records that affect an area before changing it.
 | [0047](0047-the-bundled-provider-requires-a-second-factor-and-provisions-its-accounts.md) | The bundled provider requires a second factor and provisions its accounts | Accepted |
 | [0048](0048-release-md-is-written-by-the-release-not-by-a-pull-request.md) | RELEASE.md is written by the release, not by a pull request | Accepted |
 | [0049](0049-the-docker-wizard-is-downloaded-from-a-release-and-knows-its-version.md) | The Docker wizard is downloaded from a release, and knows its version | Accepted |
+| [0050](0050-every-pull-request-to-main-rebuilds-the-search-index.md) | Every pull request to main rebuilds the search index | Accepted |
 
 ## Writing a new record
 

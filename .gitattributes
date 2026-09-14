@@ -2,7 +2,7 @@
 # catalogues and the version, and they are also checked in, so two branches
 # that touch any of those conflict on the same lines with nothing for a person
 # to decide. The driver rebuilds the file instead of merging it - which is what
-# the release workflow would produce anyway, and the only workflow allowed to.
+# the pull request and release workflows would produce anyway (ADR 0050).
 # Register it once per clone: python scripts/setup_git_merge_drivers.py
 # See CONTRIBUTING.md, "Generated files and merge conflicts".
 frontend/static/search-index.json merge=search-index linguist-generated

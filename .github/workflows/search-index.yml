@@ -1,0 +1,76 @@
+name: Search index
+
+# The browser search index is a checked-in file generated from the public
+# templates and the catalogues (ADR 0019). Left to the release workflow alone,
+# a pull request that edits a page merges with an index describing the page as
+# it read before - so every pull request to main rebuilds it, whether or not
+# anything it reads changed, and commits the result back to the branch when it
+# differs. See adr/0050.
+#
+# Same-repository branches only: a fork's pull request gets a read-only token,
+# so there the index is checked instead and a stale one is reported, not
+# pushed. The generator runs before any credential is placed in the checkout,
+# and the push names the branch through the environment rather than pasting
+# it into the script.
+#
+# A push made with GITHUB_TOKEN starts no workflow, so the bot's commit cannot
+# re-trigger this one.
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  rebuild:
+    name: Rebuild the search index
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout the pull request branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Rebuild every language's index
+        run: python scripts/build_search_index.py
+
+      - name: Commit the rebuilt index to the branch
+        if: >-
+          github.event.pull_request.head.repo.full_name == github.repository
+          && github.event.pull_request.user.login != 'dependabot[bot]'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          git add frontend/static/search-index.json \
+            frontend/static/search-index.de.json \
+            frontend/static/search-index.es.json \
+            frontend/static/search-index.fr.json
+          if git diff --cached --quiet; then
+            echo "The search index is already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore: rebuild the search index"
+          git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            "HEAD:refs/heads/${HEAD_REF}"
+
+      - name: Report a stale index the token cannot push
+        if: >-
+          github.event.pull_request.head.repo.full_name != github.repository
+          || github.event.pull_request.user.login == 'dependabot[bot]'
+        run: |
+          if ! git diff --quiet -- frontend/static/search-index*.json; then
+            echo "::warning::The search index is out of date on this branch. Run python scripts/build_search_index.py and commit the result."
+          fi

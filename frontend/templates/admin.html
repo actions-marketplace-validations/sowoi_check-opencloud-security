@@ -389,6 +389,18 @@
     <p class="flush"><strong data-value="index-state">-</strong></p>
     <p class="hint flush" data-value="index-detail">-</p>
   </div>
+  {#
+    What an operator can actually do about it, shown only once the verdict
+    is anything but current. A published release always ships an index built
+    for it, so a stale one on a running service is a build that is not a
+    release as published - and the fix is a deployment, not a button.
+  #}
+  <div class="admin-index-remedy" data-admin-index-remedy hidden>
+    <p class="hint flush">{{ t('admin.search.remedy') }}</p>
+    <pre class="code-block"><code>python scripts/build_search_index.py
+cd docker &amp;&amp; docker compose up --build -d</code></pre>
+    <p class="hint flush">{{ t('admin.search.remedy.commit') }}</p>
+  </div>
   <p class="hint section-gap flush">{{ t('admin.search.fix') }}</p>
 </section>
 
