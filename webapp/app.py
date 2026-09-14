@@ -2030,7 +2030,7 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
 
         @app.post(f"{ADMIN_PATH}/refresh", include_in_schema=False)
         async def admin_refresh(
-            request: Request, action: str = Form(default="")
+            request: Request, action: str = Form(default="", alias="source")
         ) -> Response:
             operator = admin_operator(request)
             if operator is None:
@@ -2061,7 +2061,7 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
         @app.post(f"{ADMIN_PATH}/exclusions", include_in_schema=False)
         async def admin_exclusions(
             request: Request,
-            action: str = Form(default=""),
+            action: str = Form(default="", alias="operation"),
             entry: str = Form(default=""),
         ) -> Response:
             """

@@ -462,10 +462,10 @@
     }
 
     function posts(form, show) {
-        // The attribute, not the property: every one of these forms carries a
-        // hidden control named "action", and a named control shadows the
-        // property of the same name - `form.action` would be that input
-        // element, and the POST would go to "[object HTMLInputElement]".
+        // The attribute, not the property: a control named "action" would
+        // shadow `form.action` and the POST would go to
+        // "[object HTMLInputElement]". The templates no longer name a control
+        // that way (a test holds them to it); this keeps a future one harmless.
         var where = form.getAttribute("action");
         form.addEventListener("submit", function (event) {
             event.preventDefault();

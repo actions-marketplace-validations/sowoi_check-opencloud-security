@@ -329,3 +329,32 @@ def test_the_address_is_never_among_the_remembered_settings():
     before_click = source[: source.index('apply.addEventListener("click"')]
     assert "track.value =" not in before_click
     assert ".checked =" not in before_click
+
+
+#: Properties of an HTML form that a control of the same name replaces when a
+#: script reads them. `form.action` naming an input sent a POST to
+#: `/[object HTMLInputElement]`; `form.submit` naming one makes `form.submit()`
+#: throw.
+_FORM_PROPERTIES = (
+    "action", "method", "submit", "reset", "target", "elements", "length",
+    "enctype", "encoding", "acceptCharset", "noValidate", "id", "className",
+)
+
+
+def test_no_template_names_a_control_after_a_form_property_it_would_shadow():
+    """A field called `action` or `submit` silently breaks the script driving its form."""
+    templates = Path(__file__).resolve().parents[1] / "frontend" / "templates"
+    offending = [
+        f"{path.relative_to(templates)}: name={name!r}"
+        for path in sorted(templates.rglob("*.html"))
+        for name in re.findall(
+            r'<(?:input|button|select|textarea)\b[^>]*\bname="([^"]+)"',
+            path.read_text(encoding="utf-8"),
+        )
+        if name in _FORM_PROPERTIES
+    ]
+
+    assert offending == []
+    # The pattern still sees the controls it is meant to judge.
+    admin = (templates / "admin.html").read_text(encoding="utf-8")
+    assert re.search(r'<input\b[^>]*\bname="source"', admin)

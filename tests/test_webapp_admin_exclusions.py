@@ -66,7 +66,7 @@ def _admin_settings(**overrides):
 def _exclude(client, entry: str, action: str = "add"):
     return client.post(
         "/admin/exclusions",
-        data={"action": action, "entry": entry},
+        data={"operation": action, "entry": entry},
         headers={**FORWARDED, "accept": "application/json"},
     )
 
@@ -245,11 +245,11 @@ def test_a_stranger_cannot_reach_the_control_at_all():
     """
     with TestClient(create_app(_admin_settings())) as client:
         unsigned = client.post(
-            "/admin/exclusions", data={"action": "add", "entry": "cloud.example.com"}
+            "/admin/exclusions", data={"operation": "add", "entry": "cloud.example.com"}
         )
         wrong_secret = client.post(
             "/admin/exclusions",
-            data={"action": "add", "entry": "cloud.example.com"},
+            data={"operation": "add", "entry": "cloud.example.com"},
             headers={**FORWARDED, "x-cos-admin-proxy": "c" * 48},
         )
         allowed = client.post("/api/scans", json={"target_url": TARGET})
@@ -271,7 +271,7 @@ def test_the_control_meets_the_cross_site_check_every_other_post_does():
     with TestClient(create_app(_admin_settings())) as client:
         refused = client.post(
             "/admin/exclusions",
-            data={"action": "add", "entry": "cloud.example.com"},
+            data={"operation": "add", "entry": "cloud.example.com"},
             headers={**FORWARDED, "sec-fetch-site": "cross-site"},
         )
         allowed = client.post("/api/scans", json={"target_url": TARGET})

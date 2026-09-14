@@ -67,7 +67,7 @@ def test_the_area_is_absent_rather_than_protected_when_nobody_asked_for_it():
     with TestClient(create_app(settings())) as client:
         assert client.get("/admin").status_code == 404
         assert client.get("/admin/state").status_code == 404
-        assert client.post("/admin/refresh", data={"action": "schedule"}).status_code == 404
+        assert client.post("/admin/refresh", data={"source": "schedule"}).status_code == 404
         assert client.get("/admin/audit/stream").status_code == 404
 
 
@@ -459,7 +459,7 @@ def test_an_action_nobody_offers_is_refused_rather_than_attempted():
     with TestClient(create_app(_admin_settings())) as client:
         answer = client.post(
             "/admin/refresh",
-            data={"action": "rm -rf"},
+            data={"source": "rm -rf"},
             headers={**FORWARDED, "Accept": "application/json"},
         )
 
@@ -476,7 +476,7 @@ def test_a_refresh_meets_the_cross_site_check_every_other_post_does():
     with TestClient(create_app(_admin_settings())) as client:
         answer = client.post(
             "/admin/refresh",
-            data={"action": "schedule"},
+            data={"source": "schedule"},
             headers={**FORWARDED, "sec-fetch-site": "cross-site"},
         )
 
@@ -488,12 +488,12 @@ def test_a_refresh_cannot_be_held_down_against_somebody_elses_server():
     with TestClient(create_app(_admin_settings())) as client:
         first = client.post(
             "/admin/refresh",
-            data={"action": "schedule"},
+            data={"source": "schedule"},
             headers={**FORWARDED, "Accept": "application/json"},
         ).json()
         second = client.post(
             "/admin/refresh",
-            data={"action": "schedule"},
+            data={"source": "schedule"},
             headers={**FORWARDED, "Accept": "application/json"},
         ).json()
 
@@ -507,12 +507,12 @@ def test_the_two_refreshes_do_not_hold_each_other_up():
     with TestClient(create_app(_admin_settings())) as client:
         client.post(
             "/admin/refresh",
-            data={"action": "schedule"},
+            data={"source": "schedule"},
             headers={**FORWARDED, "Accept": "application/json"},
         )
         other = client.post(
             "/admin/refresh",
-            data={"action": "advisories"},
+            data={"source": "advisories"},
             headers={**FORWARDED, "Accept": "application/json"},
         ).json()
 
@@ -653,7 +653,7 @@ def test_a_refresh_that_has_stopped_landing_says_which_failure_it_was(monkeypatc
     def _refresh(client):
         client.post(
             "/admin/refresh",
-            data={"action": "schedule"},
+            data={"source": "schedule"},
             headers={**FORWARDED, "Accept": "application/json"},
         )
         return client.get("/admin/state", headers=FORWARDED).json()["referenceData"]
@@ -794,7 +794,7 @@ def test_the_search_index_is_reported_and_never_rebuilt():
     # refreshes and the exclusions (ADR 0044, the one thing here that writes),
     # and a third kind of write should have to come past this line. "remove"
     # is absent only because this deployment has excluded nothing yet.
-    offered = set(re.findall(r'name="action" value="(\w+)"', page))
+    offered = set(re.findall(r'name="(?:source|operation)" value="(\w+)"', page))
     assert offered == {"schedule", "advisories", "add"}
 
 
@@ -940,26 +940,44 @@ def _usable_sources(monkeypatch):
     )
 
 
-def test_the_action_buttons_post_to_the_path_the_form_names():
-    """A named control shadows the form property of the same name.
+def test_the_action_buttons_post_to_the_path_the_form_names(monkeypatch):
+    """Every scripted button reaches the route its form names, with its own fields.
 
-    Every one of these forms carries `<input name="action">` to say which
-    source to refresh, and a control named `action` is reachable as
-    `form.action` - so the property is that input element, not the path, and
-    `fetch(form.action)` posted to `/[object HTMLInputElement]` and answered
-    404. The attribute is the only reading of these forms that survives the
-    hidden field they need.
+    The script once read `form.action`, which a hidden control named `action`
+    had shadowed, and posted to `/[object HTMLInputElement]` - a 404 that left
+    the page saying nothing. Checking the script's text could not catch a
+    rewrite of the same mistake, so this posts what each form would post.
     """
+    _usable_sources(monkeypatch)
+    json_headers = {**FORWARDED, "Accept": "application/json"}
     with TestClient(create_app(_admin_settings())) as client:
         page = client.get("/admin", headers=FORWARDED).text
-        script = client.get("/static/js/admin.js").text
+        forms = re.findall(
+            r'<form method="post" action="([^"]+)" data-admin-(?:action|probe)>(.*?)</form>',
+            page,
+            re.DOTALL,
+        )
+        answers = [
+            client.post(
+                path,
+                data=dict(re.findall(r'name="(\w+)" value="([^"]*)"', body)),
+                headers=json_headers,
+            )
+            for path, body in forms
+        ]
 
-    # The hidden field that causes the shadowing is still how the form speaks.
-    assert '<input type="hidden" name="action" value="schedule">' in page
-    assert '<input type="hidden" name="action" value="advisories">' in page
-    # And the script reads the attribute, never the clobbered property.
-    assert 'form.getAttribute("action")' in script
-    assert "fetch(form.action" not in script
+    # Both refreshes and the dry run: a form the pattern stopped matching
+    # would otherwise pass by posting nothing.
+    assert len(forms) == 3
+    for answer in answers:
+        assert answer.status_code == 200, answer.text
+        assert answer.json()["state"] not in {"failed", "cooldown"}
+    # And a request still naming the old field is refused, not quietly obeyed.
+    with TestClient(create_app(_admin_settings())) as client:
+        stale = client.post(
+            "/admin/refresh", data={"action": "schedule"}, headers=json_headers
+        )
+    assert stale.status_code == 422
 
 
 def test_the_dry_run_reads_both_sources_and_stores_none_of_it(monkeypatch):
@@ -1025,7 +1043,7 @@ def test_the_dry_run_is_held_back_on_a_key_of_its_own(monkeypatch):
         first = client.post("/admin/probe", headers=json_headers).json()
         again = client.post("/admin/probe", headers=json_headers).json()
         refresh = client.post(
-            "/admin/refresh", data={"action": "schedule"}, headers=json_headers
+            "/admin/refresh", data={"source": "schedule"}, headers=json_headers
         ).json()
 
     assert first["state"] == "probed"

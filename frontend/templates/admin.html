@@ -257,7 +257,7 @@
   <p class="admin-outcome" data-outcome="failed">{{ t('admin.exclusions.unreadable') }}</p>
   {% else %}
   <form class="admin-exclusion-add" method="post" action="/admin/exclusions">
-    <input type="hidden" name="action" value="add">
+    <input type="hidden" name="operation" value="add">
     <label class="admin-exclusion-label" for="admin-exclusion-entry">
       {{ t('admin.exclusions.add.label') }}
     </label>
@@ -284,7 +284,7 @@
     <li class="admin-exclusion" data-source="stored">
       <span class="admin-exclusion-entry">{{ entry }}</span>
       <form method="post" action="/admin/exclusions">
-        <input type="hidden" name="action" value="remove">
+        <input type="hidden" name="operation" value="remove">
         <input type="hidden" name="entry" value="{{ entry }}">
         <button class="btn btn-quiet" type="submit">{{ t('admin.exclusions.remove') }}</button>
       </form>
@@ -315,10 +315,13 @@
     scripting - the page simply reloads with the outcome - and admin.js only
     turns the reload into an in-place answer. The cross-site check every
     other POST here meets applies to these too.
+
+    The field is "source", never "action": a control named after a form
+    property (action, method, submit, ...) shadows that property in scripts.
   #}
   <div class="admin-actions">
     <form method="post" action="/admin/refresh" data-admin-action>
-      <input type="hidden" name="action" value="schedule">
+      <input type="hidden" name="source" value="schedule">
       <button class="btn btn-primary" type="submit">
         {{ t('admin.actions.schedule') }}
       </button>
@@ -326,7 +329,7 @@
     </form>
 
     <form method="post" action="/admin/refresh" data-admin-action>
-      <input type="hidden" name="action" value="advisories">
+      <input type="hidden" name="source" value="advisories">
       <button class="btn btn-primary" type="submit">
         {{ t('admin.actions.advisories') }}
       </button>

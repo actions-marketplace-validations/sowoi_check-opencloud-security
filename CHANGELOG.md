@@ -22,6 +22,17 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   nothing. It now reads the form's `action` attribute. The dry-run probe
   beside them, which has no such field, was unaffected.
 
+### Changed
+
+- **The operator area's forms no longer name a field `action`.** A refresh
+  now posts `source=schedule|advisories` to `/admin/refresh`, and an exclusion
+  posts `operation=add|remove` to `/admin/exclusions`; the old `action` field
+  is refused with 422. Only a script posting to these routes by hand needs
+  the new names - the JSON answers still carry `action`. A test now keeps
+  every template from naming a control after a form property it would shadow
+  (`action`, `method`, `submit`, ...), and the button test posts each form's
+  own fields to its own path instead of reading the script's text.
+
 ## [1.22.6] - 2026-09-13
 
 ### Security
