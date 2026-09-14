@@ -798,7 +798,12 @@ print(result["rating"], result["version"], result["extraChecks"])
 `scan()` raises `ScanError` when the instance cannot be identified as an
 OpenCloud - an unreachable `/status.php`, a non-JSON response, a JSON document
 without any recognisable version field, or one naming ownCloud or Nextcloud as
-the product.
+the product. Every case where something *answered* raises the subclass
+`NotOpenCloud`. By default an HTTPS answer like that is retried without
+certificate verification and then over plain HTTP, so a monitoring check finds
+the endpoint that works; `ScannerSettings(stop_when_not_opencloud=True)` stops
+at the first such answer instead, which is what the web application sets for a
+host a stranger named.
 
 The document also carries `addresses`, the IPv4 and IPv6 the hostname resolved
 to while the scan ran:

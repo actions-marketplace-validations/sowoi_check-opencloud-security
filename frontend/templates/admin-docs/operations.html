@@ -686,7 +686,7 @@ anything else refuses to start.</p>
 </tr>
 </tbody>
 </table>
-<p>Beside the overview there are two more places, reached from the tab strip at
+<p>Beside the overview there are four more places, reached from the tab strip at
 the top of every page in the area:</p>
 <table>
 <thead>
@@ -697,6 +697,14 @@ the top of every page in the area:</p>
 </thead>
 <tbody>
 <tr>
+<td>Configuration</td>
+<td>Every <code>COS_WEB_*</code> variable the web service reads, grouped, with the value <strong>in effect</strong> - after parsing, clamping and fallbacks, so a malformed value shows the default it fell back to - whether the environment set it or the default applies, and the documented default and description from the table in <code>docs/webapp.md</code>. A token, key, salt or the Redis password is only ever <strong>set</strong> or <strong>not set</strong>. <code>COS_WEB_*</code> names the service does not read are listed by name, without their values, because a misspelt variable otherwise leaves the default in force with nothing saying so. It is this web process's environment: not OpenCloud's, and not the worker's, which reads the same variables in its own container</td>
+</tr>
+<tr>
+<td>Rules</td>
+<td>How a grade is decided and every rule enforced against a request, with the numbers this deployment runs with: the grade scale and the scanner's severity ceilings, the end-of-life and track overrides, whether extra checks count, how many waivers a visitor may choose and the reference data rated against; then the per-client, daily and per-target limits, the probe block with its strikes and escalation (1 h → 6 h → 24 h by default), the SSRF guard's refused ranges, names and wildcard DNS services, approval mode, the flags every scan is built with, and the credential and refresh-button limits. Each rule says <strong>Enforced</strong> or <strong>Off</strong> and names the <code>COS_WEB_*</code> variables behind it. Every number and list is read from the running settings and from the constants the enforcing code uses (<code>webapp/rules.py</code>), so the tab cannot describe a limit the service no longer has; <code>tests/test_webapp_admin_rules.py</code> changes settings and looks for the change on the page</td>
+</tr>
+<tr>
 <td>Architecture</td>
 <td><code>ARCHITECTURE.md</code> — how the repository is put together and why the seams are where they are</td>
 </tr>
@@ -706,13 +714,17 @@ the top of every page in the area:</p>
 </tr>
 </tbody>
 </table>
-<p>Both are generated into <code>frontend/templates/admin-docs/</code> at build time by
+<p>The two documents are generated into <code>frontend/templates/admin-docs/</code> at build time by
 <code>scripts/build_frontend_documentation.py</code>, from
 <code>OPERATOR_DOCUMENTATION_PAGES</code> rather than the public manifest, so no
 Markdown is parsed at runtime and neither document reaches <code>/documentation</code>,
 the sitemap or the search index. They are English only: a half-translated
 operations note is worse than an English one that says which file it came
-from, which the line above each of them does.</p>
+from, which the line above each of them does. The configuration tab's
+descriptions come from the same script, which extracts the <code>docs/webapp.md</code>
+table into <code>webapp/environment_reference.py</code>; its <code>--check</code> in CI fails when
+the two disagree, and <code>tests/test_webapp_admin_configuration.py</code> fails when
+a variable is read, listed or documented in one place and not the others.</p>
 <p>What it deliberately cannot do: name a target, a uuid, a result or a client
 address. The statistics are counts and settings, and the audit view shows the
 pseudonymised records the log already wrote - a fingerprint is a truncated
@@ -883,7 +895,7 @@ with the uuid the reporter gives you, within the result TTL.</p>
 </tr>
 <tr>
 <td>Rate limits hitting legitimate users</td>
-<td><code>COS_WEB_IP_RATE_LIMIT</code> / <code>COS_WEB_IP_RATE_WINDOW</code> / <code>COS_WEB_TARGET_COOLDOWN</code>; behind a proxy also <code>COS_WEB_TRUST_FORWARDED_FOR</code> and <code>COS_WEB_TRUSTED_PROXY_HOPS</code></td>
+<td><code>COS_WEB_IP_RATE_LIMIT</code> / <code>COS_WEB_IP_RATE_WINDOW</code> / <code>COS_WEB_TARGET_COOLDOWN</code>; an hour-or-longer 429 is the probe block (<code>COS_WEB_PROBE_*</code>, <code>rate_limit_probe</code> in the audit trail, counted on the <strong>Abuse guard</strong> tile) or the daily cap (<code>COS_WEB_DAILY_SCAN_LIMIT</code>, <code>rate_limit_daily</code>); a 403 is approval mode (<code>COS_WEB_REQUIRE_APPROVAL</code>); behind a proxy also <code>COS_WEB_TRUST_FORWARDED_FOR</code> and <code>COS_WEB_TRUSTED_PROXY_HOPS</code></td>
 </tr>
 <tr>
 <td>Scans of internal hosts refused</td>

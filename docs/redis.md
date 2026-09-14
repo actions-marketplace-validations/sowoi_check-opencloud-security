@@ -62,6 +62,12 @@ empty Redis loses nothing except results whose owners can run the scan again.
 | `cos:web:worker:heartbeat` | That a worker is alive, for `/healthz` | Refreshed by the worker |
 | `cos:web:rl:client:{fingerprint}` | The per-client request count | `COS_WEB_IP_RATE_WINDOW` |
 | `cos:web:rl:target:{fingerprint}` | The per-target cooldown | `COS_WEB_TARGET_COOLDOWN` |
+| `scan:{uuid}:prober` | The client fingerprint a scan's outcome counts against, until a worker starts it | `COS_WEB_RESULT_TTL` at most |
+| `cos:web:rl:probe:{fingerprint}` | Strikes against one client network | `COS_WEB_PROBE_WINDOW` |
+| `cos:web:rl:blocked:{fingerprint}` | A client network blocked for probing | `COS_WEB_PROBE_BLOCK`, growing to `COS_WEB_PROBE_BLOCK_MAX` |
+| `cos:web:rl:blocks:{fingerprint}` | How many blocks a network earned recently, for escalation | The last block plus `COS_WEB_PROBE_REPEAT_WINDOW` |
+| `cos:web:rl:daily:{fingerprint}` | The per-client daily count | A day |
+| `cos:web:stats:{blocks,strikes,daily}:{YYYYMMDD}` | Counts for the operator's area: blocks started, strikes, daily caps reached. A number per day, nothing else | Eight days |
 | `cos:web:schedule:document`, `cos:web:schedule:checked` | The release lifecycle re-read once a day | Until the next refresh |
 | `cos:web:advisories:document`, `cos:web:advisories:checked` | The advisory database re-read once a day | Until the next refresh |
 

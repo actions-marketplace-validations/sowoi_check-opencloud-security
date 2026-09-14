@@ -280,6 +280,44 @@ def test_the_control_meets_the_cross_site_check_every_other_post_does():
     assert allowed.status_code == 202
 
 
+def test_a_sibling_subdomain_cannot_post_the_operators_session_into_the_area():
+    """
+    ``same-site`` is not ``same-origin``, and a sign-in cookie is sent on both.
+
+    A page on the identity provider's host, or on an OpenCloud instance under
+    the same domain, is same-site. Accepting it - as the public form rightly
+    does - would let any of them edit the exclusions with the operator's
+    session.
+    """
+    configured = _admin_settings()
+    with TestClient(create_app(configured)) as client:
+        refused = client.post(
+            "/admin/exclusions",
+            data={"operation": "add", "entry": "cloud.example.com"},
+            headers={
+                **FORWARDED,
+                "sec-fetch-site": "same-site",
+                "origin": "https://files.example.com",
+            },
+        )
+        from_another_host = client.post(
+            "/admin/exclusions",
+            data={"operation": "add", "entry": "cloud.example.com"},
+            headers={
+                "x-cos-admin-proxy": SECRET,
+                "x-authentik-username": OPERATOR,
+                "origin": "https://files.example.com",
+            },
+        )
+        stored = asyncio.run(read_exclusions(backend(), configured)).stored
+        allowed = _exclude(client, "cloud.example.com")
+
+    assert refused.status_code == 403
+    assert from_another_host.status_code == 403
+    assert "cloud.example.com" not in stored
+    assert allowed.status_code == 200
+
+
 def test_an_action_the_area_does_not_offer_is_refused():
     """The two verbs are add and remove; anything else is a caller guessing."""
     with TestClient(create_app(_admin_settings())) as client:

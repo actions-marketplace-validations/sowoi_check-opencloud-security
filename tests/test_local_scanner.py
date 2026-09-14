@@ -1490,3 +1490,66 @@ def test_a_policy_that_publishes_no_character_classes_reports_no_complexity_find
 
     assert "passwordPolicyComplexity" not in result["hardenings"]
     assert result["hardenings"]["passwordPolicyEnforced"] is False
+
+
+def _count_status_requests(monkeypatch, failure: ScanError) -> list[str]:
+    """Make every status.php read fail with ``failure``, recording where it was sent."""
+    asked: list[str] = []
+
+    def refuse(probe):
+        asked.append(probe.base_url)
+        raise failure
+
+    monkeypatch.setattr(scanner_module, "_fetch_status", refuse)
+    return asked
+
+
+def test_a_host_that_answers_as_something_else_is_asked_once_when_told_to_stop(monkeypatch):
+    """
+    A stranger's submission must buy one request against a host that is not OpenCloud.
+
+    The unverified HTTPS retry would read the same answer again, and port 80
+    is somewhere nobody asked this service to look.
+    """
+    asked = _count_status_requests(
+        monkeypatch, scanner_module.NotOpenCloud("status.php did not return JSON")
+    )
+
+    with pytest.raises(scanner_module.NotOpenCloud):
+        scan("opencloud.example.com", settings=ScannerSettings(stop_when_not_opencloud=True))
+
+    assert asked == ["https://opencloud.example.com"]
+
+
+def test_the_plugin_still_looks_for_the_endpoint_that_works(monkeypatch):
+    """Monitoring one's own instance keeps the unverified and plain HTTP attempts."""
+    asked = _count_status_requests(
+        monkeypatch, scanner_module.NotOpenCloud("status.php did not return JSON")
+    )
+
+    with pytest.raises(ScanError):
+        scan("opencloud.example.com", settings=ScannerSettings())
+
+    assert asked == [
+        "https://opencloud.example.com",
+        "https://opencloud.example.com",
+        "http://opencloud.example.com",
+    ]
+
+
+def test_silence_is_still_worth_asking_again_another_way(monkeypatch):
+    """A host that did not answer at all may only lack a trusted certificate."""
+    asked = _count_status_requests(monkeypatch, ScanError("status.php is unreachable"))
+
+    with pytest.raises(ScanError):
+        scan("opencloud.example.com", settings=ScannerSettings(stop_when_not_opencloud=True))
+
+    assert len(asked) == 3
+
+
+def test_an_answer_that_is_not_opencloud_is_its_own_kind_of_scan_error():
+    """The web service tells silence from a foreign answer by this type alone."""
+    behaviour = InstanceBehaviour(status_payload={"productname": "Nextcloud", "version": "29.0.0"})
+
+    with pytest.raises(scanner_module.NotOpenCloud):
+        run_scan(behaviour)

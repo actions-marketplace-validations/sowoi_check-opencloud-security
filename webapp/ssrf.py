@@ -27,6 +27,13 @@ ADR 0043.
 The scanner appends only paths it knows to that base address and takes no
 instruction from the submission about *what* to request.
 
+Names built to point anywhere are refused by name: wildcard DNS services that
+turn ``10.0.0.1.nip.io`` into ``10.0.0.1``, and rebinding services whose
+names answer differently on every lookup. A public address reached through
+one is still the same address typed out, so nothing legitimate is lost - and
+a submission's name is looked up twice more at once, refused when the two
+answers share nothing.
+
 DNS rebinding is answered by resolving twice: once when the request is
 accepted, and again in the worker immediately before the scan. That closes the
 long window between the two, which is the one an attacker can actually aim at.
@@ -74,6 +81,26 @@ BLOCKED_HOSTNAMES = frozenset(
 )
 
 BLOCKED_SUFFIXES = (".localhost", ".local", ".internal", ".localdomain")
+
+# Services that answer any name under them with whatever address the name
+# spells out, or with a different address on each lookup. None of them hosts
+# an OpenCloud instance; all of them exist to point a name somewhere its
+# reader did not expect. The public address behind one can still be scanned
+# by typing it.
+WILDCARD_DNS_SUFFIXES = (
+    ".nip.io",
+    ".sslip.io",
+    ".xip.io",
+    ".traefik.me",
+    ".localtest.me",
+    ".lvh.me",
+    ".vcap.me",
+    ".lacolhost.com",
+    ".localhost.direct",
+    ".local.gd",
+    ".rbndr.us",
+    ".1u.ms",
+)
 
 # Link-local already covers 169.254.169.254, but naming the metadata endpoints
 # makes the refusal message useful and survives a future carve-out.
@@ -246,6 +273,22 @@ def ensure_blocklist_ready(entries: Iterable[str]) -> None:
             "An entry that does not parse excludes nothing, and a deployment "
             "would go on scanning what it was told to leave alone."
         )
+
+
+#: The refusals that say something about the person asking rather than about
+#: what they typed: an address this service is never pointed at, an operator's
+#: exclusion, a name built to mislead. Each counts towards the probe block; a
+#: typo, a name that does not resolve or a missing scheme does not.
+SUSPICIOUS_REJECTIONS = frozenset(
+    {
+        "error.target.internal",
+        "error.target.private",
+        "error.target.blocked",
+        "error.target.wildcard_dns",
+        "error.target.unstable",
+        "error.target.not_approved",
+    }
+)
 
 
 class TargetRejected(ValueError):
@@ -424,6 +467,12 @@ def _address_public(address: ipaddress.IPv4Address | ipaddress.IPv6Address) -> b
     )
 
 
+def _wildcard_dns(hostname: str) -> bool:
+    return any(
+        hostname == suffix[1:] or hostname.endswith(suffix) for suffix in WILDCARD_DNS_SUFFIXES
+    )
+
+
 def validate_target(
     raw: str,
     *,
@@ -431,6 +480,7 @@ def validate_target(
     allowed_hosts: tuple[str, ...] = (),
     blocked_targets: tuple[str, ...] = (),
     address_only: bool = True,
+    check_consistency: bool = False,
 ) -> Target:
     """
     Turn what the visitor typed into a target that is safe to connect to.
@@ -445,6 +495,10 @@ def validate_target(
 
     ``blocked_targets`` is the operator's exclusion list and is the one rule
     neither ``allow_private`` nor ``allowed_hosts`` can open.
+
+    ``check_consistency`` resolves the name a second time and refuses it when
+    the answers share no address. A submission asks for it; the worker and
+    the redirect guard do not, because they pin what they resolved.
     """
     scheme, hostname, port, path = _split(raw, address_only=address_only)
     exempt = _hostname_allowed(hostname, allowed_hosts)
@@ -464,6 +518,13 @@ def validate_target(
             "error.target.internal",
         )
 
+    if not (allow_private or exempt) and _wildcard_dns(hostname):
+        raise _reject(
+            "That name belongs to a service that points names at any address. "
+            "Enter the instance's own hostname, or its address.",
+            "error.target.wildcard_dns",
+        )
+
     try:
         literal: ipaddress.IPv4Address | ipaddress.IPv6Address | None = (
             ipaddress.ip_address(hostname.strip("[]"))
@@ -476,15 +537,29 @@ def validate_target(
     else:
         addresses = _resolve(hostname)
 
+    # Every address from both answers goes through the checks below, so a
+    # name that answers public first and private second is refused for the
+    # private one even when the two answers overlap.
+    checked = list(addresses)
+    if literal is None and check_consistency and not (allow_private or exempt):
+        again = _resolve(hostname)
+        if set(addresses).isdisjoint(again):
+            raise _reject(
+                "That hostname answers with different addresses each time it "
+                "is looked up, so this service cannot tell what it would scan.",
+                "error.target.unstable",
+            )
+        checked.extend(address for address in again if address not in addresses)
+
     # Before the public-address rules, and outside the exemptions they honour:
     # an excluded range stays excluded for an allowed host and on a deployment
     # that scans its own private estate.
-    for address in addresses:
+    for address in checked:
         if excluded.blocks_address(address):
             raise _reject(EXCLUDED, "error.target.blocked")
 
     if not (allow_private or exempt):
-        for address in addresses:
+        for address in checked:
             if not _address_public(address):
                 raise _reject(
                     "That address points into a private, loopback or "

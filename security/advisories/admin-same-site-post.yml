@@ -1,0 +1,58 @@
+# A security advisory record. See AGENTS.md, "Security advisories".
+#
+# One file per bullet under a `### Security` heading in CHANGELOG.md.
+# `state` is the decision; `verified` is the evidence it rests on.
+
+slug: admin-same-site-post
+state: draft
+changelog_version: "1.23.0"
+changelog_entry: "The operator area accepts a write only from its own origin."
+shipped: true
+severity: low
+cwe_ids:
+  - CWE-352
+package: web
+introduced: "1.19.0"
+fixed: "1.23.0"
+summary: >-
+  The operator area's POSTs accepted same-site requests, letting a page on a
+  sibling subdomain act with the operator's sign-in
+verified: |
+  git show v1.22.7:webapp/app.py - admin_refresh, admin_exclusions and
+  admin_probe guard with cross_site_post, which returns True only for
+  Sec-Fetch-Site: cross-site. The /admin/refresh POST is present from v1.19.0,
+  /admin/exclusions from v1.22.0. Against v1.22.7 a POST to /admin/exclusions
+  with the outpost's headers and Sec-Fetch-Site: same-site answers 200 and
+  stores the entry.
+description: |
+  ### Impact
+
+  Only deployments that turned on the operator area (`COS_WEB_ADMIN_ENABLED`)
+  are affected.
+
+  The area sits behind an identity provider's forward auth, so a signed-in
+  operator's browser carries a session cookie for it. Its three POSTs refused
+  a request only when `Sec-Fetch-Site` said `cross-site` - the check the public
+  scan form uses - and a cookie is sent on a `same-site` request as well. A
+  page on any other host under the same registrable domain (the identity
+  provider's own host, an OpenCloud instance, anything else the organisation
+  serves beneath it) could therefore submit a form to the area while the
+  operator was signed in, and the service acted on it as the operator.
+
+  From 1.22.0 that means adding or withdrawing an exclusion: refusing scans of
+  an instance, or scanning again one somebody asked to be left alone. From
+  1.19.0 it also means pressing the release-schedule and advisory refreshes,
+  which are rate limited and fetch only fixed sources. Nothing in the area can
+  read scan results, and the attacker must already control content on a
+  same-site origin.
+
+  ### Patches
+
+  Fixed in **1.23.0**. A POST to the area now needs `Sec-Fetch-Site:
+  same-origin` (or `none`), or, where a browser sends no such header, an
+  `Origin` naming this service.
+
+  ### Workarounds
+
+  Serve the scanner under a registrable domain of its own, so nothing else is
+  same-site with it, or leave the operator area off.

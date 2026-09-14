@@ -64,6 +64,11 @@ def scanner_settings_for(
         # dozen requests and a demo sign-in per node of somebody else's pool
         # (ADR 0042). Spelled out so no default can change it.
         check_all_addresses=False,
+        # A host that answered with something other than OpenCloud is not
+        # asked again without verification or over port 80: one request is
+        # all a stranger's submission buys against a host that is not ours
+        # to scan.
+        stop_when_not_opencloud=True,
         concurrency=settings.scan_concurrency,
         ignore_hardenings=ignore_hardenings,
         redirect_guard=redirect_guard(

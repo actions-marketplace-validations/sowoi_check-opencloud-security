@@ -170,8 +170,13 @@ def _from_proxy(request: Request, settings: WebSettings) -> bool:
         return False
     presented = request.headers.get(ADMIN_PROXY_HEADER, "")
     # Constant time, because this is a secret being compared and the answer
-    # is worth guessing at.
-    return hmac.compare_digest(presented, expected)
+    # is worth guessing at. Bytes, because a header can carry characters that
+    # are not ASCII and comparing those as str raises - a 500 where an area
+    # that is off answers 404, which tells a prober the area is there.
+    return hmac.compare_digest(
+        presented.encode("utf-8", "surrogateescape"),
+        expected.encode("utf-8", "surrogateescape"),
+    )
 
 
 def _permitted(username: str, settings: WebSettings) -> bool:

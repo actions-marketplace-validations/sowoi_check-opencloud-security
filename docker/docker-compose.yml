@@ -51,6 +51,26 @@ services:
       COS_WEB_IP_RATE_LIMIT: "10"
       COS_WEB_IP_RATE_WINDOW: "60"
       COS_WEB_TARGET_COOLDOWN: "300"
+      # Scans from one client address that may find no OpenCloud - nothing
+      # answering, something else answering - inside the window before that
+      # address is blocked, and for how long. The same host again counts again.
+      # The worker counts and this service refuses, so both need the same
+      # values. COS_WEB_PROBE_LIMIT "0" disables the block. A block earned
+      # again within the repeat window lasts six times longer, up to the max.
+      COS_WEB_PROBE_LIMIT: "5"
+      COS_WEB_PROBE_WINDOW: "300"
+      COS_WEB_PROBE_BLOCK: "3600"
+      COS_WEB_PROBE_BLOCK_MAX: "86400"
+      COS_WEB_PROBE_REPEAT_WINDOW: "86400"
+      # How much of an address counts as one client, the daily cap per client,
+      # and the double DNS lookup that refuses names built to rebind.
+      COS_WEB_PROBE_IPV4_PREFIX: "24"
+      COS_WEB_CLIENT_IPV6_PREFIX: "64"
+      COS_WEB_DAILY_SCAN_LIMIT: "50"
+      COS_WEB_DNS_CONSISTENCY_CHECK: "true"
+      # Scan approved instances only: COS_WEB_APPROVED_TARGETS, or a TXT record
+      # _check-opencloud-security.<host> naming this service (COS_WEB_APPROVAL_DNS).
+      COS_WEB_REQUIRE_APPROVAL: "false"
       # Targets one POST /api/scans/batch may carry. A batch is a convenience,
       # not a discount: every target still counts against the client limit and
       # still claims its own cooldown.
@@ -237,6 +257,13 @@ services:
       COS_WEB_MAX_WORKERS: "5"
       COS_WEB_SCAN_CONCURRENCY: "4"
       COS_WEB_SCAN_TIMEOUT: "15"
+      # The same probe guard the web service reads: the worker is where a scan
+      # turns out not to be OpenCloud, so it is what counts and imposes the block.
+      COS_WEB_PROBE_LIMIT: "5"
+      COS_WEB_PROBE_WINDOW: "300"
+      COS_WEB_PROBE_BLOCK: "3600"
+      COS_WEB_PROBE_BLOCK_MAX: "86400"
+      COS_WEB_PROBE_REPEAT_WINDOW: "86400"
       COS_WEB_JOB_TIMEOUT: "180"
       # Refuse private, loopback and link-local targets. Turn this on only for
       # a deployment that is meant to scan its own network.

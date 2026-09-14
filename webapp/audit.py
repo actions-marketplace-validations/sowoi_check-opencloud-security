@@ -77,6 +77,12 @@ REASON_TARGET_REJECTED = "target_rejected"
 REASON_EXCLUSIONS_UNREADABLE = "exclusions_unreadable"
 REASON_RATE_LIMIT_CLIENT = "rate_limit_client"
 REASON_RATE_LIMIT_TARGET = "rate_limit_target"
+#: Refused because the client's recent scans kept finding no OpenCloud.
+REASON_RATE_LIMIT_PROBE = "rate_limit_probe"
+#: Refused because the client's daily cap was spent.
+REASON_RATE_LIMIT_DAILY = "rate_limit_daily"
+#: Refused because the deployment scans approved targets only.
+REASON_TARGET_NOT_APPROVED = "target_not_approved"
 REASON_BATCH_TOO_LARGE = "batch_too_large"
 REASON_PURGE_UNAUTHORISED = "purge_unauthorised"
 REASON_RATE_LIMIT_PURGE = "rate_limit_purge"

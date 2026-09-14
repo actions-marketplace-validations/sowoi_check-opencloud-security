@@ -241,6 +241,42 @@ def test_a_cross_site_submission_never_reaches_the_rate_limiter():
         assert allowed.status_code == 202
 
 
+def test_a_cross_site_batch_is_refused_before_anything_is_queued():
+    """
+    A ``text/plain`` form needs no preflight and the batch body is parsed as
+    JSON whatever its type, so without the check a page anywhere could queue
+    scans from a borrowed browser - and spend its allowance doing it.
+    """
+    with client(ip_rate_limit=1, ip_rate_window=60) as browser:
+        refused = browser.post(
+            "/api/scans/batch",
+            content='{"targets":["instance.example.com","x="]}',
+            headers={
+                "Content-Type": "text/plain",
+                "Sec-Fetch-Site": "cross-site",
+                "Origin": "https://evil.example",
+            },
+        )
+        assert refused.status_code == 403
+
+        allowed = browser.post(
+            "/api/scans/batch", json={"targets": ["instance.example.com"]}
+        )
+        assert allowed.status_code == 202
+
+
+def test_a_same_origin_batch_is_still_accepted():
+    """The negative case above must not have closed the batch to this site."""
+    with client() as browser:
+        response = browser.post(
+            "/api/scans/batch",
+            json={"targets": ["instance.example.com"]},
+            headers={"Sec-Fetch-Site": "same-origin", "Origin": "http://testserver"},
+        )
+
+    assert response.status_code == 202
+
+
 def test_a_cross_site_language_switch_does_not_set_the_cookie():
     """Changing what somebody's next visit says is still doing it to them."""
     with client() as browser:

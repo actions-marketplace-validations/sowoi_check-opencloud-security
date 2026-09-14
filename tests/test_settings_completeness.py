@@ -79,6 +79,11 @@ PROGRAMMATIC_ONLY: dict[str, str] = {
         "the addresses the web application already validated, handed to the "
         "scan so it dials those and not whatever DNS answers the second time."
     ),
+    "stop_when_not_opencloud": (
+        "only the web application sets it: a host a stranger named that "
+        "answered as something else gets no further request. An operator "
+        "monitoring their own instance wants the endpoint that works found."
+    ),
 }
 
 

@@ -135,6 +135,22 @@ def test_the_identity_headers_are_worthless_without_the_outpost_secret():
     assert wrong.status_code == 404
 
 
+def test_a_secret_that_is_not_ascii_is_a_wrong_secret_rather_than_an_error():
+    """
+    Comparing non-ASCII ``str`` values raises, which answered 500.
+
+    An area that is off answers 404 to the same request, so the difference
+    told a prober from outside that the area was switched on.
+    """
+    presented = {"x-cos-admin-proxy": "é".encode("latin-1"), "x-authentik-username": OPERATOR}
+    with TestClient(create_app(_admin_settings()), raise_server_exceptions=False) as client:
+        refused = client.get("/admin", headers=presented)
+        admitted = client.get("/admin", headers=FORWARDED)
+
+    assert refused.status_code == 404
+    assert admitted.status_code == 200
+
+
 def test_signing_in_is_not_the_same_as_being_on_the_guest_list():
     """The request really came through the outpost; the person is still not an operator."""
     with TestClient(create_app(_admin_settings())) as client:
@@ -549,6 +565,37 @@ def test_the_statistics_name_nothing_anybody_scanned():
     # And the readings it does carry are there.
     assert "queueDepth" in body
     assert "ipRateLimit" in body
+
+
+def test_the_guard_tile_counts_blocks_without_naming_who_was_blocked():
+    """
+    An operator should see the guard working, and never whom it caught.
+
+    The counts move when a network is blocked; the fingerprint the block is
+    keyed on - the closest thing the store has to a client - is not in the
+    document the tile reads.
+    """
+    configured = _admin_settings(trust_forwarded_for=True, probe_limit=2)
+    app = create_app(configured)
+    with TestClient(app) as client:
+        before = client.get("/admin/state", headers=FORWARDED).json()["guard"]
+        for _ in range(2):
+            client.post(
+                "/api/scans",
+                json={"target_url": "http://10.0.0.1"},
+                headers={"X-Forwarded-For": "203.0.113.5"},
+            )
+        body = client.get("/admin/state", headers=FORWARDED).text
+
+    guard = json.loads(body)["guard"]
+    keys = asyncio.run(backend().keys_matching("cos:web:rl:blocked:*"))
+    assert before["activeBlocks"] == 0
+    assert guard["activeBlocks"] == 1
+    assert guard["blocksWeek"] == 1
+    assert guard["strikesToday"] == 2
+    assert keys
+    assert all(key.rsplit(":", 1)[1] not in body for key in keys)
+    assert "203.0.113" not in body
 
 
 def test_a_store_that_is_gone_is_not_reported_as_a_worker_that_died(monkeypatch):

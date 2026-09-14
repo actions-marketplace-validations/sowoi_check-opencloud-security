@@ -335,6 +335,11 @@ somebody could.</p>
 <td>Probe extra ports. Off in public: it is a port scan of somebody else's host</td>
 </tr>
 <tr>
+<td><code>COS_WEB_IPV6_ENABLED</code></td>
+<td><code>false</code></td>
+<td>Whether this service has outbound IPv6 of its own. Off, IPv6 addresses are never dialled and the IPv4/IPv6 TLS comparison is skipped, so a missing route on the scanning host is not reported as a fault of the instance</td>
+</tr>
+<tr>
 <td><code>COS_WEB_IP_RATE_LIMIT</code></td>
 <td><code>10</code></td>
 <td>Scans per client address per window. <code>0</code> disables</td>
@@ -348,6 +353,66 @@ somebody could.</p>
 <td><code>COS_WEB_TARGET_COOLDOWN</code></td>
 <td><code>300</code></td>
 <td>Seconds before the same instance may be scanned again. <code>0</code> disables</td>
+</tr>
+<tr>
+<td><code>COS_WEB_PROBE_LIMIT</code></td>
+<td><code>5</code></td>
+<td>Scans from one client address that may find no OpenCloud within <code>COS_WEB_PROBE_WINDOW</code> before that address is blocked. The same host scanned again counts again. Set on the web service <strong>and</strong> the worker. <code>0</code> disables</td>
+</tr>
+<tr>
+<td><code>COS_WEB_PROBE_WINDOW</code></td>
+<td><code>300</code></td>
+<td>The window those scans are counted in, in seconds</td>
+</tr>
+<tr>
+<td><code>COS_WEB_PROBE_BLOCK</code></td>
+<td><code>3600</code></td>
+<td>How long the first block lasts, in seconds</td>
+</tr>
+<tr>
+<td><code>COS_WEB_PROBE_BLOCK_MAX</code></td>
+<td><code>86400</code></td>
+<td>The longest a repeated block grows to; each block inside the repeat window lasts six times the one before</td>
+</tr>
+<tr>
+<td><code>COS_WEB_PROBE_REPEAT_WINDOW</code></td>
+<td><code>86400</code></td>
+<td>How long after a block ends the next one escalates, in seconds. <code>0</code> never escalates</td>
+</tr>
+<tr>
+<td><code>COS_WEB_PROBE_IPV4_PREFIX</code></td>
+<td><code>24</code></td>
+<td>The IPv4 network the probe block counts as one client. <code>32</code> counts single addresses</td>
+</tr>
+<tr>
+<td><code>COS_WEB_CLIENT_IPV6_PREFIX</code></td>
+<td><code>64</code></td>
+<td>The IPv6 network every client limit counts as one client</td>
+</tr>
+<tr>
+<td><code>COS_WEB_DAILY_SCAN_LIMIT</code></td>
+<td><code>50</code></td>
+<td>Scans per client per day, on top of the per-minute limit. <code>0</code> disables</td>
+</tr>
+<tr>
+<td><code>COS_WEB_DNS_CONSISTENCY_CHECK</code></td>
+<td><code>true</code></td>
+<td>Resolve a submitted name twice and refuse it when the answers share no address</td>
+</tr>
+<tr>
+<td><code>COS_WEB_REQUIRE_APPROVAL</code></td>
+<td><code>false</code></td>
+<td>Scan approved instances only; see <a href="#approval-mode">Approval mode</a></td>
+</tr>
+<tr>
+<td><code>COS_WEB_APPROVED_TARGETS</code></td>
+<td><em>(empty)</em></td>
+<td>Approved hostnames, <code>.suffix</code> domains, addresses and CIDR ranges, separated by <code>;</code>. An entry that does not parse refuses startup</td>
+</tr>
+<tr>
+<td><code>COS_WEB_APPROVAL_DNS</code></td>
+<td><code>true</code></td>
+<td>In approval mode, accept a <code>_check-opencloud-security</code> TXT record naming this service's hostname</td>
 </tr>
 <tr>
 <td><code>COS_WEB_MAX_BATCH_TARGETS</code></td>
@@ -560,6 +625,11 @@ somebody could.</p>
 <td>Encrypt the stored result document with AES-256-GCM. Requires a key; a process asked to encrypt without one refuses to start</td>
 </tr>
 <tr>
+<td><code>COS_WEB_WEBHOOK_SECRET</code></td>
+<td><em>(none)</em></td>
+<td>Read at startup but not used by the web service, which sends no webhooks; signed webhooks are the plugin's <code>--webhook-secret</code>. Listed so that setting it is not mistaken for a typo</td>
+</tr>
+<tr>
 <td><code>COS_WEB_ENCRYPTION_KEY_&lt;n&gt;</code></td>
 <td><em>(none)</em></td>
 <td>A 32-byte key as 64 hex characters. The highest <code>&lt;n&gt;</code> encrypts, lower ones still decrypt, which is how a key is rotated</td>
@@ -721,7 +791,15 @@ checked before anything connects:</p>
   address is either broken or lying;</li>
 <li><code>169.254.169.254</code>, <code>100.100.100.200</code> and <code>fd00:ec2::254</code> are refused
   explicitly. Link-local already covers the first, but naming them keeps the
-  refusal readable and survives a future carve-out.</li>
+  refusal readable and survives a future carve-out;</li>
+<li>names under wildcard and rebinding DNS services - <code>nip.io</code>, <code>sslip.io</code>,
+  <code>xip.io</code>, <code>traefik.me</code>, <code>localtest.me</code>, <code>lvh.me</code>, <code>vcap.me</code>,
+  <code>lacolhost.com</code>, <code>localhost.direct</code>, <code>local.gd</code>, <code>rbndr.us</code>, <code>1u.ms</code> - are
+  refused by name. They exist to point a name somewhere its reader did not
+  expect; the public address behind one can still be scanned by typing it;</li>
+<li>a submitted name is resolved twice at once, and refused when the two answers
+  share no address (<code>COS_WEB_DNS_CONSISTENCY_CHECK</code>). Every address from both
+  answers is held to the rules above.</li>
 </ul>
 <p><strong>DNS rebinding</strong> is answered by resolving twice: once when the request is
 accepted and again in the worker immediately before the scan. The window an
@@ -796,23 +874,88 @@ has an <em>Exclusions</em> card that adds and withdraws entries, and:</p>
 four properties that made it acceptable there, and
 <a href="https://github.com/sowoi/check-opencloud-security/blob/main/ADMIN.md#the-operators-area-at-admin">ADMIN.md</a> for the area itself.</p>
 <h2 id="rate-limiting">Rate limiting</h2>
-<p>Two independent limits, both in Redis, both expiring on their own:</p>
+<p>Every limit lives in Redis and expires on its own:</p>
 <ul>
-<li><strong>per client address</strong> - <code>COS_WEB_IP_RATE_LIMIT</code> scans per
-  <code>COS_WEB_IP_RATE_WINDOW</code>. Protects the service from one visitor;</li>
+<li><strong>per client</strong> - <code>COS_WEB_IP_RATE_LIMIT</code> scans per <code>COS_WEB_IP_RATE_WINDOW</code>,
+  and at most <code>COS_WEB_DAILY_SCAN_LIMIT</code> a day. Protects the service from one
+  visitor, and the daily cap from the patient version of a burst that stays
+  just under the per-minute limit all night;</li>
 <li><strong>per target</strong> - one scan per <code>COS_WEB_TARGET_COOLDOWN</code>. Protects an
   OpenCloud instance from the service. Claimed with <code>SET NX</code>, so two
-  simultaneous requests for the same instance cannot both win.</li>
+  simultaneous requests for the same instance cannot both win;</li>
+<li><strong>the probe block</strong> - <code>COS_WEB_PROBE_LIMIT</code> strikes within
+  <code>COS_WEB_PROBE_WINDOW</code> block the client's network for <code>COS_WEB_PROBE_BLOCK</code>.
+  Protects everybody else's hosts from this service being used to find out
+  what answers where.</li>
 </ul>
-<p>Both answer <strong>429</strong> with a <code>Retry-After</code>. The client address is never stored:
-the key holds a truncated HMAC under a pepper generated at startup, which is
-enough to count and useless afterwards.</p>
+<p>All of them answer <strong>429</strong> with a <code>Retry-After</code>. The client address is never
+stored: a key holds a truncated HMAC under a pepper, which is enough to count
+and useless afterwards.</p>
+<p><strong>What counts as one client.</strong> A single IPv4 address for the per-minute and
+daily limits, because strangers behind one /24 should not share an allowance;
+an IPv6 /64 (<code>COS_WEB_CLIENT_IPV6_PREFIX</code>) for every limit, because one
+subscriber is handed a whole /64 and could otherwise rotate through it for
+free. The probe block counts the IPv4 network <code>COS_WEB_PROBE_IPV4_PREFIX</code>
+(<code>/24</code> by default) too, so a block cannot be stepped around by moving to the
+next address along.</p>
+<p><strong>What is a strike.</strong> A scan that ends with the scanner's own verdict of <em>no
+OpenCloud here</em> - <code>status.php</code> unreachable, not JSON, or another product - or
+that runs out of time; and a submission the guard refuses for what it points
+at: a private or internal address, an operator's exclusion, a wildcard or
+rebinding DNS name, a name whose lookups disagree, or - in approval mode - an
+instance nobody approved. The same host again is another strike, because
+asking one address over and over whether it answers yet is probing too. A
+finished scan never counts, whatever its grade, and neither does a typo, a
+name that does not resolve or an unsupported scheme.</p>
+<p><strong>Blocks grow when they are earned again.</strong> A network blocked again within
+<code>COS_WEB_PROBE_REPEAT_WINDOW</code> after its last block ended waits six times
+longer - an hour, six hours, a day - up to <code>COS_WEB_PROBE_BLOCK_MAX</code>. Strikes
+from scans that finish during a block change nothing, and a network that
+stays away for the repeat window starts again at an hour.</p>
+<p><strong>The block is decided after the fact.</strong> Only the worker learns whether a host
+was OpenCloud, so the submission hands it the network's fingerprint - never
+the address - under <code>scan:{uuid}:prober</code>, which the worker reads and deletes
+the moment the scan starts. The worker counts those strikes, the API counts
+refused targets, and both impose the block through the same keys; the API
+reads it before the client limit, so refusals during a block do not also spend
+the allowance the visitor comes back to. MCP and the workflows wait out a
+<code>Retry-After</code> of up to five minutes by themselves and hand anything longer - a
+block or a spent daily cap - back to the caller.</p>
+<p><strong>A host that is not OpenCloud is asked once.</strong> The scanner reads <code>status.php</code>
+before anything else, and the web service sets
+<code>ScannerSettings.stop_when_not_opencloud</code>: an HTTPS answer that is not
+OpenCloud ends the scan there, instead of being asked again without
+certificate verification and then on port 80 as the plugin does for an
+operator looking for the endpoint that works. Silence is still retried, since
+that may only be an untrusted certificate.</p>
+<p>A legitimate operator whose own instance is down can meet the block too,
+after five attempts. That is the trade: the message says why, and points at
+running the scanner locally, which has no such limit.</p>
+<p><strong>The operator's area shows the guard working</strong> - networks blocked right now,
+and blocks, strikes and spent daily caps today and over seven days - as
+counts. The block keys are counted, never read or listed.</p>
+<h3 id="approval-mode">Approval mode</h3>
+<p><code>COS_WEB_REQUIRE_APPROVAL=true</code> turns the public scanner into one that scans
+approved instances only, and refuses the rest with <strong>403</strong>. An instance is
+approved when it matches <code>COS_WEB_APPROVED_TARGETS</code> - hostnames, <code>.suffix</code>
+domains, addresses and CIDR ranges, the same shapes as the exclusions - or,
+with <code>COS_WEB_APPROVAL_DNS</code> (on by default), when its own zone publishes</p>
+<pre><code class="language-text">_check-opencloud-security.opencloud.example.com. TXT &quot;check-opencloud-security=scan.example.net&quot;
+</code></pre>
+<p>naming this service's hostname from <code>COS_WEB_PUBLIC_BASE_URL</code>. The record
+approves one deployment, not every copy of the project, and needs no secret:
+whoever can publish a TXT record under a name controls the name, which is the
+claim approval asks for. The lookup goes to the system resolver only, like the
+scanner's CAA check (ADR 0024), and a lookup that fails is a refusal. Approval
+is checked at submission. A deployment that requires approval with an empty
+list and the DNS proof off, or with an entry that does not parse, refuses to
+start.</p>
 <p><strong>A report page counts the wait down.</strong> A finished report carries a <strong>Scan
-again</strong> button, and beside it the time before that is allowed. Both limits are
-read - <code>RateLimiter.peek_client</code> and <code>RateLimiter.peek_target</code>, which are the
-ordinary checks with the counting left out - and the longer of the two is what
-is shown, because a countdown that expired into a refusal from the <em>other</em>
-limit would be worse than none at all. Reading a limit must never spend it, or
+again</strong> button, and beside it the time before that is allowed. Every limit in
+the way is read - <code>RateLimiter.peek_client</code>, <code>peek_daily</code>, <code>peek_target</code> and
+the probe block, which are the ordinary checks with the counting left out - and
+the longest is what is shown, because a countdown that expired into a refusal
+from <em>another</em> limit would be worse than none at all. Reading a limit must never spend it, or
 showing somebody their wait would be the request that caused it.</p>
 <p>The hostname comes from the record the uuid already unlocked, so this asks
 nothing the caller did not bring with them: there is no way to enquire about a
@@ -851,9 +994,10 @@ routed and retained on its own:</p>
 {&quot;client&quot;: &quot;3c80d5f21ab94e77&quot;, &quot;event&quot;: &quot;submission_rejected&quot;, &quot;fields&quot;: [&quot;workers&quot;], &quot;reason&quot;: &quot;unsupported_fields&quot;, &quot;status&quot;: 422, &quot;timestamp&quot;: &quot;2026-08-19T10:15:09+00:00&quot;}
 </code></pre>
 <p>Three events: <code>scan_requested</code> for an accepted submission, <code>rate_limited</code> for
-a client limit or target cooldown that actually triggered, and
+a client limit, target cooldown, daily cap (<code>rate_limit_daily</code>) or probe block
+(<code>rate_limit_probe</code>) that actually triggered, and
 <code>submission_rejected</code> for one that never became a scan - <code>unsupported_fields</code>,
-<code>target_rejected</code>.</p>
+<code>target_rejected</code>, <code>target_not_approved</code>.</p>
 <p>The point of the design is what it still does not write down:</p>
 <ul>
 <li><strong>A client address is always a fingerprint</strong>, a truncated HMAC under the
@@ -1006,8 +1150,10 @@ policy of its own, make sure it does not loosen this one.</p>
 </code></pre>
 <p><code>target_url</code> may be a bare hostname; <code>https://</code> is assumed when no scheme is
 given.</p>
-<p><strong>202</strong> on success, <strong>400</strong> for a target that cannot be scanned, <strong>422</strong> for a
-field the service does not accept, <strong>429</strong> when a rate limit applies.</p>
+<p><strong>202</strong> on success, <strong>400</strong> for a target that cannot be scanned, <strong>403</strong> for an
+instance a deployment in approval mode has not approved, <strong>422</strong> for a field
+the service does not accept, <strong>429</strong> when a rate limit or the probe block
+applies.</p>
 <p>The browser form posts to <code>/</code> rather than here, and gets <strong>303</strong> to
 <code>/scan/{uuid}</code>. Both paths are the same handler: a rejected submission is
 re-rendered where it was posted, and <code>/</code> is a URL a reload can survive.

@@ -149,6 +149,11 @@ services:
       COS_WEB_MAX_WORKERS: "5"
       COS_WEB_SCAN_CONCURRENCY: "4"
       COS_WEB_SCAN_TIMEOUT: "15"
+      COS_WEB_PROBE_LIMIT: "5"
+      COS_WEB_PROBE_WINDOW: "300"
+      COS_WEB_PROBE_BLOCK: "3600"
+      COS_WEB_PROBE_BLOCK_MAX: "86400"
+      COS_WEB_PROBE_REPEAT_WINDOW: "86400"
       COS_WEB_JOB_TIMEOUT: "180"
       COS_WEB_ALLOW_PRIVATE_TARGETS: "false"
       COS_WEB_CHECK_DEBUG_PORTS: "false"
@@ -188,6 +193,16 @@ services:
       COS_WEB_IP_RATE_LIMIT: "10"
       COS_WEB_IP_RATE_WINDOW: "60"
       COS_WEB_TARGET_COOLDOWN: "300"
+      COS_WEB_PROBE_LIMIT: "5"
+      COS_WEB_PROBE_WINDOW: "300"
+      COS_WEB_PROBE_BLOCK: "3600"
+      COS_WEB_PROBE_BLOCK_MAX: "86400"
+      COS_WEB_PROBE_REPEAT_WINDOW: "86400"
+      COS_WEB_PROBE_IPV4_PREFIX: "24"
+      COS_WEB_CLIENT_IPV6_PREFIX: "64"
+      COS_WEB_DAILY_SCAN_LIMIT: "50"
+      COS_WEB_DNS_CONSISTENCY_CHECK: "true"
+      COS_WEB_REQUIRE_APPROVAL: "false"
       COS_WEB_TRUST_FORWARDED_FOR: "false"
       COS_WEB_RELEASES_MODE: "off"
     read_only: true
@@ -243,6 +258,7 @@ docker run -d --name opencloud-scanner-web \
   -e COS_WEB_PUBLIC_BASE_URL=http://127.0.0.1:8811 \
   -e COS_WEB_IP_RATE_LIMIT=10 -e COS_WEB_IP_RATE_WINDOW=60 \
   -e COS_WEB_TARGET_COOLDOWN=300 \
+  -e COS_WEB_PROBE_LIMIT=5 -e COS_WEB_PROBE_WINDOW=300 -e COS_WEB_PROBE_BLOCK=3600 \
   -e COS_WEB_TRUST_FORWARDED_FOR=false \
   okxo/opencloud-scanner:latest
 docker network connect opencloud-scanner opencloud-scanner-web

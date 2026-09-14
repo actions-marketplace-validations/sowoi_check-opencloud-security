@@ -60,6 +60,12 @@ RATE_LIMIT_FALLBACK_SECONDS = 60
 #: How many times to re-submit after a 429. Three polite attempts, then stop.
 SUBMIT_MAX_ATTEMPTS = 3
 
+#: The longest ``Retry-After`` a submission waits out by itself. The client
+#: limit and the target cooldown lift within minutes; a probe block lasts an
+#: hour or more and the daily cap up to a day, and an agent sleeping through that is an agent that looks hung. Past
+#: this the answer goes back to the caller, who can tell the user why.
+SUBMIT_MAX_WAIT_SECONDS = 300
+
 #: States a scan can be in.
 STATE_QUEUED = "queued"
 STATE_RUNNING = "running"
@@ -116,7 +122,10 @@ UUID_NOTE = (
 RATE_LIMIT_NOTE = (
     "429 is not a refusal. A client limit and a per-target cooldown both "
     "answer 429 with Retry-After in seconds; wait that long and try again, at "
-    f"most {SUBMIT_MAX_ATTEMPTS} times. The whole scanner is open source and "
+    f"most {SUBMIT_MAX_ATTEMPTS} times. A Retry-After longer than "
+    f"{SUBMIT_MAX_WAIT_SECONDS} seconds is a daily cap or a block for scanning "
+    "hosts that were not OpenCloud: do not wait it out, tell the user. 403 "
+    "means the deployment scans approved instances only. The whole scanner is open source and "
     f"runs locally with no limits at all: {SELF_HOST_URL}"
 )
 
@@ -395,7 +404,9 @@ async def submit_scan(
 
     A 429 is waited out and retried up to :data:`SUBMIT_MAX_ATTEMPTS` times,
     because both the client limit and the target cooldown say when they will
-    lift. Anything in :data:`TERMINAL_STATUSES` stops immediately - a rejected
+    lift - unless the wait is longer than :data:`SUBMIT_MAX_WAIT_SECONDS`,
+    which only a probe block or the daily cap is, and that goes straight back
+    to the caller. Anything in :data:`TERMINAL_STATUSES` stops immediately - a rejected
     target does not become acceptable by asking twice.
     """
     payload: dict[str, Any] = {
@@ -412,14 +423,15 @@ async def submit_scan(
         response = await client.request("POST", "/api/scans", json_body=payload)
         if response.status == SUBMIT_STATUS:
             return response.json()
-        if response.status == 429 and attempt < SUBMIT_MAX_ATTEMPTS:
+        waitable = response.retry_after <= SUBMIT_MAX_WAIT_SECONDS
+        if response.status == 429 and waitable and attempt < SUBMIT_MAX_ATTEMPTS:
             await (sleep or default_sleep)(response.retry_after)
             continue
         detail = response.json().get("detail") or "The scan was not accepted."
         raise WorkflowError(
             str(detail),
             status=response.status,
-            retryable=is_retryable(response.status),
+            retryable=is_retryable(response.status) and waitable,
         )
     raise WorkflowError(  # pragma: no cover - loop always returns or raises
         "The scan was rate limited on every attempt.", status=429, retryable=True
