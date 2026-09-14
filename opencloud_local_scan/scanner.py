@@ -400,6 +400,17 @@ class ScanError(RuntimeError):
     """Raised when the instance cannot be scanned at all."""
 
 
+class NotOpenCloud(ScanError):
+    """Something answered ``status.php``, and what it said is not OpenCloud.
+
+    Kept apart from a host that did not answer at all, because only silence
+    is worth asking again another way: an answer over HTTPS is the same
+    answer without certificate verification, and a caller that scans hosts
+    somebody else named has no business trying port 80 to see what else is
+    there.
+    """
+
+
 @dataclass(frozen=True)
 class ScannerSettings:
     """Tunables for a scan run."""
@@ -502,6 +513,15 @@ class ScannerSettings:
     """Validated addresses for the initial hostname, used by web scans."""
     redirect_pinner: Callable[[str], tuple[str, ...] | None] | None = None
     """Validate and return addresses for each redirect before it is followed."""
+    stop_when_not_opencloud: bool = False
+    """Give up at the first ``status.php`` answer that is not OpenCloud.
+
+    ``False`` keeps the plugin's behaviour: an HTTPS endpoint that answers
+    with something else is retried without verification and then over plain
+    HTTP, because an operator monitoring their own instance wants the one
+    that works found. The web service sets ``True``: a host a stranger named
+    that already answered "not OpenCloud" gets no second and third request.
+    """
 
     @property
     def proxies(self) -> dict[str, str] | None:
@@ -1314,20 +1334,20 @@ def _fetch_status(probe: _Probe) -> dict[str, Any]:
     if response is None:
         raise ScanError(f"{probe.base_url}{STATUS_PATH} is unreachable")
     if response.status_code >= 400:
-        raise ScanError(
+        raise NotOpenCloud(
             f"{probe.base_url}{STATUS_PATH} returned HTTP {response.status_code}"
         )
     try:
         payload = response.json()
     except ValueError as exc:
-        raise ScanError(f"{probe.base_url}{STATUS_PATH} did not return JSON: {exc}") from exc
+        raise NotOpenCloud(f"{probe.base_url}{STATUS_PATH} did not return JSON: {exc}") from exc
     if not isinstance(payload, dict) or not any(
         key in payload for key in ("version", "productversion", "productname")
     ):
-        raise ScanError(f"No OpenCloud instance found at {probe.base_url}")
+        raise NotOpenCloud(f"No OpenCloud instance found at {probe.base_url}")
     foreign = _foreign_product(payload)
     if foreign:
-        raise ScanError(
+        raise NotOpenCloud(
             f"{probe.base_url} is not an OpenCloud instance: "
             f"{STATUS_PATH} reports {foreign}"
         )
@@ -3263,6 +3283,8 @@ def _open_instance(host: str, settings: ScannerSettings) -> tuple[
         probe.close()
         if settings.scheme != "https":
             raise
+        if settings.stop_when_not_opencloud and isinstance(exc, NotOpenCloud):
+            raise
         https_error = exc
 
     if settings.verify_tls:
@@ -3272,8 +3294,10 @@ def _open_instance(host: str, settings: ScannerSettings) -> tuple[
         insecure_probe = _Probe(base_url=base_url, settings=insecure)
         try:
             status = _fetch_status(insecure_probe)
-        except ScanError:
+        except ScanError as exc:
             insecure_probe.close()
+            if settings.stop_when_not_opencloud and isinstance(exc, NotOpenCloud):
+                raise
             LOGGER.debug("Instance is unreachable over HTTPS even without verification")
         else:
             LOGGER.debug("HTTPS scan needed to skip certificate verification")

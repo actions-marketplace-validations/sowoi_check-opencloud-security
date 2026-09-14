@@ -567,6 +567,37 @@ def test_the_statistics_name_nothing_anybody_scanned():
     assert "ipRateLimit" in body
 
 
+def test_the_guard_tile_counts_blocks_without_naming_who_was_blocked():
+    """
+    An operator should see the guard working, and never whom it caught.
+
+    The counts move when a network is blocked; the fingerprint the block is
+    keyed on - the closest thing the store has to a client - is not in the
+    document the tile reads.
+    """
+    configured = _admin_settings(trust_forwarded_for=True, probe_limit=2)
+    app = create_app(configured)
+    with TestClient(app) as client:
+        before = client.get("/admin/state", headers=FORWARDED).json()["guard"]
+        for _ in range(2):
+            client.post(
+                "/api/scans",
+                json={"target_url": "http://10.0.0.1"},
+                headers={"X-Forwarded-For": "203.0.113.5"},
+            )
+        body = client.get("/admin/state", headers=FORWARDED).text
+
+    guard = json.loads(body)["guard"]
+    keys = asyncio.run(backend().keys_matching("cos:web:rl:blocked:*"))
+    assert before["activeBlocks"] == 0
+    assert guard["activeBlocks"] == 1
+    assert guard["blocksWeek"] == 1
+    assert guard["strikesToday"] == 2
+    assert keys
+    assert all(key.rsplit(":", 1)[1] not in body for key in keys)
+    assert "203.0.113" not in body
+
+
 def test_a_store_that_is_gone_is_not_reported_as_a_worker_that_died(monkeypatch):
     """Two outages that drew one picture, and pointed at the wrong container.
 

@@ -52,6 +52,13 @@ from . import __version__
 from .advisories import advisory_state, probe_advisories, refresh_advisories
 from .blocklist import exclusion_counts
 from .i18n import DEFAULT_LOCALE, SUPPORTED_LOCALES, Translator
+from .ratelimit import (
+    STAT_BLOCKS,
+    STAT_DAILY,
+    STAT_STRIKES,
+    active_blocks,
+    event_counts,
+)
 from .redis_backend import RedisBackend, RedisUnavailable
 from .reference_data import (
     ADVISORY_ATTEMPT_KEY,
@@ -297,6 +304,37 @@ def surface_rows(
     return tuple(rows)
 
 
+async def guard_state(backend: RedisBackend, settings: WebSettings) -> dict[str, Any]:
+    """
+    How hard the abuse guards are working, as counts.
+
+    How many networks are blocked right now, and how many blocks, strikes and
+    spent daily caps today and over the last week. The block keys are counted
+    and never read or returned: a key holds a fingerprint of a client network,
+    and a list of those is a list of who was blocked. ``None`` everywhere
+    when the store does not answer, like the worker tile.
+    """
+    try:
+        active = await active_blocks(backend)
+        blocks = await event_counts(backend, STAT_BLOCKS)
+        strikes = await event_counts(backend, STAT_STRIKES)
+        daily = await event_counts(backend, STAT_DAILY)
+    except RedisUnavailable:
+        return {"reachable": False, "activeBlocks": None}
+    return {
+        "reachable": True,
+        "activeBlocks": active,
+        "blocksToday": blocks[0],
+        "blocksWeek": blocks[1],
+        "strikesToday": strikes[0],
+        "strikesWeek": strikes[1],
+        "dailyCapToday": daily[0],
+        "dailyCapWeek": daily[1],
+        "probeGuard": settings.probe_limit > 0,
+        "approvalRequired": settings.require_approval,
+    }
+
+
 async def statistics(
     backend: RedisBackend,
     settings: WebSettings,
@@ -341,10 +379,15 @@ async def statistics(
             "probeLimit": settings.probe_limit,
             "probeWindow": settings.probe_window,
             "probeBlock": settings.probe_block,
+            "probeBlockMax": settings.probe_block_max,
+            "probeIpv4Prefix": settings.probe_ipv4_prefix,
+            "clientIpv6Prefix": settings.client_ipv6_prefix,
+            "dailyScanLimit": settings.daily_scan_limit,
             "maxBatchTargets": settings.max_batch_targets,
             "resultTtl": settings.result_ttl,
             "scanTimeout": settings.scan_timeout,
         },
+        "guard": await guard_state(backend, settings),
         "referenceData": {
             "releaseSchedule": await schedule_state(backend, settings),
             "advisories": await advisory_state(backend, settings),

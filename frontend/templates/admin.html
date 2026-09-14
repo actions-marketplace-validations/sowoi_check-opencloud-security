@@ -36,6 +36,9 @@
   data-admin-queue="{{ t.raw('admin.state.queue') }}"
   data-admin-ratelimit="{{ t.raw('admin.state.ratelimit.value') }}"
   data-admin-cooldown="{{ t.raw('admin.state.cooldown.value') }}"
+  data-admin-guard="{{ t.raw('admin.state.guard.value') }}"
+  data-admin-guard-week="{{ t.raw('admin.state.guard.week') }}"
+  data-admin-guard-off="{{ t('admin.state.guard.off') }}"
   data-admin-checked="{{ t.raw('admin.state.checked') }}"
   data-admin-checked-failed="{{ t.raw('admin.state.checked.failed') }}"
   data-admin-checked-rejected="{{ t.raw('admin.state.checked.rejected') }}"
@@ -131,6 +134,11 @@
       <span class="admin-stat-label">{{ t('admin.state.ratelimit') }}</span>
       <strong class="admin-stat-value" data-value="ratelimit">-</strong>
       <span class="admin-stat-note" data-value="cooldown">-</span>
+    </div>
+    <div class="admin-stat" data-stat="guard">
+      <span class="admin-stat-label">{{ t('admin.state.guard') }}</span>
+      <strong class="admin-stat-value" data-value="guard">-</strong>
+      <span class="admin-stat-note" data-value="guard-week">-</span>
     </div>
     <div class="admin-stat" data-stat="schedule">
       <span class="admin-stat-label">{{ t('admin.state.schedule') }}</span>

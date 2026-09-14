@@ -2941,7 +2941,7 @@ def test_the_first_run_defaults_to_quick_and_an_edit_to_full(
 
 
 def test_a_section_nothing_needs_is_named_as_skipped(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A step counter that jumps from 9 to 11 leaves the operator wondering what they missed."""
+    """A step counter that jumps from 10 to 12 leaves the operator wondering what they missed."""
     printed = _typed(monkeypatch, [])
     wizard = wizard_module.Wizard(wizard_module.Setup(), style=wizard_module.Style(False))
 
@@ -2949,8 +2949,8 @@ def test_a_section_nothing_needs_is_named_as_skipped(monkeypatch: pytest.MonkeyP
 
     skipped = [line for line in printed if "Skipped" in line]
     assert any("Mail" in line for line in skipped)
-    assert any("Step 11 of 12" in line for line in printed)
-    assert not any("Step 10 of 12" in line for line in printed)
+    assert any("Step 12 of 13" in line for line in printed)
+    assert not any("Step 11 of 13" in line for line in printed)
     # A section that was asked is never reported as skipped.
     assert not any("Images" in line for line in skipped)
 
@@ -3302,3 +3302,75 @@ def test_a_checkout_reports_the_version_in_its_pyproject(tmp_path: Path) -> None
     foreign.write_text('[project]\nname = "other"\nversion = "9.9.9"\n', encoding="utf-8")
     assert wizard_module._pyproject_version(foreign) == ""
     assert wizard_module._pyproject_version(tmp_path / "absent.toml") == ""
+
+
+# ------------------------------------------------------------ abuse protection
+
+
+def _environments(setup) -> tuple[dict, dict]:
+    document = yaml.safe_load(wizard_module.render_compose_file(setup, "compose.yml"))
+    services = document["services"]
+    return services["web_app"]["environment"], services["arq_worker"]["environment"]
+
+
+def test_the_abuse_limits_the_operator_chose_reach_both_containers() -> None:
+    """The worker imposes the block and the web service reads it; they must agree."""
+    setup = wizard_module.Setup(
+        probe_limit=3, probe_window=120, probe_block=600, probe_block_max=7200,
+        probe_repeat_window=3600, daily_scan_limit=20, probe_ipv4_prefix=32,
+    )
+
+    web, worker = _environments(setup)
+
+    for environment in (web, worker):
+        assert environment["COS_WEB_PROBE_LIMIT"] == "3"
+        assert environment["COS_WEB_PROBE_WINDOW"] == "120"
+        assert environment["COS_WEB_PROBE_BLOCK"] == "600"
+        assert environment["COS_WEB_PROBE_BLOCK_MAX"] == "7200"
+        assert environment["COS_WEB_PROBE_REPEAT_WINDOW"] == "3600"
+    assert web["COS_WEB_DAILY_SCAN_LIMIT"] == "20"
+    assert web["COS_WEB_PROBE_IPV4_PREFIX"] == "32"
+    assert web["COS_WEB_DNS_CONSISTENCY_CHECK"] == "true"
+    # What only the submission reads stays out of the worker.
+    assert "COS_WEB_DAILY_SCAN_LIMIT" not in worker
+
+
+def test_the_approved_list_is_written_only_for_a_deployment_that_requires_approval() -> None:
+    """A list with no approval mode behind it would read as protection that is not there."""
+    off_web, _ = _environments(wizard_module.Setup(approved_targets="opencloud.example.com"))
+    on_web, _ = _environments(
+        wizard_module.Setup(require_approval=True, approved_targets="opencloud.example.com;.example.org")
+    )
+
+    assert off_web["COS_WEB_REQUIRE_APPROVAL"] == "false"
+    assert "COS_WEB_APPROVED_TARGETS" not in off_web
+    assert on_web["COS_WEB_REQUIRE_APPROVAL"] == "true"
+    assert on_web["COS_WEB_APPROVED_TARGETS"] == "opencloud.example.com;.example.org"
+    assert on_web["COS_WEB_APPROVAL_DNS"] == "true"
+
+
+def test_the_block_details_are_only_asked_while_there_is_a_block() -> None:
+    """With the block off its window and length are questions with no consequence."""
+    assert wizard_module._relevant("probe_block", wizard_module.Setup(probe_limit=5))
+    assert not wizard_module._relevant("probe_block", wizard_module.Setup(probe_limit=0))
+    assert not wizard_module._relevant("approved_targets", wizard_module.Setup())
+    assert wizard_module._relevant("approved_targets", wizard_module.Setup(require_approval=True))
+
+
+def test_an_approved_entry_that_is_not_a_target_is_refused_when_typed() -> None:
+    """The service refuses to start on such an entry; the wizard should say so first."""
+    assert wizard_module._target_list("opencloud.example.com;.example.org;*.example.net") is None
+    assert wizard_module._target_list("203.0.113.0/24;2001:db8::/32") is None
+    assert wizard_module._target_list("not a host") is not None
+    assert wizard_module._target_list("bad!name.example.com") is not None
+
+
+def test_an_approval_mode_that_could_approve_nothing_is_warned_about() -> None:
+    """Better a warning before writing than a container that exits at startup."""
+    stuck = wizard_module.Setup(require_approval=True, approval_dns=False)
+    fine = wizard_module.Setup(
+        require_approval=True, approval_dns=False, approved_targets="opencloud.example.com"
+    )
+
+    assert any("nothing could ever be scanned" in w for w in wizard_module.check_consistency(stuck))
+    assert not any("nothing could ever be scanned" in w for w in wizard_module.check_consistency(fine))

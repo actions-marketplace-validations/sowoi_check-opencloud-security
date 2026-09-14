@@ -134,13 +134,28 @@ empty Redis loses nothing except results whose owners can run the scan again.</p
 </tr>
 <tr>
 <td><code>cos:web:rl:probe:{fingerprint}</code></td>
-<td>Scans of one client that found no OpenCloud</td>
+<td>Strikes against one client network</td>
 <td><code>COS_WEB_PROBE_WINDOW</code></td>
 </tr>
 <tr>
 <td><code>cos:web:rl:blocked:{fingerprint}</code></td>
-<td>A client blocked for probing</td>
-<td><code>COS_WEB_PROBE_BLOCK</code></td>
+<td>A client network blocked for probing</td>
+<td><code>COS_WEB_PROBE_BLOCK</code>, growing to <code>COS_WEB_PROBE_BLOCK_MAX</code></td>
+</tr>
+<tr>
+<td><code>cos:web:rl:blocks:{fingerprint}</code></td>
+<td>How many blocks a network earned recently, for escalation</td>
+<td>The last block plus <code>COS_WEB_PROBE_REPEAT_WINDOW</code></td>
+</tr>
+<tr>
+<td><code>cos:web:rl:daily:{fingerprint}</code></td>
+<td>The per-client daily count</td>
+<td>A day</td>
+</tr>
+<tr>
+<td><code>cos:web:stats:{blocks,strikes,daily}:{YYYYMMDD}</code></td>
+<td>Counts for the operator's area: blocks started, strikes, daily caps reached. A number per day, nothing else</td>
+<td>Eight days</td>
 </tr>
 <tr>
 <td><code>cos:web:schedule:document</code>, <code>cos:web:schedule:checked</code></td>

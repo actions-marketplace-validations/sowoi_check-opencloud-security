@@ -225,6 +225,33 @@
         }));
         put("cooldown", fill(text("cooldown"), { seconds: limits.targetCooldown }));
 
+        // Counts only: the service never hands this page a blocked network,
+        // just how many there are. A store that did not answer is "?" rather
+        // than a reassuring zero.
+        var guard = stats.guard || {};
+        if (guard.reachable === false) {
+            put("guard", "?", "warn");
+            put("guard-week", text("store-down"));
+        } else if (!guard.probeGuard) {
+            put("guard", text("guard-off"));
+            put("guard-week", fill(text("guard-week"), {
+                blocks: guard.blocksWeek || 0,
+                strikes: guard.strikesWeek || 0,
+                daily: guard.dailyCapWeek || 0
+            }));
+        } else {
+            put(
+                "guard",
+                fill(text("guard"), { active: guard.activeBlocks }),
+                guard.activeBlocks ? "warn" : "good"
+            );
+            put("guard-week", fill(text("guard-week"), {
+                blocks: guard.blocksWeek,
+                strikes: guard.strikesWeek,
+                daily: guard.dailyCapWeek
+            }));
+        }
+
         // The keys the state document actually uses: `updated` is the date
         // the schedule itself carries, `advisories` is how many the database
         // holds. Both are the same names /healthz reports them under.

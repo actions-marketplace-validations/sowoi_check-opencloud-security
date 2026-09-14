@@ -10,6 +10,31 @@ MESSAGES: dict[str, str] = {
     "admin.kicker": "Exploitation",
     "admin.tabs.aria": "Espace d'exploitation",
     "admin.tabs.overview": "Vue d'ensemble",
+    "admin.tabs.configuration": "Configuration",
+    "admin.config.title": "Configuration",
+    "admin.config.lede": "Chaque variable COS_WEB_* lue par ce service, et la valeur avec laquelle il fonctionne.",
+    "admin.config.scope": "Il s'agit de l'environnement propre au service web, tel que ce processus l'a lu au démarrage - ni la configuration d'OpenCloud, ni celle du worker, qui lit les mêmes variables dans son propre conteneur. Les valeurs sont affichées telles qu'elles s'appliquent après lecture ; les identifiants ne sont jamais indiqués que comme définis ou non définis.",
+    "admin.config.source.environment": "Définie",
+    "admin.config.source.default": "Par défaut",
+    "admin.config.secret.set": "Définie (valeur masquée)",
+    "admin.config.unset": "Non définie",
+    "admin.config.default": "Valeur par défaut documentée :",
+    "admin.config.unknown.kicker": "Vérifiez l'orthographe",
+    "admin.config.unknown.heading": "Variables que ce service ne lit pas",
+    "admin.config.unknown.lede": "Ces noms portent le préfixe COS_WEB_ mais ne correspondent à aucun réglage : ils ne changent donc rien. Une faute de frappe laisse ici la valeur par défaut en vigueur. Les valeurs ne sont pas affichées.",
+    "admin.config.group.storage": "Stockage et workers",
+    "admin.config.group.scanning": "Déroulement d'une analyse",
+    "admin.config.group.targets": "Ce qui peut être analysé",
+    "admin.config.group.limits": "Limites de débit et protection contre les abus",
+    "admin.config.group.approval": "Approbation des cibles",
+    "admin.config.group.network": "Adresse publique, proxy et indexation",
+    "admin.config.group.reference": "Données de versions et d'avis",
+    "admin.config.group.interfaces": "Documentation de l'API et point d'accès pour agents",
+    "admin.config.group.mcp_auth": "Connexion au point d'accès pour agents",
+    "admin.config.group.admin": "Espace opérateur",
+    "admin.config.group.audit": "Journal d'audit",
+    "admin.config.group.protection": "Effacement, signatures et chiffrement",
+    "admin.config.group.frontend": "Frontend",
     "admin.docs.kicker": "Documentation d'exploitation",
     "admin.docs.source": "Depuis <code>{file}</code> dans le dépôt, en anglais.",
     "admin.band": "Espace d'exploitation - connecté en tant que {user}",
@@ -42,6 +67,10 @@ MESSAGES: dict[str, str] = {
     "admin.state.ratelimit": "Limite de requêtes",
     "admin.state.ratelimit.value": "{limit} par {window}s",
     "admin.state.cooldown.value": "{seconds}s par cible",
+    "admin.state.guard": "Protection contre les abus",
+    "admin.state.guard.value": "{active} réseaux bloqués",
+    "admin.state.guard.week": "7 derniers jours : {blocks} blocages, {strikes} avertissements, {daily} plafonds journaliers atteints",
+    "admin.state.guard.off": "Blocage anti-sondage désactivé",
     "admin.state.schedule": "Calendrier des versions",
     "admin.state.advisories": "Avis de sécurité",
     "admin.state.checked": "vérifié {when}",
@@ -957,6 +986,8 @@ MESSAGES: dict[str, str] = {
     ),
     "api.limits.cooldown": "une analyse par cible toutes les {minutes} minute(s)",
     "api.limits.no_cooldown": "aucun délai de repos par cible",
+    "api.limits.daily": "Au plus {count} analyses par réseau par jour.",
+    "api.limits.probe": "Un réseau dont les analyses ne trouvent jamais OpenCloud est mis en pause un moment.",
     "api.limits.none": "Ce déploiement n'impose aucune limite de débit.",
     "api.limits.self_host": (
         "Si vous en rencontrez une et préférez ne pas attendre, l'ensemble "
@@ -1488,6 +1519,23 @@ MESSAGES: dict[str, str] = {
         "sont pas révélées être OpenCloud, ce service fait donc une pause avec "
         "vos analyses pendant un moment. Si vous vouliez vérifier votre propre "
         "instance, le scanner fonctionne aussi sur votre machine."
+    ),
+    "error.rate_limit.daily": (
+        "C'est toutes les analyses que ce service peut faire aujourd'hui pour "
+        "votre réseau. Il y aura de la place demain - ou lancez le scanner "
+        "vous-même, il n'a pas de limite journalière."
+    ),
+    "error.target.wildcard_dns": (
+        "Ce nom appartient à un service qui fait pointer des noms vers n'importe "
+        "quelle adresse. Saisissez le nom d'hôte propre de l'instance ou son adresse."
+    ),
+    "error.target.unstable": (
+        "Ce nom d'hôte répond avec des adresses différentes à chaque requête, "
+        "ce service ne peut donc pas savoir ce qu'il analyserait."
+    ),
+    "error.target.not_approved": (
+        "Ce service n'analyse que les instances approuvées pour lui. Demandez à "
+        "l'opérateur de l'ajouter, ou publiez l'enregistrement DNS qui l'approuve."
     ),
     "error.rate_limit.target": (
         "Cette instance a été analysée très récemment. Merci de patienter "

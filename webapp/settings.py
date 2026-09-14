@@ -33,6 +33,18 @@ DEFAULT_TARGET_COOLDOWN_SECONDS = 300
 DEFAULT_PROBE_LIMIT = 5
 DEFAULT_PROBE_WINDOW_SECONDS = 300
 DEFAULT_PROBE_BLOCK_SECONDS = 3600
+# A network blocked again soon after its last block is blocked for longer:
+# an hour, six, then a day, remembered for a day after each block ends.
+DEFAULT_PROBE_BLOCK_MAX_SECONDS = 86400
+DEFAULT_PROBE_REPEAT_WINDOW_SECONDS = 86400
+# How much of an address counts as one client. An IPv6 subscriber is handed a
+# whole /64; an IPv4 /24 is usually one hosting customer or one office.
+DEFAULT_PROBE_IPV4_PREFIX = 24
+DEFAULT_CLIENT_IPV6_PREFIX = 64
+# Enough to check every instance a small company runs several times over; not
+# enough to walk a list overnight a few scans a minute at a time.
+DEFAULT_DAILY_SCAN_LIMIT = 50
+DAILY_WINDOW_SECONDS = 86400
 DEFAULT_MAX_BATCH_TARGETS = 10
 # One reverse proxy, which is what a deployment that turns
 # COS_WEB_TRUST_FORWARDED_FOR on almost always has.
@@ -245,6 +257,36 @@ class WebSettings:
 
     probe_window: int = DEFAULT_PROBE_WINDOW_SECONDS
     probe_block: int = DEFAULT_PROBE_BLOCK_SECONDS
+    probe_block_max: int = DEFAULT_PROBE_BLOCK_MAX_SECONDS
+    """The longest a repeated block may grow to. Each block inside
+    ``probe_repeat_window`` of the last one ends lasts six times longer."""
+    probe_repeat_window: int = DEFAULT_PROBE_REPEAT_WINDOW_SECONDS
+
+    probe_ipv4_prefix: int = DEFAULT_PROBE_IPV4_PREFIX
+    """The IPv4 network the probe guard counts as one client. ``32`` counts
+    single addresses. The per-minute and daily limits always count single
+    IPv4 addresses, because a /24 of strangers behind one shared limit is a
+    capacity problem nobody caused."""
+    client_ipv6_prefix: int = DEFAULT_CLIENT_IPV6_PREFIX
+    """The IPv6 network every client limit counts as one client."""
+
+    daily_scan_limit: int = DEFAULT_DAILY_SCAN_LIMIT
+    """Submissions per client per day, on top of the per-minute limit.
+    ``0`` disables."""
+
+    dns_consistency_check: bool = True
+    """Resolve a submitted hostname twice and refuse it when the two answers
+    share no address - the signature of a name built to answer differently
+    each time it is asked."""
+
+    require_approval: bool = False
+    """Scan only approved targets: those in ``approved_targets``, or - with
+    ``approval_dns`` - those whose own DNS says this service may."""
+    approved_targets: tuple[str, ...] = field(default_factory=tuple)
+    """Hostnames and ``.suffix`` domains approved for scanning."""
+    approval_dns: bool = True
+    """Accept a TXT record at ``_check-opencloud-security.<host>`` naming this
+    service's hostname as approval, when approval is required."""
 
     trust_forwarded_for: bool = False
     """Read the client address from ``X-Forwarded-For``. Only behind a proxy
@@ -561,6 +603,23 @@ class WebSettings:
                 "PROBE_WINDOW", DEFAULT_PROBE_WINDOW_SECONDS, minimum=1
             ),
             probe_block=_env_int("PROBE_BLOCK", DEFAULT_PROBE_BLOCK_SECONDS, minimum=1),
+            probe_block_max=_env_int(
+                "PROBE_BLOCK_MAX", DEFAULT_PROBE_BLOCK_MAX_SECONDS, minimum=1
+            ),
+            probe_repeat_window=_env_int(
+                "PROBE_REPEAT_WINDOW", DEFAULT_PROBE_REPEAT_WINDOW_SECONDS
+            ),
+            probe_ipv4_prefix=min(
+                32, _env_int("PROBE_IPV4_PREFIX", DEFAULT_PROBE_IPV4_PREFIX, minimum=8)
+            ),
+            client_ipv6_prefix=min(
+                128, _env_int("CLIENT_IPV6_PREFIX", DEFAULT_CLIENT_IPV6_PREFIX, minimum=32)
+            ),
+            daily_scan_limit=_env_int("DAILY_SCAN_LIMIT", DEFAULT_DAILY_SCAN_LIMIT),
+            dns_consistency_check=_env_bool("DNS_CONSISTENCY_CHECK", True),
+            require_approval=_env_bool("REQUIRE_APPROVAL", False),
+            approved_targets=_env_list("APPROVED_TARGETS"),
+            approval_dns=_env_bool("APPROVAL_DNS", True),
             trust_forwarded_for=_env_bool("TRUST_FORWARDED_FOR", False),
             trusted_proxy_hops=_env_int(
                 "TRUSTED_PROXY_HOPS", DEFAULT_TRUSTED_PROXY_HOPS, minimum=1

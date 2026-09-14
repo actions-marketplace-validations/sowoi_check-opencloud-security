@@ -10,6 +10,31 @@ MESSAGES: dict[str, str] = {
     "admin.kicker": "Operación",
     "admin.tabs.aria": "Área de operación",
     "admin.tabs.overview": "Resumen",
+    "admin.tabs.configuration": "Configuración",
+    "admin.config.title": "Configuración",
+    "admin.config.lede": "Cada variable COS_WEB_* que lee este servicio y el valor con el que está funcionando.",
+    "admin.config.scope": "Es el entorno propio del servicio web, tal como este proceso lo leyó al arrancar: no la configuración de OpenCloud ni la del worker, que lee las mismas variables en su propio contenedor. Los valores se muestran tal como rigen tras interpretarlos; las credenciales solo aparecen como definidas o no definidas.",
+    "admin.config.source.environment": "Definida",
+    "admin.config.source.default": "Predeterminado",
+    "admin.config.secret.set": "Definida (valor oculto)",
+    "admin.config.unset": "No definida",
+    "admin.config.default": "Valor predeterminado documentado:",
+    "admin.config.unknown.kicker": "Revise la ortografía",
+    "admin.config.unknown.heading": "Variables que este servicio no lee",
+    "admin.config.unknown.lede": "Estos nombres llevan el prefijo COS_WEB_ pero no corresponden a ningún ajuste, así que no cambian nada. Una errata aquí deja en vigor el valor predeterminado. No se muestran los valores.",
+    "admin.config.group.storage": "Almacenamiento y workers",
+    "admin.config.group.scanning": "Cómo se ejecuta un escaneo",
+    "admin.config.group.targets": "Qué se puede escanear",
+    "admin.config.group.limits": "Límites de frecuencia y protección contra abusos",
+    "admin.config.group.approval": "Aprobación de objetivos",
+    "admin.config.group.network": "Dirección pública, proxy e indexación",
+    "admin.config.group.reference": "Datos de versiones y avisos",
+    "admin.config.group.interfaces": "Documentación de la API y endpoint para agentes",
+    "admin.config.group.mcp_auth": "Inicio de sesión en el endpoint para agentes",
+    "admin.config.group.admin": "Área del operador",
+    "admin.config.group.audit": "Registro de auditoría",
+    "admin.config.group.protection": "Borrado, firmas y cifrado",
+    "admin.config.group.frontend": "Frontend",
     "admin.docs.kicker": "Documentación de operación",
     "admin.docs.source": "Desde <code>{file}</code> en el repositorio, en inglés.",
     "admin.band": "Área de operación - sesión iniciada como {user}",
@@ -41,6 +66,10 @@ MESSAGES: dict[str, str] = {
     "admin.state.ratelimit": "Límite de peticiones",
     "admin.state.ratelimit.value": "{limit} por {window}s",
     "admin.state.cooldown.value": "{seconds}s por destino",
+    "admin.state.guard": "Protección contra abusos",
+    "admin.state.guard.value": "{active} redes bloqueadas",
+    "admin.state.guard.week": "últimos 7 días: {blocks} bloqueos, {strikes} avisos, {daily} límites diarios alcanzados",
+    "admin.state.guard.off": "Bloqueo por sondeo desactivado",
     "admin.state.schedule": "Calendario de versiones",
     "admin.state.advisories": "Avisos",
     "admin.state.checked": "comprobado {when}",
@@ -919,6 +948,8 @@ MESSAGES: dict[str, str] = {
     ),
     "api.limits.cooldown": "un análisis por objetivo cada {minutes} minuto(s)",
     "api.limits.no_cooldown": "sin tiempo de espera por objetivo",
+    "api.limits.daily": "Como máximo {count} análisis por red al día.",
+    "api.limits.probe": "Una red cuyos análisis no dejan de encontrar algo que no es OpenCloud queda en pausa un tiempo.",
     "api.limits.none": "Este despliegue no establece ningún límite de frecuencia.",
     "api.limits.self_host": (
         "Si te encuentras con uno y prefieres no esperar, todo esto se "
@@ -1433,6 +1464,23 @@ MESSAGES: dict[str, str] = {
         "resultaron ser OpenCloud, así que este servicio hace una pausa con "
         "tus análisis durante un rato. Si querías comprobar tu propia "
         "instancia, el escáner también funciona en tu equipo."
+    ),
+    "error.rate_limit.daily": (
+        "Son todos los análisis que este servicio puede hacer hoy para tu red. "
+        "Mañana habrá sitio de nuevo, o ejecuta el escáner tú mismo, que no "
+        "tiene límite diario."
+    ),
+    "error.target.wildcard_dns": (
+        "Ese nombre pertenece a un servicio que apunta nombres a cualquier "
+        "dirección. Escribe el nombre de host propio de la instancia o su dirección."
+    ),
+    "error.target.unstable": (
+        "Ese nombre de host responde con direcciones distintas en cada consulta, "
+        "así que este servicio no puede saber qué analizaría."
+    ),
+    "error.target.not_approved": (
+        "Este servicio solo analiza instancias aprobadas para ello. Pide al "
+        "operador que la añada o publica el registro DNS que la aprueba."
     ),
     "error.rate_limit.target": (
         "Esa instancia se analizó hace muy poco. Por favor, espera unos minutos."

@@ -35,6 +35,8 @@ curl https://scan.okxo.de/api/scans/&lt;uuid&gt;</code></pre>
     {% if limits.client %}
     {% set cooldown_phrase = t('api.limits.cooldown', minutes=limits.cooldown_minutes) if limits.cooldown else t('api.limits.no_cooldown') %}
     {{ t.html('api.limits.enforced', client=limits.client, window=limits.window_minutes, cooldown=cooldown_phrase) }}
+    {% if limits.daily %}{{ t('api.limits.daily', count=limits.daily) }}{% endif %}
+    {% if limits.probe %}{{ t('api.limits.probe') }}{% endif %}
     {% else %}
     {{ t('api.limits.none') }}
     {% endif %}

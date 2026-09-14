@@ -661,7 +661,12 @@ before the first deployment:
 | `COS_WEB_SCAN_CONCURRENCY` | `4` | Probes in flight within one scan |
 | `COS_WEB_IP_RATE_LIMIT` / `_WINDOW` | `10` / `60` | The client limit. `0` disables |
 | `COS_WEB_TARGET_COOLDOWN` | `300` | Seconds before the same instance may be scanned again |
-| `COS_WEB_PROBE_LIMIT` / `_WINDOW` / `_BLOCK` | `5` / `300` / `3600` | Scans from one client that found no OpenCloud before it is blocked, the window, and the block. Web service and worker alike. `0` disables |
+| `COS_WEB_PROBE_LIMIT` / `_WINDOW` / `_BLOCK` | `5` / `300` / `3600` | Strikes - scans that found no OpenCloud, targets the guard refused - before a client network is blocked, the window, and the first block. Web service and worker alike. `0` disables |
+| `COS_WEB_PROBE_BLOCK_MAX` / `_REPEAT_WINDOW` | `86400` / `86400` | A block earned again soon lasts six times longer, up to the ceiling |
+| `COS_WEB_PROBE_IPV4_PREFIX` / `COS_WEB_CLIENT_IPV6_PREFIX` | `24` / `64` | How much of an address counts as one client |
+| `COS_WEB_DAILY_SCAN_LIMIT` | `50` | Scans per client per day. `0` disables |
+| `COS_WEB_DNS_CONSISTENCY_CHECK` | `true` | Refuse a name whose two lookups share no address |
+| `COS_WEB_REQUIRE_APPROVAL` / `_APPROVED_TARGETS` / `COS_WEB_APPROVAL_DNS` | `false` / *(empty)* / `true` | Scan listed or DNS-approved instances only |
 | `COS_WEB_MAX_BATCH_TARGETS` | `10` | Targets one batch may carry; each still spends a scan from every limit |
 | `COS_WEB_TRUST_FORWARDED_FOR` | `false` | Only behind a proxy that **overwrites** the header, or the limit is decorative |
 | `COS_WEB_PUBLIC_BASE_URL` | *(required)* | The stable origin in canonical links, `sitemap.xml`, and agent discovery. Startup refuses an unset value rather than trusting an incoming `Host` header |

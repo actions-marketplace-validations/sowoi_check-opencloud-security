@@ -29,6 +29,13 @@ services:
       COS_WEB_PROBE_LIMIT: "5"
       COS_WEB_PROBE_WINDOW: "300"
       COS_WEB_PROBE_BLOCK: "3600"
+      COS_WEB_PROBE_BLOCK_MAX: "86400"
+      COS_WEB_PROBE_REPEAT_WINDOW: "86400"
+      COS_WEB_PROBE_IPV4_PREFIX: "24"
+      COS_WEB_CLIENT_IPV6_PREFIX: "64"
+      COS_WEB_DAILY_SCAN_LIMIT: "50"
+      COS_WEB_DNS_CONSISTENCY_CHECK: "true"
+      COS_WEB_REQUIRE_APPROVAL: "false"
       # Set this only when a reverse proxy overwrites X-Forwarded-For.
       COS_WEB_TRUST_FORWARDED_FOR: "false"
       # Required. The address this service is reached at from outside, so the
@@ -102,6 +109,8 @@ services:
       COS_WEB_PROBE_LIMIT: "5"
       COS_WEB_PROBE_WINDOW: "300"
       COS_WEB_PROBE_BLOCK: "3600"
+      COS_WEB_PROBE_BLOCK_MAX: "86400"
+      COS_WEB_PROBE_REPEAT_WINDOW: "86400"
       COS_WEB_JOB_TIMEOUT: "180"
       COS_WEB_ALLOW_PRIVATE_TARGETS: "false"
       COS_WEB_CHECK_DEBUG_PORTS: "false"

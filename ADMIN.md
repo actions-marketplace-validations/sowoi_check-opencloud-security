@@ -541,21 +541,26 @@ What the area does:
 | Search index | **Reports** whether the shipped index still matches this build. It never rebuilds - every pull request to main and the release workflow do that. When it is out of date, the card lists every reason and shows how to fix it. Three verdicts, not two: an index that does not name the release it was built for is **Cannot tell**, because its pages and languages could be compared and its copy could not |
 | Audit | Streams the audit records as they are written, from the log file when one is configured and otherwise from a bounded in-memory ring |
 
-Beside the overview there are two more places, reached from the tab strip at
+Beside the overview there are three more places, reached from the tab strip at
 the top of every page in the area:
 
 | Tab | What it shows |
 |:--|:--|
+| Configuration | Every `COS_WEB_*` variable the web service reads, grouped, with the value **in effect** - after parsing, clamping and fallbacks, so a malformed value shows the default it fell back to - whether the environment set it or the default applies, and the documented default and description from the table in `docs/webapp.md`. A token, key, salt or the Redis password is only ever **set** or **not set**. `COS_WEB_*` names the service does not read are listed by name, without their values, because a misspelt variable otherwise leaves the default in force with nothing saying so. It is this web process's environment: not OpenCloud's, and not the worker's, which reads the same variables in its own container |
 | Architecture | `ARCHITECTURE.md` — how the repository is put together and why the seams are where they are |
 | Operations | This file — the data to keep current, what to rebuild, and where to look when something breaks |
 
-Both are generated into `frontend/templates/admin-docs/` at build time by
+The two documents are generated into `frontend/templates/admin-docs/` at build time by
 `scripts/build_frontend_documentation.py`, from
 `OPERATOR_DOCUMENTATION_PAGES` rather than the public manifest, so no
 Markdown is parsed at runtime and neither document reaches `/documentation`,
 the sitemap or the search index. They are English only: a half-translated
 operations note is worse than an English one that says which file it came
-from, which the line above each of them does.
+from, which the line above each of them does. The configuration tab's
+descriptions come from the same script, which extracts the `docs/webapp.md`
+table into `webapp/environment_reference.py`; its `--check` in CI fails when
+the two disagree, and `tests/test_webapp_admin_configuration.py` fails when
+a variable is read, listed or documented in one place and not the others.
 
 What it deliberately cannot do: name a target, a uuid, a result or a client
 address. The statistics are counts and settings, and the audit view shows the
@@ -735,7 +740,7 @@ The optional audit log (`COS_WEB_AUDIT_LOG*`, salted via
 | Grades look generous | Advisory refresh rejected or stale — check `advisories` in `/healthz` |
 | An instance is graded unknown instead of EOL | Schedule refresh rejected or stale |
 | Agents can reach `/mcp` unauthenticated | `COS_WEB_MCP_AUTH_ENABLED` plus an issuer must both be set; a deployment that asked for a sign-in it cannot enforce refuses to start |
-| Rate limits hitting legitimate users | `COS_WEB_IP_RATE_LIMIT` / `COS_WEB_IP_RATE_WINDOW` / `COS_WEB_TARGET_COOLDOWN`; a one-hour 429 is the probe block (`COS_WEB_PROBE_LIMIT` / `COS_WEB_PROBE_WINDOW` / `COS_WEB_PROBE_BLOCK`, `rate_limit_probe` in the audit trail); behind a proxy also `COS_WEB_TRUST_FORWARDED_FOR` and `COS_WEB_TRUSTED_PROXY_HOPS` |
+| Rate limits hitting legitimate users | `COS_WEB_IP_RATE_LIMIT` / `COS_WEB_IP_RATE_WINDOW` / `COS_WEB_TARGET_COOLDOWN`; an hour-or-longer 429 is the probe block (`COS_WEB_PROBE_*`, `rate_limit_probe` in the audit trail, counted on the **Abuse guard** tile) or the daily cap (`COS_WEB_DAILY_SCAN_LIMIT`, `rate_limit_daily`); a 403 is approval mode (`COS_WEB_REQUIRE_APPROVAL`); behind a proxy also `COS_WEB_TRUST_FORWARDED_FOR` and `COS_WEB_TRUSTED_PROXY_HOPS` |
 | Scans of internal hosts refused | That is the SSRF guard. `COS_WEB_ALLOW_PRIVATE_TARGETS` exists but think hard before a public deployment sets it |
 
 For the plugin rather than the service, `docs/troubleshooting.md` covers

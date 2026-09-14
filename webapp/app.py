@@ -7,13 +7,16 @@ side, and the request never gets a vote.
 
 Requests are checked in this order:
 
-1. the probe block, a single read, because a client that has been scanning
-   hosts that are not OpenCloud is refused before it spends anything;
-2. the client rate limit, because it is one Redis ``INCR`` and it protects
-   the resolver behind step 3 from being used as an amplifier;
-3. the target itself, against the SSRF guard;
-4. the waiver list, against the allow-list, dropping anything unknown;
-5. the target cooldown, claimed with ``SET NX`` so two simultaneous requests
+1. the probe block, a single read, because a client network that has been
+   scanning hosts that are not OpenCloud is refused before it spends anything;
+2. the client rate limit and the daily cap, because each is one Redis
+   ``INCR`` and they protect the resolver behind step 3 from being used as an
+   amplifier;
+3. the target itself, against the SSRF guard - and a refusal that says
+   something about the asker counts towards the probe block;
+4. approval, when the deployment requires it;
+5. the waiver list, against the allow-list, dropping anything unknown;
+6. the target cooldown, claimed with ``SET NX`` so two simultaneous requests
    for the same instance cannot both win.
 
 Only then does a uuid exist. Overload never changes any of this: when every
@@ -24,6 +27,7 @@ service that punishes people for being interested.
 
 from __future__ import annotations
 
+import asyncio
 import hmac
 import importlib.util
 import ipaddress
@@ -76,15 +80,18 @@ from .admin import (
 )
 from .admin_auth import Operator, ensure_admin_ready, operator_for, sign_out_url
 from .advisories import advisory_catalogue, advisory_state, stored_database
+from .approval import NOT_APPROVED, approved, ensure_approval_ready
 from .arazzo import arazzo_document
 from .audit import (
     REASON_BATCH_TOO_LARGE,
     REASON_EXCLUSIONS_UNREADABLE,
     REASON_PURGE_UNAUTHORISED,
     REASON_RATE_LIMIT_CLIENT,
+    REASON_RATE_LIMIT_DAILY,
     REASON_RATE_LIMIT_PROBE,
     REASON_RATE_LIMIT_PURGE,
     REASON_RATE_LIMIT_TARGET,
+    REASON_TARGET_NOT_APPROVED,
     REASON_TARGET_REJECTED,
     REASON_UNSUPPORTED_FIELDS,
     AuditLog,
@@ -116,6 +123,8 @@ from .catalog import (
     summarise,
     waiver_options,
 )
+from .configuration import grouped_rows as configuration_groups
+from .configuration import unrecognised as configuration_unrecognised
 from .discovery import (
     ARAZZO_PATH,
     DISCOVERY_PATH,
@@ -158,7 +167,7 @@ from .purge import (
     normalise_target,
 )
 from .queue import ScanQueue, create_queue
-from .ratelimit import RateLimiter
+from .ratelimit import RateLimiter, limiter_for
 from .redis_backend import RedisUnavailable, create_backend
 from .reports import (
     EXPORT_FORMATS,
@@ -191,7 +200,12 @@ from .seo import (
     wants_robots_tag,
 )
 from .settings import WebSettings
-from .ssrf import TargetRejected, ensure_blocklist_ready, validate_target
+from .ssrf import (
+    SUSPICIOUS_REJECTIONS,
+    TargetRejected,
+    ensure_blocklist_ready,
+    validate_target,
+)
 from .store import (
     QUEUE_KEY,
     STATE_COMPLETED,
@@ -921,6 +935,8 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
     # And before a single submission is accepted: an exclusion nobody could
     # parse would let this service scan exactly what it was told not to.
     ensure_blocklist_ready(settings.blocked_targets)
+    # And an approval mode that could approve nothing, or names a typo.
+    ensure_approval_ready(settings)
     # The window the live audit view reads on a deployment that logs to
     # stdout. Attached only when both the trail and the area are on.
     app.state.recent_audit = install_recent_audit(settings)
@@ -929,17 +945,7 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
         ttl=settings.result_ttl,
         encryption_config=settings if settings.encrypt_results else None,
     )
-    app.state.limiter = RateLimiter(
-        backend=app.state.backend,
-        client_limit=settings.ip_rate_limit,
-        client_window=settings.ip_rate_window,
-        target_cooldown=settings.target_cooldown,
-        # Unset is a random pepper per process, which counts correctly only
-        # while there is one. A deployment behind several web processes sets
-        # the same value in each, or every client gets one allowance apiece.
-        salt=settings.rate_limit_salt,
-        probe_limit=settings.probe_limit,
-    )
+    app.state.limiter = limiter_for(app.state.backend, settings)
     app.state.queue = None
     app.state.audit = AuditLog.from_settings(settings)
     # And before the first record: a deployment that asked for the trail to
@@ -1031,6 +1037,8 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
             "limits": {
                 "client": settings.ip_rate_limit,
                 "window_minutes": max(1, settings.ip_rate_window // 60),
+                "daily": settings.daily_scan_limit,
+                "probe": settings.probe_limit > 0,
                 "cooldown_minutes": max(1, settings.target_cooldown // 60),
                 "cooldown": settings.target_cooldown,
             },
@@ -1077,8 +1085,9 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
         address = client_address(request, settings)
         blocked = await limiter.check_probe_block(address)
         client = await limiter.peek_client(address)
+        daily = await limiter.peek_daily(address)
         target = await limiter.peek_target(target_hostname(record.metadata.get("target")))
-        return max(blocked.retry_after, client.retry_after, target.retry_after)
+        return max(blocked.retry_after, client.retry_after, daily.retry_after, target.retry_after)
 
     async def accept_submission(
         request: Request,
@@ -1146,6 +1155,23 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
                 key="error.rate_limit.client",
             )
 
+        daily = await limiter.check_daily(address)
+        if not daily.allowed:
+            audit.rate_limited(
+                client=address,
+                scope=REASON_RATE_LIMIT_DAILY,
+                retry_after=daily.retry_after,
+            )
+            raise _Rejected(
+                "That is all the scans this service can run for your network "
+                "today. It will make room again tomorrow - or run the scanner "
+                "yourself, which has no daily limit.",
+                status=429,
+                retry_after=daily.retry_after,
+                self_host=True,
+                key="error.rate_limit.daily",
+            )
+
         # Read per submission rather than held from startup: an operator who
         # excludes a target in the area has excluded it for the next request,
         # in every process, without a restart.
@@ -1181,6 +1207,7 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
                 allow_private=settings.allow_private_targets,
                 allowed_hosts=settings.extra_hosts_allowed,
                 blocked_targets=exclusions,
+                check_consistency=settings.dns_consistency_check,
             )
         except TargetRejected as exc:
             audit.submission_rejected(
@@ -1188,9 +1215,25 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
                 reason=REASON_TARGET_REJECTED,
                 status=400,
             )
+            if exc.key in SUSPICIOUS_REJECTIONS:
+                await limiter.record_refused_target(address)
             raise _Rejected(
                 str(exc), status=400, key=getattr(exc, "key", "")
             ) from exc
+
+        # Off the event loop: with DNS approval this is a lookup that may
+        # take its whole timeout, and every other visitor is waiting on the
+        # same loop.
+        if settings.require_approval and not await asyncio.to_thread(
+            approved, target, settings
+        ):
+            audit.submission_rejected(
+                client=address,
+                reason=REASON_TARGET_NOT_APPROVED,
+                status=403,
+            )
+            await limiter.record_refused_target(address)
+            raise _Rejected(NOT_APPROVED, status=403, key="error.target.not_approved")
 
         waivers = sanitize_waivers(ignore_hardenings)
         chosen_format = output_format if output_format in OUTPUT_FORMATS else "dashboard"
@@ -2033,6 +2076,25 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
             if operator is None:
                 return not_found(request)
             return page(request, "admin.html", await admin_context(operator, None))
+
+        @app.get(f"{ADMIN_PATH}/configuration", response_class=HTMLResponse,
+                 include_in_schema=False)
+        async def admin_configuration(request: Request) -> Response:
+            """
+            Every ``COS_WEB_*`` variable and what this process runs with.
+
+            Rendered by the server and never polled: every value is one read
+            at startup, so there is nothing a refresh could move. Credentials
+            are shown as set or not set only - see :mod:`webapp.configuration`.
+            """
+            operator = admin_operator(request)
+            if operator is None:
+                return not_found(request)
+            context = await admin_context(operator, None)
+            context["admin_tab"] = "configuration"
+            context["configuration_groups"] = configuration_groups(settings)
+            context["configuration_unrecognised"] = configuration_unrecognised()
+            return page(request, "admin-configuration.html", context)
 
         @app.get(f"{ADMIN_PATH}/docs/{{slug}}", response_class=HTMLResponse,
                  include_in_schema=False)

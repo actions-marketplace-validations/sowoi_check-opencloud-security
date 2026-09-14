@@ -10,6 +10,31 @@ MESSAGES: dict[str, str] = {
     "admin.kicker": "Betrieb",
     "admin.tabs.aria": "Betreiberbereich",
     "admin.tabs.overview": "Überblick",
+    "admin.tabs.configuration": "Konfiguration",
+    "admin.config.title": "Konfiguration",
+    "admin.config.lede": "Jede COS_WEB_*-Variable, die dieser Dienst liest, und der Wert, mit dem er läuft.",
+    "admin.config.scope": "Das ist die eigene Umgebung des Webdienstes, wie dieser Prozess sie beim Start gelesen hat - nicht die Konfiguration von OpenCloud und nicht die des Workers, der dieselben Variablen in seinem eigenen Container liest. Werte erscheinen so, wie sie nach dem Einlesen gelten; Zugangsdaten werden nur als gesetzt oder nicht gesetzt angezeigt.",
+    "admin.config.source.environment": "Gesetzt",
+    "admin.config.source.default": "Standard",
+    "admin.config.secret.set": "Gesetzt (Wert verborgen)",
+    "admin.config.unset": "Nicht gesetzt",
+    "admin.config.default": "Dokumentierter Standard:",
+    "admin.config.unknown.kicker": "Schreibweise prüfen",
+    "admin.config.unknown.heading": "Variablen, die dieser Dienst nicht liest",
+    "admin.config.unknown.lede": "Diese Namen tragen das Präfix COS_WEB_, passen aber zu keiner Einstellung und ändern daher nichts. Ein Tippfehler lässt hier den Standard gelten. Werte werden nicht angezeigt.",
+    "admin.config.group.storage": "Speicher und Worker",
+    "admin.config.group.scanning": "Ablauf eines Scans",
+    "admin.config.group.targets": "Was gescannt werden darf",
+    "admin.config.group.limits": "Ratenbegrenzung und Missbrauchsschutz",
+    "admin.config.group.approval": "Freigabe von Zielen",
+    "admin.config.group.network": "Öffentliche Adresse, Proxy und Indexierung",
+    "admin.config.group.reference": "Release- und Advisory-Daten",
+    "admin.config.group.interfaces": "API-Dokumentation und Agent-Endpunkt",
+    "admin.config.group.mcp_auth": "Anmeldung am Agent-Endpunkt",
+    "admin.config.group.admin": "Betreiberbereich",
+    "admin.config.group.audit": "Audit-Protokoll",
+    "admin.config.group.protection": "Löschung, Signaturen und Verschlüsselung",
+    "admin.config.group.frontend": "Frontend",
     "admin.docs.kicker": "Betreiberdokumentation",
     "admin.docs.source": "Aus <code>{file}</code> im Repository, auf Englisch.",
     "admin.band": "Betriebsbereich - angemeldet als {user}",
@@ -42,6 +67,10 @@ MESSAGES: dict[str, str] = {
     "admin.state.ratelimit": "Ratenbegrenzung",
     "admin.state.ratelimit.value": "{limit} pro {window}s",
     "admin.state.cooldown.value": "{seconds}s pro Ziel",
+    "admin.state.guard": "Missbrauchsschutz",
+    "admin.state.guard.value": "{active} Netze gesperrt",
+    "admin.state.guard.week": "letzte 7 Tage: {blocks} Sperren, {strikes} Verstöße, {daily}-mal Tageslimit erreicht",
+    "admin.state.guard.off": "Scan-Sperre aus",
     "admin.state.schedule": "Release-Zeitplan",
     "admin.state.advisories": "Advisories",
     "admin.state.checked": "geprüft {when}",
@@ -932,6 +961,8 @@ MESSAGES: dict[str, str] = {
     ),
     "api.limits.cooldown": "ein Scan pro Ziel alle {minutes} Minute(n)",
     "api.limits.no_cooldown": "keine Abkühlzeit pro Ziel",
+    "api.limits.daily": "Höchstens {count} Scans pro Netz am Tag.",
+    "api.limits.probe": "Ein Netz, dessen Scans immer wieder keine OpenCloud finden, wird eine Weile pausiert.",
     "api.limits.none": "Dieses Deployment setzt kein Ratenlimit.",
     "api.limits.self_host": (
         "Wenn du eines triffst und lieber nicht warten möchtest: Das Ganze läuft "
@@ -1445,6 +1476,24 @@ MESSAGES: dict[str, str] = {
         "waren keine OpenCloud-Instanzen, deshalb pausiert dieser Dienst deine "
         "Scans für eine Weile. Wenn du deine eigene Instanz prüfen wolltest: "
         "Der Scanner läuft auch auf deinem Rechner."
+    ),
+    "error.rate_limit.daily": (
+        "Das sind alle Scans, die dieser Dienst heute für dein Netz ausführen "
+        "kann. Morgen ist wieder Platz - oder du startest den Scanner selbst, "
+        "der kein Tageslimit hat."
+    ),
+    "error.target.wildcard_dns": (
+        "Dieser Name gehört zu einem Dienst, der Namen auf beliebige Adressen "
+        "zeigen lässt. Gib den eigenen Hostnamen der Instanz oder ihre Adresse ein."
+    ),
+    "error.target.unstable": (
+        "Dieser Hostname liefert bei jeder Abfrage andere Adressen, daher kann "
+        "dieser Dienst nicht sagen, was er scannen würde."
+    ),
+    "error.target.not_approved": (
+        "Dieser Dienst scannt nur Instanzen, die dafür freigegeben wurden. Bitte "
+        "den Betreiber, sie hinzuzufügen, oder veröffentliche den DNS-Eintrag, "
+        "der sie freigibt."
     ),
     "error.rate_limit.target": (
         "Diese Instanz wurde erst vor kurzem gescannt. Bitte gib ihr ein "

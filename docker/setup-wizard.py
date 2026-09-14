@@ -501,6 +501,21 @@ class Setup:
     target_cooldown: int = 300
     max_batch_targets: int = 10
 
+    # Abuse protection: what it costs to use this service to find out what
+    # answers where, rather than to check an OpenCloud instance.
+    probe_limit: int = 5
+    probe_window: int = 300
+    probe_block: int = 3600
+    probe_block_max: int = 86400
+    probe_repeat_window: int = 86400
+    probe_ipv4_prefix: int = 24
+    client_ipv6_prefix: int = 64
+    daily_scan_limit: int = 50
+    dns_consistency_check: bool = True
+    require_approval: bool = False
+    approved_targets: str = ""
+    approval_dns: bool = True
+
     # The service's whole load on other people's servers.
     max_workers: int = 5
     scan_concurrency: int = 4
@@ -809,6 +824,37 @@ def _hostname_list(value: str) -> str | None:
     for item in re.split(r"[;,]", value):
         if item.strip() and re.search(r"\s", item.strip()):
             return "Separate several names with ';', without spaces inside a name."
+    return None
+
+
+def _between(minimum: int, maximum: int) -> Callable[[str], str | None]:
+    def check(value: str) -> str | None:
+        try:
+            number = int(value)
+        except ValueError:
+            return f"Enter a whole number between {minimum} and {maximum}."
+        if minimum <= number <= maximum:
+            return None
+        return f"Enter a whole number between {minimum} and {maximum}."
+
+    return check
+
+
+def _target_list(value: str) -> str | None:
+    """Hostnames, .suffix domains, addresses and CIDR ranges, separated by ';'."""
+    if not value.strip():
+        return None
+    for item in re.split(r"[;,]", value):
+        entry = item.strip().lower().removeprefix("*")
+        if not entry:
+            continue
+        if re.search(r"\s", entry):
+            return "Separate several entries with ';', without spaces inside one."
+        if not re.fullmatch(r"\.?[a-z0-9.:\[\]/-]+", entry):
+            return (
+                f"{item.strip()!r} is neither a hostname, a .suffix, an address "
+                "nor a CIDR range."
+            )
     return None
 
 
@@ -1483,6 +1529,145 @@ def build_sections(setup: Setup) -> list[Section]:
                     example="10",
                     kind="int",
                     validate=_positive(1),
+                ),
+            ],
+        ),
+        Section(
+            "Abuse protection",
+            "What it costs to use this service to map other people's hosts.",
+            [
+                Question(
+                    key="probe_limit",
+                    prompt="Scans that find no OpenCloud before a network is blocked",
+                    explain=(
+                        "A scan whose host did not answer, answered with something else, "
+                        "or a target the guard refused outright, counts as a strike - the "
+                        "same host again counts again. This many strikes inside the window "
+                        "below block the client's network. 0 turns the block off."
+                    ),
+                    example="5",
+                    kind="int",
+                    validate=_positive(0),
+                ),
+                Question(
+                    key="probe_window",
+                    prompt="Window those strikes are counted in, in seconds",
+                    explain="Strikes further apart than this do not add up.",
+                    example="300",
+                    kind="int",
+                    validate=_positive(1),
+                ),
+                Question(
+                    key="probe_block",
+                    prompt="How long the first block lasts, in seconds",
+                    explain=(
+                        "Answered with a friendly note and a pointer to running the "
+                        "scanner locally, like every other limit."
+                    ),
+                    example="3600",
+                    kind="int",
+                    validate=_positive(1),
+                ),
+                Question(
+                    key="probe_block_max",
+                    prompt="Longest a repeated block may grow to, in seconds",
+                    explain=(
+                        "A network blocked again soon after its last block waits six "
+                        "times longer each time - an hour, six hours, a day - up to this."
+                    ),
+                    example="86400",
+                    kind="int",
+                    validate=_positive(1),
+                ),
+                Question(
+                    key="probe_repeat_window",
+                    prompt="How long a block is remembered after it ends, in seconds",
+                    explain=(
+                        "A network that stays away this long starts again at the first "
+                        "block's length. 0 never escalates."
+                    ),
+                    example="86400",
+                    kind="int",
+                    validate=_positive(0),
+                ),
+                Question(
+                    key="probe_ipv4_prefix",
+                    prompt="IPv4 network counted as one client by the block (prefix length)",
+                    explain=(
+                        "24 counts a /24 - usually one office or one hosting customer - so "
+                        "the next address along does not step around a block. 32 counts "
+                        "single addresses. The per-minute and daily limits always count "
+                        "single IPv4 addresses."
+                    ),
+                    example="24",
+                    kind="int",
+                    validate=_between(8, 32),
+                ),
+                Question(
+                    key="client_ipv6_prefix",
+                    prompt="IPv6 network counted as one client by every limit (prefix length)",
+                    explain=(
+                        "One subscriber is handed a whole /64 and can rotate through it for "
+                        "free, so counting single IPv6 addresses is no limit at all."
+                    ),
+                    example="64",
+                    kind="int",
+                    validate=_between(32, 128),
+                ),
+                Question(
+                    key="daily_scan_limit",
+                    prompt="Scans one client may submit per day",
+                    explain=(
+                        "On top of the per-minute limit, for the patient version of a "
+                        "burst that stays just under it all night. 0 turns it off."
+                    ),
+                    example="50",
+                    kind="int",
+                    validate=_positive(0),
+                ),
+                Question(
+                    key="dns_consistency_check",
+                    prompt="Refuse hostnames that answer differently on every lookup?",
+                    explain=(
+                        "A submitted name is looked up twice; two answers that share no "
+                        "address are the mark of a name built to rebind. Turn off only for "
+                        "targets behind DNS pools that rotate whole address sets."
+                    ),
+                    example="yes",
+                    kind="bool",
+                ),
+                Question(
+                    key="require_approval",
+                    prompt="Scan approved instances only?",
+                    explain=(
+                        "For a deployment that should not be a public scanner at all. An "
+                        "instance is approved when it is listed below, or - if allowed - "
+                        "when its own DNS publishes a TXT record approving this service."
+                    ),
+                    example="no",
+                    kind="bool",
+                ),
+                Question(
+                    key="approved_targets",
+                    prompt="Approved instances",
+                    explain=(
+                        "Hostnames, .suffix domains, addresses and CIDR ranges, separated "
+                        "by ';'. A .suffix covers the domain and every name under it."
+                    ),
+                    example="opencloud.example.com;.example.org",
+                    validate=_target_list,
+                ),
+                Question(
+                    key="approval_dns",
+                    prompt="Accept a DNS TXT record as approval?",
+                    explain=(
+                        "The owner of a name approves this service by publishing "
+                        "_check-opencloud-security.<host> TXT "
+                        "\"check-opencloud-security=<this service's hostname>\". Needs the "
+                        "public base URL."
+                    ),
+                    example="yes",
+                    kind="bool",
                 ),
             ],
         ),
@@ -2527,6 +2712,11 @@ def _relevant(key: str, setup: Setup) -> bool:
         return setup.image_source == "build"
     if key == "watchtower_socket":
         return setup.auto_updates
+    if key in {"probe_window", "probe_block", "probe_block_max", "probe_repeat_window",
+               "probe_ipv4_prefix"}:
+        return setup.probe_limit > 0
+    if key in {"approved_targets", "approval_dns"}:
+        return setup.require_approval
     if key == "releases_token":
         return setup.releases_mode != "off"
     if key in {"mcp_allowed_hosts", "mcp_max_concurrent_waits", "mcp_auth_enabled"}:
@@ -2803,6 +2993,17 @@ def check_consistency(setup: Setup) -> list[str]:
     exits three seconds after ``up``.
     """
     warnings: list[str] = []
+    if setup.require_approval and not setup.approved_targets.strip() and not setup.approval_dns:
+        warnings.append(
+            "Approval mode with no approved instances and the DNS proof off is "
+            "refused at startup: nothing could ever be scanned. List an instance "
+            "or accept the TXT record."
+        )
+    if setup.require_approval and setup.approval_dns and not setup.public_base_url:
+        warnings.append(
+            "Approval by DNS needs a public base URL: the TXT record approves "
+            "this service by its hostname."
+        )
     if _signs_in(setup) and not _uses_authentik(setup) and not setup.mcp_auth_issuer:
         warnings.append(
             "A sign-in on /mcp without an issuer is refused at startup. "
@@ -4639,6 +4840,7 @@ def _web_environment(setup: Setup) -> list[EnvEntry]:
         ),
         _entry("COS_WEB_IP_RATE_WINDOW", f'"{setup.ip_rate_window}"'),
         _entry("COS_WEB_TARGET_COOLDOWN", f'"{setup.target_cooldown}"'),
+        *_abuse_environment(setup, web=True),
         _entry(
             "COS_WEB_MAX_BATCH_TARGETS",
             f'"{setup.max_batch_targets}"',
@@ -4958,6 +5160,7 @@ def _worker_environment(setup: Setup) -> list[EnvEntry]:
             "limitation of this deployment rather than of the instance.",
         ),
         _entry("COS_WEB_RELEASES_MODE", f'"{setup.releases_mode}"'),
+        *_abuse_environment(setup, web=False),
     ]
     if setup.releases_mode != "off" and setup.releases_token:
         entries.append(
@@ -4973,6 +5176,69 @@ def _worker_environment(setup: Setup) -> list[EnvEntry]:
             )
         )
     entries.extend(_encryption_environment(setup))
+    return entries
+
+
+def _abuse_environment(setup: Setup, *, web: bool) -> list[EnvEntry]:
+    """
+    The abuse guards, for one container.
+
+    The worker learns whether a host was OpenCloud and imposes the block, so
+    it reads the block's own numbers; only the web service reads the rest,
+    because only it sees the client and the submitted name.
+    """
+    entries = [
+        _entry(
+            "COS_WEB_PROBE_LIMIT",
+            f'"{setup.probe_limit}"',
+            "Scans from one client network that find no OpenCloud - or targets",
+            "the guard refused - inside the window before that network is",
+            "blocked. The same host again counts again. Both containers read",
+            "these; 0 turns the block off.",
+        ),
+        _entry("COS_WEB_PROBE_WINDOW", f'"{setup.probe_window}"'),
+        _entry(
+            "COS_WEB_PROBE_BLOCK",
+            f'"{setup.probe_block}"',
+            "The first block, and the longest a block repeated inside the",
+            "remembered window may grow to, six times longer each time.",
+        ),
+        _entry("COS_WEB_PROBE_BLOCK_MAX", f'"{setup.probe_block_max}"'),
+        _entry("COS_WEB_PROBE_REPEAT_WINDOW", f'"{setup.probe_repeat_window}"'),
+    ]
+    if not web:
+        return entries
+    entries.extend(
+        [
+            _entry(
+                "COS_WEB_PROBE_IPV4_PREFIX",
+                f'"{setup.probe_ipv4_prefix}"',
+                "How much of an address counts as one client: the IPv4 network",
+                "the block covers, and the IPv6 network every limit covers.",
+            ),
+            _entry("COS_WEB_CLIENT_IPV6_PREFIX", f'"{setup.client_ipv6_prefix}"'),
+            _entry(
+                "COS_WEB_DAILY_SCAN_LIMIT",
+                f'"{setup.daily_scan_limit}"',
+                "Scans one client may submit per day, on top of the per-minute",
+                "limit. 0 turns it off.",
+            ),
+            _entry(
+                "COS_WEB_DNS_CONSISTENCY_CHECK",
+                f'"{_bool(setup.dns_consistency_check)}"',
+                "Refuse a name whose two lookups share no address.",
+            ),
+            _entry(
+                "COS_WEB_REQUIRE_APPROVAL",
+                f'"{_bool(setup.require_approval)}"',
+                "Scan approved instances only: listed ones, or ones whose DNS",
+                "publishes a TXT record approving this service.",
+            ),
+        ]
+    )
+    if setup.require_approval:
+        entries.append(_entry("COS_WEB_APPROVED_TARGETS", f'"{setup.approved_targets}"'))
+        entries.append(_entry("COS_WEB_APPROVAL_DNS", f'"{_bool(setup.approval_dns)}"'))
     return entries
 
 

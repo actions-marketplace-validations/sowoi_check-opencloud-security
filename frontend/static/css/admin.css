@@ -223,6 +223,79 @@
 
 .admin-surface-label { font-size: .92rem; }
 
+/* The configuration tab. One row per variable, in the same ruled list the
+   exposure card uses: the name and where it came from on the first line, the
+   value in effect under it, then what the documentation says. A list rather
+   than a table, so a phone gets the same reading order without scrolling
+   sideways past eighty variables. */
+.admin-config {
+    list-style: none;
+    margin: 1rem 0 0;
+    padding: 0;
+    border-top: 1px solid var(--line);
+}
+
+.admin-config-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: .3rem .9rem;
+    padding: .75rem .2rem;
+    border-bottom: 1px solid var(--line);
+}
+
+.admin-config-name {
+    font-size: .86rem;
+    overflow-wrap: anywhere;
+}
+
+.admin-config-source {
+    justify-self: end;
+    padding: .15rem .55rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--tint);
+    color: var(--ink-soft);
+    font-family: var(--mono);
+    font-size: .68rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+/* Set by the deployment: the marked accent, because these are the lines an
+   operator is looking for when they ask what this service was started with. */
+.admin-config-row[data-source="environment"] .admin-config-source {
+    border-color: var(--admin-accent-line);
+    background: var(--admin-accent-soft);
+    color: var(--admin-accent);
+}
+
+.admin-config-value,
+.admin-config-description,
+.admin-config-default {
+    grid-column: 1 / -1;
+}
+
+.admin-config-value { font-size: .9rem; }
+
+.admin-config-value code { overflow-wrap: anywhere; }
+
+.admin-config-description,
+.admin-config-default {
+    font-size: .82rem;
+    color: var(--ink-soft);
+}
+
+.admin-config-unknown-list {
+    margin: .75rem 0 0;
+    padding-left: 1.2rem;
+}
+
+.admin-config-unknown {
+    border-left: 3px solid var(--admin-accent-line);
+}
+
 /* The note sits under the label, in the column the label is in: it explains
    the answer rather than qualifying the pill. */
 .admin-surface-note {

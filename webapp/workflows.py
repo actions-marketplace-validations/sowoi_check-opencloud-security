@@ -62,7 +62,7 @@ SUBMIT_MAX_ATTEMPTS = 3
 
 #: The longest ``Retry-After`` a submission waits out by itself. The client
 #: limit and the target cooldown lift within minutes; a probe block lasts an
-#: hour, and an agent sleeping through that is an agent that looks hung. Past
+#: hour or more and the daily cap up to a day, and an agent sleeping through that is an agent that looks hung. Past
 #: this the answer goes back to the caller, who can tell the user why.
 SUBMIT_MAX_WAIT_SECONDS = 300
 
@@ -123,8 +123,9 @@ RATE_LIMIT_NOTE = (
     "429 is not a refusal. A client limit and a per-target cooldown both "
     "answer 429 with Retry-After in seconds; wait that long and try again, at "
     f"most {SUBMIT_MAX_ATTEMPTS} times. A Retry-After longer than "
-    f"{SUBMIT_MAX_WAIT_SECONDS} seconds is a block for scanning hosts that were "
-    "not OpenCloud: do not wait it out, tell the user. The whole scanner is open source and "
+    f"{SUBMIT_MAX_WAIT_SECONDS} seconds is a daily cap or a block for scanning "
+    "hosts that were not OpenCloud: do not wait it out, tell the user. 403 "
+    "means the deployment scans approved instances only. The whole scanner is open source and "
     f"runs locally with no limits at all: {SELF_HOST_URL}"
 )
 
@@ -404,7 +405,8 @@ async def submit_scan(
     A 429 is waited out and retried up to :data:`SUBMIT_MAX_ATTEMPTS` times,
     because both the client limit and the target cooldown say when they will
     lift - unless the wait is longer than :data:`SUBMIT_MAX_WAIT_SECONDS`,
-    which only a probe block is, and that goes straight back to the caller. Anything in :data:`TERMINAL_STATUSES` stops immediately - a rejected
+    which only a probe block or the daily cap is, and that goes straight back
+    to the caller. Anything in :data:`TERMINAL_STATUSES` stops immediately - a rejected
     target does not become acceptable by asking twice.
     """
     payload: dict[str, Any] = {

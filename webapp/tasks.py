@@ -29,7 +29,7 @@ from .blocklist import effective_exclusions
 from .catalog import sanitize_release_track
 from .encryption import ensure_encryption_ready
 from .queue import redis_settings
-from .ratelimit import record_non_opencloud
+from .ratelimit import probe_policy, record_strike
 from .redis_backend import RedisBackend, RedisUnavailable, create_backend
 from .runner import execute_scan
 from .schedule import refresh_schedule, stored_schedule
@@ -154,13 +154,7 @@ async def _count_non_opencloud(
     if not prober:
         return
     try:
-        outcome = await record_non_opencloud(
-            store.backend,
-            prober,
-            limit=settings.probe_limit,
-            window=settings.probe_window,
-            block=settings.probe_block,
-        )
+        outcome = await record_strike(store.backend, prober, probe_policy(settings))
     except RedisUnavailable:  # pragma: no cover - defensive; see the docstring
         LOGGER.info("probe_guard_unavailable %s", uuid)
         return

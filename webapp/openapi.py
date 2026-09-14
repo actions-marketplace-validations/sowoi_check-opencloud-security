@@ -62,7 +62,10 @@ def _rate_limited() -> dict[str, Any]:
             "too many scans, or this target was scanned very recently and is "
             "in its cooldown. Read Retry-After, wait that many seconds and "
             f"try the same call again - at most {wf.SUBMIT_MAX_ATTEMPTS} "
-            "times. The whole scanner is open source and runs locally with "
+            f"times. A Retry-After above {wf.SUBMIT_MAX_WAIT_SECONDS} seconds "
+            "is a daily cap or a block for scanning hosts that were not "
+            "OpenCloud: stop and tell the user rather than wait it out. "
+            "The whole scanner is open source and runs locally with "
             f"no limits: {wf.SELF_HOST_URL}"
         ),
         "headers": {
@@ -764,6 +767,10 @@ def _paths() -> dict[str, Any]:
                     "400": _problem(
                         "The target was refused: not resolvable, or an "
                         "address this service will not probe. Do not retry."
+                    ),
+                    "403": _problem(
+                        "This deployment scans approved instances only, and "
+                        "this one is not approved. Do not retry."
                     ),
                     "422": _problem(
                         "The body carried a field this service does not "

@@ -28,10 +28,13 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import ipaddress
 import os
+import time
 from dataclasses import dataclass
 
 from .redis_backend import RedisBackend
+from .settings import DAILY_WINDOW_SECONDS, WebSettings
 
 # The fallback, regenerated on every restart. There is no reason for it to
 # survive: a counter with a one-minute window has nothing to remember across a
@@ -65,24 +68,156 @@ def credential_key(client: str, salt: str | None = None) -> str:
     return f"cos:web:rl:auth:{_fingerprint(client, salt)}"
 
 
+def network_of(client: str, ipv4_prefix: int, ipv6_prefix: int) -> str:
+    """
+    The network a client address is counted as, in CIDR notation.
+
+    One IPv6 subscriber is handed a whole /64 and can rotate through it for
+    free, so counting single IPv6 addresses gives a client as many allowances
+    as it cares to have. Anything that is not an address - a test client, a
+    socket with no peer - is counted as itself.
+    """
+    try:
+        address = ipaddress.ip_address(client.strip("[]"))
+    except ValueError:
+        return client
+    if isinstance(address, ipaddress.IPv6Address) and address.ipv4_mapped is not None:
+        address = address.ipv4_mapped
+    prefix = ipv4_prefix if address.version == 4 else ipv6_prefix
+    maximum = 32 if address.version == 4 else 128
+    prefix = max(1, min(maximum, prefix))
+    if prefix == maximum:
+        # A single address keeps the spelling every key was derived from
+        # before networks were counted, so a deploy does not reset counters.
+        return str(address)
+    return str(ipaddress.ip_network(f"{address}/{prefix}", strict=False))
+
+
 def prober_fingerprint(client: str, salt: str | None = None) -> str:
     """The fingerprint a submission hands to the worker for the probe guard.
 
-    The worker learns whether a host was OpenCloud and the API knows who
-    asked; neither can derive the other's key while the pepper is per
-    process, so the fingerprint itself travels with the scan instead.
+    ``client`` is already the network (:func:`network_of`). The worker learns
+    whether a host was OpenCloud and the API knows who asked; neither can
+    derive the other's key while the pepper is per process, so the
+    fingerprint itself travels with the scan instead.
     """
     return _fingerprint(client, salt)
 
 
 def probe_count_key(prober: str) -> str:
-    """How many scans of one client found no OpenCloud, in the window."""
+    """How many suspicious outcomes one client network had, in the window."""
     return f"cos:web:rl:probe:{prober}"
 
 
 def probe_block_key(prober: str) -> str:
-    """The block a client earned by scanning too many hosts that were not OpenCloud."""
+    """The block a client network earned by probing."""
     return f"cos:web:rl:blocked:{prober}"
+
+
+def probe_repeat_key(prober: str) -> str:
+    """How many blocks one client network has earned recently, for escalation."""
+    return f"cos:web:rl:blocks:{prober}"
+
+
+def daily_key(client: str, salt: str | None = None) -> str:
+    """Submissions from one client in the current day-long window."""
+    return f"cos:web:rl:daily:{_fingerprint(client, salt)}"
+
+
+BLOCK_KEY_PATTERN = "cos:web:rl:blocked:*"
+
+#: How much longer each repeated block lasts than the one before it, up to
+#: the configured ceiling: an hour, then six, then a day.
+BLOCK_ESCALATION_FACTOR = 6
+
+#: Day-stamped counters for the operator area, kept for a week and a day so
+#: "the last seven days" is always whole.
+STATS_RETENTION_SECONDS = 8 * 86400
+STAT_BLOCKS = "blocks"
+STAT_STRIKES = "strikes"
+STAT_DAILY = "daily"
+
+
+def stats_key(name: str, day: str) -> str:
+    """One day's count of one guard event. A number and a date, nothing else."""
+    return f"cos:web:stats:{name}:{day}"
+
+
+def _today(offset_days: int = 0) -> str:
+    return time.strftime("%Y%m%d", time.gmtime(time.time() - offset_days * 86400))
+
+
+async def count_event(backend: RedisBackend, name: str) -> None:
+    """Add one to today's count of a guard event."""
+    key = stats_key(name, _today())
+    if await backend.incr(key) == 1:
+        await backend.expire(key, STATS_RETENTION_SECONDS)
+
+
+async def event_counts(backend: RedisBackend, name: str) -> tuple[int, int]:
+    """Today's count and the last seven days' total of one guard event."""
+    days = []
+    for offset in range(7):
+        raw = await backend.get(stats_key(name, _today(offset)))
+        try:
+            days.append(int(raw) if raw is not None else 0)
+        except ValueError:  # pragma: no cover - only a hand-edited key gets here
+            days.append(0)
+    return days[0], sum(days)
+
+
+def probe_policy(settings: WebSettings) -> ProbePolicy:
+    """The probe guard as both processes read it from the environment."""
+    return ProbePolicy(
+        limit=settings.probe_limit,
+        window=settings.probe_window,
+        block=settings.probe_block,
+        block_max=settings.probe_block_max,
+        repeat_window=settings.probe_repeat_window,
+    )
+
+
+def limiter_for(backend: RedisBackend, settings: WebSettings) -> RateLimiter:
+    """Every client and target limit, configured from the settings."""
+    return RateLimiter(
+        backend=backend,
+        client_limit=settings.ip_rate_limit,
+        client_window=settings.ip_rate_window,
+        target_cooldown=settings.target_cooldown,
+        # Unset is a random pepper per process, which counts correctly only
+        # while there is one. A deployment behind several web processes sets
+        # the same value in each, or every client gets one allowance apiece.
+        salt=settings.rate_limit_salt,
+        probe=probe_policy(settings),
+        ipv4_prefix=settings.probe_ipv4_prefix,
+        ipv6_prefix=settings.client_ipv6_prefix,
+        daily_limit=settings.daily_scan_limit,
+        daily_window=DAILY_WINDOW_SECONDS,
+    )
+
+
+@dataclass(frozen=True)
+class ProbePolicy:
+    """How many suspicious outcomes earn a block, and how long blocks last.
+
+    Built from the settings in both processes: the API refuses and counts
+    refused targets, the worker counts hosts that were not OpenCloud.
+    """
+
+    limit: int
+    window: int
+    block: int
+    block_max: int
+    repeat_window: int
+
+    @property
+    def enabled(self) -> bool:
+        return self.limit > 0
+
+    def duration(self, repeat: int) -> int:
+        """How long the ``repeat``-th block inside the repeat window lasts."""
+        steps = max(0, repeat - 1)
+        return max(1, min(self.block * BLOCK_ESCALATION_FACTOR**steps, max(self.block, self.block_max)))
 
 
 # An erasure request is rare and its credential belongs to the operator, so
@@ -115,16 +250,31 @@ class RateLimiter:
     Two processes with different peppers do not share a counter, so this is
     what makes the client limit hold for a deployment that runs more than
     one."""
-    probe_limit: int = 0
-    """Scans that found no OpenCloud before a block; ``0`` switches it off.
-    The API only reads the block - the worker, which learns the outcome,
-    is what counts and imposes it (:func:`record_non_opencloud`)."""
+    probe: ProbePolicy | None = None
+    """The probe guard, or ``None`` with it off. The API reads the block and
+    counts refused targets; the worker, which learns whether a host was
+    OpenCloud, counts the rest (:func:`record_strike`)."""
+    ipv4_prefix: int = 32
+    """How much of an IPv4 address the probe guard counts as one client."""
+    ipv6_prefix: int = 64
+    """How much of an IPv6 address every client limit counts as one client."""
+    daily_limit: int = 0
+    """Submissions per client per day; ``0`` switches the cap off."""
+    daily_window: int = 86400
+
+    def client_identity(self, client: str) -> str:
+        """Who the client and daily limits count: the address, or its IPv6 /64."""
+        return network_of(client, 32, self.ipv6_prefix)
+
+    def network(self, client: str) -> str:
+        """Who the probe guard counts: the configured IPv4 and IPv6 networks."""
+        return network_of(client, self.ipv4_prefix, self.ipv6_prefix)
 
     async def check_client(self, client: str) -> LimitDecision:
         """Count one request from this client and decide whether it may run."""
         if self.client_limit <= 0:
             return LimitDecision(True)
-        key = client_key(client, self.salt)
+        key = client_key(self.client_identity(client), self.salt)
         count = await self.backend.incr(key)
         if count == 1:
             await self.backend.expire(key, self.client_window)
@@ -180,7 +330,7 @@ class RateLimiter:
         """
         if self.client_limit <= 0:
             return LimitDecision(True)
-        key = client_key(client, self.salt)
+        key = client_key(self.client_identity(client), self.salt)
         raw = await self.backend.get(key)
         try:
             count = int(raw) if raw is not None else 0
@@ -239,16 +389,52 @@ class RateLimiter:
         if count == 1:
             await self.backend.expire(key, CREDENTIAL_ATTEMPT_WINDOW_SECONDS)
 
+    async def check_daily(self, client: str) -> LimitDecision:
+        """
+        Count one submission against this client's day, and decide.
+
+        The per-minute limit stops a burst; this stops the patient version of
+        the same thing, which stays just under it all night.
+        """
+        if self.daily_limit <= 0:
+            return LimitDecision(True)
+        key = daily_key(self.client_identity(client), self.salt)
+        count = await self.backend.incr(key)
+        if count == 1:
+            await self.backend.expire(key, self.daily_window)
+        if count > self.daily_limit:
+            if count == self.daily_limit + 1:
+                await count_event(self.backend, STAT_DAILY)
+            return LimitDecision(False, await self._window_left(key, self.daily_window), "daily")
+        return LimitDecision(True)
+
+    async def peek_daily(self, client: str) -> LimitDecision:
+        """The mirror of :meth:`check_daily` that spends nothing."""
+        if self.daily_limit <= 0:
+            return LimitDecision(True)
+        key = daily_key(self.client_identity(client), self.salt)
+        raw = await self.backend.get(key)
+        try:
+            count = int(raw) if raw is not None else 0
+        except ValueError:  # pragma: no cover - only a hand-edited key gets here
+            count = 0
+        if count < self.daily_limit:
+            return LimitDecision(True)
+        retry_after = await self.backend.ttl(key)
+        return LimitDecision(
+            False, max(1, retry_after if retry_after > 0 else self.daily_window), "daily"
+        )
+
     async def check_probe_block(self, client: str) -> LimitDecision:
         """
-        Whether this client is serving a block for probing, spending nothing.
+        Whether this client's network is serving a block for probing, spending nothing.
 
         Asked before the client limit, so a blocked client's refusals do not
         also run down an allowance it will want back when the block ends.
         """
-        if self.probe_limit <= 0:
+        prober = self.prober_for(client)
+        if prober is None:
             return LimitDecision(True)
-        prober = prober_fingerprint(client, self.salt)
         remaining = await self.backend.ttl(probe_block_key(prober))
         if remaining <= 0:
             return LimitDecision(True)
@@ -256,9 +442,16 @@ class RateLimiter:
 
     def prober_for(self, client: str) -> str | None:
         """The fingerprint to store with a scan, or ``None`` with the guard off."""
-        if self.probe_limit <= 0:
+        if self.probe is None or not self.probe.enabled:
             return None
-        return prober_fingerprint(client, self.salt)
+        return prober_fingerprint(self.network(client), self.salt)
+
+    async def record_refused_target(self, client: str) -> ProbeOutcome:
+        """Count a submission the guard refused as a strike against its network."""
+        prober = self.prober_for(client)
+        if prober is None or self.probe is None:
+            return ProbeOutcome(0, False)
+        return await record_strike(self.backend, prober, self.probe)
 
     async def release_target(self, host: str) -> None:
         """Give the slot back when the request is rejected for another reason."""
@@ -278,38 +471,56 @@ class RateLimiter:
 
 @dataclass(frozen=True)
 class ProbeOutcome:
-    """What one non-OpenCloud answer did to the client that asked for it."""
+    """What one suspicious outcome did to the client network that caused it."""
 
     strikes: int
     blocked: bool
-    """Whether this answer is the one that started a block."""
+    """Whether this outcome is the one that started a block."""
+    duration: int = 0
+    """How long that block lasts, when it started one."""
 
 
-async def record_non_opencloud(
-    backend: RedisBackend,
-    prober: str,
-    *,
-    limit: int,
-    window: int,
-    block: int,
-) -> ProbeOutcome:
+async def record_strike(backend: RedisBackend, prober: str, policy: ProbePolicy) -> ProbeOutcome:
     """
-    Count a scan whose host turned out not to be OpenCloud, and block at the limit.
+    Count one suspicious outcome, and block the network at the limit.
 
-    Every such scan counts, the same host again as much as a new one: a list
-    of addresses that answer with something else - or nothing - is the shape
-    of using this service to find out what runs where, and so is asking one
-    address over and over whether it has started answering yet. The window is
-    fixed from the first strike; the block is claimed with ``SET NX`` so a
-    second worker reaching the limit at the same moment does not extend it.
+    A strike is a scan whose host turned out not to be OpenCloud, or a target
+    the guard refused outright. Every one counts, the same host again as much
+    as a new one: a list of addresses that answer with something else - or
+    nothing - is the shape of using this service to find out what runs where,
+    and so is asking one address over and over whether it answers yet.
+
+    The block is claimed with ``SET NX`` before its length is decided, so two
+    workers reaching the limit together start one block and escalate once.
+    Each block inside the repeat window lasts :data:`BLOCK_ESCALATION_FACTOR`
+    times the one before, up to the ceiling; strikes that land while a block
+    already runs change nothing.
     """
-    if limit <= 0 or not prober:
+    if not policy.enabled or not prober:
         return ProbeOutcome(0, False)
+    await count_event(backend, STAT_STRIKES)
     key = probe_count_key(prober)
     strikes = await backend.incr(key)
     if strikes == 1 or await backend.ttl(key) <= 0:
-        await backend.expire(key, window)
-    if strikes < limit:
+        await backend.expire(key, policy.window)
+    if strikes < policy.limit:
         return ProbeOutcome(strikes, False)
-    started = await backend.set(probe_block_key(prober), "1", ex=block, nx=True)
-    return ProbeOutcome(strikes, bool(started))
+    block_key = probe_block_key(prober)
+    if not await backend.set(block_key, "1", ex=policy.block, nx=True):
+        return ProbeOutcome(strikes, False)
+    repeat_key = probe_repeat_key(prober)
+    repeat = await backend.incr(repeat_key)
+    duration = policy.duration(repeat)
+    await backend.expire(block_key, duration)
+    # Remembered from the end of this block, not its start: a network that
+    # comes straight back to probing after a day-long block has not waited a
+    # day of good behaviour.
+    await backend.expire(repeat_key, duration + policy.repeat_window)
+    await backend.delete(key)
+    await count_event(backend, STAT_BLOCKS)
+    return ProbeOutcome(strikes, True, duration)
+
+
+async def active_blocks(backend: RedisBackend) -> int:
+    """How many client networks are blocked right now. A count, never a key."""
+    return len(await backend.keys_matching(BLOCK_KEY_PATTERN))

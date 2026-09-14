@@ -30,6 +30,31 @@ MESSAGES: dict[str, str] = {
     "admin.kicker": "Operations",
     "admin.tabs.aria": "Operator area",
     "admin.tabs.overview": "Overview",
+    "admin.tabs.configuration": "Configuration",
+    "admin.config.title": "Configuration",
+    "admin.config.lede": "Every COS_WEB_* variable this service reads, and the value it is running with.",
+    "admin.config.scope": "This is the web service's own environment, as this process read it at startup - not OpenCloud's configuration, and not the worker's, which reads the same variables in its own container. Values are shown as they are in effect after parsing; credentials are only ever shown as set or not set.",
+    "admin.config.source.environment": "Set",
+    "admin.config.source.default": "Default",
+    "admin.config.secret.set": "Set (value hidden)",
+    "admin.config.unset": "Not set",
+    "admin.config.default": "Documented default:",
+    "admin.config.unknown.kicker": "Check the spelling",
+    "admin.config.unknown.heading": "Variables this service does not read",
+    "admin.config.unknown.lede": "These names carry the COS_WEB_ prefix but match no setting, so they change nothing. A typo here leaves the default in force. Values are not shown.",
+    "admin.config.group.storage": "Storage and workers",
+    "admin.config.group.scanning": "How a scan runs",
+    "admin.config.group.targets": "What may be scanned",
+    "admin.config.group.limits": "Rate limits and abuse guards",
+    "admin.config.group.approval": "Target approval",
+    "admin.config.group.network": "Public address, proxy and indexing",
+    "admin.config.group.reference": "Release and advisory data",
+    "admin.config.group.interfaces": "API documentation and agent endpoint",
+    "admin.config.group.mcp_auth": "Sign-in on the agent endpoint",
+    "admin.config.group.admin": "Operator area",
+    "admin.config.group.audit": "Audit trail",
+    "admin.config.group.protection": "Erasure, signatures and encryption",
+    "admin.config.group.frontend": "Frontend",
     "admin.docs.kicker": "Operator documentation",
     "admin.docs.source": "Shown from <code>{file}</code> in the repository, in English.",
     "admin.band": "Operator area - signed in as {user}",
@@ -64,6 +89,10 @@ MESSAGES: dict[str, str] = {
     "admin.state.ratelimit": "Rate limit",
     "admin.state.ratelimit.value": "{limit} per {window}s",
     "admin.state.cooldown.value": "{seconds}s per target",
+    "admin.state.guard": "Abuse guard",
+    "admin.state.guard.value": "{active} networks blocked",
+    "admin.state.guard.week": "last 7 days: {blocks} blocks, {strikes} strikes, {daily} daily caps reached",
+    "admin.state.guard.off": "Probe block off",
     "admin.state.schedule": "Release schedule",
     "admin.state.advisories": "Advisories",
     "admin.state.checked": "checked {when}",
@@ -903,6 +932,8 @@ MESSAGES: dict[str, str] = {
     ),
     "api.limits.cooldown": "one scan per target every {minutes} minute(s)",
     "api.limits.no_cooldown": "no per-target cooldown",
+    "api.limits.daily": "At most {count} scans per network per day.",
+    "api.limits.probe": "A network whose scans keep finding no OpenCloud is paused for a while.",
     "api.limits.none": "This deployment sets no rate limit.",
     "api.limits.self_host": (
         "If you meet one and would rather not wait, the whole thing runs on your "
@@ -1381,6 +1412,23 @@ MESSAGES: dict[str, str] = {
         "turn out to be OpenCloud, so this service is taking a break from your "
         "scans for a while. If you meant to check your own instance, the "
         "scanner runs on your machine too."
+    ),
+    "error.rate_limit.daily": (
+        "That is all the scans this service can run for your network today. It "
+        "will make room again tomorrow - or run the scanner yourself, which has "
+        "no daily limit."
+    ),
+    "error.target.wildcard_dns": (
+        "That name belongs to a service that points names at any address. Enter "
+        "the instance's own hostname, or its address."
+    ),
+    "error.target.unstable": (
+        "That hostname answers with different addresses each time it is looked "
+        "up, so this service cannot tell what it would scan."
+    ),
+    "error.target.not_approved": (
+        "This service only scans instances that have been approved for it. Ask "
+        "the operator to add it, or publish the DNS record that approves it."
     ),
     "error.rate_limit.target": (
         "That instance was scanned very recently. Please give it a few minutes."
