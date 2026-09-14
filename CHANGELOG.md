@@ -40,6 +40,12 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   every template from naming a control after a form property it would shadow
   (`action`, `method`, `submit`, ...), and the button test posts each form's
   own fields to its own path instead of reading the script's text.
+- **Code scanning no longer mistakes a file path in the Docker setup wizard
+  for a credential.** The path of the nginx admin-proxy header file was held
+  in a variable called `secret`, and because the wizard prints that path in
+  its list of written files, CodeQL reported clear-text logging of sensitive
+  data. Only the name changed: the wizard never printed the value, and the
+  file is still written owner-readable only.
 
 ## [1.22.6] - 2026-09-13
 
