@@ -30,6 +30,36 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   five minutes by themselves and hand a longer one back to the caller instead
   of sleeping through it. See ADR 0051.
 
+### Security
+
+- **The scan service refuses a request not addressed to loopback when it has
+  no token.** `check-opencloud-scanner serve` on its default `127.0.0.1` bind
+  with no token answered any `Host`, so a web page open in a browser on the
+  same machine could point a hostname of its own at `127.0.0.1` (DNS
+  rebinding), read every answer as same-origin, and use `/api/scan` - which
+  has no target guard - to scan and report back what the operator's network
+  holds. Without a token a request must now name `localhost`, a `127.0.0.0/8`
+  address or `::1`, or it is answered 403; a service with a token is
+  unaffected, since a page cannot know it.
+- **`POST /api/scans/batch` refuses a cross-site submission like the single
+  one does.** It was the one public POST without the `Sec-Fetch-Site`/`Origin`
+  check, and it parses its body as JSON whatever the `Content-Type` says, so a
+  foreign page's `text/plain` form - which needs no preflight - could queue a
+  batch of scans from a borrowed browser, spending that visitor's allowance
+  and, with the probe guard, earning their address a block.
+- **The operator area accepts a write only from its own origin.** Its three
+  POSTs took the public pages' check, which lets `same-site` through, and a
+  sign-in cookie is sent on a same-site request - so a page on any sibling
+  subdomain, the identity provider's or an OpenCloud instance's among them,
+  could add or withdraw exclusions and press the refreshes with the
+  operator's session. `/admin` now requires `Sec-Fetch-Site: same-origin`
+  (or `none`), or an `Origin` of this service where that header is absent.
+- **A non-ASCII `X-COS-Admin-Proxy` header is refused with 404 instead of
+  crashing with 500.** The secret was compared as `str`, which raises on
+  characters outside ASCII; the 500 differed from the 404 an area that is off
+  answers, and told a prober from outside that `/admin` was switched on. It is
+  now compared as bytes, as the erasure token already was.
+
 ## [1.22.7] - 2026-09-14
 
 ### Fixed

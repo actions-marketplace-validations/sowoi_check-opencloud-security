@@ -203,6 +203,28 @@ class _Handler(BaseHTTPRequestHandler):
             self.auth_token.encode("utf-8", "surrogateescape"),
         )
 
+    def _addressed_to_loopback(self) -> bool:
+        """
+        Whether a service without a token was asked for by a loopback name.
+
+        Binding loopback keeps other machines out, but not a web page open in
+        a browser on this one: a page can point a hostname of its own at
+        127.0.0.1 (DNS rebinding) and then read every answer as same-origin,
+        which makes this service a scanner into the operator's network that
+        reports back to that page. The ``Host`` header still carries the
+        page's hostname, so a request not addressed to a loopback name is
+        refused. A token defeats the page anyway - it cannot know one - and a
+        client that sends no ``Host`` at all is not a browser.
+        """
+        if self.auth_token:
+            return True
+        header = (self.headers.get("Host") or "").strip()
+        if not header:
+            return True
+        hostname = urllib.parse.urlsplit(f"//{header}").hostname or ""
+        # Not empty: an empty name counts as loopback for a *bind* address.
+        return bool(hostname) and _is_loopback_listen(hostname)
+
     def _read_host(self) -> str | None:
         length = int(self.headers.get("Content-Length") or 0)
         if length <= 0 or length > MAX_BODY_BYTES:
@@ -233,6 +255,10 @@ class _Handler(BaseHTTPRequestHandler):
             self._send_json({"status": "ok"})
             return
 
+        if not self._addressed_to_loopback():
+            self._send_error(HTTPStatus.FORBIDDEN, "Request not addressed to this host.")
+            return
+
         if not self._authorized():
             self._send_error(HTTPStatus.UNAUTHORIZED, "Invalid or missing token.")
             return
@@ -261,6 +287,10 @@ class _Handler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         """Handle queue and requeue requests."""
         path = urllib.parse.urlparse(self.path).path.rstrip("/") or "/"
+
+        if not self._addressed_to_loopback():
+            self._send_error(HTTPStatus.FORBIDDEN, "Request not addressed to this host.")
+            return
 
         if not self._authorized():
             self._send_error(HTTPStatus.UNAUTHORIZED, "Invalid or missing token.")

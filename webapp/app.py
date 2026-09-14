@@ -673,6 +673,23 @@ def cross_site_post(request: Request, settings: WebSettings) -> bool:
     return _origin_host(origin) not in _own_hosts(request, settings)
 
 
+def cross_origin_post(request: Request, settings: WebSettings) -> bool:
+    """
+    Whether this POST came from anywhere but a page of this origin.
+
+    Stricter than :func:`cross_site_post`, for the operator's area. That area
+    has what the public pages lack - a sign-in cookie - and a cookie is sent
+    on a ``same-site`` request: a page on any sibling subdomain, the
+    identity provider's or an OpenCloud instance's among them, could post
+    the operator's own session into it. ``same-site`` is refused here, and
+    so is an ``Origin`` naming another host.
+    """
+    site = request.headers.get("sec-fetch-site", "").strip().lower()
+    if site:
+        return site not in {"same-origin", "none"}
+    return cross_site_post(request, settings)
+
+
 def _origin_host(value: str) -> str:
     """The ``host:port`` an ``Origin`` names, lowercased."""
     return urlsplit(value).netloc.lower()
@@ -1565,6 +1582,13 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
     # while others wait for a cooldown they share with nobody.
     @app.post("/api/scans/batch")
     async def create_batch(request: Request) -> Response:
+        # The same refusal the single submission meets, and for the same
+        # reason. The body is parsed as JSON whatever its Content-Type says,
+        # so a foreign page's `text/plain` form - which needs no preflight -
+        # could otherwise queue a batch from a borrowed browser.
+        if cross_site_post(request, settings):
+            LOGGER.info("submission_cross_site")
+            return _cross_site_response(request, wants_html(request))
         try:
             parsed = await request.json()
         except ValueError:
@@ -2065,7 +2089,7 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
             # The same check every other POST here meets. An area reachable
             # from a browser is an area a foreign page can try to post to,
             # and these two buttons reach somebody else's server.
-            if cross_site_post(request, settings):
+            if cross_origin_post(request, settings):
                 LOGGER.info("admin_cross_site")
                 return _cross_site_response(request, wants_html(request))
             if action not in ACTIONS:
@@ -2104,7 +2128,7 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
             operator = admin_operator(request)
             if operator is None:
                 return not_found(request)
-            if cross_site_post(request, settings):
+            if cross_origin_post(request, settings):
                 LOGGER.info("admin_cross_site")
                 return _cross_site_response(request, wants_html(request))
             if action not in {"add", "remove"}:
@@ -2153,7 +2177,7 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
             operator = admin_operator(request)
             if operator is None:
                 return not_found(request)
-            if cross_site_post(request, settings):
+            if cross_origin_post(request, settings):
                 LOGGER.info("admin_cross_site")
                 return _cross_site_response(request, wants_html(request))
 

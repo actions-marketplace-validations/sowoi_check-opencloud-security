@@ -1,0 +1,29 @@
+# A security advisory record. See AGENTS.md, "Security advisories".
+#
+# One file per bullet under a `### Security` heading in CHANGELOG.md.
+# `state` is the decision; `verified` is the evidence it rests on.
+
+slug: batch-cross-site-submission
+state: declined
+changelog_version: "1.23.0"
+changelog_entry: "POST /api/scans/batch refuses a cross-site submission like the single one does."
+shipped: true
+declined_because: |
+  The same defect as cross-site-scan-submission, on the endpoint that change
+  missed, and declined for the same reason: the forged request spends a
+  borrowed visitor's rate-limit allowance and makes their network the
+  apparent origin of a scan, but the public service has no session, account
+  or state belonging to that visitor for it to act upon, and the uuids it
+  creates are never readable by the page that sent it. The one consequence
+  that would be new - a borrowed address earning a probe block - comes from
+  the probe guard, which no release has carried.
+summary: >-
+  POST /api/scans/batch accepted a cross-site text/plain form submission,
+  queueing scans attributed to a borrowed browser
+verified: |
+  git show v1.22.7:webapp/app.py - create_batch has no cross_site_post call
+  (the only ones are the form, the language switch and the three /admin
+  POSTs), and parses the body with request.json(), which ignores the
+  Content-Type. /api/scans/batch is present from v1.7.0; cross_site_post from
+  v1.17.0, so 1.17.0 to 1.22.7 carried the gap on this endpoint alone. The
+  probe guard (ADR 0051) is absent from v1.22.7.

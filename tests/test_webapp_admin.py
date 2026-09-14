@@ -135,6 +135,22 @@ def test_the_identity_headers_are_worthless_without_the_outpost_secret():
     assert wrong.status_code == 404
 
 
+def test_a_secret_that_is_not_ascii_is_a_wrong_secret_rather_than_an_error():
+    """
+    Comparing non-ASCII ``str`` values raises, which answered 500.
+
+    An area that is off answers 404 to the same request, so the difference
+    told a prober from outside that the area was switched on.
+    """
+    presented = {"x-cos-admin-proxy": "é".encode("latin-1"), "x-authentik-username": OPERATOR}
+    with TestClient(create_app(_admin_settings()), raise_server_exceptions=False) as client:
+        refused = client.get("/admin", headers=presented)
+        admitted = client.get("/admin", headers=FORWARDED)
+
+    assert refused.status_code == 404
+    assert admitted.status_code == 200
+
+
 def test_signing_in_is_not_the_same_as_being_on_the_guest_list():
     """The request really came through the outpost; the person is still not an operator."""
     with TestClient(create_app(_admin_settings())) as client:
