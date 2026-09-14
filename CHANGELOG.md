@@ -21,6 +21,14 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   `/[object HTMLInputElement]`, which answered 404 and left the page saying
   nothing. It now reads the form's `action` attribute. The dry-run probe
   beside them, which has no such field, was unaffected.
+- **The light/dark switch keeps switching in a browser that refuses to
+  remember it.** A press wrote the scheme to the document and to
+  localStorage, and where the write was refused - a private window, blocked
+  site data - the next press asked storage what was on screen, got nothing,
+  fell back to the operating system's scheme and so computed the scheme the
+  page had just left. The button changed nothing from the second press on.
+  It now reads the scheme the document is actually in first, which a press
+  writes whether or not anything can be stored.
 
 ### Changed
 

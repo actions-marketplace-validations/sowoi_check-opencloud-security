@@ -185,6 +185,35 @@ def test_the_scheme_switch_is_offered_with_a_name_and_no_inline_handler():
     assert "style=" not in button
 
 
+def test_the_scheme_switch_still_switches_where_nothing_can_be_stored():
+    """Otherwise the button works once and then looks broken.
+
+    `apply` writes the chosen scheme to the document and to localStorage, and
+    it promises in as many words that a browser refusing the write still
+    honours the press. But the press after that asked *storage* what was on
+    screen, got nothing, and fell back to the system's scheme - the one the
+    first press had just moved away from - so it computed the same scheme
+    again and the page did not change. Private windows and blocked site data
+    are exactly where that happens.
+    """
+    source = (
+        Path(__file__).resolve().parents[1]
+        / "frontend" / "static" / "js" / "theme-toggle.js"
+    ).read_text(encoding="utf-8")
+    current = source[
+        source.index("function current()") : source.index("function paintBrowserChrome")
+    ]
+
+    # The scheme the document is in is read, and read before the two that can
+    # disagree with it.
+    assert 'root.getAttribute("data-theme")' in source
+    assert current.index("applied()") < current.index("stored()")
+    assert current.index("stored()") < current.index("night")
+    # And the press is still what writes both, so the attribute stays true.
+    press = source[source.index("function apply(") :]
+    assert 'root.setAttribute("data-theme", theme)' in press
+
+
 def test_both_theme_colour_tags_can_be_repointed_at_the_chosen_scheme():
     """Under an override the browser chrome would otherwise frame the page wrong."""
     page = _landing()
