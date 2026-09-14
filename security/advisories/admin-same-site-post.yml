@@ -5,6 +5,7 @@
 
 slug: admin-same-site-post
 state: draft
+ghsa: GHSA-4m29-3q54-3hrf
 changelog_version: "1.23.0"
 changelog_entry: "The operator area accepts a write only from its own origin."
 shipped: true

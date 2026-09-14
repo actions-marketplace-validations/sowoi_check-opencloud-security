@@ -5,6 +5,7 @@
 
 slug: scan-service-dns-rebinding
 state: draft
+ghsa: GHSA-6cxh-p5j3-hv7h
 changelog_version: "1.23.0"
 changelog_entry: "The scan service refuses a request not addressed to loopback when it has no token."
 shipped: true
