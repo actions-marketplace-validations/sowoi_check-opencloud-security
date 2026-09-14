@@ -405,6 +405,10 @@
 .admin-index strong[data-state="fresh"] { color: var(--good); }
 .admin-index strong[data-state="unknown"] { color: var(--ink-soft); }
 
+/* The fix for a stale index, revealed by admin.js only when there is one. */
+.admin-index-remedy { margin-top: 1rem; }
+.admin-index-remedy pre.code-block { margin: .6rem 0; }
+
 /* ------------------------------------------------------- the audit stream */
 /* The sentence that says what a fingerprint is, kept beside the records
    rather than in a footnote: somebody reading a log of pseudonyms should not

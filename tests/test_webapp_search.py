@@ -56,14 +56,38 @@ def test_each_language_has_a_release_built_public_only_index():
         assert all("/export/" not in page["path"] for page in document["pages"])
 
 
-def test_only_the_release_workflow_refreshes_the_index():
-    """Ordinary CI must not make search drift between published versions."""
-    release = (ROOT / ".github/workflows/publish-pypi.yml").read_text(encoding="utf-8")
+def test_only_automation_refreshes_the_index():
+    """The index is rebuilt on every pull request to main and at release, nowhere else.
+
+    ADR 0050: a pull request that edits a page must not merge with search
+    describing the page as it read before, and a release must still ship an
+    index built for exactly its version. Any other workflow writing it would
+    make search drift for a reason nobody reviewed.
+    """
+    workflows = ROOT / ".github/workflows"
+    release = (workflows / "publish-pypi.yml").read_text(encoding="utf-8")
     assert "python scripts/build_search_index.py" in release
     for locale in ("de", "es", "fr"):
         assert f"frontend/static/search-index.{locale}.json" in release
-    for workflow in (ROOT / ".github/workflows").glob("*.yml"):
-        if workflow.name != "publish-pypi.yml":
+
+    rebuild = (workflows / "search-index.yml").read_text(encoding="utf-8")
+    assert "python scripts/build_search_index.py" in rebuild
+    for locale in SUPPORTED_LOCALES:
+        suffix = "" if locale == "en" else f".{locale}"
+        assert f"frontend/static/search-index{suffix}.json" in rebuild
+    # On every pull request to main, with no path filter to forget an input.
+    assert "pull_request:\n    branches:\n      - main" in rebuild
+    assert "paths" not in rebuild
+    # Never with a trigger that hands a write token to a fork's code, and
+    # never pushing anywhere but the pull request's own branch.
+    assert "pull_request_target" not in rebuild
+    assert "push:" not in rebuild
+    assert '"HEAD:refs/heads/${HEAD_REF}"' in rebuild
+    assert "head.repo.full_name == github.repository" in rebuild
+
+    allowed = {"publish-pypi.yml", "search-index.yml"}
+    for workflow in workflows.glob("*.yml"):
+        if workflow.name not in allowed:
             assert "build_search_index.py" not in workflow.read_text(encoding="utf-8")
 
 

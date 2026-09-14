@@ -83,9 +83,10 @@ repository able to hand one to everyone who clones it would be a repository
 that runs code on clone. That is why this cannot be automatic.
 
 Rebuilding is the correct resolution and not merely the convenient one: the
-index is authoritative exactly once, in the release workflow, and
-`test_only_the_release_workflow_refreshes_the_index` forbids any other
-workflow from touching it — so a rebuild produces what the next release would
+index is only ever written by the generator — on every pull request to `main`
+by `search-index.yml`, which commits the result to your branch, and again by
+the release workflow (ADR 0050). `test_only_automation_refreshes_the_index`
+keeps every other workflow away from it, so a rebuild produces what CI would
 produce anyway.
 
 Without the setup step you get the ordinary conflict, exactly as before.

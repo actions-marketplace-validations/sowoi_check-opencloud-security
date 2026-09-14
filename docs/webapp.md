@@ -1055,10 +1055,11 @@ source files. ADR 0018 records the boundary.
 
 `/search` filters a checked-in, same-origin JSON index in the browser. Its
 manifest names public templates explicitly and cannot see Redis, the API,
-result pages, exports, UUIDs or submitted addresses. The release workflow
-rebuilds that file when a new version is published; ordinary CI deliberately
-does not, so one deployed release has one immutable search index. ADR 0019
-records the boundary.
+result pages, exports, UUIDs or submitted addresses. Every pull request to
+`main` rebuilds that file and commits it to the branch, and the release
+workflow rebuilds it again before building artefacts, so one deployed release
+has one immutable search index. ADR 0019 records the boundary and ADR 0050
+when it is rebuilt.
 
 When `COS_WEB_ENABLE_MCP` is on, the landing and result pages also expose
 their existing actions to supporting browsers through the

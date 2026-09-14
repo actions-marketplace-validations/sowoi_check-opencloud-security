@@ -251,7 +251,8 @@ __marimo__/
 /requirements.txt
 /requirements-*.txt
 
-# Editor state
+# Editor and operating-system state
+.DS_Store
 .idea/
 .vscode/
 /.ansible/

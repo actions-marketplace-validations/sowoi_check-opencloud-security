@@ -741,8 +741,9 @@ door.
 The small header search opens `/search`, where `search.js` filters
 `/static/search-index.json` locally. `webapp/search.py` is the explicit
 public-page manifest and `scripts/build_search_index.py` reads only those
-templates. The release workflow is the only automation that rebuilds the
-checked-in index. It has no store, API, result-template or network input, so
+templates. Every pull request to `main` rebuilds the checked-in index and
+commits it to the branch, and the release workflow rebuilds it once more
+(ADR 0050). It has no store, API, result-template or network input, so
 scan UUIDs, submitted addresses and result documents cannot enter it.
 
 ## Tests

@@ -637,7 +637,8 @@ document then stops advertising it. A new tool or resource needs a row in
 **Search is a release artefact, never a runtime crawl.**
 `webapp/search.py` explicitly lists the public templates,
 `scripts/build_search_index.py` writes the English index and its German,
-Spanish and French overlays, and only the release workflow refreshes them.
+Spanish and French overlays, and only automation refreshes them: every pull
+request to `main` (`search-index.yml`, ADR 0050) and the release workflow.
 Never give the generator a store, API, result template, export, UUID or
 network input; scan results and submitted addresses must be structurally
 impossible to index.

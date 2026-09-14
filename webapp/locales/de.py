@@ -215,9 +215,20 @@ MESSAGES: dict[str, str] = {
     ),
     "admin.search.detail.changed": "{count} Seitentitel oder Kurzbeschreibungen haben sich seither geändert.",
     "admin.search.detail.unreadable": "Der Index konnte nicht gelesen werden.",
+    "admin.search.remedy": (
+        "Ein veröffentlichtes Release liefert immer einen passend erzeugten "
+        "Index aus, dieser Build ist also kein Release wie veröffentlicht - "
+        "meist ein Image oder Bundle, das zwischen zwei Releases aus einem "
+        "Checkout gebaut wurde. Spielen Sie ein veröffentlichtes Release ein "
+        "oder erzeugen Sie den Index in diesem Checkout neu und bauen Sie neu:"
+    ),
+    "admin.search.remedy.commit": (
+        "Von Hand muss nichts eingecheckt werden: Jeder Pull Request auf main "
+        "erzeugt den Index neu und checkt ihn in seinen Branch ein."
+    ),
     "admin.search.fix": (
-        "Ein veralteter Index wird vom Release-Workflow erneuert, der ihn neu "
-        "erzeugt und eincheckt. Hier gibt es nichts zu drücken."
+        "Jeder Pull Request auf main und der Release-Workflow erzeugen den "
+        "Index neu und checken ihn ein. Hier gibt es nichts zu drücken."
     ),
     "admin.audit.kicker": "Audit",
     "admin.audit.heading": "Das Protokoll, während es geschrieben wird",

@@ -4552,14 +4552,17 @@ def _write_proxy_files(setup: Setup, output_dir: Path) -> list[str]:
     written.append(f"{path} (install it into your {setup.reverse_proxy})")
 
     if _proxy_forwards_auth(setup) and setup.reverse_proxy == "nginx":
-        secret = output_dir / admin_secret_filename(setup)
+        # A path, not the credential, but named for what it is: code scanning
+        # takes a variable called `secret` for the value itself, and this one
+        # ends up in the list of written files the wizard prints.
+        header_file = output_dir / admin_secret_filename(setup)
         descriptor = os.open(
-            secret, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, stat.S_IRUSR | stat.S_IWUSR
+            header_file, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, stat.S_IRUSR | stat.S_IWUSR
         )
         with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
             handle.write(render_admin_secret_file(setup))
-        os.chmod(secret, stat.S_IRUSR | stat.S_IWUSR)
-        written.append(f"{secret} (owner-readable only)")
+        os.chmod(header_file, stat.S_IRUSR | stat.S_IWUSR)
+        written.append(f"{header_file} (owner-readable only)")
     return written
 
 

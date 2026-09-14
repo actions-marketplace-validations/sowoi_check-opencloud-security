@@ -242,9 +242,19 @@ MESSAGES: dict[str, str] = {
     "admin.search.detail.extra": "Indexed but no longer served: {list}.",
     "admin.search.detail.changed": "{count} page titles or summaries have changed since it was built.",
     "admin.search.detail.unreadable": "The index could not be read.",
+    "admin.search.remedy": (
+        "A published release always ships an index built for it, so this "
+        "build is not a release as published - usually an image or bundle "
+        "built from a checkout between releases. Deploy a published release, "
+        "or regenerate the index in that checkout and rebuild what you deploy:"
+    ),
+    "admin.search.remedy.commit": (
+        "Nothing needs committing by hand: every pull request to main "
+        "rebuilds the index and commits it to its branch."
+    ),
     "admin.search.fix": (
-        "A stale index is refreshed by the release workflow, which regenerates "
-        "it and commits it. There is nothing to press here."
+        "Every pull request to main and the release workflow regenerate the "
+        "index and commit it. There is nothing to press here."
     ),
     "admin.audit.kicker": "Audit",
     "admin.audit.heading": "The trail, as it is written",

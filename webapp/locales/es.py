@@ -212,9 +212,20 @@ MESSAGES: dict[str, str] = {
     ),
     "admin.search.detail.changed": "{count} títulos o resúmenes han cambiado desde que se generó.",
     "admin.search.detail.unreadable": "No se ha podido leer el índice.",
+    "admin.search.remedy": (
+        "Una versión publicada siempre incluye un índice generado para ella, "
+        "así que esta compilación no es una versión tal como se publicó - "
+        "normalmente una imagen o un paquete construido desde un checkout "
+        "entre versiones. Despliegue una versión publicada, o regenere el "
+        "índice en ese checkout y vuelva a construir lo que despliega:"
+    ),
+    "admin.search.remedy.commit": (
+        "No hace falta confirmar nada a mano: cada pull request a main "
+        "regenera el índice y lo confirma en su rama."
+    ),
     "admin.search.fix": (
-        "De un índice desactualizado se encarga el flujo de publicación, que lo "
-        "regenera y lo confirma. Aquí no hay nada que pulsar."
+        "Cada pull request a main y el flujo de publicación regeneran el "
+        "índice y lo confirman. Aquí no hay nada que pulsar."
     ),
     "admin.audit.kicker": "Auditoría",
     "admin.audit.heading": "El registro, según se escribe",

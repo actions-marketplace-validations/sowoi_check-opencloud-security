@@ -257,7 +257,7 @@
   <p class="admin-outcome" data-outcome="failed">{{ t('admin.exclusions.unreadable') }}</p>
   {% else %}
   <form class="admin-exclusion-add" method="post" action="/admin/exclusions">
-    <input type="hidden" name="action" value="add">
+    <input type="hidden" name="operation" value="add">
     <label class="admin-exclusion-label" for="admin-exclusion-entry">
       {{ t('admin.exclusions.add.label') }}
     </label>
@@ -284,7 +284,7 @@
     <li class="admin-exclusion" data-source="stored">
       <span class="admin-exclusion-entry">{{ entry }}</span>
       <form method="post" action="/admin/exclusions">
-        <input type="hidden" name="action" value="remove">
+        <input type="hidden" name="operation" value="remove">
         <input type="hidden" name="entry" value="{{ entry }}">
         <button class="btn btn-quiet" type="submit">{{ t('admin.exclusions.remove') }}</button>
       </form>
@@ -315,10 +315,13 @@
     scripting - the page simply reloads with the outcome - and admin.js only
     turns the reload into an in-place answer. The cross-site check every
     other POST here meets applies to these too.
+
+    The field is "source", never "action": a control named after a form
+    property (action, method, submit, ...) shadows that property in scripts.
   #}
   <div class="admin-actions">
     <form method="post" action="/admin/refresh" data-admin-action>
-      <input type="hidden" name="action" value="schedule">
+      <input type="hidden" name="source" value="schedule">
       <button class="btn btn-primary" type="submit">
         {{ t('admin.actions.schedule') }}
       </button>
@@ -326,7 +329,7 @@
     </form>
 
     <form method="post" action="/admin/refresh" data-admin-action>
-      <input type="hidden" name="action" value="advisories">
+      <input type="hidden" name="source" value="advisories">
       <button class="btn btn-primary" type="submit">
         {{ t('admin.actions.advisories') }}
       </button>
@@ -385,6 +388,18 @@
   <div class="admin-index" id="admin-index" aria-live="polite">
     <p class="flush"><strong data-value="index-state">-</strong></p>
     <p class="hint flush" data-value="index-detail">-</p>
+  </div>
+  {#
+    What an operator can actually do about it, shown only once the verdict
+    is anything but current. A published release always ships an index built
+    for it, so a stale one on a running service is a build that is not a
+    release as published - and the fix is a deployment, not a button.
+  #}
+  <div class="admin-index-remedy" data-admin-index-remedy hidden>
+    <p class="hint flush">{{ t('admin.search.remedy') }}</p>
+    <pre class="code-block"><code>python scripts/build_search_index.py
+cd docker &amp;&amp; docker compose up --build -d</code></pre>
+    <p class="hint flush">{{ t('admin.search.remedy.commit') }}</p>
   </div>
   <p class="hint section-gap flush">{{ t('admin.search.fix') }}</p>
 </section>

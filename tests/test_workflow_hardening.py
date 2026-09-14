@@ -101,7 +101,14 @@ def test_a_checkout_keeps_no_token_unless_its_job_pushes(workflow: Path):
     """
     for name, job in _document(workflow)["jobs"].items():
         steps = job.get("steps", [])
-        pushes = any("git push" in str(step.get("run", "")) for step in steps)
+        # A push that names its token in the remote URL needs nothing kept in
+        # .git/config - the stricter shape, for a job that runs a branch's own
+        # code before it pushes (search-index.yml).
+        pushes = any(
+            "git push" in str(step.get("run", ""))
+            and "x-access-token:" not in str(step.get("run", ""))
+            for step in steps
+        )
         for step in steps:
             if not str(step.get("uses", "")).startswith("actions/checkout@"):
                 continue
