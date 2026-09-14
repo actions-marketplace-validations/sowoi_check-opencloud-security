@@ -671,3 +671,81 @@
     .admin-tabs { gap: .3rem; }
     .admin-tabs a { padding: .35rem .7rem; font-size: .72rem; }
 }
+
+/* ------------------------------------------------------------ the rules tab */
+/* One ruled row per rule, in the shape the exposure card already taught the
+   reader: what it is and whether it is on in the first line, the sentence
+   with this deployment's numbers under it, then the lists it names. */
+.admin-rules {
+    list-style: none;
+    margin: 1.25rem 0 0;
+    padding: 0;
+    border-top: 1px solid var(--line);
+}
+
+.admin-rule {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: .3rem .9rem;
+    padding: .75rem .2rem;
+    border-bottom: 1px solid var(--line);
+}
+
+.admin-rule-title { font-weight: 600; font-size: .95rem; }
+
+.admin-rule[data-state="on"] .admin-surface-pill {
+    border-color: color-mix(in srgb, var(--good) 45%, transparent);
+    color: var(--good);
+}
+
+/* Off is not an error - a private deployment turns half of these off on
+   purpose - so it is quieter rather than louder. */
+.admin-rule[data-state="off"] .admin-rule-title,
+.admin-rule[data-state="off"] .admin-rule-body { color: var(--ink-soft); }
+
+.admin-rule-body,
+.admin-rule-labels,
+.admin-rule-items,
+.admin-rule-variables {
+    grid-column: 1 / -1;
+}
+
+.admin-rule-body { font-size: .9rem; }
+
+.admin-rule-labels {
+    margin: .2rem 0 0;
+    padding-left: 1.2rem;
+    font-size: .86rem;
+}
+
+.admin-rule-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .3rem .5rem;
+    margin: .2rem 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.admin-rule-items code { font-size: .8rem; overflow-wrap: anywhere; }
+
+.admin-rule-variables {
+    font-size: .8rem;
+    color: var(--ink-soft);
+    overflow-wrap: anywhere;
+}
+
+.admin-rules-grades {
+    list-style: none;
+    margin: .75rem 0 1rem;
+    padding: 0;
+    display: grid;
+    gap: .5rem;
+}
+
+.admin-rules-grades li {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+}

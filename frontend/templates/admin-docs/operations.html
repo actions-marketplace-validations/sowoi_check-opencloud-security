@@ -686,7 +686,7 @@ anything else refuses to start.</p>
 </tr>
 </tbody>
 </table>
-<p>Beside the overview there are three more places, reached from the tab strip at
+<p>Beside the overview there are four more places, reached from the tab strip at
 the top of every page in the area:</p>
 <table>
 <thead>
@@ -699,6 +699,10 @@ the top of every page in the area:</p>
 <tr>
 <td>Configuration</td>
 <td>Every <code>COS_WEB_*</code> variable the web service reads, grouped, with the value <strong>in effect</strong> - after parsing, clamping and fallbacks, so a malformed value shows the default it fell back to - whether the environment set it or the default applies, and the documented default and description from the table in <code>docs/webapp.md</code>. A token, key, salt or the Redis password is only ever <strong>set</strong> or <strong>not set</strong>. <code>COS_WEB_*</code> names the service does not read are listed by name, without their values, because a misspelt variable otherwise leaves the default in force with nothing saying so. It is this web process's environment: not OpenCloud's, and not the worker's, which reads the same variables in its own container</td>
+</tr>
+<tr>
+<td>Rules</td>
+<td>How a grade is decided and every rule enforced against a request, with the numbers this deployment runs with: the grade scale and the scanner's severity ceilings, the end-of-life and track overrides, whether extra checks count, how many waivers a visitor may choose and the reference data rated against; then the per-client, daily and per-target limits, the probe block with its strikes and escalation (1 h → 6 h → 24 h by default), the SSRF guard's refused ranges, names and wildcard DNS services, approval mode, the flags every scan is built with, and the credential and refresh-button limits. Each rule says <strong>Enforced</strong> or <strong>Off</strong> and names the <code>COS_WEB_*</code> variables behind it. Every number and list is read from the running settings and from the constants the enforcing code uses (<code>webapp/rules.py</code>), so the tab cannot describe a limit the service no longer has; <code>tests/test_webapp_admin_rules.py</code> changes settings and looks for the change on the page</td>
 </tr>
 <tr>
 <td>Architecture</td>

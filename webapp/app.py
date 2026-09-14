@@ -177,6 +177,7 @@ from .reports import (
     pdf_report,
     sarif_report,
 )
+from .rules import enforcement_groups, rating_rules
 from .schedule import schedule_state
 from .seo import (
     AGENTS_JSON_PATH,
@@ -2095,6 +2096,47 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
             context["configuration_groups"] = configuration_groups(settings)
             context["configuration_unrecognised"] = configuration_unrecognised()
             return page(request, "admin-configuration.html", context)
+
+        @app.get(f"{ADMIN_PATH}/rules", response_class=HTMLResponse,
+                 include_in_schema=False)
+        async def admin_rules(request: Request) -> Response:
+            """
+            How a grade is decided, and every rule enforced against a request.
+
+            Server-rendered like the configuration tab: the rules are read off
+            the settings this process started with and the constants the
+            enforcing code uses (:mod:`webapp.rules`), so the page states what
+            is enforced rather than what was once documented. The exclusion
+            count and the reference data are the two readings taken per
+            request, because the area and the daily refresh can change them.
+            """
+            operator = admin_operator(request)
+            if operator is None:
+                return not_found(request)
+            context = await admin_context(operator, None)
+            exclusions = context["exclusions"]
+            try:
+                advisories = await advisory_state(app.state.backend, settings)
+                schedule = await schedule_state(app.state.backend, settings)
+            except RedisUnavailable:
+                advisories, schedule = {}, {}
+            context.update(
+                {
+                    "admin_tab": "rules",
+                    "rule_groups": enforcement_groups(
+                        settings,
+                        None if exclusions is None else len(exclusions.effective),
+                    ),
+                    "rating": rating_rules(settings),
+                    "grades": grade_scale(translator_for(request)),
+                    "severity_tags": SEVERITY_TAGS,
+                    "reference": {
+                        "advisories": advisories.get("advisories", "?"),
+                        "schedule": schedule.get("updated") or "?",
+                    },
+                }
+            )
+            return page(request, "admin-rules.html", context)
 
         @app.get(f"{ADMIN_PATH}/docs/{{slug}}", response_class=HTMLResponse,
                  include_in_schema=False)

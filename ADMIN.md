@@ -541,12 +541,13 @@ What the area does:
 | Search index | **Reports** whether the shipped index still matches this build. It never rebuilds - every pull request to main and the release workflow do that. When it is out of date, the card lists every reason and shows how to fix it. Three verdicts, not two: an index that does not name the release it was built for is **Cannot tell**, because its pages and languages could be compared and its copy could not |
 | Audit | Streams the audit records as they are written, from the log file when one is configured and otherwise from a bounded in-memory ring |
 
-Beside the overview there are three more places, reached from the tab strip at
+Beside the overview there are four more places, reached from the tab strip at
 the top of every page in the area:
 
 | Tab | What it shows |
 |:--|:--|
 | Configuration | Every `COS_WEB_*` variable the web service reads, grouped, with the value **in effect** - after parsing, clamping and fallbacks, so a malformed value shows the default it fell back to - whether the environment set it or the default applies, and the documented default and description from the table in `docs/webapp.md`. A token, key, salt or the Redis password is only ever **set** or **not set**. `COS_WEB_*` names the service does not read are listed by name, without their values, because a misspelt variable otherwise leaves the default in force with nothing saying so. It is this web process's environment: not OpenCloud's, and not the worker's, which reads the same variables in its own container |
+| Rules | How a grade is decided and every rule enforced against a request, with the numbers this deployment runs with: the grade scale and the scanner's severity ceilings, the end-of-life and track overrides, whether extra checks count, how many waivers a visitor may choose and the reference data rated against; then the per-client, daily and per-target limits, the probe block with its strikes and escalation (1 h → 6 h → 24 h by default), the SSRF guard's refused ranges, names and wildcard DNS services, approval mode, the flags every scan is built with, and the credential and refresh-button limits. Each rule says **Enforced** or **Off** and names the `COS_WEB_*` variables behind it. Every number and list is read from the running settings and from the constants the enforcing code uses (`webapp/rules.py`), so the tab cannot describe a limit the service no longer has; `tests/test_webapp_admin_rules.py` changes settings and looks for the change on the page |
 | Architecture | `ARCHITECTURE.md` — how the repository is put together and why the seams are where they are |
 | Operations | This file — the data to keep current, what to rebuild, and where to look when something breaks |
 

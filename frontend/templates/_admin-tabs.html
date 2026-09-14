@@ -20,6 +20,10 @@
      {% if admin_tab == 'configuration' %}aria-current="page"{% endif %}>
     {{ t('admin.tabs.configuration') }}
   </a>
+  <a href="{{ admin_path }}/rules"
+     {% if admin_tab == 'rules' %}aria-current="page"{% endif %}>
+    {{ t('admin.tabs.rules') }}
+  </a>
   {% for tab in admin_doc_tabs %}
   <a href="{{ admin_path }}/docs/{{ tab.slug }}"
      {% if admin_tab == tab.slug %}aria-current="page"{% endif %}>

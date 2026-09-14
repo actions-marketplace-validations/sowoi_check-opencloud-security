@@ -14,6 +14,18 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ### Added
 
+- **The operator area has a Rules tab.** `/admin/rules` documents how a grade
+  is decided - the scale, the scanner's severity ceilings, the end-of-life and
+  track overrides, whether extra checks count, the waivers a visitor may
+  choose, and the advisory database and release schedule rated against - and
+  every rule enforced against a request: the per-client, daily and per-target
+  limits, the probe block with its strikes, network scope and escalation, the
+  SSRF guard's refused ranges, names and wildcard DNS services, approval mode,
+  the flags every scan runs with, and the credential and refresh limits. Each
+  rule is marked enforced or off and names its `COS_WEB_*` variables. Nothing
+  is restated: every number and list is read from the running settings and
+  the constants of the code that enforces it, and the page names no target,
+  uuid or client.
 - **The operator area has a Configuration tab.** `/admin/configuration`
   lists every `COS_WEB_*` variable the web service reads, grouped, with the
   value in effect after parsing, whether the environment set it or the default
