@@ -21,6 +21,17 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   database was re-read from OSV and has nothing new. The frontend
   documentation and the search indexes are rebuilt to match.
 
+### Documentation
+
+- **Claude Code skills for the repetitive maintenance tasks.** `.claude/skills/`
+  now carries step-by-step skills for patch, minor and major releases, opening
+  the release pull request, refreshing the bundled data, adding a setting, a
+  hardening check or a translated string, writing a security advisory record or
+  an ADR, a local run of the pull request checks, fixing OpenCloud
+  documentation links, and resolving conflicts in generated files. They follow
+  `AGENTS.md`: none of them publishes an advisory, merges to `main` or bumps a
+  version unless the maintainer invokes a release skill.
+
 ## [1.23.0] - 2026-09-14
 
 ### Added
