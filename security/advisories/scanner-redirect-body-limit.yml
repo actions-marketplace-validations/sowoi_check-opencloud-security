@@ -1,0 +1,28 @@
+# Security advisory record; publication remains a maintainer decision.
+slug: scanner-redirect-body-limit
+state: draft
+changelog_version: "1.23.2"
+changelog_entry: "Redirect responses obey the scanner response-size limit."
+shipped: true
+severity: medium
+cwe_ids:
+  - CWE-400
+package: plugin
+introduced: "1.4.0"
+fixed: "1.23.2"
+summary: >-
+  Requests buffered redirect bodies before the scanner's response-size cap
+verified: |
+  git show v1.4.0:opencloud_local_scan/scanner.py introduces _capped. git show v1.23.1:opencloud_local_scan/scanner.py passes responses to _capped only after Session.request returns. Requests resolves redirects internally and also consumes redirect bodies when preparing Response.next with allow_redirects=False.
+description: |
+  ### Impact
+  
+  A scanned server could return a very large or continuously streaming redirect body. Requests buffered it before the scanner enforced max_response_bytes, consuming memory or tying up a CLI scan or web worker. Both guarded web redirects and unguarded plugin redirects were affected.
+  
+  ### Patches
+  
+  Fixed in the source for **1.23.2**. Scanner sessions leave all redirect handling to the capped manual redirect loop, including the normally implicit Response.next preparation. Explicit request Authorization headers are not propagated to redirect targets.
+  
+  ### Workarounds
+  
+  Restrict scans to trusted targets and apply process memory/runtime limits. Merely disabling automatic redirects is insufficient with an ordinary Requests session.

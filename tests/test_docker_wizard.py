@@ -142,7 +142,7 @@ def test_existing_env_permissions_are_restricted_before_writing(tmp_path, monkey
         return Writer(original(descriptor, *args, **kwargs))
 
     monkeypatch.setattr(wizard_module.os, "fdopen", checked_writer)
-    assert _run(tmp_path) == 0
+    assert _run(tmp_path, "--force") == 0
     assert checked
 
 

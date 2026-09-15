@@ -1,0 +1,32 @@
+# Security advisory record; publication remains a maintainer decision.
+slug: web-worker-timeout-orphans
+state: draft
+changelog_version: "1.23.2"
+changelog_entry: "A web scan timeout now stops its probes."
+shipped: true
+severity: high
+cwe_ids:
+  - CWE-400
+package: web
+introduced: "1.4.0"
+fixed: "1.23.2"
+summary: >-
+  Timed-out web scans continued running after their worker slots were released
+verified: |
+  git show v1.4.0:webapp/tasks.py and git show v1.23.1:webapp/tasks.py wrap asyncio.to_thread(execute_scan, ...) in asyncio.wait_for. Cancellation stops awaiting a running thread, not the thread or its network requests.
+description: |
+  ### Impact
+  
+  A slow target could keep a blocking scan alive after the job was reported timed out. Subsequent jobs acquired released slots while the previous probes continued, defeating the configured active-scan bound and accumulating threads, sockets and memory. Ordinary inter-byte socket timeouts do not bound a peer that keeps sending small amounts of data.
+  
+  ### Patches
+  
+  Fixed in the source for **1.23.2**. Each web scan runs in a spawned child process. Timeout and cancellation kill and reap it, including its probe threads, before the slot is released. Unexpected child failures return a generic classification; worker logs no longer include exception traces that may contain scan data.
+  
+  ### Workarounds
+  
+  Use external worker memory/PID limits and restrict approved scan targets. Restart a worker that has accumulated stuck probes; the old application timeout alone does not stop them.
+  
+  ### Distribution
+  
+  This affects the web application or its standalone deployment wizard, not the PyPI plugin distribution.

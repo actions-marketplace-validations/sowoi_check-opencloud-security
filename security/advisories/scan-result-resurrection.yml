@@ -1,0 +1,32 @@
+# Security advisory record; publication remains a maintainer decision.
+slug: scan-result-resurrection
+state: draft
+changelog_version: "1.23.2"
+changelog_entry: "Workers cannot resurrect erased or expired scan results."
+shipped: true
+severity: medium
+cwe_ids:
+  - CWE-367
+package: web
+introduced: "1.4.0"
+fixed: "1.23.2"
+summary: >-
+  In-flight workers could recreate scan capabilities after erasure or expiry
+verified: |
+  git show v1.4.0:webapp/store.py shows unconditional worker result/status writes. git show v1.7.0:webapp/store.py adds purge_target while retaining those writes. git show v1.23.1:webapp/store.py still writes result and status even after metadata has disappeared.
+description: |
+  ### Impact
+  
+  A scan completing after its keys expired, or after an operator erased its target, could write its result and status back under the original UUID. Someone retaining that result link could read data after its promised erasure or expiry. Erasure is affected from 1.7.0; expiry is affected from 1.4.0.
+  
+  ### Patches
+  
+  Fixed in the source for **1.23.2**. Worker transitions require the original metadata and status keys to exist, and check and write atomically in Redis. MemoryRedis follows the same contract. Deletion between reading metadata and committing completion cannot revive the UUID.
+  
+  ### Workarounds
+  
+  Stop or drain workers before erasure, then erase again after all in-flight work has stopped.
+  
+  ### Distribution
+  
+  This affects the web application or its standalone deployment wizard, not the PyPI plugin distribution.

@@ -178,6 +178,56 @@ def test_a_value_reads_back_exactly_as_it_was_written(store):
     assert _run(store.get(key)) is None
 
 
+def test_conditional_transition_writes_all_values_and_their_ttls(store):
+    """Production Lua must preserve the same all-or-nothing transition as the fake."""
+    metadata, status, result = (store.key(name) for name in ("metadata", "status", "result"))
+    _run(store.set(metadata, "old metadata", ex=60))
+    _run(store.set(status, "running", ex=60))
+    values = {metadata: "new metadata", status: "completed", result: "ü result"}
+
+    assert _run(store.set_if_exists((metadata, status), values, ex=120)) is True
+    for key, value in values.items():
+        assert _run(store.get(key)) == value
+        assert 0 < _run(store.ttl(key)) <= 120
+
+
+@pytest.mark.parametrize("missing", ["metadata", "status"])
+def test_conditional_transition_cannot_recreate_a_missing_required_key(store, missing):
+    """Losing either original key must prevent every completion write."""
+    metadata, status, result = (store.key(name) for name in ("metadata", "status", "result"))
+    _run(store.set(metadata, "old metadata", ex=60))
+    _run(store.set(status, "running", ex=60))
+    _run(store.delete(store.key(missing)))
+
+    assert _run(store.set_if_exists(
+        (metadata, status), {metadata: "new", status: "completed", result: "secret"}, ex=120,
+    )) is False
+    assert _run(store.get(result)) is None
+    assert _run(store.get(metadata)) == (None if missing == "metadata" else "old metadata")
+    assert _run(store.get(status)) == (None if missing == "status" else "running")
+
+
+def test_erasure_wins_even_when_it_races_a_conditional_completion(store):
+    """There must be no result left whichever Redis command wins the race."""
+    metadata, status, result = (store.key(name) for name in ("metadata", "status", "result"))
+
+    async def race():
+        for _ in range(20):
+            await store.set(metadata, "old", ex=60)
+            await store.set(status, "running", ex=60)
+            await asyncio.gather(
+                store.set_if_exists(
+                    (metadata, status), {metadata: "new", status: "completed", result: "secret"}, ex=60,
+                ),
+                store.delete(metadata, status, result),
+            )
+            assert await store.get(result) is None
+            assert await store.get(metadata) is None
+            assert await store.get(status) is None
+
+    _run(race())
+
+
 def test_setting_a_key_that_exists_is_refused_only_when_nx_is_asked_for(store):
     """`SET NX` is how a uuid is claimed; a wrong answer hands one scan two workers."""
     key = store.key("claim")

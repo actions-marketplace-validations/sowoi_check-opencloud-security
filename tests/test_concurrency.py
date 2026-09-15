@@ -56,6 +56,11 @@ def test_scanning_without_multithreading_is_the_default():
     assert ScannerSettings().workers == 1
 
 
+def test_fake_instance_accepts_a_full_burst_of_parallel_probes():
+    with FakeOpenCloud() as instance:
+        assert instance._server.request_queue_size >= MAX_CONCURRENCY
+
+
 @pytest.mark.parametrize("concurrency", [2, 8])
 def test_a_parallel_scan_finds_exactly_what_a_sequential_scan_finds(concurrency):
     """Speeding a scan up must not change a single verdict it reaches."""

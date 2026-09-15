@@ -1,0 +1,32 @@
+# Security advisory record; publication remains a maintainer decision.
+slug: web-request-body-unbounded
+state: draft
+changelog_version: "1.23.2"
+changelog_entry: "Web request bodies are bounded before parsing."
+shipped: true
+severity: high
+cwe_ids:
+  - CWE-400
+package: web
+introduced: "1.4.0"
+fixed: "1.23.2"
+summary: >-
+  Unauthenticated request bodies could exhaust memory before submission limits applied
+verified: |
+  git show v1.4.0:webapp/app.py and git show v1.23.1:webapp/app.py read request.json without a total request-body limit. v1.23.1 has no ASGI body-size/deadline middleware ahead of JSON, form or MCP parsing.
+description: |
+  ### Impact
+  
+  A client reaching the web application directly, or through a proxy without a suitable body limit, could send oversized JSON or form bodies before the application's scan rate limits applied. Large bodies and slow uploads could consume memory or hold request resources without creating a scan.
+  
+  ### Patches
+  
+  Fixed in the source for **1.23.2**. An ASGI guard bounds mutation request bodies to 1 MiB and a 30-second total receive deadline before downstream parsing. Chunked bodies are counted as well. Oversized bodies return 413 and incomplete bodies return 408.
+  
+  ### Workarounds
+  
+  Set a small request-body size limit and an upload deadline at the trusted reverse proxy, and prevent direct access to the application port.
+  
+  ### Distribution
+  
+  This affects the web application or its standalone deployment wizard, not the PyPI plugin distribution.

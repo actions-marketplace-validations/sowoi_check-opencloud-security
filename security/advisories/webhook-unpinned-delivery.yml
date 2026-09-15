@@ -1,0 +1,28 @@
+# Security advisory record; publication remains a maintainer decision.
+slug: webhook-unpinned-delivery
+state: draft
+changelog_version: "1.23.2"
+changelog_entry: "Webhook delivery dials only the addresses that passed validation."
+shipped: true
+severity: medium
+cwe_ids:
+  - CWE-918
+package: plugin
+introduced: "1.2.3"
+fixed: "1.23.2"
+summary: >-
+  Webhook DNS rechecks still left an unpinned delivery lookup vulnerable to rebinding
+verified: |
+  git show v1.2.3:check_opencloud_security.py shows the private-address guard followed by requests.post. git show v1.23.1:check_opencloud_security.py rechecks DNS in _webhook_address_has_changed, then calls requests.post, which resolves again without a pin. The previous 1.6.0 fix did not bind the actual socket to either validated lookup.
+description: |
+  ### Impact
+  
+  A configured webhook hostname controlled by an attacker could return public addresses for both guard lookups and a private address for the HTTP connection. The notification, signature and custom headers could reach a destination excluded by the private-address guard. Environment or explicitly configured resolving proxies also bypassed that guard. This requires the attacker to influence the configured receiver's DNS or proxy resolution; ordinary scan submitters cannot choose webhook URLs.
+  
+  ### Patches
+  
+  Fixed in the source for **1.23.2**. Delivery pins the validated address set while preserving Host, TLS SNI and certificate hostname verification. Restricted delivery refuses an explicit resolving proxy and ignores ambient proxies. Redirects remain disabled and response bodies are not downloaded.
+  
+  ### Workarounds
+  
+  Use a trusted receiver with a literal public IP and no proxy, or enforce destination restrictions outside the process. Do not treat two DNS lookups as connection pinning.

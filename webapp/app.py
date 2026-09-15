@@ -736,7 +736,12 @@ def _own_origins(request: Request, settings: WebSettings) -> set[tuple[str, str,
     Behind a proxy the internal HTTP origin is not an additional trusted
     browser origin. The scheme and effective port are part of the boundary.
     """
-    origin = _origin(settings.public_base_url or str(request.base_url))
+    # A deployment URL may include a path prefix; browser origins never do.
+    try:
+        base = urlsplit(settings.public_base_url or str(request.base_url))
+    except ValueError:
+        return set()
+    origin = _origin(f"{base.scheme}://{base.netloc}")
     return {origin} if origin is not None else set()
 
 

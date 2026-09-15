@@ -64,8 +64,9 @@ def test_redirect_bodies_are_capped_before_requests_can_buffer_them(monkeypatch,
 
 
 def test_webhook_dials_only_validated_addresses_and_keeps_host(monkeypatch, tmp_path):
-    import check_opencloud_security as plugin
     from urllib3.util import connection
+
+    import check_opencloud_security as plugin
 
     received = []
     dialled = []
@@ -114,7 +115,12 @@ def test_webhook_dials_only_validated_addresses_and_keeps_host(monkeypatch, tmp_
 
 def test_jwks_outages_are_rate_limited_and_recover(monkeypatch):
     import jwt
-    from webapp.mcp_auth import JWKS_MISS_REFETCH_SECONDS, OidcTokenVerifier
+
+    from webapp.mcp_auth import (
+        JWKS_MISS_REFETCH_SECONDS,
+        OidcTokenVerifier,
+        UnknownSigningKey,
+    )
 
     now = [1000.0]
     monkeypatch.setattr("webapp.mcp_auth.time.monotonic", lambda: now[0])
@@ -129,8 +135,10 @@ def test_jwks_outages_are_rate_limited_and_recover(monkeypatch):
             raise OSError("provider unavailable")
 
     keys = Keys()
-    for _ in range(20):
-        with pytest.raises(Exception):
+    with pytest.raises(OSError):
+        verifier._signing_key(keys, token)
+    for _ in range(19):
+        with pytest.raises(UnknownSigningKey):
             verifier._signing_key(keys, token)
     assert keys.calls == 1
     now[0] += JWKS_MISS_REFETCH_SECONDS + 1
@@ -141,6 +149,7 @@ def test_jwks_outages_are_rate_limited_and_recover(monkeypatch):
 
 def test_a_jwks_fetch_in_progress_does_not_start_another(monkeypatch):
     import jwt
+
     from webapp.mcp_auth import OidcTokenVerifier, UnknownSigningKey
 
     verifier = OidcTokenVerifier(jwks_uri="https://auth.example.com/jwks", issuer="issuer")
@@ -179,6 +188,7 @@ def _unending_child(channel, arguments):
 @pytest.mark.parametrize("cancel", [False, True])
 def test_scan_timeout_and_cancellation_reap_the_child(monkeypatch, cancel):
     import multiprocessing
+
     from webapp import scan_process
 
     monkeypatch.setattr(scan_process, "_execute", _unending_child)
@@ -305,14 +315,15 @@ def test_completion_cannot_race_past_erasure(monkeypatch):
 
 
 @pytest.mark.parametrize("origin", ["https://scan.example.com", "https://scan.example.com:443"])
-def test_origin_fallback_accepts_the_configured_origin(origin):
+@pytest.mark.parametrize("prefix", ["", "/security"])
+def test_origin_fallback_accepts_the_configured_origin(origin, prefix):
     request = Request({
         "type": "http", "method": "POST", "scheme": "http",
         "server": ("internal.example.com", 8000), "path": "/admin/exclusions",
         "root_path": "", "query_string": b"",
         "headers": [(b"host", b"internal.example.com:8000"), (b"origin", origin.encode())],
     })
-    assert not cross_origin_post(request, WebSettings(public_base_url="https://scan.example.com"))
+    assert not cross_origin_post(request, WebSettings(public_base_url=f"https://scan.example.com{prefix}"))
 
 
 def test_explicit_plugin_proxy_and_ca_are_preserved():

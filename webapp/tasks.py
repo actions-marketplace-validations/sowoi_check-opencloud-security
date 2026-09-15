@@ -125,7 +125,7 @@ async def run_scan(ctx: dict[str, Any], uuid: str) -> str:
         LOGGER.info("scan_failed %s", uuid)
         await _count_non_opencloud(store, settings, prober, uuid)
         return "failed"
-    except Exception:  # pragma: no cover - defensive; a crash must not leak
+    except Exception:  # noqa: BLE001 - defensive; a crash must not leak  # pragma: no cover
         await store.mark_failed(uuid, "The scan could not be completed.")
         LOGGER.error("scan_error %s", uuid)
         return "failed"

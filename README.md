@@ -454,7 +454,7 @@ check-opencloud-security
 
 Scans do not read `.netrc`, `HTTP_PROXY`, `HTTPS_PROXY` or Requests' CA-bundle
 environment variables. Configure a proxy explicitly with `--proxy`/`COS_PROXY`
-and a private CA with `--ca-file`/`COS_CA_FILE`. Restricted webhook delivery
+and a private CA with `--ca-file`/`COS_SCANNER_TLS_CA_FILE`. Restricted webhook delivery
 pins its validated addresses and cannot use a resolving proxy; proxying a
 webhook requires the explicit `--allow-private-webhooks` opt-out.
 

@@ -26,7 +26,7 @@ def _execute(channel: Connection, arguments: tuple[Any, ...]) -> None:
             message = ("rejected", str(exc))
         except ScanError as exc:
             message = ("failed", str(exc))
-        except Exception:
+        except Exception:  # noqa: BLE001 - a crash must cross the pipe, not the logs
             message = ("error", None)
         channel.send(message)
     finally:
