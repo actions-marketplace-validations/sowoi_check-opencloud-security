@@ -18,6 +18,30 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   polished.** The translated catalogues now use more natural phrasing and
   established technical terms across the public and operator-facing pages,
   without changing any scan behaviour or API contract.
+- **Keeping the release schedule and advisories current.**
+  `docs/reference-data.md` documents `check-opencloud-scanner refresh-data`:
+  - the reviewed, Sigstore-attested files it fetches, and the three
+    verification outcomes;
+  - the structural checks that apply either way;
+  - pointing `scanner.release_schedule` and `scanner.vulnerability_db` at the
+    result;
+  - the daily systemd timer;
+  - mirrors for hosts without internet access.
+
+  It also warns that a schedule file the check cannot read turns the
+  end-of-life check off rather than falling back to the bundled schedule.
+- **A reference for `check-opencloud-scanner`.** `docs/scanner-cli.md` covers
+  the global options and configuration search, `scan`, `diff`, `explain`,
+  `refresh-data`, `serve` and `configure`, with options and exit codes for
+  each. It explains how they differ from the plugin's Nagios codes.
+- **Signed exports are documented in `docs/webapp.md`.** A new section
+  explains what `X-COS-Signature` covers and that it is a shared-secret HMAC
+  rather than a public signature. It shows how to keep the header with the
+  file, and how to verify it with `scripts/verify_export.py` or `openssl`.
+- **The README no longer says the bundled advisory database is empty.** It
+  names the advisory it carries and points to the refresh guide.
+- Both new pages are listed in `docs/README.md` and published under
+  `/documentation`. The frontend documentation and search indexes are rebuilt.
 
 ## [1.23.1] - 2026-09-15
 

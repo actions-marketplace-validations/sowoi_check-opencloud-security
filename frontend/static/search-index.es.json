@@ -54,6 +54,11 @@
       "summary": "Every command-line flag, its default, and the environment variable that sets the same thing."
     },
     {
+      "path": "/documentation/scanner-cli",
+      "title": "The check-opencloud-scanner command",
+      "summary": "Print the raw OpenCloud scan result, compare two saved results, explain a finding, refresh reference data and run the scan service."
+    },
+    {
       "path": "/documentation/reference",
       "title": "OpenCloud Security Scanner CLI reference",
       "summary": "Install, configure, rate, and automate the OpenCloud Security Scanner CLI."
@@ -77,6 +82,11 @@
       "path": "/documentation/release-lifecycle",
       "title": "OpenCloud release tracks, end of life and update recommendations",
       "summary": "Why the same version can be current on one track and dead on another, and what --release-track changes."
+    },
+    {
+      "path": "/documentation/reference-data",
+      "title": "Keep the OpenCloud release schedule and advisories current",
+      "summary": "Refresh the release schedule and advisory database with signature verification, without waiting for a package upgrade."
     },
     {
       "path": "/documentation/hardening",

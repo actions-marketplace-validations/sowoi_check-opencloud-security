@@ -714,12 +714,15 @@ understood, so an air-gapped setup can mirror a feed to a file without
 conversion. A feed that is unreachable is logged and ignored - it never turns a
 healthy instance into <code>UNKNOWN</code>.</p>
 <blockquote>
-<p><strong>The bundled database is empty.</strong> At the time of writing no CVE or GHSA has
-been published for OpenCloud, so <code>vulnerabilities: []</code> means "nothing in the
-database you configured matched", not "this version is known to be safe". The
-rating you get is driven by the configuration checks above. Point
-<code>scanner.vulnerability_feed</code> at OSV or your own advisory mirror to make that
-part of the check meaningful.</p>
+<p><strong>The bundled database is only as complete as the published advisories.</strong>
+Few have been published for OpenCloud so far. <code>GHSA-vf5j-r2hw-2hrw</code> (fixed
+in 4.0.3 and 5.0.2) is one of them, and the database is regenerated from OSV
+as new ones appear. So <code>vulnerabilities: []</code> means "nothing in the database
+you configured matched", not "this version is known to be safe". Most of the
+rating comes from the configuration checks above. To pick up advisories
+published after your package was built, see
+<a href="/documentation/reference-data">Keeping the release schedule and advisories current</a>,
+or point <code>scanner.vulnerability_feed</code> at OSV or your own advisory mirror.</p>
 </blockquote>
 <h3 id="running-the-scanner-as-a-service">Running the scanner as a service</h3>
 <p>The package ships a second entry point, <code>check-opencloud-scanner</code>. It runs the
