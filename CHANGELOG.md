@@ -12,6 +12,8 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+## [1.23.1] - 2026-09-15
+
 ### Changed
 
 - **The bundled release schedule knows OpenCloud 8.0.** Regenerated from the
