@@ -1,6 +1,7 @@
 # Security advisory record; publication remains a maintainer decision.
 slug: scanner-redirect-body-limit
 state: draft
+ghsa: GHSA-f7pp-mr5c-gmr9
 changelog_version: "1.23.2"
 changelog_entry: "Redirect responses obey the scanner response-size limit."
 shipped: true

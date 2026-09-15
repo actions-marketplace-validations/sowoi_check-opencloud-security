@@ -1,6 +1,7 @@
 # Security advisory record; publication remains a maintainer decision.
 slug: webhook-unpinned-delivery
 state: draft
+ghsa: GHSA-r2xr-7jw6-vxjj
 changelog_version: "1.23.2"
 changelog_entry: "Webhook delivery dials only the addresses that passed validation."
 shipped: true

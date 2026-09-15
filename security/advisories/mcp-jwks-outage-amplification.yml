@@ -1,6 +1,7 @@
 # Security advisory record; publication remains a maintainer decision.
 slug: mcp-jwks-outage-amplification
 state: draft
+ghsa: GHSA-2whp-w4pj-vgxm
 changelog_version: "1.23.2"
 changelog_entry: "Authentication-key fetches stay bounded during outages."
 shipped: true

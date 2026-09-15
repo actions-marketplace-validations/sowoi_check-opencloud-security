@@ -1,6 +1,7 @@
 # Security advisory record; publication remains a maintainer decision.
 slug: web-scan-environment-proxy-bypass
 state: draft
+ghsa: GHSA-pqw3-72fw-3x53
 changelog_version: "1.23.2"
 changelog_entry: "Pinned scans cannot be redirected through ambient proxies."
 shipped: true

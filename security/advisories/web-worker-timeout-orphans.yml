@@ -1,6 +1,7 @@
 # Security advisory record; publication remains a maintainer decision.
 slug: web-worker-timeout-orphans
 state: draft
+ghsa: GHSA-6m8m-9rhq-42w4
 changelog_version: "1.23.2"
 changelog_entry: "A web scan timeout now stops its probes."
 shipped: true

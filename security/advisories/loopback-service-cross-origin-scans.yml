@@ -1,6 +1,7 @@
 # Security advisory record; publication remains a maintainer decision.
 slug: loopback-service-cross-origin-scans
 state: draft
+ghsa: GHSA-pjvm-765m-h9fg
 changelog_version: "1.23.2"
 changelog_entry: "Unrelated browser pages cannot trigger loopback-service scans."
 shipped: true

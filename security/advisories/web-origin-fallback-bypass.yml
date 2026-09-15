@@ -1,6 +1,7 @@
 # Security advisory record; publication remains a maintainer decision.
 slug: web-origin-fallback-bypass
 state: draft
+ghsa: GHSA-xcv9-j4rj-r59h
 changelog_version: "1.23.2"
 changelog_entry: "Browser-origin fallback checks validate the complete origin."
 shipped: true

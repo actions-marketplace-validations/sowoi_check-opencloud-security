@@ -1,6 +1,7 @@
 # Security advisory record; publication remains a maintainer decision.
 slug: scan-result-resurrection
 state: draft
+ghsa: GHSA-47j6-6xwv-5gpp
 changelog_version: "1.23.2"
 changelog_entry: "Workers cannot resurrect erased or expired scan results."
 shipped: true

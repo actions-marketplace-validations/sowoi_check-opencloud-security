@@ -1,6 +1,7 @@
 # Security advisory record; publication remains a maintainer decision.
 slug: web-request-body-unbounded
 state: draft
+ghsa: GHSA-r3x4-wg5r-vhg6
 changelog_version: "1.23.2"
 changelog_entry: "Web request bodies are bounded before parsing."
 shipped: true
