@@ -12,6 +12,8 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+## [1.23.2] - 2026-09-15
+
 ### Fixed
 
 - **Parallel scanner tests no longer overflow the fake server's backlog.**
