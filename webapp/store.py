@@ -201,8 +201,7 @@ class ScanStore:
     async def mark_running(self, uuid: str) -> None:
         """A worker picked this scan up."""
         await self.backend.lrem(QUEUE_KEY, 1, uuid)
-        await self._patch_metadata(uuid, {"startedAt": _now()})
-        await self.backend.set(status_key(uuid), _dump({"state": STATE_RUNNING}), ex=self.ttl)
+        await self._transition(uuid, {"startedAt": _now()}, {"state": STATE_RUNNING})
 
     async def mark_completed(self, uuid: str, result: dict[str, Any]) -> None:
         """Store the result document and stop the clock."""
@@ -210,20 +209,16 @@ class ScanStore:
         result_str = _dump(result)
         if self.encryption_config:
             result_str = encrypt_value(result_str, self.encryption_config)
-        await self.backend.set(result_key(uuid), result_str, ex=self.ttl)
-        await self._patch_metadata(uuid, {"finishedAt": _now()})
-        await self.backend.set(
-            status_key(uuid), _dump({"state": STATE_COMPLETED}), ex=self.ttl
+        await self._transition(
+            uuid, {"finishedAt": _now()}, {"state": STATE_COMPLETED},
+            result=result_str,
         )
 
     async def mark_failed(self, uuid: str, error: str) -> None:
         """Record why the scan could not produce a result."""
         await self.backend.lrem(QUEUE_KEY, 1, uuid)
-        await self._patch_metadata(uuid, {"finishedAt": _now()})
-        await self.backend.set(
-            status_key(uuid),
-            _dump({"state": STATE_FAILED, "error": error}),
-            ex=self.ttl,
+        await self._transition(
+            uuid, {"finishedAt": _now()}, {"state": STATE_FAILED, "error": error},
         )
 
     async def get(self, uuid: str) -> ScanRecord | None:
@@ -319,10 +314,22 @@ class ScanStore:
                 found.append(parts[1])
         return found
 
-    async def _patch_metadata(self, uuid: str, changes: dict[str, Any]) -> None:
-        metadata = _load(await self.backend.get(metadata_key(uuid))) or {}
+    async def _transition(
+        self, uuid: str, changes: dict[str, Any], status: dict[str, Any],
+        *, result: str | None = None,
+    ) -> None:
+        metadata = _load(await self.backend.get(metadata_key(uuid)))
+        if metadata is None:
+            return
         metadata.update(changes)
-        await self.backend.set(metadata_key(uuid), _dump(metadata), ex=self.ttl)
+        values = {metadata_key(uuid): _dump(metadata), status_key(uuid): _dump(status)}
+        if result is not None:
+            values[result_key(uuid)] = result
+        # A purge or expiry can happen after the read above. Checking and
+        # writing atomically prevents an in-flight worker reviving that UUID.
+        await self.backend.set_if_exists(
+            (metadata_key(uuid), status_key(uuid)), values, ex=self.ttl,
+        )
 
 
 def _now() -> float:

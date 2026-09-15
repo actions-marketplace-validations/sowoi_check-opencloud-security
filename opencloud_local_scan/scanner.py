@@ -649,6 +649,17 @@ class _PinnedHTTPAdapter(HTTPAdapter):
         self._pinned_pool.pin(hostname, addresses)
 
 
+class _NoRedirectSession(requests.Session):
+    """Leave redirect handling to the caller, including reading its body.
+
+    Even with allow_redirects=False, requests consumes the entire redirect
+    body to prepare Response.next. That happens before our response cap.
+    """
+
+    def resolve_redirects(self, *args: Any, **kwargs: Any):
+        return iter(())
+
+
 _T = TypeVar("_T")
 
 
@@ -705,7 +716,7 @@ class _Probe:
 
     base_url: str
     settings: ScannerSettings
-    session: requests.Session = field(default_factory=requests.Session)
+    session: requests.Session = field(default_factory=_NoRedirectSession)
     _sessions: threading.local = field(default_factory=threading.local, repr=False)
     _owner: int = field(default_factory=threading.get_ident, repr=False)
     # Every session opened for this probe, so that :meth:`close` can reach the
@@ -758,6 +769,11 @@ class _Probe:
         the pool still holding its open connections would no longer be
         reachable from ``session.adapters`` for :meth:`close` to shut down.
         """
+        # Probes are anonymous. requests otherwise loads .netrc credentials
+        # and environment proxies, which also bypass the address-pinning pool.
+        session.trust_env = False
+        if self.settings.pinned_addresses and self.settings.proxy:
+            raise ValueError("A pinned scan cannot use a proxy that resolves its target.")
         if not self._pins:
             self._pins.update(
                 (name.lower().rstrip("."), addresses)
@@ -809,7 +825,7 @@ class _Probe:
             return self.session
         session = getattr(self._sessions, "session", None)
         if session is None:
-            session = requests.Session()
+            session = _NoRedirectSession()
             self._mount(session)
             self._sessions.session = session
             self._remember(session)
@@ -834,7 +850,6 @@ class _Probe:
         """
         url = f"{base_url or self.base_url}{path}"
         guard = self.settings.redirect_guard
-        follow = allow_redirects and guard is None
         try:
             response = self._capped(
                 self._session.request(
@@ -843,7 +858,7 @@ class _Probe:
                     timeout=self.settings.timeout,
                     verify=self.settings.tls_verify,
                     proxies=self.settings.proxies,
-                    allow_redirects=follow,
+                    allow_redirects=False,
                     headers={
                         **self._headers(url),
                         "User-Agent": self.settings.user_agent,
@@ -855,7 +870,7 @@ class _Probe:
         except REQUEST_ERRORS as exc:
             LOGGER.debug("Request to %s failed: %s", url, exc)
             return None
-        if follow or not allow_redirects or guard is None:
+        if not allow_redirects:
             return response
         return self._follow(response, method=method, guard=guard)
 
@@ -882,7 +897,7 @@ class _Probe:
         response: requests.Response,
         *,
         method: str,
-        guard: Callable[[str], bool],
+        guard: Callable[[str], bool] | None,
     ) -> requests.Response | None:
         """
         Walk the redirect chain by hand, asking ``guard`` about every hop.
@@ -897,7 +912,7 @@ class _Probe:
                 return response
             location = response.headers.get("Location") or ""
             target = urljoin(response.url, location)
-            if not guard(target):
+            if guard is not None and not guard(target):
                 LOGGER.debug("Refusing to follow redirect to %s", target)
                 return response
             if self.settings.redirect_pinner is not None:

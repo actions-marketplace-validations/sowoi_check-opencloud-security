@@ -33,10 +33,13 @@ def posts(monkeypatch):
     class _Response:
         status_code = 200
 
+        def close(self):
+            pass
+
         def raise_for_status(self):
             pass
 
-    def _post(url, **kwargs):
+    def _post(self, url, **kwargs):
         # The plugin posts pre-serialised bytes (`data=`) rather than handing
         # requests an object, so that the bytes it signed are the bytes that go
         # out. Parse them back under "json" so a test can talk about the
@@ -47,7 +50,7 @@ def posts(monkeypatch):
         recorded.append((url, kwargs))
         return _Response()
 
-    monkeypatch.setattr(plugin.requests, "post", _post)
+    monkeypatch.setattr(plugin.requests.Session, "post", _post)
     return recorded
 
 
@@ -170,7 +173,7 @@ def test_webhook_failure_does_not_change_the_check_state(monkeypatch, capsys):
     def _boom(*args, **kwargs):
         raise requests.exceptions.ConnectionError("hook is down")
 
-    monkeypatch.setattr(plugin.requests, "post", _boom)
+    monkeypatch.setattr(plugin.requests.Session, "post", _boom)
 
     code = run(CRITICAL_RESULT, webhook_url="https://x/")
 
@@ -248,13 +251,16 @@ def test_private_webhooks_require_an_explicit_opt_out(monkeypatch):
     class _Response:
         status_code = 200
 
+        def close(self):
+            pass
+
         def raise_for_status(self):
             pass
 
     monkeypatch.setattr(
-        plugin.requests,
+        plugin.requests.Session,
         "post",
-        lambda url, **kwargs: posted.append((url, kwargs)) or _Response(),
+        lambda self, url, **kwargs: posted.append((url, kwargs)) or _Response(),
     )
 
     sent = plugin._send_webhook(
@@ -388,12 +394,12 @@ def test_dns_rebinding_attack_is_prevented(monkeypatch, caplog):
         def raise_for_status(self):
             pass
 
-    def _post(url, **kwargs):
+    def _post(self, url, **kwargs):
         posted.append((url, kwargs))
         return _Response()
 
     monkeypatch.setattr(plugin.socket, "getaddrinfo", _getaddrinfo_rebinding)
-    monkeypatch.setattr(plugin.requests, "post", _post)
+    monkeypatch.setattr(plugin.requests.Session, "post", _post)
 
     sent = plugin._send_webhook(
         ScanContext(
@@ -425,15 +431,18 @@ def test_a_redirecting_receiver_is_never_followed(monkeypatch, caplog):
         # still a receiver that did not accept the payload.
         status_code = 302
 
+        def close(self):
+            pass
+
         def raise_for_status(self):  # a 3xx is not an error to requests
             pass
 
-    def _post(url, **kwargs):
+    def _post(self, url, **kwargs):
         posted.append((url, kwargs))
         return _Redirect()
 
     monkeypatch.setattr(plugin.socket, "getaddrinfo", _fake_getaddrinfo("93.184.216.34"))
-    monkeypatch.setattr(plugin.requests, "post", _post)
+    monkeypatch.setattr(plugin.requests.Session, "post", _post)
 
     sent = plugin._send_webhook(
         ScanContext(
@@ -465,10 +474,13 @@ def test_a_delivered_webhook_still_reports_success(monkeypatch):
     class _Ok:
         status_code = 200
 
+        def close(self):
+            pass
+
         def raise_for_status(self):
             pass
 
-    monkeypatch.setattr(plugin.requests, "post", lambda url, **kwargs: _Ok())
+    monkeypatch.setattr(plugin.requests.Session, "post", lambda self, url, **kwargs: _Ok())
 
     sent = plugin._send_webhook(
         ScanContext(host="cloud.example.com", webhook_url="https://hooks.example.com/x"),

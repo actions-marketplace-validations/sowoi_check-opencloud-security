@@ -112,6 +112,7 @@ is needed.
 | [`test_webapp_blocked_targets.py`](test_webapp_blocked_targets.py) | Operator-excluded addresses stay blocked at submission, in the worker and on redirect. |
 | [`test_webapp_client_identity.py`](test_webapp_client_identity.py) | Behind a proxy, the address a request is counted as cannot be chosen by the client. |
 | [`test_webapp_request_provenance.py`](test_webapp_request_provenance.py) | Where a request really comes from (`X-Forwarded-For`), and whether it was meant (cross-site checks). |
+| [`test_webapp_security_audit.py`](test_webapp_security_audit.py) | Repository audit regressions: anonymous transport, response/request limits, erasure races, origin checks, JWKS fetch bounds and scan-process cleanup. |
 | [`test_webapp_encryption.py`](test_webapp_encryption.py) | Results are encrypted at rest, with no way to fall back to plaintext silently. |
 | [`test_webapp_purge.py`](test_webapp_purge.py) | Erasure on request: the data is gone, nothing else is touched, and the receipt remains. |
 | [`test_webapp_audit.py`](test_webapp_audit.py) | The audit trail records events and pseudonymises addresses and targets. |

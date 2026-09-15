@@ -40,6 +40,7 @@ places this check tends to end up.
 | [Hardening measures, one by one](hardening.md) | What each hardening identifier means, what a failure indicates and which OpenCloud setting changes it - plus the two nobody can influence, and how to waive a finding |
 | [Reporting only what changed](baseline.md) | `--baseline` and `--warn-on-new`: the diff formats, what counts as a regression, and the rules that keep a baseline from hiding anything |
 | [Release tracks, end of life and the update recommendation](release-lifecycle.md) | Why the same version can be current on one track and dead on another, what the bundled schedule knows, and what `--release-track` changes |
+| [Keeping the release schedule and advisories current](reference-data.md) | `check-opencloud-scanner refresh-data`: the reviewed, Sigstore-verified data it fetches, the checks it applies either way, pointing the check at the files, a daily systemd timer, mirrors for hosts without internet access - and the unreadable-file pitfall that turns the end-of-life check off |
 
 ## Securing the instance itself
 
@@ -56,6 +57,7 @@ internet; the page below is the rest of the job.
 | Page | What it covers |
 |:-----|:---------------|
 | [CLI option reference](cli-reference.md) | Every flag, its default and the environment variable that sets the same thing |
+| [The `check-opencloud-scanner` command](scanner-cli.md) | The second command the package installs: `scan` for the raw result document, `diff` between two saved results, `explain` for any finding identifier, `refresh-data`, `serve` and `configure` - with their options and exit codes |
 | [Icinga Director](icinga-director.md) | Creating the `CheckCommand`, data fields, service template and apply rule through the web UI |
 | [Checkmk](checkmk.md) | Both routes: an active check on the Checkmk server, or `--format checkmk` as a local check on an agent host that can reach an instance the server cannot |
 | [Automated deployment with Ansible](ansible.md) | The native and Docker roles, the variables, and deploying the Icinga2 objects without clicking |

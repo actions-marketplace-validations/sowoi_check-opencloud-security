@@ -452,6 +452,12 @@ export COS_PROXY=http://proxy.example.com:3128
 check-opencloud-security
 ```
 
+Scans do not read `.netrc`, `HTTP_PROXY`, `HTTPS_PROXY` or Requests' CA-bundle
+environment variables. Configure a proxy explicitly with `--proxy`/`COS_PROXY`
+and a private CA with `--ca-file`/`COS_SCANNER_TLS_CA_FILE`. Restricted webhook delivery
+pins its validated addresses and cannot use a resolving proxy; proxying a
+webhook requires the explicit `--allow-private-webhooks` opt-out.
+
 Boolean variables (`COS_DEBUG`, `COS_CHECK_HARDENING`, `COS_INSECURE`, ...)
 accept `1`, `true`, `yes`, or `on` (case-insensitive) to enable the
 corresponding flag; any other value (including unset/empty) is treated as
@@ -667,12 +673,15 @@ understood, so an air-gapped setup can mirror a feed to a file without
 conversion. A feed that is unreachable is logged and ignored - it never turns a
 healthy instance into `UNKNOWN`.
 
-> **The bundled database is empty.** At the time of writing no CVE or GHSA has
-> been published for OpenCloud, so `vulnerabilities: []` means "nothing in the
-> database you configured matched", not "this version is known to be safe". The
-> rating you get is driven by the configuration checks above. Point
-> `scanner.vulnerability_feed` at OSV or your own advisory mirror to make that
-> part of the check meaningful.
+> **The bundled database is only as complete as the published advisories.**
+> Few have been published for OpenCloud so far. `GHSA-vf5j-r2hw-2hrw` (fixed
+> in 4.0.3 and 5.0.2) is one of them, and the database is regenerated from OSV
+> as new ones appear. So `vulnerabilities: []` means "nothing in the database
+> you configured matched", not "this version is known to be safe". Most of the
+> rating comes from the configuration checks above. To pick up advisories
+> published after your package was built, see
+> [Keeping the release schedule and advisories current](docs/reference-data.md),
+> or point `scanner.vulnerability_feed` at OSV or your own advisory mirror.
 
 ## Running the scanner as a service
 

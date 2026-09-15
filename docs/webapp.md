@@ -824,6 +824,18 @@ and installing nothing gives you none, and the file grows until the disk is
 full. An unrecognised value refuses to start rather than guessing which you
 meant.
 
+Request bodies are limited to **1 MiB** and **30 seconds** before form, JSON
+or MCP parsing. Oversized bodies return 413; incomplete bodies time out with
+408. These fixed service-side limits do not change the scan queue or its
+overload behaviour. Apply connection and bandwidth limits at the reverse
+proxy too.
+
+Each running scan uses a child process. A job timeout or cancellation stops
+and reaps that process and its probe threads before the worker takes another
+job. The worker therefore needs permission to spawn processes; allow for one
+additional Python process per active scan when sizing memory and PID limits.
+See [ADR 0053](../adr/0053-a-scan-timeout-ends-its-process.md).
+
 ## Putting it behind a reverse proxy
 
 Worked configuration for nginx, Apache httpd, Caddy, Traefik and HAProxy -
@@ -973,6 +985,63 @@ gone when the scan expires. The PDF is written by this service rather than by
 a reporting library, for the same reason the frontend loads nothing from a
 CDN. The finished `GET /api/scans/{uuid}` response advertises the four URLs
 under `exports`, and the result page offers them as download buttons.
+
+#### Signed exports
+
+With `COS_WEB_EXPORT_SIGNING_KEY` set, every export response carries a
+signature of its exact bytes:
+
+```text
+X-COS-Signature: HMAC-SHA256=d68d9da7f04a4dcf38de5c64545141dc02c50c7476e76687e74c015383f34258
+```
+
+It is an HMAC-SHA256 over the body as sent, computed with the key's text as
+UTF-8. PDF and CSV are covered the same way as JSON and SARIF. It lets a CI
+job or an archive show later that a file is the one this service produced,
+and that nobody edited it since.
+
+**It is a shared secret, not a public signature.** Verifying needs the same
+key, so only someone who holds it can check a file: the operator, or a
+pipeline given the key through its secret store. A visitor cannot verify a
+download on their own, and must never be sent the key to do so. Treat it like
+a password, and generate a long random one:
+
+```bash
+openssl rand -hex 32
+```
+
+Save the header together with the file, because the signature is not
+embedded in the file itself:
+
+```bash
+curl -sS -D headers.txt -o result.pdf \
+  http://127.0.0.1:8811/api/scans/0f4a1f22-.../export/pdf
+grep -i '^x-cos-signature' headers.txt
+```
+
+Verify the **downloaded bytes**, never a parsed or re-serialised copy.
+Reformatting the JSON changes the bytes and breaks the signature. From a
+checkout of this repository:
+
+```bash
+COS_WEB_EXPORT_SIGNING_KEY='<key-from-secret-store>' \
+  uv run python scripts/verify_export.py result.pdf 'HMAC-SHA256=<hex-from-header>'
+```
+
+It prints `signature verified` and exits `0`, or prints `signature
+verification failed` and exits `1`. `--key-env NAME` reads the key from a
+different environment variable. Without a checkout, `openssl` computes the
+same digest, to compare with the hex after `HMAC-SHA256=`:
+
+```bash
+openssl dgst -sha256 -hmac "$COS_WEB_EXPORT_SIGNING_KEY" -r result.pdf
+```
+
+Rotating the key invalidates every signature made with the old one, since
+there is no key versioning as there is for
+`COS_WEB_ENCRYPTION_KEY_<n>`. Keep the old key wherever old files may still
+need checking. Without the variable, exports are sent unsigned and carry no
+header.
 
 **200** with a `Content-Disposition` naming the uuid, **409** while the scan
 has not finished - it exists, so 404 would send a caller into a retry loop

@@ -86,6 +86,21 @@ def test_healthz_needs_no_token(server):
     assert payload == {"status": "ok"}
 
 
+@pytest.mark.parametrize("headers", [
+    {"Sec-Fetch-Site": "cross-site"}, {"Sec-Fetch-Site": "same-site"},
+    {"Origin": "null"}, {"Origin": "https://untrusted.example.com"},
+    {"Origin": "http://["},
+])
+@pytest.mark.parametrize("post", [False, True])
+def test_browser_pages_cannot_borrow_the_loopback_scanner(server, fake_scan, headers, post):
+    base, _ = server()
+    url = f"{base}/api/queue" if post else f"{base}/api/scan?url=opencloud.example.com"
+    with pytest.raises(urllib.error.HTTPError) as error:
+        _request(url, data="url=opencloud.example.com" if post else None, headers=headers)
+    assert error.value.code == 403
+    assert fake_scan == []
+
+
 def test_queue_returns_a_uuid_and_result_serves_the_document(server, fake_scan):
     """The two-step flow mirrors the API the plugin family expects."""
     base, _ = server()

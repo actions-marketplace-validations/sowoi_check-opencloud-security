@@ -1108,6 +1108,16 @@ gives you two, which is how a trail loses records; setting it to <code>external<
 and installing nothing gives you none, and the file grows until the disk is
 full. An unrecognised value refuses to start rather than guessing which you
 meant.</p>
+<p>Request bodies are limited to <strong>1 MiB</strong> and <strong>30 seconds</strong> before form, JSON
+or MCP parsing. Oversized bodies return 413; incomplete bodies time out with
+408. These fixed service-side limits do not change the scan queue or its
+overload behaviour. Apply connection and bandwidth limits at the reverse
+proxy too.</p>
+<p>Each running scan uses a child process. A job timeout or cancellation stops
+and reaps that process and its probe threads before the worker takes another
+job. The worker therefore needs permission to spawn processes; allow for one
+additional Python process per active scan when sizing memory and PID limits.
+See <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0053-a-scan-timeout-ends-its-process.md">ADR 0053</a>.</p>
 <h2 id="putting-it-behind-a-reverse-proxy">Putting it behind a reverse proxy</h2>
 <p>Worked configuration for nginx, Apache httpd, Caddy, Traefik and HAProxy -
 including the streaming the MCP endpoint needs and the paths a proxy must not
@@ -1220,6 +1230,45 @@ gone when the scan expires. The PDF is written by this service rather than by
 a reporting library, for the same reason the frontend loads nothing from a
 CDN. The finished <code>GET /api/scans/{uuid}</code> response advertises the four URLs
 under <code>exports</code>, and the result page offers them as download buttons.</p>
+<h4 id="signed-exports">Signed exports</h4>
+<p>With <code>COS_WEB_EXPORT_SIGNING_KEY</code> set, every export response carries a
+signature of its exact bytes:</p>
+<pre><code class="language-text">X-COS-Signature: HMAC-SHA256=d68d9da7f04a4dcf38de5c64545141dc02c50c7476e76687e74c015383f34258
+</code></pre>
+<p>It is an HMAC-SHA256 over the body as sent, computed with the key's text as
+UTF-8. PDF and CSV are covered the same way as JSON and SARIF. It lets a CI
+job or an archive show later that a file is the one this service produced,
+and that nobody edited it since.</p>
+<p><strong>It is a shared secret, not a public signature.</strong> Verifying needs the same
+key, so only someone who holds it can check a file: the operator, or a
+pipeline given the key through its secret store. A visitor cannot verify a
+download on their own, and must never be sent the key to do so. Treat it like
+a password, and generate a long random one:</p>
+<pre><code class="language-bash">openssl rand -hex 32
+</code></pre>
+<p>Save the header together with the file, because the signature is not
+embedded in the file itself:</p>
+<pre><code class="language-bash">curl -sS -D headers.txt -o result.pdf \
+  http://127.0.0.1:8811/api/scans/0f4a1f22-.../export/pdf
+grep -i '^x-cos-signature' headers.txt
+</code></pre>
+<p>Verify the <strong>downloaded bytes</strong>, never a parsed or re-serialised copy.
+Reformatting the JSON changes the bytes and breaks the signature. From a
+checkout of this repository:</p>
+<pre><code class="language-bash">COS_WEB_EXPORT_SIGNING_KEY='&lt;key-from-secret-store&gt;' \
+  uv run python scripts/verify_export.py result.pdf 'HMAC-SHA256=&lt;hex-from-header&gt;'
+</code></pre>
+<p>It prints <code>signature verified</code> and exits <code>0</code>, or prints <code>signature
+verification failed</code> and exits <code>1</code>. <code>--key-env NAME</code> reads the key from a
+different environment variable. Without a checkout, <code>openssl</code> computes the
+same digest, to compare with the hex after <code>HMAC-SHA256=</code>:</p>
+<pre><code class="language-bash">openssl dgst -sha256 -hmac &quot;$COS_WEB_EXPORT_SIGNING_KEY&quot; -r result.pdf
+</code></pre>
+<p>Rotating the key invalidates every signature made with the old one, since
+there is no key versioning as there is for
+<code>COS_WEB_ENCRYPTION_KEY_&lt;n&gt;</code>. Keep the old key wherever old files may still
+need checking. Without the variable, exports are sent unsigned and carry no
+header.</p>
 <p><strong>200</strong> with a <code>Content-Disposition</code> naming the uuid, <strong>409</strong> while the scan
 has not finished - it exists, so 404 would send a caller into a retry loop
 against the wrong endpoint - and <strong>404</strong> for an unknown uuid or an unknown

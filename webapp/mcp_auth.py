@@ -321,6 +321,8 @@ class OidcTokenVerifier:
         # moment - which is the whole point of the floor.
         self._last_miss_refetch = float("-inf")
         self._miss_lock = threading.Lock()
+        self._lookup_lock = threading.Lock()
+        self._last_fetch_failure = float("-inf")
 
     async def verify_token(self, token: str) -> Any:
         """The ``TokenVerifier`` protocol: an access token, or ``None``."""
@@ -401,13 +403,32 @@ class OidcTokenVerifier:
         import jwt
 
         kid = jwt.get_unverified_header(token).get("kid")
-        for key in keys.get_signing_keys():
+        # Cold/expired caches and provider outages must obey a bound too.
+        # Do not queue blocking threads behind a fetch already in progress.
+        if not self._lookup_lock.acquire(blocking=False):
+            raise UnknownSigningKey("key lookup in progress")
+        try:
+            if time.monotonic() - self._last_fetch_failure < JWKS_MISS_REFETCH_SECONDS:
+                raise UnknownSigningKey("key provider unavailable")
+            return self._lookup_signing_key(keys, kid)
+        finally:
+            self._lookup_lock.release()
+
+    def _published_keys(self, keys: Any, *, refresh: bool = False) -> Any:
+        try:
+            return keys.get_signing_keys(refresh=refresh)
+        except Exception:
+            self._last_fetch_failure = time.monotonic()
+            raise
+
+    def _lookup_signing_key(self, keys: Any, kid: Any) -> Any:
+        for key in self._published_keys(keys):
             if key.key_id == kid:
                 return key
         if not self._may_refetch():
             LOGGER.debug("mcp_token_rejected reason=unknown_key_id")
             raise UnknownSigningKey(str(kid))
-        for key in keys.get_signing_keys(refresh=True):
+        for key in self._published_keys(keys, refresh=True):
             if key.key_id == kid:
                 return key
         raise UnknownSigningKey(str(kid))

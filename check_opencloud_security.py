@@ -67,6 +67,7 @@ from opencloud_local_scan.hardening import describe as describe_hardening
 from opencloud_local_scan.hardening import is_actionable
 from opencloud_local_scan.prometheus import render as render_prometheus_metrics
 from opencloud_local_scan.releases import MODES as UPDATE_SOURCES
+from opencloud_local_scan.scanner import _NoRedirectSession, _PinnedHTTPAdapter
 from opencloud_local_scan.selfupdate import self_update_note
 from opencloud_local_scan.versions import RELEASE_TRACK_CHOICES, TRACK_AUTO
 
@@ -1086,6 +1087,9 @@ def _send_webhook(context: ScanContext, payload: dict[str, Any]) -> bool:
 
     validated_addresses: tuple[str, ...] | None = None
     if not context.allow_private_webhooks:
+        if context.proxy:
+            LOGGER.warning("A restricted webhook cannot use a proxy that resolves its target")
+            return False
         is_safe, validated_addresses = _resolve_and_validate_webhook_url(url)
         if not is_safe:
             LOGGER.warning(
@@ -1141,14 +1145,26 @@ def _send_webhook(context: ScanContext, payload: dict[str, Any]) -> bool:
         # `X-COS-Signature` and every `--webhook-header` go with it, and
         # `requests` drops `Authorization` across hosts but keeps the rest, so
         # a receiver's own API key would be handed to whatever it points at.
-        response = requests.post(
-            url,
-            data=body_bytes,
-            headers=headers,
-            proxies=_proxies(context),
-            timeout=context.webhook_timeout,
-            allow_redirects=False,
-        )
+        with _NoRedirectSession() as session:
+            session.trust_env = False
+            if validated_addresses:
+                hostname = urlsplit(url).hostname
+                assert hostname is not None
+                adapter = _PinnedHTTPAdapter({hostname.lower().rstrip("."): validated_addresses})
+                session.mount("http://", adapter)
+                session.mount("https://", adapter)
+                headers["Host"] = urlsplit(url).netloc
+            response = session.post(
+                url,
+                data=body_bytes,
+                headers=headers,
+                proxies=_proxies(context),
+                timeout=context.webhook_timeout,
+                allow_redirects=False,
+                stream=True,
+            )
+            # Delivery depends on the status, never on a receiver's body.
+            response.close()
         # `raise_for_status` passes a 3xx, so an unfollowed redirect would
         # otherwise be reported as a delivered notification that never arrived.
         # The status range rather than `response.is_redirect`: that property is

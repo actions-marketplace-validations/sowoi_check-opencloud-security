@@ -323,10 +323,13 @@ def posts(monkeypatch):
     class _Response:
         status_code = 200
 
+        def close(self):
+            pass
+
         def raise_for_status(self):
             pass
 
-    def _post(url, **kwargs):
+    def _post(self, url, **kwargs):
         # See the identical fixture in tests/test_webhook.py: the plugin posts
         # pre-serialised bytes so that what it signed is what it sends, and
         # these tests assert against the document parsed back out of them.
@@ -335,7 +338,7 @@ def posts(monkeypatch):
         recorded.append((url, kwargs))
         return _Response()
 
-    monkeypatch.setattr(plugin.requests, "post", _post)
+    monkeypatch.setattr(plugin.requests.Session, "post", _post)
     return recorded
 
 

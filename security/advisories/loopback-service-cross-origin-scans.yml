@@ -1,0 +1,28 @@
+# Security advisory record; publication remains a maintainer decision.
+slug: loopback-service-cross-origin-scans
+state: draft
+changelog_version: "1.23.2"
+changelog_entry: "Unrelated browser pages cannot trigger loopback-service scans."
+shipped: true
+severity: medium
+cwe_ids:
+  - CWE-352
+package: plugin
+introduced: "1.0.1"
+fixed: "1.23.2"
+summary: >-
+  The optional unauthenticated loopback service accepted cross-origin scan triggers
+verified: |
+  git show v1.0.1:opencloud_local_scan/service.py exposes GET /api/scan and POST queue/requeue. git show v1.23.1:opencloud_local_scan/service.py checks the addressed Host but no Origin or Fetch Metadata before triggering scans.
+description: |
+  ### Impact
+  
+  A browser able to reach the optional loopback service could be induced by an unrelated page to request GET /api/scan or submit its scan form. Checking that Host is loopback prevents DNS-rebinding reads but does not prevent direct cross-origin scan triggers. This can cause unwanted network probes and resource consumption; it does not by itself let the page read results. Browser private-network protections may mitigate the attack.
+  
+  ### Patches
+  
+  Fixed in the source for **1.23.2**. Scan-triggering GET and POST routes reject cross-site/same-site Fetch Metadata and foreign or opaque fallback Origins. Ordinary non-browser monitoring clients remain supported. Malformed Host values are refused instead of raising.
+  
+  ### Workarounds
+  
+  Require the service's authentication token even on loopback, or stop the optional listener when it is not needed.

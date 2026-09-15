@@ -44,6 +44,12 @@ DOCUMENTATION_PAGES: tuple[DocumentationPage, ...] = (
         "Every command-line flag, its default, and the environment variable that sets the same thing.",
     ),
     DocumentationPage(
+        "scanner-cli",
+        "docs/scanner-cli.md",
+        "The check-opencloud-scanner command",
+        "Print the raw OpenCloud scan result, compare two saved results, explain a finding, refresh reference data and run the scan service.",
+    ),
+    DocumentationPage(
         "reference",
         "README.md",
         "OpenCloud Security Scanner CLI reference",
@@ -75,6 +81,12 @@ DOCUMENTATION_PAGES: tuple[DocumentationPage, ...] = (
         "docs/release-lifecycle.md",
         "OpenCloud release tracks, end of life and update recommendations",
         "Why the same version can be current on one track and dead on another, and what --release-track changes.",
+    ),
+    DocumentationPage(
+        "reference-data",
+        "docs/reference-data.md",
+        "Keep the OpenCloud release schedule and advisories current",
+        "Refresh the release schedule and advisory database with signature verification, without waiting for a package upgrade.",
     ),
     DocumentationPage(
         "hardening",

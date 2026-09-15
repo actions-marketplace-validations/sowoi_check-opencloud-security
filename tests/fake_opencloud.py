@@ -534,7 +534,13 @@ def _make_handler(behaviour: InstanceBehaviour):
     return _Handler
 
 
-class _IPv6Server(ThreadingHTTPServer):
+class _Server(ThreadingHTTPServer):
+    # The default backlog of five can drop bursts from the 32-worker scanner,
+    # making a test of identical findings depend on TCP retransmission timing.
+    request_queue_size = 64
+
+
+class _IPv6Server(_Server):
     address_family = socket.AF_INET6
 
 
@@ -552,7 +558,7 @@ class FakeOpenCloud:
         # one on 127.0.0.1 and one on ::1, are two nodes behind one name.
         self.behaviour = behaviour or InstanceBehaviour()
         self.address = address
-        server_class = _IPv6Server if ":" in address else ThreadingHTTPServer
+        server_class = _IPv6Server if ":" in address else _Server
         self._server = server_class((address, port), _make_handler(self.behaviour))
         self._thread = threading.Thread(target=self._server.serve_forever, daemon=True)
 
