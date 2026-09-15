@@ -37,6 +37,9 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   Redis, Docker or real instance. The web app gets an in-process worker, so a
   submitted scan completes. Headless Chromium submits the form and takes
   screenshots.
+- **`.claude/` stays out of images and source archives.** It is listed in
+  `.dockerignore` and marked `export-ignore` in `.gitattributes`, like
+  `.github/`.
 
 ## [1.23.0] - 2026-09-14
 

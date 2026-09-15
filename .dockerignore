@@ -16,6 +16,9 @@ check-opencloud-security.yml
 .github/
 .pre-commit-config.yaml
 
+# Claude Code skills and agent tooling
+.claude/
+
 # Virtualenvs and packaging output
 .venv/
 .venv*/
