@@ -31,6 +31,12 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   documentation links, and resolving conflicts in generated files. They follow
   `AGENTS.md`: none of them publishes an advisory, merges to `main` or bumps a
   version unless the maintainer invokes a release skill.
+- **A skill to run and drive the project locally.**
+  `.claude/skills/run-check-opencloud-security/` runs the scanner library,
+  the plugin or the web app against the fake OpenCloud from the tests, with no
+  Redis, Docker or real instance. The web app gets an in-process worker, so a
+  submitted scan completes. Headless Chromium submits the form and takes
+  screenshots.
 
 ## [1.23.0] - 2026-09-14
 
