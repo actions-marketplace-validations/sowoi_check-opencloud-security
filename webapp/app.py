@@ -683,9 +683,10 @@ def cross_site_post(request: Request, settings: WebSettings) -> bool:
     if site:
         return site == "cross-site"
     origin = request.headers.get("origin", "").strip()
-    if not origin or origin.lower() == "null":
+    if not origin:
         return False
-    return _origin_host(origin) not in _own_hosts(request, settings)
+    parsed = _origin(origin)
+    return parsed is None or parsed not in _own_origins(request, settings)
 
 
 def cross_origin_post(request: Request, settings: WebSettings) -> bool:
@@ -705,25 +706,38 @@ def cross_origin_post(request: Request, settings: WebSettings) -> bool:
     return cross_site_post(request, settings)
 
 
-def _origin_host(value: str) -> str:
-    """The ``host:port`` an ``Origin`` names, lowercased."""
-    return urlsplit(value).netloc.lower()
+def _origin(value: str) -> tuple[str, str, int] | None:
+    """Parse a browser origin, rejecting opaque and malformed values."""
+    try:
+        parts = urlsplit(value)
+        if (
+            parts.scheme not in {"http", "https"}
+            or not parts.hostname
+            or parts.username is not None
+            or parts.password is not None
+            or parts.path not in {"", "/"}
+            or parts.query
+            or parts.fragment
+        ):
+            return None
+        return (
+            parts.scheme,
+            parts.hostname.lower(),
+            parts.port or (443 if parts.scheme == "https" else 80),
+        )
+    except ValueError:
+        return None
 
 
-def _own_hosts(request: Request, settings: WebSettings) -> set[str]:
+def _own_origins(request: Request, settings: WebSettings) -> set[tuple[str, str, int]]:
     """
-    Every ``host:port`` this deployment legitimately answers as.
+    The configured public origin, or the request origin for local use.
 
-    The configured public address is the authority - it is required at startup
-    precisely so the service does not have to trust a header for questions
-    like this one - and the address the request actually arrived on is
-    accepted alongside it, which is what keeps a local run working before
-    anybody has put a proxy in front.
+    Behind a proxy the internal HTTP origin is not an additional trusted
+    browser origin. The scheme and effective port are part of the boundary.
     """
-    hosts = {urlsplit(str(request.base_url)).netloc.lower()}
-    if settings.public_base_url:
-        hosts.add(_origin_host(settings.public_base_url))
-    return {host for host in hosts if host}
+    origin = _origin(settings.public_base_url or str(request.base_url))
+    return {origin} if origin is not None else set()
 
 
 def is_safe_link(value: Any) -> bool:
@@ -919,6 +933,9 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
 
     app.mount("/static", StaticFiles(directory=str(root / "static")), name="static")
 
+    from .request_limits import RequestBodyLimit
+
+    app.add_middleware(RequestBodyLimit)
     app.state.settings = settings
     app.state.backend = create_backend(settings.redis_url)
     # Before anything can be written: a deployment that asked for encryption

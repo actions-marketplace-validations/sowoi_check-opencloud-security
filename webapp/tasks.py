@@ -7,7 +7,7 @@ Run it with::
 
 One job per scan, ``max_jobs`` of them at a time, and that number comes from
 ``COS_WEB_MAX_WORKERS`` - never from a request. The scan itself is blocking
-(the scanner speaks ``requests``), so it goes to a thread and leaves the event
+(the scanner speaks ``requests``), so it goes to a child process and leaves the event
 loop free to keep the other jobs' status keys current.
 
 Logging here is lifecycle only: a uuid and a state. No target, no client, no
@@ -31,7 +31,7 @@ from .encryption import ensure_encryption_ready
 from .queue import redis_settings
 from .ratelimit import probe_policy, record_strike
 from .redis_backend import RedisBackend, RedisUnavailable, create_backend
-from .runner import execute_scan
+from .scan_process import execute_scan_process
 from .schedule import refresh_schedule, stored_schedule
 from .settings import WebSettings
 from .ssrf import TargetRejected, ensure_blocklist_ready, validate_target
@@ -101,17 +101,14 @@ async def run_scan(ctx: dict[str, Any], uuid: str) -> str:
         # advisory published after this image was built is exactly the one a
         # visitor most needs to hear about.
         database = await stored_database(store.backend, settings)
-        result = await asyncio.wait_for(
-            asyncio.to_thread(
-                execute_scan,
-                target,
-                ignore,
-                settings,
-                track,
-                schedule,
-                database,
-                exclusions,
-            ),
+        result = await execute_scan_process(
+            target,
+            ignore,
+            settings,
+            track,
+            schedule,
+            database,
+            exclusions,
             timeout=settings.job_timeout,
         )
     except TargetRejected as exc:
@@ -130,7 +127,7 @@ async def run_scan(ctx: dict[str, Any], uuid: str) -> str:
         return "failed"
     except Exception:  # pragma: no cover - defensive; a crash must not leak
         await store.mark_failed(uuid, "The scan could not be completed.")
-        LOGGER.exception("scan_error %s", uuid)
+        LOGGER.error("scan_error %s", uuid)
         return "failed"
 
     await store.mark_completed(uuid, result)

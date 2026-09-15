@@ -452,6 +452,12 @@ export COS_PROXY=http://proxy.example.com:3128
 check-opencloud-security
 ```
 
+Scans do not read `.netrc`, `HTTP_PROXY`, `HTTPS_PROXY` or Requests' CA-bundle
+environment variables. Configure a proxy explicitly with `--proxy`/`COS_PROXY`
+and a private CA with `--ca-file`/`COS_CA_FILE`. Restricted webhook delivery
+pins its validated addresses and cannot use a resolving proxy; proxying a
+webhook requires the explicit `--allow-private-webhooks` opt-out.
+
 Boolean variables (`COS_DEBUG`, `COS_CHECK_HARDENING`, `COS_INSECURE`, ...)
 accept `1`, `true`, `yes`, or `on` (case-insensitive) to enable the
 corresponding flag; any other value (including unset/empty) is treated as

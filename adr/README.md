@@ -59,6 +59,7 @@ project. Read the accepted records that affect an area before changing it.
 | [0050](0050-every-pull-request-to-main-rebuilds-the-search-index.md) | Every pull request to main rebuilds the search index | Accepted |
 | [0051](0051-a-client-that-keeps-scanning-hosts-that-are-not-opencloud-is-blocked.md) | A client that keeps scanning hosts that are not OpenCloud is blocked | Accepted |
 | [0052](0052-the-probe-guard-counts-networks-and-a-deployment-may-scan-approved-instances-only.md) | The probe guard counts networks, and a deployment may scan approved instances only | Accepted |
+| [0053](0053-a-scan-timeout-ends-its-process.md) | A scan timeout ends its process | Accepted |
 
 ## Writing a new record
 

@@ -6,14 +6,14 @@ MESSAGES: dict[str, str] = {
     # ---------------------------------------------------------------- site
     # ------------------------------------------------ der Betriebsbereich
     "admin.title": "Betriebsbereich",
-    "admin.description": "Dienstzustand, Referenzdaten und das Audit-Protokoll.",
+    "admin.description": "Dienstzustand, Referenzdaten und das Audit-Log.",
     "admin.kicker": "Betrieb",
     "admin.tabs.aria": "Betreiberbereich",
     "admin.tabs.overview": "Überblick",
     "admin.tabs.configuration": "Konfiguration",
     "admin.tabs.rules": "Regeln",
     "admin.config.title": "Konfiguration",
-    "admin.config.lede": "Jede COS_WEB_*-Variable, die dieser Dienst liest, und der Wert, mit dem er läuft.",
+    "admin.config.lede": "Alle COS_WEB_*-Variablen, die dieser Dienst liest, und ihre aktuell wirksamen Werte.",
     "admin.config.scope": "Das ist die eigene Umgebung des Webdienstes, wie dieser Prozess sie beim Start gelesen hat - nicht die Konfiguration von OpenCloud und nicht die des Workers, der dieselben Variablen in seinem eigenen Container liest. Werte erscheinen so, wie sie nach dem Einlesen gelten; Zugangsdaten werden nur als gesetzt oder nicht gesetzt angezeigt.",
     "admin.config.source.environment": "Gesetzt",
     "admin.config.source.default": "Standard",
@@ -33,11 +33,11 @@ MESSAGES: dict[str, str] = {
     "admin.config.group.interfaces": "API-Dokumentation und Agent-Endpunkt",
     "admin.config.group.mcp_auth": "Anmeldung am Agent-Endpunkt",
     "admin.config.group.admin": "Betreiberbereich",
-    "admin.config.group.audit": "Audit-Protokoll",
+    "admin.config.group.audit": "Audit-Log",
     "admin.config.group.protection": "Löschung, Signaturen und Verschlüsselung",
     "admin.config.group.frontend": "Frontend",
     "admin.rules.title": "Geltende Regeln",
-    "admin.rules.lede": "Wie eine Note entsteht, und jede Regel, die dieses Deployment gegen eine Anfrage durchsetzt - mit den Werten, mit denen es läuft.",
+    "admin.rules.lede": "Wie eine Note entsteht und welche Regeln diese Bereitstellung für Anfragen durchsetzt – einschließlich der aktuell wirksamen Werte.",
     "admin.rules.scope": "Gelesen aus den Einstellungen, mit denen dieser Prozess gestartet ist, und aus den Konstanten des durchsetzenden Codes: Eine hier aufgeführte Regel wendet der Dienst jetzt an. Nichts auf dieser Seite nennt ein Ziel oder einen Besucher.",
     "admin.rules.on": "Aktiv",
     "admin.rules.off": "Aus",
@@ -67,7 +67,7 @@ MESSAGES: dict[str, str] = {
     "admin.rules.group.targets": "Was gescannt werden darf",
     "admin.rules.group.targets.lede": "Geprüft, bevor irgendetwas eine Verbindung aufbaut, und erneut bei jeder Weiterleitung.",
     "admin.rules.group.scanner": "Wie intensiv ein Host geprüft wird",
-    "admin.rules.group.scanner.lede": "Die Einstellungen, mit denen jeder Scan dieses Deployments gebaut wird. Keine Anfrage kann sie ändern.",
+    "admin.rules.group.scanner.lede": "Die Einstellungen, mit denen jeder Scan dieser Bereitstellung ausgeführt wird. Anfragen können sie nicht ändern.",
     "admin.rules.group.operator": "Zugangsdaten und Betreiberaktionen",
     "admin.rules.group.operator.lede": "Limits für die wenigen Aufrufe, die Zugangsdaten brauchen oder einen Knopf drücken.",
     "admin.rules.rule.client_limit.title": "Limit pro Client",
@@ -81,7 +81,7 @@ MESSAGES: dict[str, str] = {
     "admin.rules.rule.queue.title": "Überlast wird eingereiht",
     "admin.rules.rule.queue.body": "{workers} Scans laufen gleichzeitig; weitere Einreichungen warten der Reihe nach und werden nie wegen Last abgelehnt.",
     "admin.rules.rule.agent_wait.title": "Agenten verschlafen keine Sperre",
-    "admin.rules.rule.agent_wait.body": "MCP und die Workflows warten ein Retry-After von bis zu {wait} selbst ab, höchstens {attempts} Versuche; ein längeres geht an den Aufrufer zurück.",
+    "admin.rules.rule.agent_wait.body": "MCP und die Workflows warten eine Retry-After-Zeit von bis zu {wait} selbst ab, höchstens {attempts} Mal. Bei längerer Wartezeit geht die Antwort an den Aufrufer zurück.",
     "admin.rules.rule.probe_block.title": "Sperre nach wiederholten Verstößen",
     "admin.rules.rule.probe_block.body": "{limit} Verstöße innerhalb von {window} sperren das Netz des Clients für {block}.",
     "admin.rules.rule.probe_escalation.title": "Wiederholte Sperren werden länger",
@@ -107,9 +107,9 @@ MESSAGES: dict[str, str] = {
     "admin.rules.rule.dns_consistency.title": "Ein Name muss zweimal gleich auflösen",
     "admin.rules.rule.dns_consistency.body": "Ein eingereichter Name wird zweimal abgefragt und abgelehnt, wenn die Antworten keine Adresse teilen; jede Adresse aus beiden wird geprüft.",
     "admin.rules.rule.redirects.title": "Jede Weiterleitung wird geprüft",
-    "admin.rules.rule.redirects.body": "Eine Weiterleitung wird wie das eingereichte Ziel aufgelöst und geprüft, bevor ihr gefolgt wird, und der Scan wählt nur Adressen an, die bestanden haben.",
+    "admin.rules.rule.redirects.body": "Eine Weiterleitung wird wie das eingereichte Ziel aufgelöst und geprüft, bevor ihr gefolgt wird. Der Scan stellt nur Verbindungen zu Adressen her, die die Prüfung bestanden haben.",
     "admin.rules.rule.exclusions.title": "Ausschlüsse",
-    "admin.rules.rule.exclusions.body": "{count} Einträge ausgeschlossen, aus der Umgebung und dem Übersichts-Tab zusammen.",
+    "admin.rules.rule.exclusions.body": "{count} ausgeschlossene Einträge aus der Umgebung und dem Tab „Übersicht“.",
     "admin.rules.rule.allowed_hosts.title": "Vom Schutz ausgenommene Hosts",
     "admin.rules.rule.allowed_hosts.body": "Diese Namen umgehen die Regeln für öffentliche Adressen. Ausschlüsse gelten weiterhin:",
     "admin.rules.rule.approval.title": "Freigabemodus",
@@ -121,7 +121,7 @@ MESSAGES: dict[str, str] = {
     "admin.rules.rule.no_port_scan.title": "Keine zusätzlichen Ports",
     "admin.rules.rule.no_port_scan.body": "Nur der eingereichte Port wird kontaktiert; die Debug-Ports werden nicht geprüft.",
     "admin.rules.rule.load.title": "Last pro Scan",
-    "admin.rules.rule.load.body": "Höchstens {concurrency} gleichzeitige Anfragen, je {timeout} erlaubt; ein ganzer Scan wird nach {job} abgebrochen.",
+    "admin.rules.rule.load.body": "Höchstens {concurrency} gleichzeitige Anfragen mit jeweils {timeout} Zeit; ein gesamter Scan wird nach {job} abgebrochen.",
     "admin.rules.rule.purge_attempts.title": "Versuche mit dem Löschzugang",
     "admin.rules.rule.purge_attempts.body": "{limit} falsche Zugangsdaten pro Client innerhalb von {window}, danach abgelehnt, bis das Fenster endet. Richtige werden nie gezählt.",
     "admin.rules.rule.admin_refresh.title": "Aktualisierungsknöpfe",
@@ -221,7 +221,7 @@ MESSAGES: dict[str, str] = {
         "prüft."
     ),
     "admin.surfaces.encrypt": "Ergebnisse verschlüsselt gespeichert",
-    "admin.surfaces.audit": "Audit-Protokoll",
+    "admin.surfaces.audit": "Audit-Log",
     "admin.surfaces.audit.file": (
         "Wird in eine Datei geschrieben, die den Container überdauert."
     ),
@@ -251,7 +251,7 @@ MESSAGES: dict[str, str] = {
     "admin.exclusions.source.configured": "Aus der Umgebung",
     "admin.exclusions.updated": "Zuletzt hier geändert am {when}.",
     "admin.exclusions.durability": (
-        "Hier hinzugefügte Einträge liegen in Redis, das diese Installation "
+        "Hier hinzugefügte Einträge liegen in Redis, das diese Bereitstellung "
         "jederzeit leeren kann. Was dauerhaft gelten soll, gehört in "
         "COS_WEB_BLOCKED_TARGETS - dort kann es auf dieser Seite nicht "
         "zurückgenommen werden."
@@ -267,7 +267,7 @@ MESSAGES: dict[str, str] = {
     ),
     "admin.blocklist.error.configured": (
         "Dieser Eintrag stammt aus COS_WEB_BLOCKED_TARGETS. Dort entfernen "
-        "und neu starten, damit Installation und Liste nicht auseinanderlaufen."
+        "und den Dienst neu starten, damit Bereitstellung und Liste nicht auseinanderlaufen."
     ),
     "admin.blocklist.error.full": (
         "Diese Liste ist voll. Dauerhafte Einträge gehören in "
@@ -280,11 +280,11 @@ MESSAGES: dict[str, str] = {
     "admin.outcome.excluded": "Ausgeschlossen. Ab der nächsten Anfrage abgelehnt.",
     "admin.outcome.withdrawn": "Zurückgenommen. Kann wieder gescannt werden.",
     "admin.actions.kicker": "Referenzdaten",
-    "admin.actions.heading": "Aktualisieren, wogegen der Scanner bewertet",
+    "admin.actions.heading": "Die Referenzdaten aktualisieren, anhand derer der Scanner bewertet",
     "admin.actions.lede": (
         "Dieselben zwei Aktualisierungen, die der Worker täglich ausführt, mit "
-        "denselben Regeln: Ein Zeitplan, der eine Release-Linie verloren hat, "
-        "wird abgelehnt, eine Advisory-Datenbank gewinnt nur hinzu, und ein "
+        "denselben Regeln: Ein Zeitplan, dem eine Release-Linie fehlt, "
+        "wird abgelehnt, eine Advisory-Datenbank darf nur Einträge hinzugewinnen, und ein "
         "fehlgeschlagener Abruf ändert nichts."
     ),
     "admin.actions.schedule": "Release-Zeitplan abgleichen",
@@ -294,7 +294,7 @@ MESSAGES: dict[str, str] = {
     "admin.outcome.updated": "Aktualisiert. Das neue Dokument ist in Gebrauch.",
     "admin.outcome.unchanged": "Bereits aktuell - nichts geändert.",
     "admin.outcome.rejected": (
-        "Abgelehnt: Das Abgerufene hat die Prüfungen nicht bestanden, die "
+        "Abgelehnt: Die abgerufenen Daten haben die Prüfungen nicht bestanden; die "
         "bisherigen Daten bleiben in Gebrauch."
     ),
     "admin.outcome.failed": "Konnte nicht abgerufen werden. Nichts geändert.",
@@ -317,7 +317,7 @@ MESSAGES: dict[str, str] = {
         "Der Index entsteht beim Release und wird schreibgeschützt "
         "ausgeliefert, deshalb meldet diese Ansicht nur, statt neu zu bauen. "
         "Verglichen werden die Seiten, die Sprachen und das Release, für das er "
-        "erzeugt wurde - nicht der Fließtext, den nur der Generator gewinnen "
+        "erzeugt wurde – nicht der Fließtext, den nur der Generator ermitteln "
         "kann."
     ),
     "admin.search.fresh": "Aktuell",
@@ -330,7 +330,7 @@ MESSAGES: dict[str, str] = {
         "Indiziert, aber nicht mehr ausgeliefert: {list}."
     ),
     "admin.search.detail.unstamped": (
-        "Der Index nennt keine Release, für die er gebaut wurde; nur seine "
+        "Der Index nennt kein Release, für das er gebaut wurde; nur seine "
         "Seiten und Sprachen ließen sich vergleichen."
     ),
     "admin.search.detail.changed": "{count} Seitentitel oder Kurzbeschreibungen haben sich seither geändert.",
@@ -351,16 +351,16 @@ MESSAGES: dict[str, str] = {
         "Index neu und checken ihn ein. Hier gibt es nichts zu drücken."
     ),
     "admin.audit.kicker": "Audit",
-    "admin.audit.heading": "Das Protokoll, während es geschrieben wird",
+    "admin.audit.heading": "Das Audit-Log in Echtzeit",
     "admin.audit.lede": (
-        "Scan-Anfragen, Ablehnungen und ausgelöste Grenzen, sobald sie "
-        "auftreten. Das Mitlesen öffnet eine Verbindung; ohne Aufforderung wird "
+        "Scan-Anfragen, Ablehnungen und ausgelöste Limits in Echtzeit. Das "
+        "Live-Verfolgen öffnet eine Verbindung; ohne Aufforderung wird "
         "nichts übertragen."
     ),
     "admin.audit.privacy": (
         "Eine Client-Adresse ist ein gekürzter HMAC unter einem Salt, das "
         "dieser Prozess hält, und nichts führt von dort zurück zu einer "
-        "Adresse. Diese Ansicht kann nicht mehr zeigen, als das Audit-Protokoll "
+        "Adresse. Diese Ansicht kann nicht mehr zeigen, als das Audit-Log "
         "ohnehin festgehalten hat."
     ),
     "admin.audit.replicas": (
@@ -369,20 +369,20 @@ MESSAGES: dict[str, str] = {
         "bei mehr als einer Replik ist das ein Teil des Protokolls und nicht "
         "das ganze."
     ),
-    "admin.audit.follow": "Mitlesen",
+    "admin.audit.follow": "Live verfolgen",
     "admin.audit.stop": "Anhalten",
     "admin.audit.clear": "Leeren",
     "admin.audit.empty": "Noch nichts.",
     "admin.audit.closed": (
         "Die Verbindung hat ihre Grenze von {minutes} Minuten erreicht und "
         "wurde vom Dienst geschlossen. Bis dahin ist nichts verloren gegangen; "
-        "„Mitlesen“ öffnet eine neue."
+        "„Live verfolgen“ öffnet eine neue."
     ),
     "admin.audit.disabled": (
-        "Diese Installation führt kein Audit-Protokoll, es gibt also nichts "
-        "mitzulesen. COS_WEB_AUDIT_LOG schaltet es ein."
+        "Diese Installation führt kein Audit-Log, es gibt also nichts live zu "
+        "verfolgen. COS_WEB_AUDIT_LOG schaltet es ein."
     ),
-    "admin.audit.state.off": "Kein Mitlesen",
+    "admin.audit.state.off": "Nicht aktiv",
     "admin.audit.state.live": "Live",
     "admin.audit.state.reconnecting": "Verbindet neu",
     "admin.audit.state.unsupported": "Von diesem Browser nicht unterstützt",
@@ -550,8 +550,8 @@ MESSAGES: dict[str, str] = {
         "Keine gültige Adresse: ein Hostname, optionaler Port und ein einfacher "
         "Unterordner - keine Query, kein Fragment und keine Parameter."
     ),
-    "index.submit": "Prüfung starten",
-    "index.submit.busy": "Prüfung wird gestartet...",
+    "index.submit": "Scan starten",
+    "index.submit.busy": "Scan wird gestartet...",
     "index.track.label": "Release-Track",
     "index.track.hint": (
         "Bestimmt, wie lange dieses Release unterstützt wird und auf welches "
@@ -954,8 +954,8 @@ MESSAGES: dict[str, str] = {
         "Einweg-Fingerabdruck für die Ratenbegrenzung gezählt wird."
     ),
     "privacy.self_host": (
-        "Möchtest du es lieber selbst betreiben? Derselbe Scanner ist eine "
-        "Kommandozeilenprüfung und ein Python-Paket. In keinem der beiden Fälle "
+        "Möchtest du es lieber selbst betreiben? Derselbe Scanner ist als "
+        "Kommandozeilen-Tool und Python-Paket verfügbar. In keinem der beiden Fälle "
         "spricht hier irgendetwas mit einem Drittanbieterdienst."
     ),
     # ----------------------------------------------------------- legal notice
@@ -1238,7 +1238,7 @@ MESSAGES: dict[str, str] = {
     "cli.nodocker.kicker": "Kein Docker?",
     "cli.nodocker.heading": "Ohne Container",
     "cli.nodocker.body": (
-        "Die Prüfung ist ein gewöhnliches Python-Programm auf PyPI, sodass "
+        "Der Scanner ist ein gewöhnliches Python-Programm auf PyPI, sodass "
         "<code>uv</code> oder <code>pipx</code> es holen und ausführen, ohne "
         "irgendetwas dauerhaft zu installieren."
     ),
@@ -1405,16 +1405,16 @@ MESSAGES: dict[str, str] = {
     "compare.eyebrow": "Haben die Korrekturen gewirkt?",
     "compare.heading": "Zwei Scans vergleichen",
     "compare.lede": (
-        "Fügen Sie die uuid eines früheren und eines späteren Scans ein. Beide "
+        "Fügen Sie die UUID eines früheren und eines späteren Scans ein. Beide "
         "Ergebnisse müssen noch vorhanden sein - dieser Dienst führt keine "
         "Historie, in der ein abgelaufener Scan nachgeschlagen werden könnte."
     ),
     "compare.form.baseline": "Früherer Scan",
     "compare.form.current": "Späterer Scan",
-    "compare.form.placeholder": "Die uuid aus der Adresse einer Ergebnisseite",
+    "compare.form.placeholder": "Die UUID aus der Adresse einer Ergebnisseite",
     "compare.form.submit": "Vergleichen",
     "compare.form.hint": (
-        "Die uuid ist der Teil nach <code>/scan/</code> in der Adresse einer "
+        "Die UUID ist der Teil nach <code>/scan/</code> in der Adresse einer "
         "Ergebnisseite. Sie ist die gesamte Berechtigung für dieses Ergebnis - "
         "behandeln Sie sie wie ein Passwort."
     ),
@@ -1439,7 +1439,7 @@ MESSAGES: dict[str, str] = {
     "compare.error.same": (
         "Beide Felder nennen denselben Scan, es gibt also nichts zu "
         "vergleichen. Scannen Sie die Instanz erneut und vergleichen Sie die "
-        "neue uuid mit dieser."
+        "neue UUID mit dieser."
     ),
     "compare.different_targets": (
         "Diese beiden Scans beschreiben verschiedene Instanzen. Der Vergleich "
@@ -1453,8 +1453,8 @@ MESSAGES: dict[str, str] = {
     "compare.rating.up": "Die Note ist um {points} Punkt(e) gestiegen.",
     "compare.rating.down": "Die Note ist um {points} Punkt(e) gefallen.",
     "compare.rating.same": (
-        "Die Note hat sich nicht bewegt. Das allein ist keine gescheiterte "
-        "Behebung - Funde einer Schwere teilen sich eine einzige Deckelung, "
+        "Die Note hat sich nicht verändert. Das allein bedeutet nicht, dass eine "
+        "Behebung gescheitert ist: Befunde eines Schweregrads teilen sich eine Obergrenze, "
         "also können mehrere Korrekturen landen, bevor sich der Buchstabe "
         "ändert. Lesen Sie die Listen unten."
     ),
@@ -1508,7 +1508,7 @@ MESSAGES: dict[str, str] = {
     # opposed to the words on the page itself.
     "search.page.index.title": "Eine OpenCloud-Instanz scannen",
     "search.page.index.summary": (
-        "Einen öffentlichen Sicherheitsscan gegen eine OpenCloud-Instanz "
+        "Einen öffentlichen Sicherheitsscan für eine OpenCloud-Instanz "
         "ausführen."
     ),
     "search.page.how.title": "Wie der Scanner funktioniert",
@@ -1563,8 +1563,8 @@ MESSAGES: dict[str, str] = {
         "Minute und versuche es erneut."
     ),
     "error.rate_limit.probe": (
-        "Mehrere der Adressen, die zuletzt aus deinem Netz gescannt wurden, "
-        "waren keine OpenCloud-Instanzen, deshalb pausiert dieser Dienst deine "
+        "Mehrere der zuletzt von deinem Netz gescannten Adressen "
+        "waren keine OpenCloud-Instanzen. Deshalb pausiert dieser Dienst deine "
         "Scans für eine Weile. Wenn du deine eigene Instanz prüfen wolltest: "
         "Der Scanner läuft auch auf deinem Rechner."
     ),
@@ -1579,7 +1579,7 @@ MESSAGES: dict[str, str] = {
     ),
     "error.target.unstable": (
         "Dieser Hostname liefert bei jeder Abfrage andere Adressen, daher kann "
-        "dieser Dienst nicht sagen, was er scannen würde."
+        "dieser Dienst nicht verlässlich bestimmen, was er scannen würde."
     ),
     "error.target.not_approved": (
         "Dieser Dienst scannt nur Instanzen, die dafür freigegeben wurden. Bitte "
@@ -1628,9 +1628,9 @@ MESSAGES: dict[str, str] = {
         "Dieser Dienst wurde gebeten, diese Adresse nicht zu scannen."
     ),
     "error.store_unavailable": (
-        "Dieser Dienst erreicht gerade seine eigene Konfiguration nicht und "
-        "scannt nicht, ohne zu wissen, was er auslassen soll. Bitte versuchen "
-        "Sie es in einigen Minuten erneut."
+        "Dieser Dienst kann seine eigene Konfiguration gerade nicht lesen und "
+        "scannt nicht, solange unklar ist, welche Ziele ausgeschlossen sind. Bitte versuche "
+        "es in einigen Minuten erneut."
     ),
     # ----------------------------------------------------------- result page
     "result.title": "Scan-Ergebnisse",
@@ -1672,7 +1672,7 @@ MESSAGES: dict[str, str] = {
     "result.progress.step.running": "Läuft",
     "result.progress.step.done": "Ergebnis",
     "result.progress.estimate": "Die meisten Scans sind in unter einer Minute fertig.",
-    "result.progress.elapsed": "{duration} vergangen",
+    "result.progress.elapsed": "seit {duration}",
     "result.progress.noscript": (
         "Diese Seite aktualisiert sich mit JavaScript. Ohne dieses lädst du "
         "die Seite in ein paar Sekunden neu, um das Ergebnis zu sehen."
@@ -1702,7 +1702,7 @@ MESSAGES: dict[str, str] = {
     "result.document.kicker": "Ergebnisdokument",
     "result.document.heading": "Ergebnisdokument",
     "result.document.lede": (
-        "Dasselbe Dokument, das die Kommandozeilenprüfung und das Nagios-Plugin "
+        "Dasselbe Dokument, das das Kommandozeilen-Tool und das Nagios-Plugin "
         "auswerten."
     ),
     "result.verdict.kicker": "Urteil",
@@ -1880,7 +1880,7 @@ MESSAGES: dict[str, str] = {
         "zugleich die Grenze. <strong>Das Fehlen eines Befunds ist kein Beweis "
         "für Sicherheit</strong>, und die höchste Note, die diese Seite vergeben "
         "kann, ist keine Aussage darüber, dass die Instanz sicher ist - nur, "
-        "dass nichts hier Geprüftes fehlgeschlagen ist. Ganze Kategorien liegen "
+        "dass keine der hier durchgeführten Prüfungen fehlgeschlagen ist. Ganze Kategorien liegen "
         "vollständig außerhalb dessen, was ein nicht angemeldeter Scan erreicht: "
         "das Betriebssystem und seine Pakete, die Container-Laufzeit, die "
         "eigene Konfiguration des Reverse Proxy, Backups und ihre "
@@ -1891,8 +1891,8 @@ MESSAGES: dict[str, str] = {
         "diese zwei, die sichtbar sein sollten und es nicht sind:"
     ),
     "result.scope.audit": (
-        "<strong>Audit-Protokollierung.</strong> Der Audit-Dienst von OpenCloud "
-        "konsumiert nur den internen Event-Bus - er veröffentlicht keinen "
+        "<strong>Audit-Logging.</strong> Der Audit-Dienst von OpenCloud "
+        "nutzt nur den internen Event-Bus – er veröffentlicht keinen "
         "Endpunkt und erscheint in keinem nicht angemeldeten Dokument -, sodass "
         "von außen überhaupt nicht festgestellt werden kann, ob er läuft. Er "
         "wird nicht geprüft."
@@ -1934,8 +1934,8 @@ MESSAGES: dict[str, str] = {
     "result.tls.lifetime": "Ausgestellt für",
     "result.tls.lifetime.days": "{days} Tag(e)",
     "result.tls.ocsp": "OCSP-Stapling",
-    "result.tls.ocsp.stapled": "Eine Widerrufsantwort ist angeheftet",
-    "result.tls.ocsp.not_stapled": "Nicht angeheftet",
+    "result.tls.ocsp.stapled": "Eine Widerrufsantwort wird mitgeliefert",
+    "result.tls.ocsp.not_stapled": "Nicht mitgeliefert",
     "result.tls.ocsp.undetermined": "Nicht ermittelt",
     "result.raw.kicker": "Rohdaten",
     "result.raw.heading": "Technische Details",
@@ -1964,8 +1964,8 @@ MESSAGES: dict[str, str] = {
     "result.share.kicker": "Teilen",
     "result.share.heading": "Diesen Bericht teilen",
     "result.share.lede": (
-        "Per E-Mail oder über die eigene Zwischenablage. Nichts läuft über "
-        "diesen Dienst, und kein anderes Unternehmen wird um Hilfe gebeten."
+        "Per E-Mail oder über die Zwischenablage. Nichts wird über diesen "
+        "Dienst versendet, und kein anderes Unternehmen wird eingebunden."
     ),
     "result.share.warning": (
         "Die Adresse dieser Seite ist das Einzige, was sie schützt: Wer sie "

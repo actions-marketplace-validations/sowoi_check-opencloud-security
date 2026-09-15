@@ -113,6 +113,39 @@ def test_the_env_file_is_readable_by_its_owner_only(tmp_path: Path) -> None:
     assert not mode & (stat.S_IRGRP | stat.S_IROTH)
 
 
+def test_existing_env_permissions_are_restricted_before_writing(tmp_path, monkeypatch):
+    path = tmp_path / ".env"
+    path.write_text("# previous configuration\n")
+    path.chmod(0o644)
+    original = os.fdopen
+    checked = []
+
+    class Writer:
+        def __init__(self, handle):
+            self.handle = handle
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            self.handle.close()
+
+        def fileno(self):
+            return self.handle.fileno()
+
+        def write(self, content):
+            checked.append(stat.S_IMODE(os.fstat(self.fileno()).st_mode))
+            assert checked[-1] == 0o600
+            return self.handle.write(content)
+
+    def checked_writer(descriptor, *args, **kwargs):
+        return Writer(original(descriptor, *args, **kwargs))
+
+    monkeypatch.setattr(wizard_module.os, "fdopen", checked_writer)
+    assert _run(tmp_path) == 0
+    assert checked
+
+
 def test_the_public_preset_refuses_private_targets_and_runs_no_port_scan(
     tmp_path: Path,
 ) -> None:

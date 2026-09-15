@@ -824,6 +824,18 @@ and installing nothing gives you none, and the file grows until the disk is
 full. An unrecognised value refuses to start rather than guessing which you
 meant.
 
+Request bodies are limited to **1 MiB** and **30 seconds** before form, JSON
+or MCP parsing. Oversized bodies return 413; incomplete bodies time out with
+408. These fixed service-side limits do not change the scan queue or its
+overload behaviour. Apply connection and bandwidth limits at the reverse
+proxy too.
+
+Each running scan uses a child process. A job timeout or cancellation stops
+and reaps that process and its probe threads before the worker takes another
+job. The worker therefore needs permission to spawn processes; allow for one
+additional Python process per active scan when sizing memory and PID limits.
+See [ADR 0053](../adr/0053-a-scan-timeout-ends-its-process.md).
+
 ## Putting it behind a reverse proxy
 
 Worked configuration for nginx, Apache httpd, Caddy, Traefik and HAProxy -

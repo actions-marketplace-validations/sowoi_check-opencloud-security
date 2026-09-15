@@ -278,7 +278,7 @@ def test_the_release_track_the_visitor_chose_reaches_the_scanner(monkeypatch):
     pinned: the choice arrives, and an unspecified one becomes 'auto' rather
     than silently becoming a track nobody asked for.
     """
-    from webapp import runner
+    from webapp import runner, tasks
 
     seen: list[str | None] = []
 
@@ -287,6 +287,10 @@ def test_the_release_track_the_visitor_chose_reaches_the_scanner(monkeypatch):
         return {"rating": 5, "productversion": "7.2.3", "extraChecks": []}
 
     monkeypatch.setattr(runner, "scan", _capture)
+    async def in_process(*args, timeout):
+        return runner.execute_scan(*args)
+
+    monkeypatch.setattr(tasks, "execute_scan_process", in_process)
     context, store = _worker_context()
 
     chosen = "b6f2c0c5-1c4b-4f4e-9a3b-0d3f8b7c1a20"

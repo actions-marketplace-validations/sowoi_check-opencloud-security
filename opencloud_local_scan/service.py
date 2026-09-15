@@ -221,9 +221,32 @@ class _Handler(BaseHTTPRequestHandler):
         header = (self.headers.get("Host") or "").strip()
         if not header:
             return True
-        hostname = urllib.parse.urlsplit(f"//{header}").hostname or ""
+        try:
+            hostname = urllib.parse.urlsplit(f"//{header}").hostname or ""
+        except ValueError:
+            return False
         # Not empty: an empty name counts as loopback for a *bind* address.
         return bool(hostname) and _is_loopback_listen(hostname)
+
+    def _browser_may_scan(self) -> bool:
+        """Loopback prevents remote reads, not drive-by browser submissions."""
+        site = (self.headers.get("Sec-Fetch-Site") or "").strip().lower()
+        if site:
+            return site in {"same-origin", "none"}
+        origin = (self.headers.get("Origin") or "").strip()
+        if not origin:
+            return True
+        try:
+            source = urllib.parse.urlsplit(origin)
+            own = urllib.parse.urlsplit(f"http://{self.headers.get('Host', '')}")
+            return (
+                source.scheme == "http" and source.hostname == own.hostname
+                and (source.port or 80) == (own.port or 80)
+                and source.username is None and source.password is None
+                and source.path in {"", "/"} and not source.query and not source.fragment
+            )
+        except ValueError:
+            return False
 
     def _read_host(self) -> str | None:
         length = int(self.headers.get("Content-Length") or 0)
@@ -273,6 +296,9 @@ class _Handler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/scan":
+            if not self._browser_may_scan():
+                self._send_error(HTTPStatus.FORBIDDEN, "Cross-origin scans are not allowed.")
+                return
             query = urllib.parse.parse_qs(parsed.query)
             hosts = query.get("url") or query.get("host") or []
             if not hosts:
@@ -298,6 +324,10 @@ class _Handler(BaseHTTPRequestHandler):
 
         if path not in {"/api/queue", "/api/requeue"}:
             self._send_error(HTTPStatus.NOT_FOUND, f"Unknown endpoint {path}.")
+            return
+
+        if not self._browser_may_scan():
+            self._send_error(HTTPStatus.FORBIDDEN, "Cross-origin scans are not allowed.")
             return
 
         host = self._read_host()

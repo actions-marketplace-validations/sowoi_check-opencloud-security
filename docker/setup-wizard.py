@@ -4761,6 +4761,7 @@ def _write_proxy_files(setup: Setup, output_dir: Path) -> list[str]:
             header_file, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, stat.S_IRUSR | stat.S_IWUSR
         )
         with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            os.fchmod(handle.fileno(), stat.S_IRUSR | stat.S_IWUSR)
             handle.write(render_admin_secret_file(setup))
         os.chmod(header_file, stat.S_IRUSR | stat.S_IWUSR)
         written.append(f"{header_file} (owner-readable only)")
@@ -5521,6 +5522,7 @@ def write_files(
         env_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, stat.S_IRUSR | stat.S_IWUSR
     )
     with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+        os.fchmod(handle.fileno(), stat.S_IRUSR | stat.S_IWUSR)
         handle.write(render_env_file(setup))
     os.chmod(env_path, stat.S_IRUSR | stat.S_IWUSR)
     written.append(f"{env_path} (owner-readable only)")
@@ -6237,6 +6239,7 @@ def backup_existing(
                 backup, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, stat.S_IRUSR | stat.S_IWUSR
             )
             with os.fdopen(descriptor, "wb") as handle:
+                os.fchmod(handle.fileno(), stat.S_IRUSR | stat.S_IWUSR)
                 handle.write(path.read_bytes())
             os.chmod(backup, stat.S_IRUSR | stat.S_IWUSR)
         else:

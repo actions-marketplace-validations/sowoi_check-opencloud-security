@@ -13,7 +13,7 @@ MESSAGES: dict[str, str] = {
     "admin.tabs.configuration": "Configuration",
     "admin.tabs.rules": "Règles",
     "admin.config.title": "Configuration",
-    "admin.config.lede": "Chaque variable COS_WEB_* lue par ce service, et la valeur avec laquelle il fonctionne.",
+    "admin.config.lede": "Toutes les variables COS_WEB_* lues par ce service et leurs valeurs actuellement effectives.",
     "admin.config.scope": "Il s'agit de l'environnement propre au service web, tel que ce processus l'a lu au démarrage - ni la configuration d'OpenCloud, ni celle du worker, qui lit les mêmes variables dans son propre conteneur. Les valeurs sont affichées telles qu'elles s'appliquent après lecture ; les identifiants ne sont jamais indiqués que comme définis ou non définis.",
     "admin.config.source.environment": "Définie",
     "admin.config.source.default": "Par défaut",
@@ -37,7 +37,7 @@ MESSAGES: dict[str, str] = {
     "admin.config.group.protection": "Effacement, signatures et chiffrement",
     "admin.config.group.frontend": "Frontend",
     "admin.rules.title": "Règles en vigueur",
-    "admin.rules.lede": "Comment une note est décidée, et chaque règle que ce déploiement applique à une requête - avec les valeurs qu'il utilise.",
+    "admin.rules.lede": "Comment une note est établie et quelles règles ce déploiement applique aux requêtes, avec les valeurs actuellement utilisées.",
     "admin.rules.scope": "Lu dans la configuration avec laquelle ce processus a démarré et dans les constantes du code qui les applique : une règle listée ici est une règle que le service applique maintenant. Rien sur cette page ne nomme une cible ni un visiteur.",
     "admin.rules.on": "Appliquée",
     "admin.rules.off": "Désactivée",
@@ -67,7 +67,7 @@ MESSAGES: dict[str, str] = {
     "admin.rules.group.targets": "Ce qui peut être analysé",
     "admin.rules.group.targets.lede": "Vérifié avant toute connexion, puis à chaque redirection.",
     "admin.rules.group.scanner": "Avec quelle intensité un hôte est sondé",
-    "admin.rules.group.scanner.lede": "Les paramètres avec lesquels chaque analyse de ce déploiement est construite. Aucune requête ne peut les changer.",
+    "admin.rules.group.scanner.lede": "Les paramètres utilisés pour chaque analyse de ce déploiement. Aucune requête ne peut les modifier.",
     "admin.rules.group.operator": "Identifiants et actions de l'opérateur",
     "admin.rules.group.operator.lede": "Limites des rares appels qui demandent un identifiant ou appuient sur un bouton.",
     "admin.rules.rule.client_limit.title": "Limite par client",
@@ -81,7 +81,7 @@ MESSAGES: dict[str, str] = {
     "admin.rules.rule.queue.title": "La surcharge fait la queue",
     "admin.rules.rule.queue.body": "{workers} analyses tournent en même temps ; les autres soumissions attendent dans l'ordre et ne sont jamais refusées pour cause de charge.",
     "admin.rules.rule.agent_wait.title": "Les agents ne dorment pas pendant un blocage",
-    "admin.rules.rule.agent_wait.body": "MCP et les workflows attendent eux-mêmes un Retry-After d'au plus {wait}, au plus {attempts} tentatives ; un délai plus long est rendu à l'appelant.",
+    "admin.rules.rule.agent_wait.body": "MCP et les workflows attendent eux-mêmes un Retry-After d'au plus {wait}, dans la limite de {attempts} tentatives. Au-delà, la réponse est renvoyée à l'appelant.",
     "admin.rules.rule.probe_block.title": "Blocage après des avertissements répétés",
     "admin.rules.rule.probe_block.body": "{limit} avertissements en {window} bloquent le réseau du client pendant {block}.",
     "admin.rules.rule.probe_escalation.title": "Les blocages répétés s'allongent",
@@ -107,9 +107,9 @@ MESSAGES: dict[str, str] = {
     "admin.rules.rule.dns_consistency.title": "Un nom doit se résoudre deux fois de la même façon",
     "admin.rules.rule.dns_consistency.body": "Un nom soumis est résolu deux fois et refusé si les réponses ne partagent aucune adresse ; chaque adresse des deux est vérifiée.",
     "admin.rules.rule.redirects.title": "Chaque redirection est vérifiée",
-    "admin.rules.rule.redirects.body": "Une redirection est résolue et vérifiée comme la cible soumise avant d'être suivie, et l'analyse ne contacte que des adresses validées.",
+    "admin.rules.rule.redirects.body": "Une redirection est résolue et vérifiée comme la cible soumise avant d'être suivie. L'analyse ne contacte que des adresses validées.",
     "admin.rules.rule.exclusions.title": "Exclusions",
-    "admin.rules.rule.exclusions.body": "{count} entrées exclues, de l'environnement et de l'onglet de synthèse réunis.",
+    "admin.rules.rule.exclusions.body": "{count} entrées exclues, provenant de l'environnement et de l'onglet de synthèse.",
     "admin.rules.rule.allowed_hosts.title": "Hôtes exemptés de la protection",
     "admin.rules.rule.allowed_hosts.body": "Ces noms échappent aux règles d'adresse publique. Les exclusions s'appliquent toujours :",
     "admin.rules.rule.approval.title": "Mode d'approbation",
@@ -280,11 +280,11 @@ MESSAGES: dict[str, str] = {
     "admin.outcome.excluded": "Exclue. Refusée dès la requête suivante.",
     "admin.outcome.withdrawn": "Retirée. Elle peut de nouveau être analysée.",
     "admin.actions.kicker": "Données de référence",
-    "admin.actions.heading": "Mettre à jour ce sur quoi la note repose",
+    "admin.actions.heading": "Mettre à jour les données de référence utilisées pour la note",
     "admin.actions.lede": (
         "Les deux mêmes mises à jour que le worker exécute chaque jour, avec "
-        "les mêmes règles : un calendrier qui a perdu une ligne de versions est "
-        "refusé, une base d'avis ne fait qu'en gagner, et une récupération qui "
+        "les mêmes règles : un calendrier auquel il manque une ligne de versions est "
+        "refusé, une base d'avis ne peut qu'ajouter des entrées, et une récupération qui "
         "échoue ne change rien."
     ),
     "admin.actions.schedule": "Synchroniser le calendrier",
@@ -294,7 +294,7 @@ MESSAGES: dict[str, str] = {
     "admin.outcome.updated": "Mis à jour. Le nouveau document est utilisé.",
     "admin.outcome.unchanged": "Déjà à jour - rien n'a changé.",
     "admin.outcome.rejected": (
-        "Refusé : ce qui a été récupéré n'a pas passé les contrôles, les "
+        "Refusé : les données récupérées n'ont pas passé les contrôles ; les "
         "données précédentes restent donc en service."
     ),
     "admin.outcome.failed": "Récupération impossible. Rien n'a changé.",
@@ -350,10 +350,10 @@ MESSAGES: dict[str, str] = {
         "régénèrent l'index et le valident. Il n'y a rien à presser ici."
     ),
     "admin.audit.kicker": "Audit",
-    "admin.audit.heading": "Le journal, au fil de son écriture",
+    "admin.audit.heading": "Le journal d'audit en temps réel",
     "admin.audit.lede": (
-        "Demandes de scan, refus et limites atteintes, au moment où ils se "
-        "produisent. Suivre le journal ouvre une connexion ; rien n'est "
+        "Demandes de scan, refus et limites atteintes en temps réel. Suivre le "
+        "journal ouvre une connexion ; rien n'est "
         "transmis tant que tu ne le demandes pas."
     ),
     "admin.audit.privacy": (
@@ -367,20 +367,20 @@ MESSAGES: dict[str, str] = {
         "répondu - avec plusieurs répliques, c'est une partie du journal et non "
         "sa totalité."
     ),
-    "admin.audit.follow": "Suivre",
+    "admin.audit.follow": "Suivre en direct",
     "admin.audit.stop": "Arrêter",
     "admin.audit.clear": "Vider",
     "admin.audit.empty": "Rien pour l'instant.",
     "admin.audit.closed": (
         "La connexion a atteint sa limite de {minutes} minutes et le service "
-        "l'a fermée. Rien n'a été perdu jusque-là ; « Suivre » en ouvre une "
+        "l'a fermée. Rien n'a été perdu jusque-là ; « Suivre en direct » en ouvre une "
         "autre."
     ),
     "admin.audit.disabled": (
         "Cette installation ne tient pas de journal d'audit, il n'y a donc rien "
         "à suivre. COS_WEB_AUDIT_LOG l'active."
     ),
-    "admin.audit.state.off": "Pas de suivi",
+    "admin.audit.state.off": "Pas de suivi en direct",
     "admin.audit.state.live": "En direct",
     "admin.audit.state.reconnecting": "Reconnexion",
     "admin.audit.state.unsupported": "Non pris en charge par ce navigateur",
@@ -1443,16 +1443,16 @@ MESSAGES: dict[str, str] = {
     "compare.eyebrow": "Les correctifs ont-ils fonctionné ?",
     "compare.heading": "Comparer deux analyses",
     "compare.lede": (
-        "Collez l'uuid d'une analyse antérieure et celui d'une analyse "
+        "Collez l'UUID d'une analyse antérieure et celui d'une analyse "
         "postérieure. Les deux résultats doivent encore exister - ce service "
         "ne conserve aucun historique où retrouver une analyse expirée."
     ),
     "compare.form.baseline": "Analyse antérieure",
     "compare.form.current": "Analyse postérieure",
-    "compare.form.placeholder": "L'uuid dans l'adresse d'une page de résultat",
+    "compare.form.placeholder": "L'UUID dans l'adresse d'une page de résultat",
     "compare.form.submit": "Comparer",
     "compare.form.hint": (
-        "L'uuid est la partie qui suit <code>/scan/</code> dans l'adresse "
+        "L'UUID est la partie qui suit <code>/scan/</code> dans l'adresse "
         "d'une page de résultat. Il constitue à lui seul l'autorisation "
         "d'accès à ce résultat : traitez-le comme un mot de passe."
     ),
@@ -1477,7 +1477,7 @@ MESSAGES: dict[str, str] = {
     "compare.error.same": (
         "Les deux champs désignent la même analyse : il n'y a rien à "
         "comparer. Relancez une analyse de l'instance et comparez le nouvel "
-        "uuid avec celui-ci."
+        "UUID avec celui-ci."
     ),
     "compare.different_targets": (
         "Ces deux analyses décrivent des instances différentes. La "
@@ -1552,7 +1552,7 @@ MESSAGES: dict[str, str] = {
     # opposed to the words on the page itself.
     "search.page.index.title": "Analyser une instance OpenCloud",
     "search.page.index.summary": (
-        "Lancez une analyse de sécurité publique sur une instance OpenCloud."
+        "Lancez une analyse de sécurité publique pour une instance OpenCloud."
     ),
     "search.page.how.title": "Comment fonctionne le scanner",
     "search.page.how.summary": (
@@ -1606,8 +1606,8 @@ MESSAGES: dict[str, str] = {
         "Patientez une minute et réessayez."
     ),
     "error.rate_limit.probe": (
-        "Plusieurs des adresses analysées récemment depuis votre réseau ne se "
-        "sont pas révélées être OpenCloud, ce service fait donc une pause avec "
+        "Plusieurs adresses analysées récemment depuis votre réseau ne se "
+        "sont pas révélées être des instances OpenCloud. Ce service suspend donc "
         "vos analyses pendant un moment. Si vous vouliez vérifier votre propre "
         "instance, le scanner fonctionne aussi sur votre machine."
     ),
@@ -1622,7 +1622,7 @@ MESSAGES: dict[str, str] = {
     ),
     "error.target.unstable": (
         "Ce nom d'hôte répond avec des adresses différentes à chaque requête, "
-        "ce service ne peut donc pas savoir ce qu'il analyserait."
+        "ce service ne peut donc pas déterminer de façon fiable ce qu'il analyserait."
     ),
     "error.target.not_approved": (
         "Ce service n'analyse que les instances approuvées pour lui. Demandez à "
@@ -1669,9 +1669,9 @@ MESSAGES: dict[str, str] = {
         "Il a été demandé à ce service de ne pas analyser cette adresse."
     ),
     "error.store_unavailable": (
-        "Ce service n'atteint pas sa propre configuration pour le moment et "
-        "n'analysera pas sans savoir ce qu'il lui a été demandé de laisser "
-        "tranquille. Veuillez réessayer dans quelques minutes."
+        "Ce service ne peut pas lire sa propre configuration pour le moment et "
+        "n'analysera rien tant qu'il ne sait pas quelles cibles exclure. "
+        "Veuillez réessayer dans quelques minutes."
     ),
     # ----------------------------------------------------------- result page
     "result.title": "Résultats de l'analyse",
@@ -1714,7 +1714,7 @@ MESSAGES: dict[str, str] = {
     "result.progress.step.running": "En cours",
     "result.progress.step.done": "Résultat",
     "result.progress.estimate": "La plupart des analyses se terminent en moins d'une minute.",
-    "result.progress.elapsed": "{duration} écoulées",
+    "result.progress.elapsed": "il y a {duration}",
     "result.progress.noscript": (
         "Cette page se met à jour elle-même grâce à JavaScript. Sans lui, "
         "rechargez la page dans quelques secondes pour voir le résultat."
@@ -1916,7 +1916,7 @@ MESSAGES: dict[str, str] = {
         "fois l'objectif et la limite. <strong>L'absence de constat n'est "
         "pas une preuve de sécurité</strong>, et la meilleure note que cette "
         "page puisse donner n'affirme pas que l'instance est sécurisée - "
-        "seulement que rien de ce qui a été contrôlé ici n'a posé problème. "
+        "seulement qu'aucune des vérifications effectuées ici n'a échoué. "
         "Des catégories entières échappent totalement à une analyse non "
         "authentifiée : le système d'exploitation et ses paquets, "
         "l'environnement d'exécution des conteneurs, la configuration propre "
@@ -1973,8 +1973,8 @@ MESSAGES: dict[str, str] = {
     "result.tls.lifetime": "Délivré pour",
     "result.tls.lifetime.days": "{days} jour(s)",
     "result.tls.ocsp": "Agrafage OCSP",
-    "result.tls.ocsp.stapled": "Une réponse de révocation est agrafée",
-    "result.tls.ocsp.not_stapled": "Non agrafé",
+    "result.tls.ocsp.stapled": "Une réponse de révocation est fournie",
+    "result.tls.ocsp.not_stapled": "Aucune réponse de révocation fournie",
     "result.tls.ocsp.undetermined": "Non déterminé",
     "result.raw.kicker": "Données brutes",
     "result.raw.heading": "Détails techniques",
@@ -2005,8 +2005,8 @@ MESSAGES: dict[str, str] = {
     "result.share.kicker": "Partager",
     "result.share.heading": "Partager ce rapport",
     "result.share.lede": (
-        "Par courriel, ou via votre propre presse-papiers. Rien ne transite "
-        "par ce service et aucune autre entreprise n'est sollicitée."
+        "Par courriel ou via le presse-papiers. Rien ne transite par ce "
+        "service et aucune autre entreprise n'intervient."
     ),
     "result.share.warning": (
         "L'adresse de cette page est la seule chose qui la protège : qui la "

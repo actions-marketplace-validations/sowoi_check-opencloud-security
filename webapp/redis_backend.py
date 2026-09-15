@@ -50,6 +50,10 @@ class RedisBackend(Protocol):
 
     async def delete(self, *keys: str) -> int: ...
 
+    async def set_if_exists(
+        self, required: tuple[str, ...], values: dict[str, str], *, ex: int
+    ) -> bool: ...
+
     async def keys_matching(self, pattern: str) -> list[str]: ...
 
     async def incr(self, key: str) -> int: ...
@@ -151,6 +155,20 @@ class MemoryRedis:
             if self._lists.pop(key, None) is not None:
                 removed += 1
         return removed
+
+    async def set_if_exists(
+        self, required: tuple[str, ...], values: dict[str, str], *, ex: int
+    ) -> bool:
+        """Commit a scan transition only while its original keys still exist."""
+        # No await between the existence check and writes: the real backend
+        # performs the same operation atomically in Redis.
+        if any(not self._live(key) or key not in self._values for key in required):
+            return False
+        due = self._now() + ex
+        for key, value in values.items():
+            self._values[key] = value
+            self._expiry[key] = due
+        return True
 
     async def keys_matching(self, pattern: str) -> list[str]:
         """
@@ -280,6 +298,25 @@ class _RealRedis:
         if not keys:
             return 0
         return int(await self._client.delete(*keys))  # type: ignore[attr-defined]
+
+    async def set_if_exists(
+        self, required: tuple[str, ...], values: dict[str, str], *, ex: int
+    ) -> bool:
+        """The existence check and all writes share one Redis transaction."""
+        script = """
+        local required = tonumber(ARGV[1])
+        for i = 1, required do
+            if redis.call('EXISTS', KEYS[i]) == 0 then return 0 end
+        end
+        for i = required + 1, #KEYS do
+            redis.call('SET', KEYS[i], ARGV[i - required + 2], 'EX', ARGV[2])
+        end
+        return 1
+        """
+        keys = [*required, *values]
+        return bool(await self._client.eval(  # type: ignore[attr-defined]
+            script, len(keys), *keys, len(required), ex, *values.values(),
+        ))
 
     async def keys_matching(self, pattern: str) -> list[str]:
         found: list[str] = []
