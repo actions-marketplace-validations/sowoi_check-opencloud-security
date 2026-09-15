@@ -64,16 +64,6 @@ acceptable, is in the wrong layer. Grades in the web UI come from the
 plugin's `RATE_MAP`; `webapp/catalog.py` only regroups what the scanner
 already produced.
 
-Key modules (see `AGENTS.md` for the full table):
-- `opencloud_local_scan/scanner.py` — the scan pipeline, findings, waivers, rating
-- `opencloud_local_scan/versions.py` / `releases.py` — release lifecycle, update recommendations
-- `opencloud_local_scan/tls.py` — transport security checks
-- `opencloud_local_scan/hardening.py` — catalogue of every hardening identifier
-- `opencloud_local_scan/config.py`, `factory.py` — configuration → frozen settings
-- `webapp/workflows.py` — the one workflow layer (submit/poll/wait/complete/export semantics)
-- `webapp/mcp_server.py`, `mcp_auth.py`, `prompts.py` — the MCP agent-facing layer
-- `frontend/` — templates/CSS/JS the browser sees; `webapp/` holds no markup
-
 ### Settings flow in one direction
 
 ```
@@ -90,12 +80,8 @@ CLI flags    ───┘        (flat COS_ names)     (builds)       (dataclass
   `ReleaseSettings` (frozen dataclasses).
 - A file ending in `.json` is parsed as JSON, anything else as YAML — format
   follows the suffix, not the content.
-- **Adding one setting touches seven places**: `config.py` (only if a new
-  default path), `factory.py`, the plugin flag in
-  `check_opencloud_security.py`, the subcommand in
-  `opencloud_local_scan/cli.py`, the question in `wizard.py`, the CLI option
-  table in `README.md`, `config/check-opencloud-security.example.yml`, plus
-  a matching entry under `## [Unreleased]` in `CHANGELOG.md`.
+- **Adding a setting touches many places** — use `/add-setting`, which lists
+  them all.
 
 ### Conventions easy to get wrong
 
@@ -121,13 +107,8 @@ CLI flags    ───┘        (flat COS_ names)     (builds)       (dataclass
   edit `RELEASE.md` — the release workflow writes it from that section, so it
   names the last release until the next one (ADR 0048).
 - **A `### Security` changelog entry also needs a record in
-  `security/advisories/`**, written in the same pull request;
-  `scripts/security_advisories.py --check` fails without one and CI runs it.
-  The record answers what the prose cannot: *did a released version carry this*
-  — determined from the git tags, not the wording — and does an advisory
-  follow. Declining is a normal outcome (never shipped, hardening, fails
-  closed); leaving it undecided is not. **Never publish an advisory yourself.**
-  See `AGENTS.md`, "Security advisories".
+  `security/advisories/`** in the same pull request — use
+  `/security-fix-record`. **Never publish an advisory yourself.**
 
 ## The web application (`webapp/` + `frontend/`)
 
@@ -159,20 +140,6 @@ CLI flags    ───┘        (flat COS_ names)     (builds)       (dataclass
   in-process**, never internals directly — that's what makes the SSRF guard,
   rate limit, cooldown, and queue apply to agents the same as browsers. See
   [ADR 0011](adr/0011-mcp-is-an-execution-layer-not-a-second-implementation.md).
-
-## Tests
-
-- `tests/fake_opencloud.py` is a real HTTP server driven by an
-  `InstanceBehaviour` dataclass — use it rather than mocking `requests`, and
-  derive expectations from an actual scan of it (hardcoded lists go stale).
-- `tests/conftest.py` has two autouse fixtures: one strips every `COS_`
-  environment variable, one stubs `time.sleep` for retry/backoff tests.
-- `tests/webapp_support.py` holds web fixtures: an isolated in-process Redis
-  per test and an offline resolver (`example.com` doesn't resolve).
-- Name tests as sentences describing the behaviour they protect (e.g.
-  `test_a_waived_check_no_longer_caps_the_rating`) with a one-line docstring
-  explaining why it matters. **Assert the negative case as well as the
-  positive one.**
 
 ## Documentation map
 
