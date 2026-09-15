@@ -12,6 +12,15 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+### Changed
+
+- **The bundled release schedule knows OpenCloud 8.0.** Regenerated from the
+  published lifecycle page: the 8.0 line is the current rolling release
+  (8.0.0), so 7.5 is now behind the rolling track. Production (7.2.4) and LTS
+  (4.0.8) are unchanged, and the README release table follows. The advisory
+  database was re-read from OSV and has nothing new. The frontend
+  documentation and the search indexes are rebuilt to match.
+
 ## [1.23.0] - 2026-09-14
 
 ### Added

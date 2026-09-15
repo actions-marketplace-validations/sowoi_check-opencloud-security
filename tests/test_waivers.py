@@ -319,11 +319,13 @@ def test_without_a_declared_track_the_longest_support_wins():
 
 def test_a_rolling_instance_is_end_of_life_once_the_next_release_ships():
     """Three weeks is the whole point of the rolling track."""
-    status = load_release_schedule().status_for("7.2.4", today=TODAY, track="rolling")
+    schedule = load_release_schedule()
+    status = schedule.status_for("7.2.4", today=TODAY, track="rolling")
 
     assert status.state == "endOfLife"
     assert status.declared_track == "rolling"
-    assert status.upgrade_to == "7.5.0"
+    assert status.upgrade_to == schedule.latest_for("rolling")
+    assert status.upgrade_to != "7.2.4"
 
 
 def test_the_same_version_is_current_on_the_production_track():
@@ -462,7 +464,7 @@ def test_an_older_release_than_the_production_track_is_still_rated_f():
 def test_the_auto_release_track_reaches_the_scan(capsys):
     """'auto' has to be usable end to end, not just parsed."""
     behaviour = InstanceBehaviour()
-    behaviour.status_payload["productversion"] = "7.5.0"
+    behaviour.status_payload["productversion"] = load_release_schedule().latest_for("rolling")
 
     result = run_scan(behaviour, release_track="auto")
     output, _ = run(result, capsys)
