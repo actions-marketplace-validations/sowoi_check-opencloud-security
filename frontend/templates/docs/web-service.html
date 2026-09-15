@@ -1108,6 +1108,16 @@ gives you two, which is how a trail loses records; setting it to <code>external<
 and installing nothing gives you none, and the file grows until the disk is
 full. An unrecognised value refuses to start rather than guessing which you
 meant.</p>
+<p>Request bodies are limited to <strong>1 MiB</strong> and <strong>30 seconds</strong> before form, JSON
+or MCP parsing. Oversized bodies return 413; incomplete bodies time out with
+408. These fixed service-side limits do not change the scan queue or its
+overload behaviour. Apply connection and bandwidth limits at the reverse
+proxy too.</p>
+<p>Each running scan uses a child process. A job timeout or cancellation stops
+and reaps that process and its probe threads before the worker takes another
+job. The worker therefore needs permission to spawn processes; allow for one
+additional Python process per active scan when sizing memory and PID limits.
+See <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0053-a-scan-timeout-ends-its-process.md">ADR 0053</a>.</p>
 <h2 id="putting-it-behind-a-reverse-proxy">Putting it behind a reverse proxy</h2>
 <p>Worked configuration for nginx, Apache httpd, Caddy, Traefik and HAProxy -
 including the streaming the MCP endpoint needs and the paths a proxy must not
