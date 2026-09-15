@@ -12,6 +12,13 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+### Documentation
+
+- **German, French and Spanish frontend wording and terminology have been
+  polished.** The translated catalogues now use more natural phrasing and
+  established technical terms across the public and operator-facing pages,
+  without changing any scan behaviour or API contract.
+
 ## [1.23.1] - 2026-09-15
 
 ### Changed
@@ -25,10 +32,6 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ### Documentation
 
-- **German, French and Spanish frontend wording and terminology have been
-  polished.** The translated catalogues now use more natural phrasing and
-  established technical terms across the public and operator-facing pages,
-  without changing any scan behaviour or API contract.
 - **Claude Code skills for the repetitive maintenance tasks.** `.claude/skills/`
   now carries step-by-step skills for patch, minor and major releases, opening
   the release pull request, refreshing the bundled data, adding a setting, a
