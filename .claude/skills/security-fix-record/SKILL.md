@@ -1,6 +1,6 @@
 ---
 name: security-fix-record
-description: Write the security/advisories/<slug>.yml record for a ### Security changelog entry in check-opencloud-security - determine from git tags whether a released version carried the defect, choose draft or declined, fill every field, and run the coverage check. Never publishes an advisory. Use whenever a ### Security entry is added or security_advisories.py --check fails.
+description: "Write the security/advisories/<slug>.yml record for a ### Security changelog entry in check-opencloud-security - determine from git tags whether a released version carried the defect, choose draft or declined, fill every field, and run the coverage check. Never publishes an advisory. Use whenever a ### Security entry is added or security_advisories.py --check fails."
 argument-hint: <changelog entry phrase or description of the fix>
 ---
 
