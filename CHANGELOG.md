@@ -12,6 +12,8 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+## [1.23.3] - 2026-09-16
+
 ### Added
 
 - **An operator can search the operator area.** While the sign-in lasts,
