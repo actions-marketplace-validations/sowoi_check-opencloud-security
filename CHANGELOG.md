@@ -160,10 +160,9 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 - Rewrite frontend explanations and operator documentation for clearer,
   consistent wording in English, German, French and Spanish. Clarify scan
   coverage, temporary storage, alert timing and configuration instructions.
-- Add German and French versions of all public guides under `docs/de/` and
-  `docs/fr/`, with generated frontend pages and language-specific search
-  content. Preserve section links across languages; Spanish continues to use
-  the explicit English fallback.
+- Add German versions of all public guides under `docs/de/`, generated German
+  frontend pages and German guide search content. Preserve section links across
+  languages; French and Spanish continue to use English guide bodies.
 
 ### Added
 
