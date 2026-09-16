@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.web-service.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de') %}
+{% if locale not in ('en', 'de', 'fr') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -766,7 +766,7 @@ exempt from.</p>
 </tr>
 <tr>
 <td>The two scans describe different instances</td>
-<td><strong>200</strong>, compared and said so. Staging against production is a fair question; answering it silently is not</td>
+<td><strong>422</strong>, not compared. "Did the fix work" is a question about one instance, and two hosts compared by accident is a wrong answer nobody notices - <code>check-opencloud-scanner diff</code> refuses them too. See <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0059-a-comparison-refuses-two-different-instances.md">ADR 0059</a></td>
 </tr>
 </tbody>
 </table>
@@ -780,7 +780,9 @@ the earlier side as a <strong>file</strong> instead: the JSON or the CSV from th
 on a result page, uploaded from the reader's own disk, compared against a scan
 of this service that has not expired. Same page, same arithmetic, same
 verdicts - only where the earlier document came from changes. See
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0057-an-uploaded-report-is-evidence-not-a-scan.md">ADR 0057</a>.</p>
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0057-an-uploaded-report-is-evidence-not-a-scan.md">ADR 0057</a>.
+A report of a different instance than the scan it is compared with, or one
+that names no instance, is refused with 422 the same way.</p>
 <p>It is a browser feature and stays one: HTML only, never in the OpenAPI schema,
 and there is no MCP tool for it. An agent already has <code>compare_scans</code>, which
 takes two uuids - the shape an agent is in a position to supply.</p>

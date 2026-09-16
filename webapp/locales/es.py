@@ -885,9 +885,9 @@ MESSAGES: dict[str, str] = {
     "api.clients.heading": "Configurar un cliente de agente",
     "api.clients.intro": "Configure el cliente con la URL del punto de acceso y el transporte HTTP streamable. Si el operador exige autenticación, también deberá iniciar sesión.",
     "api.clients.body": (
-        "Encontrarás configuraciones completas para Claude Code, Claude "
+        "Encontrará configuraciones completas para Claude Code, Claude "
         "Desktop, GitHub Copilot en VS Code y en la CLI, Cursor, Zed y "
-        "Windsurf, contra este despliegue o contra el tuyo propio, en "
+        "Windsurf, para este despliegue o para el suyo propio, en "
         '<a href="{project}/blob/main/docs/mcp.md" '
         'rel="noopener noreferrer">la guía de MCP</a>.'
     ),
@@ -1041,7 +1041,7 @@ MESSAGES: dict[str, str] = {
     ),
     # --------------------------------------------------- generated guide pages
     "docs.guide.kicker": "Documentación de la CLI",
-    "docs.guide.english_notice": "Esta guía está disponible en inglés y alemán. Se muestra la versión inglesa para el idioma seleccionado.",
+    "docs.guide.english_notice": "Esta guía está disponible en inglés, alemán y francés. Se muestra la versión inglesa para el idioma seleccionado.",
     "docs.guide.toc.heading": "En esta página",
     "docs.guide.toc.aria": "En esta página",
     # ---------------------------------------------------------------- compare
@@ -1085,7 +1085,7 @@ MESSAGES: dict[str, str] = {
         "comparar. Analice la instancia de nuevo y compare el UUID nuevo con "
         "este."
     ),
-    "compare.different_targets": "Los análisis corresponden a instancias distintas. Téngalo en cuenta al comparar, por ejemplo, un sistema de pruebas con uno de producción.",
+    "compare.error.different_targets": "Los dos análisis corresponden a instancias distintas, por lo que no se comparan. Compare dos análisis de la misma instancia.",
     "compare.verdict.kicker": "Entre los dos análisis",
     "compare.verdict.improved": "Ha mejorado",
     "compare.verdict.unchanged": "No ha cambiado nada",

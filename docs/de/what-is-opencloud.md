@@ -1,5 +1,3 @@
-# What OpenCloud is
-
 # Was ist OpenCloud?
 
 [OpenCloud](https://opencloud.eu/) ist eine quelloffene Plattform zum Speichern, Synchronisieren und Teilen von Dateien. Dieser Scanner ist auf ihre Versionen, Einstellungen und Bereitstellungsweise zugeschnitten. Ein kompatibler Statusendpunkt allein genügt nicht, um andere Produkte damit zu bewerten.
@@ -31,7 +29,7 @@ Für Backups müssen trotzdem die verwendeten Speicher, Metadaten, Konfiguration
 
 Verwandte Produkte können denselben `/status.php`-Pfad beantworten, besitzen aber eigene Releases, Sicherheitshinweise und Standardkonfigurationen. Eine Bewertung mit den falschen Referenzdaten wäre irreführend.
 
-Der Scanner prüft deshalb `product` und `productname` und bewertet nur eine als OpenCloud erkannte Instanz. Bei einem anderen Produkt müssen Sie das passende Prüfwerkzeug verwenden; siehe [Fehlersuche](../troubleshooting.md).
+Der Scanner prüft deshalb `product` und `productname` und bewertet nur eine als OpenCloud erkannte Instanz. Bei einem anderen Produkt musst du das passende Prüfwerkzeug verwenden; siehe [Fehlersuche](../troubleshooting.md).
 
 Dieses Projekt ist unabhängig von OpenCloud GmbH. „OpenCloud“ und zugehörige Marken gehören ihren jeweiligen Inhabern und werden hier nur zur Bezeichnung der geprüften Software verwendet. Der vollständige Hinweis steht in der [Dokumentationsübersicht](../README.md).
 

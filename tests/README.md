@@ -36,6 +36,7 @@ is needed.
 |---|---|
 | [`conftest.py`](conftest.py) | Autouse fixtures: strip every `COS_` environment variable, keep machine-wide configuration files out, and stub retry sleeps. Also passes coverage settings to subprocesses. |
 | [`fake_opencloud.py`](fake_opencloud.py) | A real HTTP server that plays an OpenCloud instance, driven by an `InstanceBehaviour` dataclass. |
+| [`browser_support.py`](browser_support.py) | Browser test plumbing: the web app, an in-process worker and fake targets served from a thread; WebKit or Firefox behind a dead proxy so nothing leaves loopback; a watch for console errors, CSP violations and stray requests (ADR 0061). |
 | [`webapp_support.py`](webapp_support.py) | Web test plumbing: an isolated in-process Redis per test, an offline resolver, and skipping when the web extra is missing. |
 | [`integration/test_real_opencloud.py`](integration/test_real_opencloud.py) | Opt-in (`-m integration`): scans a real OpenCloud container. Needs a container runtime. |
 
@@ -162,6 +163,19 @@ is needed.
 | [`test_webapp_search.py`](test_webapp_search.py) | The browser search built at release, and what result data it may contain. |
 | [`test_frontend_documentation.py`](test_frontend_documentation.py) | Browser documentation generated from the Markdown guides. |
 
+### In a real browser
+
+These need Playwright's browser build once: `uv run playwright install webkit`
+(and `firefox`, the second engine in CI). Without it they skip locally;
+`.github/workflows/browser-tests.yml` runs them with
+`PLAYWRIGHT_TESTS_REQUIRED=1`. `PLAYWRIGHT_BROWSER=firefox` picks the other
+engine; Chromium is refused (ADR 0061).
+
+| File | Purpose |
+|---|---|
+| [`test_webapp_browser_ux.py`](test_webapp_browser_ux.py) | Every public page runs clean under its CSP, fits a phone, and hides what is marked hidden; navigation, theme, language, validation, waiver search, site search and back-to-top behave. |
+| [`test_webapp_browser_e2e.py`](test_webapp_browser_e2e.py) | A visitor's journeys: form to report for three instances, the waiting page's hand-over, severity filters, every export, waivers, no JavaScript, keyboard only, a German report, an unknown uuid. |
+
 ### Self-refreshing data
 
 | File | Purpose |
@@ -187,6 +201,8 @@ is needed.
 | File | Purpose |
 |---|---|
 | [`test_check_pull_request.py`](test_check_pull_request.py) | `scripts/check_pull_request.py`: a changelog entry is present, and version bumps only move forward. |
+| [`test_claude_hooks.py`](test_claude_hooks.py) | The Claude Code hooks in `.claude/hooks/` keep refusing merges, force-pushes, hand edits to generated files, and real hosts, scan output or personal data in commits, and refuse when they cannot run. |
+| [`test_dependency_policy.py`](test_dependency_policy.py) | `scripts/check_dependencies.py`: every Python dependency has an approved, tested and reviewed record, or predates the policy, and the grandfather list never grows. |
 | [`test_release_notes.py`](test_release_notes.py) | `scripts/release_notes.py` turns `## [Unreleased]` into the release section. |
 | [`test_release_dry_run.py`](test_release_dry_run.py) | The release rehearsal matches the release, and publishing to PyPI happens last. |
 | [`test_security_advisories.py`](test_security_advisories.py) | Every `### Security` changelog entry has a decided record in `security/advisories/`. |

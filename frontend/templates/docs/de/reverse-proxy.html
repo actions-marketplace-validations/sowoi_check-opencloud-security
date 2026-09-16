@@ -11,20 +11,19 @@
   <p class="lede">{{ t('docs.reverse-proxy.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de') %}
+{% if locale not in ('en', 'de', 'fr') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
 <article class="docs-article card section-gap" data-reveal lang="de">
-<h1 id="reverse-proxys-einrichten">Reverse Proxys einrichten</h1>
 <p>Die Anforderungen unterscheiden sich danach, ob der Proxy vor OpenCloud oder vor dem Scan-Webdienst steht:</p>
 <ul>
 <li><strong>Vor OpenCloud</strong> beeinflusst er die gemessenen TLS-Einstellungen, Header und Zugriffskontrollen. Siehe <a href="#in-front-of-opencloud">OpenCloud absichern</a>.</li>
 <li><strong>Vor dem Scan-Webdienst</strong> muss er Client-Adressen verlässlich weitergeben und lange API- beziehungsweise MCP-Antworten zulassen. Siehe <a href="#in-front-of-the-scan-service">Scan-Webdienst veröffentlichen</a>.</li>
 </ul>
-<p>Die Beispiele behandeln nginx, Apache, Caddy, Traefik und HAProxy. Ersetzen Sie <code>opencloud.example.com</code> und <code>scan.example.com</code> durch Ihre eigenen Namen.</p>
+<p>Die Beispiele behandeln nginx, Apache, Caddy, Traefik und HAProxy. Ersetze <code>opencloud.example.com</code> und <code>scan.example.com</code> durch deine eigenen Namen.</p>
 <h2 id="in-front-of-opencloud">Vor OpenCloud</h2>
-<p>OpenClouds eigener Proxy liefert bereits Sicherheitsheader. Fehlen sie im Scan, prüfen Sie, ob eine vorgeschaltete Komponente sie entfernt oder die Anfrage selbst beantwortet.</p>
+<p>OpenClouds eigener Proxy liefert bereits Sicherheitsheader. Fehlen sie im Scan, prüfe, ob eine vorgeschaltete Komponente sie entfernt oder die Anfrage selbst beantwortet.</p>
 <h3 id="the-headers-this-check-looks-for">Erwartete Header</h3>
 <table>
 <thead>
@@ -68,7 +67,7 @@
 </tr>
 </tbody>
 </table>
-<p>Setzen Sie HSTS nur auf HTTPS-Antworten. Browser ignorieren diesen Header über unverschlüsseltes HTTP.</p>
+<p>Setze HSTS nur auf HTTPS-Antworten. Browser ignorieren diesen Header über unverschlüsseltes HTTP.</p>
 <h3 id="two-findings-decided-here-that-are-not-headers">Weitere Proxy-Prüfungen</h3>
 <table>
 <thead>
@@ -132,8 +131,8 @@ server {
     return 308 https://$host$request_uri;
 }
 </code></pre>
-<p>Bei der üblichen <code>add_header</code>-Vererbung übernimmt ein <code>location</code>-Block die übergeordneten Header nur, wenn er keine eigenen <code>add_header</code>-Direktiven enthält. Wiederholen Sie die benötigten Header in solchen Blöcken oder verwenden Sie eine dazu passende gemeinsame Konfiguration.</p>
-<p>Die CSP ist im Beispiel absichtlich nicht neu gesetzt. OpenCloud liefert seine eigene Richtlinie. Überschreiben Sie sie nur nach Prüfung der tatsächlich fehlenden oder ungeeigneten Richtlinie und testen Sie anschließend die Oberfläche.</p>
+<p>Bei der üblichen <code>add_header</code>-Vererbung übernimmt ein <code>location</code>-Block die übergeordneten Header nur, wenn er keine eigenen <code>add_header</code>-Direktiven enthält. Wiederhole die benötigten Header in solchen Blöcken oder verwende eine dazu passende gemeinsame Konfiguration.</p>
+<p>Die CSP ist im Beispiel absichtlich nicht neu gesetzt. OpenCloud liefert seine eigene Richtlinie. Überschreibe sie nur nach Prüfung der tatsächlich fehlenden oder ungeeigneten Richtlinie und teste anschließend die Oberfläche.</p>
 <h3 id="apache-httpd">Apache httpd</h3>
 <pre><code class="language-apache">&lt;VirtualHost *:443&gt;
     ServerName opencloud.example.com
@@ -158,7 +157,7 @@ server {
     RequestHeader set X-Forwarded-Proto &quot;https&quot;
 &lt;/VirtualHost&gt;
 </code></pre>
-<p>Benötigt werden <code>mod_headers</code>, <code>mod_proxy</code>, <code>mod_proxy_http</code> und <code>mod_ssl</code>. Apache ergänzt <code>X-Forwarded-For</code> selbst; setzen Sie die Client-Adresse nicht zusätzlich doppelt.</p>
+<p>Benötigt werden <code>mod_headers</code>, <code>mod_proxy</code>, <code>mod_proxy_http</code> und <code>mod_ssl</code>. Apache ergänzt <code>X-Forwarded-For</code> selbst; setze die Client-Adresse nicht zusätzlich doppelt.</p>
 <h3 id="caddy">Caddy</h3>
 <pre><code class="language-caddyfile">opencloud.example.com {
     encode zstd gzip
@@ -201,7 +200,7 @@ server {
   - &quot;traefik.http.middlewares.opencloud-headers.headers.customResponseHeaders.X-Robots-Tag=noindex, nofollow&quot;
   - &quot;traefik.http.middlewares.opencloud-headers.headers.customResponseHeaders.X-XSS-Protection=1; mode=block&quot;
 </code></pre>
-<p>Konfigurieren Sie HSTS im Headers-Middleware über <code>stsSeconds</code>. Eine zusätzliche Vorgabe über <code>customResponseHeaders</code> kann dadurch überschrieben werden. HSTS wird auf dem TLS-Router gesendet.</p>
+<p>Konfiguriere HSTS im Headers-Middleware über <code>stsSeconds</code>. Eine zusätzliche Vorgabe über <code>customResponseHeaders</code> kann dadurch überschrieben werden. HSTS wird auf dem TLS-Router gesendet.</p>
 <h3 id="haproxy">HAProxy</h3>
 <pre><code class="language-haproxy">frontend https-in
     bind :443 ssl crt /etc/ssl/opencloud/opencloud.pem alpn h2,http/1.1
@@ -223,14 +222,14 @@ backend opencloud
     timeout server 1h
     server oc1 127.0.0.1:9200 check
 </code></pre>
-<p><code>set-header</code> ersetzt einen vorhandenen Wert. Verwenden Sie hier nicht <code>add-header</code>, um doppelte HSTS-Header zu vermeiden.</p>
+<p><code>set-header</code> ersetzt einen vorhandenen Wert. Verwende hier nicht <code>add-header</code>, um doppelte HSTS-Header zu vermeiden.</p>
 <h3 id="mistakes-that-cost-a-grade">Häufige Fehler</h3>
 <ul>
-<li><strong>Header fehlen auf Fehlerantworten.</strong> Verwenden Sie bei nginx <code>add_header ... always</code> und bei Apache <code>Header always set</code>, wenn der Header auch auf solchen Antworten benötigt wird.</li>
+<li><strong>Header fehlen auf Fehlerantworten.</strong> Verwende bei nginx <code>add_header ... Always</code> und bei Apache <code>Header always set</code>, wenn der Header auch auf solchen Antworten benötigt wird.</li>
 <li><strong>Der Proxy antwortet selbst.</strong> Eine Wartungs- oder Fehlerseite kann die Produkt- und Versionserkennung verhindern. Siehe <a href="/documentation/troubleshooting">Fehlersuche</a>.</li>
-<li><strong>Ungeprüfte Weiterleitungsheader.</strong> Überschreiben Sie vom Client gelieferte Werte am Netzrand oder richten Sie eine eindeutig definierte Vertrauenskette ein.</li>
-<li><strong>Fremdes <code>X-Forwarded-Host</code>.</strong> Wenn OpenCloud daraus öffentliche URLs erzeugt, meldet der Scanner <code>forwardedHostIgnored</code>. Setzen Sie <code>OC_URL</code> und einen kontrollierten Hostheader im Proxy, etwa <code>proxy_set_header X-Forwarded-Host $host;</code> zusammen mit geprüften virtuellen Hosts.</li>
-<li><strong>Kein ablehnender Standardhost.</strong> nginx oder Apache können unbekannte Hostnamen an den ersten virtuellen Host weiterreichen. Dessen Weiterleitung kann dann den fremden Namen übernehmen, obwohl OpenCloud korrekt konfiguriert ist. Prüfen Sie dies mit:</li>
+<li><strong>Ungeprüfte Weiterleitungsheader.</strong> Überschreibe vom Client gelieferte Werte am Netzrand oder richte eine eindeutig definierte Vertrauenskette ein.</li>
+<li><strong>Fremdes <code>X-Forwarded-Host</code>.</strong> Wenn OpenCloud daraus öffentliche URLs erzeugt, meldet der Scanner <code>forwardedHostIgnored</code>. Setze <code>OC_URL</code> und einen kontrollierten Hostheader im Proxy, etwa <code>proxy_set_header X-Forwarded-Host $host;</code> zusammen mit geprüften virtuellen Hosts.</li>
+<li><strong>Kein ablehnender Standardhost.</strong> nginx oder Apache können unbekannte Hostnamen an den ersten virtuellen Host weiterreichen. Dessen Weiterleitung kann dann den fremden Namen übernehmen, obwohl OpenCloud korrekt konfiguriert ist. Prüfe dies mit:</li>
 </ul>
 <p><code>bash
   curl -sI -H "Host: unknown.invalid" https://opencloud.example.com/.well-known/openid-configuration</code></p>
@@ -246,18 +245,18 @@ backend opencloud
       return 444;
   }</code></p>
 <p>Unter Apache kann der erste <code>&lt;VirtualHost&gt;</code> je Port mit <code>Redirect 403 /</code> ablehnen. Caddy und Traefik routen unbekannte Namen normalerweise nicht an eine konfigurierte Site.
-- <strong>Die Oberfläche bleibt über HTTP erreichbar.</strong> Leiten Sie direkt auf HTTPS um oder schließen Sie Port 80; siehe <code>httpsEnforced</code> oben.
+- <strong>Die Oberfläche bleibt über HTTP erreichbar.</strong> Leite direkt auf HTTPS um oder schließe Port 80; siehe <code>httpsEnforced</code> oben.
 - <strong>Nicht vertrauenswürdiges Zertifikat.</strong> Ein selbstsigniertes, abgelaufenes oder unpassendes Zertifikat bleibt ein TLS-Befund, unabhängig von den Headern.</p>
 <h2 id="in-front-of-the-scan-service">Vor dem Scan-Webdienst</h2>
 <p>Die <a href="/documentation/web-service">Webanwendung</a> liefert ihre eigenen Sicherheitsheader einschließlich CSP. Der Proxy muss vor allem die Client-Adresse korrekt übergeben und lange Antworten beziehungsweise Ereignisströme unterstützen.</p>
 <p><a href="https://github.com/sowoi/check-opencloud-security/blob/main/docker/setup-wizard.py"><code>docker/setup-wizard.py</code></a> kann die Konfiguration für nginx, Apache, Caddy oder Traefik erzeugen. Bei einer Authentik-Bereitstellung ergänzt er auch Forward Auth für <code>/admin</code> und den virtuellen Host für den Anmeldeanbieter. Die folgenden Abschnitte dienen auch als Referenz für manuell eingerichtete Proxys.</p>
 <h3 id="what-the-service-needs-from-a-proxy">Anforderungen des Dienstes</h3>
 <ul>
-<li><strong>Verlässliche Client-Adresse:</strong> Geben Sie <code>X-Forwarded-For</code> weiter und aktivieren Sie <code>COS_WEB_TRUST_FORWARDED_FOR=true</code>. Setzen Sie <code>COS_WEB_TRUSTED_PROXY_HOPS</code> auf die Zahl der von Ihnen kontrollierten Proxys. Der Dienst liest die entsprechende Adresse von rechts. Ein zu hoher Wert kann vom Client kontrollierte Einträge erreichen; ein zu niedriger fasst Besucher unter einer Proxy-Adresse zusammen.</li>
-<li><strong>Ausreichende Zeitlimits:</strong> Scans, Exporte und wartende MCP-Aufrufe können länger dauern. Wählen Sie mindestens 120 Sekunden für entsprechende Antworten und ein zum MCP-Ablauf passendes längeres Limit.</li>
+<li><strong>Verlässliche Client-Adresse:</strong> Gib <code>X-Forwarded-For</code> weiter und aktiviere <code>COS_WEB_TRUST_FORWARDED_FOR=true</code>. Setze <code>COS_WEB_TRUSTED_PROXY_HOPS</code> auf die Zahl der von dir kontrollierten Proxys. Der Dienst liest die entsprechende Adresse von rechts. Ein zu hoher Wert kann vom Client kontrollierte Einträge erreichen; ein zu niedriger fasst Besucher unter einer Proxy-Adresse zusammen.</li>
+<li><strong>Ausreichende Zeitlimits:</strong> Scans, Exporte und wartende MCP-Aufrufe können länger dauern. Wähle mindestens 120 Sekunden für entsprechende Antworten und ein zum MCP-Ablauf passendes längeres Limit.</li>
 <li><strong>Kein Puffern auf <code>/mcp</code>:</strong> Der Ereignisstrom muss fortlaufend weitergegeben werden.</li>
-<li><strong>Unveränderte Discovery-Pfade:</strong> Leiten Sie <code>/.well-known/ai.json</code>, <code>/openapi.json</code>, <code>/arazzo.json</code>, <code>/robots.txt</code> und <code>/sitemap.xml</code> an die Anwendung weiter. Eigene ACME-Regeln dürfen sie nicht abfangen.</li>
-<li><strong>Öffentliche Basisadresse:</strong> Setzen Sie <code>COS_WEB_PUBLIC_BASE_URL</code> für kanonische Links, Sitemap und Discovery-URLs.</li>
+<li><strong>Unveränderte Discovery-Pfade:</strong> Leite <code>/.well-known/ai.json</code>, <code>/openapi.json</code>, <code>/arazzo.json</code>, <code>/robots.txt</code> und <code>/sitemap.xml</code> an die Anwendung weiter. Eigene ACME-Regeln dürfen sie nicht abfangen.</li>
+<li><strong>Öffentliche Basisadresse:</strong> Setze <code>COS_WEB_PUBLIC_BASE_URL</code> für kanonische Links, Sitemap und Discovery-URLs.</li>
 </ul>
 <h3 id="nginx_1">nginx</h3>
 <pre><code class="language-nginx">map $http_upgrade $connection_upgrade {
@@ -310,7 +309,7 @@ COS_WEB_TRUSTED_PROXY_HOPS=1
 COS_WEB_PUBLIC_BASE_URL=https://scan.example.com
 COS_WEB_MCP_ALLOWED_HOSTS=scan.example.com
 </code></pre>
-<p><code>COS_WEB_MCP_ALLOWED_HOSTS</code> begrenzt die für MCP akzeptierten Hostnamen. Setzen Sie die Liste passend zur öffentlichen Adresse, auch wenn der Proxy den Host bereits kontrolliert.</p>
+<p><code>COS_WEB_MCP_ALLOWED_HOSTS</code> begrenzt die für MCP akzeptierten Hostnamen. Setze die Liste passend zur öffentlichen Adresse, auch wenn der Proxy den Host bereits kontrolliert.</p>
 <h3 id="apache-httpd_1">Apache httpd</h3>
 <pre><code class="language-apache">&lt;VirtualHost *:443&gt;
     ServerName scan.example.com
@@ -338,7 +337,7 @@ COS_WEB_MCP_ALLOWED_HOSTS=scan.example.com
     ProxyPassReverse / http://127.0.0.1:8811/
 &lt;/VirtualHost&gt;
 </code></pre>
-<p>Beachten Sie die Reihenfolge der Proxy-Regeln: Die besondere Behandlung von <code>/mcp</code> darf nicht von der allgemeinen Weiterleitung übergangen werden.</p>
+<p>Beachte die Reihenfolge der Proxy-Regeln: Die besondere Behandlung von <code>/mcp</code> darf nicht von der allgemeinen Weiterleitung übergangen werden.</p>
 <h3 id="caddy_1">Caddy</h3>
 <pre><code class="language-caddyfile">scan.example.com {
     encode zstd gzip
@@ -358,7 +357,7 @@ COS_WEB_MCP_ALLOWED_HOSTS=scan.example.com
     }
 }
 </code></pre>
-<p><code>flush_interval -1</code> deaktiviert das Puffern für den Ereignisstrom. Bei einem einzelnen Caddy-Proxy verwenden Sie <code>COS_WEB_TRUST_FORWARDED_FOR=true</code> und <code>COS_WEB_TRUSTED_PROXY_HOPS=1</code>.</p>
+<p><code>flush_interval -1</code> deaktiviert das Puffern für den Ereignisstrom. Bei einem einzelnen Caddy-Proxy verwende <code>COS_WEB_TRUST_FORWARDED_FOR=true</code> und <code>COS_WEB_TRUSTED_PROXY_HOPS=1</code>.</p>
 <h3 id="traefik_1">Traefik</h3>
 <pre><code class="language-yaml">labels:
   - &quot;traefik.enable=true&quot;
@@ -370,7 +369,7 @@ COS_WEB_MCP_ALLOWED_HOSTS=scan.example.com
   # only thing to get right is the timeout on the entrypoint.
   - &quot;traefik.http.services.scan.loadbalancer.responseForwarding.flushInterval=1ms&quot;
 </code></pre>
-<p>Ergänzen Sie die statische Konfiguration:</p>
+<p>Ergänze die statische Konfiguration:</p>
 <pre><code class="language-yaml">entryPoints:
   websecure:
     address: &quot;:443&quot;
@@ -380,7 +379,7 @@ COS_WEB_MCP_ALLOWED_HOSTS=scan.example.com
         writeTimeout: 0       # a scan may take a minute, an MCP call longer
         idleTimeout: 300s
 </code></pre>
-<p>Traefik ergänzt <code>X-Forwarded-For</code>. Bei einem einzelnen kontrollierten Proxy liest der Dienst mit <code>COS_WEB_TRUSTED_PROXY_HOPS=1</code> den rechten, von Traefik gesetzten Eintrag. Bei weiteren Proxys passen Sie den Wert an die tatsächliche kontrollierte Kette an.</p>
+<p>Traefik ergänzt <code>X-Forwarded-For</code>. Bei einem einzelnen kontrollierten Proxy liest der Dienst mit <code>COS_WEB_TRUSTED_PROXY_HOPS=1</code> den rechten, von Traefik gesetzten Eintrag. Bei weiteren Proxys passt du den Wert an die tatsächliche kontrollierte Kette an.</p>
 <h3 id="haproxy_1">HAProxy</h3>
 <pre><code class="language-haproxy">frontend scan-in
     bind :443 ssl crt /etc/ssl/scan/scan.pem alpn h2,http/1.1
@@ -396,7 +395,7 @@ backend scan
     timeout tunnel 1h
     server scan1 127.0.0.1:8811 check
 </code></pre>
-<p><code>timeout tunnel</code> berücksichtigt langlebige Verbindungen; stimmen Sie es zusammen mit <code>timeout server</code> auf den MCP-Betrieb ab.</p>
+<p><code>timeout tunnel</code> berücksichtigt langlebige Verbindungen; stimme es zusammen mit <code>timeout server</code> auf den MCP-Betrieb ab.</p>
 <h3 id="checking-the-result">Einrichtung prüfen</h3>
 <pre><code class="language-bash"># The client address the service actually sees, through the proxy.
 curl -sS https://scan.example.com/healthz
@@ -418,7 +417,7 @@ curl -sS -X POST https://scan.example.com/mcp \
         &quot;protocolVersion&quot;:&quot;2025-06-18&quot;,&quot;capabilities&quot;:{},
         &quot;clientInfo&quot;:{&quot;name&quot;:&quot;curl&quot;,&quot;version&quot;:&quot;1&quot;&#125;&#125;}'
 </code></pre>
-<p>Prüfen Sie das Client-Limit mit zwei getrennten Adressen. Erreicht eine Adresse ihr <code>COS_WEB_IP_RATE_LIMIT</code>, sollte sie <code>429</code> erhalten. Die zweite sollte weiterhin Anfragen stellen können, sofern keine andere Begrenzung greift. Werden beide gemeinsam begrenzt, prüfen Sie die weitergegebene Client-Adresse.</p>
+<p>Prüfe das Client-Limit mit zwei getrennten Adressen. Erreicht eine Adresse ihr <code>COS_WEB_IP_RATE_LIMIT</code>, sollte sie <code>429</code> erhalten. Die zweite sollte weiterhin Anfragen stellen können, sofern keine andere Begrenzung greift. Werden beide gemeinsam begrenzt, prüfe die weitergegebene Client-Adresse.</p>
 <hr>
 <p>Dieses unabhängige Community-Projekt steht in keiner Verbindung zu OpenCloud GmbH und wird von ihr weder unterstützt noch empfohlen. „OpenCloud“ und zugehörige Marken gehören ihren jeweiligen Inhabern und dienen hier nur zur Bezeichnung der geprüften Software.</p>
 </article>

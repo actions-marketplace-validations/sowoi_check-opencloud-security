@@ -1,4 +1,4 @@
-# Protect OpenCloud Security Scanner MCP with Authentik
+# Den MCP-Endpunkt des OpenCloud Security Scanners mit Authentik schützen
 
 Dieser Leitfaden richtet den Scan-Webdienst zusammen mit
 [Authentik](https://goauthentik.io) ein. Der MCP-Endpunkt `/mcp` verlangt damit
@@ -31,7 +31,7 @@ den Autorisierungsserver. Die gleichen Angaben stehen unter `/.well-known/ai.jso
 
 `docker/docker-compose.authentik.yml` enthält den vollständigen Stack:
 Webanwendung, Scan-Worker, Redis, Authentik-Server, PostgreSQL und
-Authentik-Worker. Starten Sie ihn mit:
+Authentik-Worker. Starte ihn mit:
 
 ```bash
 cd docker
@@ -39,8 +39,8 @@ cd docker
 docker compose -f docker-compose.authentik.yml up -d
 ```
 
-Öffnen Sie anschließend **<http://127.0.0.1:9000/if/flow/initial-setup/>** und
-setzen Sie das Passwort für `akadmin`. Der abschließende Schrägstrich ist
+Öffne anschließend **<http://127.0.0.1:9000/if/flow/initial-setup/>** und
+setze das Passwort für `akadmin`. Der abschließende Schrägstrich ist
 notwendig. Dieser Einrichtungsablauf steht nur einmal zur Verfügung.
 Bei der ersten Anmeldung wird zusätzlich ein zweiter Faktor eingerichtet.
 
@@ -60,9 +60,9 @@ vorhandene zu überschreiben:
 | `AUTHENTIK_CLIENT_SECRET` | OAuth-Client-Geheimnis |
 | `COS_WEB_PURGE_TOKEN` | Separater Berechtigungsnachweis zum Löschen von Scandaten |
 
-Sichern Sie diese Datei zusammen mit den Authentik-Daten. Insbesondere muss
+Sichere diese Datei zusammen mit den Authentik-Daten. Insbesondere muss
 `AUTHENTIK_SECRET_KEY` bei einer Wiederherstellung erhalten bleiben.
-Für einen über den eigenen Rechner hinaus erreichbaren Dienst setzen Sie:
+Für einen über den eigenen Rechner hinaus erreichbaren Dienst setze:
 
 ```bash
 AUTHENTIK_URL=https://sso.example.com \
@@ -84,12 +84,12 @@ Hinweise zum Aufbau:
   werden in diesem Stack nicht benötigt.
 - Daten liegen in den benannten Volumes `authentik_database`, `authentik_media`,
   `authentik_templates` und `authentik_certs`.
-- Belassen Sie die interne Zeitzone bei UTC und binden Sie keine lokale
+- Belasse die interne Zeitzone bei UTC und binde keine lokale
   `/etc/localtime` oder `/etc/timezone` ein.
 
 ## E-Mail-Versand einrichten {#sending-mail}
 
-Richten Sie SMTP ein, damit Passwort-Wiederherstellungslinks zugestellt werden
+Richte SMTP ein, damit Passwort-Wiederherstellungslinks zugestellt werden
 können. Ohne externen Mailserver bleibt die lokale Zustellung im Container.
 Server und Worker müssen dieselben Einstellungen erhalten: Der Server sendet
 Testnachrichten, der Worker die übrigen Nachrichten.
@@ -105,7 +105,7 @@ Testnachrichten, der Worker die übrigen Nachrichten.
 | `AUTHENTIK_EMAIL_TIMEOUT` | `10` | Wartezeit in Sekunden |
 | `AUTHENTIK_EMAIL_FROM` | `authentik@localhost` | Absenderadresse |
 
-Aktivieren Sie `USE_TLS` und `USE_SSL` nicht gleichzeitig. Wählen Sie die
+Aktiviere `USE_TLS` und `USE_SSL` nicht gleichzeitig. Wähle die
 Variante, die Ihr Mailserver unterstützt:
 
 ```bash
@@ -122,8 +122,8 @@ docker compose -f docker-compose.authentik.yml up -d
 ```
 
 `authentik-env.sh` hinterlegt die Namen auskommentiert in `.env` und erhält
-bereits gesetzte Werte. Senden Sie unter **System → Settings → Email** eine
-Testnachricht und prüfen Sie anschließend auch das Worker-Log:
+bereits gesetzte Werte. Sende unter **System → Settings → Email** eine
+Testnachricht und prüfe anschließend auch das Worker-Log:
 
 ```bash
 docker compose -f docker-compose.authentik.yml logs -f authentik_worker
@@ -162,12 +162,12 @@ Scanner-Seite als `COS_WEB_MCP_AUTH_AUDIENCE` eingelesen.
 | Token | `https://sso.example.com/application/o/token/` |
 
 Der Token-Endpunkt wählt die Anwendung anhand von `client_id`; Discovery und
-JWKS verwenden den Anwendungs-Slug. Übernehmen Sie den Issuer aus der Discovery,
+JWKS verwenden den Anwendungs-Slug. Übernimm den Issuer aus der Discovery,
 damit er mit dem Wert in den Tokens übereinstimmt.
 
-Ein fehlerhafter Blueprint verhindert den Authentik-Start nicht. Prüfen Sie bei
+Ein fehlerhafter Blueprint verhindert den Authentik-Start nicht. Prüfe bei
 abgewiesenen Tokens auf einem neuen Stack zuerst **Customisation → Blueprints**.
-Bei einem bestehenden Authentik können Sie dieselben Werte über
+Bei einem bestehenden Authentik kannst du dieselben Werte über
 **Applications → Applications → Create with wizard** einrichten.
 
 ## Zweiter Faktor für alle Benutzer {#a-second-factor-for-everybody}
@@ -191,7 +191,7 @@ nun einen einrichten, statt diese Prüfung zu überspringen.
 3. Für WebAuthn: Sicherheitsschlüssel oder Passkey im Browser registrieren.
 4. Spätere Anmeldungen verlangen nach dem Passwort den eingerichteten Faktor.
 5. Unter **Settings → MFA Devices → Enroll → Static tokens** lassen sich
-   Wiederherstellungscodes erzeugen. Bewahren Sie diese getrennt vom Gerät auf.
+   Wiederherstellungscodes erzeugen. Bewahre diese getrennt vom Gerät auf.
 
 Mehrere Faktoren sind möglich. Ein zusätzliches Gerät erleichtert den Zugang,
 wenn das erste verloren geht.
@@ -199,7 +199,7 @@ wenn das erste verloren geht.
 ### Durchsetzung und Wiederherstellung {#how-it-is-enforced}
 
 Der Blueprint ändert die vorhandene Stufe, sodass Benutzer nicht zweimal nach
-einem Faktor gefragt werden. Zum Aufheben der Vorgabe entfernen Sie zunächst
+einem Faktor gefragt werden. Zum Aufheben der Vorgabe entferne zunächst
 die Blueprint-Datei und ändern danach die bestehende Stufeneinstellung.
 
 `client_credentials` verwendet keinen interaktiven Anmeldeablauf; Servicekonten
@@ -224,7 +224,7 @@ Er zeigt anschließend eine Einladungsadresse mit Platzhalter:
 https://sso.example.com/if/flow/opencloud-scanner-enrollment/?itoken=<AUTHENTIK_ENROLLMENT_TOKEN>
 ```
 
-Der enthaltene Token ist ein Geheimnis. Die vollständige Adresse erzeugen Sie
+Der enthaltene Token ist ein Geheimnis. Die vollständige Adresse erzeuge
 mit dem ausgegebenen Befehl aus `.env`:
 
 ```
@@ -242,9 +242,9 @@ Die Einladung ist dreifach begrenzt:
 - Ein bereits vorhandener Benutzername kann nicht erneut registriert werden.
 - Ohne den passenden Token wird der Ablauf vor dem Formular abgewiesen.
 
-Behandeln Sie die Adresse bis zur abgeschlossenen Registrierung aller Personen
-wie ein Passwort. Neue Namen ergänzen Sie durch erneutes Ausführen des
-Assistenten. Zum Ungültigmachen der Adresse ersetzen Sie
+Behandle die Adresse bis zur abgeschlossenen Registrierung aller Personen
+wie ein Passwort. Neue Namen ergänze durch erneutes Ausführen des
+Assistenten. Zum Ungültigmachen der Adresse ersetze
 `AUTHENTIK_ENROLLMENT_TOKEN` durch eine neue UUID und starten Authentik neu.
 Wer nach dem Passwort, aber vor dem zweiten Faktor abbricht, hat bereits ein
 Konto und setzt die Einrichtung bei der normalen Anmeldung fort.
@@ -255,9 +255,9 @@ neuen Datenbank und schließt damit den initialen Einrichtungsablauf. Auf
 vorhandene Konten hat die Variable keine Wirkung.
 
 Beim manuell gestarteten `docker-compose.authentik.yml` ist ohne Enrollment-Token
-keine Einladung aktiv. Legen Sie Konten dann wie unter
+keine Einladung aktiv. Lege Konten dann wie unter
 [Zugang zu MCP vergeben](#adding-somebody-who-may-use-the-endpoint) beschrieben an.
-`--non-interactive` gibt keinen Link aus; bilden Sie ihn aus öffentlicher
+`--non-interactive` gibt keinen Link aus; Bilde ihn aus öffentlicher
 Authentik-Adresse und Token entsprechend dem Kommentar in der Compose-Datei.
 
 ## Operator-Zugang zu /admin {#an-operator-for-admin}
@@ -271,16 +271,16 @@ Für den Operator-Bereich müssen zwei Freigaben zusammenpassen:
 
 ### Mit dem Assistenten {#with-the-wizard}
 
-Aktivieren Sie im Setup-Assistenten den Operator-Bereich und tragen Sie unter
+Aktiviere im Setup-Assistenten den Operator-Bereich und trage unter
 `admin_users` den gewünschten Benutzernamen ein. Die Liste der anzulegenden
 Authentik-Konten enthält ihn automatisch.
 
-Starten Sie den Stack und erzeugen Sie den Einladungslink aus `.env`.
+Starte den Stack und erzeuge den Einladungslink aus `.env`.
 Die Person registriert den exakt angegebenen Namen, wählt ein Passwort und
 richtet einen zweiten Faktor ein. Danach ist der Zugang zu
 `https://scan.example.com/admin` möglich.
 
-Für weitere Operatoren führen Sie den Assistenten im selben Verzeichnis erneut
+Für weitere Operatoren führe den Assistenten im selben Verzeichnis erneut
 aus, ergänzen die Liste, starten die betroffenen Container mit den neuen
 Einstellungen und vergeben die Einladung.
 
@@ -297,25 +297,24 @@ zeitlich begrenzten Wiederherstellungszugang:
 docker compose exec authentik_worker ak create_recovery_key 10 akadmin
 ```
 
-Öffnen Sie den ausgegebenen Pfad an der öffentlichen Authentik-Adresse innerhalb
-von zehn Minuten und setzen Sie ein Passwort. Auch `akadmin` muss einen zweiten
+Öffne den ausgegebenen Pfad an der öffentlichen Authentik-Adresse innerhalb
+von zehn Minuten und setze ein Passwort. Auch `akadmin` muss einen zweiten
 Faktor einrichten.
 
 **2. Konto anlegen.** Unter **Directory → Users → New User → Internal User**
-tragen Sie den Namen exakt wie in `COS_WEB_ADMIN_USERS` ein. Eine E-Mail-Adresse
+trage den Namen exakt wie in `COS_WEB_ADMIN_USERS` ein. Eine E-Mail-Adresse
 erlaubt die Passwort-Wiederherstellung.
 
-**3. Passwort vergeben lassen.** Verwenden Sie **Email recovery link** oder
+**3. Passwort vergeben lassen.** Verwende **Email recovery link** oder
 **Create recovery link**; alternativ steht **Set password** zur Verfügung.
 
-**4. Gruppe zuweisen.** Unter **Groups → Add to existing group** wählen Sie
+**4. Gruppe zuweisen.** Unter **Groups → Add to existing group** wähle
 `opencloud-scanner-operators`. Authentik-Superuserrechte sind dafür nicht nötig.
 
 **5. Anmeldung prüfen.** Die Person öffnet `/admin`, meldet sich bei Authentik
 an, richtet den zweiten Faktor ein und kehrt zum Scan-Webdienst zurück.
 
-Konto und Gruppenzuordnung lassen sich auch über die Shell anlegen. Kopieren
-Sie jeden Befehl als einzelne Zeile, da `ak shell -c` die Zeichenfolge als
+Konto und Gruppenzuordnung lassen sich auch über die Shell anlegen. Kopiere jeden Befehl als einzelne Zeile, da `ak shell -c` die Zeichenfolge als
 Python-Skript ausführt:
 
 ```bash
@@ -332,19 +331,19 @@ ein Passwort zu setzen.
 
 ### Zugang kontrollieren {#checking-it}
 
-Prüfen Sie die Gruppenzuordnung:
+Prüfe die Gruppenzuordnung:
 
 ```bash
 docker compose exec authentik_worker ak shell -c "from authentik.core.models import Group; g = Group.objects.get(name='opencloud-scanner-operators'); print('IN_GROUP', g.users.filter(username='scanokko').exists())" 2>&1 | grep -E 'IN_GROUP|Error|DoesNotExist'
 ```
 
-Testen Sie auch ein Konto außerhalb der Gruppe: Authentik muss dessen Zugang
+Teste auch ein Konto außerhalb der Gruppe: Authentik muss dessen Zugang
 ablehnen. Unter **Events → Logs** stehen Konto und betroffene Anwendung.
 
 ## Den Webdienst mit dem Provider verbinden {#pointing-the-scanner-at-it}
 
 Der mitgelieferte Authentik-Stack setzt diese Werte bereits. Für einen eigenen
-Provider konfigurieren Sie `web_app` entsprechend:
+Provider konfiguriere `web_app` entsprechend:
 
 ```yaml
 COS_WEB_PUBLIC_BASE_URL: "https://scanner.example.com"
@@ -375,37 +374,37 @@ Providers hier akzeptiert werden. Deshalb sind sowohl eine leere
 ## Zugang zu MCP vergeben {#adding-somebody-who-may-use-the-endpoint}
 
 Eine Authentik-Anwendung ohne Bindungen steht grundsätzlich allen Konten dieser
-Installation offen. Beschränken Sie sie vor der allgemeinen Nutzung auf eine
+Installation offen. Beschränke sie vor der allgemeinen Nutzung auf eine
 Gruppe. Der Scan-Webdienst prüft keine Benutzernamen oder Gruppenclaims; die
 Entscheidung, wer ein Token erhält, liegt beim Provider.
 
 ### Gruppe und Anwendungsbindung {#a-group-and-the-binding-that-makes-it-mean-something}
 
-1. Unter **Directory → Groups → Create** legen Sie `opencloud-scanner` ohne
+1. Unter **Directory → Groups → Create** lege `opencloud-scanner` ohne
    Superuserrechte an.
-2. Öffnen Sie **Applications → Applications → OpenCloud security scanner →
+2. Öffne **Applications → Applications → OpenCloud security scanner →
    Policy / Group / User Bindings → Bind existing Group/User**.
-3. Wählen Sie die Gruppe und den Policy-Modus **any**.
+3. Wähle die Gruppe und den Policy-Modus **any**.
 
-Prüfen Sie mit einem Konto außerhalb der Gruppe, dass keine Autorisierung
+Prüfe mit einem Konto außerhalb der Gruppe, dass keine Autorisierung
 möglich ist. Fehlgeschlagene Versuche erscheinen unter **Events → Logs**.
 
 ### Benutzerkonten {#the-person}
 
-Legen Sie ein internes Konto mit Benutzername und E-Mail an. Lassen Sie die
-Person das Passwort per Wiederherstellungslink setzen und nehmen Sie das Konto
+Lege ein internes Konto mit Benutzername und E-Mail an. Lass die
+Person das Passwort per Wiederherstellungslink setzen und nimm das Konto
 in `opencloud-scanner` auf. Ein MCP-Client mit OAuth-Unterstützung führt die
 Anmeldung anschließend im Browser durch. Der zweite Faktor wird beim ersten
 Anmelden eingerichtet.
 
 ### Servicekonten für automatisierte Aufrufe {#the-agent-that-is-nobody}
 
-Für Cronjobs, CI und Server-Agenten legen Sie unter **Directory → Users →
+Für Cronjobs, CI und Server-Agenten lege unter **Directory → Users →
 New User → Service Account** ein eigenes Servicekonto pro Aufrufer an.
-Bewahren Sie das einmal angezeigte App-Passwort auf und nehmen Sie das Konto
+Bewahre das einmal angezeigte App-Passwort auf und nimm das Konto
 in `opencloud-scanner` auf.
 
-Prüfen Sie die Ablaufzeit des App-Passworts und planen Sie die Erneuerung unter
+Prüfe die Ablaufzeit des App-Passworts und plane die Erneuerung unter
 **Directory → Tokens and App passwords**. Separate Konten erlauben es, einen
 Aufrufer zu sperren, ohne die Zugangsdaten aller anderen zu ersetzen.
 Servicekonten haben keinen Zugang zur normalen Benutzer- oder Adminoberfläche.
@@ -436,7 +435,7 @@ curl -s https://sso.example.com/application/o/token/ \
 ```
 
 `username` und `password` gehören zum Servicekonto; `client_id` und
-`client_secret` stammen aus `.env`. Fordern Sie die konfigurierten Scopes an.
+`client_secret` stammen aus `.env`. Fordere die konfigurierten Scopes an.
 Ohne zusätzliche Scope-Vorgaben genügt hier `openid`.
 
 Für Clients mit nur einem Geheimnisfeld kann der Benutzername eingebettet werden:
@@ -464,7 +463,7 @@ curl -s https://sso.example.com/application/o/token/ \
 
 Das eignet sich für einen ersten Funktionstest. Bei gemeinsamer Nutzung lassen
 sich einzelne Aufrufer jedoch nicht getrennt sperren. Sobald eine Gruppenbindung
-besteht, muss auch dieses erzeugte Konto der Gruppe angehören. Verwenden Sie
+besteht, muss auch dieses erzeugte Konto der Gruppe angehören. Verwende
 für den dauerhaften Betrieb getrennte Servicekonten.
 
 ### Interaktive Anmeldung {#as-a-person}
@@ -474,13 +473,13 @@ Resource-Metadaten, öffnet den Browser und übernimmt das Token nach der Anmeld
 Der Blueprint erlaubt Loopback-Weiterleitungen auf `127.0.0.1` mit variablem
 Port und verwendet den Ablauf ohne zusätzliche Zustimmungsseite.
 
-Falls der Client eine Registrierung benötigt, legen Sie ihn unter
+Falls der Client eine Registrierung benötigt, lege ihn unter
 **Applications → Providers** an. Dynamische Registrierung ist bei Authentik
 standardmäßig deaktiviert und setzt einen Registrierungstoken voraus.
 
 ### Den Token prüfen {#reading-the-token-you-got}
 
-Lesen Sie bei Problemen zunächst die Claims aus. Das Dekodieren allein
+Lies bei Problemen zunächst die Claims aus. Das Dekodieren allein
 verifiziert noch keine Signatur:
 
 ```bash
@@ -495,7 +494,7 @@ python -c 'import base64,json,sys;p=sys.argv[1].split(".")[1];print(json.dumps(j
 | `scope` | Enthält alle geforderten Scopes |
 | `sub` | Vom Provider vergeben; vom Scan-Webdienst nicht ausgewertet |
 
-Rufen Sie anschließend MCP auf:
+rufst du anschließend MCP auf:
 
 ```bash
 curl -s https://scanner.example.com/mcp \
@@ -505,8 +504,8 @@ curl -s https://scanner.example.com/mcp \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
 ```
 
-Eine Werkzeugliste bestätigt den erfolgreichen Zugriff. Bei 401 prüfen Sie
-Issuer, Audience, Ablaufdatum, Signaturalgorithmus und Scopes. Verwenden Sie ein
+Eine Werkzeugliste bestätigt den erfolgreichen Zugriff. Bei 401 prüfe
+Issuer, Audience, Ablaufdatum, Signaturalgorithmus und Scopes. Verwende ein
 Token für mehrere Aufrufe bis zu seinem Ablauf, statt für jede Anfrage ein neues
 anzufordern. Die hier verwendeten JWTs werden lokal anhand der JWKS geprüft.
 
@@ -548,9 +547,9 @@ Beide Werte kommen aus den HTTP-Headern, nicht aus Werkzeugargumenten.
 
 ## Betrieb hinter einem Reverse Proxy {#behind-a-reverse-proxy}
 
-Authentik bildet den Issuer anhand des übergebenen Hosts. Lassen Sie den Proxy
+Authentik bildet den Issuer anhand des übergebenen Hosts. Lass den Proxy
 den richtigen öffentlichen `Host` erhalten und `X-Forwarded-Proto` passend zur
-Verbindung setzen. Ergänzen Sie bei Bedarf die Proxy-Adresse in
+Verbindung setzen. Ergänze bei Bedarf die Proxy-Adresse in
 `AUTHENTIK_LISTEN__TRUSTED_PROXY_CIDRS`. Authentik benötigt einen eigenen
 Hostnamen statt eines Unterpfads.
 
@@ -561,7 +560,7 @@ Metadaten. Die erwartete Token-Audience wird separat über
 
 ## Sicherung {#backing-it-up}
 
-Sichern Sie folgende Bestandteile:
+Sichere folgende Bestandteile:
 
 | Bestandteil | Speicherort | Zweck |
 |:--|:--|:--|
@@ -594,9 +593,9 @@ cp .env "authentik-env-$stamp.backup"
 ```
 
 Compose stellt den Projektnamen vor die Volume-Namen. Mit `docker volume ls`
-sehen Sie die tatsächlichen Namen. Der Datenbankdump enthält Zugangsdaten und
-Schlüssel: Verschlüsseln Sie die Sicherung, bewahren Sie sie außerhalb des
-Hosts auf und testen Sie eine Wiederherstellung.
+siehst du die tatsächlichen Namen. Der Datenbankdump enthält Zugangsdaten und
+Schlüssel: Verschlüssele die Sicherung, bewahre sie außerhalb des
+Hosts auf und teste eine Wiederherstellung.
 
 ## Wiederherstellung {#restoring-it}
 
@@ -624,14 +623,14 @@ done
 docker compose $stack up -d
 ```
 
-Stellen Sie zunächst mit der zur Sicherung passenden PostgreSQL-Hauptversion
-wieder her und führen Sie danach gegebenenfalls ein Upgrade durch.
+Stelle zunächst mit der zur Sicherung passenden PostgreSQL-Hauptversion
+wieder her und führe danach gegebenenfalls ein Upgrade durch.
 Der Scan-Webdienst hält keine eigenen Provider-Konten; seine Konfiguration
 muss erhalten bleiben, die Signaturschlüssel lädt er erneut.
 
 ## Fehler eingrenzen {#when-it-does-not-work}
 
-| Symptom | Was Sie prüfen sollten |
+| Symptom | Was Du prüfst sollten |
 |:--|:--|
 | Startfehler zu Issuer, Resource-URL oder HTTPS | Vollständigkeit der MCP-Authentifizierungseinstellungen |
 | Ständig 401 | `iss`, `aud`, Ablaufdatum, Scopes und Provider-Schlüssel |
@@ -656,7 +655,7 @@ muss erhalten bleiben, die Signaturschlüssel lädt er erneut.
 | PostgreSQL 18 beanstandet Volume-Pfad | Volume unter `/var/lib/postgresql` einbinden; ältere Hauptversionen erfordern eine Migration |
 | `Address family not supported by protocol` | Auf Hosts ohne IPv6 alle drei `AUTHENTIK_LISTEN__*`-Listener einschließlich Metriken auf IPv4 setzen |
 
-Kontrollieren Sie nach Konfigurationsänderungen auch den nicht angemeldeten Zugriff:
+Kontrolliere nach Konfigurationsänderungen auch den nicht angemeldeten Zugriff:
 
 ```bash
 curl -s https://scanner.example.com/.well-known/ai.json | jq .mcp.authentication
@@ -667,7 +666,7 @@ curl -si https://scanner.example.com/mcp -X POST -d '{}' | grep -i www-authentic
 ## Einen anderen Provider verwenden {#using-a-provider-that-is-not-authentik}
 
 Auch andere Provider sind geeignet, wenn sie JWT-Zugriffstokens asymmetrisch
-signieren und die öffentlichen Schlüssel als JWKS bereitstellen. Setzen Sie
+signieren und die öffentlichen Schlüssel als JWKS bereitstellen. Setze
 Issuer und Audience entsprechend den tatsächlichen Claims und bei Bedarf
 `COS_WEB_MCP_AUTH_JWKS_URL`.
 
@@ -678,7 +677,7 @@ mitgeliefert.
 ---
 
 Dies ist ein unabhängiges Community-Projekt. Es ist weder mit OpenCloud GmbH
-noch mit Authentik Security, Inc. verbunden und wird von diesen Unternehmen
+noch mit Authentik Security, Inc. Verbunden und wird von diesen Unternehmen
 nicht unterstützt. Die genannten Marken gehören ihren jeweiligen Inhabern.
 
 ## Marken und Unabhängigkeit

@@ -161,8 +161,6 @@ runs:
           "$RUNNER_TEMP/opencloud-security/bin/python" -m pip install \
             --quiet --disable-pip-version-check "check-opencloud-security"
         fi
-        echo "$RUNNER_TEMP/opencloud-security/bin" >> "$GITHUB_PATH"
-
     - name: Scan the instance
       id: scan
       shell: bash
@@ -203,7 +201,8 @@ runs:
         # shellcheck disable=SC2206
         [ -n "$INPUT_EXTRA_ARGS" ] && args+=($INPUT_EXTRA_ARGS)
 
-        check-opencloud-security "${args[@]}" > "$OUTPUT_FILE"
+        "$RUNNER_TEMP/opencloud-security/bin/check-opencloud-security" \
+          "${args[@]}" > "$OUTPUT_FILE"
         state=$?
         echo "exit-code=$state" >> "$GITHUB_OUTPUT"
         cat "$OUTPUT_FILE"

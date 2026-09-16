@@ -83,11 +83,11 @@ def test_an_unknown_document_is_the_same_404_as_any_unknown_page():
     assert "Nothing here" in response.text
 
 
-@pytest.mark.parametrize("locale,body_language", [("en", "en"), ("de", "de"), ("fr", "en"), ("es", "en")])
+@pytest.mark.parametrize("locale,body_language", [("en", "en"), ("de", "de"), ("fr", "fr"), ("es", "en")])
 def test_every_guide_serves_the_selected_translation_or_an_explicit_fallback(
     locale: str, body_language: str,
 ):
-    """German guides must be complete, while French and Spanish retain English bodies."""
+    """English, German and French guides serve their matching source bodies."""
     test_client = client()
     for document in DOCUMENTATION_PAGES:
         response = test_client.get(
@@ -97,6 +97,7 @@ def test_every_guide_serves_the_selected_translation_or_an_explicit_fallback(
         body = re.search(r'<article class="docs-article.*?</article>', response.text, re.DOTALL)
         assert body is not None
         assert f'lang="{body_language}"' in body[0]
+        assert "<h1" not in body[0]
         template = generator.render_page(document.slug, body_language)
         expected = re.search(r'<article class="docs-article.*?</article>', template, re.DOTALL)
         assert expected is not None
@@ -106,17 +107,17 @@ def test_every_guide_serves_the_selected_translation_or_an_explicit_fallback(
         if first_heading:
             assert first_heading[0] in body[0]
         notice = CATALOGUES[locale]["docs.guide.english_notice"]
-        assert (notice in response.text) == (locale in ("fr", "es"))
+        assert (notice in response.text) == (locale == "es")
 
 
 def test_german_guides_keep_the_english_section_anchors():
     """Cross-guide links must reach the same section after a language switch."""
     for document in DOCUMENTATION_PAGES:
         anchors = []
-        for language in ("en", "de"):
+        for language in ("en", "de", "fr"):
             template = generator.render_page(document.slug, language)
             anchors.append(re.findall(r'<h[2-6] id="([^"]+)"', template))
-        assert anchors[0] == anchors[1], document.slug
+        assert anchors[0] == anchors[1] == anchors[2], document.slug
 
 
 def test_a_saved_language_choice_selects_the_german_guide_body():

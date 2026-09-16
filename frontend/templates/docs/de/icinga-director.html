@@ -11,21 +11,20 @@
   <p class="lede">{{ t('docs.icinga-director.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de') %}
+{% if locale not in ('en', 'de', 'fr') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
 <article class="docs-article card section-gap" data-reveal lang="de">
-<h1 id="icinga-director">Icinga Director</h1>
 <p><a href="https://icinga.com/docs/icinga-director/latest/">Icinga Director</a> verwaltet <code>CheckCommand</code>, <code>Service Template</code> und <code>Service</code> über eine Weboberfläche. Die folgende Einrichtung funktioniert sowohl mit der nativen Installation als auch mit dem <a href="/documentation/installation#docker">Docker-Image</a>.</p>
 <ol>
 <li>
 <p><strong>CheckCommand anlegen</strong>
-   - Öffnen Sie <em>Icinga Director → Commands → Add</em>.
-   - Setzen Sie <strong>Command name</strong> auf <code>check_opencloud_security</code>.
-   - Wählen Sie als <strong>Command</strong> bei nativer Installation <code>/usr/lib/nagios/plugins/check-opencloud-security</code> oder den tatsächlichen Installationspfad; siehe <a href="/documentation/reference#installation">Installation</a>.
-   - Für Docker verwenden Sie <code>/usr/bin/docker</code>. Die festen Argumente <code>run</code>, <code>--rm</code> und der Image-Name stehen im <a href="/documentation/installation#using-the-docker-image-instead">Docker-CheckCommand-Beispiel</a>.
-   - Wählen Sie <strong>Command type: Plugin Check Command</strong>.</p>
+   - Öffne <em>Icinga Director → Commands → Add</em>.
+   - Setze <strong>Command name</strong> auf <code>check_opencloud_security</code>.
+   - Wähle als <strong>Command</strong> bei nativer Installation <code>/usr/lib/nagios/plugins/check-opencloud-security</code> oder den tatsächlichen Installationspfad; siehe <a href="/documentation/reference#installation">Installation</a>.
+   - Für Docker verwende <code>/usr/bin/docker</code>. Die festen Argumente <code>run</code>, <code>--rm</code> und der Image-Name stehen im <a href="/documentation/installation#using-the-docker-image-instead">Docker-CheckCommand-Beispiel</a>.
+   - Wähle <strong>Command type: Plugin Check Command</strong>.</p>
 </li>
 <li>
 <p><strong>Argumente hinzufügen</strong> (<em>Fields → Add argument</em>):</p>
@@ -67,26 +66,26 @@
 </tr>
 </tbody>
 </table>
-<p>Aktivieren Sie bei optionalen Argumenten <em>Skip this argument on empty value</em>. Director lässt das Argument dann weg, wenn kein Wert gesetzt ist.</p>
+<p>Aktiviere bei optionalen Argumenten <em>Skip this argument on empty value</em>. Director lässt das Argument dann weg, wenn kein Wert gesetzt ist.</p>
 <ol start="3">
 <li>
 <p><strong>Datenfelder für Services bereitstellen</strong>
-   - Legen Sie unter <em>Fields → Add data field</em> die passenden Felder an, etwa <code>opencloud_host</code>, <code>opencloud_port</code>, <code>opencloud_insecure</code> und <code>opencloud_debug</code>.
-   - Wählen Sie den passenden <em>Data Type</em> (<code>String</code> oder <code>Boolean</code>) und bei Bedarf einen <em>Var Filter</em>.</p>
+   - Lege unter <em>Fields → Add data field</em> die passenden Felder an, etwa <code>opencloud_host</code>, <code>opencloud_port</code>, <code>opencloud_insecure</code> und <code>opencloud_debug</code>.
+   - Wähle den passenden <em>Data Type</em> (<code>String</code> oder <code>Boolean</code>) und bei Bedarf einen <em>Var Filter</em>.</p>
 </li>
 <li>
 <p><strong>Service-Vorlage anlegen</strong>
-   - Öffnen Sie <em>Icinga Director → Service Templates → Add</em>.
-   - Setzen Sie <strong>Check command</strong> auf <code>check_opencloud_security</code>.
-   - Beginnen Sie mit einem <strong>Check interval</strong> von <code>24h</code>. Lesen Sie vor kürzeren Intervallen den Hinweis unter <a href="/documentation/installation#icinga2--nagios">Icinga2 / Nagios</a>.
-   - Lassen Sie die Datenfelder hier leer, damit sie je Service oder Host gesetzt werden können.</p>
+   - Öffne <em>Icinga Director → Service Templates → Add</em>.
+   - Setze <strong>Check command</strong> auf <code>check_opencloud_security</code>.
+   - Beginne mit einem <strong>Check interval</strong> von <code>24h</code>. Lies vor kürzeren Intervallen den Hinweis unter <a href="/documentation/installation#icinga2--nagios">Icinga2 / Nagios</a>.
+   - Lass die Datenfelder hier leer, damit sie je Service oder Host gesetzt werden können.</p>
 </li>
 <li>
 <p><strong>Vorlage einem Host oder einer Hostgruppe zuweisen</strong>
-   - Öffnen Sie <em>Icinga Director → Services → Add</em>. Für eine Hostgruppe verwenden Sie eine <em>Service Apply Rule</em>.
-   - Importieren Sie die erstellte Service-Vorlage.
-   - Setzen Sie <code>opencloud_host</code> und die benötigten optionalen Felder. Wenn Sie <code>$address$</code> beibehalten haben, ist kein eigenes Hostfeld nötig.
-   - Übernehmen Sie die Konfiguration unter <em>Icinga Director → Deployments</em>.</p>
+   - Öffne <em>Icinga Director → Services → Add</em>. Für eine Hostgruppe verwende eine <em>Service Apply Rule</em>.
+   - Importiere die erstellte Service-Vorlage.
+   - Setze <code>opencloud_host</code> und die benötigten optionalen Felder. Wenn du <code>$address$</code> beibehalten haben, ist kein eigenes Hostfeld nötig.
+   - Übernimm die Konfiguration unter <em>Icinga Director → Deployments</em>.</p>
 </li>
 </ol>
 <p>Icinga2 führt anschließend den nativen Befehl oder <code>docker run</code> wie unter <a href="/documentation/installation#icinga2--nagios">Icinga2 / Nagios</a> beschrieben aus.</p>

@@ -9,6 +9,8 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "monthly"
+    cooldown:
+      default-days: 7
 
   # Pinned actions go stale quietly, and the way that surfaces is a runner
   # deprecation warning on every job. Let Dependabot raise it instead.
@@ -16,6 +18,8 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
+    cooldown:
+      default-days: 7
 
   # The web application's images: the Python base and the uv stage of
   # docker/Dockerfile.web, and the Redis image in docker/docker-compose.yml.
@@ -23,3 +27,5 @@ updates:
     directory: "/docker"
     schedule:
       interval: "monthly"
+    cooldown:
+      default-days: 7

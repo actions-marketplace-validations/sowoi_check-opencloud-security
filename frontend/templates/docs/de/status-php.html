@@ -11,16 +11,15 @@
   <p class="lede">{{ t('docs.status-php.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de') %}
+{% if locale not in ('en', 'de', 'fr') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
 <article class="docs-article card section-gap" data-reveal lang="de">
-<h1 id="warum-opencloud-auf-statusphp-antwortet">Warum OpenCloud auf /status.php antwortet</h1>
 <p>OpenCloud ist in Go geschrieben. Der Pfad <code>/status.php</code> bezeichnet kein PHP-Skript, sondern einen Kompatibilitätsendpunkt für bestehende Clients.</p>
 <h2 id="where-the-path-comes-from">Herkunft des Pfads</h2>
 <p>OpenCloud ging aus ownCloud Infinite Scale (oCIS) hervor und verwendet die <a href="https://github.com/cs3org">CS3-APIs</a> und <a href="https://github.com/cs3org/reva">Reva</a>. Der ursprüngliche ownCloud-Server bot <code>/status.php</code> an, damit Synchronisationsclients, Apps und Monitoring-Skripte vor der Anmeldung Produkt und Version abfragen konnten. Kompatible Nachfolger beantworten diesen Pfad weiterhin.</p>
-<p>Der gemeinsame Endpunkt reicht jedoch nicht aus, um alle diese Produkte nach denselben Regeln zu bewerten. Meldet er ein anderes Produkt als OpenCloud, beendet dieser Scanner die Prüfung. Weitere Hinweise finden Sie unter <a href="/documentation/troubleshooting">Fehlersuche</a> und <a href="/documentation/what-is-opencloud">Was ist OpenCloud?</a>.</p>
+<p>Der gemeinsame Endpunkt reicht jedoch nicht aus, um alle diese Produkte nach denselben Regeln zu bewerten. Meldet er ein anderes Produkt als OpenCloud, beendet dieser Scanner die Prüfung. Weitere Hinweise findest du unter <a href="/documentation/troubleshooting">Fehlersuche</a> und <a href="/documentation/what-is-opencloud">Was ist OpenCloud?</a>.</p>
 <p>Im OpenCloud-Quellcode registriert das eingebundene Reva-Paket die Route:</p>
 <pre><code class="language-go">// vendor/github.com/opencloud-eu/reva/v2/internal/http/services/owncloud/ocdav/ocdav.go
 return []string{&quot;/status.php&quot;, &quot;/status&quot;, &quot;/remote.php/dav/public-files/&quot;, ...}
@@ -44,7 +43,7 @@ status := &amp;ocs.Status{
     Product:        s.c.Product,
 }
 </code></pre>
-<p><code>Installed</code>, <code>Maintenance</code> und <code>NeedsDBUpgrade</code> sind fest auf <code>true</code>, <code>false</code> und <code>false</code> gesetzt. Sie werden weder aus dem aktuellen Betriebszustand noch aus einer Datenbank oder Datei gelesen. Eine Instanz mit diesem Handler liefert daher dieselben Werte während des Starts, einer Bereitstellung und des normalen Betriebs. OpenCloud verwendet zudem keine SQL-Datenbank mit Schema-Upgrades, wie der Feldname <code>needsDbUpgrade</code> vermuten lässt.</p>
+<p><code>Installed</code>, <code>Maintenance</code> und <code>NeedsDBUpgrade</code> sind fest auf <code>true</code>, <code>false</code> und <code>false</code> gesetzt. Diese Werte werden weder aus dem aktuellen Betriebszustand noch aus einer Datenbank oder Datei gelesen. Eine Instanz mit diesem Handler liefert daher dieselben Werte während des Starts, einer Bereitstellung und des normalen Betriebs. OpenCloud verwendet zudem keine SQL-Datenbank mit Schema-Upgrades, wie der Feldname <code>needsDbUpgrade</code> vermuten lässt.</p>
 <p><code>Version</code>, <code>VersionString</code>, <code>Edition</code>, <code>ProductName</code>, <code>ProductVersion</code> und <code>Product</code> stammen aus der Dienstkonfiguration <code>s.c</code>. <code>Version</code> und <code>VersionString</code> dienen allerdings als feste Kompatibilitätsangaben für ältere Clients. Die tatsächliche Release-Version steht in <code>ProductVersion</code>; siehe <a href="/documentation/scanner-checks#reading-the-version-correctly">Die Version richtig lesen</a>.</p>
 <h2 id="what-this-scanner-reads-from-it-and-what-it-does-not">Welche Felder der Scanner auswertet</h2>
 <p>Der Scanner liest <code>product</code> und <code>productname</code>, um OpenCloud zu erkennen, sowie <code>productversion</code> für Supportstatus, Sicherheitshinweise und Updates. <a href="/documentation/lifecycle">Versionsangaben prüfen</a> erklärt, was bei einer fehlenden Versionsnummer passiert.</p>

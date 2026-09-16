@@ -595,22 +595,47 @@ def test_a_finding_that_appeared_between_the_two_scans_is_a_regression():
     assert answer["ratingChange"] == 0
 
 
-def test_two_documents_from_different_instances_are_answered_but_flagged():
+@pytest.mark.parametrize(
+    ("earlier", "later"),
+    [
+        ("staging.example.com", "opencloud.example.com"),
+        ("", "opencloud.example.com"),
+        ("opencloud.example.com", ""),
+        ("", ""),
+    ],
+)
+def test_two_documents_from_different_instances_are_refused(earlier, later):
     """
-    Comparing staging with production is a fair question and a different one.
+    "Did the fix work" is a question about one instance.
 
-    Refusing it would be wrong; answering it silently would be worse, because
-    every number in the answer then means something else.
+    Two hosts compared by accident is a wrong answer nobody notices, and a
+    document naming no instance cannot be shown to be the same one
+    (ADR 0059). The CLI's `diff` refuses the same pair.
     """
     api = ScriptedApi(
-        _document(rating=4, domain="staging.example.com"),
+        _document(rating=4, domain=earlier),
+        _document(rating=4, domain=later),
+    )
+
+    with pytest.raises(wf.WorkflowError) as raised:
+        asyncio.run(wf.compare_scans(api, UUID, OTHER_UUID, sleep=_instant))
+
+    assert raised.value.status == 422
+    assert raised.value.retryable is False
+    assert "different instances" in str(raised.value)
+
+
+def test_the_same_instance_is_matched_regardless_of_case_or_trailing_dot():
+    """A hostname is case-insensitive; refusing its capitals would be a bug."""
+    api = ScriptedApi(
+        _document(rating=4, domain="OpenCloud.Example.com."),
         _document(rating=4, domain="opencloud.example.com"),
     )
 
     answer = asyncio.run(wf.compare_scans(api, UUID, OTHER_UUID, sleep=_instant))
 
     assert answer["ok"] is True
-    assert answer["sameTarget"] is False
+    assert answer["sameTarget"] is True
 
 
 def test_comparing_a_scan_with_itself_is_refused_rather_than_answered():

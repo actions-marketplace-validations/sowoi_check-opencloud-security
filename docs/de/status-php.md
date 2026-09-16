@@ -1,5 +1,3 @@
-# Why OpenCloud still answers /status.php
-
 # Warum OpenCloud auf /status.php antwortet
 
 OpenCloud ist in Go geschrieben. Der Pfad `/status.php` bezeichnet kein PHP-Skript, sondern einen Kompatibilitätsendpunkt für bestehende Clients.
@@ -8,7 +6,7 @@ OpenCloud ist in Go geschrieben. Der Pfad `/status.php` bezeichnet kein PHP-Skri
 
 OpenCloud ging aus ownCloud Infinite Scale (oCIS) hervor und verwendet die [CS3-APIs](https://github.com/cs3org) und [Reva](https://github.com/cs3org/reva). Der ursprüngliche ownCloud-Server bot `/status.php` an, damit Synchronisationsclients, Apps und Monitoring-Skripte vor der Anmeldung Produkt und Version abfragen konnten. Kompatible Nachfolger beantworten diesen Pfad weiterhin.
 
-Der gemeinsame Endpunkt reicht jedoch nicht aus, um alle diese Produkte nach denselben Regeln zu bewerten. Meldet er ein anderes Produkt als OpenCloud, beendet dieser Scanner die Prüfung. Weitere Hinweise finden Sie unter [Fehlersuche](../troubleshooting.md) und [Was ist OpenCloud?](../what-is-opencloud.md).
+Der gemeinsame Endpunkt reicht jedoch nicht aus, um alle diese Produkte nach denselben Regeln zu bewerten. Meldet er ein anderes Produkt als OpenCloud, beendet dieser Scanner die Prüfung. Weitere Hinweise findest du unter [Fehlersuche](../troubleshooting.md) und [Was ist OpenCloud?](../what-is-opencloud.md).
 
 Im OpenCloud-Quellcode registriert das eingebundene Reva-Paket die Route:
 
@@ -41,7 +39,7 @@ status := &ocs.Status{
 }
 ```
 
-`Installed`, `Maintenance` und `NeedsDBUpgrade` sind fest auf `true`, `false` und `false` gesetzt. Sie werden weder aus dem aktuellen Betriebszustand noch aus einer Datenbank oder Datei gelesen. Eine Instanz mit diesem Handler liefert daher dieselben Werte während des Starts, einer Bereitstellung und des normalen Betriebs. OpenCloud verwendet zudem keine SQL-Datenbank mit Schema-Upgrades, wie der Feldname `needsDbUpgrade` vermuten lässt.
+`Installed`, `Maintenance` und `NeedsDBUpgrade` sind fest auf `true`, `false` und `false` gesetzt. Diese Werte werden weder aus dem aktuellen Betriebszustand noch aus einer Datenbank oder Datei gelesen. Eine Instanz mit diesem Handler liefert daher dieselben Werte während des Starts, einer Bereitstellung und des normalen Betriebs. OpenCloud verwendet zudem keine SQL-Datenbank mit Schema-Upgrades, wie der Feldname `needsDbUpgrade` vermuten lässt.
 
 `Version`, `VersionString`, `Edition`, `ProductName`, `ProductVersion` und `Product` stammen aus der Dienstkonfiguration `s.c`. `Version` und `VersionString` dienen allerdings als feste Kompatibilitätsangaben für ältere Clients. Die tatsächliche Release-Version steht in `ProductVersion`; siehe [Die Version richtig lesen](../scanner-checks.md#reading-the-version-correctly).
 

@@ -1,8 +1,6 @@
-# OpenCloud Security Scanner in Checkmk
-
 # Checkmk einrichten
 
-Checkmk kann die Nagios-Ausgabe des Plugins direkt lesen. Sie können den Scan auf dem Checkmk-Server oder auf einem Host mit Checkmk-Agent ausführen:
+Checkmk kann die Nagios-Ausgabe des Plugins direkt lesen. Du kannst den Scan auf dem Checkmk-Server oder auf einem Host mit Checkmk-Agent ausführen:
 
 | | [Aktiver Check](#1-an-active-check-on-the-checkmk-server) | [Lokaler Check](#2-a-local-check-on-an-agent-host) |
 |:--|:--|:--|
@@ -12,13 +10,13 @@ Checkmk kann die Nagios-Ausgabe des Plugins direkt lesen. Sie können den Scan a
 | Konfiguration | Weboberfläche | Vom Agent ausgeführtes Skript |
 | Ausgabe | `nagios`, der Standard | `--format checkmk` |
 
-Verwenden Sie einen aktiven Check, wenn der Checkmk-Server die Instanz erreicht. Für interne Netze, die nur ein Agent-Host erreicht, eignet sich der lokale Check.
+Verwende einen aktiven Check, wenn der Checkmk-Server die Instanz erreicht. Für interne Netze, die nur ein Agent-Host erreicht, eignet sich der lokale Check.
 
-Ersetzen Sie in den Beispielen `opencloud.example.com` durch eine Instanz, die Sie prüfen dürfen.
+Ersetze in den Beispielen `opencloud.example.com` durch eine Instanz, die Du prüfst dürfen.
 
 ## 1. Aktiver Check auf dem Checkmk-Server {#1-an-active-check-on-the-checkmk-server}
 
-Installieren Sie das Plugin auf dem Checkmk-Server als Site-Benutzer:
+Installiere das Plugin auf dem Checkmk-Server als Site-Benutzer:
 
 ```shell
 pipx install check-opencloud-security
@@ -26,16 +24,16 @@ pipx install check-opencloud-security
 
 Der [Installationsleitfaden](../installation.md) beschreibt weitere Wege über uv, pip und einen Checkout. `check-opencloud-security --version` zeigt die installierte Version.
 
-Legen Sie unter **Setup > Services > Other services > Integrate Nagios plugins** eine Regel an:
+Lege unter **Setup > Services > Other services > Integrate Nagios plugins** eine Regel an:
 
 - **Service description:** `OpenCloud security opencloud.example.com`
 - **Command line:** `check-opencloud-security --host opencloud.example.com --check-hardening`
 
-Weisen Sie die Regel dem Host zu, unter dem der Service erscheinen soll. Das tatsächliche Scanziel bestimmt weiterhin `--host`.
+Weise die Regel dem Host zu, unter dem der Service erscheinen soll. Das tatsächliche Scanziel bestimmt weiterhin `--host`.
 
 Checkmk liest den Status aus dem Exitcode, die Zusammenfassung aus der ersten Ausgabezeile, weitere Zeilen als Details und die Werte hinter `|` als Metriken. Die [Performancedaten](../../README.md#performance-data) enthalten `rating`, `vulnerabilities`, `hardenings_missing`, `extra_checks_failed`, `update_available`, `support_days_left`, `cert_days_left` und `time` einschließlich Schwellwerten.
 
-Prüfen Sie das Intervall unter **Setup > Services > Service monitoring rules > Normal check interval for service checks**. Ein Scan erzeugt mehrere HTTP-Anfragen und TCP-Verbindungen; ein minütlicher Check ist für diese Konfigurationsprüfung meist unnötig. Wählen Sie beispielsweise eine Stunde oder länger.
+Prüfe das Intervall unter **Setup > Services > Service monitoring rules > Normal check interval for service checks**. Ein Scan erzeugt mehrere HTTP-Anfragen und TCP-Verbindungen; ein minütlicher Check ist für diese Konfigurationsprüfung meist unnötig. Wähle beispielsweise eine Stunde oder länger.
 
 ## 2. Lokaler Check auf einem Agent-Host {#2-a-local-check-on-an-agent-host}
 
@@ -62,11 +60,11 @@ sudo install -m 0755 contrib/checkmk/opencloud_security \
     /usr/lib/check_mk_agent/local/3600/opencloud_security
 ```
 
-Das Unterverzeichnis `3600` legt das Cache-Intervall des Agents in Sekunden fest. Der Scan läuft damit höchstens stündlich; dazwischen liefert der Agent die zwischengespeicherte Ausgabe. Direkt unter `local/` würde das Skript bei jedem Agent-Aufruf laufen. Passen Sie das Intervall an Ihren Bedarf an.
+Das Unterverzeichnis `3600` legt das Cache-Intervall des Agents in Sekunden fest. Der Scan läuft damit höchstens stündlich; dazwischen liefert der Agent die zwischengespeicherte Ausgabe. Direkt unter `local/` würde das Skript bei jedem Agent-Aufruf laufen. Passt du das Intervall an deinen Bedarf an.
 
-Bei Installation über `.deb` oder `.rpm` liegt die Vorlage unter `/usr/share/doc/check-opencloud-security/checkmk-local-check.sh`. Kopieren Sie sie selbst in das Agent-Verzeichnis.
+Bei Installation über `.deb` oder `.rpm` liegt die Vorlage unter `/usr/share/doc/check-opencloud-security/checkmk-local-check.sh`. Kopiere sie selbst in das Agent-Verzeichnis.
 
-Setzen Sie das Ziel im Skript oder in einer vom Agent gelesenen Umgebungsdatei:
+Setze das Ziel im Skript oder in einer vom Agent gelesenen Umgebungsdatei:
 
 ```shell
 COS_HOST=opencloud.example.com
@@ -74,7 +72,7 @@ COS_HOST=opencloud.example.com
 #COS_SCANNER_VERIFY_TLS=false
 ```
 
-Suchen Sie anschließend unter **Setup > Hosts**, auf der *Services*-Seite des Hosts, mit *Full service scan* nach dem neuen Service.
+Suche anschließend unter **Setup > Hosts**, auf der *Services*-Seite des Hosts, mit *Full service scan* nach dem neuen Service.
 
 ### Bedeutung der Statuswerte {#what-the-states-mean}
 
@@ -111,8 +109,8 @@ Nicht ermittelte Werte werden weggelassen und nicht als Null ausgegeben.
 
 Beide Varianten erzeugen reguläre Checkmk-Services. Benachrichtigungen, Wartungszeiten und Bestätigungen funktionieren wie bei anderen Services.
 
-- Richten Sie zeitnahe Benachrichtigungen für **CRIT** ein.
-- Stellen Sie `support_days_left` dar und warnen Sie rechtzeitig vor dem Supportende. Sobald die Version nicht mehr unterstützt wird, fällt die Bewertung auf F.
+- Richte zeitnahe Benachrichtigungen für **CRIT** ein.
+- Stelle `support_days_left` dar und warne rechtzeitig vor dem Supportende. Sobald die Version nicht mehr unterstützt wird, fällt die Bewertung auf F.
 
 Mit [`--baseline` und `--warn-on-new`](../baseline.md) kann die Alarmierung auf neue oder verschlechterte Befunde beschränkt werden. Das Supportende und weitere Verschlechterungen werden dadurch nicht unterdrückt.
 

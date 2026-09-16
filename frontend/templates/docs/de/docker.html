@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.docker.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de') %}
+{% if locale not in ('en', 'de', 'fr') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -26,8 +26,7 @@
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="de">
-<h1 id="den-scanner-mit-docker-ausfuhren">Den Scanner mit Docker ausführen</h1>
-<p>Mit dem veröffentlichten Container-Image führen Sie denselben Scanner wie die <a href="/documentation/web-service">Webanwendung</a> auf Ihrem eigenen Rechner aus. Sie benötigen Docker, aber kein Konto bei diesem Dienst. Die Begrenzungen der öffentlichen Website gelten für den lokalen Scan nicht.</p>
+<p>Mit dem veröffentlichten Container-Image führe denselben Scanner wie die <a href="/documentation/web-service">Webanwendung</a> auf deinem eigenen Rechner aus. Du benötigst Docker, aber kein Konto bei diesem Dienst. Die Begrenzungen der öffentlichen Website gelten für den lokalen Scan nicht.</p>
 <pre><code class="language-shell">docker run --rm --entrypoint check-opencloud-security \
   okxo/opencloud-scanner:latest --host opencloud.example.com
 </code></pre>
@@ -60,18 +59,18 @@ Release lifecycle: 7.2 (production, track detected), current release
 </tr>
 </tbody>
 </table>
-<p>Standardmäßig startet das Image die Webanwendung. Deshalb setzen alle folgenden Aufrufe <code>--entrypoint</code>. Verwenden Sie für wiederholbare Abläufe einen festen Tag, beispielsweise <code>okxo/opencloud-scanner:1.9</code>, statt <code>latest</code>.</p>
+<p>Standardmäßig startet das Image die Webanwendung. Deshalb setzen alle folgenden Aufrufe <code>--entrypoint</code>. Verwende für wiederholbare Abläufe einen festen Tag, beispielsweise <code>okxo/opencloud-scanner:1.9</code>, statt <code>latest</code>.</p>
 <h2 id="the-same-scan-as-json">Ergebnisse als JSON</h2>
 <p>Das JSON-Dokument enthält Bewertung, Release-Lebenszyklus, Sicherheitshinweise und Prüfergebnisse, aus denen die Weboberfläche ihren Bericht erstellt:</p>
 <pre><code class="language-shell">docker run --rm --entrypoint check-opencloud-scanner \
   okxo/opencloud-scanner:latest scan opencloud.example.com
 </code></pre>
-<p>Mit <code>jq</code> wählen Sie einzelne Felder aus:</p>
+<p>Mit <code>jq</code> wähle einzelne Felder aus:</p>
 <pre><code class="language-shell">docker run --rm --entrypoint check-opencloud-scanner \
   okxo/opencloud-scanner:latest scan opencloud.example.com \
   | jq '{rating, version, addresses, failed: [.extraChecks[] | select(.passed | not) | .id]}'
 </code></pre>
-<p><code>addresses</code> enthält die während des Scans ermittelten IPv4- und IPv6-Adressen. Diese erscheinen im Webbericht unter „Aufgelöst zu“. Prüfen Sie sie bei unerwarteten Befunden: Möglicherweise zeigt der DNS-Eintrag noch auf einen anderen Server.</p>
+<p><code>addresses</code> enthält die während des Scans ermittelten IPv4- und IPv6-Adressen. Diese erscheinen im Webbericht unter „Aufgelöst zu“. Prüfe bei unerwarteten Befunden: Möglicherweise zeigt der DNS-Eintrag noch auf einen anderen Server.</p>
 <h2 id="useful-variations">Häufige Varianten</h2>
 <p>Zu jedem Befund eine Erklärung ausgeben:</p>
 <pre><code class="language-shell">docker run --rm --entrypoint check-opencloud-security \
@@ -92,11 +91,11 @@ Release lifecycle: 7.2 (production, track detected), current release
   okxo/opencloud-scanner:latest --host opencloud.internal.example.com
 </code></pre>
 <p>Dafür muss der Container die private Adresse erreichen und den Hostnamen auflösen können. Die Zielbeschränkung des öffentlichen Webdienstes gilt für diesen lokalen Aufruf nicht.</p>
-<p>Für Container und Vorlagen können Sie Einstellungen auch über <code>COS_</code>-Umgebungsvariablen setzen. Die vollständige Zuordnung steht im <a href="/documentation/reference#environment-variables">Haupt-README</a>:</p>
+<p>Für Container und Vorlagen kannst du Einstellungen auch über <code>COS_</code>-Umgebungsvariablen setzen. Die vollständige Zuordnung steht im <a href="/documentation/reference#environment-variables">Haupt-README</a>:</p>
 <pre><code class="language-shell">docker run --rm -e COS_HOST=opencloud.example.com \
   --entrypoint check-opencloud-security okxo/opencloud-scanner:latest
 </code></pre>
-<p>Wenn die Release-Quelle nicht kontaktiert werden soll oder kein Internetzugang besteht, deaktivieren Sie die Update-Prüfung:</p>
+<p>Wenn die Release-Quelle nicht kontaktiert werden soll oder kein Internetzugang besteht, deaktiviere die Update-Prüfung:</p>
 <pre><code class="language-shell">docker run --rm --entrypoint check-opencloud-security \
   okxo/opencloud-scanner:latest --host opencloud.example.com --no-update-check
 </code></pre>

@@ -1,8 +1,6 @@
-# Run the OpenCloud Security Scanner with Docker
-
 # Den Scanner mit Docker ausführen
 
-Mit dem veröffentlichten Container-Image führen Sie denselben Scanner wie die [Webanwendung](../webapp.md) auf Ihrem eigenen Rechner aus. Sie benötigen Docker, aber kein Konto bei diesem Dienst. Die Begrenzungen der öffentlichen Website gelten für den lokalen Scan nicht.
+Mit dem veröffentlichten Container-Image führe denselben Scanner wie die [Webanwendung](../webapp.md) auf deinem eigenen Rechner aus. Du benötigst Docker, aber kein Konto bei diesem Dienst. Die Begrenzungen der öffentlichen Website gelten für den lokalen Scan nicht.
 
 ```shell
 docker run --rm --entrypoint check-opencloud-security \
@@ -30,7 +28,7 @@ Der Exitcode ist `0` für OK, `1` für WARNING, `2` für CRITICAL oder `3` für 
 | `check-opencloud-security` | Nagios-/Icinga-Plugin mit Statuszeile, Performancedaten und Exitcode |
 | `check-opencloud-scanner` | Vollständiges JSON-Ergebnis oder Betrieb als HTTP-Dienst |
 
-Standardmäßig startet das Image die Webanwendung. Deshalb setzen alle folgenden Aufrufe `--entrypoint`. Verwenden Sie für wiederholbare Abläufe einen festen Tag, beispielsweise `okxo/opencloud-scanner:1.9`, statt `latest`.
+Standardmäßig startet das Image die Webanwendung. Deshalb setzen alle folgenden Aufrufe `--entrypoint`. Verwende für wiederholbare Abläufe einen festen Tag, beispielsweise `okxo/opencloud-scanner:1.9`, statt `latest`.
 
 ## Ergebnisse als JSON {#the-same-scan-as-json}
 
@@ -41,7 +39,7 @@ docker run --rm --entrypoint check-opencloud-scanner \
   okxo/opencloud-scanner:latest scan opencloud.example.com
 ```
 
-Mit `jq` wählen Sie einzelne Felder aus:
+Mit `jq` wähle einzelne Felder aus:
 
 ```shell
 docker run --rm --entrypoint check-opencloud-scanner \
@@ -49,7 +47,7 @@ docker run --rm --entrypoint check-opencloud-scanner \
   | jq '{rating, version, addresses, failed: [.extraChecks[] | select(.passed | not) | .id]}'
 ```
 
-`addresses` enthält die während des Scans ermittelten IPv4- und IPv6-Adressen. Diese erscheinen im Webbericht unter „Aufgelöst zu“. Prüfen Sie sie bei unerwarteten Befunden: Möglicherweise zeigt der DNS-Eintrag noch auf einen anderen Server.
+`addresses` enthält die während des Scans ermittelten IPv4- und IPv6-Adressen. Diese erscheinen im Webbericht unter „Aufgelöst zu“. Prüfe bei unerwarteten Befunden: Möglicherweise zeigt der DNS-Eintrag noch auf einen anderen Server.
 
 ## Häufige Varianten {#useful-variations}
 
@@ -85,14 +83,14 @@ docker run --rm --network host --entrypoint check-opencloud-security \
 
 Dafür muss der Container die private Adresse erreichen und den Hostnamen auflösen können. Die Zielbeschränkung des öffentlichen Webdienstes gilt für diesen lokalen Aufruf nicht.
 
-Für Container und Vorlagen können Sie Einstellungen auch über `COS_`-Umgebungsvariablen setzen. Die vollständige Zuordnung steht im [Haupt-README](../../README.md#environment-variables):
+Für Container und Vorlagen kannst du Einstellungen auch über `COS_`-Umgebungsvariablen setzen. Die vollständige Zuordnung steht im [Haupt-README](../../README.md#environment-variables):
 
 ```shell
 docker run --rm -e COS_HOST=opencloud.example.com \
   --entrypoint check-opencloud-security okxo/opencloud-scanner:latest
 ```
 
-Wenn die Release-Quelle nicht kontaktiert werden soll oder kein Internetzugang besteht, deaktivieren Sie die Update-Prüfung:
+Wenn die Release-Quelle nicht kontaktiert werden soll oder kein Internetzugang besteht, deaktiviere die Update-Prüfung:
 
 ```shell
 docker run --rm --entrypoint check-opencloud-security \

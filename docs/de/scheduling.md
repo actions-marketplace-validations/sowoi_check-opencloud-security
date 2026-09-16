@@ -1,14 +1,12 @@
-# Schedule OpenCloud security scans with systemd and cron
-
 # Regelmäßige Scans mit systemd oder cron
 
-Auch ohne Icinga2 oder Nagios können Sie Scans zeitgesteuert ausführen. Unter [`contrib/`](../../contrib) liegen Vorlagen für:
+Auch ohne Icinga2 oder Nagios kannst du Scans zeitgesteuert ausführen. Unter [`contrib/`](../../contrib) liegen Vorlagen für:
 
 - [systemd-Service](../../contrib/systemd/check-opencloud-security.service) und [Timer](../../contrib/systemd/check-opencloud-security.timer)
 - [Umgebungsvariablen für systemd](../../contrib/systemd/check-opencloud-security.env.example)
 - [Cronjob](../../contrib/cron/check-opencloud-security.cron)
 
-Der separate [Refresh-Timer](../../contrib/systemd/check-opencloud-security-refresh.timer) hält Release-Zeitplan und Schwachstellendatenbank aktuell. Konfigurieren Sie den Scanner vor dem Aktivieren so, dass er beide Dateien unter `/var/lib/check-opencloud-security` liest. Der Aktualisierungsbefehl prüft die Dokumente und schreibt sie atomar.
+Der separate [Refresh-Timer](../../contrib/systemd/check-opencloud-security-refresh.timer) hält Release-Zeitplan und Schwachstellendatenbank aktuell. Konfiguriere den Scanner vor dem Aktivieren so, dass er beide Dateien unter `/var/lib/check-opencloud-security` liest. Der Aktualisierungsbefehl prüft die Dokumente und schreibt sie atomar.
 
 ## systemd-Timer {#systemd-timer}
 
@@ -36,11 +34,11 @@ sudo chmod 644 /etc/cron.d/check-opencloud-security
 sudo $EDITOR /etc/cron.d/check-opencloud-security   # set COS_HOST (and any other options)
 ```
 
-Beide Beispiele verwenden ausschließlich [Umgebungsvariablen](../../README.md#environment-variables). Programmdatei und Docker-Image bleiben auf allen Hosts gleich; Sie passen nur die Umgebungsdatei oder den Cron-Eintrag an.
+Beide Beispiele verwenden ausschließlich [Umgebungsvariablen](../../README.md#environment-variables). Programmdatei und Docker-Image bleiben auf allen Hosts gleich; du passt nur die Umgebungsdatei oder den Cron-Eintrag an.
 
-cron und systemd übernehmen weder den `PATH` noch die übrigen Variablen Ihrer Login-Shell. Verwenden Sie deshalb den vollständigen Pfad zu `check-opencloud-security` und setzen Sie `COS_HOST` ausdrücklich. Weitere Hinweise stehen unter [Fehlersuche](../troubleshooting.md).
+Cron und systemd übernehmen weder den `PATH` noch die übrigen Variablen deiner Login-Shell. Verwende deshalb den vollständigen Pfad zu `check-opencloud-security` und setze `COS_HOST` ausdrücklich. Weitere Hinweise stehen unter [Fehlersuche](../troubleshooting.md).
 
-In Kubernetes übernimmt ein [`CronJob`](../kubernetes.md) diese Aufgabe. Für mehrere Instanzen lesen Sie [Mehrere Instanzen prüfen](../many-instances.md).
+In Kubernetes übernimmt ein [`CronJob`](../kubernetes.md) diese Aufgabe. Für mehrere Instanzen lies [Mehrere Instanzen prüfen](../many-instances.md).
 
 ---
 

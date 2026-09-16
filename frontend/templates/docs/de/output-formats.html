@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.output-formats.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de') %}
+{% if locale not in ('en', 'de', 'fr') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -26,10 +26,9 @@
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="de">
-<h1 id="ausgabeformate">Ausgabeformate</h1>
-<p>Standardmäßig gibt das Plugin eine Nagios-Statuszeile mit Performancedaten aus. Mit <code>--format</code> (<code>COS_FORMAT</code>) wählen Sie stattdessen ein Format für Skripte, Dashboards oder CI-Pipelines.</p>
+<p>Standardmäßig gibt das Plugin eine Nagios-Statuszeile mit Performancedaten aus. Mit <code>--format</code> (<code>COS_FORMAT</code>) wähle stattdessen ein Format für Skripte, Dashboards oder CI-Pipelines.</p>
 <p><code>json</code>, <code>sarif</code> und <code>junit</code> erzeugen jeweils <strong>ein gemeinsames Dokument für alle gescannten Hosts</strong>. Das Format bleibt auch bei nur einem Host gleich.</p>
-<p>Die Exitcodes behalten ihre Nagios-Bedeutung: <code>0</code> für OK, <code>1</code> für WARNING, <code>2</code> für CRITICAL und <code>3</code> für UNKNOWN. Eine CI-Pipeline kann damit den Status auswerten und das Dokument zusätzlich als Artefakt speichern. Die Metrikformate <code>prometheus</code> und <code>otlp</code> bilden eine Ausnahme: Sie geben Befunde als Messwerte aus und beenden den Prozess mit <code>0</code>.</p>
+<p>Die Exitcodes behalten ihre Nagios-Bedeutung: <code>0</code> für OK, <code>1</code> für WARNING, <code>2</code> für CRITICAL und <code>3</code> für UNKNOWN. Eine CI-Pipeline kann damit den Status auswerten und das Dokument zusätzlich als Artefakt speichern. Die Metrikformate <code>prometheus</code> und <code>otlp</code> bilden eine Ausnahme: Du gibst Befunde als Messwerte aus und beenden den Prozess mit <code>0</code>.</p>
 <h2 id="json"><code>json</code></h2>
 <p>Ein JSON-Array mit einem Objekt pro Host, auch bei nur einer Instanz. Die Objekte entsprechen dem unter <a href="/documentation/reference#webhook-notifications">Webhook-Benachrichtigungen</a> beschriebenen Ergebnisdokument. Dieses Format eignet sich für die Weiterverarbeitung in Skripten oder anderen Diensten.</p>
 <pre><code class="language-shell">check-opencloud-security --host opencloud.example.com --format json
@@ -39,7 +38,7 @@
 <pre><code class="language-shell">check-opencloud-security --host opencloud.example.com --format sarif \
   &gt; opencloud-security.sarif
 </code></pre>
-<p>In GitHub Actions können Sie die Datei anschließend hochladen. <code>continue-on-error: true</code> stellt sicher, dass der Upload auch bei einem nicht erfolgreichen Scanstatus ausgeführt wird:</p>
+<p>In GitHub Actions kannst du die Datei anschließend hochladen. <code>continue-on-error: true</code> stellt sicher, dass der Upload auch bei einem nicht erfolgreichen Scanstatus ausgeführt wird:</p>
 <pre><code class="language-yaml">- name: Scan OpenCloud
   run: |
     check-opencloud-security --host opencloud.example.com --format sarif \
@@ -54,7 +53,7 @@
 <pre><code class="language-shell">check-opencloud-security --host opencloud.example.com --format junit \
   &gt; opencloud-security.xml
 </code></pre>
-<p>Richten Sie den JUnit-Reporter Ihres CI-Systems auf diese Datei aus, um die Befunde als Testergebnisse anzuzeigen.</p>
+<p>Richte den JUnit-Reporter Ihres CI-Systems auf diese Datei aus, um die Befunde als Testergebnisse anzuzeigen.</p>
 <h2 id="checkmk"><code>checkmk</code></h2>
 <p>Das Format erzeugt eine <a href="/documentation/checkmk">Checkmk-Local-Check-Zeile</a> pro Host: Status, Dienstname in Anführungszeichen, Metriken und Detailtext.</p>
 <pre><code class="language-shell">check-opencloud-security --host opencloud.example.com --format checkmk
@@ -66,9 +65,9 @@
   | curl -sf -X POST http://collector.example.com:4318/v1/metrics \
       -H 'Content-Type: application/json' --data-binary @-
 </code></pre>
-<p>Das Plugin schreibt nur das Dokument auf die Standardausgabe. Den Versand übernehmen Sie beispielsweise mit <code>curl</code> im bestehenden Timer. Collector-Adresse, Proxy und Zugangsdaten konfigurieren Sie beim Versand.</p>
+<p>Das Plugin schreibt nur das Dokument auf die Standardausgabe. Den Versand übernimm beispielsweise mit <code>curl</code> im bestehenden Timer. Collector-Adresse, Proxy und Zugangsdaten konfiguriere beim Versand.</p>
 <p>Jeder Host wird über das Attribut <code>host</code> unterschieden. Alle Metriken sind Gauges, also aktuelle Messwerte. Namen und Werte entsprechen dem Prometheus-Exporter; je nach Backend können Attributnamen anders abgebildet werden. Die gemeinsame Tabelle steht unter <a href="/documentation/prometheus#what-the-exporter-publishes">Prometheus und Grafana</a>.</p>
-<p>Wie <code>--format prometheus</code> beendet sich dieses Format auch bei Befunden mit <code>0</code>. Ein fehlgeschlagener Scan liefert <code>opencloud_security_scrape_success 0</code>. Wenn der Exitcode die Alarmierung steuern soll, verwenden Sie <code>nagios</code>, <code>json</code>, <code>sarif</code> oder <code>junit</code>.</p>
+<p>Wie <code>--format prometheus</code> beendet sich dieses Format auch bei Befunden mit <code>0</code>. Ein fehlgeschlagener Scan liefert <code>opencloud_security_scrape_success 0</code>. Wenn der Exitcode die Alarmierung steuern soll, verwende <code>nagios</code>, <code>json</code>, <code>sarif</code> oder <code>junit</code>.</p>
 <h2 id="choosing-a-format">Das passende Format wählen</h2>
 <table>
 <thead>

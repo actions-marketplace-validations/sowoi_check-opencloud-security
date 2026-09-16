@@ -80,6 +80,12 @@ for a remote scan service.
   `draft`; publishing raises Dependabot alerts for every affected installation
   and cannot be undone. See [Security advisories](#security-advisories) - like
   the version, that is the user's decision alone.
+- **Never use a Python dependency nobody approved.** A new package - in
+  `pyproject.toml` or as a `uvx` tool in a workflow - is justified, tested and
+  security-reviewed in a `security/dependencies/<name>.yml` record first, and
+  only a maintainer approves that record. Draft it as `proposed`, never set
+  `approved`, and never add a name to `grandfathered.txt`. See [Adding a
+  Python dependency](#adding-a-python-dependency).
 - **`pyproject.toml` is the only place the version is written.**
   `opencloud_local_scan.__version__` derives it from there (package metadata
   when installed, the file itself in a checkout) and the plugin imports that.
@@ -214,6 +220,45 @@ says so in its step summary, and the drafts wait for a maintainer to run
 it.** A published advisory enters the GitHub Advisory Database and raises
 Dependabot alerts for everyone on the affected range; like the version bump,
 that is the user's call. Do not request a CVE either.
+
+## Adding a Python dependency
+
+**Every new Python dependency is justified, tested and security-reviewed
+before it is used, and a maintainer approves it.**
+[ADR 0060](adr/0060-a-new-dependency-is-justified-tested-and-reviewed-first.md)
+has the reasoning; `security/dependencies/README.md` has the record format;
+`/add-dependency` walks through it.
+
+- **What counts:** every requirement in `pyproject.toml` - `[project]
+  dependencies`, every extra, every dependency group, `[build-system]
+  requires` - and every package a workflow runs with `uvx`.
+- **First ask whether it is needed.** The standard library (3.10, so no
+  `tomllib`), a package already declared, or a few lines of our own code
+  usually are enough. Fewer packages is a security property here: the plugin
+  runs on monitoring hosts and the web service fetches URLs strangers submit.
+- **The record** in `security/dependencies/<name>.yml` says why the package is
+  needed and what else was considered. It names the tests that exercise it
+  (at least one must mention its import name) and gives a review: known
+  vulnerabilities, maintenance, provenance, install-time behaviour, runtime
+  network use, native code, transitive packages and license. A package that
+  contacts a third party is refused outright - see
+  [Third parties](#third-parties).
+- **Scope is part of the review.** Declare a package in the narrowest place
+  that works, and put the same scopes in the record. Moving it somewhere wider
+  (a test group into the runtime) fails the check until the record is updated,
+  on purpose.
+- **Approval is the maintainer's alone.** Write `status: proposed`; the check
+  fails until a maintainer sets `status: approved` and `approved_by`. Like
+  the version bump and advisories, never do that yourself.
+- **`security/dependencies/grandfathered.txt` only shrinks.** It lists what
+  was declared when the policy was adopted - unreviewed, not approved. Never
+  add a name; remove one when its record is approved or the package is
+  dropped. Removing a package also removes its record.
+
+`python scripts/check_dependencies.py --check` enforces all of this, and the
+`dependency-policy` job in `supply-chain.yml` runs it with `--base` on every
+pull request. The dependency-review action fails a pull request that
+introduces any known-vulnerable version, and `pip-audit` audits the locked set.
 
 ## Architectural decision records
 
@@ -655,6 +700,16 @@ keep remote scan evidence verbatim. Generated guide bodies remain English
 under `lang="en"` with a localized notice and chrome. See
 [ADR 0020](adr/0020-frontend-language-is-request-scoped.md).
 
+**German text addresses the reader informally, with "du".** Every new or
+reworded German string - in `webapp/locales/de.py` and in the guides under
+`docs/de/` - uses `du`/`dein`/`dir` and informal imperatives (`Prüfe`,
+`Starte`), never `Sie`/`Ihr`/`Ihnen`. Most existing German text is still
+formal; that is not a register to copy. When you reword a formal string,
+convert all of it rather than mixing both forms in one sentence.
+`tests/test_webapp_i18n.py` fails on a formal catalogue string whose key is not
+in `FORMAL_GERMAN_KEYS`, the list of strings that predate the guideline; that
+list only shrinks. Spanish and French keep their existing register.
+
 Every page carries the trademark notice in the footer of `base.html`. See
 [Trademarks and affiliation](#trademarks-and-affiliation) - do not remove it
 from a template, and add it to any new surface that stands on its own.
@@ -692,7 +747,9 @@ line is whether *this* page causes a request the visitor did not ask for.
 This is not only a frontend rule. It covers the scanner, the plugin, the
 container images, the CI workflows and the documentation. A dependency that
 phones one of them home is the same leak with more steps, so check what a new
-package fetches at install time and at runtime before adding it.
+package fetches at install time and at runtime before adding it - that is the
+`runtime_network` question of its dependency record (see
+[Adding a Python dependency](#adding-a-python-dependency)).
 
 `tests/test_webapp_seo.py` asserts no page carries such metadata, and the
 third-party test in `tests/test_webapp_api.py` walks the rendered HTML for any

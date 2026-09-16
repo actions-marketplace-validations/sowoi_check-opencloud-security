@@ -423,7 +423,7 @@ The answers it can give:
 | Either uuid is unknown or expired | **404**, naming *which* of the two is gone - "one of them has expired" sends somebody looking through both |
 | Either scan has not finished | **409**: there is nothing to compare yet, and 404 would send a reader to scan again while their scan is still running |
 | The same uuid twice | **422**. An empty diff of a scan against itself reads as "nothing is wrong" |
-| The two scans describe different instances | **200**, compared and said so. Staging against production is a fair question; answering it silently is not |
+| The two scans describe different instances | **422**, not compared. "Did the fix work" is a question about one instance, and two hosts compared by accident is a wrong answer nobody notices - `check-opencloud-scanner diff` refuses them too. See [ADR 0059](../adr/0059-a-comparison-refuses-two-different-instances.md) |
 
 Like `/scan/{uuid}` and for the same reason, the page renders results and is
 therefore never indexed and never in the OpenAPI schema, and each uuid remains
@@ -438,6 +438,8 @@ on a result page, uploaded from the reader's own disk, compared against a scan
 of this service that has not expired. Same page, same arithmetic, same
 verdicts - only where the earlier document came from changes. See
 [ADR 0057](../adr/0057-an-uploaded-report-is-evidence-not-a-scan.md).
+A report of a different instance than the scan it is compared with, or one
+that names no instance, is refused with 422 the same way.
 
 It is a browser feature and stays one: HTML only, never in the OpenAPI schema,
 and there is no MCP tool for it. An agent already has `compare_scans`, which

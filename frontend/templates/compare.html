@@ -116,17 +116,6 @@
 {% endif %}
 
 {% if comparison %}
-{#
-  sameTarget false is not refused - comparing staging against production is a
-  fair question - but every number below then answers a different one, so it
-  is said before any of them are read.
-#}
-{% if not comparison.sameTarget %}
-<section class="card compare-warning" data-reveal>
-  <p class="flush">{{ t('compare.different_targets') }}</p>
-</section>
-{% endif %}
-
 <section class="card" data-reveal>
   <p class="kicker">{{ t('compare.verdict.kicker') }}</p>
   <h2 class="compare-verdict" data-verdict="{{ comparison.verdict }}">

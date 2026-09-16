@@ -1,5 +1,3 @@
-# OpenCloud hardening measures, one by one
-
 # Härtungsmaßnahmen und Ausnahmen
 
 Die kurzen Kennungen der Härtungsmaßnahmen erscheinen in Alarmen und Berichten. Dieser Leitfaden erklärt die Befunde, die passenden Einstellungen und den Umgang mit bewusst akzeptierten Ausnahmen.
@@ -37,15 +35,15 @@ Zwei Maßnahmen lassen sich nicht konfigurieren:
 - **`publicLinkExpirationEnforced`** ist im Frontend-Dienst fest auf `false` gesetzt. Es gibt keine Variable, mit der die Prüfung bestanden werden könnte.
 - **`userEnumerationRestricted`** ist fest auf den eingeschränkten Zustand gesetzt und besteht daher immer.
 
-Die Werte bleiben im Ergebnisdokument und in `--debug` sichtbar. Sie werden aus der Zeile „Missing hardening“, der Metrik `hardenings_missing` und dem Webhook ausgeschlossen, damit nicht behebbare Befunde keine dauerhaften Alarme erzeugen.
+Die Werte bleiben im Ergebnisdokument und in `--debug` sichtbar. Der Befund wird aus der Zeile „Missing hardening“, der Metrik `hardenings_missing` und dem Webhook ausgeschlossen, damit nicht behebbare Befunde keine dauerhaften Alarme erzeugen.
 
-Auch `cspWithoutUnsafeInline` schlägt mit OpenClouds Standard-CSP fehl. Diese Richtlinie ist jedoch konfigurierbar. Testen Sie eine strengere CSP vor dem Einsatz, da die Weboberfläche sowie Office- und Anmeldeintegrationen Inline-Skripte oder -Styles benötigen können. Näheres erklärt der [CSP-Leitfaden](../csp.md).
+Auch `cspWithoutUnsafeInline` schlägt mit OpenClouds Standard-CSP fehl. Diese Richtlinie ist jedoch konfigurierbar. Teste eine strengere CSP vor dem Einsatz, da die Weboberfläche sowie Office- und Anmeldeintegrationen Inline-Skripte oder -Styles benötigen können. Näheres erklärt der [CSP-Leitfaden](../csp.md).
 
 Aus Capabilities abgeleitete Prüfungen erscheinen nur, wenn die Instanz das jeweilige Feld tatsächlich liefert. Ältere Releases erhalten dadurch keine Befunde für unbekannte Einstellungen.
 
 ## Befunde bewusst ausnehmen {#accepting-a-finding-you-are-not-going-to-fix}
 
-Eine Einstellung kann in Ihrer Umgebung erforderlich sein, etwa Basic Auth für ein Migrationstool. Mit `--ignore-hardening` nehmen Sie einen solchen Befund anhand seiner Kennung aus der Alarmierung und Bewertung aus:
+Eine Einstellung kann in deiner Umgebung erforderlich sein, etwa Basic Auth für ein Migrationstool. Mit `--ignore-hardening` nimm einen solchen Befund anhand seiner Kennung aus der Alarmierung und Bewertung aus:
 
 ```bash
 check-opencloud-security --host opencloud.example.com --check-hardening \
@@ -59,7 +57,7 @@ Die Option ist wiederholbar, akzeptiert kommagetrennte Listen und unterstützt S
 --ignore-hardening 'debugPort:*,exposed:/status.php'
 ```
 
-Sie gilt für Härtungsmaßnahmen, Headernamen, `httpsEnforced` und die Kennungen zusätzlicher Prüfungen. So wird beispielsweise `basicAuthDisabled` an allen Stellen einheitlich ausgenommen.
+du gilt für Härtungsmaßnahmen, Headernamen, `httpsEnforced` und die Kennungen zusätzlicher Prüfungen. So wird beispielsweise `basicAuthDisabled` an allen Stellen einheitlich ausgenommen.
 
 Ein ausgenommener Befund:
 
@@ -76,7 +74,7 @@ Zwei Grenzen gelten immer:
 - **Nur tatsächlich fehlgeschlagene Prüfungen werden ausgenommen.** Eine bestandene Prüfung wird nicht nachträglich als ignoriert markiert.
 - **Das Supportende lässt sich nicht ausnehmen.** Eine Version ohne Sicherheitsupdates erhält auch mit `--ignore-hardening '*'` die End-of-Life-Bewertung.
 
-Halten Sie Ausnahmen möglichst in der Konfigurationsdatei fest und begründen Sie jede davon in einem Kommentar:
+Halte Ausnahmen möglichst in der Konfigurationsdatei fest und begründen jede davon in einem Kommentar:
 
 ```yaml
 scanner:

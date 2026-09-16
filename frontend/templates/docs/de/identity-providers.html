@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.identity-providers.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de') %}
+{% if locale not in ('en', 'de', 'fr') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -30,11 +30,10 @@
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="de">
-<h1 id="externe-identitatsanbieter-einrichten">Externe Identitätsanbieter einrichten</h1>
-<p>Dieser Leitfaden beschreibt die Anmeldung an OpenCloud mit <strong>Keycloak</strong>, <strong>Authentik</strong> oder <strong>Authelia</strong>. Wählen Sie einen Anbieter passend zu Ihrer vorhandenen Infrastruktur. <a href="/documentation/secure-deployment#1-put-a-real-identity-provider-in-front">OpenCloud sicher betreiben</a> erklärt die Rolle eines externen Anmeldeanbieters im Gesamtkonzept.</p>
+<p>Dieser Leitfaden beschreibt die Anmeldung an OpenCloud mit <strong>Keycloak</strong>, <strong>Authentik</strong> oder <strong>Authelia</strong>. Wähle einen Anbieter passend zu deiner vorhandenen Infrastruktur. <a href="/documentation/secure-deployment#1-put-a-real-identity-provider-in-front">OpenCloud sicher betreiben</a> erklärt die Rolle eines externen Anmeldeanbieters im Gesamtkonzept.</p>
 <p>Die Anmeldung ergänzt Firewall, Reverse Proxy, Audit-Log und Updates. Diese Maßnahmen bleiben auch mit einem externen Anbieter erforderlich.</p>
 <h2 id="before-you-start">Voraussetzungen</h2>
-<p>Legen Sie die öffentlichen Namen vor der Einrichtung fest. Spätere Änderungen am Issuer können bestehende Sitzungen und gespeicherte Client-Tokens ungültig machen.</p>
+<p>Lege die öffentlichen Namen vor der Einrichtung fest. Spätere Änderungen am Issuer können bestehende Sitzungen und gespeicherte Client-Tokens ungültig machen.</p>
 <table>
 <thead>
 <tr>
@@ -61,15 +60,15 @@
 </tr>
 </tbody>
 </table>
-<p>Sie benötigen außerdem:</p>
+<p>Du benötigst außerdem:</p>
 <ul>
 <li>Eine bereits funktionierende OpenCloud-Instanz über HTTPS.</li>
 <li>Von den beteiligten Clients vertraute Zertifikate für beide Namen.</li>
 <li>DNS-Auflösung beider Namen aus dem Container-Netz und aus den Client-Netzen.</li>
-<li>Einen getesteten Rückweg zur bisherigen Anmeldung. Halten Sie während der Umstellung einen administrativen Zugang bereit und entfernen Sie <code>idp</code> erst nach erfolgreicher Prüfung aus dem Dienstsatz.</li>
+<li>Einen getesteten Rückweg zur bisherigen Anmeldung. Halte während der Umstellung einen administrativen Zugang bereit und entferne <code>idp</code> erst nach erfolgreicher Prüfung aus dem Dienstsatz.</li>
 </ul>
 <h2 id="what-every-provider-has-to-produce">Gemeinsame Anforderungen</h2>
-<p>Client-IDs, Redirect-URIs und Scopes richten sich nach den OpenCloud-Anwendungen. Sie müssen beim Anbieter und in OpenCloud zusammenpassen.</p>
+<p>Client-IDs, Redirect-URIs und Scopes richten sich nach den OpenCloud-Anwendungen. Du musst beim Anbieter und in OpenCloud zusammenpassen.</p>
 <h3 id="the-four-clients">Vier Clients registrieren</h3>
 <table>
 <thead>
@@ -109,11 +108,11 @@
 </table>
 <p>Der Webclient benötigt alle drei Redirect-URIs: den Einstieg, den Abschluss der Anmeldung und die stille Erneuerung der Sitzung. Fehlt <code>oidc-silent-redirect.html</code>, können Sitzungen nach zunächst erfolgreicher Anmeldung scheitern.</p>
 <p><code>offline_access</code> ist in diesen Beispielen für Desktop und Mobilgeräte vorgesehen, damit sie Refresh-Tokens erhalten. Der Webclient wird ohne diesen Scope eingerichtet.</p>
-<p>Wenn Sie Client-IDs ändern, passen Sie auch <code>WEBFINGER_WEB_OIDC_CLIENT_ID</code> und die entsprechenden <code>ANDROID</code>-, <code>IOS</code>- und <code>DESKTOP</code>-Variablen an. Sonst verwenden die Clients andere IDs als der Anbieter kennt.</p>
+<p>Wenn du Client-IDs änderst, passe auch <code>WEBFINGER_WEB_OIDC_CLIENT_ID</code> und die entsprechenden <code>ANDROID</code>-, <code>IOS</code>- und <code>DESKTOP</code>-Variablen an. Sonst verwenden die Clients andere IDs als der Anbieter kennt.</p>
 <h3 id="why-they-are-all-public-clients">Öffentliche Clients mit PKCE</h3>
-<p>Web-, Desktop- und Mobilclients laufen auf Geräten der Benutzer und können ein gemeinsames Client-Geheimnis nicht vertraulich halten. Registrieren Sie sie als <strong>öffentliche Clients mit Authorization Code Flow und PKCE</strong>. Verwenden Sie die Challenge-Methode <code>S256</code>. Ein statisch eingebautes Client-Secret bietet bei diesen Clients keinen verlässlichen Geheimnisschutz.</p>
+<p>Web-, Desktop- und Mobilclients laufen auf Geräten der Benutzer und können ein gemeinsames Client-Geheimnis nicht vertraulich halten. Registriere sie als <strong>öffentliche Clients mit Authorization Code Flow und PKCE</strong>. Verwende die Challenge-Methode <code>S256</code>. Ein statisch eingebautes Client-Secret bietet bei diesen Clients keinen verlässlichen Geheimnisschutz.</p>
 <h2 id="what-opencloud-needs-whichever-provider-you-pick">OpenCloud konfigurieren</h2>
-<p>Sobald der Anbieter bereitsteht, setzen Sie die OpenCloud-Variablen. Die <a href="https://docs.opencloud.eu/docs/admin/configuration/authentication-and-user-management/external-idp">OpenCloud-Anleitung für externe IdPs</a> ist die weiterführende Referenz:</p>
+<p>Sobald der Anbieter bereitsteht, setze die OpenCloud-Variablen. Die <a href="https://docs.opencloud.eu/docs/admin/configuration/authentication-and-user-management/external-idp">OpenCloud-Anleitung für externe IdPs</a> ist die weiterführende Referenz:</p>
 <pre><code class="language-shell"># The provider, and turning the built-in one off.
 OC_OIDC_ISSUER=&quot;https://id.example.com/realms/opencloud&quot;
 OC_EXCLUDE_RUN_SERVICES=&quot;idp&quot;
@@ -146,12 +145,12 @@ WEBFINGER_DESKTOP_OIDC_CLIENT_ID=&quot;OpenCloudDesktop&quot;
 WEBFINGER_ANDROID_OIDC_CLIENT_ID=&quot;OpenCloudAndroid&quot;
 WEBFINGER_IOS_OIDC_CLIENT_ID=&quot;OpenCloudIOS&quot;
 </code></pre>
-<p>Prüfen Sie besonders die Zugriffsentscheidungen:</p>
+<p>Prüfe besonders die Zugriffsentscheidungen:</p>
 <ul>
-<li><code>PROXY_AUTOPROVISION_ACCOUNTS=true</code> erstellt bei der ersten Anmeldung ein Konto. Beschränken Sie deshalb beim Anbieter, wer die OpenCloud-Anwendung verwenden darf, etwa über eine Gruppe.</li>
-<li>Bei <code>PROXY_ROLE_ASSIGNMENT_DRIVER=oidc</code> setzen Sie <code>GRAPH_ASSIGN_DEFAULT_USER_ROLE=false</code>, damit die automatische Standardrolle nicht zusätzlich vergeben wird.</li>
+<li><code>PROXY_AUTOPROVISION_ACCOUNTS=true</code> erstellt bei der ersten Anmeldung ein Konto. Beschränke deshalb beim Anbieter, wer die OpenCloud-Anwendung verwenden darf, etwa über eine Gruppe.</li>
+<li>Bei <code>PROXY_ROLE_ASSIGNMENT_DRIVER=oidc</code> setze <code>GRAPH_ASSIGN_DEFAULT_USER_ROLE=false</code>, damit die automatische Standardrolle nicht zusätzlich vergeben wird.</li>
 </ul>
-<p>Starten Sie OpenCloud nach Änderungen neu. Insbesondere <code>OC_EXCLUDE_RUN_SERVICES</code> wird beim Start gelesen.</p>
+<p>Starte OpenCloud nach Änderungen neu. Insbesondere <code>OC_EXCLUDE_RUN_SERVICES</code> wird beim Start gelesen.</p>
 <h2 id="tutorial-a-keycloak">Anleitung A: Keycloak</h2>
 <p>Keycloak eignet sich besonders, wenn bereits ein Realm, Benutzerföderation oder umfangreiche Rollenzuordnung vorhanden ist.</p>
 <p><strong>1. Dienst starten:</strong> Das Beispiel verwendet eine Datenbank und einen vorgeschalteten TLS-Proxy:</p>
@@ -175,16 +174,16 @@ WEBFINGER_IOS_OIDC_CLIENT_ID=&quot;OpenCloudIOS&quot;
     depends_on: [keycloak-db]
 </code></pre>
 <p><code>KC_PROXY_HEADERS: xforwarded</code> erlaubt Keycloak, die vom kontrollierten Proxy übergebene öffentliche Adresse zu berücksichtigen.</p>
-<p><strong>2. Realm anlegen:</strong> Öffnen Sie <em>Realms → Create realm</em> und erstellen Sie <code>opencloud</code>. Der Realm <code>master</code> bleibt der Keycloak-Verwaltung vorbehalten.</p>
+<p><strong>2. Realm anlegen:</strong> Öffne <em>Realms → Create realm</em> und erstellst du <code>opencloud</code>. Der Realm <code>master</code> bleibt der Keycloak-Verwaltung vorbehalten.</p>
 <p>Der Issuer lautet dann:</p>
 <pre><code>https://id.example.com/realms/opencloud
 </code></pre>
-<p><strong>3. Vier Clients anlegen:</strong> Verwenden Sie unter <em>Clients → Create client</em> die <a href="#the-four-clients">oben aufgeführten Werte</a>:</p>
+<p><strong>3. Vier Clients anlegen:</strong> Verwende unter <em>Clients → Create client</em> die <a href="#the-four-clients">oben aufgeführten Werte</a>:</p>
 <ul>
 <li><strong>Client type:</strong> OpenID Connect.</li>
 <li><strong>Client authentication:</strong> aus, für öffentliche Clients.</li>
-<li><strong>Authentication flow:</strong> Standard Flow. Deaktivieren Sie Direct Access Grants und nicht benötigte Flows.</li>
-<li><strong>Valid redirect URIs:</strong> die passenden Werte je Client. Der Desktop-Client benötigt Loopback-Weiterleitungen mit seinem zur Laufzeit gewählten Port; prüfen Sie die vom Anbieter unterstützte Schreibweise für <code>http://127.0.0.1/*</code> und <code>http://localhost/*</code>.</li>
+<li><strong>Authentication flow:</strong> Standard Flow. Deaktiviere Direct Access Grants und nicht benötigte Flows.</li>
+<li><strong>Valid redirect URIs:</strong> die passenden Werte je Client. Der Desktop-Client benötigt Loopback-Weiterleitungen mit seinem zur Laufzeit gewählten Port; prüfe die vom Anbieter unterstützte Schreibweise für <code>http://127.0.0.1/*</code> und <code>http://localhost/*</code>.</li>
 <li><strong>Web origins:</strong> <code>https://opencloud.example.com</code> für den Webclient.</li>
 <li><strong>Proof Key for Code Exchange Code Challenge Method:</strong> unter <em>Advanced → Advanced settings</em> auf <code>S256</code> setzen.</li>
 </ul>
@@ -193,13 +192,13 @@ WEBFINGER_IOS_OIDC_CLIENT_ID=&quot;OpenCloudIOS&quot;
 <li>Einen <strong>Group Membership</strong>-Mapper für <code>groups</code>, mit <em>Full group path</em> aus. Sonst wird beispielsweise <code>/finance</code> statt <code>finance</code> geliefert.</li>
 <li>Bei Rollenvergabe aus Keycloak einen <strong>User Client Role</strong>-Mapper für <code>roles</code>.</li>
 </ul>
-<p>Stellen Sie die Claims im Access-Token und in der Userinfo-Antwort bereit. Ein Claim nur im ID-Token genügt für diese Zuordnung nicht.</p>
-<p><strong>5. Zweiten Faktor verlangen:</strong> Aktivieren Sie <em>Configure OTP</em> unter <em>Authentication → Required actions</em> und verwenden Sie einen Browser-Flow, der den zweiten Faktor tatsächlich verlangt. Testen Sie auch die erste Einrichtung eines Faktors.</p>
-<p><strong>6. OpenCloud umstellen:</strong> Setzen Sie die oben beschriebenen Variablen und starten Sie die Instanz neu.</p>
+<p>Stelle die Claims im Access-Token und in der Userinfo-Antwort bereit. Ein Claim nur im ID-Token genügt für diese Zuordnung nicht.</p>
+<p><strong>5. Zweiten Faktor verlangen:</strong> aktiviere <em>Configure OTP</em> unter <em>Authentication → Required actions</em> und verwende einen Browser-Flow, der den zweiten Faktor tatsächlich verlangt. Teste auch die erste Einrichtung eines Faktors.</p>
+<p><strong>6. OpenCloud umstellen:</strong> Setze die oben beschriebenen Variablen und starte die Instanz neu.</p>
 <h2 id="tutorial-b-authentik">Anleitung B: Authentik</h2>
 <p>Authentik eignet sich für mehrere Anwendungen mit eigenen Gruppen- und Zugriffsregeln sowie für eine dateibasierte Bereitstellung über Blueprints.</p>
-<p>Die Authentik-Konfiguration dieses Repositorys schützt den <a href="/documentation/authentik">MCP-Endpunkt des Scan-Dienstes</a> und dessen Betreiberbereich. Sie konfiguriert nicht automatisch die Anmeldung Ihrer OpenCloud-Instanz. Die <a href="https://github.com/sowoi/check-opencloud-security/blob/main/authentik/blueprints">Blueprints</a> können jedoch als Beispiel dienen.</p>
-<p><strong>1. Dienst installieren:</strong> Folgen Sie der <a href="https://docs.goauthentik.io/install-config/install/docker-compose">Authentik-Installationsanleitung</a>. Stellen Sie sicher, dass <code>https://id.example.com</code> aus allen beteiligten Netzen mit vertrauenswürdigem Zertifikat erreichbar ist.</p>
+<p>Die Authentik-Konfiguration dieses Repositorys schützt den <a href="/documentation/authentik">MCP-Endpunkt des Scan-Dienstes</a> und dessen Betreiberbereich. Sie konfiguriert nicht automatisch die Anmeldung deiner OpenCloud-Instanz. Die <a href="https://github.com/sowoi/check-opencloud-security/blob/main/authentik/blueprints">Blueprints</a> können jedoch als Beispiel dienen.</p>
+<p><strong>1. Dienst installieren:</strong> Folge der <a href="https://docs.goauthentik.io/install-config/install/docker-compose">Authentik-Installationsanleitung</a>. Stelle sicher, dass <code>https://id.example.com</code> aus allen beteiligten Netzen mit vertrauenswürdigem Zertifikat erreichbar ist.</p>
 <p><strong>2. Gruppen-Mapping anlegen:</strong> Unter <em>Customisation → Property mappings → Create → Scope mapping</em>:</p>
 <ul>
 <li><strong>Name:</strong> <code>OpenCloud groups</code></li>
@@ -208,23 +207,23 @@ WEBFINGER_IOS_OIDC_CLIENT_ID=&quot;OpenCloudIOS&quot;
 </ul>
 <p><code>python
   return {"groups": [group.name for group in request.user.ak_groups.all()]}</code></p>
-<p>Mappings für <code>openid</code>, <code>profile</code> und <code>email</code> sind bereits vorhanden. Ergänzen Sie das Gruppen-Mapping für die OpenCloud-Zuordnung.</p>
-<p><strong>3. Vier Provider anlegen:</strong> Unter <em>Applications → Providers → Create → OAuth2/OpenID Provider</em> registrieren Sie die Clients aus der <a href="#the-four-clients">Tabelle</a>:</p>
+<p>Mappings für <code>openid</code>, <code>profile</code> und <code>email</code> sind bereits vorhanden. Ergänze das Gruppen-Mapping für die OpenCloud-Zuordnung.</p>
+<p><strong>3. Vier Provider anlegen:</strong> Unter <em>Applications → Providers → Create → OAuth2/OpenID Provider</em> registriere die Clients aus der <a href="#the-four-clients">Tabelle</a>:</p>
 <ul>
 <li><strong>Client type:</strong> Public, mit PKCE.</li>
 <li><strong>Client ID und Redirect URIs:</strong> passend zur Anwendung.</li>
-<li>Verwenden Sie beim Einsatz regulärer Ausdrücke exakt begrenzte Redirect-Muster, etwa <code>http://127\.0\.0\.1(:[0-9]+)?</code> für den Loopback-Eingang, und beachten Sie den gewählten URI-Abgleichmodus.</li>
+<li>Verwende beim Einsatz regulärer Ausdrücke exakt begrenzte Redirect-Muster, etwa <code>http://127\.0\.0\.1(:[0-9]+)?</code> für den Loopback-Eingang, und beachte den gewählten URI-Abgleichmodus.</li>
 <li><strong>Scopes:</strong> die Standard-Mappings und <code>OpenCloud groups</code>, für native Clients zusätzlich die benötigte Offline-Berechtigung.</li>
 <li><strong>Signing key:</strong> ein konfigurierter Signaturschlüssel.</li>
 <li><strong>Authorization flow:</strong> für eine vertrauenswürdige interne Anwendung beispielsweise <code>implicit consent</code>.</li>
 </ul>
-<p><strong>4. Anwendung und Gruppe zuordnen:</strong> Erstellen Sie unter <em>Applications → Applications → Create</em> die Anwendung <code>opencloud</code> mit dem Webprovider. Beschränken Sie sie unter <em>Policies / Group / User bindings</em> auf die vorgesehene Gruppe. Prüfen Sie die entsprechende Zugriffsregel auch für die übrigen Clients.</p>
+<p><strong>4. Anwendung und Gruppe zuordnen:</strong> Erstelle unter <em>Applications → Applications → Create</em> die Anwendung <code>opencloud</code> mit dem Webprovider. Beschränke sie unter <em>Policies / Group / User bindings</em> auf die vorgesehene Gruppe. Prüfe die entsprechende Zugriffsregel auch für die übrigen Clients.</p>
 <p>Diese Zuordnung bestimmt, wer bei aktiviertem Autoprovisioning ein OpenCloud-Konto erhält.</p>
-<p><strong>5. Issuer übernehmen:</strong> Lesen Sie den tatsächlichen Wert am Provider ab:</p>
+<p><strong>5. Issuer übernehmen:</strong> Lies den tatsächlichen Wert am Provider ab:</p>
 <pre><code>https://id.example.com/application/o/opencloud/
 </code></pre>
 <p>Der abschließende Schrägstrich gehört zum Issuer und muss in OpenCloud identisch stehen.</p>
-<p><strong>6. OpenCloud umstellen:</strong> Setzen Sie die gemeinsamen Variablen und starten Sie neu.</p>
+<p><strong>6. OpenCloud umstellen:</strong> Setze die gemeinsamen Variablen und starte neu.</p>
 <h2 id="tutorial-c-authelia">Anleitung C: Authelia</h2>
 <p>Authelia lässt sich über eine Konfigurationsdatei einrichten und passt häufig zu einer bereits vorhandenen Proxy-Authentifizierung.</p>
 <p><strong>1. Dienst und Sitzungsspeicher starten:</strong></p>
@@ -238,13 +237,13 @@ WEBFINGER_IOS_OIDC_CLIENT_ID=&quot;OpenCloudIOS&quot;
       AUTHELIA_IDENTITY_PROVIDERS_OIDC_ISSUER_PRIVATE_KEY_FILE: /run/secrets/oidc_key
     secrets: [oidc_hmac, oidc_key]
 </code></pre>
-<p>Erzeugen Sie die benötigten Geheimnisse vor dem ersten Start:</p>
+<p>Erzeuge die benötigten Geheimnisse vor dem ersten Start:</p>
 <pre><code class="language-shell">docker run --rm ghcr.io/authelia/authelia:latest \
     authelia crypto rand --length 64 --charset alphanumeric
 docker run --rm -v &quot;$PWD/authelia:/keys&quot; ghcr.io/authelia/authelia:latest \
     authelia crypto pair rsa generate --bits 4096 --directory /keys
 </code></pre>
-<p><strong>2. Clients registrieren:</strong> Legen Sie unter <code>identity_providers.oidc.clients</code> in <code>configuration.yml</code> alle vier Clients an. Das Beispiel zeigt den Webclient; passen Sie für die übrigen IDs, Redirects und Scopes an:</p>
+<p><strong>2. Clients registrieren:</strong> Lege unter <code>identity_providers.oidc.clients</code> in <code>configuration.yml</code> alle vier Clients an. Das Beispiel zeigt den Webclient; passt du für die übrigen IDs, Redirects und Scopes an:</p>
 <pre><code class="language-yaml">identity_providers:
   oidc:
     clients:
@@ -310,7 +309,7 @@ docker run --rm -v &quot;$PWD/authelia:/keys&quot; ghcr.io/authelia/authelia:lat
 <p><strong>4. Issuer übernehmen:</strong> Bei dieser Konfiguration ist es die Basisadresse ohne Pfad und ohne abschließenden Schrägstrich:</p>
 <pre><code>https://id.example.com
 </code></pre>
-<p><strong>5. OpenCloud umstellen:</strong> Setzen Sie die gemeinsamen Variablen und starten Sie neu.</p>
+<p><strong>5. OpenCloud umstellen:</strong> Setze die gemeinsamen Variablen und starte neu.</p>
 <h2 id="verifying-it-actually-worked">Einrichtung prüfen</h2>
 <p><strong>1. Discovery-Dokument abrufen:</strong></p>
 <pre><code class="language-shell">curl -fsS https://id.example.com/.well-known/openid-configuration | \
@@ -321,20 +320,20 @@ docker run --rm -v &quot;$PWD/authelia:/keys&quot; ghcr.io/authelia/authelia:lat
 <pre><code class="language-shell">curl -fsS https://opencloud.example.com/.well-known/openid-configuration | \
     python3 -c 'import json,sys; print(json.load(sys.stdin)[&quot;issuer&quot;])'
 </code></pre>
-<p>Erscheint weiterhin der eingebaute Anbieter, prüfen Sie die wirksame Konfiguration, <code>OC_EXCLUDE_RUN_SERVICES</code> und den Neustart.</p>
-<p><strong>3. Anmeldung testen:</strong> Verwenden Sie ein privates Browserfenster. Prüfen Sie Kontoanlage, Gruppen, Rollen und den verpflichtenden zweiten Faktor. Testen Sie auch einen Benutzer, der keinen Zugriff erhalten soll.</p>
+<p>Erscheint weiterhin der eingebaute Anbieter, prüfe die wirksame Konfiguration, <code>OC_EXCLUDE_RUN_SERVICES</code> und den Neustart.</p>
+<p><strong>3. Anmeldung testen:</strong> Verwende ein privates Browserfenster. Prüfe Kontoanlage, Gruppen, Rollen und den verpflichtenden zweiten Faktor. Teste auch einen Benutzer, der keinen Zugriff erhalten soll.</p>
 <p><strong>4. Scan ausführen:</strong></p>
 <pre><code class="language-shell">check-opencloud-security --host opencloud.example.com --check-hardening --debug
 </code></pre>
-<p>Prüfen Sie <code>identityProviderDetected</code> und die vier <code>oidc*</code>-Angaben, soweit sie aus dem öffentlich erreichbaren Dokument ermittelt werden konnten. <a href="/documentation/authentication">Authentifizierung</a> erklärt die einzelnen Befunde. Ein Scan kann weder eine korrekte Gruppenzuordnung noch die tatsächliche Durchsetzung des zweiten Faktors bestätigen; dafür ist der Anmeldungstest erforderlich.</p>
+<p>Prüfe <code>identityProviderDetected</code> und die vier <code>oidc*</code>-Angaben, soweit sie aus dem öffentlich erreichbaren Dokument ermittelt werden konnten. <a href="/documentation/authentication">Authentifizierung</a> erklärt die einzelnen Befunde. Ein Scan kann weder eine korrekte Gruppenzuordnung noch die tatsächliche Durchsetzung des zweiten Faktors bestätigen; dafür ist der Anmeldungstest erforderlich.</p>
 <h2 id="moving-an-instance-that-already-has-accounts">Bestehende Konten migrieren</h2>
 <p>Bei einer Umstellung müssen die Identitäten des Anbieters den vorhandenen OpenCloud-Konten zugeordnet werden. <code>PROXY_USER_OIDC_CLAIM</code> und <code>PROXY_USER_CS3_CLAIM</code> bestimmen diese Zuordnung. Stimmen beispielsweise <code>preferred_username</code> und <code>username</code> nicht überein, kann Autoprovisioning ein zweites, leeres Konto anlegen.</p>
 <ol>
-<li>Exportieren Sie die vorhandenen Benutzernamen und gleichen Sie sie vorab mit dem Anbieter ab.</li>
-<li>Bereiten Sie den externen Anbieter vor und halten Sie den bisherigen Anmeldeweg als Rückfall bereit.</li>
-<li>Testen Sie ein vorhandenes Konto und prüfen Sie, dass es seinen bisherigen Speicherbereich erreicht.</li>
-<li>Nehmen Sie den eingebauten <code>idp</code> erst nach erfolgreicher Prüfung über <code>OC_EXCLUDE_RUN_SERVICES</code> außer Betrieb und starten Sie neu.</li>
-<li>Lassen Sie <code>PROXY_ENABLE_BASIC_AUTH=false</code>, wenn kein Client es benötigt. Für notwendige WebDAV-, CalDAV- oder Backup-Zugriffe verwenden Sie App-Tokens; siehe <a href="/documentation/secure-deployment#basic-authentication-is-the-hole-in-all-of-this">Basic Auth</a>.</li>
+<li>Exportiere die vorhandenen Benutzernamen und gleiche sie vorab mit dem Anbieter ab.</li>
+<li>Bereite den externen Anbieter vor und halte den bisherigen Anmeldeweg als Rückfall bereit.</li>
+<li>Teste ein vorhandenes Konto und prüfe, dass es seinen bisherigen Speicherbereich erreicht.</li>
+<li>Nimm den eingebauten <code>idp</code> erst nach erfolgreicher Prüfung über <code>OC_EXCLUDE_RUN_SERVICES</code> außer Betrieb und starte neu.</li>
+<li>Lass <code>PROXY_ENABLE_BASIC_AUTH=false</code>, wenn kein Client es benötigt. Für notwendige WebDAV-, CalDAV- oder Backup-Zugriffe verwende App-Tokens; siehe <a href="/documentation/secure-deployment#basic-authentication-is-the-hole-in-all-of-this">Basic Auth</a>.</li>
 </ol>
 <h2 id="troubleshooting">Fehlersuche</h2>
 <table>

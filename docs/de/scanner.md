@@ -1,4 +1,4 @@
-# OpenCloud Security Scanner library and JSON CLI
+# Bibliothek und JSON-CLI des OpenCloud Security Scanners
 
 `opencloud_local_scan` ist die Scanner-Bibliothek hinter
 `check-opencloud-security` und dem Dienst `check-opencloud-scanner`. Sie ruft die
@@ -46,7 +46,7 @@ Nur `productversion` bezeichnet das installierte Release.
 `versions.select_version()` bevorzugt dieses Feld, fragt ersatzweise die
 Capabilities ab und verwirft bekannte Platzhalter. Ist keine verwertbare
 Version vorhanden, enthält das Ergebnis `legacyVersion`; EOL-, Update- und
-Schwachstellenprüfungen entfallen. Verwenden Sie auch in eigenen Skripten
+Schwachstellenprüfungen entfallen. Verwende auch in eigenen Skripten
 `productversion`.
 
 ## Wie die Bewertung entsteht {#rating-algorithm}
@@ -66,8 +66,8 @@ Anschließend begrenzen fehlgeschlagene Zusatzprüfungen den Wert: kritisch auf
 `2` (`D`), hoch auf `3` (`C`), mittel auf `4` (`A`), niedrig auf `5` (`A+`).
 Eine solche Grenze verbessert niemals eine bereits schlechtere Bewertung.
 
-Beachten Sie die Monitoring-Schwellen: Ein kritischer Einzelbefund mit Note `D`
-führt beim Standard `--critical 1` zu WARNING. Wählen Sie `--critical 2`, wenn
+Beachte die Monitoring-Schwellen: Ein kritischer Einzelbefund mit Note `D`
+führt beim Standard `--critical 1` zu WARNING. Wähle `--critical 2`, wenn
 dieser Befund CRITICAL auslösen soll. Um Zusatzbefunde ohne Einfluss auf die
 Note zu erfassen:
 
@@ -226,7 +226,7 @@ steht zusätzlich unter `newestRelease`.
 | `off` | Update-Prüfung auslassen |
 
 Standard ist `auto`. Bei einem nicht erreichbaren Feed bleibt die Prüfung mit
-den Daten des installierten Pakets möglich. Wählen Sie `feed`, wenn Sie einen
+den Daten des installierten Pakets möglich. Wähle `feed`, wenn du einen
 fehlgeschlagenen Abruf ausdrücklich sehen möchten.
 
 Standardquelle ist die GitHub-Releases-API. `parse_release_feed()` versteht
@@ -251,12 +251,12 @@ Der Befehl lädt die im Projekt-Repository geprüften Dateien und versucht, ihre
 Sigstore-Attestierung zu verifizieren. Er verwirft Zeitpläne, die gebündelte
 Release-Linien verlieren, sowie Sicherheitsmeldungen ohne Versionsgrenzen.
 Die Zieldateien werden atomar ersetzt; das installierte Paket bleibt unverändert.
-Verweisen Sie mit `scanner.release_schedule` und `scanner.vulnerability_db`
+Verweise mit `scanner.release_schedule` und `scanner.vulnerability_db`
 auf diese Dateien. Der mitgelieferte
 [systemd-Timer](../../contrib/systemd/check-opencloud-security-refresh.timer)
 kann den Abruf täglich ausführen.
 
-Für die Signaturprüfung benötigen Sie das Extra `signing`:
+Für die Signaturprüfung benötigst du das Extra `signing`:
 
 ```console
 $ pip install 'check-opencloud-security[signing]'
@@ -280,7 +280,7 @@ einen Pull Request für `data/vulnerabilities.json`. Dabei kommen nur Einträge
 hinzu. Entfernen einer Meldung erfordert eine bewusste Bearbeitung.
 
 Eine leere Liste `vulnerabilities` bedeutet, dass keine geladene Meldung zur
-Version passt. Sie bestätigt nicht die Vollständigkeit der Quellen. Eigene
+Version passt. SIE bestätigt nicht die Vollständigkeit der Quellen. Eigene
 Datenbanken lassen sich ergänzen:
 
 ```yaml
@@ -471,8 +471,8 @@ scheinbar fertiger Konfigurationswert.
 ## Debug-Ports {#debug-ports}
 
 Debug-Listener liefern unter anderem `/healthz`, `/readyz`, `/metrics`,
-`/config` und `/debug/pprof`. Sie können Versionen und Konfigurationen offenlegen
-und Profiling erlauben. Standardmäßig binden sie an Loopback, sofern
+`/config` und `/debug/pprof`. Du kannst Versionen und Konfigurationen offenlegen
+und Profiling erlauben. Standardmäßig binde an Loopback, sofern
 `<SERVICE>_DEBUG_ADDR` nichts anderes festlegt.
 
 | Port | Dienst |
@@ -601,7 +601,7 @@ Gültigkeit, Restlaufzeit, Namen, Kettenlänge und weitere Messwerte:
 
 `null` bedeutet „nicht ermittelt“. Fehlende Laufzeitunterstützung, ein nicht
 vorhandenes `openssl` oder ein fehlender OCSP-Responder können einzelne
-Prüfungen verhindern. Sie werden dann nicht als bestanden ausgewiesen; siehe
+Prüfungen verhindern. SIE werden dann nicht als bestanden ausgewiesen; siehe
 [ADR 0013](../../adr/0013-transport-security-is-measured-not-assumed.md).
 
 Auch ein nicht vertrauenswürdiges Zertifikat wird auf Ablauf, Namen und

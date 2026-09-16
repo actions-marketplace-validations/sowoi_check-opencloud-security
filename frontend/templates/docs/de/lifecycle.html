@@ -11,23 +11,22 @@
   <p class="lede">{{ t('docs.lifecycle.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de') %}
+{% if locale not in ('en', 'de', 'fr') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
 <article class="docs-article card section-gap" data-reveal lang="de">
-<h1 id="versionsangaben-prufen">Versionsangaben prüfen</h1>
 <p>Drei Prüfungen befassen sich mit der Erkennung und Offenlegung der laufenden Version. Sie ergänzen die <a href="/documentation/reference#end-of-life-detection">End-of-Life-Erkennung</a> und die Update-Prüfung: Beide können nur arbeiten, wenn die tatsächliche OpenCloud-Version bekannt ist.</p>
 <h2 id="1-could-the-running-version-be-determined-at-all-versiondetection">1. Version erkennen: <code>versionDetection</code></h2>
 <p><code>/status.php</code> kann drei Felder mit Versionsangaben liefern, von denen nur eines die tatsächliche OpenCloud-Version enthält. <a href="/documentation/scanner-checks#reading-the-version-correctly">Die Version richtig lesen</a> erklärt die Unterschiede; <a href="/documentation/status-php">der Leitfaden zu <code>/status.php</code></a> beschreibt den Ursprung der Kompatibilitätsfelder. Diese Prüfung schlägt fehl, wenn <code>productversion</code> fehlt und nur die älteren Felder <code>version</code> und <code>versionstring</code> vorliegen.</p>
 <p>Ohne die tatsächliche Version lassen sich weder Sicherheitshinweise zuordnen noch Supportstatus und verfügbare Updates bestimmen. Diese Teile des Berichts sind dann unbekannt; sie gelten nicht als bestanden.</p>
-<p><strong>Bei einem Fehler:</strong> Prüfen Sie, ob ein vorgeschalteter Proxy Felder aus <code>/status.php</code> entfernt oder umschreibt. Auch eine alte OpenCloud-Version, die noch kein <code>productversion</code> ausgibt, kommt als Ursache infrage. Behandeln Sie alle versionsabhängigen Ergebnisse als unbekannt, bis eine verlässliche Versionsangabe vorliegt.</p>
+<p><strong>Bei einem Fehler:</strong> Prüfe, ob ein vorgeschalteter Proxy Felder aus <code>/status.php</code> entfernt oder umschreibt. Auch eine alte OpenCloud-Version, die noch kein <code>productversion</code> ausgibt, kommt als Ursache infrage. Behandle alle versionsabhängigen Ergebnisse als unbekannt, bis eine verlässliche Versionsangabe vorliegt.</p>
 <h2 id="2-does-a-response-header-publish-the-version-versiondisclosureheader">2. Version in HTTP-Headern: <code>versionDisclosure:&lt;header&gt;</code></h2>
 <p>Der Scanner sucht in <code>Server</code> und <code>X-Powered-By</code> nach Versionsmustern aus Ziffer, Punkt und weiterer Ziffer. Die Angabe allein ist keine Schwachstelle, erleichtert aber die Suche nach passenden bekannten Angriffen. Beide Befunde haben deshalb den Schweregrad <code>low</code>.</p>
-<p><strong>Behebung:</strong> Unterdrücken oder kürzen Sie die Versionsangabe im Reverse Proxy, etwa mit <code>server_tokens off</code> in nginx oder <code>ServerTokens Prod</code> in Apache. Sie können den betreffenden Header auch vollständig entfernen. Entsprechende Einstellungen für Caddy, Traefik und HAProxy finden Sie unter <a href="/documentation/reverse-proxy">Reverse Proxys</a>.</p>
+<p><strong>Behebung:</strong> Unterdrücke oder kürze die Versionsangabe im Reverse Proxy, etwa mit <code>server_tokens off</code> in nginx oder <code>ServerTokens Prod</code> in Apache. Du kannst den betreffenden Header auch vollständig entfernen. Entsprechende Einstellungen für Caddy, Traefik und HAProxy findest du unter <a href="/documentation/reverse-proxy">Reverse Proxys</a>.</p>
 <h2 id="3-does-the-webfinger-document-publish-the-version-webfingerversiondisclosure">3. Version im Webfinger-Dokument: <code>webfingerVersionDisclosure</code></h2>
 <p>Der Scanner ruft <code>/.well-known/webfinger</code> ohne Anmeldung ab und sucht in der Antwort nach einer Versionsangabe. Wie bei den HTTP-Headern handelt es sich um eine Offenlegung von Informationen mit dem Schweregrad <code>low</code>, hier in einem JSON-Dokument.</p>
-<p><strong>Behebung:</strong> Entfernen Sie die Versionsangabe über den Reverse Proxy aus der Webfinger-Antwort. Wenn Sie die Offenlegung bewusst akzeptieren, halten Sie die Instanz aktuell: Besonders hilfreich ist die Angabe für Angreifer, solange bekannte Schwachstellen dieser Version ungepatcht sind.</p>
+<p><strong>Behebung:</strong> Entferne die Versionsangabe über den Reverse Proxy aus der Webfinger-Antwort. Wenn du die Offenlegung bewusst akzeptierst, halte die Instanz aktuell: Besonders hilfreich ist die Angabe für Angreifer, solange bekannte Schwachstellen dieser Version ungepatcht sind.</p>
 <h2 id="severity-and-rating-impact">Schweregrad und Bewertung</h2>
 <p>Alle drei Prüfungen gehören zu <code>extraChecks</code> und benötigen kein <code>--check-hardening</code>. <code>versionDetection</code> hat den Schweregrad <code>medium</code> und begrenzt die Note auf <code>A</code>; die Offenlegungsprüfungen haben <code>low</code> und begrenzen sie auf <code>A+</code>. Details stehen in der <a href="/documentation/scanner-checks#what-the-scanner-checks">Prüfübersicht</a>.</p>
 <p>Diese Befunde sind von der <a href="/documentation/reference#end-of-life-detection">End-of-Life-Bewertung</a> unabhängig. Eine verborgene Versionsnummer verlängert den Support einer veralteten Version nicht.</p>

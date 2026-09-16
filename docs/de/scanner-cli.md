@@ -1,5 +1,3 @@
-# The check-opencloud-scanner command
-
 # Die Befehle von check-opencloud-scanner
 
 Das Paket installiert zwei Programme:
@@ -91,7 +89,7 @@ Hardening: + Content-Security-Policy
 Rating: A+ (5) -> D (2)
 ```
 
-Der Befehl liest zwei Dateien und führt keinen Scan aus. `+` kennzeichnet neue, `-` behobene Befunde. Er zeigt außerdem Änderungen an Bewertung, Version und Supportzeitraum. Für einen automatisch gespeicherten Vergleich mit dem letzten Lauf verwenden Sie stattdessen eine [Baseline](../baseline.md).
+Der Befehl liest zwei Dateien und führt keinen Scan aus. `+` kennzeichnet neue, `-` behobene Befunde. Er zeigt außerdem Änderungen an Bewertung, Version und Supportzeitraum. Für einen automatisch gespeicherten Vergleich mit dem letzten Lauf verwende stattdessen eine [Baseline](../baseline.md).
 
 | Option | Funktion |
 |:--|:--|
@@ -163,7 +161,7 @@ Der Befehl lädt Release-Zeitplan und Schwachstellendatenbank aus dem Projekt-Re
 | `--schedule-url` | keine | Alternative Lebenszyklusseite ohne Signaturprüfung |
 | `--advisory-url` | keine | Alternativer OSV-Endpunkt ohne Signaturprüfung |
 
-Tragen Sie die Dateien anschließend in die Konfiguration ein und prüfen Sie ihre Lesbarkeit unter dem Benutzer des Checks. Eine unlesbare eigene Zeitplandatei deaktiviert die End-of-Life-Prüfung. Details stehen unter [Referenzdaten aktualisieren](../reference-data.md).
+Trage die Dateien anschließend in die Konfiguration ein und prüfe ihre Lesbarkeit unter dem Benutzer des Checks. Eine unlesbare eigene Zeitplandatei deaktiviert die End-of-Life-Prüfung. Details stehen unter [Referenzdaten aktualisieren](../reference-data.md).
 
 ## `serve`: HTTP-Dienst betreiben {#serve-the-scan-service}
 
@@ -194,7 +192,7 @@ check-opencloud-scanner configure
 check-opencloud-scanner -c /etc/check-opencloud-security/.env.json configure
 ```
 
-Der Assistent erklärt die Einstellungen und speichert sie als JSON mit Dateirechten nur für den Eigentümer. Er bietet `./.env.json`, `~/.config/check-opencloud-security/.env.json` und `/etc/check-opencloud-security/.env.json` an; über `-c` können Sie einen anderen Pfad wählen. Es ist derselbe Assistent wie bei `check-opencloud-security --configure`.
+Der Assistent erklärt die Einstellungen und speichert sie als JSON mit Dateirechten nur für den Eigentümer. Er bietet `./.env.json`, `~/.config/check-opencloud-security/.env.json` und `/etc/check-opencloud-security/.env.json` an; über `-c` kannst du einen anderen Pfad wählen. Es ist derselbe Assistent wie bei `check-opencloud-security --configure`.
 
 | Option | Funktion |
 |:--|:--|

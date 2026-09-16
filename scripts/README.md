@@ -10,6 +10,7 @@ published material. Run them from the repository root.
 | `build_distro_packages.py` | Builds the `.deb` and the `.rpm` from the already-built wheel, using `packaging/nfpm.yaml`. Needs `nfpm` on `PATH`. See [ADR 0039](../adr/0039-the-plugin-ships-as-a-distribution-package-built-from-the-wheel.md). |
 | `build_web_bundle.py` | Builds `dist/check_opencloud_security_web.tar.gz` and its checksum for a web-service release. |
 | `check_pull_request.py` | Refuses a pull request without an Unreleased `CHANGELOG.md` entry, or with a version change that is not forward, already tagged or misnamed in its commit subject. A local check before opening a pull request; no workflow runs it. |
+| `check_dependencies.py` | Refuses a Python dependency (in `pyproject.toml` or a workflow's `uvx`) without an approved record in `security/dependencies/`, and a grandfather list that grew (`--base`). `--list` shows every dependency's standing. CI runs it; see [ADR 0060](../adr/0060-a-new-dependency-is-justified-tested-and-reviewed-first.md). |
 | `check_documentation_links.py` | Checks documented OpenCloud links after merges and on a schedule. |
 | `release_notes.py` | Prepares release notes from the Unreleased changelog section. It rewrites release files, so use it on a scratch copy when previewing. |
 | `security_advisories.py` | Checks that every `### Security` changelog entry has a decision recorded in `security/advisories/`, and drafts or publishes the GitHub advisories. Use `--check` in CI. |

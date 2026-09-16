@@ -1,10 +1,8 @@
-# Run the OpenCloud Security Scanner on Kubernetes
-
 # Kubernetes
 
-Auf Kubernetes können Sie den Scanner als zeitgesteuerten `CronJob` oder als dauerhaftes `Deployment` des [Scan-Dienstes](../../README.md#running-the-scanner-as-a-service) betreiben. Der Dienst eignet sich für mehrere Anwendungen, die ein Ergebnis gemeinsam nutzen; für regelmäßige Prüfungen genügt meist der CronJob.
+Auf Kubernetes kannst du den Scanner als zeitgesteuerten `CronJob` oder als dauerhaftes `Deployment` des [Scan-Dienstes](../../README.md#running-the-scanner-as-a-service) betreiben. Der Dienst eignet sich für mehrere Anwendungen, die ein Ergebnis gemeinsam nutzen; für regelmäßige Prüfungen genügt meist der CronJob.
 
-Bauen Sie das Image wie unter [Docker](../installation.md#docker) beschrieben und übertragen Sie es in Ihre Registry. Ersetzen Sie in den Beispielen `registry.example.com/check-opencloud-security:1.1.0`. Verwenden Sie einen festen Tag, da Release-Zeitplan und bekannte Versionen Teil des Images sind.
+Baue das Image wie unter [Docker](../installation.md#docker) beschrieben und übertrage es in deine Registry. Ersetze in den Beispielen `registry.example.com/check-opencloud-security:1.1.0`. Verwende einen festen Tag, da Release-Zeitplan und bekannte Versionen Teil des Images sind.
 
 ## Helm-Chart {#the-helm-chart}
 
@@ -17,7 +15,7 @@ helm install opencloud-security contrib/helm/check-opencloud-security \
   --set 'cronJob.hosts={opencloud.example.com,other.example.com}'
 ```
 
-Dieser Aufruf richtet den zeitgesteuerten Scan ein. Mit `scanService.enabled=true` ergänzen Sie den Dienst. Die jeweils benötigten Werte müssen ausdrücklich gesetzt werden:
+Dieser Aufruf richtet den zeitgesteuerten Scan ein. Mit `scanService.enabled=true` ergänze den Dienst. Die jeweils benötigten Werte müssen ausdrücklich gesetzt werden:
 
 | Wert | Grund |
 |:--|:--|
@@ -26,9 +24,9 @@ Dieser Aufruf richtet den zeitgesteuerten Scan ein. Mit `scanService.enabled=tru
 | `scanService.existingSecret` | Der aktivierte Scan-Dienst benötigt ein vorhandenes Secret für sein Token |
 | `scanService.networkPolicy.allowedTargets` | Die aktivierte NetworkPolicy benötigt die erlaubten Ziele für ausgehende Verbindungen |
 
-Das Chart erzeugt keine Zugangsdaten. Erstellen Sie die Secrets vorher und verweisen Sie darauf. Die vollständige Wertetabelle steht im [Chart-README](../../contrib/helm/check-opencloud-security/README.md).
+Das Chart erzeugt keine Zugangsdaten. Erstellst du die Secrets vorher und verweise darauf. Die vollständige Wertetabelle steht im [Chart-README](../../contrib/helm/check-opencloud-security/README.md).
 
-Die folgenden Manifeste können Sie auch direkt anwenden oder als Grundlage für die Prüfung des gerenderten Charts verwenden.
+Die folgenden Manifeste kannst du auch direkt anwenden oder als Grundlage für die Prüfung des gerenderten Charts verwenden.
 
 ## Zeitgesteuerter Scan {#a-scheduled-scan}
 
@@ -94,7 +92,7 @@ kubectl logs job/opencloud-security-now --namespace monitoring
 
 ## Ergebnisse versenden {#sending-the-result-somewhere}
 
-Mit einem Webhook erhalten Sie neben dem Jobstatus auch den Grund für den Befund. Siehe [Webhook-Beispiele](../webhook-recipes.md) und [Uptime Kuma](../webhook-recipes.md#uptime-kuma):
+Mit einem Webhook erhältst du neben dem Jobstatus auch den Grund für den Befund. Siehe [Webhook-Beispiele](../webhook-recipes.md) und [Uptime Kuma](../webhook-recipes.md#uptime-kuma):
 
 ```yaml
               args:
@@ -108,7 +106,7 @@ Mit einem Webhook erhalten Sie neben dem Jobstatus auch den Grund für den Befun
                     secretKeyRef: {name: opencloud-security, key: webhook-url}
 ```
 
-Verwenden Sie für Push-Empfänger `--webhook-on=always`, wenn auch erfolgreiche Durchläufe gemeldet werden sollen. Beim Standard `critical` erfährt der Empfänger nur von kritischen Ergebnissen und kann einen erfolgreichen Lauf nicht von einem ausgebliebenen Job unterscheiden.
+Verwende für Push-Empfänger `--webhook-on=always`, wenn auch erfolgreiche Durchläufe gemeldet werden sollen. Beim Standard `critical` erfährt der Empfänger nur von kritischen Ergebnissen und kann einen erfolgreichen Lauf nicht von einem ausgebliebenen Job unterscheiden.
 
 ## Scan-Dienst {#the-scan-service}
 
@@ -173,7 +171,7 @@ kubectl run curl --rm -it --image=curlimages/curl --restart=Never -- \
   'http://opencloud-scanner.monitoring:8811/api/scan?url=opencloud.example.com'
 ```
 
-Beschränken Sie die ausgehenden Verbindungen des Pods mit einer `NetworkPolicy` auf die vorgesehenen Instanzen. Wer den Dienst aufrufen darf, sollte ihn nicht auf beliebige interne Clusterziele richten können.
+Beschränke die ausgehenden Verbindungen des Pods mit einer `NetworkPolicy` auf die vorgesehenen Instanzen. Wer den Dienst aufrufen darf, sollte ihn nicht auf beliebige interne Clusterziele richten können.
 
 ---
 

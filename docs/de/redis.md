@@ -1,12 +1,10 @@
-# Redis behind the OpenCloud Security Scanner web service
-
 # Redis für den Scan-Webdienst
 
 Redis speichert Warteschlange, Scanstatus, Ergebnisse und gemeinsam genutzte Betriebsdaten des Webdienstes. Dieser Leitfaden beschreibt Verbindung, Zugriffsschutz, Speicherbedarf und Fehlersuche.
 
 Er gilt für die [Webanwendung](../../webapp/README.md). Das CLI-Plugin benötigt kein Redis; es verbindet sich direkt mit OpenCloud und beendet sich nach dem Scan.
 
-Für den Passwortschutz der mitgelieferten Compose-Bereitstellung setzen Sie `COS_REDIS_PASSWORD` in `docker/.env` und wenden die Konfiguration mit `docker compose up -d` an.
+Für den Passwortschutz der mitgelieferten Compose-Bereitstellung setze `COS_REDIS_PASSWORD` in `docker/.env` und wenden die Konfiguration mit `docker compose up -d` an.
 
 ## Inhaltsübersicht {#table-of-contents}
 
@@ -42,7 +40,7 @@ Ein Neustart eines nicht persistenten Redis entfernt diesen Zustand. Neben noch 
 
 Die UUID berechtigt zum Abruf eines Scans. Ungültige, unbekannte und abgelaufene UUIDs erhalten denselben `404`; es gibt keine öffentliche Scanliste.
 
-Ratenlimit-Schlüssel verwenden mit `COS_WEB_AUDIT_SALT` abgeleitete Fingerabdrücke statt Klartext-Client-Adressen. Scanmetadaten enthalten während ihrer Lebensdauer jedoch die eingereichten Ziele. Schützen Sie daher den Zugriff auf Redis. Siehe [Protokollierung](../webapp.md#what-gets-logged).
+Ratenlimit-Schlüssel verwenden mit `COS_WEB_AUDIT_SALT` abgeleitete Fingerabdrücke statt Klartext-Client-Adressen. Scanmetadaten enthalten während ihrer Lebensdauer jedoch die eingereichten Ziele. Schütze daher den Zugriff auf Redis. Siehe [Protokollierung](../webapp.md#what-gets-logged).
 
 ## Verbindung konfigurieren {#configuring-the-connection}
 
@@ -56,13 +54,13 @@ Webanwendung und Worker lesen dieselbe `COS_WEB_REDIS_URL`:
 | `rediss://user:PASSWORD@host:6380/0` | TLS-Verbindung |
 | `memory://` | Prozessinterner Testersatz |
 
-Kodieren Sie Sonderzeichen wie `@`, `:`, `/` und `#` im Passwort für URLs. Die Generatoren [`docker/setup-wizard.py`](../../docker/setup-wizard.py) und [`docker/authentik-env.sh`](../../docker/authentik-env.sh) erzeugen URL-taugliche Werte.
+Kodiere Sonderzeichen wie `@`, `:`, `/` und `#` im Passwort für URLs. Die Generatoren [`docker/setup-wizard.py`](../../docker/setup-wizard.py) und [`docker/authentik-env.sh`](../../docker/authentik-env.sh) erzeugen URL-taugliche Werte.
 
 ## Ohne Redis testen {#running-without-redis}
 
 `COS_WEB_REDIS_URL=memory://` verwendet einen Speicher im Webprozess. Er eignet sich für Tests und zum Ansehen der Oberfläche ohne zusätzliche Infrastruktur.
 
-Dieser Modus ersetzt keine produktive Warteschlange: Ein anderer Prozess kann den Zustand nicht sehen, und ein Neustart löscht ihn. Für Webanwendung und getrennten Worker verwenden Sie Redis.
+Dieser Modus ersetzt keine produktive Warteschlange: Ein anderer Prozess kann den Zustand nicht sehen, und ein Neustart löscht ihn. Für Webanwendung und getrennten Worker verwende Redis.
 
 ## Passwortschutz {#the-password}
 
@@ -73,7 +71,7 @@ WARNING: Redis does not require authentication and is not protected by
 network restriction
 ```
 
-Setzen Sie ein Passwort:
+Setze ein Passwort:
 
 ```bash
 cd docker
@@ -86,7 +84,7 @@ Die Compose-Dateien verwenden `COS_REDIS_PASSWORD` für `--requirepass` und für
 
 Der Setup-Assistent erzeugt das Passwort in einer `.env` mit Modus `0600`. Auch `authentik-env.sh` ergänzt einen fehlenden Wert und erhält einen bereits vorhandenen.
 
-Prüfen Sie die wirksame Einstellung:
+Prüfe die wirksame Einstellung:
 
 ```bash
 docker compose exec -e REDISCLI_AUTH= redis redis-cli ping
@@ -97,7 +95,7 @@ docker compose exec redis redis-cli ping
 
 Der Container-Healthcheck liest das Passwort über `REDISCLI_AUTH`, damit es nicht als `-a`-Argument in der Prozessliste erscheint.
 
-Bei einem Passwortwechsel müssen Redis, Webanwendung und Worker dieselbe neue Konfiguration übernehmen. Ihre Verbindungsdaten werden beim Start gelesen.
+Bei einem Passwortwechsel müssen Redis, Webanwendung und Worker dieselbe neue Konfiguration übernehmen. Deine Verbindungsdaten werden beim Start gelesen.
 
 ## Netzwerkzugriff begrenzen {#network-isolation}
 
@@ -111,15 +109,15 @@ networks:
 
 Webanwendung und Worker sind zusätzlich mit dem Netz für ihre ausgehenden Verbindungen verbunden. Redis benötigt diesen Zugang nicht.
 
-Bei einer eigenen Installation begrenzen Sie den Zugriff durch Bind-Adresse, Firewall und private Netzsegmente. Veröffentlichen Sie Port 6379 nicht im Internet.
+Bei einer eigenen Installation begrenze den Zugriff durch Bind-Adresse, Firewall und private Netzsegmente. Veröffentliche Port 6379 nicht im Internet.
 
 ## Persistenz {#persistence-or-the-deliberate-lack-of-it}
 
 Standardmäßig läuft Redis mit `--save ""` und `--appendonly no`. Scanergebnisse werden damit nicht durch Redis auf Datenträger geschrieben.
 
-Snapshots und Backups können Ergebnisse über ihre TTL hinaus aufbewahren. Aktivieren Sie Persistenz nur mit einer bewussten Entscheidung zu Aufbewahrung und Zugriffsschutz.
+Snapshots und Backups können Ergebnisse über ihre TTL hinaus aufbewahren. Aktiviere Persistenz nur mit einer bewussten Entscheidung zu Aufbewahrung und Zugriffsschutz.
 
-Der Setup-Assistent bietet Persistenz für private Bereitstellungen an, etwa wenn wartende Scans einen Neustart überstehen sollen. Standard bleibt keine Persistenz. Bei aktivierter Ergebnisverschlüsselung enthält der gespeicherte Ergebnisinhalt Chiffretext; den Schlüssel müssen Sie getrennt schützen. Nicht alle Betriebsmetadaten werden dadurch verschlüsselt.
+Der Setup-Assistent bietet Persistenz für private Bereitstellungen an, etwa wenn wartende Scans einen Neustart überstehen sollen. Standard bleibt keine Persistenz. Bei aktivierter Ergebnisverschlüsselung enthält der gespeicherte Ergebnisinhalt Chiffretext; den Schlüssel musst du getrennt schützen. Nicht alle Betriebsmetadaten werden dadurch verschlüsselt.
 
 ## Speicher und Verdrängung {#memory-and-eviction}
 
@@ -128,9 +126,9 @@ Der Setup-Assistent bietet Persistenz für private Bereitstellungen an, etwa wen
 --maxmemory-policy allkeys-lru
 ```
 
-Das Speicherlimit begrenzt den Verbrauch bei wachsenden Warteschlangen und vielen Ergebnissen. Passen Sie es an Workerzahl, Ergebnisgröße und TTL an.
+Das Speicherlimit begrenzt den Verbrauch bei wachsenden Warteschlangen und vielen Ergebnissen. Passt du es an Workerzahl, Ergebnisgröße und TTL an.
 
-`allkeys-lru` kann unter Speicherdruck beliebige wenig genutzte Schlüssel entfernen, auch bevor deren TTL abläuft. Dadurch können Ergebnisse früher verschwinden; auch andere Redis-Zustände können betroffen sein. Beobachten Sie die Verdrängungszähler:
+`allkeys-lru` kann unter Speicherdruck beliebige wenig genutzte Schlüssel entfernen, auch bevor deren TTL abläuft. Dadurch können Ergebnisse früher verschwinden; auch andere Redis-Zustände können betroffen sein. Beobachte die Verdrängungszähler:
 
 ```bash
 docker compose exec redis redis-cli info stats | grep evicted_keys
@@ -140,12 +138,12 @@ Regelmäßige Verdrängung ist ein Anlass, Kapazität, Last und Aufbewahrungsdau
 
 ## Externes oder verwaltetes Redis {#an-external-or-managed-redis}
 
-Tragen Sie die externe Adresse in `COS_WEB_REDIS_URL` ein und entfernen Sie gegebenenfalls den lokalen Redis-Service aus Compose.
+Trage die externe Adresse in `COS_WEB_REDIS_URL` ein und entferne gegebenenfalls den lokalen Redis-Service aus Compose.
 
-- Verwenden Sie `rediss://` für TLS.
-- Trennen Sie die Daten dieser Anwendung über eine eigene Instanz oder geeignete Datenbankzuordnung.
-- Prüfen Sie die Verdrängungsregeln. Bei `noeviction` scheitern neue Schreibvorgänge, sobald das Limit erreicht ist.
-- Prüfen Sie Snapshots, Backups und die tatsächliche Löschdauer.
+- Verwende `rediss://` für TLS.
+- Trenne die Daten dieser Anwendung über eine eigene Instanz oder geeignete Datenbankzuordnung.
+- Prüfe die Verdrängungsregeln. Bei `noeviction` scheitern neue Schreibvorgänge, sobald das Limit erreicht ist.
+- Prüfe Snapshots, Backups und die tatsächliche Löschdauer.
 
 ## Kubernetes {#kubernetes}
 
@@ -153,8 +151,8 @@ Für die Webanwendung benötigen Web-Pods und Worker eine eigene Redis-Bereitste
 
 - Zugangsdaten gehören in ein `Secret`, nicht in eine `ConfigMap`.
 - Eine `NetworkPolicy` sollte nur den vorgesehenen Web- und Worker-Pods Zugriff erlauben.
-- Verwenden Sie einen internen `ClusterIP`-Service statt `LoadBalancer`, `NodePort` oder öffentlichem Ingress.
-- Richten Sie persistente Volumes nur ein, wenn die oben beschriebene Aufbewahrung bewusst gewünscht ist.
+- Verwende einen internen `ClusterIP`-Service statt `LoadBalancer`, `NodePort` oder öffentlichem Ingress.
+- Richte persistente Volumes nur ein, wenn die oben beschriebene Aufbewahrung bewusst gewünscht ist.
 
 ## Zustand überwachen {#health-and-monitoring}
 
@@ -180,7 +178,7 @@ Für die Webanwendung benötigen Web-Pods und Worker eine eigene Redis-Bereitste
 | Fehlender Worker-Heartbeat | Workerprozess und dessen Logs prüfen |
 | Ergebnis frühzeitig mit 404 | TTL, Neustart und Verdrängungszähler prüfen |
 
-Die Anwendungslogs nennen Lebenszyklusereignisse und UUIDs, keine Zieladressen oder Ergebnisse. Untersuchen Sie deshalb insbesondere Scans, deren Verarbeitung nicht über `queued` hinauskommt, und die allgemeinen Dienstzustände.
+Die Anwendungslogs nennen Lebenszyklusereignisse und UUIDs, keine Zieladressen oder Ergebnisse. Untersuche deshalb insbesondere Scans, deren Verarbeitung nicht über `queued` hinauskommt, und die allgemeinen Dienstzustände.
 
 ## Marken und Unabhängigkeit
 

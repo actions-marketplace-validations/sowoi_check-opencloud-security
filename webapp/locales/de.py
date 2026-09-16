@@ -1089,7 +1089,7 @@ MESSAGES: dict[str, str] = {
         "vergleichen. Scannen Sie die Instanz erneut und vergleichen Sie die "
         "neue UUID mit dieser."
     ),
-    "compare.different_targets": "Die Scans betreffen unterschiedliche Instanzen. Berücksichtigen Sie das beim Vergleich, etwa zwischen Test- und Produktionssystem.",
+    "compare.error.different_targets": "Die beiden Scans betreffen unterschiedliche Instanzen und werden deshalb nicht verglichen. Vergleiche zwei Scans derselben Instanz.",
     "compare.verdict.kicker": "Zwischen den beiden Scans",
     "compare.verdict.improved": "Es ist besser geworden",
     "compare.verdict.unchanged": "Nichts hat sich geändert",

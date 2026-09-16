@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.web-service.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de') %}
+{% if locale not in ('en', 'de', 'fr') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -38,9 +38,9 @@
 <p>Der Webdienst führt den eingebauten Scanner aus und zeigt die Bewertung von
 <strong>A+</strong> bis <strong>F</strong> im Browser. Ergebnisse bleiben standardmäßig eine Stunde in
 Redis verfügbar. Der Scanner ist derselbe wie im Monitoring-Plugin.</p>
-<p>Unter <a href="https://scan.okxo.de">scan.okxo.de</a> steht eine öffentliche Installation
+<p>Unter <a href="https://scan.example.com">scan.example.com</a> steht eine öffentliche Installation
 bereit. Eine eigene Installation erlaubt passende Netzwerkanbindung und selbst
-gewählte Betriebsgrenzen. Sie erhalten den Webdienst als Release-Archiv
+gewählte Betriebsgrenzen. Du erhältst den Webdienst als Release-Archiv
 <code>check_opencloud_security_web.tar.gz</code> oder als Container-Image. Das PyPI-Paket
 enthält ausschließlich Plugin und Scanner-Bibliothek.</p>
 <p>Der Stack besteht aus FastAPI, ARQ-Worker und Redis. Parallelität und Zeitlimits
@@ -48,8 +48,8 @@ legt der Betreiber fest. Besucher benötigen für öffentliche Scans kein Konto.
 <p>Die Oberfläche ist auf Deutsch, Englisch, Französisch und Spanisch verfügbar.
 Die erste Auswahl folgt der Browsersprache; der Sprachschalter speichert eine
 bewusste Auswahl in einem <code>HttpOnly</code>-/<code>SameSite=Lax</code>-Cookie. Die Leitfäden stehen
-auf Deutsch und Englisch bereit. Bei französischer oder spanischer Oberfläche
-werden sie vorerst auf Englisch angezeigt. API-Dokumente, Exportdaten und
+auf Deutsch und Französisch bereit. Bei spanischer Oberfläche werden sie
+vorerst auf Englisch angezeigt. API-Dokumente, Exportdaten und
 Scan-Befunde behalten ihre technischen Originalwerte.</p>
 <h2 id="contents">Inhalt</h2>
 <p>Die Abschnitte behandeln Einrichtung, Konfiguration, Schutzmaßnahmen und die
@@ -82,8 +82,8 @@ chmod 600 .env
 docker compose -f docker-compose.dockerhub.yml up -d
 # http://127.0.0.1:8811
 </code></pre>
-<p>Zum Bauen aus dem Checkout verwenden Sie <code>docker compose up --build -d</code> ohne
-<code>-f</code>. Vor öffentlicher Nutzung prüfen Sie insbesondere:</p>
+<p>Zum Bauen aus dem Checkout verwende <code>docker compose up --build -d</code> ohne
+<code>-f</code>. Vor öffentlicher Nutzung prüfe insbesondere:</p>
 <ul>
 <li><code>COS_WEB_PUBLIC_BASE_URL</code>: die tatsächliche öffentliche Adresse statt localhost.</li>
 <li><code>COS_REDIS_PASSWORD</code>: Schutz des Speichers für laufende Scans und Ergebnisse.</li>
@@ -102,14 +102,14 @@ die öffentliche Basis-URL:</p>
 </code></pre>
 <p>Weitere Varianten beschreibt die <a href="https://github.com/sowoi/check-opencloud-security/blob/main/docker/README.md">Docker-Dokumentation</a>.</p>
 <h3 id="without-containers">Ohne Container</h3>
-<p>Starten Sie aus dem Checkout Redis, Webanwendung und Worker getrennt:</p>
+<p>Starte aus dem Checkout Redis, Webanwendung und Worker getrennt:</p>
 <pre><code class="language-bash">pip install &quot;.[web,mcp]&quot;    # the mcp extra is optional; it serves /mcp
 redis-server &amp;
 COS_WEB_REDIS_URL=redis://127.0.0.1:6379/0 python -m webapp.tasks &amp;
 COS_WEB_REDIS_URL=redis://127.0.0.1:6379/0 \
     uvicorn webapp.app:app --host 127.0.0.1 --port 8811
 </code></pre>
-<p>Ein eigenes Release-Archiv bauen Sie mit:</p>
+<p>Ein eigenes Release-Archiv baue mit:</p>
 <pre><code class="language-bash">python scripts/build_web_bundle.py
 # dist/check_opencloud_security_web.tar.gz  (+ .sha256)
 </code></pre>
@@ -124,8 +124,8 @@ eine interne Installation, <code>--non-interactive</code> übernimmt die vorgege
 <p><code>--sign-in</code> aktiviert die Token-Prüfung auf <code>/mcp</code> und fragt Issuer, Audience und
 Schlüsselquelle ab. <code>--with-authentik</code> stellt einen Provider samt Datenbank und
 Blueprints bereit. Die Optionen sind unabhängig: Ein bereitgestellter Provider
-aktiviert für sich allein noch keinen Zugriffsschutz. Wählen Sie beide, wenn der
-neue Provider MCP schützen soll, und testen Sie die Token-Prüfung vor Freigabe.</p>
+aktiviert für sich allein noch keinen Zugriffsschutz. Wähle beide, wenn der
+neue Provider MCP schützen soll, und teste die Token-Prüfung vor Freigabe.</p>
 <p>Bei interaktiver Einrichtung bietet der Assistent Authentik an, wenn MCP-Anmeldung
 oder Operator-Bereich gewünscht sind. Er fragt auch SMTP ab; das Passwort kommt
 aus <code>AUTHENTIK_EMAIL_PASSWORD</code>. Die <a href="https://github.com/sowoi/check-opencloud-security/blob/main/docker/README.md#the-setup-wizard">Docker-Anleitung</a>
@@ -579,7 +579,7 @@ scan:{uuid}:metadata    target, waivers, timestamps
 <p>Wer die UUID kennt, kann das zugehörige Ergebnis abrufen. Es gibt keine
 Auflistung aller Scans. Unbekannte, ungültige und abgelaufene UUIDs liefern
 dieselbe <strong>404</strong>. Auch während der Wartezeit erhalten die Scan-Schlüssel eine TTL.
-Behandeln Sie Ergebnislinks deshalb als Zugang zum Bericht.</p>
+Behandle Ergebnislinks deshalb als Zugang zum Bericht.</p>
 <h2 id="comparing-two-scans">Zwei Scans vergleichen</h2>
 <p><code>GET /compare?baseline=&lt;uuid&gt;&amp;current=&lt;uuid&gt;</code> zeigt behobene, neue und weiterhin
 offene Befunde sowie die Änderung der Note. Eine fertige Ergebnisseite trägt
@@ -621,7 +621,7 @@ Aufruf neu berechnet und nicht gesondert gespeichert.</p>
 <p>Die Seite wird nicht indexiert und bleibt außerhalb des OpenAPI-Schemas.
 Siehe <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0029-a-comparison-is-two-live-results-and-one-arithmetic.md">ADR 0029</a>.</p>
 <h2 id="comparing-against-a-report-you-uploaded">Vergleich mit einem hochgeladenen Bericht</h2>
-<p>Mit <code>POST /compare</code> laden Sie einen früher heruntergeladenen JSON- oder
+<p>Mit <code>POST /compare</code> lade einen früher heruntergeladenen JSON- oder
 CSV-Bericht als Ausgangsstand hoch. Die zweite Seite ist ein noch verfügbarer,
 abgeschlossener Scan dieses Dienstes. Diese Funktion ist für den Browser
 vorgesehen; sie besitzt keinen eigenen API- oder MCP-Aufruf.</p>
@@ -664,13 +664,13 @@ oder freigegeben wären:</p>
 </code></pre>
 <p>Erlaubt sind Hostnamen, Domain-Suffixe mit führendem Punkt oder <code>*.</code>, IP-Adressen
 und CIDR-Netze. Suffixe schließen die Domain selbst ein. Namen werden als Namen
-verglichen, Netze mit jeder aufgelösten Adresse. Verwenden Sie eine Netzsperre,
+verglichen, Netze mit jeder aufgelösten Adresse. Verwende eine Netzsperre,
 wenn auch andere Namen für dieselbe Adresse gesperrt sein sollen.</p>
 <p>Die Prüfung erfolgt bei Annahme, vor dem Scan und bei Weiterleitungen.
 Ungültige Einträge oder mehr als 253 Zeichen verhindern den Start.
 Besucher erfahren nur, dass das Ziel ausgeschlossen wurde, nicht den passenden
 Konfigurationseintrag. Siehe <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0043-an-operators-exclusion-outranks-every-allowance.md">ADR 0043</a>.</p>
-<p>Der Operator-Bereich kann weitere Einträge in Redis verwalten. Sie gelten ab der
+<p>Der Operator-Bereich kann weitere Einträge in Redis verwalten. SIE gelten ab der
 nächsten Anfrage in allen Prozessen, auch für wartende Aufträge. Einträge aus
 der Umgebung lassen sich dort nicht entfernen; äquivalente Schreibweisen werden
 als derselbe Ausschluss behandelt. Dauerhafte Vorgaben gehören in die Umgebung,
@@ -699,7 +699,7 @@ Tippfehler, fehlende DNS-Auflösung und unzulässige Schemata ebenfalls nicht.</
 <p>Erneute Sperren innerhalb des Wiederholungsfensters dauern sechsmal länger,
 bis zum eingestellten Maximum. Der Worker erhält dafür einen Fingerabdruck,
 keine Client-Adresse. API und Worker verwenden dieselben Zähler. MCP-Workflows
-können kurze <code>Retry-After</code>-Zeiten abwarten; längere Wartezeiten geben sie zurück.</p>
+können kurze <code>Retry-After</code>-Zeiten abwarten; längere Wartezeiten gib zurück.</p>
 <p>Der Webdienst beendet den Scan, sobald eine Antwort ein anderes Produkt zeigt,
 statt weitere Protokollvarianten zu versuchen. Bei fehlender Antwort bleiben
 Wiederholungen möglich. Auch eine rechtmäßige Prüfung einer ausgefallenen
@@ -741,13 +741,13 @@ scan_completed 0f4a1f22-7ce0-4f74-8a01-4d1d5b60e2aa
 Client-Adressen sind stets Fingerabdrücke. Ziele ebenfalls, sofern nicht
 <code>COS_WEB_AUDIT_LOG_TARGETS=true</code> für den internen Betrieb gesetzt wurde.</p>
 <p>Ein zufälliger Salt gilt pro Prozess. <code>COS_WEB_AUDIT_SALT</code> ermöglicht die
-Zuordnung über Neustarts hinweg; Rotation beendet diese Zuordnung. Schützen Sie
+Zuordnung über Neustarts hinweg; Rotation beendet diese Zuordnung. Schütze
 einen festen Salt wie ein Geheimnis: Wer ihn kennt, kann vermutete Adressen
 selbst hashen. Eingabefeldnamen werden begrenzt, von Steuerzeichen bereinigt
 und als JSON maskiert.</p>
 <h4 id="keeping-the-trail-past-the-container">Über die Container-Laufzeit hinaus aufbewahren</h4>
 <p>Standardmäßig gehen Audit-Ereignisse an die Prozessausgabe. Für dauerhafte
-Aufbewahrung verwenden Sie einen eingebundenen Speicherort:</p>
+Aufbewahrung verwende einen eingebundenen Speicherort:</p>
 <pre><code class="language-yaml">services:
   web_app:
     environment:
@@ -772,11 +772,11 @@ Bind-Mount muss vorher vorhanden und für Container-UID 10001 beschreibbar sein:
 <pre><code class="language-bash">mkdir -p /srv/opencloud-scan/audit
 sudo chown 10001 /srv/opencloud-scan/audit
 </code></pre>
-<p>Bei Rootless Docker setzen Sie die Eigentumsrechte innerhalb des User-Namespace:</p>
+<p>Bei Rootless Docker setze die Eigentumsrechte innerhalb des User-Namespace:</p>
 <pre><code class="language-bash">docker run --rm --user 0 --entrypoint chown \
   -v /srv/opencloud-scan/audit:/target redis:8.10-alpine 10001 /target
 </code></pre>
-<p>Verwenden Sie ein anderes Verzeichnis als für Redis, das mit anderer UID schreibt.</p>
+<p>Verwende ein anderes Verzeichnis als für Redis, das mit anderer UID schreibt.</p>
 <h4 id="letting-the-hosts-logrotate-keep-it">Rotation durch logrotate</h4>
 <p><code>COS_WEB_AUDIT_LOG_ROTATION=external</code> überlässt die Rotation dem Host.
 Der Dienst erkennt ersetzte Dateien und öffnet sie erneut. Der Setup-Assistent
@@ -797,7 +797,7 @@ kann dazu eine Richtlinie schreiben:</p>
 sudo logrotate --debug /etc/logrotate.d/opencloud-scan-audit   # changes nothing
 </code></pre>
 <p><code>create 0600 10001 10001</code> hält die Ersatzdatei für den Container beschreibbar und
-für andere unlesbar. Verwenden Sie kein <code>copytruncate</code>, da zwischen Kopieren und
+für andere unlesbar. Verwende kein <code>copytruncate</code>, da zwischen Kopieren und
 Kürzen Einträge verloren gehen können. Genau eine Stelle darf rotieren:
 entweder <code>service</code> oder eine installierte externe Richtlinie.</p>
 <p>Anfragekörper sind vor dem Parsen auf 1 MiB und 30 Sekunden begrenzt.
@@ -805,13 +805,13 @@ Zu große Eingaben ergeben <strong>413</strong>, unvollständige <strong>408</st
 Verbindungs- und Bandbreitengrenzen gehören an den Proxy.</p>
 <p>Jeder Scan läuft in einem Kindprozess. Bei Timeout oder Abbruch beendet der
 Worker diesen samt Probe-Threads, bevor er einen weiteren Auftrag übernimmt.
-Planen Sie Speicher und PID-Limits für einen zusätzlichen Python-Prozess pro
+Plane Speicher und PID-Limits für einen zusätzlichen Python-Prozess pro
 aktivem Scan ein; siehe <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0053-a-scan-timeout-ends-its-process.md">ADR 0053</a>.</p>
 <h2 id="putting-it-behind-a-reverse-proxy">Reverse Proxy</h2>
 <p>Der <a href="/documentation/reverse-proxy">Proxy-Leitfaden</a> enthält Konfigurationen für nginx,
 Apache httpd, Caddy, Traefik und HAProxy. Der Assistent kann die ersten vier
 erzeugen, einschließlich TLS, MCP-Streaming und gegebenenfalls Forward Auth.</p>
-<p>Aktivieren Sie <code>COS_WEB_TRUST_FORWARDED_FOR</code> nur hinter einem eigenen Proxy.
+<p>aktiviere <code>COS_WEB_TRUST_FORWARDED_FOR</code> nur hinter einem eigenen Proxy.
 <code>COS_WEB_TRUSTED_PROXY_HOPS</code> zählt von rechts im <code>X-Forwarded-For</code>-Header.
 Zu wenige Hops fassen Besucher unter einer Proxy-Adresse zusammen; zu viele
 können einen vom Client vorgegebenen Wert als Adresse übernehmen.
@@ -881,16 +881,16 @@ abrufbar. Die API nennt die Download-URLs unter <code>exports</code>.</p>
 <pre><code class="language-text">X-COS-Signature: HMAC-SHA256=d68d9da7f04a4dcf38de5c64545141dc02c50c7476e76687e74c015383f34258
 </code></pre>
 <p>Die Prüfung benötigt dasselbe geheime Schlüsselmaterial. Das ist keine
-öffentlich prüfbare Signatur; geben Sie den Schlüssel nicht an Besucher weiter.
-Erzeugen Sie einen langen Zufallswert:</p>
+öffentlich prüfbare Signatur; gib den Schlüssel nicht an Besucher weiter.
+Erzeuge einen langen Zufallswert:</p>
 <pre><code class="language-bash">openssl rand -hex 32
 </code></pre>
-<p>Speichern Sie den Header zusammen mit der Datei:</p>
+<p>Speichere den Header zusammen mit der Datei:</p>
 <pre><code class="language-bash">curl -sS -D headers.txt -o result.pdf \
   http://127.0.0.1:8811/api/scans/0f4a1f22-.../export/pdf
 grep -i '^x-cos-signature' headers.txt
 </code></pre>
-<p>Prüfen Sie die unveränderten Download-Bytes, nicht neu formatiertes JSON:</p>
+<p>Prüfe die unveränderten Download-Bytes, nicht neu formatiertes JSON:</p>
 <pre><code class="language-bash">COS_WEB_EXPORT_SIGNING_KEY='&lt;key-from-secret-store&gt;' \
   uv run python scripts/verify_export.py result.pdf 'HMAC-SHA256=&lt;hex-from-header&gt;'
 </code></pre>
@@ -944,7 +944,7 @@ Hostname oder vollständige URL. <code>deleted</code> zählt entfernte Schlüsse
 <code>remaining == 0</code>. Heruntergeladene Dateien und ein etwaiges Audit-Log liegen
 außerhalb dieses Löschvorgangs und werden in <code>notes</code> genannt.</p>
 <p><code>targetFingerprint</code> ist nur mit <code>COS_WEB_PURGE_SIGNING_KEY</code> gesetzt.
-Den signierten Beleg prüfen Sie mit:</p>
+Den signierten Beleg prüfe mit:</p>
 <pre><code class="language-python">from webapp.purge import verify
 verify(receipt, key)      # the value of COS_WEB_PURGE_SIGNING_KEY
 </code></pre>

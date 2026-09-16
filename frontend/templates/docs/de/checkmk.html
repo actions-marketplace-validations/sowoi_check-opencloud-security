@@ -11,13 +11,12 @@
   <p class="lede">{{ t('docs.checkmk.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de') %}
+{% if locale not in ('en', 'de', 'fr') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
 <article class="docs-article card section-gap" data-reveal lang="de">
-<h1 id="checkmk-einrichten">Checkmk einrichten</h1>
-<p>Checkmk kann die Nagios-Ausgabe des Plugins direkt lesen. Sie können den Scan auf dem Checkmk-Server oder auf einem Host mit Checkmk-Agent ausführen:</p>
+<p>Checkmk kann die Nagios-Ausgabe des Plugins direkt lesen. Du kannst den Scan auf dem Checkmk-Server oder auf einem Host mit Checkmk-Agent ausführen:</p>
 <table>
 <thead>
 <tr>
@@ -54,21 +53,21 @@
 </tr>
 </tbody>
 </table>
-<p>Verwenden Sie einen aktiven Check, wenn der Checkmk-Server die Instanz erreicht. Für interne Netze, die nur ein Agent-Host erreicht, eignet sich der lokale Check.</p>
-<p>Ersetzen Sie in den Beispielen <code>opencloud.example.com</code> durch eine Instanz, die Sie prüfen dürfen.</p>
+<p>Verwende einen aktiven Check, wenn der Checkmk-Server die Instanz erreicht. Für interne Netze, die nur ein Agent-Host erreicht, eignet sich der lokale Check.</p>
+<p>Ersetze in den Beispielen <code>opencloud.example.com</code> durch eine Instanz, die Du prüfst dürfen.</p>
 <h2 id="1-an-active-check-on-the-checkmk-server">1. Aktiver Check auf dem Checkmk-Server</h2>
-<p>Installieren Sie das Plugin auf dem Checkmk-Server als Site-Benutzer:</p>
+<p>Installiere das Plugin auf dem Checkmk-Server als Site-Benutzer:</p>
 <pre><code class="language-shell">pipx install check-opencloud-security
 </code></pre>
 <p>Der <a href="/documentation/installation">Installationsleitfaden</a> beschreibt weitere Wege über uv, pip und einen Checkout. <code>check-opencloud-security --version</code> zeigt die installierte Version.</p>
-<p>Legen Sie unter <strong>Setup &gt; Services &gt; Other services &gt; Integrate Nagios plugins</strong> eine Regel an:</p>
+<p>Lege unter <strong>Setup &gt; Services &gt; Other services &gt; Integrate Nagios plugins</strong> eine Regel an:</p>
 <ul>
 <li><strong>Service description:</strong> <code>OpenCloud security opencloud.example.com</code></li>
 <li><strong>Command line:</strong> <code>check-opencloud-security --host opencloud.example.com --check-hardening</code></li>
 </ul>
-<p>Weisen Sie die Regel dem Host zu, unter dem der Service erscheinen soll. Das tatsächliche Scanziel bestimmt weiterhin <code>--host</code>.</p>
+<p>Weise die Regel dem Host zu, unter dem der Service erscheinen soll. Das tatsächliche Scanziel bestimmt weiterhin <code>--host</code>.</p>
 <p>Checkmk liest den Status aus dem Exitcode, die Zusammenfassung aus der ersten Ausgabezeile, weitere Zeilen als Details und die Werte hinter <code>|</code> als Metriken. Die <a href="/documentation/reference#performance-data">Performancedaten</a> enthalten <code>rating</code>, <code>vulnerabilities</code>, <code>hardenings_missing</code>, <code>extra_checks_failed</code>, <code>update_available</code>, <code>support_days_left</code>, <code>cert_days_left</code> und <code>time</code> einschließlich Schwellwerten.</p>
-<p>Prüfen Sie das Intervall unter <strong>Setup &gt; Services &gt; Service monitoring rules &gt; Normal check interval for service checks</strong>. Ein Scan erzeugt mehrere HTTP-Anfragen und TCP-Verbindungen; ein minütlicher Check ist für diese Konfigurationsprüfung meist unnötig. Wählen Sie beispielsweise eine Stunde oder länger.</p>
+<p>Prüfe das Intervall unter <strong>Setup &gt; Services &gt; Service monitoring rules &gt; Normal check interval for service checks</strong>. Ein Scan erzeugt mehrere HTTP-Anfragen und TCP-Verbindungen; ein minütlicher Check ist für diese Konfigurationsprüfung meist unnötig. Wähle beispielsweise eine Stunde oder länger.</p>
 <h2 id="2-a-local-check-on-an-agent-host">2. Lokaler Check auf einem Agent-Host</h2>
 <p>Ein lokaler Check führt den Scanner auf einem Host aus, der die Instanz erreichen kann. Der Agent übernimmt dessen Ausgabe als Service dieses Hosts.</p>
 <p><code>--format checkmk</code> erzeugt das dafür benötigte Format:</p>
@@ -82,14 +81,14 @@
 <pre><code class="language-shell">sudo install -m 0755 contrib/checkmk/opencloud_security \
     /usr/lib/check_mk_agent/local/3600/opencloud_security
 </code></pre>
-<p>Das Unterverzeichnis <code>3600</code> legt das Cache-Intervall des Agents in Sekunden fest. Der Scan läuft damit höchstens stündlich; dazwischen liefert der Agent die zwischengespeicherte Ausgabe. Direkt unter <code>local/</code> würde das Skript bei jedem Agent-Aufruf laufen. Passen Sie das Intervall an Ihren Bedarf an.</p>
-<p>Bei Installation über <code>.deb</code> oder <code>.rpm</code> liegt die Vorlage unter <code>/usr/share/doc/check-opencloud-security/checkmk-local-check.sh</code>. Kopieren Sie sie selbst in das Agent-Verzeichnis.</p>
-<p>Setzen Sie das Ziel im Skript oder in einer vom Agent gelesenen Umgebungsdatei:</p>
+<p>Das Unterverzeichnis <code>3600</code> legt das Cache-Intervall des Agents in Sekunden fest. Der Scan läuft damit höchstens stündlich; dazwischen liefert der Agent die zwischengespeicherte Ausgabe. Direkt unter <code>local/</code> würde das Skript bei jedem Agent-Aufruf laufen. Passt du das Intervall an deinen Bedarf an.</p>
+<p>Bei Installation über <code>.deb</code> oder <code>.rpm</code> liegt die Vorlage unter <code>/usr/share/doc/check-opencloud-security/checkmk-local-check.sh</code>. Kopiere sie selbst in das Agent-Verzeichnis.</p>
+<p>Setze das Ziel im Skript oder in einer vom Agent gelesenen Umgebungsdatei:</p>
 <pre><code class="language-shell">COS_HOST=opencloud.example.com
 # OpenCloud self-signs its certificate unless a proxy terminates TLS for it.
 #COS_SCANNER_VERIFY_TLS=false
 </code></pre>
-<p>Suchen Sie anschließend unter <strong>Setup &gt; Hosts</strong>, auf der <em>Services</em>-Seite des Hosts, mit <em>Full service scan</em> nach dem neuen Service.</p>
+<p>Suche anschließend unter <strong>Setup &gt; Hosts</strong>, auf der <em>Services</em>-Seite des Hosts, mit <em>Full service scan</em> nach dem neuen Service.</p>
 <h3 id="what-the-states-mean">Bedeutung der Statuswerte</h3>
 <p>Der Status entspricht den Exitcodes des Plugins und berücksichtigt dieselben <a href="/documentation/reference#rating-thresholds">Schwellwerte</a>, Ausnahmen und End-of-Life-Regeln:</p>
 <ul>
@@ -151,8 +150,8 @@
 <h2 id="alerting-on-it">Benachrichtigungen einrichten</h2>
 <p>Beide Varianten erzeugen reguläre Checkmk-Services. Benachrichtigungen, Wartungszeiten und Bestätigungen funktionieren wie bei anderen Services.</p>
 <ul>
-<li>Richten Sie zeitnahe Benachrichtigungen für <strong>CRIT</strong> ein.</li>
-<li>Stellen Sie <code>support_days_left</code> dar und warnen Sie rechtzeitig vor dem Supportende. Sobald die Version nicht mehr unterstützt wird, fällt die Bewertung auf F.</li>
+<li>Richte zeitnahe Benachrichtigungen für <strong>CRIT</strong> ein.</li>
+<li>Stelle <code>support_days_left</code> dar und warne rechtzeitig vor dem Supportende. Sobald die Version nicht mehr unterstützt wird, fällt die Bewertung auf F.</li>
 </ul>
 <p>Mit <a href="/documentation/baseline"><code>--baseline</code> und <code>--warn-on-new</code></a> kann die Alarmierung auf neue oder verschlechterte Befunde beschränkt werden. Das Supportende und weitere Verschlechterungen werden dadurch nicht unterdrückt.</p>
 <h2 id="see-also">Weitere Anleitungen</h2>

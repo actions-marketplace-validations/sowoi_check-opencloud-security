@@ -1101,7 +1101,7 @@ MESSAGES: dict[str, str] = {
     ),
     # --------------------------------------------------- generated guide pages
     "docs.guide.kicker": "Documentation en ligne de commande",
-    "docs.guide.english_notice": "Ce guide est disponible en anglais et en allemand. La version anglaise est affichée pour la langue sélectionnée.",
+    "docs.guide.english_notice": "Ce guide est disponible en anglais, allemand et français. La version anglaise est affichée pour la langue sélectionnée.",
     "docs.guide.toc.heading": "Sur cette page",
     "docs.guide.toc.aria": "Sur cette page",
     # ---------------------------------------------------------------- compare
@@ -1145,7 +1145,7 @@ MESSAGES: dict[str, str] = {
         "comparer. Relancez une analyse de l'instance et comparez le nouvel "
         "UUID avec celui-ci."
     ),
-    "compare.different_targets": "Les analyses concernent des instances différentes. Tenez-en compte pour interpréter les écarts, par exemple entre un environnement de test et la production.",
+    "compare.error.different_targets": "Les deux analyses concernent des instances différentes et ne sont donc pas comparées. Comparez deux analyses de la même instance.",
     "compare.verdict.kicker": "Entre les deux analyses",
     "compare.verdict.improved": "C'est meilleur",
     "compare.verdict.unchanged": "Rien n'a changé",

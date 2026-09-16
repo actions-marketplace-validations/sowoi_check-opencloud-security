@@ -787,6 +787,33 @@ def refuse_identical_scans(baseline_identifier: str, current_identifier: str) ->
         )
 
 
+def _compared_host(document: Mapping[str, Any]) -> str:
+    """The instance a result document describes, as a comparison matches it."""
+    return str(document.get("domain") or "").strip().rstrip(".").lower()
+
+
+def refuse_different_instances(
+    before: Mapping[str, Any], after: Mapping[str, Any]
+) -> None:
+    """
+    Refuse a comparison of two different instances.
+
+    "Did the fix work" is a question about one instance, and two hosts
+    compared by accident is a wrong answer nobody notices - the reason
+    ``check-opencloud-scanner diff`` refuses them too. A document that names
+    no instance at all cannot be shown to be the same one, so it is refused
+    as well. See ADR 0059.
+    """
+    host = _compared_host(after)
+    if not host or _compared_host(before) != host:
+        raise WorkflowError(
+            "The two scans describe different instances, so they are not "
+            "compared. Compare two scans of the same instance.",
+            status=422,
+            retryable=False,
+        )
+
+
 def compare_documents(
     baseline_identifier: str,
     current_identifier: str,
@@ -811,6 +838,7 @@ def compare_documents(
     disagree about the same two scans.
     """
     refuse_identical_scans(baseline_identifier, current_identifier)
+    refuse_different_instances(before, after)
 
     baseline = Baseline(path=Path(os.devnull))
     host = str(after.get("domain") or "")
@@ -825,7 +853,6 @@ def compare_documents(
     previous = comparison.previous
     assert previous is not None
 
-    same_target = str(before.get("domain") or "") == host
     rated_before, rated_after = before.get("rating"), after.get("rating")
     rating_change = (
         rated_after - rated_before
@@ -851,11 +878,9 @@ def compare_documents(
         "current": _compared_side(
             current_identifier, after, f"/scan/{current_identifier}"
         ),
-        # False means the two documents describe different instances. Not
-        # refused - comparing staging with production is a fair question - but
-        # said plainly, because every other number below then answers a
-        # different question than the caller probably asked.
-        "sameTarget": same_target,
+        # Always true since ADR 0059 refuses two instances above. Kept so a
+        # client that reads the field keeps working.
+        "sameTarget": True,
         "verdict": verdict,
         "ratingChange": rating_change,
         "resolved": list(comparison.resolved_findings),

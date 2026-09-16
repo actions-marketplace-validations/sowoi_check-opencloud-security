@@ -11,18 +11,17 @@
   <p class="lede">{{ t('docs.ci.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de') %}
+{% if locale not in ('en', 'de', 'fr') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
 <article class="docs-article card section-gap" data-reveal lang="de">
-<h1 id="scans-in-ci-pipelines">Scans in CI-Pipelines</h1>
-<p>Eine geplante Pipeline eignet sich für regelmäßige Scans oder für Prüfungen aus einem anderen Netzwerk. Überwachen Sie auch, ob die Pipeline tatsächlich läuft: Ein ausgebliebener Job liefert keinen Scanstatus.</p>
+<p>Eine geplante Pipeline eignet sich für regelmäßige Scans oder für Prüfungen aus einem anderen Netzwerk. Überwache auch, ob die Pipeline tatsächlich läuft: Ein ausgebliebener Job liefert keinen Scanstatus.</p>
 <p>Für alle Plattformen gelten dieselben Voraussetzungen:</p>
 <ul>
-<li><strong>Der Runner muss die Instanz erreichen.</strong> Für private Ziele benötigen Sie einen Runner mit Zugriff auf das interne Netzwerk.</li>
+<li><strong>Der Runner muss die Instanz erreichen.</strong> Für private Ziele benötigst du einen Runner mit Zugriff auf das interne Netzwerk.</li>
 <li><strong>Der Standort bestimmt das Ergebnis.</strong> TLS, HTTPS-Weiterleitungen und Debug-Ports werden aus Sicht des Runner-Netzes geprüft.</li>
-<li><strong>Der Exitcode steuert den Jobstatus.</strong> <code>0</code> bedeutet OK, <code>1</code> WARNING, <code>2</code> CRITICAL und <code>3</code> UNKNOWN. Über <code>--warning</code> und <code>--critical</code> bestimmen Sie die Bewertungsschwellen.</li>
+<li><strong>Der Exitcode steuert den Jobstatus.</strong> <code>0</code> bedeutet OK, <code>1</code> WARNING, <code>2</code> CRITICAL und <code>3</code> UNKNOWN. Über <code>--warning</code> und <code>--critical</code> bestimme die Bewertungsschwellen.</li>
 </ul>
 <h2 id="github-actions">GitHub Actions</h2>
 <h3 id="the-action">Die mitgelieferte Action</h3>
@@ -48,7 +47,7 @@ jobs:
           releases-token: $&#123;&#123; github.token &#125;&#125;
 </code></pre>
 <p>Die Action installiert die festgelegte Version, scannt die Instanz, schreibt <code>opencloud-security.json</code> und ergänzt die Jobzusammenfassung. Standardmäßig schlägt der Job bei WARNING, CRITICAL oder UNKNOWN fehl.</p>
-<p><strong>Verwenden Sie einen festen Tag.</strong> Referenzdaten werden mit dem Paket ausgeliefert und können die Bewertung beeinflussen. <code>@v1.16.0</code> installiert genau Version 1.16.0. Bei einem Branch- oder SHA-Verweis ohne ausdrückliche Versionsangabe wird das neueste Release installiert und eine Warnung ausgegeben.</p>
+<p><strong>Verwende einen festen Tag.</strong> Referenzdaten werden mit dem Paket ausgeliefert und können die Bewertung beeinflussen. <code>@v1.16.0</code> installiert genau Version 1.16.0. Bei einem Branch- oder SHA-Verweis ohne ausdrückliche Versionsangabe wird das neueste Release installiert und eine Warnung ausgegeben.</p>
 <table>
 <thead>
 <tr>
@@ -134,7 +133,7 @@ jobs:
           GH_TOKEN: $&#123;&#123; github.token &#125;&#125;
 </code></pre>
 <p>Mit <code>fail-on: never</code> bleibt der Scan-Schritt erfolgreich. Ein späterer Schritt kann dann anhand der ausgegebenen Werte entscheiden, wie weiter verfahren wird.</p>
-<p>Vergewissern Sie sich vor dem Einsatz, dass der Runner die Instanz erreicht. Für Ziele hinter einer Firewall eignet sich ein selbst betriebener Runner im passenden Netzwerk.</p>
+<p>Vergewissere dich vor dem Einsatz, dass der Runner die Instanz erreicht. Für Ziele hinter einer Firewall eignet sich ein selbst betriebener Runner im passenden Netzwerk.</p>
 <h3 id="feeding-the-code-scanning-dashboard">Befunde im Code-Scanning-Dashboard</h3>
 <p><code>format: sarif</code> erzeugt SARIF 2.1.0 für den Security-Bereich von GitHub:</p>
 <pre><code class="language-yaml">permissions:
@@ -158,9 +157,9 @@ jobs:
           sarif_file: opencloud-security.sarif
           category: opencloud-security
 </code></pre>
-<p>Lassen Sie den Scan-Schritt mit <code>fail-on: never</code> fortfahren, damit die Datei auch bei Befunden hochgeladen wird. Werten Sie die hochgeladenen Befunde anschließend aus.</p>
+<p>Lass den Scan-Schritt mit <code>fail-on: never</code> fortfahren, damit die Datei auch bei Befunden hochgeladen wird. Werte die hochgeladenen Befunde anschließend aus.</p>
 <h3 id="installing-it-yourself-instead">Installation im eigenen Workflow</h3>
-<p>Sie können das Paket auch selbst installieren und denselben Befehl ohne die Action ausführen:</p>
+<p>Du kannst das Paket auch selbst installieren und denselben Befehl ohne die Action ausführen:</p>
 <pre><code class="language-yaml">name: OpenCloud security check
 
 on:
@@ -188,9 +187,9 @@ jobs:
           COS_RELEASES_TOKEN: $&#123;&#123; github.token &#125;&#125;
         run: check-opencloud-security
 </code></pre>
-<p>Legen Sie die Paketversion fest, damit ein neues Release mit geänderten Referenzdaten nicht unbemerkt die Pipeline verändert. Mit <code>workflow_dispatch</code> können Sie nach einer Korrektur sofort einen weiteren Scan starten.</p>
+<p>Lege die Paketversion fest, damit ein neues Release mit geänderten Referenzdaten nicht unbemerkt die Pipeline verändert. Mit <code>workflow_dispatch</code> kannst du nach einer Korrektur sofort einen weiteren Scan starten.</p>
 <h3 id="reporting-rather-than-failing">Ergebnisse weitergeben</h3>
-<p>Wenn nach dem Scan weitere Schritte laufen sollen, erfassen Sie den Status und schreiben Sie das Ergebnis in die Jobzusammenfassung:</p>
+<p>Wenn nach dem Scan weitere Schritte laufen sollen, erfasse den Status und schreibe das Ergebnis in die Jobzusammenfassung:</p>
 <pre><code class="language-yaml">      - name: Scan the instance
         id: scan
         continue-on-error: true
@@ -216,7 +215,7 @@ jobs:
 </code></pre>
 <p>Alternativ versendet das Plugin über <code>--webhook-url</code> eine Nachricht; siehe <a href="/documentation/webhooks">Webhook-Beispiele</a>. Auch dieser Versand setzt voraus, dass der Workflow ausgeführt wird. Er überwacht keine deaktivierten oder ausgebliebenen Jobs.</p>
 <h3 id="the-json-document-instead">Einzelne JSON-Felder auswerten</h3>
-<p>Für eigene Prüfregeln verwenden Sie das vollständige JSON von <code>check-opencloud-scanner</code>. Die Felder sind im <a href="/documentation/scanner">Bibliotheks-README</a> dokumentiert.</p>
+<p>Für eigene Prüfregeln verwende das vollständige JSON von <code>check-opencloud-scanner</code>. Die Felder sind im <a href="/documentation/scanner">Bibliotheks-README</a> dokumentiert.</p>
 <pre><code class="language-yaml">      - name: Scan and keep the result
         run: |
           check-opencloud-scanner scan --compact opencloud.example.com &gt; scan.json
@@ -228,7 +227,7 @@ jobs:
           name: opencloud-scan
           path: scan.json
 </code></pre>
-<p><code>jq -e</code> liefert einen Fehlercode, wenn der Ausdruck falsch ist. Damit können Sie etwa <code>.EOL</code>, <code>.rating</code>, <code>.updates.available</code> oder <code>.lifecycle.daysRemaining</code> als Pipeline-Bedingung verwenden.</p>
+<p><code>jq -e</code> liefert einen Fehlercode, wenn der Ausdruck falsch ist. Damit kannst du etwa <code>.EOL</code>, <code>.rating</code>, <code>.updates.available</code> oder <code>.lifecycle.daysRemaining</code> als Pipeline-Bedingung verwenden.</p>
 <h3 id="opencloud-compatibility-evidence">Nachweis der OpenCloud-Kompatibilität</h3>
 <p>Der Workflow <strong>real OpenCloud container</strong> prüft wöchentlich ein anhand seines Digests festgelegtes Rolling-Image. Er testet Initialisierung, öffentlichen Statusendpunkt, Produktkennung, Versionsangabe und einen gültigen Bewertungsbereich. Eine neue Version gilt erst nach Prüfung dieser Ergebnisse als bestätigt.</p>
 <table>
@@ -279,10 +278,10 @@ jobs:
   allow_failure:
     exit_codes: [1]
 </code></pre>
-<p>Mit <code>allow_failure.exit_codes</code> erlauben Sie ausgewählte Statuswerte. <code>1</code> toleriert WARNING; <code>3</code> toleriert einen nicht abgeschlossenen Scan. Entscheiden Sie ausdrücklich, ob ein solcher Fehler den Job scheitern lassen soll.</p>
-<p>Legen Sie den Zeitplan unter <em>Build → Pipeline schedules</em> an. Der <code>rules</code>-Block beschränkt den Job auf geplante Durchläufe.</p>
+<p>Mit <code>allow_failure.exit_codes</code> erlaube ausgewählte Statuswerte. <code>1</code> toleriert WARNING; <code>3</code> toleriert einen nicht abgeschlossenen Scan. Entscheide ausdrücklich, ob ein solcher Fehler den Job scheitern lassen soll.</p>
+<p>Lege den Zeitplan unter <em>Build → Pipeline schedules</em> an. Der <code>rules</code>-Block beschränkt den Job auf geplante Durchläufe.</p>
 <h2 id="using-the-container-image-instead-of-installing">Ein eigenes Container-Image verwenden</h2>
-<p>Bauen Sie das Plugin-Image wie unter <a href="/documentation/installation#docker">Docker</a> beschrieben, übertragen Sie es in Ihre Registry und legen Sie den Tag fest. Es läuft als unprivilegierter Benutzer und enthält einen <code>HEALTHCHECK</code>:</p>
+<p>Baue das Plugin-Image wie unter <a href="/documentation/installation#docker">Docker</a> beschrieben, übertrage es in deine Registry und lege den Tag fest. Es läuft als unprivilegierter Benutzer und enthält einen <code>HEALTHCHECK</code>:</p>
 <pre><code class="language-shell">docker build -f docker/Dockerfile \
   -t registry.example.com/check-opencloud-security:1.1.0 .
 docker push registry.example.com/check-opencloud-security:1.1.0
@@ -293,7 +292,7 @@ docker run --rm \
   registry.example.com/check-opencloud-security:1.1.0
 </code></pre>
 <h2 id="do-not-put-the-token-on-the-command-line">Zugangsdaten sicher übergeben</h2>
-<p>Übergeben Sie Secrets über Umgebungsvariablen wie <code>COS_RELEASES_TOKEN</code> und <code>COS_WEBHOOK_URL</code> oder als <a href="/documentation/reference#configuration-file-and-secrets">Secret-Verweis</a>. Vermeiden Sie Zugangsdaten in ausgeschriebenen Kommandozeilen. Das Plugin maskiert Tokens in seiner Diagnoseausgabe, kann aber weder Shell-Traces noch die Logausgabe anderer Programme bereinigen.</p>
+<p>Übergib Secrets über Umgebungsvariablen wie <code>COS_RELEASES_TOKEN</code> und <code>COS_WEBHOOK_URL</code> oder als <a href="/documentation/reference#configuration-file-and-secrets">Secret-Verweis</a>. Vermeide Zugangsdaten in ausgeschriebenen Kommandozeilen. Das Plugin maskiert Tokens in seiner Diagnoseausgabe, kann aber weder Shell-Traces noch die Logausgabe anderer Programme bereinigen.</p>
 <hr>
 <p><a href="/documentation">Zur Dokumentationsübersicht</a> | <a href="/documentation/reference">Zum Haupt-README</a></p>
 </article>

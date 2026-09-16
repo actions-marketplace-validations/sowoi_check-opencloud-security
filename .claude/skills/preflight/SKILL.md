@@ -2,6 +2,9 @@
 name: preflight
 description: Run locally everything CI checks on a check-opencloud-security pull request - ruff, mypy, Bandit, the generator --check modes, the advisory and pull request guards, Biome, zizmor, ansible-lint, actionlint, shellcheck, hadolint and the test suite - and report one pass/fail/skipped summary. Use before opening or updating a pull request, or when asked to check the branch.
 argument-hint: "[quick]"
+context: fork
+agent: preflight-runner
+background: false
 ---
 
 # Preflight
@@ -9,9 +12,11 @@ argument-hint: "[quick]"
 Arguments: $ARGUMENTS (`quick` skips the full test suite and runs only the test
 files related to the changed code).
 
-Run from the repository root. **Do not fix anything while running** - collect
-results first, then report. Do not run `ruff format` or reformat the tree.
-Run independent checks in parallel where possible; the test suite takes about
+This skill runs in the read-only `preflight-runner` agent
+(`.claude/agents/preflight-runner.md`), so the long output stays out of the
+main conversation and nothing is fixed while the checks run. Run from the
+repository root. Do not run `ruff format` or reformat the tree. Run
+independent checks in parallel where possible; the test suite takes about
 75 seconds, so start it in the background first.
 
 ## 1. Context
@@ -30,6 +35,7 @@ A tool that is not installed is reported as **skipped**, never as passed. Use
 | # | Check | Command |
 |:--|:--|:--|
 | 1 | Tests | `uv run --group test --extra signing pytest -q` (web tests use `COS_WEB_REDIS_URL=memory://` automatically via fixtures; set it if they complain) |
+| 1a | Browser tests | `uv run pytest tests/test_webapp_browser_ux.py tests/test_webapp_browser_e2e.py -q` (part of check 1; report them separately, and as **skipped** - not passed - when WebKit is not installed: `uv run playwright install webkit`) |
 | 2 | Ruff | `uvx ruff check .` |
 | 3 | mypy | `uv run --group test mypy --config-file mypy.ini` |
 | 4 | Bandit | `uvx bandit --recursive . --severity-level medium --confidence-level medium --exclude ./tests,./secrets,./.venv -q` (advisory in CI - report findings, do not fail) |
@@ -40,6 +46,7 @@ A tool that is not installed is reported as **skipped**, never as passed. Use
 | 9 | Wizard blueprints | `python scripts/embed_wizard_blueprints.py --check` |
 | 10 | Security advisories | `python scripts/security_advisories.py --check` |
 | 11 | Changelog and version guard | `python scripts/check_pull_request.py --base origin/main` |
+| 11a | Dependency policy | `uv run python scripts/check_dependencies.py --check --base origin/main` (a `proposed` record is a **warning** - it awaits the maintainer's approval - anything else fails) |
 | 12 | Biome | `npx --yes @biomejs/biome@2.5.13 lint --error-on-warnings` (needs Node) |
 | 13 | zizmor | `uvx zizmor@1.30.1 .github/workflows` |
 | 14 | ansible-lint | `cd ansible && uvx ansible-lint` (**only** from inside `ansible/`; skip unless `ansible/` changed) |
@@ -69,4 +76,5 @@ Also scan the diff for the project's hard rules and report violations:
 
 One table: check, result (pass / fail / warning / skipped + reason), and for
 each failure the first relevant lines of output. End with the list of
-concrete fixes needed, and ask whether to apply them.
+concrete fixes needed. The main conversation relays the report and asks the
+user whether to apply them.

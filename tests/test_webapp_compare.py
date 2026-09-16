@@ -207,9 +207,12 @@ def test_a_scan_that_has_not_finished_is_not_compared(improved_pair):
     assert "not finished" in page.text
 
 
-def test_two_different_instances_are_compared_but_said_so():
+def test_two_different_instances_are_refused_rather_than_compared():
     """
-    Staging against production is a fair question; answered silently it is not.
+    Two uuids of two instances answer nothing.
+
+    Pasting the wrong uuid is the easy mistake, and a verdict drawn between
+    two unrelated instances reads exactly like a real one (ADR 0059).
 
     The same fake server under two names, because what the comparison calls
     the same instance is the name that was scanned - two ports on one address
@@ -223,10 +226,12 @@ def test_two_different_instances_are_compared_but_said_so():
 
     page = client().get(f"/compare?baseline={EARLIER}&current={LATER}")
 
-    assert page.status_code == 200
+    assert page.status_code == 422
     assert "different instances" in page.text
-    # Shown, not refused.
-    assert "compare-verdict" in page.text
+    # Refused, not shown with a caveat.
+    assert "compare-verdict" not in page.text
+    # What the reader typed stays in the form, so it can be corrected.
+    assert f'value="{EARLIER}"' in page.text
 
 
 def test_the_comparison_page_is_never_indexable(improved_pair):

@@ -260,3 +260,6 @@ __marimo__/
 # Backups the Docker setup wizard keeps of the files it replaces; one of
 # them is a copy of a .env.
 *.bak
+
+# Screenshots and snapshots written by the Playwright MCP server (.mcp.json).
+.playwright-mcp/

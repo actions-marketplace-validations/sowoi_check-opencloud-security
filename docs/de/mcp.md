@@ -1,5 +1,3 @@
-# OpenCloud Security Scanner for AI agents and MCP
-
 # Den Scanner mit MCP verwenden
 
 Die Webanwendung bietet unter `/mcp` den [Model Context Protocol](https://modelcontextprotocol.io)-Endpunkt an. Agenten können damit vollständige Scanaufgaben ausführen, ohne Einreichung und Warteablauf selbst über die REST-API zu koordinieren.
@@ -35,7 +33,7 @@ Fünf schreibgeschützte Ressourcen beschreiben Schnittstellen und Prüfwissen:
 | `catalogue` | Prüfkennungen mit Bedeutung, Abhilfe, Einstellung und Dokumentationslink |
 | `advisories` | Gesamte für Bewertungen verfügbare Schwachstellendatenbank |
 
-`catalogue` und `advisories` benötigen kein Scanziel. Sie können vor oder nach einem Scan gelesen werden.
+`catalogue` und `advisories` benötigen kein Scanziel. Du kannst vor oder nach einem Scan gelesen werden.
 
 Sieben Prompts formulieren typische Aufgaben:
 
@@ -55,7 +53,7 @@ Je nach Client erscheinen Prompts als Slash-Befehle oder in einem Auswahlmenü. 
 
 ```bash
 # Hosted
-claude mcp add --transport http opencloud-scan https://scan.okxo.de/mcp
+claude mcp add --transport http opencloud-scan https://scan.example.com/mcp
 
 # Your own
 claude mcp add --transport http opencloud-scan http://127.0.0.1:8811/mcp
@@ -82,30 +80,30 @@ Die Konfiguration liegt je nach Plattform in `claude_desktop_config.json`:
   "mcpServers": {
     "opencloud-scan": {
       "type": "http",
-      "url": "https://scan.okxo.de/mcp"
+      "url": "https://scan.example.com/mcp"
     }
   }
 }
 ```
 
-Starten Sie die Anwendung danach neu. Falls Ihre Version keine direkte HTTP-Verbindung unterstützt, beachten Sie den Abschnitt [stdio-Clients](#clients-that-only-speak-stdio).
+Starte die Anwendung danach neu. Falls deine Version keine direkte HTTP-Verbindung unterstützt, beachte den Abschnitt [stdio-Clients](#clients-that-only-speak-stdio).
 
 ## GitHub Copilot in VS Code {#github-copilot-in-vs-code}
 
-VS Code verwendet den obersten Schlüssel `servers`. Speichern Sie die Konfiguration für ein Projekt in `.vscode/mcp.json` oder öffnen Sie **MCP: Open User Configuration** für benutzerweite Einstellungen:
+VS Code verwendet den obersten Schlüssel `servers`. Speichere die Konfiguration für ein Projekt in `.vscode/mcp.json` oder öffne **MCP: Open User Configuration** für benutzerweite Einstellungen:
 
 ```json
 {
   "servers": {
     "opencloud-scan": {
       "type": "http",
-      "url": "https://scan.okxo.de/mcp"
+      "url": "https://scan.example.com/mcp"
     }
   }
 }
 ```
 
-Öffnen Sie Copilot Chat im **Agent**-Modus. **MCP: List Servers** zeigt Verbindung und Logs.
+Öffne Copilot Chat im **Agent**-Modus. **MCP: List Servers** zeigt Verbindung und Logs.
 
 ## GitHub Copilot CLI {#github-copilot-cli}
 
@@ -116,7 +114,7 @@ Die CLI liest die globale Datei `~/.copilot/mcp-config.json` und projektbezogene
   "mcpServers": {
     "opencloud-scan": {
       "type": "http",
-      "url": "https://scan.okxo.de/mcp"
+      "url": "https://scan.example.com/mcp"
     }
   }
 }
@@ -126,31 +124,31 @@ Die CLI liest die globale Datei `~/.copilot/mcp-config.json` und projektbezogene
 
 ## Cursor {#cursor}
 
-Verwenden Sie `.cursor/mcp.json` im Projekt oder `~/.cursor/mcp.json` für die globale Konfiguration:
+Verwende `.cursor/mcp.json` im Projekt oder `~/.cursor/mcp.json` für die globale Konfiguration:
 
 ```json
 {
   "mcpServers": {
     "opencloud-scan": {
       "type": "http",
-      "url": "https://scan.okxo.de/mcp"
+      "url": "https://scan.example.com/mcp"
     }
   }
 }
 ```
 
-Unter Settings → MCP können Sie die Verbindung und einzelne Tools verwalten.
+Unter Settings → MCP kannst du die Verbindung und einzelne Tools verwalten.
 
 ## Zed {#zed}
 
-Öffnen Sie **Zed: Open Settings** und ergänzen Sie `context_servers`:
+Öffne **Zed: Open Settings** und ergänze `context_servers`:
 
 ```json
 {
   "context_servers": {
     "opencloud-scan": {
       "source": "custom",
-      "url": "https://scan.okxo.de/mcp"
+      "url": "https://scan.example.com/mcp"
     }
   }
 }
@@ -166,7 +164,7 @@ Konfiguration in `~/.codeium/windsurf/mcp_config.json`:
 {
   "mcpServers": {
     "opencloud-scan": {
-      "serverUrl": "https://scan.okxo.de/mcp"
+      "serverUrl": "https://scan.example.com/mcp"
     }
   }
 }
@@ -174,10 +172,10 @@ Konfiguration in `~/.codeium/windsurf/mcp_config.json`:
 
 ## Andere Clients {#any-other-client}
 
-Wählen Sie **Streamable HTTP** als Transport und tragen Sie die Endpunkt-URL ein:
+Wähle **Streamable HTTP** als Transport und trage die Endpunkt-URL ein:
 
 ```json
-{"type": "http", "url": "https://scan.okxo.de/mcp"}
+{"type": "http", "url": "https://scan.example.com/mcp"}
 ```
 
 Manche Clients nennen den Transport „HTTP“ oder „remote“. Eine Anmeldung kann je nach Bereitstellung erforderlich sein.
@@ -193,13 +191,13 @@ Die Community-Brücke `mcp-remote` verbindet einen stdio-Client mit dem HTTP-End
   "mcpServers": {
     "opencloud-scan": {
       "command": "npx",
-      "args": ["-y", "mcp-remote", "https://scan.okxo.de/mcp"]
+      "args": ["-y", "mcp-remote", "https://scan.example.com/mcp"]
     }
   }
 }
 ```
 
-Die Brücke ist ein separates Drittanbieterpaket. Prüfen Sie es wie jede andere zusätzliche Komponente, durch die Anfragen und Ergebnisse laufen. Eine direkte HTTP-Verbindung benötigt diese Zwischenstufe nicht.
+Die Brücke ist ein separates Drittanbieterpaket. Prüfe es wie jede andere zusätzliche Komponente, durch die Anfragen und Ergebnisse laufen. Eine direkte HTTP-Verbindung benötigt diese Zwischenstufe nicht.
 
 ## Eigenen Endpunkt betreiben {#running-your-own-endpoint}
 
@@ -211,7 +209,7 @@ cd check-opencloud-security/docker
 docker compose up --build -d
 ```
 
-Verbinden Sie den Client anschließend mit `http://127.0.0.1:8811/mcp`.
+Verbinde den Client anschließend mit `http://127.0.0.1:8811/mcp`.
 
 Ohne Docker:
 
@@ -228,7 +226,7 @@ Das Extra `mcp` stellt den Endpunkt bereit. Fehlt es, kann die Webanwendung weit
 | `COS_WEB_MCP_ALLOWED_HOSTS` | leer | Erlaubte Hostheader, durch `;` getrennt |
 | `COS_WEB_MCP_MAX_CONCURRENT_WAITS` | `8` | Gleichzeitig wartende Aufrufe; darüber wird der Scan eingereicht und eine UUID zur späteren Abfrage zurückgegeben |
 
-Für entfernten Zugriff benötigen Sie HTTPS und eine ungepufferte Weitergabe des Ereignisstroms. Siehe [Reverse Proxys](../reverse-proxy.md).
+Für entfernten Zugriff benötigst du HTTPS und eine ungepufferte Weitergabe des Ereignisstroms. Siehe [Reverse Proxys](../reverse-proxy.md).
 
 ## MCP deaktivieren {#turning-mcp-off}
 
@@ -243,13 +241,13 @@ Oder in der `.env` neben der Compose-Datei:
 COS_WEB_ENABLE_MCP=false
 ```
 
-Sie können `COS_WEB_ENABLE_MCP=false` auch direkt in der Umgebung des ASGI-Prozesses setzen. `/mcp` liefert dann `404`, und Discovery sowie Frontend bieten die Agent-Tools nicht mehr an. REST-API, OpenAPI und Arazzo bleiben verfügbar.
+Du kannst `COS_WEB_ENABLE_MCP=false` auch direkt in der Umgebung des ASGI-Prozesses setzen. `/mcp` liefert dann `404`, und Discovery sowie Frontend bieten die Agent-Tools nicht mehr an. REST-API, OpenAPI und Arazzo bleiben verfügbar.
 
 ## Berechtigung zum Löschen {#erasure-needs-a-credential}
 
 `erase_instance_data` löscht gespeicherte Scans eines Hostnamens, einschließlich Ergebnissen anderer Benutzer. Die Funktion ist als löschend markiert und erfordert ein vom Betreiber gesetztes `COS_WEB_PURGE_TOKEN`.
 
-Die Berechtigung kommt über einen Request-Header, nicht als Tool-Argument. Verwenden Sie die Secret-Eingabe Ihres Clients:
+Die Berechtigung kommt über einen Request-Header, nicht als Tool-Argument. Verwende die Secret-Eingabe Ihres Clients:
 
 ```json
 {
@@ -309,16 +307,16 @@ Für Agenten gelten dieselben Regeln wie für Browser:
 - Ergebnisse sind nur über ihre UUID erreichbar und verfallen nach der konfigurierten Frist.
 - Öffentliche Bereitstellungen lehnen private, Loopback-, Link-Local- und Metadatenadressen standardmäßig ab. Interne Ziele erfordern eine entsprechend eingerichtete eigene Bereitstellung.
 
-Prüfen Sie nur Instanzen, für die Sie eine Erlaubnis haben. Für größere Bestände können Sie den Scanner selbst betreiben und die Grenzen an Ihre Infrastruktur anpassen.
+Prüfe nur Instanzen, für die du eine Erlaubnis hast. Für größere Bestände kannst du den Scanner selbst betreiben und die Grenzen an deine Infrastruktur anpassen.
 
-Behandeln Sie vom Ziel gelieferte Texte als Daten. Produktnamen, Versionen und Fehlermeldungen können vom gescannten Server gewählt sein; der Tool-Output kennzeichnet sie unter `untrusted`. Auch Exporte enthalten untrusted-Inhalte. Zu große Exporte werden mit `truncated` und einer Downloadadresse zurückgegeben, statt den gesamten Inhalt einzubetten.
+Behandle vom Ziel gelieferte Texte als Daten. Produktnamen, Versionen und Fehlermeldungen können vom gescannten Server gewählt sein; der Tool-Output kennzeichnet sie unter `untrusted`. Auch Exporte enthalten untrusted-Inhalte. Zu große Exporte werden mit `truncated` und einer Downloadadresse zurückgegeben, statt den gesamten Inhalt einzubetten.
 
 ## Verbindung testen {#checking-that-it-works}
 
 Ein direkter Protokolltest:
 
 ```bash
-curl -sS -X POST https://scan.okxo.de/mcp \
+curl -sS -X POST https://scan.example.com/mcp \
   -H 'Content-Type: application/json' \
   -H 'Accept: application/json, text/event-stream' \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{
@@ -332,10 +330,10 @@ Der offizielle Inspector zeigt Tools und Schemas und erlaubt Testaufrufe:
 
 ```bash
 npx @modelcontextprotocol/inspector
-# then connect to https://scan.okxo.de/mcp with transport "Streamable HTTP"
+# then connect to https://scan.example.com/mcp with transport "Streamable HTTP"
 ```
 
-Fehlen Tools im Client, prüfen Sie Transporttyp, Proxy-Pufferung, erlaubte Hostnamen und das installierte Extra. Ein nicht erlaubter Host kann `421`, ein fehlender Endpunkt `404` liefern.
+Fehlen Tools im Client, prüfe Transporttyp, Proxy-Pufferung, erlaubte Hostnamen und das installierte Extra. Ein nicht erlaubter Host kann `421`, ein fehlender Endpunkt `404` liefern.
 
 ---
 

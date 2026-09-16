@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.prometheus.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de') %}
+{% if locale not in ('en', 'de', 'fr') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -28,9 +28,8 @@
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="de">
-<h1 id="prometheus-grafana-und-opentelemetry">Prometheus, Grafana und OpenTelemetry</h1>
 <p>Das Plugin enthält einen Prometheus-Exporter. Mit <code>--prometheus-listen-port 9102</code> stellt es <code>/metrics</code> bereit. Ergebnisse werden für <code>--scrape-interval</code> Sekunden zwischengespeichert, standardmäßig 60. Nur bei <code>0</code> löst jeder Abruf einen neuen Scan aus.</p>
-<p>Der Exporter lauscht standardmäßig auf <code>127.0.0.1</code>. Für einen Container oder entfernte Scraper verwenden Sie <code>--prometheus-listen-addr 0.0.0.0</code> und beschränken den Zugriff über Firewall oder NetworkPolicy:</p>
+<p>Der Exporter lauscht standardmäßig auf <code>127.0.0.1</code>. Für einen Container oder entfernte Scraper verwende <code>--prometheus-listen-addr 0.0.0.0</code> und beschränken den Zugriff über Firewall oder NetworkPolicy:</p>
 <pre><code class="language-shell">docker run --rm -p 9102:9102 check-opencloud-security \
   --host opencloud.example.com --prometheus-listen-port 9102 \
   --prometheus-listen-addr 0.0.0.0
@@ -60,7 +59,7 @@
 <pre><code class="language-shell">cp contrib/prometheus/alerts.yml /etc/prometheus/rules/opencloud-security.yml
 promtool check rules /etc/prometheus/rules/opencloud-security.yml
 </code></pre>
-<p>Das Dashboard bietet eine Auswahl nach <code>Instance</code> und kann damit mehrere Hosts darstellen. Passen Sie Scanintervall, Scrape-Intervall und die Dauer <code>for:</code> der Alarmregeln gemeinsam an. <code>for:</code> misst, wie lange eine Bedingung bei der Regelauswertung ununterbrochen erfüllt ist; es zählt keine unabhängigen Scans.</p>
+<p>Das Dashboard bietet eine Auswahl nach <code>Instance</code> und kann damit mehrere Hosts darstellen. Passt du Scanintervall, Scrape-Intervall und die Dauer <code>for:</code> der Alarmregeln gemeinsam an. <code>for:</code> misst, wie lange eine Bedingung bei der Regelauswertung ununterbrochen erfüllt ist; es zählt keine unabhängigen Scans.</p>
 <p>Die späteren Beispiele mit <code>jq</code> verwenden eigene, kürzere Metriknamen. Die beiden mitgelieferten Dateien passen zu den Namen des nativen Exporters, nicht zu diesen Beispielen.</p>
 <h2 id="what-the-exporter-publishes">Metriken des Exporters</h2>
 <table>
@@ -119,7 +118,7 @@ promtool check rules /etc/prometheus/rules/opencloud-security.yml
 </tr>
 </tbody>
 </table>
-<p>Bei einem fehlgeschlagenen Scan erscheinen nur Dauer und Erfolgsstatus. Frühere Befunde werden nicht erneut als aktuell ausgegeben. Prüfen Sie deshalb zuerst <code>opencloud_security_scrape_success</code>.</p>
+<p>Bei einem fehlgeschlagenen Scan erscheinen nur Dauer und Erfolgsstatus. Frühere Befunde werden nicht erneut als aktuell ausgegeben. Prüfe deshalb zuerst <code>opencloud_security_scrape_success</code>.</p>
 <p><code>opencloud_security_end_of_life</code> ist von der Zahl verbleibender Tage getrennt. Bei Rolling und Production kann das Ende noch undatiert sein, da es vom nächsten Release abhängt. Eine fehlende Tageszahl bedeutet nicht, dass der Support heute endet.</p>
 <h2 id="what-there-is-to-graph">Nagios-Performancedaten darstellen</h2>
 <p>Jeder reguläre Plugin-Aufruf gibt hinter <code>|</code> Performancedaten aus:</p>
@@ -163,7 +162,7 @@ promtool check rules /etc/prometheus/rules/opencloud-security.yml
 </tr>
 </tbody>
 </table>
-<p>Mit <code>support_days_left</code> können Sie rechtzeitig vor einem bekannten Supportende warnen.</p>
+<p>Mit <code>support_days_left</code> kannst du rechtzeitig vor einem bekannten Supportende warnen.</p>
 <h2 id="node_exporter-textfile-collector">Textfile Collector von node_exporter</h2>
 <p>Dieses Beispiel verwendet das JSON von <code>check-opencloud-scanner</code> und wandelt es mit <code>jq</code> um. Die Ausgabe wird zuerst in eine temporäre Datei geschrieben und dann umbenannt, damit node_exporter keine unvollständige Datei liest.</p>
 <pre><code class="language-shell">#!/bin/sh
@@ -194,9 +193,9 @@ mv &quot;$TMP&quot; &quot;$OUT&quot;
 chmod 644 &quot;$OUT&quot;
 </code></pre>
 <p><code>opencloud_scan_success</code> macht einen fehlgeschlagenen Scan sichtbar. Ohne einen eigenen Erfolgswert könnten zuletzt gespeicherte Messwerte weiterhin wie ein aktuelles Ergebnis aussehen.</p>
-<p><code>lifecycle.daysRemaining</code> ist <code>null</code>, wenn das Supportende noch nicht datiert ist. Im Beispiel wird daraus mit <code>// 0</code> eine Null. Wenn Ihre Alarme dies als „endet heute“ interpretieren, lassen Sie diese Metrik stattdessen mit <code>select(.lifecycle.daysRemaining != null)</code> weg.</p>
+<p><code>lifecycle.daysRemaining</code> ist <code>null</code>, wenn das Supportende noch nicht datiert ist. Im Beispiel wird daraus mit <code>// 0</code> eine Null. Wenn deine Alarme dies als „endet heute“ interpretieren, lass diese Metrik stattdessen mit <code>select(.lifecycle.daysRemaining != null)</code> weg.</p>
 <h2 id="pushgateway">Pushgateway</h2>
-<p>Verwenden Sie einen eigenen Gruppierungsschlüssel pro Host, um Ergebnisse getrennt zu halten:</p>
+<p>Verwende einen eigenen Gruppierungsschlüssel pro Host, um Ergebnisse getrennt zu halten:</p>
 <pre><code class="language-shell">check-opencloud-scanner scan --compact opencloud.example.com \
   | jq -r '
       &quot;# TYPE opencloud_security_rating gauge&quot;,
@@ -206,7 +205,7 @@ chmod 644 &quot;$OUT&quot;
   | curl -sS --data-binary @- \
       http://pushgateway.example.com:9091/metrics/job/opencloud_security/instance/opencloud.example.com
 </code></pre>
-<p>Pushgateway bewahrt die letzte übertragene Metrik auf. Löschen Sie die Gruppe, wenn Sie eine Instanz außer Betrieb nehmen:</p>
+<p>Pushgateway bewahrt die letzte übertragene Metrik auf. Lösche die Gruppe, wenn du eine Instanz außer Betrieb nimmst:</p>
 <pre><code class="language-shell">curl -X DELETE http://pushgateway.example.com:9091/metrics/job/opencloud_security/instance/opencloud.example.com
 </code></pre>
 <h2 id="opentelemetry-collector">OpenTelemetry-Collector</h2>
@@ -216,10 +215,10 @@ chmod 644 &quot;$OUT&quot;
   | curl -sf -X POST http://collector.example.com:4318/v1/metrics \
       -H 'Content-Type: application/json' --data-binary @-
 </code></pre>
-<p>Metriknamen und das Attribut <code>host</code> entsprechen dem Exporter. Berücksichtigen Sie bei Abfragen die Label-Konventionen Ihres Backends. Collector-Adresse, Proxy und Zugangsdaten werden beim Versand konfiguriert.</p>
+<p>Metriknamen und das Attribut <code>host</code> entsprechen dem Exporter. Berücksichtige bei Abfragen die Label-Konventionen Ihres Backends. Collector-Adresse, Proxy und Zugangsdaten werden beim Versand konfiguriert.</p>
 <p>Auch ein fehlgeschlagener Scan liefert <code>opencloud_security_scrape_success</code> mit <code>0</code> und die Dauer, aber keine Befunde. So lässt sich ein nicht erreichbares Ziel von einem erfolgreichen Scan unterscheiden.</p>
 <h2 id="alerting-rules">Alarmregeln</h2>
-<p>Für den nativen Exporter verwenden Sie <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/prometheus/alerts.yml"><code>contrib/prometheus/alerts.yml</code></a>. Diese Datei wird mit den tatsächlich ausgegebenen Metriknamen gepflegt und getestet.</p>
+<p>Für den nativen Exporter verwende <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/prometheus/alerts.yml"><code>contrib/prometheus/alerts.yml</code></a>. Diese Datei wird mit den tatsächlich ausgegebenen Metriknamen gepflegt und getestet.</p>
 <p>Die folgenden Regeln verwenden dagegen die kürzeren Namen der <code>jq</code>-Beispiele:</p>
 <pre><code class="language-yaml">groups:
   - name: opencloud-security
@@ -253,11 +252,11 @@ chmod 644 &quot;$OUT&quot;
         annotations:
           summary: &quot;The OpenCloud security scan has not produced a result&quot;
 </code></pre>
-<p>Wählen Sie <code>for:</code> nach der gewünschten Verzögerung und der Verfügbarkeit der Messwerte. Ein gecachtes Ergebnis kann eine Bedingung über mehrere Auswertungen erfüllen, ohne dass inzwischen ein neuer Scan stattgefunden hat.</p>
+<p>Wähle <code>for:</code> nach der gewünschten Verzögerung und der Verfügbarkeit der Messwerte. Ein gecachtes Ergebnis kann eine Bedingung über mehrere Auswertungen erfüllen, ohne dass inzwischen ein neuer Scan stattgefunden hat.</p>
 <h2 id="grafana">Grafana</h2>
-<p>Importieren Sie <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/grafana/dashboard.json"><code>contrib/grafana/dashboard.json</code></a> und wählen Sie die Prometheus-Datenquelle. Das Dashboard zeigt Scanstatus, Note und Supportstatus, den Bewertungsverlauf, offene Befunde, Sicherheitshinweise nach Schweregrad und die installierten Versionen.</p>
-<p>Für ein eigenes Dashboard verwenden Sie eine Skala von <code>0</code> bis <code>5</code>, bei der höhere Werte besser sind. Schwellwerte bei <code>3</code> (gelb) und <code>1</code> (rot) entsprechen den Plugin-Standards. Ordnen Sie die Zahlen den Noten zu: <code>5 → A+</code>, <code>4 → A</code>, <code>3 → C</code>, <code>2 → D</code>, <code>1 → E</code>, <code>0 → F</code>.</p>
-<p>Zeigen Sie die Version neben der Bewertung an, damit ein möglicher Updatebedarf direkt erkennbar ist.</p>
+<p>importiere <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/grafana/dashboard.json"><code>contrib/grafana/dashboard.json</code></a> und wähle die Prometheus-Datenquelle. Das Dashboard zeigt Scanstatus, Note und Supportstatus, den Bewertungsverlauf, offene Befunde, Sicherheitshinweise nach Schweregrad und die installierten Versionen.</p>
+<p>Für ein eigenes Dashboard verwende eine Skala von <code>0</code> bis <code>5</code>, bei der höhere Werte besser sind. Schwellwerte bei <code>3</code> (gelb) und <code>1</code> (rot) entsprechen den Plugin-Standards. ordne die Zahlen den Noten zu: <code>5 → A+</code>, <code>4 → A</code>, <code>3 → C</code>, <code>2 → D</code>, <code>1 → E</code>, <code>0 → F</code>.</p>
+<p>Zeige die Version neben der Bewertung an, damit ein möglicher Updatebedarf direkt erkennbar ist.</p>
 <hr>
 <p><a href="/documentation">Zur Dokumentationsübersicht</a> | <a href="/documentation/reference">Zum Haupt-README</a></p>
 </article>

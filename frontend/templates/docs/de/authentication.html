@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.authentication.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de') %}
+{% if locale not in ('en', 'de', 'fr') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -30,7 +30,6 @@
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="de">
-<h1 id="authentifizierung-prufen">Authentifizierung prüfen</h1>
 <p>Der Scanner prüft den Schutz von Endpunkten, HTTP Basic Auth, bekannte Demokonten und die öffentlich erkennbaren Anmeldeeinstellungen. Dazu liest er die Capabilities und das OpenID-Connect-Discovery-Dokument. Er errät keine Zugangsdaten. Die einzige Prüfung mit Passwörtern verwendet die unten beschriebenen veröffentlichten Demozugänge. Weitere Grenzen stehen unter <a href="/documentation/scanner-checks#what-the-scan-deliberately-does-not-answer">Prüfumfang</a>.</p>
 <h2 id="1-do-protected-endpoints-actually-require-a-session-authenticationpath">1. Geschützte Endpunkte: <code>authentication:&lt;path&gt;</code></h2>
 <p>Diese Pfade werden ohne Zugangsdaten abgefragt:</p>
@@ -57,26 +56,26 @@
 </tbody>
 </table>
 <p><code>401</code>, <code>403</code>, <code>405</code>, <code>501</code>, eine Weiterleitung zur Anmeldung und <code>404</code> gelten für diese Prüfung als geschützter Zugriff. <code>405</code> und <code>501</code> können entstehen, wenn ein Proxy <code>GET</code> auf einer WebDAV-Sammlung nicht unterstützt; <code>404</code> deckt absichtlich verborgene Pfade ab. Andere Antworten, insbesondere <code>200</code> mit geschützten Inhalten, führen zum Befund. Ein nicht erreichbarer Endpunkt wird hier als bestanden behandelt, da ein Netzwerkfehler keinen offenen Zugriff belegt.</p>
-<p><strong>Bei einem Befund:</strong> Rufen Sie den genannten Pfad selbst auf und prüfen Sie die Antwort. Auch eine eigene Fehlerseite eines Proxys oder Caches kann die Ursache sein. Sind tatsächlich geschützte Daten ohne Sitzung zugänglich, schließen Sie den Zugriff und behandeln Sie die betreffenden Inhalte als offengelegt.</p>
+<p><strong>Bei einem Befund:</strong> rufst du den genannten Pfad selbst auf und prüfe die Antwort. Auch eine eigene Fehlerseite eines Proxys oder Caches kann die Ursache sein. Sind tatsächlich geschützte Daten ohne Sitzung zugänglich, schließe den Zugriff und behandle die betreffenden Inhalte als offengelegt.</p>
 <h2 id="2-does-the-proxy-still-offer-http-basic-authentication-basicauthdisabled">2. HTTP Basic Auth: <code>basicAuthDisabled</code></h2>
 <p>Ein <code>Basic</code>-Challenge im Header <code>WWW-Authenticate</code> zeigt, dass der Endpunkt Benutzername und Passwort pro Anfrage akzeptiert. Dieser Weg durchläuft nicht die interaktive Anmeldung des Identitätsanbieters mit dessen zweitem Faktor.</p>
 <p>CalDAV-, CardDAV- und viele WebDAV-Clients benötigen diesen Mechanismus. Der Scanner bewertet ihn deshalb mit <code>medium</code>, bei erkanntem externem Anbieter für die interaktive Anmeldung mit <code>low</code>. Siehe <a href="/documentation/scanner-checks#who-signs-users-in">Anmeldeanbieter erkennen</a>.</p>
-<p><strong>Behebung:</strong> Setzen Sie <code>PROXY_ENABLE_BASIC_AUTH=false</code>, wenn kein Client Basic Auth benötigt. Andernfalls verwenden Sie widerrufbare App-Tokens statt Kontopasswörtern.</p>
+<p><strong>Behebung:</strong> Setze <code>PROXY_ENABLE_BASIC_AUTH=false</code>, wenn kein Client Basic Auth benötigt. Andernfalls verwende widerrufbare App-Tokens statt Kontopasswörtern.</p>
 <h2 id="3-do-the-documented-demo-accounts-still-sign-in-demousersdisabled">3. Veröffentlichte Demokonten: <code>demoUsersDisabled</code></h2>
 <p><code>IDM_CREATE_DEMO_USERS=true</code> legt fünf Konten an, darunter ein Administratorkonto. Namen und Passwörter stehen in der <a href="https://docs.opencloud.eu/docs/admin/resources/demo-user/">OpenCloud-Dokumentation</a>. Der Scanner testet ausschließlich diese Paare und nur dann, wenn zuvor der eingebaute Identitätsanbieter der Instanz erkannt wurde. Externe Anbieter werden nicht mit Demopasswörtern angesprochen.</p>
 <p>Funktionierende Demozugänge sind ein <code>critical</code>-Befund und begrenzen die Note auf <code>D</code>.</p>
-<p><strong>Behebung:</strong> Setzen Sie <code>IDM_CREATE_DEMO_USERS=false</code> und löschen Sie bereits angelegte Demokonten. Die Einstellung allein entfernt sie nicht. Untersuchen Sie einen öffentlich erreichbaren funktionierenden Administrator-Demozugang als möglichen unbefugten Zugriff, da das Passwort veröffentlicht ist.</p>
+<p><strong>Behebung:</strong> Setze <code>IDM_CREATE_DEMO_USERS=false</code> und lösche bereits angelegte Demokonten. Die Einstellung allein entfernt sie nicht. Untersuche einen öffentlich erreichbaren funktionierenden Administrator-Demozugang als möglichen unbefugten Zugriff, da das Passwort veröffentlicht ist.</p>
 <h2 id="4-is-account-search-restricted-to-shared-groups-userenumerationrestricted">4. Kontensuche: <code>userEnumerationRestricted</code></h2>
 <p>Die Capabilities geben an, ob Benutzer nur innerhalb gemeinsamer Gruppen gesucht werden können. Aktuelle OpenCloud-Versionen legen den eingeschränkten Zustand fest im Code fest. Die Prüfung bleibt erfasst, um Änderungen dieser Capability sichtbar zu machen.</p>
 <p><strong>Bei einem abweichenden Ergebnis:</strong> Derzeit gibt es keine konfigurierbare Einstellung für diesen Wert. Er beschreibt die OpenCloud-Implementierung.</p>
 <h2 id="5-is-the-link-password-policy-strong-enough-passwordpolicyenforced">5. Mindestlänge von Linkpasswörtern: <code>passwordPolicyEnforced</code></h2>
 <p>Der Scanner vergleicht <code>password_policy.min_characters</code> mit <code>8</code>. Dies betrifft <strong>Passwörter öffentlicher Freigabelinks</strong>, nicht Kontopasswörter. Ob Links überhaupt ein Passwort benötigen, wird unter <a href="/documentation/sharing">Freigaben</a> geprüft.</p>
-<p><strong>Behebung:</strong> Setzen Sie <code>OC_PASSWORD_POLICY_DISABLED=false</code> und <code>OC_PASSWORD_POLICY_MIN_CHARACTERS</code> auf mindestens <code>8</code>. Die <a href="https://docs.opencloud.eu/docs/admin/configuration/link-password-policy">Linkpasswort-Richtlinie</a> beschreibt weitere Anforderungen und Sperrlisten.</p>
+<p><strong>Behebung:</strong> Setze <code>OC_PASSWORD_POLICY_DISABLED=false</code> und <code>OC_PASSWORD_POLICY_MIN_CHARACTERS</code> auf mindestens <code>8</code>. Die <a href="https://docs.opencloud.eu/docs/admin/configuration/link-password-policy">Linkpasswort-Richtlinie</a> beschreibt weitere Anforderungen und Sperrlisten.</p>
 <h2 id="5a-does-it-still-ask-for-more-than-length-passwordpolicycomplexity">5a. Zeichenanforderungen: <code>passwordPolicyComplexity</code></h2>
 <p>OpenCloud verlangt standardmäßig mindestens einen Kleinbuchstaben, einen Großbuchstaben, eine Ziffer und ein Sonderzeichen. Die Prüfung liest die vier Mindestwerte und besteht, wenn jeder mindestens <code>1</code> ist.</p>
-<p>Sie ergänzt die Mindestlängenprüfung, ohne deren bisherige Bedeutung zu verändern. Ein langes Passwort könnte die Längenprüfung bestehen, obwohl die konfigurierten Zeichenanforderungen abgesenkt wurden.</p>
+<p>Die Prüfung ergänzt die Mindestlängenprüfung, ohne deren bisherige Bedeutung zu verändern. Ein langes Passwort könnte die Längenprüfung bestehen, obwohl die konfigurierten Zeichenanforderungen abgesenkt wurden.</p>
 <p>Die Prüfung erscheint nur, wenn alle vier Werte veröffentlicht werden. Eine deaktivierte Richtlinie wird durch <code>passwordPolicyEnforced</code> erfasst; fehlende Einzelwerte werden nicht als Fehler ausgelegt.</p>
-<p><strong>Behebung:</strong> Setzen Sie <code>OC_PASSWORD_POLICY_MIN_LOWERCASE_CHARACTERS</code>, <code>OC_PASSWORD_POLICY_MIN_UPPERCASE_CHARACTERS</code>, <code>OC_PASSWORD_POLICY_MIN_DIGITS</code> und <code>OC_PASSWORD_POLICY_MIN_SPECIAL_CHARACTERS</code> auf mindestens <code>1</code>.</p>
+<p><strong>Behebung:</strong> Setze <code>OC_PASSWORD_POLICY_MIN_LOWERCASE_CHARACTERS</code>, <code>OC_PASSWORD_POLICY_MIN_UPPERCASE_CHARACTERS</code>, <code>OC_PASSWORD_POLICY_MIN_DIGITS</code> und <code>OC_PASSWORD_POLICY_MIN_SPECIAL_CHARACTERS</code> auf mindestens <code>1</code>.</p>
 <h2 id="6-can-the-identity-provider-be-found-at-all-identityproviderdetected">6. Identitätsanbieter erkennen: <code>identityProviderDetected</code></h2>
 <p>Der Scanner ruft <code>/.well-known/openid-configuration</code> einmal ab, ohne Weiterleitungen zu folgen:</p>
 <ul>
@@ -86,7 +85,7 @@
 </ul>
 <p>Es werden weder Formulare ausgefüllt noch Zugangsdaten gesendet. Häufig verhindert ein Proxy die Weiterleitung von <code>/.well-known/</code>; eine fehlgeschlagene Erkennung begrenzt deshalb die Note nicht.</p>
 <p>Liegt der Issuer auf einem anderen Host, wird der Anbieter als extern gekennzeichnet. Erkannte Produkte wie Keycloak, Authentik oder Authelia werden mit ihren Sicherheitshinweisen verknüpft. Weder ein externer noch der eingebaute Anbieter ist für sich genommen ein Befund.</p>
-<p><strong>Behebung:</strong> Prüfen Sie die Weiterleitung von <code>/.well-known/</code> im <a href="/documentation/reverse-proxy">Reverse Proxy</a> und die Konfiguration des tatsächlich verwendeten Anbieters.</p>
+<p><strong>Behebung:</strong> Prüfe die Weiterleitung von <code>/.well-known/</code> im <a href="/documentation/reverse-proxy">Reverse Proxy</a> und die Konfiguration des tatsächlich verwendeten Anbieters.</p>
 <h2 id="7-what-the-discovery-document-says-about-how-sign-in-is-protected">7. Einstellungen im Discovery-Dokument</h2>
 <p>Vier weitere Prüfungen werten dieselbe Antwort aus und benötigen keine zusätzliche HTTP-Anfrage. Grundlage sind ausschließlich öffentlich veröffentlichte Angaben; siehe <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0022-identity-provider-versions-require-public-evidence.md">ADR 0022</a>.</p>
 <table>
@@ -137,7 +136,7 @@
 <tbody>
 <tr>
 <td><code>token_endpoint_auth_methods_supported</code></td>
-<td><code>client_secret_basic</code> ist nicht allein problematisch; <code>none</code> wird von öffentlichen Clients benötigt. lico bietet beides an.</td>
+<td><code>client_secret_basic</code> ist nicht allein problematisch; <code>none</code> wird von öffentlichen Clients benötigt. Lico bietet beides an.</td>
 </tr>
 <tr>
 <td><code>request_object_signing_alg_values_supported</code></td>

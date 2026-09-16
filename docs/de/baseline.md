@@ -1,14 +1,12 @@
-# Report only what changed between OpenCloud scans
-
 # Nur Änderungen melden
 
-Mit `--baseline` speichert das Plugin die Befunde eines Durchlaufs und vergleicht den nächsten Scan damit. Zusammen mit `--warn-on-new` können Sie die Alarmierung auf neue oder verschlechterte Befunde beschränken. Bereits bekannte Probleme bleiben im Bericht sichtbar.
+Mit `--baseline` speichert das Plugin die Befunde eines Durchlaufs und vergleicht den nächsten Scan damit. Zusammen mit `--warn-on-new` kannst du die Alarmierung auf neue oder verschlechterte Befunde beschränken. Bereits bekannte Probleme bleiben im Bericht sichtbar.
 
-Eine Kurzfassung finden Sie im [Haupt-README](../../README.md#reporting-only-what-changed). Dieser Leitfaden erklärt die Vergleichsformate, die Kriterien für Verschlechterungen und den Umgang mit der Baseline-Datei.
+Eine Kurzfassung findest du im [Haupt-README](../../README.md#reporting-only-what-changed). Dieser Leitfaden erklärt die Vergleichsformate, die Kriterien für Verschlechterungen und den Umgang mit der Baseline-Datei.
 
 ## Baseline speichern und vergleichen {#writing-and-comparing-a-baseline}
 
-Geben Sie mit `--baseline` die Datei an, in der die Befunde gespeichert und beim nächsten Durchlauf zum Vergleich gelesen werden:
+Gib mit `--baseline` die Datei an, in der die Befunde gespeichert und beim nächsten Durchlauf zum Vergleich gelesen werden:
 
 ```bash
 check-opencloud-security -H opencloud.example.com \
@@ -35,7 +33,7 @@ Baseline: No new findings since 2026-01-14T09:00:00+00:00 (1 known issue(s) unch
 Suppressed by --warn-on-new: this run would otherwise be WARNING (WARNING: 1 hardening measure(s) missing, but no known vulnerabilities.)
 ```
 
-Der Vergleich zeigt hinzugekommene und behobene CVEs, Änderungen an Härtungsmaßnahmen und zusätzlichen Prüfungen sowie Änderungen an Bewertung, Supportende, Supportzeitraum und installierter oder empfohlener Version. `text` eignet sich für Logs und ist der Standard. Für eine Zusammenfassung in GitHub Actions oder einen Pull-Request-Kommentar verwenden Sie Markdown:
+Der Vergleich zeigt hinzugekommene und behobene CVEs, Änderungen an Härtungsmaßnahmen und zusätzlichen Prüfungen sowie Änderungen an Bewertung, Supportende, Supportzeitraum und installierter oder empfohlener Version. `text` eignet sich für Logs und ist der Standard. Für eine Zusammenfassung in GitHub Actions oder einen Pull-Request-Kommentar verwende Markdown:
 
 ```shell
 check-opencloud-security -H opencloud.example.com \
@@ -65,7 +63,7 @@ check-opencloud-security -H opencloud.example.com \
 - Mit `--ignore-hardening` ausgenommene Befunde und von OpenCloud fest vorgegebene Maßnahmen bleiben wie in der Alarmzeile unberücksichtigt.
 - `--warn-on-new` ohne `--baseline` wird abgelehnt, da der Vergleich eine gespeicherte Ausgangslage benötigt.
 - Kann die Datei nicht geschrieben werden, erscheint ein Hinweis in der Ausgabe. Die Bewertung der Instanz bleibt davon unberührt.
-- Die Datei wird atomar geschrieben und ist nur für den Eigentümer zugänglich. Verwenden Sie ein Verzeichnis des Monitoring-Benutzers, etwa `/var/lib/check_opencloud/`.
+- Die Datei wird atomar geschrieben und ist nur für den Eigentümer zugänglich. Verwende ein Verzeichnis des Monitoring-Benutzers, etwa `/var/lib/check_opencloud/`.
 
 ## Marken und Unabhängigkeit
 

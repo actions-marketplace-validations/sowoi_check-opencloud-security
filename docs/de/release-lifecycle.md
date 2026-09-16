@@ -1,10 +1,8 @@
-# OpenCloud release tracks, end of life and update recommendations
-
 # Release-Kanäle, Supportende und Updates
 
 OpenCloud pflegt Rolling-, Production- und LTS-Releases parallel. Ob eine Version noch unterstützt wird, hängt deshalb auch von ihrem Kanal ab. Der Scanner bewertet Versionslinien, berücksichtigt den Release-Zeitplan und empfiehlt ein Update passend zum gewählten Kanal.
 
-Den aktuellen Stand der Kanäle und die Einstellungen zur End-of-Life-Prüfung finden Sie im [Haupt-README](../../README.md#end-of-life-detection). Die folgenden älteren Versionsnummern dienen als Beispiele.
+Den aktuellen Stand der Kanäle und die Einstellungen zur End-of-Life-Prüfung findest du im [Haupt-README](../../README.md#end-of-life-detection). Die folgenden älteren Versionsnummern dienen als Beispiele.
 
 ## Warum die Versionsnummer allein nicht genügt {#why-a-version-number-is-not-an-answer}
 
@@ -16,9 +14,9 @@ Der mitgelieferte Zeitplan liegt in `opencloud_local_scan/data/release_schedule.
 
 ## Aussagekraft des mitgelieferten Zeitplans {#what-the-bundled-schedule-can-and-cannot-tell-you}
 
-Beachten Sie diese Grenzen:
+Beachte diese Grenzen:
 
-- **LTS-Releases erfordern ein Abonnement.** Die Dokumentation nennt die Linien, auch wenn einzelne Releases nicht öffentlich erscheinen. Bei einem abweichenden vertraglichen Supportzeitraum können Sie mit `release_schedule` einen eigenen Zeitplan vorgeben.
+- **LTS-Releases erfordern ein Abonnement.** Die Dokumentation nennt die Linien, auch wenn einzelne Releases nicht öffentlich erscheinen. Bei einem abweichenden vertraglichen Supportzeitraum kannst du mit `release_schedule` einen eigenen Zeitplan vorgeben.
 - **Eine neuere als die bekannte Version führt allein nicht zu F.** Der Zeitplan kann zwischen Paketupdates veralten. Eine zügig aktualisierte Instanz wird deshalb nicht allein wegen fehlender Referenzdaten als nicht unterstützt bewertet und erhält keine rückwärts gerichtete Empfehlung.
 - **Veraltete Daten werden kenntlich gemacht.** Liegt die Version über der neuesten bekannten Version ihrer Linie oder auf einer neueren Linie als im Zeitplan, setzt das Ergebnis `lifecycle.scheduleStale` und ergänzt `scheduleNote`, `scheduleUpdated` und `scheduleSource`. Die Plugin-Ausgabe enthält dann beispielsweise:
 
@@ -26,7 +24,7 @@ Beachten Sie diese Grenzen:
   Release schedule: 7.4.1 is newer than anything in the bundled release schedule (generated 2026-08-12), so that schedule is probably out of date. This is not counted against the instance. Check the current support window at https://docs.opencloud.eu/docs/admin/resources/lifecycle/, and regenerate the schedule with scripts/update_release_schedule.py.
   ```
 
-  Prüfen Sie in diesem Fall die [veröffentlichte Lebenszyklusdokumentation][lifecycle] und aktualisieren Sie Paket oder Zeitplan. Ein bereits bekanntes Supportende bleibt wirksam: Ein neuer Patch innerhalb einer abgelaufenen Linie verlängert deren Support nicht.
+  Prüfe in diesem Fall die [veröffentlichte Lebenszyklusdokumentation][lifecycle] und aktualisiere Paket oder Zeitplan. Ein bereits bekanntes Supportende bleibt wirksam: Ein neuer Patch innerhalb einer abgelaufenen Linie verlängert deren Support nicht.
 
 ## Updates folgen dem gewählten Kanal {#the-recommended-release-follows-your-track}
 
@@ -47,7 +45,7 @@ Der Scanner verwendet daher den [Release-Zeitplan](../../README.md#end-of-life-d
 
 Ohne Vorgabe wählt der Scanner den längsten bekannten Support für die Versionslinie. Im Beispiel gilt `7.2.3` daher als unterstütztes Production-Release, obwohl diese Linie auch auf Rolling erschienen ist.
 
-Wenn Sie ausdrücklich Rolling folgen, muss dieselbe Version nach Erscheinen des Nachfolgers als abgelöst gelten. Legen Sie den Kanal dafür mit `--release-track` fest:
+Wenn du ausdrücklich Rolling folgen, muss dieselbe Version nach Erscheinen des Nachfolgers als abgelöst gelten. Lege den Kanal dafür mit `--release-track` fest:
 
 ```bash
 check-opencloud-security --host opencloud.example.com --release-track rolling

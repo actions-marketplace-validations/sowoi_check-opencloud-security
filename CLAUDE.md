@@ -11,6 +11,16 @@ Twitter/X/Google/Meta integrations), the rating and lifecycle invariants,
 waivers, ADR policy, and the release process in depth. This file only adds
 what's needed to get productive quickly; it does not restate AGENTS.md.
 
+Project hooks in `.claude/settings.json` (scripts in `.claude/hooks/`) refuse
+the irreversible commands and hand edits to generated files that AGENTS.md
+forbids. A refusal is final: report it to the user, never work around it.
+The hooks match text, so a heredoc line that starts with such a command also
+trips them - write that content with the Write tool instead. The privacy
+guard (`privacy_guard.py`) refuses commits and pushes that carry a real
+host, scan output or personal data; replace the value with
+`opencloud.example.com` or a 192.0.2.x address, and never extend
+`.claude/hooks/privacy_allowlist.txt` yourself - ask the user.
+
 ## What this project is
 
 A Nagios/Icinga plugin (`check_opencloud_security.py`) that rates the security
@@ -22,10 +32,9 @@ that same local scanner for a URL a stranger submits.
 
 ```bash
 uv run pytest                                       # full suite (~75s)
-uv run pytest tests/test_waivers.py                 # one file
-uv run pytest tests/test_waivers.py::test_name      # one test
-uv run pytest -k "waiver and not rating"            # by expression
 uv run pytest tests/test_webapp_api.py              # the web application (no Redis needed)
+uv run playwright install webkit                    # once: the browser for the tests below and the MCP server
+uv run pytest tests/test_webapp_browser_*.py        # the frontend in a real browser (ADR 0061)
 uvx ruff check .                                    # linting, as CI runs it
 uv run mypy --config-file mypy.ini                  # type checking
 cd ansible && ansible-lint                          # must be run from ansible/
@@ -44,6 +53,9 @@ cd docker && docker compose up --build              # web + worker + redis, loca
 
 Notes that will otherwise cost you time:
 - `pytest` exists **only** under `uv run`.
+- Browsers are **WebKit or Firefox, never Chromium** (Google's builds), and
+  always behind the dead proxy in `tests/browser_support.py`. The `playwright`
+  MCP server in `.mcp.json` is the same reviewed package, loopback only.
 - Only `ruff check` is enforced, **never `ruff format`** — do not reformat the tree.
 - `ansible-lint` is clean only from inside `ansible/`; from the repo root it reports false positives.
 - `requires-python = ">=3.10"`: no `tomllib`, no 3.11+ syntax, no backslashes inside f-string expressions.
@@ -109,6 +121,11 @@ CLI flags    ───┘        (flat COS_ names)     (builds)       (dataclass
 - **A `### Security` changelog entry also needs a record in
   `security/advisories/`** in the same pull request — use
   `/security-fix-record`. **Never publish an advisory yourself.**
+- **A new Python dependency** (in `pyproject.toml` or a workflow's `uvx`)
+  needs a justified, tested, security-reviewed record in
+  `security/dependencies/` first — use `/add-dependency` (ADR 0060). Draft it
+  `proposed`; **only the maintainer approves it**, and
+  `grandfathered.txt` never gains a name.
 
 ## The web application (`webapp/` + `frontend/`)
 
@@ -127,6 +144,10 @@ CLI flags    ───┘        (flat COS_ names)     (builds)       (dataclass
   analytics, CDNs, sign-in, share buttons, or card metadata naming them.
   Enforced by `tests/test_webapp_seo.py` and the third-party check in
   `tests/test_webapp_api.py`.
+- **New German text uses the informal "du"**, never `Sie`/`Ihr`/`Ihnen` —
+  in `webapp/locales/de.py` and `docs/de/` alike, even though most existing
+  German is still formal. Don't copy a neighbour's register;
+  `FORMAL_GERMAN_KEYS` in `tests/test_webapp_i18n.py` only shrinks.
 - **The frontend is fully self-hosted**, no CDN/Bootstrap/Tailwind/font
   service. CSP has no `unsafe-inline` — no `style=`, `<style>`, `onclick`, or
   inline `<script>`; use utility classes / `[data-...]` rules in `app.css`
@@ -144,10 +165,6 @@ CLI flags    ───┘        (flat COS_ names)     (builds)       (dataclass
 ## Documentation map
 
 - `README.md` — operator reference (keep its table of contents in sync).
-- `opencloud_local_scan/README.md` — the scanner library/service.
-- `webapp/README.md` and `docs/webapp.md` — the web application (API,
-  Swagger, input restrictions, template contract vs. operator's view).
-- `docs/` — deployment guides, indexed by `docs/README.md`.
 - `/documentation` (browser-facing CLI reference) is generated from
   `README.md` / `opencloud_local_scan/README.md` / `docs/` by
   `scripts/build_frontend_documentation.py` at build time — regenerate after

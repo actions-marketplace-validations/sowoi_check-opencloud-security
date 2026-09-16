@@ -1,0 +1,39 @@
+# Dependencies that predate the dependency policy (ADR 0060, 2026-09-16).
+#
+# They were in use before a record was required and have not had the review a
+# record describes. This list may only shrink: a name leaves it when its
+# record is approved, or when the package is dropped. Adding a name is refused
+# by `scripts/check_dependencies.py --base`. A new dependency needs a record.
+ansible-lint
+argcomplete
+arq
+bandit
+bandit-sarif-formatter
+build
+certifi
+cryptography
+cyclonedx-bom
+fastapi
+hatchling
+httpx
+httpx2
+jinja2
+markdown
+mcp
+mypy
+nox
+openapi-spec-validator
+pip-audit
+pytest
+pytest-cov
+pytest-mock
+python-multipart
+pyyaml
+redis
+requests
+ruff
+sigstore
+twine
+types-requests
+uvicorn
+zizmor

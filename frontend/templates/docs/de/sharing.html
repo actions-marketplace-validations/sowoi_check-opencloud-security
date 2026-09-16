@@ -11,22 +11,21 @@
   <p class="lede">{{ t('docs.sharing.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de') %}
+{% if locale not in ('en', 'de', 'fr') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
 <article class="docs-article card section-gap" data-reveal lang="de">
-<h1 id="offentliche-freigabelinks-prufen">Öffentliche Freigabelinks prüfen</h1>
 <p>Bei einem öffentlichen Freigabelink kann bereits die URL den Zugriff ermöglichen. Der Scanner liest in den Capabilities, ob Links ein Passwort benötigen und ob eine automatische Ablaufregel gemeldet wird.</p>
 <h2 id="1-can-a-public-link-be-created-without-a-password-publiclinkpasswordenforced">1. Passwortpflicht: <code>publicLinkPasswordEnforced</code></h2>
 <p>Die Felder <code>enforced_for</code> geben die Passwortpflicht je Freigabetyp an: schreibgeschützt, nur Upload und bearbeitbar. Die Prüfung besteht nur, wenn alle Typen ein Passwort verlangen.</p>
 <p>OpenCloud verlangt standardmäßig Passwörter für schreibgeschützte Links, aber nicht für beschreibbare. Letztere können je nach Freigabetyp das Hochladen oder Ändern von Dateien ohne zusätzliche Anmeldung erlauben.</p>
-<p><strong>Behebung:</strong> Setzen Sie <code>OC_SHARING_PUBLIC_SHARE_MUST_HAVE_PASSWORD=true</code> und <code>OC_SHARING_PUBLIC_WRITEABLE_SHARE_MUST_HAVE_PASSWORD=true</code>. Verwenden Sie diese globalen Namen statt der veralteten <code>FRONTEND_OCS_*</code>-Varianten. Die Anforderungen an das Linkpasswort selbst prüft <a href="/documentation/authentication#5-is-the-link-password-policy-strong-enough-passwordpolicyenforced"><code>passwordPolicyEnforced</code></a>.</p>
+<p><strong>Behebung:</strong> Setze <code>OC_SHARING_PUBLIC_SHARE_MUST_HAVE_PASSWORD=true</code> und <code>OC_SHARING_PUBLIC_WRITEABLE_SHARE_MUST_HAVE_PASSWORD=true</code>. Verwende diese globalen Namen statt der veralteten <code>FRONTEND_OCS_*</code>-Varianten. Die Anforderungen an das Linkpasswort selbst prüft <a href="/documentation/authentication#5-is-the-link-password-policy-strong-enough-passwordpolicyenforced"><code>passwordPolicyEnforced</code></a>.</p>
 <h2 id="2-do-public-links-expire-automatically-publiclinkexpirationenforced">2. Automatischer Ablauf: <code>publicLinkExpirationEnforced</code></h2>
 <p>Der Scanner liest <code>files_sharing.public.expire_date.enabled</code>. OpenCloud legt diesen Wert im Frontend-Dienst fest auf <code>false</code>; eine Konfigurationsänderung kann ihn nicht beeinflussen.</p>
 <p><strong>Dieser Wert löst keinen Alarm aus.</strong> Er fehlt in „Missing hardening“, <code>hardenings_missing</code> und dem Webhook. Im Ergebnisdokument und in <code>--debug</code> bleibt er mit Erklärung erhalten. Siehe <a href="/documentation/hardening#measures-that-are-not-settings">Fest vorgegebene Werte</a>.</p>
 <p>Der Wert bleibt im Katalog, damit eine spätere Änderung der Capability erkennbar wird. Für <code>userEnumerationRestricted</code> gilt derselbe Ansatz; siehe <a href="/documentation/authentication#4-is-account-search-restricted-to-shared-groups-userenumerationrestricted">Kontensuche</a>.</p>
-<p>Wenn Sie einen verbindlichen Ablauf benötigen, legen Sie ihn pro Freigabe fest oder setzen Sie einen gesonderten Prozess zur planmäßigen Rücknahme von Freigaben ein. Eine allgemeine Einstellung für den hier gemessenen Wert steht derzeit nicht zur Verfügung.</p>
+<p>Wenn du einen verbindlichen Ablauf benötigst, lege ihn pro Freigabe fest oder setze einen gesonderten Prozess zur planmäßigen Rücknahme von Freigaben ein. Eine allgemeine Einstellung für den hier gemessenen Wert steht derzeit nicht zur Verfügung.</p>
 <h2 id="what-else-is-in-that-document-and-why-none-of-it-is-checked">Weitere Sharing-Capabilities</h2>
 <p>Die folgenden Angaben werden nicht als eigene Prüfungen bewertet. Grundlage ist <code>services/frontend/pkg/revaconfig/config.go</code> in <a href="https://github.com/opencloud-eu/opencloud">opencloud-eu/opencloud</a>:</p>
 <table>

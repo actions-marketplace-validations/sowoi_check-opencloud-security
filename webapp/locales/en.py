@@ -1102,7 +1102,7 @@ MESSAGES: dict[str, str] = {
     ),
     # --------------------------------------------------- generated guide pages
     "docs.guide.kicker": "CLI documentation",
-    "docs.guide.english_notice": "This guide is available in English and German. The English version is shown for your selected language.",
+    "docs.guide.english_notice": "This guide is available in English, German and French. The English version is shown for your selected language.",
     "docs.guide.toc.heading": "On this page",
     "docs.guide.toc.aria": "On this page",
     # ---------------------------------------------------------------- compare
@@ -1146,7 +1146,7 @@ MESSAGES: dict[str, str] = {
         "Both fields name the same scan, so there is nothing to compare. Scan "
         "the instance again and compare the new uuid with this one."
     ),
-    "compare.different_targets": "These scans describe different instances. Keep that in mind when interpreting changes, for example between staging and production.",
+    "compare.error.different_targets": "The two scans describe different instances, so they are not compared. Compare two scans of the same instance.",
     "compare.verdict.kicker": "Between the two scans",
     "compare.verdict.improved": "It got better",
     "compare.verdict.unchanged": "Nothing changed",

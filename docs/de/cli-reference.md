@@ -1,8 +1,6 @@
-# OpenCloud Security Scanner CLI option reference
-
 # CLI-Optionen des Monitoring-Plugins
 
-Hier finden Sie alle Optionen von `check-opencloud-security`, ihre Standardwerte und die zugehörigen Umgebungsvariablen. Das [Haupt-README](../../README.md) erklärt den Einsatz mit Beispielen.
+Hier findest du alle Optionen von `check-opencloud-security`, ihre Standardwerte und die zugehörigen Umgebungsvariablen. Das [Haupt-README](../../README.md) erklärt den Einsatz mit Beispielen.
 
 Es gilt stets **Kommandozeile > Umgebungsvariable > Konfigurationsdatei > Standard**. Details stehen unter [Konfiguration](../../README.md#configuration-file-and-secrets) und [Umgebungsvariablen](../../README.md#environment-variables). `check-opencloud-security -h` zeigt die Optionen im Terminal.
 

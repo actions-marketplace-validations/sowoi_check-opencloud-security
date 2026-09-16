@@ -6,7 +6,7 @@ Docker. Agent tooling, not product code: run it from the repository root.
     uv run python .claude/skills/run-check-opencloud-security/driver.py scan   [--profile weak] [--json]
     uv run python .claude/skills/run-check-opencloud-security/driver.py fake   [--profile weak] [--port 9200]
     uv run --extra web python .claude/skills/run-check-opencloud-security/driver.py web [--port 8811] [--profile weak]
-    uv run --extra web --with playwright python .claude/skills/run-check-opencloud-security/driver.py browse [--base URL] [--target URL]
+    uv run --extra web --group test python .claude/skills/run-check-opencloud-security/driver.py browse [--base URL] [--target URL]
 
 `fake` and `web` block until killed and print a line starting with READY.
 """
@@ -143,7 +143,11 @@ def cmd_web(args: argparse.Namespace) -> int:
 
 
 def cmd_browse(args: argparse.Namespace) -> int:
-    """Submit the landing-page form in headless Chromium and screenshot the result."""
+    """Submit the landing-page form in headless WebKit and screenshot the result.
+
+    WebKit, never Chromium (ADR 0061), behind the same dead proxy as the
+    browser tests, so nothing the page asks for leaves loopback.
+    """
     from playwright.sync_api import sync_playwright
 
     target = args.target
@@ -153,7 +157,9 @@ def cmd_browse(args: argparse.Namespace) -> int:
     SHOTS.mkdir(parents=True, exist_ok=True)
     errors: list[str] = []
     with sync_playwright() as p:
-        browser = p.chromium.launch()
+        browser = p.webkit.launch(
+            proxy={"server": "http://127.0.0.1:9", "bypass": "127.0.0.1,localhost,[::1]"}
+        )
         # Hero blocks `rise` in with delays up to .35s and `backwards` fill
         # (app.css): until then they are opacity 0, and reduced motion zeroes
         # the duration but not the delay. Wait for the form to be opaque.
