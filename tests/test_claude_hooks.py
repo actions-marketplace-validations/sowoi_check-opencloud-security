@@ -110,6 +110,8 @@ def repo(tmp_path: Path) -> Path:
     "git push --force-with-lease",
     "git push origin +feature",
     "git push origin HEAD:main",
+    "git push --repo origin HEAD:main",
+    "git push --repo=origin HEAD:main",
     "git push --tags",
     "git status && git push origin v1.2.3",
     "cd sub && git push -f",
@@ -660,6 +662,18 @@ def test_a_push_checks_the_branch_it_pushes(repo):
     assert _decision(push("leaky")) == "deny"
     assert _decision(push("leaky:review")) == "deny"
     assert push("feature") == {}
+
+    for command in (
+        "git push --repo origin leaky",
+        "git push --repo=origin leaky:review",
+    ):
+        _, output = _hook(
+            "privacy_guard.py",
+            _commit_payload(command),
+            "pre-tool-use",
+            project=repo,
+        )
+        assert _decision(output) == "deny"
 
 
 def test_a_push_checks_what_a_merge_commit_added(repo):

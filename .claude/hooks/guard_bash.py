@@ -250,13 +250,19 @@ def push_arguments(segment: Segment) -> list[str] | None:
 
 
 def positional_push_arguments(args: list[str]) -> list[str]:
-    """Remote and refspecs of `git push`, skipping option values (-o x, --repo x)."""
-    positional, skip = [], False
+    """Remote and refspecs of `git push`, including a remote passed by `--repo`."""
+    positional, pending = [], None
     for arg in args:
-        if skip:
-            skip = False
-        elif arg in ("-o", "--push-option", "--repo", "--receive-pack", "--exec"):
-            skip = True
+        if pending:
+            if pending == "remote":
+                positional.append(arg)
+            pending = None
+        elif arg == "--repo":
+            pending = "remote"
+        elif arg.startswith("--repo="):
+            positional.append(arg.split("=", 1)[1])
+        elif arg in ("-o", "--push-option", "--receive-pack", "--exec"):
+            pending = "value"
         elif not arg.startswith("-"):
             positional.append(arg)
     return positional

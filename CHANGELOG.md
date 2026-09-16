@@ -24,8 +24,8 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   waiting page's hand-over, severity filters, all four exports, waivers,
   keyboard only, without JavaScript and in German. No browser can reach
   anything but loopback, and Chromium is never used because its builds are
-  Google's. New test dependency `playwright` (record
-  `security/dependencies/playwright.yml`, awaiting maintainer approval); see
+  Google's. New test dependency `playwright` has an approved review in
+  `security/dependencies/playwright.yml`; see
   [ADR 0061](adr/0061-the-frontend-is-tested-in-real-browsers-that-cannot-leave-loopback.md).
 - **Agents can drive the running app through the Playwright MCP server.**
   `.mcp.json` starts the server bundled with the same `playwright` package,
@@ -60,6 +60,11 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   supply-chain workflow grants its attestation permissions to the one job that
   attests. See
   [ADR 0060](adr/0060-a-new-dependency-is-justified-tested-and-reviewed-first.md).
+- **Routine dependency updates get a seven-day stabilization window.**
+  Dependabot still raises security updates immediately, while monthly version
+  updates wait long enough for a compromised or broken release to be noticed.
+  The composite action also invokes its private scanner environment directly
+  instead of adding that directory to the rest of the job's executable path.
 
 - **Comparing two scans of different instances is refused.** The `/compare`
   page, the report upload and the MCP tool `compare_scans` used to compare a
@@ -122,7 +127,9 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   `rm`), sees commands inside `$(...)`, backticks, `bash -c`, `eval`, braces,
   background jobs and `xargs`, ignores quoted text, heredoc bodies and
   comments, lets `ruff format --check`/`--diff` and redirected `git tag`
-  listings through, and reads `git push -o` values correctly. The privacy
+  listings through, and reads `git push -o` values correctly. Pushes using
+  `--repo` are checked against both the main-branch guard and the privacy
+  guard. The privacy
   guard matches values already on `main` as whole tokens only, reads diffs
   without mistaking an added `++ ` line for a file header, checks merge
   commits, checks the branch a push actually sends, reads `git commit -F`
