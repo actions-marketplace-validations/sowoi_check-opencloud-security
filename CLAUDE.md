@@ -11,6 +11,16 @@ Twitter/X/Google/Meta integrations), the rating and lifecycle invariants,
 waivers, ADR policy, and the release process in depth. This file only adds
 what's needed to get productive quickly; it does not restate AGENTS.md.
 
+Project hooks in `.claude/settings.json` (scripts in `.claude/hooks/`) refuse
+the irreversible commands and hand edits to generated files that AGENTS.md
+forbids. A refusal is final: report it to the user, never work around it.
+The hooks match text, so a heredoc line that starts with such a command also
+trips them - write that content with the Write tool instead. The privacy
+guard (`privacy_guard.py`) refuses commits and pushes that carry a real
+host, scan output or personal data; replace the value with
+`opencloud.example.com` or a 192.0.2.x address, and never extend
+`.claude/hooks/privacy_allowlist.txt` yourself - ask the user.
+
 ## What this project is
 
 A Nagios/Icinga plugin (`check_opencloud_security.py`) that rates the security
@@ -22,9 +32,6 @@ that same local scanner for a URL a stranger submits.
 
 ```bash
 uv run pytest                                       # full suite (~75s)
-uv run pytest tests/test_waivers.py                 # one file
-uv run pytest tests/test_waivers.py::test_name      # one test
-uv run pytest -k "waiver and not rating"            # by expression
 uv run pytest tests/test_webapp_api.py              # the web application (no Redis needed)
 uvx ruff check .                                    # linting, as CI runs it
 uv run mypy --config-file mypy.ini                  # type checking
@@ -144,10 +151,6 @@ CLI flags    ───┘        (flat COS_ names)     (builds)       (dataclass
 ## Documentation map
 
 - `README.md` — operator reference (keep its table of contents in sync).
-- `opencloud_local_scan/README.md` — the scanner library/service.
-- `webapp/README.md` and `docs/webapp.md` — the web application (API,
-  Swagger, input restrictions, template contract vs. operator's view).
-- `docs/` — deployment guides, indexed by `docs/README.md`.
 - `/documentation` (browser-facing CLI reference) is generated from
   `README.md` / `opencloud_local_scan/README.md` / `docs/` by
   `scripts/build_frontend_documentation.py` at build time — regenerate after

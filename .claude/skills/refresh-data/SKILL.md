@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 Between releases, OpenCloud can ship a release or an advisory the bundled data
 does not know yet. This refreshes it **without changing the version** - never
-edit `version` in `pyproject.toml` here. Use `/patch-release` when a release
+edit `version` in `pyproject.toml` here. Use `/release patch` when a release
 is wanted.
 
 ## 1. Branch

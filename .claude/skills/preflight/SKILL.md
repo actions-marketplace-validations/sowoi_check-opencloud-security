@@ -2,6 +2,9 @@
 name: preflight
 description: Run locally everything CI checks on a check-opencloud-security pull request - ruff, mypy, Bandit, the generator --check modes, the advisory and pull request guards, Biome, zizmor, ansible-lint, actionlint, shellcheck, hadolint and the test suite - and report one pass/fail/skipped summary. Use before opening or updating a pull request, or when asked to check the branch.
 argument-hint: "[quick]"
+context: fork
+agent: preflight-runner
+background: false
 ---
 
 # Preflight
@@ -9,9 +12,11 @@ argument-hint: "[quick]"
 Arguments: $ARGUMENTS (`quick` skips the full test suite and runs only the test
 files related to the changed code).
 
-Run from the repository root. **Do not fix anything while running** - collect
-results first, then report. Do not run `ruff format` or reformat the tree.
-Run independent checks in parallel where possible; the test suite takes about
+This skill runs in the read-only `preflight-runner` agent
+(`.claude/agents/preflight-runner.md`), so the long output stays out of the
+main conversation and nothing is fixed while the checks run. Run from the
+repository root. Do not run `ruff format` or reformat the tree. Run
+independent checks in parallel where possible; the test suite takes about
 75 seconds, so start it in the background first.
 
 ## 1. Context
@@ -69,4 +74,5 @@ Also scan the diff for the project's hard rules and report violations:
 
 One table: check, result (pass / fail / warning / skipped + reason), and for
 each failure the first relevant lines of output. End with the list of
-concrete fixes needed, and ask whether to apply them.
+concrete fixes needed. The main conversation relays the report and asks the
+user whether to apply them.

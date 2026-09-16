@@ -1,15 +1,22 @@
 ---
-name: major-release
-description: Prepare a major release of check-opencloud-security - bump the major version (resetting minor and patch to 0), create and switch to release/<version>, refresh uv.lock, the bundled OpenCloud release schedule and advisory database, the frontend documentation and search indexes, then commit and push the branch as a release skeleton - never writes a changelog entry. Use only when the user explicitly asks for a major release.
+name: release
+description: Prepare a patch, minor or major release of check-opencloud-security - bump the version, create and switch to release/<version>, refresh uv.lock, the bundled OpenCloud release schedule and advisory database, the frontend documentation and search indexes, then commit and push the branch as a release skeleton - never writes a changelog entry. Use only when the user explicitly asks for a release.
 disable-model-invocation: true
+argument-hint: "<patch|minor|major>"
 ---
 
-# Major release
+# Release
+
+Arguments: $ARGUMENTS - exactly one of `patch`, `minor` or `major`. If it is
+missing or anything else, stop and ask which one; never guess the level.
 
 Invoking this skill **is** the user's decision to bump the version, which
 `AGENTS.md` otherwise forbids doing on your own. It prepares and pushes a
 `release/<version>` branch; it never merges to `main` (a bump landing on
-`main` publishes to PyPI) and never publishes a security advisory.
+`main` publishes to PyPI) and never publishes a security advisory. The
+project hooks (`.claude/settings.json`) ask for confirmation on the version
+edit and refuse merges, tags and force-pushes - that is expected, not an
+obstacle to work around.
 
 The branch is a release skeleton, and a skeleton is exactly this: the version
 bump in `pyproject.toml`, a new `uv.lock`, and the refreshed generated files
@@ -38,28 +45,41 @@ git show origin/main:pyproject.toml | grep -m1 '^version'
 git tag --list 'v*' --sort=-v:refname | head -1
 ```
 
-Take `MAJOR.MINOR.PATCH` from `origin/main` and increment `MAJOR` by one,
-resetting `MINOR` and `PATCH` to 0 (`1.23.4` becomes `2.0.0`).
+Take `MAJOR.MINOR.PATCH` from `origin/main` and increment it:
+
+| Level | Rule | `1.23.4` becomes |
+|:--|:--|:--|
+| `patch` | `PATCH + 1` | `1.23.5` |
+| `minor` | `MINOR + 1`, `PATCH = 0` | `1.24.0` |
+| `major` | `MAJOR + 1`, `MINOR = PATCH = 0` | `2.0.0` |
+
 If the latest tag is already at or past that number, stop and tell the user -
 `scripts/check_pull_request.py` requires the version to move past both `main`
 and every tag. Also stop if `release/<version>` already exists locally or on
 `origin`.
 
-Then check the release is really a major release. Read the
+For `minor` and `major`, check that the level fits. Read the
 `## [Unreleased]` section of `CHANGELOG.md` on `origin/main`:
 
 ```bash
 git show origin/main:CHANGELOG.md | sed -n '/^## \[Unreleased\]/,/^## \[/p'
 ```
 
-A major release is for incompatible changes, so that section should name at
-least one breaking change - a removed or renamed CLI flag, setting or
-`COS_` variable, changed exit codes, alert line, perfdata or webhook payload,
-changed result document keys, a dropped Python version, or an incompatible
-web or MCP API change. Every such entry should tell operators what to change
-when upgrading. If the section names no breaking change, or a breaking entry
-has no upgrade instructions, show the user what is there and ask whether to
-continue - do not pick a different version on your own.
+- **minor** adds functionality in a backwards-compatible way: the section
+  should contain at least one `### Added` entry (or a comparable new
+  capability) and nothing that breaks existing configurations, flags, exit
+  codes, output or the web API.
+- **major** is for incompatible changes: the section should name at least one
+  breaking change - a removed or renamed CLI flag, setting or `COS_` variable,
+  changed exit codes, alert line, perfdata or webhook payload, changed result
+  document keys, a dropped Python version, or an incompatible web or MCP API
+  change - and every such entry should tell operators what to change when
+  upgrading.
+
+If the section does not fit the level (a minor with only fixes or with a
+breaking change, a major with no breaking change or without upgrade
+instructions), show the user what is there and ask whether to continue - do
+not pick a different level on your own.
 
 ## 3. Create the branch and switch to it
 
@@ -133,6 +153,6 @@ commit; `--labels skip-changelog` turns off only its changelog check, the
 version check still applies. Stop before pushing if it fails.
 
 End the commit message with the attribution lines from the current session's
-instructions. Finish by reporting to the user: the new version, the branch,
-what the schedule and advisory refresh found, test results, and the commit
-hash. Do not open a pull request unless asked.
+instructions. Finish by reporting to the user: the level and new version, the
+branch, what the schedule and advisory refresh found, test results, and the
+commit hash. Do not open a pull request unless asked (`/open-release-pr`).

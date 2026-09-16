@@ -1,6 +1,6 @@
 ---
 name: open-release-pr
-description: Open the pull request for a prepared release/<version> branch of check-opencloud-security against main, with the [Unreleased] changelog as its body, then watch CI and report. Use after /patch-release, /minor-release or /major-release, only when the user asks to open the release pull request.
+description: Open the pull request for a prepared release/<version> branch of check-opencloud-security against main, with the [Unreleased] changelog as its body, then watch CI and report. Use after /release, only when the user asks to open the release pull request.
 disable-model-invocation: true
 argument-hint: "[version]"
 ---
@@ -29,8 +29,8 @@ If the branch is not pushed, stop and ask - do not push on your own unless the
 user asked for it together with this skill. If a pull request already exists,
 report its URL and go to step 4.
 
-Check the changelog. The release branch is a skeleton from `/patch-release`,
-`/minor-release` or `/major-release` and adds no entry of its own; the release
+Check the changelog. The release branch is a skeleton from `/release`
+and adds no entry of its own; the release
 notes are the `## [Unreleased]` entries the merged pull requests wrote:
 
 ```bash

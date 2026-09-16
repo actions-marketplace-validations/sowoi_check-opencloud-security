@@ -28,6 +28,34 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   stops when the `[Unreleased]` section is empty or when the release branch
   itself changes `CHANGELOG.md` or `RELEASE.md`, uses the `[Unreleased]`
   entries verbatim as the pull request body, and never edits either file.
+- **Claude Code hooks enforce the project's hard rules.** `.claude/settings.json`
+  refuses publishing or syncing advisories, merging pull requests, creating
+  tags and releases, force-pushing, pushing to `main`, `git reset --hard`,
+  aborting a merge and `ruff format`; refuses hand edits to `RELEASE.md`, the
+  generated documentation, search indexes, bundled data, the README
+  release-schedule block and the embedded wizard blueprints; asks before a
+  version change or a literal `__version__`; and refuses inline styles and
+  scripts in templates. When the session ends, it runs the fast generator
+  `--check` guards for changed sources.
+- **A privacy guard keeps real instances, scan output and personal data out
+  of commits.** `.claude/hooks/privacy_guard.py` checks staged changes and
+  commit messages before `git commit`, the commits a `git push` would send,
+  pull request bodies, and, when the session ends, everything staged or not
+  yet pushed. It refuses hostnames that look like an instance or scan target,
+  public IP addresses, personal e-mail addresses, credentials and scanner or
+  plugin output in any format, and asks about any other new hostname. Values
+  already on `main` and public references in
+  `.claude/hooks/privacy_allowlist.txt` pass.
+- **The hooks refuse when they cannot run, and have tests.** A guard that is
+  missing, crashes or cannot read its input now refuses the command or edit
+  instead of letting it through; the generator checks at the end of a
+  session run in the project's environment and report a missing dependency
+  as skipped rather than as a stale file; the privacy guard only starts for
+  `git` and `gh` commands. `tests/test_claude_hooks.py` covers all of it.
+- **`/preflight` runs in a read-only `preflight-runner` agent**, so its output
+  stays out of the conversation and nothing is changed while it checks.
+- **`/patch-release`, `/minor-release` and `/major-release` are now one
+  `/release <patch|minor|major>` skill.**
 
 ## [1.24.0] - 2026-09-16
 
