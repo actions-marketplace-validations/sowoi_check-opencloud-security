@@ -238,6 +238,7 @@ def test_the_html_only_routes_stay_out_of_the_api_description():
         "/api/scans/batch",
         "/api/scans/{identifier}",
         "/api/scans/{identifier}/export/{fmt}",
+        "/api/scans/{identifier}/badge.svg",
         "/api/purge",
         "/healthz",
     }

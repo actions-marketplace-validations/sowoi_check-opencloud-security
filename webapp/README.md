@@ -157,9 +157,12 @@ A small surface, and this is all of it.
 | `GET` | `/scan/{uuid}` | The progress and result page |
 | `GET` | `/api/scans/{uuid}` | The state, and the result once there is one |
 | `GET` | `/api/scans/{uuid}/export/{format}` | The finished scan as `json`, `csv`, `sarif` or `pdf` |
+| `GET` | `/api/scans/{uuid}/badge.svg` | The grade as a small SVG, for as long as that scan exists |
 | `DELETE` | `/api/purge` | Erases everything held for one instance and returns a signed receipt; **404** until a token is configured |
 | `GET` | `/arazzo.json` | The API as Arazzo workflows, beside the schema and behind the same switch |
 | `GET` | `/healthz` | Pings Redis, reads queue depth, and requires a live worker heartbeat; returns the aggregate depth or a 503 when unavailable |
+| `GET` | `/advisories.atom` | The advisory database as an Atom feed - what a scan is rated against, subscribable |
+| `GET` | `/release-schedule.atom` | The OpenCloud release lines and when each stops receiving fixes, as Atom |
 | `GET` | `/robots.txt` | Generated. Points at the sitemap and keeps crawlers out of `/scan/` and `/api/` |
 | `GET` | `/agents.txt` | Generated. Capability declaration in the [agents-txt.com](https://agents-txt.com) format: discovery document, contracts, MCP and WebMCP endpoints |
 | `GET` | `/agents.json` | The structured sibling `agents.txt` names - the same document `/.well-known/ai.json` serves |
@@ -283,6 +286,23 @@ Each carries the remediation plan the scanner produced: a summary line and one
 entry per fix in the CSV, `runs[0].properties.remediation` in the SARIF, a
 "What gets you to A+" section in the PDF, and `remediationPlan` in the JSON,
 which is the scanner's own document.
+
+`GET /api/scans/{uuid}/badge.svg` is the fifth rendering and the smallest: the
+grade, drawn by `badge.py` as a self-contained SVG with no script, no external
+font and no request anywhere else - an embedded image that fetched a badge
+service would hand it the result URL in a referrer on every view. It carries
+the letter and nothing the scanned instance chose: no hostname, no product, no
+version. Like every other reading of a uuid it answers **404** for an unknown
+or expired one and **409** while a scan is still running, and it keeps the
+service-wide `no-store`, because ADR 0031's cacheable routes describe this
+service and this one describes somebody's instance.
+
+**A badge lives as long as its scan does** - one hour by default
+(`COS_WEB_RESULT_TTL`), after which the image stops resolving. It is for a
+ticket, a chat message or a dashboard while the result is current, not for a
+README on a deployment with this service's default lifetime. Publishing the
+URL also publishes the uuid, which is the whole of the authorisation for the
+full result.
 
 When `COS_WEB_EXPORT_SIGNING_KEY` is set, the response also carries
 `X-COS-Signature: HMAC-SHA256=<hex>`. The signature covers the exact response

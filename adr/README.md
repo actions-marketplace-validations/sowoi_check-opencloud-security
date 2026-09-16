@@ -61,6 +61,8 @@ project. Read the accepted records that affect an area before changing it.
 | [0052](0052-the-probe-guard-counts-networks-and-a-deployment-may-scan-approved-instances-only.md) | The probe guard counts networks, and a deployment may scan approved instances only | Accepted |
 | [0053](0053-a-scan-timeout-ends-its-process.md) | A scan timeout ends its process | Accepted |
 | [0054](0054-metrics-are-collected-once-and-rendered-twice.md) | Metrics are collected once and rendered twice | Accepted |
+| [0055](0055-a-badge-is-a-rendering-of-one-scan-not-a-handle-on-an-instance.md) | A badge is a rendering of one scan, not a handle on an instance | Accepted |
+| [0056](0056-the-reference-data-is-subscribable.md) | The reference data is subscribable | Accepted |
 | [0057](0057-an-uploaded-report-is-evidence-not-a-scan.md) | An uploaded report is evidence, not a scan | Accepted |
 
 ## Writing a new record

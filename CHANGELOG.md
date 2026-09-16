@@ -44,6 +44,32 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   read from one you created and named. `tests/test_helm_chart.py` holds every
   flag it can emit against the plugin's own argument parser.
 
+- **A finished scan can be shown as a grade badge.**
+  `GET /api/scans/{uuid}/badge.svg` renders the letter as a small SVG this
+  service draws itself - no badge service, no external font, no script,
+  because an image fetched from somebody else's server would hand them the
+  result URL in a referrer on every view, and that URL's uuid is the whole of
+  the authorisation. It carries nothing the scanned instance chose: no
+  hostname, no product, no version. It answers 404 for an unknown or expired
+  uuid and 409 while the scan is running, like every other reading of one, and
+  keeps the service-wide `no-store`. A badge therefore lives exactly as long
+  as its scan - an hour by default - which makes it right for a ticket or a
+  chat message and wrong for a README; there is deliberately no badge for a
+  hostname, because that would be a permanent handle on somebody's instance.
+  See [ADR 0055](adr/0055-a-badge-is-a-rendering-of-one-scan-not-a-handle-on-an-instance.md).
+
+- **The reference data can be subscribed to.** `/advisories.atom` and
+  `/release-schedule.atom` publish the advisory database and the release
+  lifecycle as Atom feeds, built from the same functions `/catalogue` and the
+  scan pipeline use. Both documents refresh themselves daily and may only gain
+  knowledge, and until now noticing a new advisory meant reopening a page and
+  remembering what had been there. The feeds name no instance, carry no uuid
+  and take no parameter, which is what lets them be publicly cacheable under
+  [ADR 0031](adr/0031-a-response-is-uncacheable-until-a-route-opts-in.md);
+  advisory titles and descriptions come from a feed this project does not
+  control and are carried as escaped text rather than markup. See
+  [ADR 0056](adr/0056-the-reference-data-is-subscribable.md).
+
 ### Changed
 
 - **The bundled release schedule and advisory database were re-checked against

@@ -1048,6 +1048,46 @@ has not finished - it exists, so 404 would send a caller into a retry loop
 against the wrong endpoint - and **404** for an unknown uuid or an unknown
 format.
 
+### `GET /api/scans/{uuid}/badge.svg`
+
+The grade as a small SVG, for pasting somewhere a picture says it faster than
+a link.
+
+```bash
+curl -sS http://127.0.0.1:8811/api/scans/0f4a1f22-.../badge.svg
+```
+
+```markdown
+![OpenCloud security](https://scan.example.com/api/scans/0f4a1f22-.../badge.svg)
+```
+
+It is written by `webapp/badge.py` the way the PDF is written by
+`reports.py` - no badge service, no external font, no script. An `<img>`
+pointing at somebody else's server would hand them the result URL in a
+referrer on every view, and that URL's uuid is the whole of the authorisation
+for the full result.
+
+The badge carries the letter and nothing the scanned instance chose: no
+hostname, no product string, no version. The colour is the dashboard's own
+tone for that rating, so a badge and the page it links to cannot disagree.
+
+**It lasts exactly as long as the scan does.** With the default
+`COS_WEB_RESULT_TTL` of one hour, an image embedded somewhere permanent stops
+resolving within the hour and answers **404** like any other expired uuid.
+That makes it right for a ticket, a chat message or a status dashboard while a
+result is current, and wrong for a README - unless the deployment serving it
+keeps results far longer, which is a decision with its own consequences for
+everybody whose scans it stores. There is deliberately no endpoint that
+renders a badge for a *hostname*: that would be a permanent, guessable handle
+on somebody's instance, and this service has none of those.
+
+**200** with `image/svg+xml` and `Cache-Control: no-store`, **409** while the
+scan has not finished, **404** for an unknown or expired uuid. The `no-store`
+is the service-wide default it never opts out of: every route that is publicly
+cacheable publishes metadata about *this service*
+([ADR 0031](../adr/0031-a-response-is-uncacheable-until-a-route-opts-in.md)),
+and a badge is a statement about somebody's instance.
+
 ### `DELETE /api/purge`
 
 Erasure on request - the operator's side of a GDPR Article 17 message - plus a
@@ -1259,6 +1299,39 @@ Docker Compose passes it from the deployment environment. The application
 parses and escapes every pair instead of accepting raw HTML, and refuses
 duplicate names, names already owned by the page, or prohibited platform
 metadata. A literal semicolon is not supported in a value.
+
+### `GET /advisories.atom`, `GET /release-schedule.atom`
+
+The two documents that refresh themselves daily, as Atom 1.0 feeds.
+
+```bash
+curl -sS http://127.0.0.1:8811/advisories.atom
+```
+
+`/advisories.atom` is the advisory database a scan is rated against - one
+entry per advisory, with its severity, the affected version ranges in the
+half-open form the scanner matches on, and a link to the published advisory.
+`/release-schedule.atom` is one entry per OpenCloud release line, dated by its
+release date, saying which tracks it was published on and when it stops
+receiving fixes.
+
+Both are built from the same functions the pages use, so a feed cannot
+describe an advisory differently from `/catalogue`. They are the reason a scan
+run today can grade an instance more harshly than the same scan last month,
+which is worth being told about: a subscriber hears that the database changed
+without re-scanning to find out.
+
+Advisory titles and descriptions come from a public feed this project does not
+control. They are carried as escaped `type="text"`, never as markup, so a
+reader cannot be made to render somebody else's HTML.
+
+These are the only reference-data routes that opt into a public cache
+(`max-age=3600`). They name no instance, carry no uuid and take no parameter -
+the test [ADR 0031](../adr/0031-a-response-is-uncacheable-until-a-route-opts-in.md)
+sets for being cacheable at all - and they must never learn to take one: a
+feed filtered by hostname would be a question about somebody's instance.
+Entry ids are URNs of the advisory or release line rather than URLs of this
+deployment, so a reader's history survives the service moving host.
 
 ### `GET /robots.txt`, `GET /agents.txt`, `GET /sitemap.xml`
 

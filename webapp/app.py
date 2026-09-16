@@ -79,9 +79,15 @@ from .admin import (
     surfaces,
 )
 from .admin_auth import Operator, ensure_admin_ready, operator_for, sign_out_url
-from .advisories import advisory_catalogue, advisory_state, stored_database
+from .advisories import (
+    advisory_catalogue,
+    advisory_state,
+    database_updated,
+    stored_database,
+)
 from .approval import NOT_APPROVED, approved, ensure_approval_ready
 from .arazzo import arazzo_document
+from .badge import render as render_badge
 from .audit import (
     REASON_BATCH_TOO_LARGE,
     REASON_EXCLUSIONS_UNREADABLE,
@@ -140,6 +146,13 @@ from .documentation import (
     OPERATOR_DOCUMENTATION_PAGES,
 )
 from .encryption import ensure_encryption_ready
+from .feeds import (
+    ADVISORIES_PATH,
+    ATOM_MEDIA_TYPE,
+    SCHEDULE_PATH,
+    advisories_feed,
+    schedule_feed,
+)
 from .export_signing import SIGNATURE_HEADER, sign_bytes
 from .i18n import (
     DEFAULT_LOCALE,
@@ -178,7 +191,7 @@ from .reports import (
     sarif_report,
 )
 from .rules import enforcement_groups, rating_rules
-from .schedule import schedule_state
+from .schedule import schedule_state, stored_schedule
 from .search import admin_search_document
 from .seo import (
     AGENTS_JSON_PATH,
@@ -1562,6 +1575,37 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
             headers={"Cache-Control": "public, max-age=3600"},
         )
 
+    # The two reference documents, subscribable. Both refresh themselves daily
+    # and may only gain knowledge, and until now the only way to notice a new
+    # advisory was to reopen /catalogue and remember what had been there.
+    #
+    # These are the one kind of page about which `public, max-age` is right
+    # (ADR 0031): they describe what *this service* knows, name no instance
+    # and hold no uuid, exactly like the contracts and the sitemap.
+    @app.get(ADVISORIES_PATH, include_in_schema=False)
+    async def advisories_atom(request: Request) -> Response:
+        origin = site_origin(str(request.base_url), settings.public_base_url)
+        database = await stored_database(app.state.backend, settings)
+        return Response(
+            advisories_feed(
+                advisory_catalogue(database),
+                origin=origin,
+                updated=await database_updated(app.state.backend, settings),
+            ),
+            media_type=ATOM_MEDIA_TYPE,
+            headers={"Cache-Control": "public, max-age=3600"},
+        )
+
+    @app.get(SCHEDULE_PATH, include_in_schema=False)
+    async def release_schedule_atom(request: Request) -> Response:
+        origin = site_origin(str(request.base_url), settings.public_base_url)
+        schedule = await stored_schedule(app.state.backend, settings)
+        return Response(
+            schedule_feed(schedule, origin=origin),
+            media_type=ATOM_MEDIA_TYPE,
+            headers={"Cache-Control": "public, max-age=3600"},
+        )
+
     # The browser form posts to "/" and the API to "/api/scans". They are the
     # same handler: a submission that fails validation is re-rendered at the
     # URL it was sent to, and a person who then reloads the page should get
@@ -2003,6 +2047,41 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
             raw_body,
             media_type=MEDIA_TYPES[fmt],
             headers=headers,
+        )
+
+    @app.get("/api/scans/{identifier}/badge.svg")
+    async def scan_badge(request: Request, identifier: str) -> Response:
+        """
+        One finished scan as a grade somebody can embed.
+
+        The uuid is still the whole of the authorisation, so this answers the
+        same 404 and the same 409 the export does - a badge that quietly said
+        "unknown" for a uuid that does not exist would be a way to ask whether
+        one does.
+
+        It keeps the service-wide `no-store`. Every route that opts into a
+        public cache publishes metadata about *this service*
+        ([ADR 0031](../adr/0031-a-response-is-uncacheable-until-a-route-opts-in.md));
+        this one is a statement about somebody's instance, and a shared cache
+        holding it is exactly what that rule exists to prevent. The scan's own
+        TTL is the other half: a badge lasts as long as the result it draws,
+        and then goes back to being a 404.
+        """
+        record = await app.state.store.get(identifier)
+        if record is None:
+            return JSONResponse({"detail": "Not found."}, status_code=404)
+        if record.state != STATE_COMPLETED or record.result is None:
+            return JSONResponse(
+                {"detail": "This scan has no result yet.", "state": record.state},
+                status_code=409,
+            )
+        return Response(
+            render_badge(record.result.get("rating")),
+            media_type="image/svg+xml",
+            # An SVG is a document, and a browser asked to render one as a
+            # page would run what it contained. This one contains no script,
+            # and says so in the way a browser enforces.
+            headers={"Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'"},
         )
 
     @app.get("/api/scans/{identifier}")

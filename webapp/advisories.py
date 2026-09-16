@@ -320,6 +320,23 @@ def _bundled_document() -> dict[str, Any]:
     return loaded if isinstance(loaded, dict) else {}
 
 
+async def database_updated(backend: RedisBackend, settings: WebSettings) -> str:
+    """
+    The date the advisory database itself records, for dating a feed.
+
+    Deliberately the document's `updated` rather than
+    :func:`~webapp.reference_data.last_checked`: the question is when the
+    database last changed, not when this deployment last asked. A deployment
+    that has never refreshed answers with the date the bundled file was
+    curated, which is the truth about what it knows.
+    """
+    if settings.advisory_refresh:
+        document = await read_document(backend, ADVISORY_DOCUMENT_KEY)
+        if document is not None and _is_usable(document) and document.get("updated"):
+            return str(document["updated"])
+    return str(_bundled_document().get("updated") or "")
+
+
 async def advisory_state(
     backend: RedisBackend, settings: WebSettings
 ) -> dict[str, Any]:

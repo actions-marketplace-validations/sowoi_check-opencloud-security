@@ -146,8 +146,9 @@ is needed.
 |---|---|
 | [`test_webapp_pages.py`](test_webapp_pages.py) | The informational pages can be reached, describe themselves, and link back. |
 | [`test_webapp_exports.py`](test_webapp_exports.py) | Exporting a scan as a file, and refusing malformed export requests. |
+| [`test_webapp_badge.py`](test_webapp_badge.py) | The grade badge: what it draws, what it never carries, and when it 404s. |
+| [`test_webapp_feeds.py`](test_webapp_feeds.py) | The advisory and release-schedule Atom feeds. |
 | [`test_webapp_compare.py`](test_webapp_compare.py) | The comparison page between two scans agrees with `compare_scans`. |
-| [`test_webapp_compare_upload.py`](test_webapp_compare_upload.py) | An uploaded report is rebuilt from an allow-list, never kept, and the comparison drawn from it expires within five minutes. |
 | [`test_webapp_result_continuity.py`](test_webapp_result_continuity.py) | The tab title follows the scan, later scans offer a comparison, and the page warns before a report expires. |
 | [`test_webapp_fragment.py`](test_webapp_fragment.py) | The configuration fragment on a report page, in every flavour and within the CSP. |
 | [`test_webapp_tls_overview.py`](test_webapp_tls_overview.py) | TLS facts shown next to the grade, without the web layer judging them. |
