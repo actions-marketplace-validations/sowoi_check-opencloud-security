@@ -168,6 +168,19 @@ ADMIN_SEARCH_PAGES: tuple[SearchPage, ...] = (
 #: anything the application mounts.
 ADMIN_INDEX_DIR = Path(__file__).resolve().parent / "data"
 
+#: The one file each language's operator index is written to and read from.
+#: A request *selects* an entry from this table and can never contribute a
+#: character to a file name, which is what keeps a hand-written language
+#: cookie a missing key rather than a path this process would go and read.
+ADMIN_INDEX_FILES: dict[str, str] = {
+    locale: (
+        "admin-search-index.json"
+        if locale == DEFAULT_LOCALE
+        else f"admin-search-index.{locale}.json"
+    )
+    for locale in SUPPORTED_LOCALES
+}
+
 
 @lru_cache(maxsize=len(SUPPORTED_LOCALES))
 def admin_search_document(locale: str) -> dict[str, Any] | None:
@@ -178,13 +191,7 @@ def admin_search_document(locale: str) -> dict[str, Any] | None:
     bundle predates this index should still answer search with the public
     pages instead of failing the request.
     """
-    if locale not in SUPPORTED_LOCALES:
-        locale = DEFAULT_LOCALE
-    name = (
-        "admin-search-index.json"
-        if locale == DEFAULT_LOCALE
-        else f"admin-search-index.{locale}.json"
-    )
+    name = ADMIN_INDEX_FILES.get(locale) or ADMIN_INDEX_FILES[DEFAULT_LOCALE]
     try:
         return json.loads((ADMIN_INDEX_DIR / name).read_text(encoding="utf-8"))
     except (OSError, ValueError):

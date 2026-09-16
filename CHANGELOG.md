@@ -38,6 +38,17 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ### Changed
 
+- **The operator index is chosen from a table rather than named by a request.**
+  The file each language's operator search index lives in is now a fixed entry
+  in one table in `webapp/search.py`, which both the build script and the
+  request path read. The language a request asks for could already only be one
+  of the four this frontend has - a cookie or `Accept-Language` is reduced to a
+  supported code or to nothing before anything else sees it - so no traversal
+  was reachable, but the name was still assembled from that value, which is a
+  shape static analysis rightly objects to and one refactor away from being
+  true. A cookie the visitor wrote by hand now selects an entry or misses the
+  table and gets English.
+
 - **The agent guide is now part of the API page.** `/ai` was a tab of its own
   next to `/api`, which asked a reader wiring up software to guess whether a
   curl call and an MCP endpoint were documented in the same place. Discovery,

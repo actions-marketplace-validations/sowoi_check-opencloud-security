@@ -31,6 +31,8 @@ from tests.webapp_support import (  # noqa: F401 - the fixtures are autouse
     settings,
 )
 from webapp.app import create_app
+from webapp.i18n import LANGUAGE_COOKIE, SUPPORTED_LOCALES
+from webapp.search import ADMIN_INDEX_FILES, admin_search_document
 from webapp.settings import ADMIN_PROXY_SECRET_MINIMUM
 
 SECRET = "b" * 48
@@ -1628,6 +1630,33 @@ def test_the_operator_index_carries_the_areas_text_in_the_readers_language():
     assert german["locale"] == "de"
     overview = next(page for page in german["pages"] if page["path"] == "/admin")
     assert overview["title"] == "Betriebsbereich"
+
+
+def test_the_operator_index_is_chosen_from_a_table_not_built_from_a_cookie():
+    """A language cookie selects a file; it never spells one.
+
+    The cookie is a visitor's to write, so the file name must not be. Every
+    language this frontend has maps to one fixed name, and anything else -
+    a tag this frontend does not have, or a hand-written traversal - falls
+    back to the English index rather than sending this process off to read
+    whatever the cookie named.
+    """
+    assert set(ADMIN_INDEX_FILES) == set(SUPPORTED_LOCALES)
+    assert all(
+        "/" not in name and "\\" not in name and ".." not in name
+        for name in ADMIN_INDEX_FILES.values()
+    )
+
+    english = admin_search_document("en")
+    for cookie in ("../../../../etc/passwd", "klingon", "en/../de", ""):
+        assert admin_search_document(cookie) == english
+
+    with TestClient(create_app(_admin_settings())) as client:
+        client.cookies.set(LANGUAGE_COOKIE, "../../../../etc/passwd")
+        answer = client.get("/admin/search-index.json", headers=FORWARDED)
+
+    assert answer.status_code == 200
+    assert "locale" not in answer.json()
 
 
 def test_the_operator_documents_show_only_images_this_service_serves():

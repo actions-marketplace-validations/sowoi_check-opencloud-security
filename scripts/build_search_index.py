@@ -35,7 +35,7 @@ ADMIN_OUTPUT_DIR = ROOT / "webapp" / "data"
 sys.path.insert(0, str(ROOT))
 from opencloud_local_scan import __version__
 from webapp.i18n import DEFAULT_LOCALE, SUPPORTED_LOCALES, Translator
-from webapp.search import ADMIN_SEARCH_PAGES, SEARCH_PAGES
+from webapp.search import ADMIN_INDEX_FILES, ADMIN_SEARCH_PAGES, SEARCH_PAGES
 
 _JINJA = re.compile(r"{[#%].*?[#%]}|{{.*?}}", re.DOTALL)
 _SPACE = re.compile(r"\s+")
@@ -158,10 +158,12 @@ def render_admin(locale: str = DEFAULT_LOCALE) -> str:
 
 
 def admin_output_for(locale: str) -> Path:
-    """Where one language's operator index is written."""
-    if locale == DEFAULT_LOCALE:
-        return ADMIN_OUTPUT_DIR / "admin-search-index.json"
-    return ADMIN_OUTPUT_DIR / f"admin-search-index.{locale}.json"
+    """Where one language's operator index is written.
+
+    The names come from the application's own table rather than a second copy
+    of the rule, so what is built is what the operator area will look for.
+    """
+    return ADMIN_OUTPUT_DIR / ADMIN_INDEX_FILES[locale]
 
 
 def output_for(locale: str) -> Path:
