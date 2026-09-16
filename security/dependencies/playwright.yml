@@ -1,8 +1,8 @@
 # A dependency record. See security/dependencies/README.md.
 name: playwright
 import_name: playwright
-status: proposed
-approved_by: ""
+status: approved
+approved_by: "Okko"
 scopes:
   - group:test
 reviewed_version: "1.63.0"
