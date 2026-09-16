@@ -12,6 +12,23 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+### Documentation
+
+- **The release skills build a release skeleton and never write a changelog
+  entry.** `/patch-release`, `/minor-release` and `/major-release` now make
+  exactly the version bump in `pyproject.toml`, a new `uv.lock` and the
+  refreshed generated files (release schedule, advisory database, frontend
+  documentation, search indexes), and leave `CHANGELOG.md` and `RELEASE.md`
+  alone: the release notes are the `[Unreleased]` entries the merged pull
+  requests wrote. A new OpenCloud release or advisory found by the refresh is
+  reported to the user instead of written down. The version guard now runs
+  after the commit, because it reads the committed version, with
+  `--labels skip-changelog` so that only its version check applies.
+- **`/open-release-pr` checks the changelog before it opens anything.** It
+  stops when the `[Unreleased]` section is empty or when the release branch
+  itself changes `CHANGELOG.md` or `RELEASE.md`, uses the `[Unreleased]`
+  entries verbatim as the pull request body, and never edits either file.
+
 ## [1.24.0] - 2026-09-16
 
 ### Documentation

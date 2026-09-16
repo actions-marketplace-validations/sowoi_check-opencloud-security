@@ -29,16 +29,31 @@ If the branch is not pushed, stop and ask - do not push on your own unless the
 user asked for it together with this skill. If a pull request already exists,
 report its URL and go to step 4.
 
-Run `python scripts/check_pull_request.py --base origin/main` and stop on
-failure.
+Check the changelog. The release branch is a skeleton from `/patch-release`,
+`/minor-release` or `/major-release` and adds no entry of its own; the release
+notes are the `## [Unreleased]` entries the merged pull requests wrote:
+
+```bash
+sed -n '/^## \[Unreleased\]/,/^## \[/p' CHANGELOG.md | sed '1d;$d'   # the release notes
+git diff --stat origin/main...HEAD -- CHANGELOG.md RELEASE.md           # must be empty
+```
+
+Stop and tell the user if the `[Unreleased]` section is empty (there is
+nothing to release), or if the branch changes `CHANGELOG.md` or `RELEASE.md`
+(a release skeleton must not). Never add, edit or remove anything in either
+file yourself.
+
+Then run the version guard and stop on failure. `--labels skip-changelog`
+turns off only its check for a new entry on this branch, which a skeleton
+never has; the version check still applies:
+
+```bash
+python scripts/check_pull_request.py --base origin/main --labels skip-changelog
+```
 
 ## 2. Build the body
 
-Take the `## [Unreleased]` section of `CHANGELOG.md` on this branch:
-
-```bash
-sed -n '/^## \[Unreleased\]/,/^## \[/p' CHANGELOG.md | sed '1d;$d'
-```
+Use the `[Unreleased]` entries from step 1, verbatim.
 
 Body layout:
 
