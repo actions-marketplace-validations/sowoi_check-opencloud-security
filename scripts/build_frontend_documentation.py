@@ -184,6 +184,12 @@ def render_operator_page(slug: str) -> str:
     repository's own English and are not translated; no `_page-nav.html`,
     because that navigates the public guides; and the operator tab strip at
     the top, so the area reads as one place rather than three.
+
+    The chrome around that strip is the area's, not the guides': `admin.css`
+    is what styles the tabs, the signed-in band and the ruled heading, so a
+    generated document loads it exactly as the hand-written tabs do. Without
+    it the strip renders as bare links and the area stops looking like one
+    place at the two tabs that are generated.
     """
     page = OPERATOR_DOCUMENTATION_BY_SLUG[slug]
     source = (REPO_ROOT / page.source).read_text(encoding="utf-8")
@@ -204,10 +210,24 @@ def render_operator_page(slug: str) -> str:
 {{% block title %}}{page.title}{{% endblock %}}
 {{% block description %}}{page.description}{{% endblock %}}
 
+{{% block head %}}
+<link rel="stylesheet" href="/static/css/admin.css">
+{{% endblock %}}
+
 {{% block content %}}
+<section class="admin-band" role="note">
+  <span class="admin-band-dot" aria-hidden="true"></span>
+  <p class="flush">
+    {{{{ t('admin.band', user=operator.username) }}}}
+  </p>
+  {{% if sign_out_url %}}
+  <a class="admin-band-exit" href="{{{{ sign_out_url }}}}">{{{{ t('admin.band.signout') }}}}</a>
+  {{% endif %}}
+</section>
+
 {{% include "_admin-tabs.html" %}}
 
-<section class="page-head">
+<section class="page-head admin-head">
   <p class="kicker">{{{{ t('admin.docs.kicker') }}}}</p>
   <h1>{page.title}</h1>
   <p class="lede">{page.description}</p>

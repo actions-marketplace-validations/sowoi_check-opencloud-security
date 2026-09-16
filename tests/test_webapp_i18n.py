@@ -31,7 +31,6 @@ FRONTEND_PATHS = (
     "/search",
     "/compare",
     "/api",
-    "/ai",
     "/privacy",
     "/about",
 )

@@ -17,6 +17,14 @@
 #}
 <section class="glass search-panel" data-search-root data-reveal
          data-search-index="/static/search-index.json"
+         {#
+           Only for a reader the proxy is authorising right now. The endpoint
+           refuses everybody else anyway, so this attribute is an offer rather
+           than the guard - but a page that never mentions it is also a page
+           that never tells a stranger the area exists.
+         #}
+         {% if is_operator %}data-search-admin-index="/admin/search-index.json"
+         data-search-admin-label="{{ t('search.scope.operator') }}"{% endif %}
          data-search-locale="{{ locale }}"
          data-search-results-label="{{ t.raw('search.status.results') }}"
          data-search-empty-label="{{ t('search.status.empty') }}"

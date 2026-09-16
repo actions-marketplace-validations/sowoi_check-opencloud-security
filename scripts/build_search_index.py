@@ -26,11 +26,16 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 STATIC = ROOT / "frontend" / "static"
 OUTPUT = STATIC / "search-index.json"
+#: Where the operator area's index lands. Inside the Python package and
+#: not under `frontend/static`, because `/static` is mounted and this file
+#: is for authorised readers only - it is served by the guarded route in
+#: the area, never as an asset.
+ADMIN_OUTPUT_DIR = ROOT / "webapp" / "data"
 
 sys.path.insert(0, str(ROOT))
 from opencloud_local_scan import __version__
 from webapp.i18n import DEFAULT_LOCALE, SUPPORTED_LOCALES, Translator
-from webapp.search import SEARCH_PAGES
+from webapp.search import ADMIN_SEARCH_PAGES, SEARCH_PAGES
 
 _JINJA = re.compile(r"{[#%].*?[#%]}|{{.*?}}", re.DOTALL)
 _SPACE = re.compile(r"\s+")
@@ -86,7 +91,7 @@ def _translated(key: str, fallback: str, translate: Translator) -> str:
 
 def _generated(template: str) -> bool:
     """Whether the page's text is generated from the repository Markdown."""
-    return template.startswith("docs/")
+    return template.startswith(("docs/", "admin-docs/"))
 
 
 def render(locale: str = DEFAULT_LOCALE) -> str:
@@ -124,6 +129,41 @@ def render(locale: str = DEFAULT_LOCALE) -> str:
     return json.dumps(document, ensure_ascii=True, indent=2) + "\n"
 
 
+def render_admin(locale: str = DEFAULT_LOCALE) -> str:
+    """The operator area's index for one language, complete rather than an overlay.
+
+    Complete because it is read by one authorised request on a page that has
+    already fetched the public index: a second round trip for an overlay would
+    buy nothing, and the operator documents have no translation to overlay.
+    """
+    translate = Translator(locale)
+    pages = [
+        {
+            "path": page.path,
+            "title": _translated(page.title_key, page.title, translate),
+            "summary": _translated(page.summary_key, page.summary, translate),
+            "body": _body(page.template, translate),
+        }
+        for page in ADMIN_SEARCH_PAGES
+    ]
+    document: dict[str, object] = {
+        "version": 1,
+        "builtFor": __version__,
+        "scope": "admin",
+        "pages": pages,
+    }
+    if locale != DEFAULT_LOCALE:
+        document["locale"] = locale
+    return json.dumps(document, ensure_ascii=True, indent=2) + "\n"
+
+
+def admin_output_for(locale: str) -> Path:
+    """Where one language's operator index is written."""
+    if locale == DEFAULT_LOCALE:
+        return ADMIN_OUTPUT_DIR / "admin-search-index.json"
+    return ADMIN_OUTPUT_DIR / f"admin-search-index.{locale}.json"
+
+
 def output_for(locale: str) -> Path:
     """Where one language's index is written."""
     if locale == DEFAULT_LOCALE:
@@ -138,13 +178,18 @@ def main(argv: list[str] | None = None) -> int:
     )
     arguments = parser.parse_args(argv)
     failed = False
-    for locale in SUPPORTED_LOCALES:
-        target = output_for(locale)
-        expected = render(locale)
+    ADMIN_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    targets = [
+        (output_for(locale), render(locale)) for locale in SUPPORTED_LOCALES
+    ] + [
+        (admin_output_for(locale), render_admin(locale))
+        for locale in SUPPORTED_LOCALES
+    ]
+    for target, expected in targets:
         if arguments.check:
             if not target.is_file() or target.read_text(encoding="utf-8") != expected:
                 print(
-                    f"The static search index {target.name} is not the current "
+                    f"The search index {target.name} is not the current "
                     "release index.",
                     file=sys.stderr,
                 )

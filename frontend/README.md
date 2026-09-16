@@ -212,7 +212,8 @@ scale and severity caps, `documentation.html` gets the guide index, and
 `api.html` gets `limits` and `docs_enabled`. `docs_enabled`
 now governs only the browsable Swagger and ReDoc links: `/openapi.json`,
 `/arazzo.json` and `/.well-known/ai.json` are public regardless, and
-`ai.html`, the page at `/ai`, links them whether the switch is on or not. Each of them ends by including
+`api.html`, the page at `/api`, links them whether the switch is on or not.
+Each of them ends by including
 `_page-nav.html`, which drops the link to the page it is rendered on by
 comparing `request.url.path`.
 
@@ -327,9 +328,9 @@ The head of `base.html` carries three `<link>` hints, on every page:
 `service-desc` is registered and is the one a general client is most likely to
 follow. The other two are hints rather than standards - nothing obliges an
 agent to know what `arazzo` means - which is why the canonical entry point is
-`/.well-known/ai.json` and why `ai.html`, at `/ai`, says all of it in prose,
-as ordinary clickable links, under **For AI agents**. A crawler that reads only
-text finds it; an agent that reads only the head finds it too.
+`/.well-known/ai.json` and why `api.html`, at `/api`, says all of it in prose,
+as ordinary clickable links, under **Start from one address**. A crawler that
+reads only text finds it; an agent that reads only the head finds it too.
 
 ## Running your own frontend
 

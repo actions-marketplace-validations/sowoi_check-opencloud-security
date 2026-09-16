@@ -1028,6 +1028,18 @@ main { flex: 1 0 auto; padding-bottom: 4.5rem; }
     transform: translateY(-1px);
 }
 .search-results span { color: var(--ink-soft); }
+/* A result from the operator area, which only an operator is ever served.
+   Named on the result rather than left to the path, so a reader can tell at
+   a glance which answers are not public ones. */
+.search-result-scope {
+    justify-self: start;
+    padding: .1rem .5rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    font-size: .68rem;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
 
 /* ----------------------------------------------------------------- compare
  * Two scans side by side. The two grades are the same tokens the dial on a

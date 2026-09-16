@@ -1203,7 +1203,7 @@ four dead buttons. Nothing is generated in the browser: the fragments come
 from the module the library tests cover, and a second implementation of that
 in JavaScript is the one thing on the page that must not exist. The explanations the landing page used to carry sit on
 their own pages - `GET /how-it-works`, `GET /grades`, `GET /documentation`,
-`GET /search`, `GET /api`, `GET /ai`, `GET /privacy` and `GET /about` - which
+`GET /search`, `GET /api`, `GET /privacy` and `GET /about` - which
 are HTML only and stay out of the OpenAPI schema. So does `GET /compare`,
 for a second reason: it renders two results and is therefore never
 indexable, exactly as `/scan/{uuid}` is not. `/grades` explains the

@@ -61,7 +61,7 @@ webapp/
 frontend/
 ├── templates/        base.html, index.html, scan.html, 404.html,
 │                     how-it-works.html, grades.html, documentation.html,
-│                     api.html, ai.html, privacy.html, about.html,
+│                     api.html, privacy.html, about.html,
 │                     docs/*.html (generated from the Markdown guides),
 │                     _page-nav.html (the cross-links between them),
 │                     _toc.html (the contents list a page carries)

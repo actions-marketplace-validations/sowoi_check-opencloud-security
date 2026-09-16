@@ -12,7 +12,32 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+### Added
+
+- **An operator can search the operator area.** While the sign-in lasts,
+  `/search` also answers from the area's own pages - the overview, the
+  configuration and rules tabs and the two operator documents - and marks
+  those results as the operator area's. The index behind them is built into
+  the package rather than `frontend/static`, is served only by an authorised
+  route under `/admin`, and is sent `no-store` so that signing out ends
+  access to it immediately. Everybody else gets the public index alone and no
+  indication that another one exists.
+
+### Fixed
+
+- **The two generated operator documents now look like the rest of the area.**
+  `Architecture` and `Operations` never loaded `admin.css`, so the tab strip
+  above them rendered as bare links and neither page carried the signed-in
+  band or the ruled heading the other tabs have.
+
 ### Changed
+
+- **The agent guide is now part of the API page.** `/ai` was a tab of its own
+  next to `/api`, which asked a reader wiring up software to guess whether a
+  curl call and an MCP endpoint were documented in the same place. Discovery,
+  WebMCP, client configuration and the rules for agents are now sections of
+  `/api`, which keeps its name. `/ai` redirects there permanently, and the
+  discovery document's `documentation` key follows it.
 
 - **Reference data re-read and the generated documentation rebuilt.** The
   OpenCloud release schedule is unchanged (production 7.2.4, rolling 8.0.0)

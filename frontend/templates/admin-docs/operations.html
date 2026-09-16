@@ -4,10 +4,24 @@
 {% block title %}Operations{% endblock %}
 {% block description %}Keeping the data current, rebuilding what is generated, and where to look when the service misbehaves.{% endblock %}
 
+{% block head %}
+<link rel="stylesheet" href="/static/css/admin.css">
+{% endblock %}
+
 {% block content %}
+<section class="admin-band" role="note">
+  <span class="admin-band-dot" aria-hidden="true"></span>
+  <p class="flush">
+    {{ t('admin.band', user=operator.username) }}
+  </p>
+  {% if sign_out_url %}
+  <a class="admin-band-exit" href="{{ sign_out_url }}">{{ t('admin.band.signout') }}</a>
+  {% endif %}
+</section>
+
 {% include "_admin-tabs.html" %}
 
-<section class="page-head">
+<section class="page-head admin-head">
   <p class="kicker">{{ t('admin.docs.kicker') }}</p>
   <h1>Operations</h1>
   <p class="lede">Keeping the data current, rebuilding what is generated, and where to look when the service misbehaves.</p>

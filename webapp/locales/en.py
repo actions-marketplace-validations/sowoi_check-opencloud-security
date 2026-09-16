@@ -434,7 +434,6 @@ MESSAGES: dict[str, str] = {
     "nav.search": "Search",
     "nav.compare": "Compare",
     "nav.api": "API",
-    "nav.ai": "AI",
     "nav.privacy": "Privacy",
     "nav.about": "About",
     # --------------------------------------------------- language switcher
@@ -494,10 +493,10 @@ MESSAGES: dict[str, str] = {
     ),
     "pagenav.docs.title": "CLI documentation",
     "pagenav.docs.blurb": "Install, configure and automate the scanner from a terminal.",
-    "pagenav.api.title": "Scanning from a script",
-    "pagenav.api.blurb": "The JSON API, the fair use limits and the OpenAPI schema.",
-    "pagenav.ai.title": "For AI agents",
-    "pagenav.ai.blurb": "Discovery, OpenAPI, Arazzo workflows and the MCP endpoint.",
+    "pagenav.api.title": "Scanning from a script or an agent",
+    "pagenav.api.blurb": (
+        "The JSON API, the fair use limits, the OpenAPI schema and the MCP endpoint."
+    ),
     "pagenav.privacy.title": "What this server keeps",
     "pagenav.privacy.blurb": (
         "In memory, for {minutes} minutes, and what the log leaves out."
@@ -994,15 +993,17 @@ MESSAGES: dict[str, str] = {
         "The project is on GitHub</a>."
     ),
     # ------------------------------------------------------------------- API
-    "api.title": "Scanning from a script",
+    "api.title": "Scanning from a script or an agent",
     "api.description": (
-        "The JSON API behind the form: how to submit a scan, poll it, and what "
-        "this server refuses to let a caller decide."
+        "The JSON API behind the form: how to submit a scan, poll it, what this "
+        "server refuses to let a caller decide, and everything software needs to "
+        "drive it - OpenAPI, Arazzo workflows and the MCP endpoint."
     ),
     "api.kicker": "The API",
     "api.lede": (
         "The form is one of two front doors; the other is JSON, and it is the same "
-        "handler."
+        "handler. Software that was not written for this service can find its way "
+        "in from the same page."
     ),
     "api.submit.kicker": "Submit & poll",
     "api.submit.heading": "Submit and poll",
@@ -1050,42 +1051,29 @@ MESSAGES: dict[str, str] = {
         "<code>/redoc</code>) are switched off on this deployment; an operator "
         "turns them on with <code>COS_WEB_ENABLE_DOCS=true</code>."
     ),
-    "api.agents.kicker": "Agents",
-    "api.agents.heading": "For AI agents",
-    "api.agents.body": (
-        "Software that was not written for this service has a page of its own: "
-        '<a href="/ai">for AI agents</a> collects the discovery document, the '
-        "OpenAPI schema, the Arazzo workflows and the MCP endpoint in one place."
-    ),
-    # -------------------------------------------------------------------- AI
-    "ai.title": "For AI agents",
-    "ai.description": (
-        "Everything software needs to use this scanner: the discovery document, "
-        "the OpenAPI schema, the Arazzo workflows and the MCP endpoint."
-    ),
-    "ai.kicker": "Machine guests",
-    "ai.lede": (
+    # ------------------------------------------------- API, for agents
+    "api.agents.kicker": "Machine guests",
+    "api.agents.heading": "Start from one address",
+    "api.agents.intro": (
         "This service is meant to be usable by software that was not written for "
         "it. Everything an agent needs is published, in the open, without an "
         "account: what the API can do, how its calls combine into a task, and a "
         "way to run that task directly."
     ),
-    "ai.discovery.kicker": "Discovery",
-    "ai.discovery.heading": "Start from one address",
-    "ai.discovery.discovery": (
+    "api.agents.discovery": (
         "<strong>Discovery</strong> - "
         '<a href="/.well-known/ai.json">/.well-known/ai.json</a> names all of the '
         "below, with absolute URLs. Start here."
     ),
-    "ai.discovery.openapi": (
+    "api.agents.openapi": (
         '<strong>OpenAPI</strong> - <a href="/openapi.json">/openapi.json</a>, '
         "every operation with its real status codes and response shapes."
     ),
-    "ai.discovery.arazzo": (
+    "api.agents.arazzo": (
         '<strong>Arazzo workflows</strong> - <a href="/arazzo.json">/arazzo.json'
         "</a>, the lifecycle of a scan: submit, poll, detect completion, export."
     ),
-    "ai.discovery.mcp": (
+    "api.agents.mcp": (
         "<strong>MCP</strong> - <code>{url}</code>, a Model Context Protocol "
         "endpoint over streamable HTTP. Tools: <code>scan_instance</code>, "
         "<code>scan_instances</code>, <code>get_scan_result</code>, "
@@ -1098,61 +1086,61 @@ MESSAGES: dict[str, str] = {
         "certificate and the handshake. It answers the protocol rather than a "
         "browser, so it is an address to configure rather than a page to open."
     ),
-    "ai.discovery.summary": (
+    "api.agents.summary": (
         "The three documents describe one service from three angles: OpenAPI says "
         "what the API can do, and Arazzo says how those operations combine into a "
         "task. They are generated from the same code the server runs, so none of "
         "them can quietly go out of date."
     ),
-    "ai.discovery.summary_mcp": (
+    "api.agents.summary_mcp": (
         "The three documents describe one service from three angles: OpenAPI says "
         "what the API can do, Arazzo says how those operations combine into a "
         "task, and MCP hands that task to an agent as a tool it can call. They are "
         "generated from the same code the server runs, so none of them can quietly "
         "go out of date."
     ),
-    "ai.webmcp.kicker": "In the browser",
-    "ai.webmcp.heading": "Use the page as a tool",
-    "ai.webmcp.intro": (
+    "api.webmcp.kicker": "In the browser",
+    "api.webmcp.heading": "Use the page as a tool",
+    "api.webmcp.intro": (
         "A browser that supports the "
         '<a href="https://webmachinelearning.github.io/webmcp/" '
         'rel="noopener noreferrer">WebMCP draft</a> can discover actions from the '
         "page already open. There is no separate client to configure."
     ),
-    "ai.webmcp.landing": (
+    "api.webmcp.landing": (
         "On the landing page, <code>scan_opencloud_security</code> queues a scan. "
         "Its schema contains the release tracks, output formats and waiver "
         "identifiers offered by that page."
     ),
-    "ai.webmcp.result": (
+    "api.webmcp.result": (
         "On a result page, <code>get_scan_result</code> reads the current scan and "
         "<code>export_scan_report</code> downloads JSON, CSV, SARIF or PDF for the "
         "uuid already being viewed."
     ),
-    "ai.webmcp.boundary": (
+    "api.webmcp.boundary": (
         "Every browser tool calls the same JSON API with "
         "<code>Accept: application/json</code>. It keeps the SSRF guard, rate "
         "limits, target cooldown, queue and uuid isolation in place."
     ),
-    "ai.webmcp.support": (
+    "api.webmcp.support": (
         "WebMCP is still a draft and is ignored by browsers that do not implement "
         "it. Turning MCP off for this deployment removes the browser tools too."
     ),
-    "ai.clients.kicker": "Configuration",
-    "ai.clients.heading": "Wiring it into a client",
-    "ai.clients.intro": (
+    "api.clients.kicker": "Configuration",
+    "api.clients.heading": "Wiring it into a client",
+    "api.clients.intro": (
         "Most agent tools take a URL and a transport. This one is streamable HTTP, "
         "with no authentication and no account:"
     ),
-    "ai.clients.body": (
+    "api.clients.body": (
         "Worked configuration for Claude Code, Claude Desktop, GitHub Copilot in "
         "VS Code and the CLI, Cursor, Zed and Windsurf - against this deployment or "
         'one of your own - is in <a href="{project}/blob/main/docs/mcp.md" '
         'rel="noopener noreferrer">the MCP guide</a>.'
     ),
-    "ai.rules.kicker": "The rules",
-    "ai.rules.heading": "The same rules as everybody else",
-    "ai.rules.body": (
+    "api.rules.kicker": "The rules",
+    "api.rules.heading": "The same rules as everybody else",
+    "api.rules.body": (
         "The rules are the same for an agent as for anybody else. A scan is "
         "asynchronous and the uuid is the only way back to it; a <code>429</code> "
         "is an invitation to slow down rather than a refusal; and if you are "
@@ -1441,6 +1429,7 @@ MESSAGES: dict[str, str] = {
     "search.label": "Search documentation",
     "search.placeholder": "TLS, Docker, waivers...",
     "search.submit": "Search",
+    "search.scope.operator": "Operator area",
     "search.status.idle": "Enter a term to search this release's documentation.",
     "search.status.results": "{count} result(s) in this release.",
     "search.status.empty": "No public documentation matched that search.",
@@ -1472,11 +1461,8 @@ MESSAGES: dict[str, str] = {
     ),
     "search.page.api.title": "API",
     "search.page.api.summary": (
-        "Submit scans, poll results, export reports, and erase retained data."
-    ),
-    "search.page.ai.title": "AI and MCP",
-    "search.page.ai.summary": (
-        "Machine-readable OpenAPI, Arazzo, discovery, MCP tools, and prompts."
+        "Submit scans, poll results, export reports, and drive the service from "
+        "an agent over OpenAPI, Arazzo or MCP."
     ),
     "search.page.privacy.title": "Privacy",
     "search.page.privacy.summary": (

@@ -179,6 +179,7 @@ from .reports import (
 )
 from .rules import enforcement_groups, rating_rules
 from .schedule import schedule_state
+from .search import admin_search_document
 from .seo import (
     AGENTS_JSON_PATH,
     AGENTS_TXT_PATH,
@@ -1073,6 +1074,12 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
             # local one: a result page keeps its uuid out of the query string
             # and therefore out of anybody's referrer.
             "language_next": safe_next_path(request.url.path),
+            # Whether this reader is inside the operator area right now, as
+            # the proxy says on this request rather than as a session
+            # remembers. Search uses it to offer the area's own index; when
+            # the sign-in ends the header stops arriving, this goes false on
+            # the very next page, and the offer is gone.
+            "is_operator": operator_for(request, settings) is not None,
             "webmcp_tools": (),
             **context,
         }
@@ -1404,9 +1411,13 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
     async def api_page(request: Request) -> Response:
         return page(request, "api.html", {})
 
-    @app.get("/ai", response_class=HTMLResponse, include_in_schema=False)
-    async def ai_page(request: Request) -> Response:
-        return page(request, "ai.html", {})
+    # The agent page is now the second half of /api: a caller wiring up
+    # software should not have to guess whether a curl call and an MCP
+    # endpoint are documented in the same place. The path stays as a permanent
+    # redirect because the discovery document has been publishing it.
+    @app.get("/ai", include_in_schema=False)
+    async def ai_page() -> Response:
+        return RedirectResponse("/api#api-agents", status_code=301)
 
     # The Docker page - for the visitor who would rather not hand an address
     # to a stranger's server at all - is now the first half of /documentation,
@@ -2204,6 +2215,31 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
                     frontend=root,
                 )
             )
+
+        @app.get(f"{ADMIN_PATH}/search-index.json", include_in_schema=False)
+        async def admin_search_index(request: Request) -> Response:
+            """The operator area's own search index, for an operator only.
+
+            The public index is a static asset because every page in it is
+            public. This one is not: it carries the text of the configuration
+            tab, the rules tab and the operations notes, so it is read from
+            the package rather than served from ``/static``, and it answers
+            404 to exactly the people the rest of the area answers 404 to.
+
+            ``no-store`` because the answer is only true while the proxy is
+            still authorising this reader. An operator who signs out must not
+            leave a copy of the area's text in a cache the next person at the
+            same browser can search.
+            """
+            if admin_operator(request) is None:
+                return not_found(request)
+            index = admin_search_document(locale_for_request(request))
+            if index is None:
+                # Built at release time; a deployment missing the file gets an
+                # empty index rather than an error, so search still answers
+                # with the public pages.
+                index = {"version": 1, "scope": "admin", "pages": []}
+            return JSONResponse(index, headers={"Cache-Control": "no-store"})
 
         @app.post(f"{ADMIN_PATH}/refresh", include_in_schema=False)
         async def admin_refresh(

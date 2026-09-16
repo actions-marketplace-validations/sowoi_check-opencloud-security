@@ -25,7 +25,6 @@ CONTENT_PAGES = (
     "/catalogue",
     "/documentation",
     "/api",
-    "/ai",
     "/privacy",
     "/about",
 )
@@ -39,8 +38,7 @@ CONTENT_PAGES = (
         ("/catalogue", "What the scanner checks"),
         ("/documentation", "Run the scanner from your terminal"),
         ("/search", "Search the scanner"),
-        ("/api", "Scanning from a script"),
-        ("/ai", "For AI agents"),
+        ("/api", "Scanning from a script or an agent"),
         ("/privacy", "What this server keeps"),
         ("/about", "About OpenCloud and this scanner"),
     ],
@@ -81,9 +79,9 @@ def test_the_landing_page_leads_with_the_form_and_delegates_the_prose():
         assert f'href="{path}"' in body
 
 
-def test_the_ai_page_explains_browser_webmcp_when_agent_tools_are_enabled():
+def test_the_api_page_explains_browser_webmcp_when_agent_tools_are_enabled():
     """A browser agent needs page-tool names and boundaries where users find AI help."""
-    enabled = client(enable_mcp=True).get("/ai").text
+    enabled = client(enable_mcp=True).get("/api").text
 
     assert "Use the page as a tool" in enabled
     assert "scan_opencloud_security" in enabled
@@ -92,7 +90,7 @@ def test_the_ai_page_explains_browser_webmcp_when_agent_tools_are_enabled():
     assert "https://webmachinelearning.github.io/webmcp/" in enabled
     assert "Accept: application/json" in enabled
 
-    disabled = client(enable_mcp=False).get("/ai").text
+    disabled = client(enable_mcp=False).get("/api").text
     assert "Use the page as a tool" not in disabled
     assert "scan_opencloud_security" not in disabled
 
