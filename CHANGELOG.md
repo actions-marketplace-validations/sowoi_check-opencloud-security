@@ -12,15 +12,6 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
-### Changed
-
-- **The bundled release schedule and advisory database were re-checked against
-  their published sources.** Neither moved: the schedule still names OpenCloud
-  7.2.4 as production and 8.0.0 as rolling, and the advisory database still
-  holds the same two records. The generated frontend documentation and the
-  public and operator search indexes were rebuilt so that the version they
-  carry is this release's.
-
 ## [1.24.0] - 2026-09-16
 
 ### Documentation
