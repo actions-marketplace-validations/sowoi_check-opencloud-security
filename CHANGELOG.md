@@ -25,9 +25,11 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   after the commit, because it reads the committed version, with
   `--labels skip-changelog` so that only its version check applies.
 - **`/open-release-pr` checks the changelog before it opens anything.** It
-  stops when the `[Unreleased]` section is empty or when the release branch
-  itself changes `CHANGELOG.md` or `RELEASE.md`, uses the `[Unreleased]`
-  entries verbatim as the pull request body, and never edits either file.
+  stops when the `[Unreleased]` section is empty, when the release branch
+  changes `RELEASE.md`, or when it changes a released section of
+  `CHANGELOG.md`. Entries the release branch adds under `[Unreleased]` are
+  allowed and become part of the pull request body, which uses the
+  `[Unreleased]` entries verbatim; the skill never edits either file.
 - **Claude Code hooks enforce the project's hard rules.** `.claude/settings.json`
   refuses publishing or syncing advisories, merging pull requests, creating
   tags and releases, force-pushing, pushing to `main`, `git reset --hard`,
