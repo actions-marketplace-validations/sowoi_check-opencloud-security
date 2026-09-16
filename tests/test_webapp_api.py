@@ -50,7 +50,15 @@ def test_the_landing_page_offers_the_form_and_the_privacy_promises():
     body = page.text
     assert 'name="target_url"' in body
     assert 'name="ignore_hardenings"' in body
-    for promise in ("air-gapped", "No data stored", "No registration needed", "Ephemeral"):
+    # The four assurance cards, by the claim each one makes. "No data stored"
+    # used to be one of them and was not true - a result lives in Redis until
+    # it expires - so the card now says how long instead.
+    for promise in (
+        "No external page assets",
+        "Temporary storage",
+        "No registration needed",
+        "Ephemeral",
+    ):
         assert promise in body
     # A form that offers a concurrency field would make the prohibition a lie.
     assert 'name="concurrency"' not in body
@@ -494,7 +502,9 @@ def test_an_expired_scan_page_explains_itself_in_html():
     page = test_client.get(f"/scan/{identifier}", headers={"Accept": "text/html"})
 
     assert page.status_code == 404
-    assert "that scan is gone" in page.text
+    # It has to say the result expired rather than only that the page is
+    # unknown, or a visitor reads a dropped result as a broken link.
+    assert "scan result has expired" in page.text
 
 
 def test_every_key_written_for_a_scan_carries_a_ttl():

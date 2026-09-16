@@ -9,12 +9,16 @@ retypes a dashboard.
 - `grafana/dashboard.json` - a dashboard for the same metrics.
 - `checkmk/opencloud_security` - a Checkmk local check, for an agent host that
   can reach an instance the Checkmk server cannot.
+- `helm/check-opencloud-security/` - a Helm chart: the scheduled scan as a
+  `CronJob`, and optionally the shared scan service with a `NetworkPolicy`
+  bounding what it may reach.
 
 See the "Scheduling without Icinga2 / Nagios" section in the main
 [README.md](../README.md) for the two scheduling examples,
-[Prometheus and Grafana](../docs/prometheus.md) for the next two, and
-[Checkmk](../docs/checkmk.md) for the last one - including why it is installed
-in a `local/3600/` subdirectory rather than in `local/` itself.
+[Prometheus and Grafana](../docs/prometheus.md) for the next two,
+[Checkmk](../docs/checkmk.md) for the one after - including why it is installed
+in a `local/3600/` subdirectory rather than in `local/` itself - and
+[Kubernetes](../docs/kubernetes.md) for the chart.
 
 The scheduling examples rely on the `COS_*` environment variables documented
 in the main README instead of command-line flags, so the same plugin

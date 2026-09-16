@@ -11,17 +11,15 @@
   <p class="lede">{{ t('docs.scan-service.description') }}</p>
 </section>
 
-{% if locale != 'en' %}
+{% if locale not in ('en', 'de') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
 <article class="docs-article card section-gap" data-reveal lang="en">
-<p>The package ships a second entry point, <code>check-opencloud-scanner</code>, which runs
-the very same scanner as a long-lived HTTP service so that several consumers
-can share one cached result. The
-<a href="/documentation/reference#running-the-scanner-as-a-service">main README</a> describes the
-endpoints and the rule that a wide bind needs a credential; this page is the
-deployment detail.</p>
+<p>Run <code>check-opencloud-scanner serve</code> to make the built-in scanner available as a
+persistent HTTP service. Several consumers can then share a cached result for each
+instance. The <a href="/documentation/reference#running-the-scanner-as-a-service">main README</a> lists the
+endpoints and token requirements; this guide covers deployment.</p>
 <p>This is <strong>not</strong> the public web application - that is
 <a href="/documentation/web-service">the scan service</a>, which takes a URL from a stranger, queues it
 and renders the answer.</p>

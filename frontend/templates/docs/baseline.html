@@ -11,15 +11,14 @@
   <p class="lede">{{ t('docs.baseline.description') }}</p>
 </section>
 
-{% if locale != 'en' %}
+{% if locale not in ('en', 'de') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
 <article class="docs-article card section-gap" data-reveal lang="en">
-<p>A check that runs every five minutes reports the same finding until somebody
-fixes it, which is how people learn to acknowledge an alert and stop reading
-it. <code>--baseline</code> writes the findings of each run to a file and compares the
-next run against it, and <code>--warn-on-new</code> acts on the comparison.</p>
+<p>Use <code>--baseline</code> to save each scan’s findings and compare them with the next run. Add
+<code>--warn-on-new</code> to alert only when findings are new or have become worse. Existing
+problems remain visible in the report.</p>
 <p>The <a href="/documentation/reference#reporting-only-what-changed">main README</a> has the short
 version. This page is the full behaviour: the diff formats, what counts as a
 regression, and the rules that keep a baseline from hiding anything.</p>

@@ -15,7 +15,8 @@ docker run --rm -p 9102:9102 check-opencloud-security \
 ```
 
 For a batch job, `--format=prometheus` prints one text exposition payload and
-exits. Both modes require no extra dependency.
+exits, and `--format=otlp` prints the same metrics as the OTLP/JSON body an
+OpenTelemetry collector accepts. Every mode requires no extra dependency.
 
 The textfile collector and Pushgateway patterns below remain useful when a
 scheduled scan is a better fit than a long-running exporter.
@@ -31,6 +32,7 @@ up by Icinga2's Graphite/InfluxDB writers directly.
   * [What there is to graph](#what-there-is-to-graph)
   * [node_exporter textfile collector](#node_exporter-textfile-collector)
   * [Pushgateway](#pushgateway)
+  * [OpenTelemetry collector](#opentelemetry-collector)
   * [Alerting rules](#alerting-rules)
   * [Grafana](#grafana)
 <!-- TOC -->
@@ -51,11 +53,9 @@ cp contrib/prometheus/alerts.yml /etc/prometheus/rules/opencloud-security.yml
 promtool check rules /etc/prometheus/rules/opencloud-security.yml
 ```
 
-The dashboard has an `Instance` selector, so one copy serves every host you
-scrape. The rules assume a scrape of a cached scan every minute or so; with a
-scan scheduled once a day, shorten every `for:` - a one-hour `for:` never
-becomes true when the value only changes once between long gaps of the same
-reading.
+The dashboard’s `Instance` selector lets one dashboard cover multiple targets. Set alert
+delays for the response time you need, and account for how often the underlying scan is
+refreshed. Repeated scrapes can contain the same cached scan.
 
 The sections after the next one are the *other* way to do this: a scheduled
 scan whose JSON is reshaped by `jq` into metric names of your own. Those names
@@ -178,6 +178,32 @@ instance, or it will be alerting on a server that no longer exists:
 curl -X DELETE http://pushgateway.example.com:9091/metrics/job/opencloud_security/instance/opencloud.example.com
 ```
 
+## OpenTelemetry collector
+
+`--format otlp` renders the metrics in this table as one OTLP/JSON
+`ExportMetricsServiceRequest`, which is what a collector accepts at
+`/v1/metrics` over OTLP/HTTP. The plugin prints it; `curl` posts it, from the
+same [systemd timer or cron job](scheduling.md) that already runs the scan:
+
+```shell
+check-opencloud-security --host opencloud.example.com,other.example.com \
+  --format otlp \
+  | curl -sf -X POST http://collector.example.com:4318/v1/metrics \
+      -H 'Content-Type: application/json' --data-binary @-
+```
+
+The metric names and the `host` attribute are the exporter's, so a query
+written against a scrape works against a collector's output too, and the
+alerting rules below need no translation beyond your backend's own label
+conventions. Where the collector lives, which proxy reaches it and what
+credential it wants are the collector's business and stay in `curl`'s
+arguments rather than becoming scanner settings.
+
+A scan that fails still reports: `opencloud_security_scrape_success` arrives
+as `0`, with the duration beside it and no findings at all, so an instance
+that could not be reached is visible as such instead of keeping the numbers
+from the last run that worked.
+
 ## Alerting rules
 
 For the native exporter, copy
@@ -222,8 +248,9 @@ groups:
           summary: "The OpenCloud security scan has not produced a result"
 ```
 
-Match `for:` to your scan interval. With a daily scan a `for: 5m` fires on the
-first scrape after a bad result, which is the same thing as no `for:` at all.
+Prometheus `for:` measures how long an expression remains true across rule evaluations.
+It does not count fresh scans. With daily scan data, `for: 5m` waits five minutes while
+the same cached failure remains visible; it does not wait for a second daily scan.
 
 ## Grafana
 

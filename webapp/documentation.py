@@ -22,8 +22,8 @@ DOCUMENTATION_PAGES: tuple[DocumentationPage, ...] = (
     DocumentationPage(
         "what-is-opencloud",
         "docs/what-is-opencloud.md",
-        "What OpenCloud is, and how it differs from ownCloud and Nextcloud",
-        "The fork history behind OpenCloud, ownCloud and Nextcloud, and the architecture, storage and release differences between them.",
+        "What OpenCloud is",
+        "OpenCloud’s architecture, release tracks and what an external security scan can assess.",
     ),
     DocumentationPage(
         "secure-deployment",

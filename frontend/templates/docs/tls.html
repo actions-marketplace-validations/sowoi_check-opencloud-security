@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.tls.description') }}</p>
 </section>
 
-{% if locale != 'en' %}
+{% if locale not in ('en', 'de') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -37,11 +37,9 @@
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="en">
-<p>Everything on this page happens before a single byte of HTTP is exchanged.
-OpenCloud's proxy terminates TLS itself on port 9200 (or whatever sits in
-front of it does), and this scanner reads what that transport actually
-negotiated - protocol version, certificate, chain, cipher suite - the same
-way a browser or a sync client would, without any special access.</p>
+<p>The scanner examines the TLS connection, the certificate presented by the server and
+related DNS records. These checks describe the connection from the scanner’s network
+position; they do not enumerate every configuration a different client might encounter.</p>
 <!-- TOC -->
 <ul>
 <li><a href="#tls-and-certificates-what-this-scanner-checks-and-why">TLS and certificates: what this scanner checks, and why</a></li>
@@ -121,14 +119,13 @@ intermediate, without the root - which is what most issuers publish as a
 <h2 id="6-is-the-certificate-about-to-expire-or-issued-for-too-long">6. Is the certificate about to expire, or issued for too long</h2>
 <p>Two independent checks, both about time, in opposite directions:</p>
 <ul>
-<li><strong><code>tlsCertificate</code></strong> - remaining validity is below <code>--tls-min-days</code> (14 by
+<li><strong><code>tlsCertificate</code></strong> - remaining validity is below <code>scanner.tls_min_days</code> (14 by
   default). Unlike most findings, this one has a date on it: it will fail
   whether or not anybody acts, so the usual cause is worth checking directly</li>
 <li>an automated issuer that stopped renewing, or a reload that never reaches
   the process actually serving TLS.</li>
 <li><strong><code>tlsCertificateLifetime</code></strong> (low) - the certificate's validity period is
-  <em>longer</em> than the 398 days the CA/Browser Forum caps publicly trusted
-  certificates at. That points at a private authority or a hand-issued
+  <em>longer</em> than the scanner’s 398-day lifetime threshold. That points at a private authority or a hand-issued
   certificate, and the risk is the key: a certificate valid for years stays
   valid for years after the key behind it leaks, with nothing forcing the
   rotation that a short-lived certificate does on its own.</li>
@@ -228,16 +225,13 @@ mis-issuance that would otherwise be invisible until it was used.</p>
 certificate it already fetched, using the same <code>openssl x509 -text</code> call that
 reads the key and signature algorithm - no extra connection and no extra
 process.</p>
-<p>Chrome and Safari refuse a publicly trusted certificate without SCTs
-outright, so this is an outage waiting for the next browser release rather
-than only a transparency gap, which is why it is a <code>medium</code> finding.</p>
-<p><strong>The check only runs where the question is fair.</strong> A private or self-signed
-authority cannot publish to a log, and OpenCloud generates a self-signed
-certificate during <code>opencloud init</code> - so on a large share of instances the
-honest answer is that the question does not apply. <code>tlsCertificateTransparency</code>
-is therefore withheld entirely unless the chain reaches a public root. It is
-also withheld when the local OpenSSL does not decode the extension at all:
-an absent finding is an unknown, never a pass.</p>
+<p>The check looks specifically for SCTs embedded in the certificate. Missing embedded SCTs
+produce a <code>medium</code> finding, but do not by themselves prove a browser will reject the
+connection: Certificate Transparency evidence can also be delivered through other
+mechanisms.</p>
+<p><code>tlsCertificateTransparency</code> is evaluated only when the chain reaches a public root.
+Private or self-signed certificates are outside this check’s scope. If the local OpenSSL
+cannot decode the extension, the finding is omitted rather than recorded as a pass.</p>
 <p><strong>Fix:</strong> reissue through a certificate authority that embeds SCTs. Every
 public one has done so for years, Let's Encrypt included; a trusted
 certificate without them was almost certainly issued by a private CA that is

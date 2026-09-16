@@ -1,6 +1,6 @@
 # ADR 0020: Frontend language is request scoped
 
-- Status: Accepted
+- Status: Accepted; English-only guide bodies superseded by ADR 0058
 - Date: 2026-08-25
 
 ## Context

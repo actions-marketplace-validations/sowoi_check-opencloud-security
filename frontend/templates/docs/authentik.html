@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.authentik.description') }}</p>
 </section>
 
-{% if locale != 'en' %}
+{% if locale not in ('en', 'de') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -37,21 +37,11 @@
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="en">
-<p>The scan service answers anybody, and for the public deployment that is the
-whole point of it. An estate running the service for itself usually wants the
-opposite for the agent endpoint: <code>/mcp</code> executes the same workflows a browser
-gets, and there are deployments where "the same workflows a browser gets"
-should still mean "and only our agents". This page is that deployment, whole:
-one compose file that brings up the scan service <em>and</em>
-<a href="https://goauthentik.io">Authentik</a>, with <code>/mcp</code> requiring a token from the
-first minute.</p>
-<p>Two things it is <em>not</em>. It is not a login for the website - the pages and the
-HTTP API are unchanged, and adding one is not what this is for. And it is not
-a way to buy more scanning: <strong>authentication decides who may ask, never how
-hard</strong>. An authenticated agent meets exactly the same client rate limit, the
-same per-target cooldown, the same SSRF guard and the same queue as a stranger
-with a browser. A sign-in that raised a limit would have turned itself into a
-way around it.</p>
+<p>This guide runs the scan service and Authentik in one Compose stack, with token
+authentication enabled on <code>/mcp</code> from startup. Use it when MCP should be available only
+to agents authorized by your identity provider.</p>
+<p>The website and HTTP API remain public. Authentication controls access to MCP; it does
+not increase scan allowances or bypass the target cooldown, SSRF checks or queue.</p>
 <!-- TOC -->
 <ul>
 <li><a href="#authentik-in-front-of-the-mcp-endpoint">Authentik in front of the MCP endpoint</a></li>
@@ -96,9 +86,8 @@ way around it.</p>
 <!-- TOC -->
 
 <h2 id="how-it-works">How it works</h2>
-<p>This service is an OAuth 2.0 <strong>resource server</strong> and nothing more. It has no
-login page, no session, no user table, no client secret and no way to issue a
-token. What it does is check one:</p>
+<p>The scan service acts as an OAuth 2.0 resource server. It verifies tokens issued by the
+provider and has no login page, sessions, user database or client secret:</p>
 <ol>
 <li>An agent presents <code>Authorization: Bearer &lt;token&gt;</code> on its MCP requests.</li>
 <li>The service fetches the provider's published signing keys - the JWKS - and
@@ -132,13 +121,9 @@ slash is required, without it you get a 404 - and set the password for the
 <p>The first sign-in after that asks <code>akadmin</code> to enrol a second factor - an
 authenticator app or a security key - before it completes; see
 <a href="#a-second-factor-for-everybody">a second factor for everybody</a>.</p>
-<p>That is the whole setup. There is no provider to create, no client ID to copy
-between two windows, and nothing to switch on afterwards: <strong>the sign-in
-follows the endpoint.</strong> <code>COS_WEB_MCP_AUTH_ENABLED</code> in that file is
-<code>${COS_WEB_ENABLE_MCP:-true}</code>, so bringing up this stack means <code>/mcp</code> requires
-a token, and turning the endpoint off turns the sign-in off with it. There is
-no combination of these two variables that leaves the endpoint open by
-accident.</p>
+<p>The blueprint creates the provider and application. In this Compose file,
+<code>COS_WEB_MCP_AUTH_ENABLED</code> follows <code>${COS_WEB_ENABLE_MCP:-true}</code>, so enabling MCP also
+requires authentication. Disabling MCP disables both together.</p>
 <p><code>authentik-env.sh</code> writes six secrets into <code>docker/.env</code> and never overwrites
 one it finds, so running it twice is safe:</p>
 <table>
@@ -175,9 +160,8 @@ one it finds, so running it twice is safe:</p>
 </tr>
 </tbody>
 </table>
-<p>Keep them somewhere you will still have them after the disk does not.
-<code>AUTHENTIK_SECRET_KEY</code> signs everything in the database, so a database
-restored next to a different key is an unusable database.</p>
+<p>Back up <code>.env</code> with the Authentik data. Preserve <code>AUTHENTIK_SECRET_KEY</code> during a restore
+so that the restored installation can use its existing cryptographic state.</p>
 <p>Reachable from somewhere other than your laptop? Two variables, and nothing
 else changes:</p>
 <pre><code class="language-bash">AUTHENTIK_URL=https://sso.example.com \
@@ -208,11 +192,9 @@ would break <code>docker compose up</code> for everybody who never wanted Authen
   Authentik needs UTC internally, and mounting a timezone breaks OAuth.</li>
 </ul>
 <h2 id="sending-mail">Sending mail</h2>
-<p>Authentik starts with exactly one account, and the way back into it is an
-email. Until a mail server is configured it uses local delivery, which means
-the message goes into the container and stays there: a forgotten <code>akadmin</code>
-password is then a database edit rather than a link in an inbox. Configure it
-before there is anything in Authentik worth keeping.</p>
+<p>Configure SMTP before relying on account recovery. Without an external mail server,
+recovery messages are delivered locally inside the container and do not reach users’
+inboxes.</p>
 <p>Every setting is a variable in <code>docker/.env</code>, and both Authentik services read
 them - the server sends the test message, the worker sends everything else, so
 configuring one and not the other works until the day it matters:</p>
@@ -788,11 +770,10 @@ same token endpoint:</p>
 </tr>
 </tbody>
 </table>
-<p><strong>Authentik does not do machine-to-machine with a client ID and a client
-secret</strong>, whatever the grant type is called. Identification is by <em>username</em>,
-authentication is by an <em>app password</em>, and the client secret is only how the
-request proves which provider it is asking. This trips up everybody who has
-used another provider first.</p>
+<p>For an explicitly named service account, use its username and app password along with
+the provider’s client ID and secret. Authentik also supports the client-only request
+described below, which creates a shared service account. Choose a separate account per
+caller when you need individual revocation.</p>
 <h3 id="as-a-service-account">As a service account</h3>
 <p>The ordinary case for an agent, and the one to reach for:</p>
 <pre><code class="language-bash">curl -s https://sso.example.com/application/o/token/ \
@@ -936,10 +917,9 @@ symptom is confusing because everything else works. Pass <code>Host</code> and
 <code>X-Forwarded-Proto</code> through unchanged, and add the proxy's egress address to
 <code>AUTHENTIK_LISTEN__TRUSTED_PROXY_CIDRS</code> if it is outside the private ranges.
 Authentik cannot run under a subpath; give it a hostname.</p>
-<p><strong>The scanner needs to know its own address</strong>, because that is what a token's
-audience is checked against and what the metadata document publishes. Set
-<code>COS_WEB_PUBLIC_BASE_URL</code>. <a href="/documentation/reverse-proxy">The reverse proxy guide</a> has
-worked configuration for both.</p>
+<p>Set <code>COS_WEB_PUBLIC_BASE_URL</code> to the scanner’s public address for resource metadata. The
+token audience is configured separately through <code>COS_WEB_MCP_AUTH_AUDIENCE</code>. The
+<a href="/documentation/reverse-proxy">reverse proxy guide</a> includes working configurations.</p>
 <h2 id="backing-it-up">Backing it up</h2>
 <p><strong>Authentik has no built-in backup.</strong> The one it used to have was removed
 years ago, so this is yours to run. Four things matter, and the first two are
@@ -999,10 +979,8 @@ cp .env &quot;authentik-env-$stamp.backup&quot;
 <p>The volume names are prefixed with the Compose project name, which is the
 directory name unless you set <code>COMPOSE_PROJECT_NAME</code>. <code>docker volume ls</code> will
 tell you what they actually came out as.</p>
-<p>Treat the result as a credential store, because it is one: the dump contains
-every token and every signing key Authentik holds, and <code>.env</code> contains the key
-that makes them usable. Encrypt it, keep it off the machine that made it, and
-test the restore - an untested backup is a belief, not a backup.</p>
+<p>The backup contains credentials and signing keys. Encrypt it, keep a copy off the host
+and test a restore with the matching database version and <code>.env</code>.</p>
 <h2 id="restoring-it">Restoring it</h2>
 <pre><code class="language-bash">cd docker
 stack=&quot;-f docker-compose.authentik.yml&quot;

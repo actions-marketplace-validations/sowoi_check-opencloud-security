@@ -193,7 +193,10 @@ def test_the_moved_prose_survived_the_move():
             "Transport and headers",
             "Hardening and exposure",
         ),
-        "/privacy": ("one-way\n    fingerprint for rate limiting",),
+        # The wording moved; the disclosure it carries did not. "One-way" is
+        # the whole of the promise - a reversible fingerprint of an address is
+        # a record of who scanned what.
+        "/privacy": ("one-way fingerprint of the client address",),
         "/api": ("curl https://scan.okxo.de/api/scans", "<code>202</code>"),
         "/about": ("https://opencloud.eu/", "docs.opencloud.eu"),
     }
@@ -474,10 +477,10 @@ def test_the_grade_page_explains_how_a_result_can_improve():
     """A grade without a route upward is a scoreboard rather than a tool."""
     page = client().get("/grades").text
 
-    assert "How this scanner helps you climb" in page
-    assert "A remediation plan, in payoff order" in page
-    assert "The exact release to move to" in page
-    assert "End of life overrides" in page
+    assert "From findings to fixes" in page
+    assert "A prioritised remediation plan" in page
+    assert "A specific release recommendation" in page
+    assert "Every failed check, explained" in page
 
 
 def test_the_docs_tab_is_a_local_cli_reference_and_a_guide_index():
@@ -507,12 +510,19 @@ def test_the_docs_tab_is_a_local_cli_reference_and_a_guide_index():
 
 
 def test_about_names_the_author_and_the_reason_for_the_project():
-    """The project's origin belongs on About, not hidden in package metadata."""
+    """
+    The project's origin belongs on About, not hidden in package metadata.
+
+    The reason is stated in its own terms - the release tracks, settings and
+    deployment model this scanner reads. It used to be stated as being an
+    alternative to `scan.nextcloud.com`, which AGENTS.md rules out: the 0-5
+    scale is the only place Nextcloud may be named.
+    """
     page = client().get("/about").text
 
     assert "Massoud Ahmed" in page
-    assert "alternative to" in page
-    assert "<code>scan.nextcloud.com</code>" in page
+    assert "release tracks" in page
+    assert "scan.nextcloud.com" not in page
 
 
 def _toc_targets(markup: str) -> list[str]:

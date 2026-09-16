@@ -1,9 +1,8 @@
 # Hardening measures, one by one
 
-The hardening identifiers are terse because they end up in alert text. This
-page says what each one means, what a failure actually indicates and which
-OpenCloud setting changes it - then covers the two measures nobody can
-influence, and how to accept a finding you are not going to fix.
+This guide explains the hardening identifiers used in alerts: what each finding means,
+which setting can address it and when a waiver is appropriate. It also identifies values
+that OpenCloud hardcodes and operators cannot change.
 
 `--debug` prints the same explanation next to each finding. The
 [main README](../README.md#hardening-checks) covers how the measures reach

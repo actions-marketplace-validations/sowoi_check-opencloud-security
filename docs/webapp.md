@@ -1,13 +1,12 @@
 # The public scan service
 
-A web application that runs the built-in scanner for anyone who visits it,
-grades the instance from **A+** to **F**, and forgets the whole thing an hour
-later. It is the same scanner the plugin uses; the web layer only serves.
+The web application runs the built-in scanner and presents its findings with a grade
+from **A+** to **F**. Results remain available in Redis for one hour by default. The web
+layer presents the scanner’s result without defining a separate rating.
 
-**A running instance is at [scan.okxo.de](https://scan.okxo.de)** - try it
-there before deploying one, or use it for a one-off scan. Everything below
-describes how to run your own, which has no rate limit and can reach instances
-a public service cannot.
+Try the public service at [scan.okxo.de](https://scan.okxo.de) for a one-off scan. The
+instructions below cover hosting your own service, including network access, retention
+and usage limits.
 
 It is **not** on PyPI. `pip install check-opencloud-security` gets the plugin
 and the scanner library, deliberately without FastAPI, Redis or a single
@@ -21,13 +20,11 @@ template. The web application ships as a GitHub release asset,
 | **Needs** | No database, no account, no API key |
 | **Concurrency** | Fixed by the operator, never by a request |
 
-The HTML interface is available in English, German, Spanish and French. It
-uses the browser's weighted language preference on a first visit and provides
-an accessible switcher on every page; a chosen language is remembered in an
-`HttpOnly`, `SameSite=Lax` cookie. Generated operator-guide bodies remain
-English and are labelled as such, while their navigation and page chrome are
-translated. JSON APIs, agent contracts, exports and scan evidence are never
-translated.
+The interface supports English, German, French and Spanish. It initially follows the
+browser’s language preference; a choice made with the language switcher is remembered in
+an `HttpOnly`, `SameSite=Lax` cookie. Guide bodies are available in English and German.
+French and Spanish interfaces currently show the English guides with a notice. API
+contracts, exports and measured evidence retain their original technical values.
 
 ## Contents
 
@@ -48,10 +45,9 @@ translated.
 
 ## Starting it
 
-The service is three containers - the pages, the worker that runs the scans,
-and the Redis between them - and the shortest honest way to get all three is
-to let the setup wizard write them. It is one Python file, uses the standard
-library alone, and needs no checkout:
+The setup wizard creates the three required services: the web application, the scan
+worker and Redis. It is a standalone Python script using the standard library and needs
+no repository checkout:
 
 ```bash
 mkdir opencloud-scanner && cd opencloud-scanner
@@ -143,11 +139,8 @@ python scripts/build_web_bundle.py
 
 ### A deployment of your own
 
-The two compose files are the two usual shapes. For anything else - a
-different port, an on-premise instance the SSRF guard would otherwise refuse,
-encryption at rest, a sign-in on `/mcp` - the wizard is the answer rather than
-editing one of them into place, either from a checkout or downloaded on its
-own:
+Use the wizard to configure a different port, internal targets, result encryption or MCP
+authentication. It can run from a checkout or as a standalone download:
 
 ```bash
 cd docker
@@ -227,6 +220,7 @@ Every setting is an environment variable, read once at startup.
 |:---------|:--------|:-------------|
 | `COS_WEB_REDIS_URL` | `redis://127.0.0.1:6379/0` | Where ephemeral state lives. `memory://` runs without Redis, for a single-process evaluation. Include the password when Redis requires one: `redis://:PASSWORD@redis:6379/0` |
 | `COS_WEB_RESULT_TTL` | `3600` | Seconds a scan stays readable. Also the TTL on every key |
+| `COS_WEB_COMPARISON_TTL` | `300` | Seconds a comparison against an uploaded report stays readable. Clamped to 300; shorter is honoured |
 | `COS_WEB_MAX_WORKERS` | `5` | Scans running at once |
 | `COS_WEB_SCAN_CONCURRENCY` | `4` | Probes in flight within one scan |
 | `COS_WEB_SCAN_TIMEOUT` | `15` | Seconds one HTTP probe may take |
@@ -406,20 +400,20 @@ what is new, what is still open, and how the grade moved. A finished result
 page links to it with its own uuid already filled in, so only the earlier one
 has to be pasted.
 
-**The arithmetic is not this layer's.** It is
-`opencloud_local_scan.baseline`, the same comparison the plugin's `--baseline`
-spends on staying quiet between runs and `check-opencloud-scanner diff`
-prints, reached through `workflows.compare_documents` - the function the
-`compare_scans` MCP tool calls too. A reader, an agent and an operator's own
-alerting therefore cannot be told different things about the same two scans.
-See [ADR 0029](../adr/0029-a-comparison-is-two-live-results-and-one-arithmetic.md).
+Comparisons use `opencloud_local_scan.baseline` through `workflows.compare_documents`,
+the same calculation used by the CLI and the `compare_scans` MCP tool. See [ADR
+0029](../adr/0029-a-comparison-is-two-live-results-and-one-arithmetic.md).
 
 **Nothing is stored.** The comparison is worked out from two results that both
 still exist and is written nowhere: this service keeps no scan history
 ([ADR 0002](../adr/0002-no-scan-result-caching.md)) and a uuid is a capability
 with a TTL ([ADR 0007](../adr/0007-erasure-on-request.md)). A stored
 comparison would be a scan result under another name, outliving the results it
-describes and exempt from their erasure.
+describes and exempt from their erasure. The one case where a comparison *is*
+held - because the file it was drawn from is gone and nothing could recompute
+it - is [below](#comparing-against-a-report-you-uploaded), and it is held for
+five minutes, under a capability, and inside the erasure it would otherwise be
+exempt from.
 
 The answers it can give:
 
@@ -434,6 +428,76 @@ The answers it can give:
 Like `/scan/{uuid}` and for the same reason, the page renders results and is
 therefore never indexed and never in the OpenAPI schema, and each uuid remains
 the whole of the authorisation for the result behind it.
+
+## Comparing against a report you uploaded
+
+The comparison above needs both scans to still exist, and the interesting
+baseline is usually older than the hour a result lives. `POST /compare` takes
+the earlier side as a **file** instead: the JSON or the CSV from the downloads
+on a result page, uploaded from the reader's own disk, compared against a scan
+of this service that has not expired. Same page, same arithmetic, same
+verdicts - only where the earlier document came from changes. See
+[ADR 0057](../adr/0057-an-uploaded-report-is-evidence-not-a-scan.md).
+
+It is a browser feature and stays one: HTML only, never in the OpenAPI schema,
+and there is no MCP tool for it. An agent already has `compare_scans`, which
+takes two uuids - the shape an agent is in a position to supply.
+
+**The file is the only untrusted structure this service parses.** Everything
+else it compares came out of its own scanner minutes earlier, where the
+untrusted part is a *string inside* a document this service built. So an
+upload crosses one boundary, `webapp/imports.py`, and what comes out of it is
+not what went in: a result document rebuilt key by key from an allow-list -
+the fields `baseline.snapshot_of` reads, each type-checked, length-capped and
+shape-checked. A key nobody named there reaches nothing downstream.
+
+| Guard | Value |
+|:------|:------|
+| Largest file read | 256 KB, well below the 1 MB body limit that has already refused anything bigger |
+| Encoding | strict UTF-8; a NUL byte or an invalid sequence is refused rather than repaired |
+| Format | decided by looking at the bytes, never at the file name - which is read by nothing and never reflected into a page |
+| CSV rows | 2 000 |
+| JSON nesting | 20 levels |
+| Entries per list, characters per string | 500 and 300 |
+| Finding identifiers | dropped unless spelled the way this scanner spells its own, and the count of dropped lines is shown |
+| Rate limit | its own bucket, with the client limit's numbers - a parse costs this service work and costs nobody else's instance anything |
+| Cross-site POST | refused before the limiter and before the parse |
+
+**A fact the format never recorded is removed from both sides rather than
+guessed at.** The CSV is a flat table of findings; whether an update was
+pending and whether HTTPS was enforced live outside that table. Both are
+written as rows now, but a file downloaded before that was true is silent
+about them - and silence is not the answer "no". Those measurements are
+neutralised on *both* documents before the comparison, and the page names what
+it left out. JSON is the lossless round trip; CSV is a spreadsheet that
+happens to be readable back.
+
+**The file is never stored. The comparison is, for five minutes.** The upload
+is read once into memory and written nowhere. What survives is the comparison
+drawn from it, held under a fresh uuid4 in its own `compare:{token}:*`
+namespace so a reload and a shared link keep working - the one thing here that
+cannot be recomputed, because the file it came from is gone. The token behaves
+like a scan uuid: unknown, malformed and expired are one 404, nothing lists
+them, and results encryption applies where it is configured.
+`COS_WEB_COMPARISON_TTL` can shorten that window and cannot widen it.
+
+**An erasure request reaches it.** `DELETE /api/purge` walks the comparison
+namespace as well as the scan one and deletes every cached comparison naming
+that instance on either side, counting the keys into the same receipt so
+`remaining: 0` keeps meaning what it says. A five-minute TTL is not a reason to
+leave something out of an erasure - that is the argument
+[ADR 0007](../adr/0007-erasure-on-request.md) refuses for the result itself.
+
+| Situation | Answer |
+|:----------|:-------|
+| A readable report and a finished scan | **303** to `/compare/{token}` |
+| No file, or no uuid | **422**, saying which half is missing |
+| The later uuid is unknown or expired | **404** |
+| The later scan has not finished | **409** |
+| The file is empty, too large, not UTF-8, or not JSON or CSV | **422**, or **413** for size, in this service's own words - a rejected upload is never quoted back |
+| The file parses but is not a scan report | **422** |
+| Too many uploads from one network | **429** with `Retry-After` |
+| `GET /compare/{token}` after five minutes | **404**, exactly as for a token that never existed |
 
 ## The SSRF guard
 
@@ -944,12 +1008,10 @@ curl -sS -X POST http://127.0.0.1:8811/api/scans/batch \
 }
 ```
 
-**A batch is a convenience, never a discount.** Every target is put through
-exactly the pipeline a single submission goes through, in the order it was
-written: it counts against the client rate limit, it claims its own target
-cooldown, and it is validated by the same SSRF guard. Ten targets spend ten
-scans from the window, which is why the answer is two lists rather than one
-status - some can start while others wait.
+Each target in a batch passes through the same validation, client limit and target
+cooldown as a single submission, in input order. Ten targets consume ten scan
+allowances. The response separates accepted and rejected targets because some may be
+queued while others are refused.
 
 The same four fields are accepted, with `targets` in place of `target_url`,
 and anything else is a **422** naming it. `COS_WEB_MAX_BATCH_TARGETS` caps the
@@ -1048,6 +1110,46 @@ has not finished - it exists, so 404 would send a caller into a retry loop
 against the wrong endpoint - and **404** for an unknown uuid or an unknown
 format.
 
+### `GET /api/scans/{uuid}/badge.svg`
+
+The grade as a small SVG, for pasting somewhere a picture says it faster than
+a link.
+
+```bash
+curl -sS http://127.0.0.1:8811/api/scans/0f4a1f22-.../badge.svg
+```
+
+```markdown
+![OpenCloud security](https://scan.example.com/api/scans/0f4a1f22-.../badge.svg)
+```
+
+It is written by `webapp/badge.py` the way the PDF is written by
+`reports.py` - no badge service, no external font, no script. An `<img>`
+pointing at somebody else's server would hand them the result URL in a
+referrer on every view, and that URL's uuid is the whole of the authorisation
+for the full result.
+
+The badge carries the letter and nothing the scanned instance chose: no
+hostname, no product string, no version. The colour is the dashboard's own
+tone for that rating, so a badge and the page it links to cannot disagree.
+
+**It lasts exactly as long as the scan does.** With the default
+`COS_WEB_RESULT_TTL` of one hour, an image embedded somewhere permanent stops
+resolving within the hour and answers **404** like any other expired uuid.
+That makes it right for a ticket, a chat message or a status dashboard while a
+result is current, and wrong for a README - unless the deployment serving it
+keeps results far longer, which is a decision with its own consequences for
+everybody whose scans it stores. There is deliberately no endpoint that
+renders a badge for a *hostname*: that would be a permanent, guessable handle
+on somebody's instance, and this service has none of those.
+
+**200** with `image/svg+xml` and `Cache-Control: no-store`, **409** while the
+scan has not finished, **404** for an unknown or expired uuid. The `no-store`
+is the service-wide default it never opts out of: every route that is publicly
+cacheable publishes metadata about *this service*
+([ADR 0031](../adr/0031-a-response-is-uncacheable-until-a-route-opts-in.md)),
+and a badge is a statement about somebody's instance.
+
 ### `DELETE /api/purge`
 
 Erasure on request - the operator's side of a GDPR Article 17 message - plus a
@@ -1083,12 +1185,10 @@ without a port.
 and is `null` otherwise: an unkeyed hash of a hostname is not a pseudonym,
 because the space of hostnames is small enough to enumerate.
 
-**The receipt is the compliance artefact**, because by the time it is written
-the data it describes is gone. `deleted` counts what was removed, and
-`remaining` is a **second walk over the store after the deletion** - the only
-honest evidence available, and `complete` is simply `remaining == 0`. `notes`
-names what the service cannot reach: a result somebody already downloaded, and
-the audit trail if one is being kept. Verify a receipt months later with
+The receipt records what the deletion found and removed. `deleted` counts removed keys;
+`remaining` comes from a second inspection afterward, and `complete` means `remaining ==
+0`. `notes` identifies data outside the operation’s reach, including downloaded reports
+and any retained audit trail. Verify a signed receipt with:
 
 ```python
 from webapp.purge import verify
@@ -1103,15 +1203,13 @@ controller - runs the purge and passes the receipt back. **200** with the
 receipt, **401** for a wrong secret, **422** for a target that is not a
 hostname, and **404** whenever `COS_WEB_PURGE_TOKEN` is unset.
 
-An instance with nothing stored answers 200 with zero counts, which is a proof
-in its own right: no data was held.
+If no matching data is found, the endpoint returns 200 with zero counts. The receipt
+describes the store at the time of that inspection.
 
 ### `GET /llms.txt`, `GET /openapi.json`, `GET /arazzo.json`, `GET /.well-known/ai.json`
 
-**Always public, and never behind a switch.** A description nobody can fetch
-describes nothing, and an agent that must be told to turn a document on has
-already failed to discover it. `COS_WEB_ENABLE_DOCS` now governs only the
-browsable `/docs` and `/redoc` pages.
+These discovery and contract documents are always public. `COS_WEB_ENABLE_DOCS` controls
+only the interactive `/docs` and `/redoc` views.
 
 The [OpenAPI](https://spec.openapis.org/oas/latest.html) document says what
 each endpoint accepts and returns, down to the shape of every response; the
@@ -1259,6 +1357,39 @@ Docker Compose passes it from the deployment environment. The application
 parses and escapes every pair instead of accepting raw HTML, and refuses
 duplicate names, names already owned by the page, or prohibited platform
 metadata. A literal semicolon is not supported in a value.
+
+### `GET /advisories.atom`, `GET /release-schedule.atom`
+
+The two documents that refresh themselves daily, as Atom 1.0 feeds.
+
+```bash
+curl -sS http://127.0.0.1:8811/advisories.atom
+```
+
+`/advisories.atom` is the advisory database a scan is rated against - one
+entry per advisory, with its severity, the affected version ranges in the
+half-open form the scanner matches on, and a link to the published advisory.
+`/release-schedule.atom` is one entry per OpenCloud release line, dated by its
+release date, saying which tracks it was published on and when it stops
+receiving fixes.
+
+Both are built from the same functions the pages use, so a feed cannot
+describe an advisory differently from `/catalogue`. They are the reason a scan
+run today can grade an instance more harshly than the same scan last month,
+which is worth being told about: a subscriber hears that the database changed
+without re-scanning to find out.
+
+Advisory titles and descriptions come from a public feed this project does not
+control. They are carried as escaped `type="text"`, never as markup, so a
+reader cannot be made to render somebody else's HTML.
+
+These are the only reference-data routes that opt into a public cache
+(`max-age=3600`). They name no instance, carry no uuid and take no parameter -
+the test [ADR 0031](../adr/0031-a-response-is-uncacheable-until-a-route-opts-in.md)
+sets for being cacheable at all - and they must never learn to take one: a
+feed filtered by hostname would be a question about somebody's instance.
+Entry ids are URNs of the advisory or release line rather than URLs of this
+deployment, so a reader's history survives the service moving host.
 
 ### `GET /robots.txt`, `GET /agents.txt`, `GET /sitemap.xml`
 

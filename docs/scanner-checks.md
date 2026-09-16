@@ -25,15 +25,11 @@ paragraph; the individual checks are explained one group at a time in
 
 Read from the instance itself:
 
-- product, `productversion` and edition from `/status.php`; a server whose
-  product name says ownCloud or Nextcloud is refused rather than rated,
-  because it serves the same endpoint but is not the same software - see
-  [`docs/what-is-opencloud.md`](what-is-opencloud.md) for where the three
-  projects came from and how they diverged. `/status.php`
-  also carries `maintenance`, `installed` and `needsDbUpgrade`, but OpenCloud's
-  own handler for it hardcodes all three (`false`, `true`, `false`) rather than
-  reading real state, so this scanner does not check them - see
-  [`docs/status-php.md`](status-php.md).
+- product, `productversion` and edition from `/status.php`. Other products are
+  refused because their releases and advisories do not match this scanner’s
+  database. OpenCloud hardcodes `maintenance`, `installed` and `needsDbUpgrade`,
+  so those fields are not treated as live health checks; see
+  [the status endpoint](status-php.md).
 - the IPv4 and IPv6 addresses the name resolved to while the scan ran,
   reported as `addresses` in the result document and shown as **Resolved to**
   on a web result page - context, never a finding, and empty when a name
@@ -91,7 +87,7 @@ Plus the additional checks (`extraChecks` in the JSON, disable with
 | `tlsDeprecatedProtocol`                                                                                                                    | high          | The server still accepts TLS 1.0 or 1.1 even though it negotiated something newer with us                   |
 | `tlsHostname`                                                                                                                              | high          | The certificate does not cover the name it was asked for                                                    |
 | `tlsChain`                                                                                                                                 | medium        | The chain is missing an intermediate, so it validates only for clients that happen to have one cached       |
-| `tlsCertificateLifetime`                                                                                                                   | low           | The certificate is valid for longer than the 398 days browsers accept                                       |
+| `tlsCertificateLifetime`                                                                                                                   | low           | The certificate is valid for longer than the scanner’s 398-day threshold                                       |
 | `tlsCipherSuite`                                                                                                                           | medium        | The cipher suite negotiated by this scan is weak or lacks forward secrecy                                   |
 | `tlsCertificatePolicy`                                                                                                                     | medium        | The certificate has a weak key or an MD5/SHA-1 signature                                                    |
 | `tlsAddressParity`                                                                                                                          | medium        | IPv4 and IPv6 present different TLS services, or one is unreachable                                          |
@@ -103,10 +99,10 @@ Plus the additional checks (`extraChecks` in the JSON, disable with
 | `cookieSecure`, `cookieHttpOnly`, `cookieSameSite`                                                                                        | high - low    | An observed cookie lacks Secure, HttpOnly or SameSite                                                        |
 | `cookiePrefix`                                                                                                                             | low           | No observed cookie uses the `__Host-`/`__Secure-` name prefix, or one claims a prefix it does not honour     |
 | `tlsOcspStapling`                                                                                                                          | low           | No OCSP response stapled to the handshake, although the certificate names a responder                       |
-| `tlsCertificateTransparency`                                                                                                               | medium        | A publicly trusted certificate carries no signed certificate timestamps, so Chrome and Safari will refuse it |
+| `tlsCertificateTransparency`                                                                                                               | medium        | A publicly trusted certificate carries no embedded signed certificate timestamps |
 | `tlsEarlyData`                                                                                                                             | low           | The server's session tickets invite a TLS 1.3 0-RTT flight, which has no replay protection                  |
 | `corsOriginRestricted`                                                                                                                     | critical/medium | Any origin may read the API's responses; critical when credentials are allowed with it                     |
-| `traceMethodDisabled`                                                                                                                      | medium        | The server answers `TRACE` by echoing the request, session cookie included                                  |
+| `traceMethodDisabled`                                                                                                                      | medium        | The server answers `TRACE` by echoing the request                                  |
 | `forwardedHostIgnored`                                                                                                                     | medium        | A host name the caller supplied comes back in the discovery document, so a caller chooses where a sign-in goes |
 | `header:<name>`                                                                                                                            | high - low    | One of the headers above missing or too weak                                                                |
 | `authentication:/remote.php/dav/files/`, `/graph/v1.0/users`, `/ocs/v1.php/cloud/user`                                                     | critical/high | An endpoint that must demand authentication answered anyway                                                 |
@@ -158,11 +154,9 @@ and no check requires an external one. It only softens `basicAuthDisabled`,
 which is `medium` normally and `low` when the interactive login goes through an
 external provider.
 
-Nothing is submitted to the instance to establish this. The discovery document
-and the `Location` header are read, and no login form is ever filled in - a
-scanner that guesses credentials against somebody's instance is a scanner
-nobody should point at their server, and an identity provider is the worst
-place to start.
+Provider detection reads the discovery document and its `Location` header without
+submitting a login. The separate demo-account check below is the only probe that sends
+credentials.
 
 When no provider can be found at all, `identityProviderDetected` fails at
 severity `low` and `--debug` points at [OpenCloud's own
@@ -220,14 +214,11 @@ that host coming back in the `Location` it redirects to or in the `issuer`,
  "detail": "A host name the caller supplied is published back: X-Forwarded-Host comes back as the issuer it publishes"}
 ```
 
-Those URLs are where a client sends the next sign-in, so a caller who picks
-the host has picked where an authentication request goes. On its own it
-misleads only whoever sent the header, which is why it is `medium` rather
-than higher; behind a cache it becomes the answer everybody gets, and behind
-a proxy that forwards a client's own `X-Forwarded-Host` it is a stranger who
-chooses. It means the instance was never told its public address and derives
-one from each request - set `OC_URL`, and set the forwarded headers from the
-proxy's configuration rather than passing the client's through.
+These URLs direct authentication requests. A caller-controlled hostname initially
+affects that caller’s response, which is why the finding is `medium`. A shared cache or
+a proxy forwarding untrusted `X-Forwarded-Host` values can extend the effect to other
+users. Set `OC_URL` and have the proxy supply forwarded headers from its own
+configuration.
 
 When only `Host` comes back, as the address it redirects to, look at the proxy
 before the instance: with no default server, a name the proxy has no site for
@@ -269,13 +260,11 @@ protocol specifies, and two findings follow from it: whether the editor's
 administration console is reachable (`companionAdminConsole`), and whether
 the editor addresses it advertises use HTTPS (`companionEditorHttps`).
 
-The scan asks the origin it was pointed at and nothing else. It deliberately
-does **not** follow the editor host named inside the discovery document -
-that would let a scanned instance choose the next address the scanner
-connects to. A deployment serving its editor from a host of its own therefore
-gets neither finding rather than a pass, because nothing was measured; point
-a second scan at that host instead. See
-[ADR 0036](../adr/0036-a-companion-service-is-probed-only-where-the-scan-was-pointed.md).
+The scanner probes only the submitted origin. It does not follow an editor hostname from
+the discovery document, because that would let the target choose another connection
+destination. A separately hosted editor therefore gets no finding from these checks.
+Assess that service with suitable editor-specific tools; see [ADR
+0036](../adr/0036-a-companion-service-is-probed-only-where-the-scan-was-pointed.md).
 
 ### What the scan deliberately does not answer
 
@@ -296,13 +285,9 @@ a second scan at that host instead. See
   matters more than several of the things above, and none of it is visible
   over HTTP.
 
-Everything in that list still has to be got right, so
-**[Running OpenCloud in a secure infrastructure](secure-deployment.md)**
-covers the part a scan cannot see: putting Keycloak, Authentik or Authelia in
-front of the instance, turning the audit service on and getting its log off
-the host, firewalling the ports Docker publishes behind your back, what the
-people using the instance should be told, and where scheduled scanning with
-this plugin fits alongside all of it.
+[Running OpenCloud in a secure infrastructure](secure-deployment.md) covers these
+separate operational checks: identity-provider policies, audit logging, firewall rules,
+user guidance and scheduled monitoring.
 
 [opencloud-idp]: https://docs.opencloud.eu/docs/admin/configuration/authentication-and-user-management/external-idp
 [opencloud-demo-users]: https://docs.opencloud.eu/docs/admin/resources/demo-user/
@@ -315,14 +300,10 @@ this plugin fits alongside all of it.
 {"version":"0.1.0.0","versionstring":"0.1.0","productversion":"7.4.0"}
 ```
 
-`version` and `versionstring` are hardcoded constants OpenCloud sends to keep
-old sync clients happy - they are the same on every instance and say nothing
-about the release. The real release is **`productversion`** only. The scanner
-uses `productversion`, falls back to the capabilities endpoint, and reports
-`legacyVersion: true` in the result document when an instance offers nothing
-but the placeholder. Anything comparing versions from `/status.php` by hand
-(including other monitoring scripts you may already run) is almost certainly
-reading the wrong field.
+`version` and `versionstring` are compatibility values. The actual release is
+`productversion`. The scanner prefers that field, falls back to capabilities and sets
+`legacyVersion: true` if only a placeholder is available. Check which field your own
+monitoring scripts read as well.
 
 ## Debug ports
 

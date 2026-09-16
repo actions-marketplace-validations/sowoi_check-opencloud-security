@@ -26,7 +26,7 @@ project. Read the accepted records that affect an area before changing it.
 | [0017](0017-the-advisory-database-refreshes-itself.md) | The advisory database refreshes itself, and only ever gains advisories | Accepted |
 | [0018](0018-cli-documentation-is-generated-at-build-time.md) | CLI documentation is generated at build time | Accepted |
 | [0019](0019-search-indexes-public-release-content-only.md) | Search indexes public release content only | Accepted; its release-only refresh superseded by ADR 0050 |
-| [0020](0020-frontend-language-is-request-scoped.md) | Frontend language is request scoped | Accepted |
+| [0020](0020-frontend-language-is-request-scoped.md) | Frontend language is request scoped | Accepted; English-only guide bodies superseded by ADR 0058 |
 | [0021](0021-webmcp-is-a-page-scoped-api-client.md) | WebMCP is a page-scoped API client | Accepted |
 | [0022](0022-identity-provider-versions-require-public-evidence.md) | Identity provider versions require public evidence | Accepted |
 | [0023](0023-tls-policy-rates-measured-parameters.md) | TLS policy rates only the cipher and certificate parameters measured | Accepted |
@@ -60,6 +60,11 @@ project. Read the accepted records that affect an area before changing it.
 | [0051](0051-a-client-that-keeps-scanning-hosts-that-are-not-opencloud-is-blocked.md) | A client that keeps scanning hosts that are not OpenCloud is blocked | Accepted |
 | [0052](0052-the-probe-guard-counts-networks-and-a-deployment-may-scan-approved-instances-only.md) | The probe guard counts networks, and a deployment may scan approved instances only | Accepted |
 | [0053](0053-a-scan-timeout-ends-its-process.md) | A scan timeout ends its process | Accepted |
+| [0054](0054-metrics-are-collected-once-and-rendered-twice.md) | Metrics are collected once and rendered twice | Accepted |
+| [0055](0055-a-badge-is-a-rendering-of-one-scan-not-a-handle-on-an-instance.md) | A badge is a rendering of one scan, not a handle on an instance | Accepted |
+| [0056](0056-the-reference-data-is-subscribable.md) | The reference data is subscribable | Accepted |
+| [0057](0057-an-uploaded-report-is-evidence-not-a-scan.md) | An uploaded report is evidence, not a scan | Accepted |
+| [0058](0058-public-guides-have-reviewed-german-sources.md) | Public guides have reviewed German sources | Accepted |
 
 ## Writing a new record
 

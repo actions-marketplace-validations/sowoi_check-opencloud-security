@@ -1,11 +1,8 @@
 # Exposed paths and debug endpoints: what this scanner checks, and why
 
-OpenCloud is a single Go binary that serves its web frontend from assets
-embedded in that binary. It never generates a directory listing and it never
-serves its own configuration files, key material or database over HTTP - so
-every check in this group is really the same question asked of a different
-path: **is something in front of OpenCloud publishing more of the filesystem
-than the reverse proxy was supposed to?**
+OpenCloud does not normally publish directory indexes, deployment files, private keys or
+its identity database over HTTP. These checks look for a web server or reverse proxy
+that exposes those files, and for debug interfaces that should remain private.
 
 Before any of these run, the scan first requests a path that cannot possibly
 exist and remembers what comes back. OpenCloud's web frontend is a

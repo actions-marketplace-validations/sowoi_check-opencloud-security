@@ -14,7 +14,7 @@ MESSAGES: dict[str, str] = {
     "admin.tabs.rules": "Règles",
     "admin.config.title": "Configuration",
     "admin.config.lede": "Toutes les variables COS_WEB_* lues par ce service et leurs valeurs actuellement effectives.",
-    "admin.config.scope": "Il s'agit de l'environnement propre au service web, tel que ce processus l'a lu au démarrage - ni la configuration d'OpenCloud, ni celle du worker, qui lit les mêmes variables dans son propre conteneur. Les valeurs sont affichées telles qu'elles s'appliquent après lecture ; les identifiants ne sont jamais indiqués que comme définis ou non définis.",
+    "admin.config.scope": "Voici les paramètres effectifs de ce processus web au démarrage. OpenCloud et le worker d’analyse ont leur propre configuration. Pour les secrets, seule leur présence est indiquée.",
     "admin.config.source.environment": "Définie",
     "admin.config.source.default": "Par défaut",
     "admin.config.secret.set": "Définie (valeur masquée)",
@@ -63,7 +63,7 @@ MESSAGES: dict[str, str] = {
     "admin.rules.group.submissions": "Limites de soumission",
     "admin.rules.group.submissions.lede": "À quelle fréquence un client peut demander, et comment le service se comporte sous charge.",
     "admin.rules.group.probe": "Blocage anti-sondage",
-    "admin.rules.group.probe.lede": "Ce que coûte l'utilisation de ce service pour découvrir ce qui répond et où.",
+    "admin.rules.group.probe.lede": "Limites appliquées aux demandes répétées vers des cibles qui ne peuvent pas être analysées.",
     "admin.rules.group.targets": "Ce qui peut être analysé",
     "admin.rules.group.targets.lede": "Vérifié avant toute connexion, puis à chaque redirection.",
     "admin.rules.group.scanner": "Avec quelle intensité un hôte est sondé",
@@ -80,7 +80,7 @@ MESSAGES: dict[str, str] = {
     "admin.rules.rule.batch.body": "Un lot contient au plus {limit} cibles, et chacune compte pour toutes les limites.",
     "admin.rules.rule.queue.title": "La surcharge fait la queue",
     "admin.rules.rule.queue.body": "{workers} analyses tournent en même temps ; les autres soumissions attendent dans l'ordre et ne sont jamais refusées pour cause de charge.",
-    "admin.rules.rule.agent_wait.title": "Les agents ne dorment pas pendant un blocage",
+    "admin.rules.rule.agent_wait.title": "Limite des nouvelles tentatives automatiques",
     "admin.rules.rule.agent_wait.body": "MCP et les workflows attendent eux-mêmes un Retry-After d'au plus {wait}, dans la limite de {attempts} tentatives. Au-delà, la réponse est renvoyée à l'appelant.",
     "admin.rules.rule.probe_block.title": "Blocage après des avertissements répétés",
     "admin.rules.rule.probe_block.body": "{limit} avertissements en {window} bloquent le réseau du client pendant {block}.",
@@ -130,11 +130,7 @@ MESSAGES: dict[str, str] = {
     "admin.docs.source": "Depuis <code>{file}</code> dans le dépôt, en anglais.",
     "admin.band": "Espace d'exploitation - connecté en tant que {user}",
     "admin.band.signout": "Se déconnecter",
-    "admin.lede": (
-        "Ce que fait cette installation, ce qu'elle sait, et les deux mises à "
-        "jour que le worker exécute une fois par jour. Rien ici ne peut être "
-        "interrogé au sujet d'un scan particulier."
-    ),
+    "admin.lede": "Consultez l’état du service et les données de référence, ou lancez manuellement les actualisations quotidiennes du worker.",
     "admin.noscript": (
         "Les valeurs ci-dessus sont remplies par JavaScript. Sans lui, recharge "
         "la page pour voir les valeurs actuelles ; les deux boutons "
@@ -142,11 +138,7 @@ MESSAGES: dict[str, str] = {
     ),
     "admin.state.kicker": "Maintenant",
     "admin.state.heading": "État du service",
-    "admin.state.lede": (
-        "Des compteurs et des limites configurées. Aucune adresse scannée, "
-        "aucun uuid et aucune adresse de client n'y figure, parce que rien de "
-        "tout cela n'est conservé là où cette vue pourrait le lire."
-    ),
+    "admin.state.lede": "Compteurs actuels et limites configurées. Les détails des analyses individuelles et les adresses des clients ne sont pas accessibles ici.",
     "admin.state.worker": "Worker",
     "admin.state.worker.up": "En marche",
     "admin.state.worker.down": "Ne répond pas",
@@ -180,10 +172,7 @@ MESSAGES: dict[str, str] = {
     "admin.state.age.seconds": "Lu il y a {seconds}s",
     "admin.state.age.minutes": "Lu il y a {minutes}m",
     "admin.state.age.waiting": "En attente de la première lecture",
-    "admin.state.stale": (
-        "Le service n'a pas répondu depuis un moment. Ce qui précède est la "
-        "dernière lecture qu'il a donnée, pas forcément l'état actuel."
-    ),
+    "admin.state.stale": "Le service n’a pas répondu récemment. Les valeurs affichées proviennent de la dernière lecture et peuvent être périmées.",
     "admin.state.refresh": "Relire",
     "admin.state.copy": "Copier le diagnostic",
     "admin.state.copy.done": "Copié",
@@ -280,7 +269,7 @@ MESSAGES: dict[str, str] = {
     "admin.outcome.excluded": "Exclue. Refusée dès la requête suivante.",
     "admin.outcome.withdrawn": "Retirée. Elle peut de nouveau être analysée.",
     "admin.actions.kicker": "Données de référence",
-    "admin.actions.heading": "Mettre à jour les données de référence utilisées pour la note",
+    "admin.actions.heading": "Actualiser les données de référence",
     "admin.actions.lede": (
         "Les deux mêmes mises à jour que le worker exécute chaque jour, avec "
         "les mêmes règles : un calendrier auquel il manque une ligne de versions est "
@@ -350,12 +339,8 @@ MESSAGES: dict[str, str] = {
         "régénèrent l'index et le valident. Il n'y a rien à presser ici."
     ),
     "admin.audit.kicker": "Audit",
-    "admin.audit.heading": "Le journal d'audit en temps réel",
-    "admin.audit.lede": (
-        "Demandes de scan, refus et limites atteintes en temps réel. Suivre le "
-        "journal ouvre une connexion ; rien n'est "
-        "transmis tant que tu ne le demandes pas."
-    ),
+    "admin.audit.heading": "Journal d’audit",
+    "admin.audit.lede": "Demandes, refus et limites atteintes en temps réel. La connexion s’ouvre lorsque vous activez le suivi du journal.",
     "admin.audit.privacy": (
         "Une adresse de client est un HMAC tronqué sous un sel que ce processus "
         "détient, et rien ne permet d'en revenir à une adresse. Cette vue ne "
@@ -419,31 +404,12 @@ MESSAGES: dict[str, str] = {
         "L'analyse elle-même reste inchangée ; seule cette page est traduite."
     ),
     # ------------------------------------------------------------- footer
-    "footer.note.title": "Un service discret, par conception.",
-    "footer.note.body": (
-        "Les analyses sont exécutées depuis ce serveur vers l'adresse que vous "
-        "saisissez. Les résultats vivent en mémoire pendant {minutes} minutes, "
-        "puis disparaissent. Construit sur le scanner "
-        "<code>check-opencloud-security</code> - aucun traceur, aucun compte, "
-        "aucune analyse d'audience."
-    ),
+    "footer.note.title": "À propos de ce service",
+    "footer.note.body": "Ce serveur analyse l’adresse que vous indiquez. Les résultats restent disponibles pendant {minutes} minutes avant d’expirer. Le service utilise <code>check-opencloud-security</code>, sans compte, sans traceurs ni outils d’analyse d’audience.",
     "footer.note.run_yourself": "Exécutez-le vous-même",
     "footer.version.title": "La version du scanner qui a produit ces résultats",
     "footer.version.label": "Backend v{version}",
-    "footer.legal.scope": (
-        "<strong>Ce contrôle n'est pas exhaustif, et une bonne note n'est pas un "
-        "certificat.</strong> Il lit ce qu'une instance OpenCloud accessible "
-        "publiquement montre à un visiteur anonyme : sa version, les avis de "
-        "sécurité concernant cette version, son transport, ses en-têtes et un "
-        "ensemble de paramètres visibles sans connexion. Un &ldquo;A&rdquo; "
-        "signifie qu'aucun de ces éléments n'a posé problème - pas que "
-        "l'instance est sécurisée. Tout ce qui se trouve derrière la connexion, "
-        "le serveur sur lequel elle tourne, le réseau qui l'entoure, les "
-        "données qu'elle contient et les personnes disposant d'un compte sont "
-        "hors de portée de toute analyse non authentifiée. Considérez le "
-        "résultat comme un élément parmi d'autres, jamais comme un audit de "
-        "sécurité ou un test d'intrusion."
-    ),
+    "footer.legal.scope": "<strong>Cette vérification n’est pas exhaustive et une bonne note n’est pas un certificat.</strong> Elle lit la version annoncée, les avis de sécurité correspondants, TLS, les en-têtes et les paramètres publics, y compris les comptes de démonstration documentés. Une bonne note signifie qu’aucun de ces points n’a échoué, pas que l’instance est sécurisée. Elle ne porte pas sur les fichiers privés, le système d’exploitation, les sauvegardes, les droits des comptes ou le réseau environnant. Utilisez ce rapport en complément de vos autres contrôles ; il ne constitue jamais un audit de sécurité ni un test d’intrusion.",
     "footer.legal.trademark": (
         "Il s'agit d'un projet communautaire indépendant. Il n'est pas affilié "
         "à OpenCloud GmbH et n'est ni recommandé ni pris en charge par cette "
@@ -501,66 +467,28 @@ MESSAGES: dict[str, str] = {
         "L'adresse n'existe pas, ou l'analyse qu'elle désignait a déjà expiré."
     ),
     "notfound.kicker": "Introuvable",
-    "notfound.lede": (
-        "Soit l'adresse n'existe pas, soit il s'agissait d'une analyse et cette "
-        "analyse a disparu : les résultats sont conservés pendant {minutes} "
-        "minutes puis supprimés, si bien qu'un lien reçu plus tôt dans la "
-        "journée ne s'ouvrira plus. Un identifiant qui n'a jamais existé se "
-        "présente exactement de la même façon ici - ce service ne peut pas vous "
-        "dire lequel des deux, et ne cherche délibérément pas à le faire."
-    ),
+    "notfound.lede": "Cette page n’existe pas ou le résultat a expiré. Les résultats restent accessibles pendant {minutes} minutes. Lancez une nouvelle analyse pour obtenir un rapport à jour.",
     "notfound.action": "Lancer une nouvelle analyse",
     # ------------------------------------------------------- landing page
     "index.title": "Analyser une instance OpenCloud",
-    "index.description": (
-        "Vérifiez une instance OpenCloud à la recherche de vulnérabilités "
-        "connues, de durcissement manquant et d'en-têtes de sécurité faibles. "
-        "Gratuit, indépendant, et rien n'est conservé."
-    ),
-    "index.eyebrow": "Indépendant &middot; isolé &middot; rien n'est conservé",
+    "index.description": "Vérifiez les vulnérabilités connues, les protections manquantes, les en-têtes de sécurité et les mises à jour disponibles d’une instance OpenCloud. Gratuit, sans inscription.",
+    "index.eyebrow": "Indépendant &middot; ressources hébergées sur place &middot; résultats temporaires",
     "index.headline": (
         'Quel est le niveau de sécurité de votre <em class="swash">instance '
         "OpenCloud</em> ?"
     ),
-    "index.lede": (
-        "Saisissez l'adresse d'une instance dont vous avez la responsabilité. "
-        "Ce serveur la contacte en HTTPS comme le ferait n'importe quel "
-        "visiteur, lit ce qu'elle publie sans se connecter, et note le "
-        "résultat de <strong>A+</strong> à <strong>F</strong>."
-    ),
+    "index.lede": "Saisissez l’adresse d’une instance OpenCloud que vous êtes autorisé à tester. Le scanner examine les paramètres accessibles au public, les en-têtes HTTP et la version du logiciel, puis attribue une note de <strong>A+</strong> à <strong>F</strong>.",
     "index.form.kicker": "Demande d'analyse",
     "index.form.hint": "Quelques secondes &middot; sans inscription",
-    "index.error.self_host": (
-        "Rien de personnel - ces limites sont ce qui permet à ce petit service "
-        "de tenir debout. Le scanner est open source, vous pouvez donc "
-        "exécuter exactement ce contrôle vous-même, aussi souvent que vous le "
-        "souhaitez :"
-    ),
+    "index.error.self_host": "Désolé pour l’attente. Ces limites permettent à chacun d’utiliser le service. Vous pouvez aussi exécuter le scanner open source sur votre machine, aussi souvent que nécessaire :",
     "index.field.label": "Adresse de l'instance",
-    "index.field.title": (
-        "L'adresse de base de l'instance : un nom d'hôte, un port facultatif "
-        "et un sous-dossier simple facultatif. Aucune requête, aucun "
-        "fragment, aucun paramètre, aucun caractère d'échappement ni "
-        "traversée de chemin."
-    ),
-    "index.field.hint": (
-        "Le nom d'hôte seul suffit - <code>https://</code> est supposé. Un "
-        "sous-dossier tel que <code>/opencloud</code> est pris en charge ; les "
-        "requêtes, fragments, paramètres et traversées de chemin sont "
-        "refusés. Adresses publiques uniquement, et seulement des instances "
-        "que vous exploitez ou que vous avez l'autorisation de tester."
-    ),
-    "index.field.invalid": (
-        "Adresse non valide : un nom d'hôte, un port facultatif et un "
-        "sous-dossier simple - aucune requête, fragment ni paramètre."
-    ),
-    "index.submit": "Démarrer l'audit",
-    "index.submit.busy": "Démarrage de l'audit...",
+    "index.field.title": "Nom d’hôte, avec un port et un sous-dossier simples si nécessaire. Aucun paramètre d’URL, fragment ni changement de répertoire.",
+    "index.field.hint": "Le nom d’hôte suffit ; sans protocole indiqué, <code>https://</code> est utilisé. Un sous-dossier simple comme <code>/opencloud</code> est accepté. Les paramètres d’URL, fragments et changements de répertoire sont refusés. Analysez uniquement des instances publiques que vous êtes autorisé à tester.",
+    "index.field.invalid": "Saisissez un nom d’hôte, éventuellement avec un port et un sous-dossier simple, sans paramètres d’URL ni fragment.",
+    "index.submit": "Lancer l’analyse",
+    "index.submit.busy": "Démarrage de l’analyse…",
     "index.track.label": "Canal de version",
-    "index.track.hint": (
-        "Détermine la durée de prise en charge de cette version et vers "
-        "quelle version elle est invitée à évoluer."
-    ),
+    "index.track.hint": "Sert à vérifier si la version est encore prise en charge et à recommander une mise à jour adaptée.",
     "index.format.label": "Afficher",
     "index.format.dashboard": "Un tableau de bord",
     "index.format.json": "Le JSON brut",
@@ -575,29 +503,19 @@ MESSAGES: dict[str, str] = {
     "index.remember.waivers.many": "{count} contrôles dérogés",
     "index.remember.apply": "Les réutiliser",
     "index.remember.forget": "Les oublier",
-    "index.waivers.hint": (
-        "Un contrôle dérogé reste dans le rapport et continue d'être affiché - "
-        "il cesse simplement de plomber la note. Seuls les contrôles "
-        "réellement en échec peuvent faire l'objet d'une dérogation."
-    ),
+    "index.waivers.hint": "Un constat exclu reste visible dans le rapport, mais ne réduit pas la note. Les exclusions s’appliquent uniquement aux contrôles qui ont échoué.",
     "index.waivers.search.label": "Filtrer les contrôles",
     "index.waivers.search.placeholder": "Rechercher par nom...",
     "index.waivers.search.empty": "Aucun contrôle ne correspond à votre recherche.",
     "index.assurance.aria": "Comment ce service traite vos données",
-    "index.assurance.airgapped.title": "100 % isolé",
-    "index.assurance.airgapped.body": (
-        "Chaque octet provient de cette origine. Aucun CDN, aucun service de "
-        "polices, aucune analyse d'audience."
-    ),
-    "index.assurance.nostore.title": "Aucune donnée conservée",
+    "index.assurance.airgapped.title": "Aucune ressource externe",
+    "index.assurance.airgapped.body": "Les polices, scripts et images sont servis ici, sans CDN ni outil d’analyse d’audience.",
+    "index.assurance.nostore.title": "Stockage temporaire",
     "index.assurance.nostore.body": (
         "Le résultat vit en mémoire et est supprimé dès qu'il expire."
     ),
     "index.assurance.noaccount.title": "Aucune inscription requise",
-    "index.assurance.noaccount.body": (
-        "Aucun compte, aucune inscription, aucune adresse e-mail, aucune "
-        "attente."
-    ),
+    "index.assurance.noaccount.body": "Lancez une analyse sans créer de compte ni fournir d’adresse e-mail.",
     "index.assurance.ephemeral.title": "Résultats éphémères",
     "index.assurance.ephemeral.body": (
         "Le lien cesse de fonctionner {minutes} minutes après l'analyse."
@@ -679,23 +597,14 @@ MESSAGES: dict[str, str] = {
         "plusieurs lignes."
     ),
     "grade.1.headline": "Un avis critique ou élevé correspond",
-    "grade.1.meaning": (
-        "Au moins un avis correspondant à la version installée est classé "
-        "critique ou élevé. Il s'agit d'une voie d'intrusion connue, publiée "
-        "et corrigée."
-    ),
+    "grade.1.meaning": "Au moins une vulnérabilité connue de la version installée présente une gravité élevée ou critique.",
     "grade.1.improve": (
         "Effectuez la mise à niveau maintenant, avant toute autre chose sur "
         "cette page. Aucun autre changement possible ne fera remonter la note "
         "au-delà de ce niveau."
     ),
     "grade.0.headline": "Hors support",
-    "grade.0.meaning": (
-        "La ligne de version ne reçoit plus aucun correctif de sécurité. Cela "
-        "prime sur tout autre signal, y compris une dérogation : une instance "
-        "que personne ne corrige ne peut pas être notée sur la propreté de ses "
-        "en-têtes."
-    ),
+    "grade.0.meaning": "Cette branche ne reçoit plus de correctifs de sécurité. Elle obtient un F, quels que soient les autres constats ou exclusions.",
     "grade.0.improve": (
         "Passez à une ligne de version prise en charge. Les lignes prises en "
         "charge, et pour combien de temps, figurent dans le calendrier de "
@@ -709,12 +618,7 @@ MESSAGES: dict[str, str] = {
         "supérieure."
     ),
     "grades.kicker": "L'échelle",
-    "grades.lede": (
-        "Chaque analyse se termine par une seule lettre. Elle est calculée à "
-        "partir de deux éléments - la version exécutée par l'instance et les "
-        "contrôles ayant échoué - et cette page présente l'intégralité de ce "
-        "calcul, dans l'ordre où le scanner l'effectue."
-    ),
+    "grades.lede": "La note tient compte du support de la version installée, des vulnérabilités connues et des contrôles qui ont échoué. Cette page explique la note de départ, les plafonds liés aux constats et les changements qui peuvent l’améliorer.",
     "grades.scale.kicker": "Six niveaux",
     "grades.scale.heading": "L'échelle, du meilleur au pire",
     "grades.scale.intro": (
@@ -736,74 +640,23 @@ MESSAGES: dict[str, str] = {
         "jusqu'où dépend de la gravité du pire contrôle en échec :"
     ),
     "grades.caps.at_best": "au mieux",
-    "grades.caps.shared": (
-        "Les constats de même gravité partagent un même plafond, si bien que "
-        "corriger un constat moyen sur trois ne change rien tant que le "
-        "dernier n'a pas disparu. C'est pourquoi la page de résultat ordonne "
-        "le plan comme elle le fait, et pourquoi elle affiche la note que "
-        "chaque étape permettrait réellement d'atteindre."
-    ),
-    "grades.caps.rules": (
-        "Deux règles priment sur tout cela. <strong>La fin de vie prime sur "
-        "tout</strong>, y compris une dérogation : une ligne de version qui ne "
-        "reçoit plus de correctifs de sécurité obtient un <strong>F</strong>, "
-        "aussi propre que soit le reste du rapport. Et <strong>être en avance "
-        "sur son canal n'est pas être en retard</strong> - une version plus "
-        "récente que la version actuelle du canal déclaré est signalée comme "
-        "étant en avance et n'est jamais notée comme non prise en charge."
-    ),
+    "grades.caps.shared": "Les constats de même gravité imposent le même plafond. S’il reste trois constats de gravité moyenne, en corriger un seul ne suffit pas à lever ce plafond. Le plan conserve les trois étapes et indique à quel moment la note s’améliorerait.",
+    "grades.caps.rules": "Deux règles sont prioritaires. <strong>La fin de support détermine toujours la note</strong> : une version qui n’est plus prise en charge reçoit <strong>F</strong>, même avec des exceptions. <strong>Une version en avance sur son canal déclaré n’est pas considérée comme obsolète</strong> ; le rapport signale cette avance.",
     "grades.improve.kicker": "Le chemin le plus court",
-    "grades.improve.heading": "Comment ce scanner vous aide à progresser",
-    "grades.improve.intro": (
-        "Une note seule n'est qu'un tableau de score, ce qui n'est pas très "
-        "utile à quatre heures de l'après-midi. Chaque page de résultat porte "
-        "aussi les quatre éléments qui la transforment en travail concret "
-        "pour l'après-midi :"
-    ),
-    "grades.improve.plan": (
-        "<strong>Un plan de remédiation, dans l'ordre de rentabilité.</strong> "
-        "Chaque étape indique ce qu'il faut changer et quelle note l'instance "
-        "obtiendrait une fois cette étape et toutes celles qui la précèdent "
-        "réalisées - vous pouvez ainsi vous arrêter là où le bénéfice "
-        "s'arrête."
-    ),
-    "grades.improve.release": (
-        "<strong>La version exacte vers laquelle évoluer.</strong> Pas "
-        '« mettez à jour » : la version qui corrige l\'avis <em>sur la ligne '
-        "où vous vous trouvez réellement</em>, et jamais un saut vers un canal "
-        "que vous n'avez pas choisi."
-    ),
+    "grades.improve.heading": "Corriger les problèmes relevés",
+    "grades.improve.intro": "Chaque rapport fournit les éléments nécessaires pour préparer les corrections :",
+    "grades.improve.plan": "<strong>Un plan de correction par priorité.</strong> Chaque étape précise le changement à effectuer et la note atteignable après cette étape et toutes les précédentes.",
+    "grades.improve.release": "<strong>Une version précise à installer.</strong> Le rapport indique la version qui corrige la vulnérabilité <em>dans votre branche</em>, en respectant le canal choisi.",
     "grades.improve.explained": (
         "<strong>Chaque contrôle en échec, expliqué.</strong> Ce qui a été "
         "mesuré, pourquoi cela compte et le correctif, avec un lien vers la "
         "documentation OpenCloud du paramètre concerné."
     ),
-    "grades.improve.waiver": (
-        "<strong>Une dérogation pour ceux que vous avez décidé "
-        "d'accepter.</strong> Un contrôle dérogé reste dans le rapport et "
-        "reste visible - il cesse simplement de plafonner la note, si bien "
-        "qu'une décision réfléchie ne se lit pas comme un échec pour "
-        "toujours. Elle ne peut pas masquer un contrôle qui réussit, et elle "
-        "ne peut pas sauver une version en fin de vie."
-    ),
-    "grades.improve.rerun": (
-        "Relancez-la ensuite. La même instance, la même analyse, et la lettre "
-        "bouge - c'est la seule preuve que tout cela a fonctionné."
-    ),
-    "grades.limits.kicker": "Honnêteté",
+    "grades.improve.waiver": "<strong>Des exclusions pour les constats que vous acceptez.</strong> Ils restent visibles, mais ne plafonnent plus la note. Une exclusion ne s’applique qu’à un contrôle échoué et ne peut pas modifier la note d’une version en fin de vie.",
+    "grades.improve.rerun": "Relancez l’analyse après vos modifications pour vérifier quels problèmes ont été corrigés.",
+    "grades.limits.kicker": "Périmètre",
     "grades.limits.heading": "Ce qu'une bonne note n'est pas",
-    "grades.limits.body": (
-        "Un <strong>A+</strong> signifie que rien de ce que cette analyse a "
-        "examiné n'a posé problème. Ce n'est pas un certificat, et ce n'est "
-        "pas un test d'intrusion. Tout ce qui se trouve derrière la "
-        "connexion, le système d'exploitation, l'environnement d'exécution "
-        "des conteneurs, les sauvegardes, les comptes et les personnes qui "
-        "les détiennent sont hors de portée de ce qu'une analyse non "
-        "authentifiée peut voir. Considérez la lettre comme un élément parmi "
-        'd\'autres - <a href="/how-it-works">le fonctionnement de '
-        "l'analyse</a> énumère ce qu'elle lit, et chaque page de résultat "
-        "rappelle les limites sous la note."
-    ),
+    "grades.limits.body": "Un <strong>A+</strong> signifie que les vérifications retenues pour la note n’ont révélé aucun problème. Cela ne couvre pas les fichiers privés, le système d’exploitation, les sauvegardes ou les droits des comptes. Contrôlez aussi ces éléments. La page <a href=\"/how-it-works\">Fonctionnement de l’analyse</a> précise ce qui est vérifié et les limites du rapport.",
     # -------------------------------------------------------------- catalogue
     "catalogue.title": "Ce que le scanner vérifie",
     "catalogue.description": (
@@ -812,12 +665,7 @@ MESSAGES: dict[str, str] = {
         "indépendamment d'un résultat d'analyse particulier."
     ),
     "catalogue.kicker": "Référence",
-    "catalogue.lede": (
-        "Voici l'ensemble complet : chaque contrôle ci-dessous peut "
-        "apparaître sur une page de résultat, et chaque vulnérabilité "
-        "ci-dessous est une de celles contre lesquelles une analyse est "
-        "évaluée. Rien ici ne dépend d'une instance particulière."
-    ),
+    "catalogue.lede": "Consultez les vérifications possibles et les avis de sécurité utilisés pour évaluer une version. Ce catalogue décrit le périmètre de l’outil sans lancer d’analyse.",
     "catalogue.checks.kicker": "Contrôles",
     "catalogue.checks.heading": "Chaque contrôle, par catégorie",
     "catalogue.checks.lede": (
@@ -839,65 +687,27 @@ MESSAGES: dict[str, str] = {
     "catalogue.advisories.unfixed": "Aucun correctif publié pour le moment",
     # -------------------------------------------------- how the scan works
     "how.title": "Comment fonctionne l'analyse",
-    "how.description": (
-        "Ce que ce scanner teste sur une instance OpenCloud, et ce qui se "
-        "passe entre le clic sur le bouton et la lecture de la note."
-    ),
+    "how.description": "Les informations vérifiées par le scanner et les étapes entre la demande et le rapport.",
     "how.kicker": "La méthode",
-    "how.lede": (
-        "Tout ce que ce service rapporte, il le détermine lui-même, en "
-        "contactant l'adresse que vous saisissez en HTTPS comme le ferait "
-        "n'importe quel visiteur. Rien n'est demandé à un tiers, et aucune "
-        "connexion n'est effectuée."
-    ),
+    "how.lede": "Le scanner se connecte directement à l’adresse saisie et évalue lui-même les réponses. Il examine les informations accessibles sans compte et utilise ses données de versions et de vulnérabilités pour évaluer le logiciel installé.",
     "how.tests.heading": "Ce qui est testé",
     "how.tests.version.title": "Version et cycle de vie",
-    "how.tests.version.body": (
-        "Quelle version est exécutée, si elle reçoit encore des correctifs de "
-        "sécurité, et si un avis publié la concerne. Une version passée en "
-        "fin de vie obtient un F, quoi que soit le reste."
-    ),
+    "how.tests.version.body": "La version installée, sa période de support et les avis de sécurité qui la concernent. Une version sans support reçoit F.",
     "how.tests.transport.title": "Transport et en-têtes",
-    "how.tests.transport.body": (
-        "Accessibilité en HTTPS, le certificat et sa durée de validité "
-        "restante, les versions TLS proposées, et les en-têtes de sécurité "
-        "réellement envoyés à un navigateur - HSTS, CSP, protection contre le "
-        "cadrage et le type de contenu."
-    ),
+    "how.tests.transport.body": "L’accès HTTPS, le certificat et sa durée de validité restante, les versions TLS proposées et les en-têtes de sécurité : HSTS, CSP, protection contre l’intégration dans un cadre et l’interprétation incorrecte du type de contenu.",
     "how.tests.hardening.title": "Durcissement et exposition",
-    "how.tests.hardening.body": (
-        "Authentification de base, politique de mot de passe et d'expiration "
-        "des liens publics, règles de mot de passe, listage de répertoires, "
-        "points de terminaison exposés et tout ce qui annonce la version au "
-        "monde entier."
-    ),
+    "how.tests.hardening.body": "L’authentification Basic, les mots de passe et dates d’expiration des liens publics, les règles de mot de passe, les listes de répertoires, les interfaces internes accessibles et les informations de version publiées.",
     "how.pipeline.kicker": "Le déroulement",
     "how.pipeline.heading": "Ce qui se passe quand vous cliquez sur le bouton",
-    "how.pipeline.lede": (
-        "Quatre étapes, et c'est à la troisième que la file d'attente "
-        "intervient."
-    ),
+    "how.pipeline.lede": "Chaque analyse suit ces quatre étapes.",
     "how.pipeline.step1": (
         "<strong>Votre adresse est vérifiée.</strong> Les adresses privées, de "
         "bouclage et de métadonnées cloud sont refusées avant toute "
         "connexion."
     ),
-    "how.pipeline.step2": (
-        "<strong>Une analyse reçoit un identifiant aléatoire.</strong> Cet "
-        "identifiant est le seul moyen d'accéder au résultat. Il n'existe "
-        "aucune liste d'analyses, ni aucun moyen d'en deviner un."
-    ),
-    "how.pipeline.step3": (
-        "<strong>Elle attend son tour.</strong> Un nombre fixe d'analyses "
-        "s'exécutent simultanément. Si elles sont toutes occupées, la vôtre "
-        "patiente en file d'attente et l'on vous indique votre position - "
-        "rien n'est rejeté parce que le service est populaire."
-    ),
-    "how.pipeline.step4": (
-        "<strong>Le résultat expire.</strong> Après {minutes} minutes, "
-        "l'identifiant cesse de fonctionner et le résultat disparaît, sans "
-        "rien écrit sur le disque."
-    ),
+    "how.pipeline.step2": "<strong>L’analyse reçoit un identifiant aléatoire.</strong> Il permet d’accéder au résultat. Il n’existe pas de liste publique des analyses.",
+    "how.pipeline.step3": "<strong>L’analyse rejoint la file d’attente.</strong> Le nombre d’analyses simultanées est limité. Si tous les workers sont occupés, votre analyse attend et la page affiche sa position dans la file.",
+    "how.pipeline.step4": "<strong>Le résultat expire.</strong> Après {minutes} minutes, il n’est plus accessible par son identifiant.",
     "how.faq.kicker": "Questions",
     "how.faq.heading": "Questions fréquentes",
     "how.faq.q1": "S'agit-il du logiciel officiel d'OpenCloud ?",
@@ -909,23 +719,9 @@ MESSAGES: dict[str, str] = {
         "pour indiquer quel logiciel cet outil contrôle."
     ),
     "how.faq.q2": "Une bonne note signifie-t-elle qu'une instance est sécurisée ?",
-    "how.faq.a2": (
-        "Non. L'analyse lit uniquement ce qu'une instance accessible "
-        "publiquement montre à un visiteur anonyme : sa version, les avis de "
-        "sécurité concernant cette version, son transport, ses en-têtes et un "
-        "ensemble de réglages visibles sans connexion. Tout ce qui se trouve "
-        "derrière la connexion, le serveur sur lequel elle tourne, le réseau "
-        "qui l'entoure et les personnes disposant d'un compte en sont exclus - "
-        "une analyse non authentifiée ne peut pas les voir. Considérez un "
-        "résultat comme un élément parmi d'autres, jamais comme un audit de "
-        "sécurité ou un test d'intrusion."
-    ),
+    "how.faq.a2": "Non. L’analyse vérifie la version annoncée, les avis de sécurité correspondants et les paramètres visibles de l’extérieur, ainsi que les identifiants de démonstration publiés. Elle n’évalue pas les fichiers privés, le système d’exploitation, les sauvegardes ou les droits des comptes. Le rapport complète votre démarche de sécurité sans remplacer un audit ou un test d’intrusion.",
     "how.faq.q3": "Combien de temps conservez-vous le résultat d'une analyse ?",
-    "how.faq.a3": (
-        "Uniquement en mémoire, pendant {minutes} minutes, puis il disparaît. "
-        "Aucun compte, aucune analyse statistique, aucun traceur - le reste se "
-        '<a href="/privacy">trouve sur ce que ce serveur conserve</a>.'
-    ),
+    "how.faq.a3": "Le résultat reste disponible pendant {minutes} minutes, puis expire. La page <a href=\"/privacy\">Données conservées par ce serveur</a> donne les détails.",
     "how.faq.q4": "Y a-t-il une limite de débit ?",
     "how.faq.a4": (
         "Oui, par visiteur et par cible analysée, afin qu'un visiteur trop "
@@ -941,14 +737,7 @@ MESSAGES: dict[str, str] = {
         "machine, sans limite et sans site web intermédiaire."
     ),
     "how.faq.q6": "Un scan m'indique-t-il si une mise à jour d'OpenCloud est en attente ?",
-    "how.faq.a6": (
-        "Oui. Chaque scan compare la version signalée au flux des versions "
-        "d'OpenCloud et signale une mise à jour en attente ou une version qui "
-        "n'est plus prise en charge, de la même façon qu'il signale un "
-        'en-tête manquant - voir <a href="/documentation/reference#update-check">'
-        "la vérification des mises à jour</a> pour savoir comment la version "
-        "recommandée est déterminée."
-    ),
+    "how.faq.a6": "Oui. La version annoncée est comparée aux données de publication disponibles, en tenant compte de son support et de son canal. La section <a href=\"/documentation/reference#update-check\">Vérification des mises à jour</a> explique le calcul de la recommandation.",
     # --------------------------------------------------------------- privacy
     "privacy.title": "Ce que ce serveur conserve",
     "privacy.description": (
@@ -956,24 +745,14 @@ MESSAGES: dict[str, str] = {
         "temps, et ce que le journal opérationnel enregistre ou non."
     ),
     "privacy.kicker": "Confidentialité",
-    "privacy.lede": "En bref : l'analyse, pendant {minutes} minutes, en mémoire.",
+    "privacy.lede": "Les résultats restent disponibles pendant {minutes} minutes, puis expirent.",
     "privacy.retention.kicker": "Rétention",
-    "privacy.retention.heading": "Pendant qu'une analyse est active",
-    "privacy.retention.body": (
-        "L'adresse que vous soumettez, les contrôles que vous avez choisi de "
-        "déroger et le résultat vivent en mémoire pendant {minutes} minutes, "
-        "sous une clé dérivée de l'identifiant aléatoire de votre analyse, "
-        "puis sont supprimés par le magasin lui-même. Le journal opérationnel "
-        "enregistre qu'une analyse a été créée, démarrée et terminée, "
-        "identifiée uniquement par cet identifiant aléatoire - ni l'adresse, "
-        "ni le résultat, ni votre adresse IP, qui n'est jamais comptée que "
-        "comme une empreinte à sens unique pour la limitation de débit."
-    ),
-    "privacy.self_host": (
-        "Vous préférez l'exécuter vous-même ? Le même scanner existe sous "
-        "forme de contrôle en ligne de commande et de paquet Python. Dans les "
-        "deux cas, rien ici ne communique avec un service tiers."
-    ),
+    "privacy.retention.heading": "Données de l’analyse",
+    "privacy.retention.body": "L’adresse cible, les exceptions choisies et le résultat sont conservés pendant {minutes} minutes sous l’identifiant aléatoire de l’analyse. Ils expirent ensuite. Le journal courant ne contient que cet identifiant et les événements de création, de démarrage et de fin. Les limites d’utilisation reposent sur une empreinte à sens unique de l’adresse du client. L’opérateur peut aussi configurer un journal d’audit distinct.",
+    "privacy.uploads.kicker": "Rapports téléversés",
+    "privacy.uploads.heading": "Quand vous téléversez un rapport à comparer",
+    "privacy.uploads.body": "Le fichier envoyé est lu en mémoire pour calculer la comparaison. Son contenu et son nom ne sont pas conservés. La comparaison reste accessible sous un identifiant aléatoire pendant {minutes} minutes, pour pouvoir la rouvrir ou la partager. Elle expire ensuite et ne peut pas être recalculée à partir du fichier supprimé.",
+    "privacy.self_host": "Le même scanner est disponible en ligne de commande et sous forme de bibliothèque Python. Exécuté localement, il se connecte directement à l’instance depuis votre machine.",
     # ----------------------------------------------------------- legal notice
     "legal.title": "Mentions légales",
     "legal.description": (
@@ -997,22 +776,10 @@ MESSAGES: dict[str, str] = {
         "projet communautaire indépendant."
     ),
     "about.kicker": "À propos",
-    "about.lede": (
-        "L'un est une plateforme de fichiers, de synchronisation et de "
-        "partage. L'autre est un contrôle communautaire qui l'observe de "
-        "l'extérieur."
-    ),
+    "about.lede": "OpenCloud permet de stocker, synchroniser et partager des fichiers. Ce scanner indépendant vérifie les paramètres de sécurité d’une instance qui sont visibles de l’extérieur.",
     "about.platform.kicker": "La plateforme",
     "about.platform.heading": "À propos d'OpenCloud",
-    "about.platform.body": (
-        '<a href="https://opencloud.eu/" rel="noopener noreferrer">OpenCloud'
-        "</a> est la plateforme de fichiers, de synchronisation et de partage "
-        "que cet outil contrôle - open source, développée en Allemagne, et "
-        'documentée sur <a href="https://docs.opencloud.eu/" '
-        'rel="noopener noreferrer">docs.opencloud.eu</a>, où chaque correctif '
-        "que ce scanner suggère est correctement documenté. Merci aux "
-        "personnes qui la font vivre."
-    ),
+    "about.platform.body": "<a href=\"https://opencloud.eu/\" rel=\"noopener noreferrer\">OpenCloud</a> est une plateforme open source de stockage, de synchronisation et de partage de fichiers. Les guides d’administration sont disponibles sur <a href=\"https://docs.opencloud.eu/\" rel=\"noopener noreferrer\">docs.opencloud.eu</a>.",
     "about.platform.independent": (
         "Ce scanner est un projet communautaire indépendant. Il n'est pas "
         "affilié à OpenCloud GmbH et n'est ni recommandé ni pris en charge "
@@ -1022,22 +789,8 @@ MESSAGES: dict[str, str] = {
     ),
     "about.project.kicker": "Le projet",
     "about.project.heading": "À propos de ce scanner",
-    "about.project.body": (
-        "Tout ce que vous voyez ici est produit par "
-        "<code>check-opencloud-security</code>, un plugin Nagios et Icinga "
-        "adossé à une bibliothèque de scan. Cette page est une façon de "
-        "l'utiliser ; une commande sur votre propre machine, sans limite de "
-        "débit ni file d'attente, en est une autre."
-    ),
-    "about.project.origin": (
-        "Le projet a été créé par <strong>Massoud Ahmed</strong> pour offrir "
-        "aux utilisateurs d'OpenCloud une alternative indépendante à "
-        "<code>scan.nextcloud.com</code> : un scanner conçu pour les canaux de "
-        "version, les paramètres et le modèle de déploiement d'OpenCloud, qui "
-        "peut s'exécuter entièrement sur la propre machine de l'exploitant. "
-        '<a href="{project}" rel="noopener noreferrer">Le projet est sur '
-        "GitHub</a>."
-    ),
+    "about.project.body": "Les résultats proviennent de <code>check-opencloud-security</code>, un plugin de supervision avec sa propre bibliothèque d’analyse. Vous pouvez l’utiliser sur ce site ou l’exécuter sur votre machine.",
+    "about.project.origin": "<strong>Massoud Ahmed</strong> a créé ce projet pour vérifier les canaux de publication, les paramètres et les installations d’OpenCloud avec un outil que les administrateurs peuvent exécuter sur leur propre machine. <a href=\"{project}\" rel=\"noopener noreferrer\">Le code source et les contributions sont sur GitHub</a>.",
     # ------------------------------------------------------------------- API
     "api.title": "Analyser depuis un script ou un agent",
     "api.description": (
@@ -1047,11 +800,7 @@ MESSAGES: dict[str, str] = {
         "OpenAPI, les flux de travail Arazzo et le point de terminaison MCP."
     ),
     "api.kicker": "L'API",
-    "api.lede": (
-        "Le formulaire est l'une des deux portes d'entrée ; l'autre est le "
-        "JSON, et c'est le même gestionnaire. Un logiciel qui n'a pas été "
-        "écrit pour ce service trouve son chemin depuis la même page."
-    ),
+    "api.lede": "L’API JSON permet de lancer des analyses, de suivre leur progression et de télécharger les résultats. Les scripts et agents utilisent le même service et respectent les mêmes limites que le formulaire du navigateur.",
     "api.submit.kicker": "Soumettre et interroger",
     "api.submit.heading": "Soumettre et interroger",
     "api.submit.body": (
@@ -1066,12 +815,7 @@ MESSAGES: dict[str, str] = {
     ),
     "api.limits.kicker": "Utilisation raisonnable",
     "api.limits.heading": "Utilisation raisonnable",
-    "api.limits.enforced": (
-        "L'utilisation raisonnable est imposée plutôt que demandée : {client} "
-        "soumissions par {window} minute(s) depuis une même adresse, et "
-        "{cooldown}, toutes deux sanctionnées par un <code>429</code> et un "
-        "<code>Retry-After</code>."
-    ),
+    "api.limits.enforced": "Cette installation autorise {client} demandes par adresse sur {window} minute(s), avec {cooldown}. Tout dépassement renvoie <code>429</code> et un en-tête <code>Retry-After</code>.",
     "api.limits.cooldown": "une analyse par cible toutes les {minutes} minute(s)",
     "api.limits.no_cooldown": "aucun délai de repos par cible",
     "api.limits.daily": "Au plus {count} analyses par réseau par jour.",
@@ -1103,16 +847,9 @@ MESSAGES: dict[str, str] = {
         "un opérateur les active avec <code>COS_WEB_ENABLE_DOCS=true</code>."
     ),
     # ------------------------------------------------- API, for agents
-    "api.agents.kicker": "Invités machines",
+    "api.agents.kicker": "Agents IA",
     "api.agents.heading": "Partez d'une seule adresse",
-    "api.agents.intro": (
-
-        "Ce service est conçu pour être utilisable par des logiciels qui "
-        "n'ont pas été écrits pour lui. Tout ce dont un agent a besoin est "
-        "publié, ouvertement, sans compte : ce que l'API peut faire, comment "
-        "ses appels s'assemblent en une tâche, et un moyen d'exécuter "
-        "directement cette tâche."
-    ),
+    "api.agents.intro": "Les agents peuvent découvrir les opérations de l’API et les étapes d’une analyse dans les documents publics ci-dessous, accessibles sans compte.",
     "api.agents.discovery": (
         '<strong>Découverte</strong> - <a href="/.well-known/ai.json">'
         "/.well-known/ai.json</a> nomme tout ce qui suit, avec des URL "
@@ -1143,21 +880,8 @@ MESSAGES: dict[str, str] = {
         "un navigateur, c'est donc une adresse à configurer plutôt qu'une "
         "page à ouvrir."
     ),
-    "api.agents.summary": (
-        "Les trois documents décrivent un même service sous trois angles : "
-        "OpenAPI dit ce que l'API peut faire, et Arazzo dit comment ces "
-        "opérations s'assemblent en une tâche. Ils sont générés à partir du "
-        "même code que celui exécuté par le serveur, si bien qu'aucun d'eux "
-        "ne peut discrètement devenir obsolète."
-    ),
-    "api.agents.summary_mcp": (
-        "Les trois documents décrivent un même service sous trois angles : "
-        "OpenAPI dit ce que l'API peut faire, Arazzo dit comment ces "
-        "opérations s'assemblent en une tâche, et MCP confie cette tâche à un "
-        "agent sous la forme d'un outil qu'il peut appeler. Ils sont générés "
-        "à partir du même code que celui exécuté par le serveur, si bien "
-        "qu'aucun d'eux ne peut discrètement devenir obsolète."
-    ),
+    "api.agents.summary": "OpenAPI décrit les opérations disponibles ; Arazzo explique comment les enchaîner pour réaliser une analyse. Les deux documents sont générés à partir du code du service.",
+    "api.agents.summary_mcp": "OpenAPI définit les opérations, Arazzo décrit les parcours et MCP les propose aux agents sous forme d’outils. Tous reposent sur la même implémentation du service.",
     "api.webmcp.kicker": "Dans le navigateur",
     "api.webmcp.heading": "Utiliser la page comme outil",
     "api.webmcp.intro": (
@@ -1187,12 +911,8 @@ MESSAGES: dict[str, str] = {
         "navigateur."
     ),
     "api.clients.kicker": "Configuration",
-    "api.clients.heading": "Le connecter à un client",
-    "api.clients.intro": (
-        "La plupart des outils d'agents attendent une URL et un transport. "
-        "Celui-ci est en HTTP en flux continu, sans authentification et sans "
-        "compte :"
-    ),
+    "api.clients.heading": "Configurer un client agent",
+    "api.clients.intro": "Configurez le client avec l’URL du point d’accès et le transport HTTP streamable. Si l’opérateur exige une authentification, vous devrez également vous connecter.",
     "api.clients.body": (
         "Une configuration détaillée pour Claude Code, Claude Desktop, "
         "GitHub Copilot dans VS Code et en CLI, Cursor, Zed et Windsurf - "
@@ -1212,21 +932,10 @@ MESSAGES: dict[str, str] = {
         "aucune limite."
     ),
     # -------------------------------- Docker one-liners, on /documentation
-    "cli.lede": (
-        "Confier une adresse au serveur d'un inconnu est une hésitation "
-        "raisonnable. Vous n'y êtes pas obligé : cette page est le même "
-        "contrôle, sous forme d'une seule commande sur votre propre machine."
-    ),
+    "cli.lede": "Exécutez le scanner sur votre machine pour garder la maîtrise de l’analyse et éviter les limites de ce service. Les commandes ci-dessous utilisent le même scanner que ce site.",
     "cli.oneliner.kicker": "La commande unique",
     "cli.oneliner.heading": "Une commande, rien à installer",
-    "cli.oneliner.body": (
-        "C'est tout. Elle affiche le même verdict que celui que ce site "
-        "établit - la note, le cycle de vie de la version, les avis de "
-        "sécurité et chaque contrôle en échec - et se termine avec le code de "
-        "statut Nagios, si bien que la même ligne fonctionne dans un script, "
-        "un pipeline ou une tâche cron. Rien n'est envoyé nulle part : le "
-        "conteneur ne parle qu'à votre instance et à personne d'autre."
-    ),
+    "cli.oneliner.body": "La commande affiche la note, le statut de support, les avis de sécurité applicables et les contrôles échoués. Son code de sortie Nagios permet de l’utiliser dans la supervision, des scripts, la CI ou des tâches cron. L’analyse s’exécute dans le conteneur et se connecte directement à votre instance.",
     "cli.json.kicker": "En JSON",
     "cli.json.heading": "L'intégralité du document de résultat",
     "cli.json.body": (
@@ -1237,22 +946,10 @@ MESSAGES: dict[str, str] = {
     ),
     "cli.private.kicker": "Votre propre réseau",
     "cli.private.heading": "Les instances que ce site n'analysera pas",
-    "cli.private.body": (
-        "Un service public qui analyserait des adresses privées est un "
-        "service public que l'on pourrait diriger vers le réseau interne de "
-        "quelqu'un d'autre, c'est pourquoi celui-ci refuse. Votre propre "
-        "machine n'a pas ce problème : un serveur de préproduction, un nom "
-        "que seul votre résolveur connaît ou une instance qui ne quitte "
-        "jamais le réseau local fonctionnent tous depuis la ligne de "
-        "commande."
-    ),
+    "cli.private.body": "Exécutez l’outil en ligne de commande depuis une machine qui peut joindre votre instance interne. Les adresses privées et les noms DNS internes sont acceptés. Les services publics limitent ces cibles pour empêcher l’accès à leurs propres réseaux internes.",
     "cli.nodocker.kicker": "Pas de Docker ?",
     "cli.nodocker.heading": "Sans conteneur",
-    "cli.nodocker.body": (
-        "Le contrôle est un simple programme Python sur PyPI, si bien "
-        "qu'<code>uv</code> ou <code>pipx</code> le récupèrent et l'exécutent "
-        "sans rien installer de façon permanente."
-    ),
+    "cli.nodocker.body": "L’outil est également disponible sur PyPI. Utilisez <code>uv</code> pour l’exécuter à la demande ou <code>pipx</code> pour l’installer dans un environnement Python isolé.",
     # ------------------------------------------------ CLI documentation index
     "docs.index.title": "Documentation en ligne de commande",
     "docs.index.description": (
@@ -1262,13 +959,7 @@ MESSAGES: dict[str, str] = {
     ),
     "docs.index.kicker": "Documentation",
     "docs.index.heading": "Exécutez le scanner depuis votre terminal",
-    "docs.index.lede": (
-        "La référence pratique de la ligne de commande, rassemblée à partir "
-        "du README du projet et des guides sous <code>docs/</code>. Commencez "
-        "par une seule commande ; gardez le reste pour quand le contrôle "
-        "s'intègre à la supervision, à l'intégration continue ou à un parc "
-        "de machines."
-    ),
+    "docs.index.lede": "Installez le scanner, lancez votre première analyse et configurez son utilisation régulière. Les guides de <code>docs/</code> expliquent la supervision, la CI, le déploiement et les contrôles à l’origine des constats.",
     "docs.index.toc.quickstart": "Démarrage rapide",
     "docs.index.toc.commands": "Commandes",
     "docs.index.toc.options": "Options utiles",
@@ -1410,11 +1101,7 @@ MESSAGES: dict[str, str] = {
     ),
     # --------------------------------------------------- generated guide pages
     "docs.guide.kicker": "Documentation en ligne de commande",
-    "docs.guide.english_notice": (
-        "Ce guide est généré à partir de la documentation du projet et n'est "
-        "disponible qu'en anglais. La page qui l'entoure est traduite ; le "
-        "texte ci-dessous ne l'est pas."
-    ),
+    "docs.guide.english_notice": "Ce guide est disponible en anglais et en allemand. La version anglaise est affichée pour la langue sélectionnée.",
     "docs.guide.toc.heading": "Sur cette page",
     "docs.guide.toc.aria": "Sur cette page",
     # ---------------------------------------------------------------- compare
@@ -1425,11 +1112,7 @@ MESSAGES: dict[str, str] = {
     ),
     "compare.eyebrow": "Les correctifs ont-ils fonctionné ?",
     "compare.heading": "Comparer deux analyses",
-    "compare.lede": (
-        "Collez l'UUID d'une analyse antérieure et celui d'une analyse "
-        "postérieure. Les deux résultats doivent encore exister - ce service "
-        "ne conserve aucun historique où retrouver une analyse expirée."
-    ),
+    "compare.lede": "Indiquez les UUID de l’analyse précédente et de la nouvelle analyse. Les deux résultats doivent encore être disponibles. Si le premier a expiré, vous pouvez utiliser un rapport téléchargé dans le formulaire ci-dessous.",
     "compare.form.baseline": "Analyse antérieure",
     "compare.form.current": "Analyse postérieure",
     "compare.form.placeholder": "L'UUID dans l'adresse d'une page de résultat",
@@ -1462,24 +1145,14 @@ MESSAGES: dict[str, str] = {
         "comparer. Relancez une analyse de l'instance et comparez le nouvel "
         "UUID avec celui-ci."
     ),
-    "compare.different_targets": (
-        "Ces deux analyses décrivent des instances différentes. La "
-        "comparaison est tout de même affichée - comparer une préproduction à "
-        "une production est une question légitime - mais chaque chiffre "
-        "ci-dessous répond alors à une autre."
-    ),
+    "compare.different_targets": "Les analyses concernent des instances différentes. Tenez-en compte pour interpréter les écarts, par exemple entre un environnement de test et la production.",
     "compare.verdict.kicker": "Entre les deux analyses",
     "compare.verdict.improved": "C'est meilleur",
     "compare.verdict.unchanged": "Rien n'a changé",
     "compare.verdict.regressed": "C'est pire",
     "compare.rating.up": "La note a augmenté de {points} point(s).",
     "compare.rating.down": "La note a baissé de {points} point(s).",
-    "compare.rating.same": (
-        "La note n'a pas bougé. Cela ne signifie pas à soi seul que la "
-        "correction a échoué : les constats d'une même gravité partagent un "
-        "seul plafond, donc plusieurs correctifs peuvent être appliqués avant "
-        "que la lettre ne change. Lisez les listes ci-dessous."
-    ),
+    "compare.rating.same": "La note est inchangée. Des problèmes peuvent pourtant avoir été corrigés : plusieurs constats peuvent imposer le même plafond. Les listes ci-dessous détaillent les changements.",
     "compare.side.baseline": "Antérieure",
     "compare.side.current": "Postérieure",
     "compare.side.target": "Instance",
@@ -1500,12 +1173,46 @@ MESSAGES: dict[str, str] = {
     "compare.changes.heading": "Ce que la comparaison détaille",
     "compare.changes.category": "Catégorie",
     "compare.changes.change": "Changement",
-    "compare.nothing_stored": (
-        "Cette comparaison a été calculée à partir des deux résultats et n'a "
-        "été stockée nulle part. Rechargez la page et elle est recalculée ; "
-        "si l'un des résultats expire, elle ne peut plus être demandée."
-    ),
+    "compare.nothing_stored": "Cette comparaison est calculée à partir des deux résultats à chaque ouverture. Elle n’est pas enregistrée séparément et cesse d’être disponible si l’un des résultats expire.",
     # ----------------------------------------------------------------- search
+    # ------------------------------------------ comparaison avec un fichier
+    "compare.upload.kicker": "Vous avez déjà un rapport ?",
+    "compare.upload.heading": "Comparer un rapport antérieur à une analyse",
+    "compare.upload.lede": "Envoyez un rapport JSON ou CSV téléchargé précédemment pour le comparer à une analyse de ce service. Vous pouvez ainsi utiliser un ancien résultat même si son lien a expiré.",
+    "compare.upload.field.report": "Rapport antérieur",
+    "compare.upload.field.current": "Analyse postérieure",
+    "compare.upload.field.hint": (
+        "Le fichier <code>.json</code> ou <code>.csv</code> des téléchargements "
+        "d'une page de résultat. Jusqu'à {kilobytes} Ko."
+    ),
+    "compare.upload.submit": "Comparer avec ce fichier",
+    "compare.upload.privacy": (
+        "Le fichier est lu une fois, en mémoire, pour calculer la comparaison, et "
+        "n'est jamais écrit sur disque ni conservé. La comparaison elle-même est "
+        "gardée {minutes} minutes pour que cette page puisse être rechargée, puis "
+        "elle disparaît aussi."
+    ),
+    "compare.upload.source.kicker": "D'où vient le côté antérieur",
+    "compare.upload.source.json": "Le rapport précédent provient d’un fichier JSON envoyé. Il n’a pas de page de résultat ici ; le fichier a été supprimé après lecture.",
+    "compare.upload.source.csv": "Le rapport précédent provient d’un fichier CSV envoyé. Il n’a pas de page de résultat ici ; le fichier a été supprimé après lecture.",
+    "compare.upload.source.dropped": "{count} entrée(s) avec des identifiants de constat inconnus ont été exclues de la comparaison.",
+    "compare.upload.source.missing.httpsEnforced": "Le fichier ne précise pas si HTTPS était imposé. Ce point est exclu des deux rapports pour la comparaison, notamment avec les anciens exports CSV.",
+    "compare.upload.source.missing.update": "Le fichier ne précise pas si une mise à jour était disponible. Ce point est exclu des deux rapports pour la comparaison, notamment avec les anciens exports CSV.",
+    "compare.upload.expires": "La comparaison reste disponible pendant environ {minutes} minutes. Vous aurez ensuite besoin du fichier d’origine pour la refaire.",
+    "compare.upload.error.missing": (
+        "Aucun fichier n'a été téléversé. Choisissez le rapport JSON ou CSV que "
+        "vous avez téléchargé auparavant."
+    ),
+    "compare.upload.error.no_current": "Indiquez l’UUID de l’analyse à laquelle comparer le rapport.",
+    "compare.upload.error.empty": "Ce fichier est vide.",
+    "compare.upload.error.too_large": "Le fichier dépasse la taille maximale de {kilobytes} Ko.",
+    "compare.upload.error.unreadable": "Impossible de lire ce fichier en JSON ou CSV. Envoyez le rapport téléchargé d’origine, sans modification.",
+    "compare.upload.error.not_a_report": "Le fichier ne correspond pas à un rapport de ce service. Utilisez un export JSON ou CSV téléchargé depuis une page de résultat.",
+    "compare.upload.error.rate_limit": (
+        "Cela fait beaucoup de rapports depuis votre réseau en peu de temps. "
+        "Attendez une minute et réessayez."
+    ),
+    "compare.upload.error.expired": "Ce lien a expiré. Une comparaison reste disponible pendant {minutes} minutes ; envoyez à nouveau le fichier pour la refaire.",
     "search.title": "Recherche",
     "search.description": (
         "Recherchez dans la documentation du scanner et les recommandations "
@@ -1659,7 +1366,7 @@ MESSAGES: dict[str, str] = {
         "Le résultat d'une analyse publique, lisible uniquement avec son "
         "propre identifiant."
     ),
-    "result.kicker": "Rapport de terrain",
+    "result.kicker": "Analyse de sécurité",
     "result.heading": "Résultat de l'analyse",
     "result.track.title": (
         "Le canal de version par rapport auquel cette analyse a été notée"
@@ -1714,11 +1421,7 @@ MESSAGES: dict[str, str] = {
         "été renvoyé."
     ),
     "result.failed.fallback": "L'analyse n'a pas pu être menée à son terme.",
-    "result.failed.body": (
-        "Rien n'a été noté, car rien d'exploitable n'a été renvoyé. Vérifiez "
-        "que l'adresse est correcte, que l'instance est accessible depuis "
-        "l'internet public, et qu'il s'agit bien d'une instance OpenCloud."
-    ),
+    "result.failed.body": "Le scanner n’a pas pu recueillir assez d’informations pour attribuer une note. Vérifiez l’adresse, confirmez qu’elle héberge OpenCloud et assurez-vous que l’instance est accessible depuis ce service.",
     "result.document.kicker": "Document de résultat",
     "result.document.heading": "Document de résultat",
     "result.document.lede": (
@@ -1786,15 +1489,7 @@ MESSAGES: dict[str, str] = {
     "result.plan.heading": "Ce qui vous mène à {label}",
     "result.plan.then": "puis {label}",
     "result.plan.still": "toujours {label}",
-    "result.plan.note": (
-        "L'ordre est celui qui est rentable le plus tôt, et la note à côté "
-        "d'une étape est celle qu'obtiendrait l'instance une fois cette "
-        "étape et toutes celles qui la précèdent réalisées. Les constats de "
-        "même gravité partagent un même plafond, si bien que la note ne "
-        "bouge que lorsque le dernier d'entre eux a disparu - c'est pourquoi "
-        "une étape peut être nécessaire tout en ne promettant rien à elle "
-        "seule."
-    ),
+    "result.plan.note": "Le plan donne la priorité aux changements qui améliorent la note. La note indiquée à chaque étape suppose que cette étape et toutes les précédentes sont terminées. Les constats de même gravité partagent un plafond : plusieurs corrections peuvent donc être nécessaires avant que la note augmente.",
     "result.plan.blocked.heading": "Ce qui plombe la note, sans pouvoir être corrigé",
     "result.plan.blocked.note": (
         "OpenCloud fige ces éléments en dur, si bien qu'aucun paramètre n'y a "
@@ -1830,10 +1525,7 @@ MESSAGES: dict[str, str] = {
     ),
     "result.hardening.kicker": "Durcissement",
     "result.hardening.heading": "Durcissement à ajouter",
-    "result.hardening.lede": (
-        "Des paramètres qui ne sont pas activés. Aucun d'entre eux n'est une "
-        "vulnérabilité active ; chacun supprime une voie d'entrée."
-    ),
+    "result.hardening.lede": "Ces paramètres renforcent la protection contre les risques courants. Consultez l’explication et la correction proposée pour chacun.",
     "result.hardening.tag": "durcissement",
     "result.header.tag": "en-tête",
     # ------------------------------------------------- configuration fragment
@@ -1853,28 +1545,16 @@ MESSAGES: dict[str, str] = {
     "result.fragment.copy": "Copier",
     "result.fragment.copied": "Copié",
     "result.fragment.copy_failed": "Copie impossible",
-    "result.fragment.nothing": (
-        "Rien ici ne se règle de cette façon. Ce qui reste ouvert relève de "
-        "{flavours}."
-    ),
+    "result.fragment.nothing": "Aucun constat restant ne peut être corrigé dans ce format. Utilisez {flavours} pour la configuration concernée.",
     "result.fragment.elsewhere": (
         "Ceux-ci se corrigent ailleurs - ils relèvent de {flavours} :"
     ),
-    "result.fragment.undecided": (
-        "Ceux-ci n'ont aucune valeur à coller : la bonne est une décision "
-        "propre à ce déploiement, et la ligne « Correction » du constat est "
-        "la réponse entière."
-    ),
+    "result.fragment.undecided": "Ces constats nécessitent un réglage adapté à votre installation. Suivez les instructions de correction de chacun pour déterminer la valeur.",
     # ------------------------------------------------------------ scan again
     "result.rescan": "Analyser à nouveau",
     "result.rescan.ready": "Cette instance peut être analysée à nouveau.",
     "result.rescan.wait": "Nouvelle analyse possible dans {countdown}.",
-    "result.rescan.note": (
-        "Même cible, mêmes exemptions, même canal de version - pour que le "
-        "prochain résultat soit comparable à celui-ci. L'attente est ce qui "
-        "maintient ce petit service debout ; le scanner est libre et tourne "
-        "sur votre propre machine sans aucune limite :"
-    ),
+    "result.rescan.note": "La prochaine analyse conserve la cible, les exclusions et le canal de versions pour permettre la comparaison. Veuillez attendre la fin du délai, ou exécuter le scanner open source sans limite sur votre machine :",
     "result.rescan.self_host": "l'exécuter vous-même",
     "result.excluded.kicker": "Exclu",
     "result.excluded.heading": "Signalé, mais non comptabilisé",
@@ -1883,12 +1563,8 @@ MESSAGES: dict[str, str] = {
         "Ils ont tout de même échoué. Ils n'ont simplement pas plombé la "
         "note."
     ),
-    "result.excluded.unfixable.heading": "Personne ne peut modifier ces éléments",
-    "result.excluded.unfixable.note": (
-        "OpenCloud fige ces indicateurs en dur, si bien qu'ils se lisent de "
-        "la même façon sur toutes les instances existantes. Ils sont "
-        "affichés par souci d'exhaustivité et exclus de la note."
-    ),
+    "result.excluded.unfixable.heading": "Valeurs imposées par OpenCloud",
+    "result.excluded.unfixable.note": "Ces valeurs sont fixées dans le code d’OpenCloud et ne sont pas configurables. Elles sont fournies à titre informatif et n’affectent pas la note.",
     "result.scope.kicker": "Périmètre",
     "result.scope.heading": "Ce que cette analyse ne peut pas voir",
     "result.scope.body": (
@@ -1984,10 +1660,7 @@ MESSAGES: dict[str, str] = {
     ),
     "result.share.kicker": "Partager",
     "result.share.heading": "Partager ce rapport",
-    "result.share.lede": (
-        "Par courriel ou via le presse-papiers. Rien ne transite par ce "
-        "service et aucune autre entreprise n'intervient."
-    ),
+    "result.share.lede": "Copiez le lien ou un résumé, ou ouvrez un brouillon dans votre messagerie. Ce service n’envoie pas le rapport à votre place.",
     "result.share.warning": (
         "L'adresse de cette page est la seule chose qui la protège : qui la "
         "détient peut lire le rapport jusqu'à son expiration. La publier dans "

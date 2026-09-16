@@ -1,14 +1,11 @@
 # Running OpenCloud in a secure infrastructure
 
-This scanner grades what an OpenCloud instance shows the internet. That is a
-useful thing to know and it is not the whole of security. Everything on this
-page is the part a scan cannot see: who your identity provider is, whether
-anybody would notice a break-in, what the firewall allows, and what the people
-using the instance have been told.
+An external scan covers only part of operating OpenCloud securely. This guide covers the
+remaining work: identity-provider policies, audit logging, firewall rules, host
+maintenance, backups and user guidance.
 
-Read it as the companion to the check, not as a replacement for it. The last
-section explains where the two meet - what continuous monitoring with this
-plugin actually buys you once the rest is in place.
+Use these controls alongside scheduled scanning. The final section explains what regular
+scans can detect after the deployment is in place.
 
 > Every setting below is quoted from OpenCloud's own documentation and links
 > to it. OpenCloud moves fast; when a variable here disagrees with the linked
@@ -73,20 +70,18 @@ plugin actually buys you once the rest is in place.
    └────────────┘               └─────────────┘
 ```
 
-Three properties of that diagram are what the rest of this page is about: only
-one thing is reachable from the internet, sign-in happens somewhere that can
-enforce a second factor, and what happens inside gets written down somewhere
-the instance itself cannot rewrite.
+Expose the intended public entry points, enforce your sign-in policy at the identity
+provider and send audit records to a separate system. The sections below describe each
+part.
 
 ## 1. Put a real identity provider in front
 
 ### Why, before how
 
-OpenCloud ships with a built-in identity provider (`idp`) and identity
-management (`idm`). They are there so that `opencloud init` produces something
-that works, and for a single-user instance that may be all you ever need. They
-are not where you want your organisation's accounts to live, for reasons that
-have nothing to do with their quality:
+OpenCloud includes an identity provider (`idp`) and identity management (`idm`) for a
+working initial installation. An external provider is useful when an organization needs
+shared account lifecycle, multifactor authentication and consistent policies across
+services:
 
 - **Second factors.** An external provider gives you TOTP, WebAuthn or
   passkeys across every application you run, configured once.
@@ -127,7 +122,7 @@ create the client differ. From
 | `PROXY_ROLE_ASSIGNMENT_OIDC_CLAIM` | Which claim carries them; `roles` by default |
 | `GRAPH_ASSIGN_DEFAULT_USER_ROLE` | `false` when roles come from the provider, or every user quietly gets the default one as well |
 
-Two decisions in that table deserve more thought than they usually get:
+Review account provisioning and role assignment together:
 
 **Autoprovisioning is an access-control decision.** With
 `PROXY_AUTOPROVISION_ACCOUNTS=true`, anybody your provider will authenticate
@@ -149,8 +144,8 @@ everyone a role you did not intend.
 The most common choice where an organisation already runs one. Create a realm
 (or reuse yours), then a client:
 
-- **Client type** OpenID Connect, **Client ID** `OpenCloudDesktop` for the
-  desktop and mobile clients, plus a web client for the browser.
+- **Client type** OpenID Connect. Register the web, desktop, Android and iOS
+  clients separately, using the client IDs in the linked provider tutorial.
 - **Public client** with PKCE - OpenCloud's clients are public clients and
   cannot keep a secret. Set *Proof Key for Code Exchange* to `S256`.
 - **Valid redirect URIs** must include the desktop client's loopback

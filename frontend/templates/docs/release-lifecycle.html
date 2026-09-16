@@ -11,17 +11,15 @@
   <p class="lede">{{ t('docs.release-lifecycle.description') }}</p>
 </section>
 
-{% if locale != 'en' %}
+{% if locale not in ('en', 'de') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
 <article class="docs-article card section-gap" data-reveal lang="en">
-<p>OpenCloud maintains a rolling, a production and an LTS track at the same
-time, so the <em>same</em> version can be current on one and long dead on another.
-This page explains how the plugin resolves that: how it reasons in release
-lines rather than version numbers, what the bundled schedule knows, why the
-update recommendation follows your track rather than the newest release, and
-what <code>--release-track</code> changes.</p>
+<p>OpenCloud maintains rolling, production and LTS tracks in parallel. A version’s support
+status therefore depends on its track as well as its number. This guide explains how the
+scanner uses release lines and the bundled schedule, chooses an update and applies
+<code>--release-track</code>.</p>
 <p>The <a href="/documentation/reference#end-of-life-detection">main README</a> carries the current
 state of each track and the settings that switch the check off.</p>
 <!-- TOC -->

@@ -1,7 +1,7 @@
 # Scheduling without Icinga2 / Nagios
-If you don't run Icinga2/Nagios, you can still schedule regular scans with
-systemd timers or cron. Ready-to-adapt example files live in
-[`contrib/`](../contrib/):
+Schedule regular scans with a systemd timer or cron when you do not use Icinga2 or
+Nagios. The examples in [`contrib/`](../contrib/) provide service, timer and environment
+files you can adapt to your installation:
 
 - [`contrib/systemd/check-opencloud-security.service`](../contrib/systemd/check-opencloud-security.service)
   and [`.timer`](../contrib/systemd/check-opencloud-security.timer)

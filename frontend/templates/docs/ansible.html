@@ -11,17 +11,15 @@
   <p class="lede">{{ t('docs.ansible.description') }}</p>
 </section>
 
-{% if locale != 'en' %}
+{% if locale not in ('en', 'de') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
 <article class="docs-article card section-gap" data-reveal lang="en">
-<p>Prefer not to click through Icinga Director or configure hosts by hand?
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/ansible/README.md"><code>ansible/</code></a> contains ready-to-use playbooks that install
-and configure check-opencloud-security - native or Docker - on one or more
-Icinga2 hosts, including the <code>CheckCommand</code> and <code>Service</code> objects described in
-<a href="/documentation/icinga-director">Icinga Director</a> and
-<a href="/documentation/installation#icinga2--nagios">Icinga2 / Nagios</a>.</p>
+<p>The playbooks in <a href="https://github.com/sowoi/check-opencloud-security/blob/main/ansible/README.md"><code>ansible/</code></a> install and configure the plugin on
+one or more Icinga2 hosts, using either a native installation or Docker. They also
+create the <code>CheckCommand</code> and <code>Service</code> objects described in <a href="/documentation/icinga-director">Icinga
+Director</a> and <a href="/documentation/installation#icinga2--nagios">Icinga2 / Nagios</a>.</p>
 <p>This page is the short version. <a href="https://github.com/sowoi/check-opencloud-security/blob/main/ansible/README.md"><code>ansible/README.md</code></a> is
 the reference, and it is the file kept in step with the roles themselves.</p>
 <!-- TOC -->

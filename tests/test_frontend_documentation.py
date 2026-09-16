@@ -7,12 +7,15 @@ import re
 import sys
 from pathlib import Path
 
+import pytest
+
 from tests.webapp_support import (  # noqa: F401 - the fixtures are autouse
     _isolated_backend,
     _offline_resolver,
     client,
 )
 from webapp.documentation import DOCUMENTATION_PAGES
+from webapp.locales import CATALOGUES
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -78,3 +81,52 @@ def test_an_unknown_document_is_the_same_404_as_any_unknown_page():
 
     assert response.status_code == 404
     assert "Nothing here" in response.text
+
+
+@pytest.mark.parametrize("locale,body_language", [("en", "en"), ("de", "de"), ("fr", "en"), ("es", "en")])
+def test_every_guide_serves_the_selected_translation_or_an_explicit_fallback(
+    locale: str, body_language: str,
+):
+    """German guides must be complete, while French and Spanish retain English bodies."""
+    test_client = client()
+    for document in DOCUMENTATION_PAGES:
+        response = test_client.get(
+            f"/documentation/{document.slug}", headers={"Accept-Language": locale}
+        )
+        assert response.status_code == 200
+        body = re.search(r'<article class="docs-article.*?</article>', response.text, re.DOTALL)
+        assert body is not None
+        assert f'lang="{body_language}"' in body[0]
+        template = generator.render_page(document.slug, body_language)
+        expected = re.search(r'<article class="docs-article.*?</article>', template, re.DOTALL)
+        assert expected is not None
+        # Jinja escapes examples during generation; render before comparing.
+        assert "@@CODE:" not in body[0] and "@@TABLE@@" not in body[0]
+        first_heading = re.search(r'<h2[^>]*>.*?</h2>', expected[0], re.DOTALL)
+        if first_heading:
+            assert first_heading[0] in body[0]
+        notice = CATALOGUES[locale]["docs.guide.english_notice"]
+        assert (notice in response.text) == (locale in ("fr", "es"))
+
+
+def test_german_guides_keep_the_english_section_anchors():
+    """Cross-guide links must reach the same section after a language switch."""
+    for document in DOCUMENTATION_PAGES:
+        anchors = []
+        for language in ("en", "de"):
+            template = generator.render_page(document.slug, language)
+            anchors.append(re.findall(r'<h[2-6] id="([^"]+)"', template))
+        assert anchors[0] == anchors[1], document.slug
+
+
+def test_a_saved_language_choice_selects_the_german_guide_body():
+    """The guide route must honour the same cookie precedence as the interface."""
+    test_client = client()
+    test_client.post(
+        "/language", data={"locale": "de", "next": "/documentation/configuration"}
+    )
+    response = test_client.get(
+        "/documentation/configuration", headers={"Accept-Language": "fr"}
+    )
+    assert 'data-reveal lang="de"' in response.text
+    assert 'data-reveal lang="en"' not in response.text

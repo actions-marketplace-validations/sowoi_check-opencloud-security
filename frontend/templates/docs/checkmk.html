@@ -11,14 +11,14 @@
   <p class="lede">{{ t('docs.checkmk.description') }}</p>
 </section>
 
-{% if locale != 'en' %}
+{% if locale not in ('en', 'de') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
 <article class="docs-article card section-gap" data-reveal lang="en">
-<p>Checkmk speaks Nagios, and this is a Nagios plugin, so the two fit together
-without an extension package. There are two ways round, and the difference is
-not cosmetic - it decides which machine opens the connection to your instance:</p>
+<p>Checkmk can read this plugin’s Nagios output directly. You can run it as an active check
+on the Checkmk server or as a local check on an agent host. Choose the machine that can
+reach the instance from the network you want to test.</p>
 <table>
 <thead>
 <tr>

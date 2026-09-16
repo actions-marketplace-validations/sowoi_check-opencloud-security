@@ -1121,6 +1121,33 @@ main { flex: 1 0 auto; padding-bottom: 4.5rem; }
 }
 .compare-changes th { color: var(--ink-faint); font-size: .82rem; font-weight: 600; }
 
+/* The upload form. The file control is the browser's own - restyling it means
+ * hiding it behind a label, and a hidden input is a control a keyboard and a
+ * screen reader reach differently from the one everybody else is using. Only
+ * the box around it is ours.
+ */
+.compare-field input[type="file"] {
+    padding: .7rem 1rem;
+    font-family: inherit;
+    font-size: .9rem;
+    cursor: pointer;
+}
+.compare-field input[type="file"]::file-selector-button {
+    margin-right: .8rem;
+    padding: .45rem .9rem;
+    border: 1px solid var(--field-border);
+    border-radius: var(--radius-sm);
+    background: var(--tint);
+    color: var(--ink);
+    font: inherit;
+    font-size: .85rem;
+    cursor: pointer;
+}
+/* Neutral, deliberately: where the earlier side came from is provenance, not
+ * a verdict, and a coloured edge here would read as one.
+ */
+.compare-source { border-left: 3px solid var(--line); }
+
 @media (max-width: 42rem) {
     .compare-form { grid-template-columns: minmax(0, 1fr); }
 }

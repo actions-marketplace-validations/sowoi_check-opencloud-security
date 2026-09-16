@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.authentication.description') }}</p>
 </section>
 
-{% if locale != 'en' %}
+{% if locale not in ('en', 'de') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -30,17 +30,12 @@
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="en">
-<p>Ten checks look at how an instance authenticates requests: whether protected
-endpoints actually demand a session, whether HTTP Basic auth is still
-offered as a bypass around the identity provider, whether the documented demo
-accounts still work, two properties OpenCloud's own capabilities document
-publishes about account search and password strength, whether the identity
-provider can be located at all, and four properties of the OpenID Connect
-discovery document that provider publishes. None of them submit a guessed
-credential anywhere - see <a href="/documentation/scanner-checks#what-the-scan-deliberately-does-not-answer">What the scan deliberately does not
-answer</a> for what is
-out of scope on principle, and the demo-account section below for the one
-documented exception.</p>
+<p>The scanner checks access to protected endpoints, HTTP Basic authentication, documented
+demo accounts and the authentication settings published in OpenCloud’s capabilities and
+OpenID Connect discovery documents. It does not guess credentials. The demo-account
+check uses only the published credentials described below; see <a href="/documentation/scanner-checks#what-the-scan-deliberately-does-not-answer">scan
+limits</a> for the full
+scope.</p>
 <!-- TOC -->
 <ul>
 <li><a href="#authentication-what-this-scanner-checks-and-why">Authentication: what this scanner checks, and why</a></li>

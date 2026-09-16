@@ -1,11 +1,9 @@
 # Content-Security-Policy: what this scanner checks, and why
 
-A `Content-Security-Policy` (CSP) header tells the browser which origins are
-allowed to supply scripts, styles, frames and other active content for a
-page. It is the browser-enforced backstop against cross-site scripting (XSS):
-even if an attacker manages to inject markup into a page OpenCloud serves, a
-correctly scoped CSP stops the browser from running it. This scanner checks
-CSP in two independent places.
+A Content-Security-Policy (CSP) tells the browser which sources may supply scripts,
+styles, frames and other content. A well-configured policy can limit the effects of
+injected content and scripts. The scanner checks whether the header is present and
+whether its script policy allows specific forms of unsafe execution.
 
 <!-- TOC -->
 * [Content-Security-Policy: what this scanner checks, and why](#content-security-policy-what-this-scanner-checks-and-why)

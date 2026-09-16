@@ -1,11 +1,9 @@
 # Release tracks, end of life and the update recommendation
 
-OpenCloud maintains a rolling, a production and an LTS track at the same
-time, so the *same* version can be current on one and long dead on another.
-This page explains how the plugin resolves that: how it reasons in release
-lines rather than version numbers, what the bundled schedule knows, why the
-update recommendation follows your track rather than the newest release, and
-what `--release-track` changes.
+OpenCloud maintains rolling, production and LTS tracks in parallel. A version’s support
+status therefore depends on its track as well as its number. This guide explains how the
+scanner uses release lines and the bundled schedule, chooses an update and applies
+`--release-track`.
 
 The [main README](../README.md#end-of-life-detection) carries the current
 state of each track and the settings that switch the check off.

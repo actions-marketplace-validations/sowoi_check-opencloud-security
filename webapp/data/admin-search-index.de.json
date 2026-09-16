@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "builtFor": "1.23.3",
+  "builtFor": "1.24.0",
   "scope": "admin",
   "pages": [
     {

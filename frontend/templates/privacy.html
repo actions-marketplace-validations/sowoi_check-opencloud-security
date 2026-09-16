@@ -11,7 +11,8 @@
 </section>
 
 {% set toc = [
-  {"href": "#privacy", "label": t('privacy.retention.heading')}
+  {"href": "#privacy", "label": t('privacy.retention.heading')},
+  {"href": "#uploads", "label": t('privacy.uploads.heading')}
 ] %}
 {% include "_toc.html" %}
 
@@ -20,6 +21,19 @@
   <h2 id="privacy">{{ t('privacy.retention.heading') }}</h2>
   <p>{{ t('privacy.retention.body', minutes=result_ttl_minutes) }}</p>
   <p class="flush">{{ t('privacy.self_host') }}</p>
+</section>
+
+{#
+  The one thing a visitor can hand this service that it did not measure
+  itself. It gets its own heading rather than a clause in the paragraph above,
+  because uploading a report about your own infrastructure is a bigger
+  decision than typing an address, and the answer to "what happens to my file"
+  should not have to be read out of a sentence about something else.
+#}
+<section class="card section-gap" aria-labelledby="uploads" data-reveal>
+  <p class="kicker">{{ t('privacy.uploads.kicker') }}</p>
+  <h2 id="uploads">{{ t('privacy.uploads.heading') }}</h2>
+  <p class="flush">{{ t('privacy.uploads.body', minutes=comparison_minutes) }}</p>
 </section>
 
 {% include "_page-nav.html" %}

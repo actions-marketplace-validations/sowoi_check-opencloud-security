@@ -63,6 +63,11 @@ def target_key(host: str, salt: str | None = None) -> str:
     return f"cos:web:rl:target:{_fingerprint(host.lower(), salt)}"
 
 
+def upload_key(client: str, salt: str | None = None) -> str:
+    """Rate-limit key for report uploads from one client address."""
+    return f"cos:web:rl:upload:{_fingerprint(client, salt)}"
+
+
 def credential_key(client: str, salt: str | None = None) -> str:
     """Failed-authorisation key for one client address."""
     return f"cos:web:rl:auth:{_fingerprint(client, salt)}"
@@ -280,6 +285,28 @@ class RateLimiter:
             await self.backend.expire(key, self.client_window)
         if count > self.client_limit:
             return LimitDecision(False, await self._window_left(key, self.client_window), "client")
+        return LimitDecision(True)
+
+    async def check_upload(self, client: str) -> LimitDecision:
+        """
+        Count one uploaded report from this client.
+
+        A bucket of its own, with the same allowance as the scan limit. Two
+        reasons it is not simply the same counter: uploading a report costs
+        this service a parse and costs somebody else's instance nothing, so it
+        has no business spending a visitor's scan allowance - and a parser fed
+        from outside is worth being able to see the rate of on its own.
+        """
+        if self.client_limit <= 0:
+            return LimitDecision(True)
+        key = upload_key(self.client_identity(client), self.salt)
+        count = await self.backend.incr(key)
+        if count == 1:
+            await self.backend.expire(key, self.client_window)
+        if count > self.client_limit:
+            return LimitDecision(
+                False, await self._window_left(key, self.client_window), "upload"
+            )
         return LimitDecision(True)
 
     async def _window_left(self, key: str, window: int) -> int:

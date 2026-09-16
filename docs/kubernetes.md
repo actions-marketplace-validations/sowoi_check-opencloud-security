@@ -1,9 +1,9 @@
 # Kubernetes
 
-Two ways to run the check on a cluster: as a `CronJob` that scans on a
-schedule, and as a `Deployment` of the
-[scan service](../README.md#running-the-scanner-as-a-service) that several
-consumers share. They are independent - most people want only the first.
+Run the scanner as a scheduled `CronJob`, or deploy the [HTTP scan
+service](../README.md#running-the-scanner-as-a-service) when several consumers need a
+shared result. These are independent options; a CronJob is sufficient for most scheduled
+checks.
 
 The image is built from this repository; see
 [Docker](installation.md#docker). Push it to your own registry and replace
@@ -13,10 +13,45 @@ version ship *inside* the image, so which tag you run is part of the verdict.
 
 <!-- TOC -->
 * [Kubernetes](#kubernetes)
+  * [The Helm chart](#the-helm-chart)
   * [A scheduled scan](#a-scheduled-scan)
   * [Sending the result somewhere](#sending-the-result-somewhere)
   * [The scan service](#the-scan-service)
 <!-- TOC -->
+
+
+## The Helm chart
+
+[`contrib/helm/check-opencloud-security`](../contrib/helm/check-opencloud-security)
+packages both of the manifests below. Install it from a checkout - it is not
+published to a registry, and reading what it will create is part of the point:
+
+```shell
+helm install opencloud-security contrib/helm/check-opencloud-security \
+  --namespace monitoring --create-namespace \
+  --set image.tag=<the release you pinned> \
+  --set 'cronJob.hosts={opencloud.example.com,other.example.com}'
+```
+
+That is the scheduled scan and nothing else; `scanService.enabled=true` adds
+the service further down. Four values have no default and an install that
+omits one is refused rather than rendered:
+
+| Value | Why it is not defaulted |
+|:--|:--|
+| `image.tag` | The release schedule ships inside the image, so `latest` would let the verdict change under a running alert |
+| `cronJob.hosts` | A Job with no host scans nothing, daily, while looking like monitoring |
+| `scanService.existingSecret` | An untokened scan service scans any host anyone who reaches the pod names |
+| `scanService.networkPolicy.allowedTargets` | A policy with no egress rule is a different policy, not an unfinished one |
+
+Every credential is read from a `Secret` you created and named; the chart
+writes none, because a values file is committed and copied while a token in
+one is not easily unremembered. The
+[chart's README](../contrib/helm/check-opencloud-security/README.md) has the
+full value table.
+
+The rest of this page is what the chart renders, for anyone who would rather
+apply the YAML directly or read it before installing.
 
 
 ## A scheduled scan

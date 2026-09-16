@@ -3,10 +3,9 @@
 The scan engine behind `check-opencloud-security` and the
 `check-opencloud-scanner` service.
 
-This package **is** the built-in scanner. It talks to an instance over HTTP(S), reads what OpenCloud exposes without
-authentication, probes for the misconfigurations that actually occur in
-OpenCloud deployments, and returns a single result document with a `0`-`5`
-rating.
+The scanner connects directly to the instance over HTTP(S), checks publicly observable
+settings and returns one result document with a rating from `0` to `5`. It also tests
+the documented demo credentials against the instance’s own identity provider.
 
 The rating scale follows the ratings of the Nextcloud scan API, so that
 existing thresholds, performance data, webhooks and dashboards keep their
@@ -37,14 +36,10 @@ Two endpoints are unauthenticated in OpenCloud, and both are needed:
 Everything else is inferred from response headers, status codes and TCP
 connects.
 
-`/status.php` is not proof of OpenCloud, though: ownCloud and Nextcloud serve
-the same endpoint, which OpenCloud inherited from them. A status document
-whose product name carries either of those names is refused with `ScanError`
-rather than scanned - their releases, advisories and defaults are not
-OpenCloud's, and a verdict here would be a confident answer about the wrong
-software. See
-[`docs/what-is-opencloud.md`](../docs/what-is-opencloud.md) for the fork
-history behind all three, and what actually differs between them.
+A `/status.php` response alone does not identify OpenCloud. The scanner checks the
+reported product and raises `ScanError` for another product, whose releases, advisories
+and defaults would not match this database. See [What OpenCloud
+is](../docs/what-is-opencloud.md).
 
 ### The version trap
 
@@ -84,12 +79,10 @@ Evaluated in this order:
 then **capped** by the worst failed additional check: `critical` -> at most `2`
 (D), `high` -> `3` (C), `medium` -> `4` (A), `low` -> `5` (A+).
 
-Capping rather than assigning is a deliberate choice. One exposed path is a
-real problem, but it is not the same problem as running a release that receives
-no security fixes at all, and a monitoring system that cannot tell them apart
-is not useful. The consequence to be aware of: a single critical finding lands
-at `D`, which the plugin's default `--critical 1` reports as WARNING. Run with
-`--critical 2` if such a finding should page.
+A cap can only lower the starting rating, so a configuration finding cannot improve an
+end-of-life result. Note the monitoring consequence: a critical finding caps the score
+at `2` (`D`), which the default `--critical 1` reports as WARNING. Use `--critical 2` to
+make it CRITICAL.
 
 To report the findings without touching the rating at all:
 
@@ -235,14 +228,10 @@ Two cases are deliberately *not* end of life:
   ages between updates and a fresh release must not trip the alarm;
 - the newest line of a track, which has nothing to upgrade to.
 
-A version ahead of the file is also *said out loud*. When the reported release
-is newer than the newest one recorded for its line - or sits on a line newer
-than every line on record - the verdict carries `scheduleStale: true` together
-with `scheduleUpdated`, `scheduleSource` and a `scheduleNote` naming the
-[lifecycle page][lifecycle]. It is a remark about this package's data and
-never a finding: the rating, the upgrade recommendation and the end-of-life
-verdict are all exactly what they would be without it. `ReleaseSchedule.is_behind()`
-is the same question asked directly.
+When the instance is newer than the schedule, the result includes `scheduleStale`,
+`scheduleUpdated`, `scheduleSource` and a `scheduleNote` linking to the [lifecycle
+page][lifecycle]. These describe the reference data without changing the rating or
+update recommendation. `ReleaseSchedule.is_behind()` exposes the same comparison.
 
 The plugin keeps the schedule that shipped with it: a monitoring host runs the
 check every few minutes and must not turn that into a documentation fetch, so
@@ -508,17 +497,12 @@ Two questions come up often enough to be worth stating as non-goals:
   provider is registered says nothing about WOPI secrets, share permissions or
   the second service's own configuration, all of which sit behind a login.
 
-Everything else the scanner does is a read. It never submits a form and never
-guesses a password. The one credential it sends is the documented demo one:
-when the instance runs OpenCloud's built-in identity provider,
-`_demo_user_finding` asks `/ocs/v1.php/cloud/user` with each of the accounts
-`IDM_CREATE_DEMO_USERS` creates - `dennis`, `margaret`, `alan`, `lynn` and
-`mary`, all with the password published in OpenCloud's documentation. An
-accepted login is `demoUsersDisabled`, a `critical` finding, because `dennis`
-is an administrator. Nothing is guessed, nothing is sent to an external
-identity provider, and a rejection is the answer the check came for - so no
-result here can be taken as evidence that authentication works, only that
-those particular accounts are gone.
+The scanner does not use ordinary user credentials. The documented exception is
+`_demo_user_finding`: with the built-in provider, it tests the published demo accounts
+through `/ocs/v1.php/cloud/user`. A successful login produces the critical
+`demoUsersDisabled` finding. No credentials go to an external provider. Rejection
+confirms only that those demo credentials failed, not that authentication is secure in
+every respect.
 
 ### Explaining the flags
 
@@ -559,19 +543,15 @@ $ check-opencloud-scanner explain --list
 $ check-opencloud-scanner explain --format json cookieSecure
 ```
 
-It reads nothing but its own package - no configuration file, no network, no
-instance - so it answers at three in the morning on a host that cannot reach
-anything. Header names and per-path findings are accepted as they appear in an
-alert; `exposed:/config/opencloud.yaml` resolves to the `exposed` family the
-catalogue actually lists. With no identifier it prints the whole catalogue. An
-identifier it does not know exits 1 and suggests the nearest ones, rather than
-printing the placeholder above as though it were an answer.
+The command works offline and reads only the installed catalogue. It accepts header
+names and path-specific identifiers such as `exposed:/config/opencloud.yaml`. With no
+identifier it prints the whole catalogue. An unknown identifier returns exit code 1 and
+suggests nearby names.
 
 ### The same fix, as configuration
 
-The sentence above is what a person reads. `snippets.py` writes the same
-answer in the syntax of the file that has to change, from the `env_fix` and
-`header_fix` pairs the catalogue entries carry:
+`snippets.py` turns the catalogue’s `env_fix` and `header_fix` entries into
+configuration snippets:
 
 ```python
 from opencloud_local_scan import configuration_fragment
@@ -595,13 +575,9 @@ into a Compose environment block would produce a line that does nothing, so a
 flavour reports what it cannot express in `Fragment.elsewhere` instead, and
 `flavours_for` names the flavours that can.
 
-It renders, it does not decide. Every name and value comes from the
-catalogue - this module holds no configuration knowledge of its own - and a
-check whose right value is a decision about the deployment (a CORS origin, a
-path to a CSP file) carries no pair at all. Those land in
-`Fragment.undecided` rather than being guessed at with a placeholder: a
-fragment that has to be edited before it is pasted is worse than the sentence
-it replaced, because it looks finished.
+All configuration names and values come from the catalogue. Settings that depend on the
+deployment, such as a CORS origin or CSP file path, appear in `Fragment.undecided`. They
+require an operator’s choice before a usable snippet can be generated.
 
 ## Debug ports
 
@@ -706,7 +682,7 @@ nothing about ratings. Beyond the handshake and trust it reports:
 | `tlsHostname` | Does the certificate cover the name it was asked for, wildcards and IP addresses included? |
 | `tlsChain` | Does the server send its intermediates, or only a leaf that validates by luck? |
 | `tlsCertificate` | Does it expire within `tls_min_days`, or has it already? |
-| `tlsCertificateLifetime` | Is it valid for longer than the 398 days browsers accept? |
+| `tlsCertificateLifetime` | Is it valid for longer than the scanner’s 398-day threshold? |
 | `tlsCipherSuite` | Is the cipher suite negotiated by this scan modern and forward-secret? |
 | `tlsCertificatePolicy` | Does the certificate use an adequately sized key and a modern signature? |
 | `tlsAddressParity` | Do the published IPv4 and IPv6 endpoints present the same usable TLS identity? |
@@ -795,15 +771,12 @@ result = scan("opencloud.example.com", settings=ScannerSettings(timeout=10))
 print(result["rating"], result["version"], result["extraChecks"])
 ```
 
-`scan()` raises `ScanError` when the instance cannot be identified as an
-OpenCloud - an unreachable `/status.php`, a non-JSON response, a JSON document
-without any recognisable version field, or one naming ownCloud or Nextcloud as
-the product. Every case where something *answered* raises the subclass
-`NotOpenCloud`. By default an HTTPS answer like that is retried without
-certificate verification and then over plain HTTP, so a monitoring check finds
-the endpoint that works; `ScannerSettings(stop_when_not_opencloud=True)` stops
-at the first such answer instead, which is what the web application sets for a
-host a stranger named.
+`scan()` raises `ScanError` when it cannot identify OpenCloud: the endpoint is
+unreachable, its response is not suitable JSON, version fields are missing or the
+product is different. Cases where a service answered raise `NotOpenCloud`. By default
+the scanner retries an unsuitable HTTPS response without certificate verification and
+then over HTTP. `ScannerSettings(stop_when_not_opencloud=True)` stops after the first
+such response; the public web application enables it.
 
 The document also carries `addresses`, the IPv4 and IPv6 the hostname resolved
 to while the scan ran:

@@ -11,15 +11,15 @@
   <p class="lede">{{ t('docs.kubernetes.description') }}</p>
 </section>
 
-{% if locale != 'en' %}
+{% if locale not in ('en', 'de') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
 <article class="docs-article card section-gap" data-reveal lang="en">
-<p>Two ways to run the check on a cluster: as a <code>CronJob</code> that scans on a
-schedule, and as a <code>Deployment</code> of the
-<a href="/documentation/reference#running-the-scanner-as-a-service">scan service</a> that several
-consumers share. They are independent - most people want only the first.</p>
+<p>Run the scanner as a scheduled <code>CronJob</code>, or deploy the <a href="/documentation/reference#running-the-scanner-as-a-service">HTTP scan
+service</a> when several consumers need a
+shared result. These are independent options; a CronJob is sufficient for most scheduled
+checks.</p>
 <p>The image is built from this repository; see
 <a href="/documentation/installation#docker">Docker</a>. Push it to your own registry and replace
 <code>registry.example.com/check-opencloud-security:1.1.0</code> below. Pin a tag rather
@@ -28,12 +28,58 @@ version ship <em>inside</em> the image, so which tag you run is part of the verd
 <!-- TOC -->
 <ul>
 <li><a href="#kubernetes">Kubernetes</a></li>
+<li><a href="#the-helm-chart">The Helm chart</a></li>
 <li><a href="#a-scheduled-scan">A scheduled scan</a></li>
 <li><a href="#sending-the-result-somewhere">Sending the result somewhere</a></li>
 <li><a href="#the-scan-service">The scan service</a></li>
 </ul>
 <!-- TOC -->
 
+<h2 id="the-helm-chart">The Helm chart</h2>
+<p><a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/helm/check-opencloud-security"><code>contrib/helm/check-opencloud-security</code></a>
+packages both of the manifests below. Install it from a checkout - it is not
+published to a registry, and reading what it will create is part of the point:</p>
+<pre><code class="language-shell">helm install opencloud-security contrib/helm/check-opencloud-security \
+  --namespace monitoring --create-namespace \
+  --set image.tag=&lt;the release you pinned&gt; \
+  --set 'cronJob.hosts={opencloud.example.com,other.example.com}'
+</code></pre>
+<p>That is the scheduled scan and nothing else; <code>scanService.enabled=true</code> adds
+the service further down. Four values have no default and an install that
+omits one is refused rather than rendered:</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Why it is not defaulted</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>image.tag</code></td>
+<td>The release schedule ships inside the image, so <code>latest</code> would let the verdict change under a running alert</td>
+</tr>
+<tr>
+<td><code>cronJob.hosts</code></td>
+<td>A Job with no host scans nothing, daily, while looking like monitoring</td>
+</tr>
+<tr>
+<td><code>scanService.existingSecret</code></td>
+<td>An untokened scan service scans any host anyone who reaches the pod names</td>
+</tr>
+<tr>
+<td><code>scanService.networkPolicy.allowedTargets</code></td>
+<td>A policy with no egress rule is a different policy, not an unfinished one</td>
+</tr>
+</tbody>
+</table>
+<p>Every credential is read from a <code>Secret</code> you created and named; the chart
+writes none, because a values file is committed and copied while a token in
+one is not easily unremembered. The
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/helm/check-opencloud-security/README.md">chart's README</a> has the
+full value table.</p>
+<p>The rest of this page is what the chart renders, for anyone who would rather
+apply the YAML directly or read it before installing.</p>
 <h2 id="a-scheduled-scan">A scheduled scan</h2>
 <p>A <code>CronJob</code> is the closest thing to the systemd timer in
 <a href="/documentation/scheduling">Scheduling</a>. The exit code is what decides whether the job

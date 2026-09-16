@@ -1,0 +1,42 @@
+{{- if and .Values.scanService.enabled .Values.scanService.networkPolicy.enabled }}
+{{- $targets := .Values.scanService.networkPolicy.allowedTargets -}}
+{{- /* `required` passes an empty list through, and a policy with no egress
+       rule is not a restriction somebody forgot to fill in - it is a
+       different policy, one that stops every scan. */ -}}
+{{- if not $targets }}{{ fail "scanService.networkPolicy.allowedTargets must name the instances the scan service may reach" }}{{ end -}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "check-opencloud-security.fullname" . }}-scanner
+  labels:
+    {{- include "check-opencloud-security.labels" . | nindent 4 }}
+    app.kubernetes.io/component: scan-service
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "check-opencloud-security.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: scan-service
+  policyTypes:
+    - Egress
+  egress:
+    {{- if .Values.scanService.networkPolicy.allowDns }}
+    # Every scan resolves a name before it connects to anything.
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    {{- end }}
+    {{- range $targets }}
+    - to:
+        - ipBlock:
+            cidr: {{ required "each allowedTargets entry needs a cidr" .cidr }}
+      {{- with .ports }}
+      ports:
+        {{- range . }}
+        - port: {{ . }}
+          protocol: TCP
+        {{- end }}
+      {{- end }}
+    {{- end }}
+{{- end }}

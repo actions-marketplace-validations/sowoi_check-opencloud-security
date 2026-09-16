@@ -37,6 +37,7 @@ import os
 import uuid as uuid_module
 from collections.abc import AsyncIterator, Mapping
 from contextlib import asynccontextmanager
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
@@ -52,6 +53,7 @@ from fastapi.responses import (
 )
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.datastructures import UploadFile as StarletteUploadFile
 from starlette.responses import StreamingResponse
 
 from opencloud_local_scan import __version__
@@ -79,7 +81,12 @@ from .admin import (
     surfaces,
 )
 from .admin_auth import Operator, ensure_admin_ready, operator_for, sign_out_url
-from .advisories import advisory_catalogue, advisory_state, stored_database
+from .advisories import (
+    advisory_catalogue,
+    advisory_state,
+    database_updated,
+    stored_database,
+)
 from .approval import NOT_APPROVED, approved, ensure_approval_ready
 from .arazzo import arazzo_document
 from .audit import (
@@ -98,6 +105,7 @@ from .audit import (
     configure_audit_file,
     install_recent_audit,
 )
+from .badge import render as render_badge
 from .blocklist import (
     EntryRejected,
     add_exclusion,
@@ -123,6 +131,7 @@ from .catalog import (
     summarise,
     waiver_options,
 )
+from .comparisons import ComparisonStore, new_token
 from .configuration import grouped_rows as configuration_groups
 from .configuration import unrecognised as configuration_unrecognised
 from .discovery import (
@@ -141,6 +150,13 @@ from .documentation import (
 )
 from .encryption import ensure_encryption_ready
 from .export_signing import SIGNATURE_HEADER, sign_bytes
+from .feeds import (
+    ADVISORIES_PATH,
+    ATOM_MEDIA_TYPE,
+    SCHEDULE_PATH,
+    advisories_feed,
+    schedule_feed,
+)
 from .i18n import (
     DEFAULT_LOCALE,
     LANGUAGE_COOKIE,
@@ -151,6 +167,13 @@ from .i18n import (
     locale_options,
     normalise_locale,
     safe_next_path,
+)
+from .imports import (
+    MAX_UPLOAD_BYTES,
+    ImportedReport,
+    ReportRejected,
+    parse_report,
+    restrict_to,
 )
 from .mcp_auth import (
     PROTECTED_RESOURCE_PATH,
@@ -178,7 +201,7 @@ from .reports import (
     sarif_report,
 )
 from .rules import enforcement_groups, rating_rules
-from .schedule import schedule_state
+from .schedule import schedule_state, stored_schedule
 from .search import admin_search_document
 from .seo import (
     AGENTS_JSON_PATH,
@@ -225,6 +248,7 @@ from .workflows import (
     EXPORT_NOTE,
     EXPORT_RETRY_SECONDS,
     INPUT_NOTE,
+    NO_PAGE,
     NOT_FINISHED_STATUS,
     RATE_LIMIT_FALLBACK_SECONDS,
     RATE_LIMIT_NOTE,
@@ -586,6 +610,28 @@ class _Rejected(Exception):
         if self.key and translate.has(self.key):
             return translate(self.key, **self.params)
         return self.message
+
+
+#: How the earlier side is named when it arrived as a file. Not a uuid, and
+#: deliberately not shaped like one: nothing should be tempted to look it up.
+UPLOADED_BASELINE = "uploaded report"
+
+
+def _import_notes(imported: ImportedReport) -> dict[str, Any]:
+    """
+    What the page says about where the earlier side came from.
+
+    Three things a reader of this comparison is entitled to know and cannot
+    work out from the lists: which format was read, whether any of the file
+    was unreadable, and which facts it never recorded - because those were
+    neutralised on *both* sides and are therefore missing from an answer that
+    otherwise looks complete.
+    """
+    return {
+        "format": imported.source_format,
+        "dropped": imported.dropped,
+        "missingRecords": list(imported.missing_records),
+    }
 
 
 def client_address(request: Request, settings: WebSettings) -> str:
@@ -969,6 +1015,14 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
         ttl=settings.result_ttl,
         encryption_config=settings if settings.encrypt_results else None,
     )
+    # The one thing this service holds that is not a scan: see ADR 0057. Its
+    # own namespace, its own much shorter clock, and the same encryption at
+    # rest a result gets where a deployment asked for it.
+    app.state.comparisons = ComparisonStore(
+        backend=app.state.backend,
+        ttl=settings.comparison_ttl,
+        encryption_config=settings if settings.encrypt_results else None,
+    )
     app.state.limiter = limiter_for(app.state.backend, settings)
     app.state.queue = None
     app.state.audit = AuditLog.from_settings(settings)
@@ -1031,6 +1085,10 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
             "version": __version__,
             "project_url": PROJECT_URL,
             "result_ttl_minutes": max(1, settings.result_ttl // 60),
+            # The two numbers the upload form promises, from the settings that
+            # actually enforce them rather than from a sentence.
+            "comparison_minutes": max(1, app.state.comparisons.ttl // 60),
+            "upload_kilobytes": MAX_UPLOAD_BYTES // 1024,
             "docs_enabled": settings.enable_docs,
             "mcp_enabled": mcp_enabled,
             "mcp_url": f"{origin}{MCP_PATH}" if origin else MCP_PATH,
@@ -1389,7 +1447,8 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
         selected = DOCUMENTATION_BY_SLUG.get(slug)
         if selected is None:
             return not_found(request)
-        return page(request, f"docs/{selected.slug}.html", {})
+        language_dir = "de/" if locale_for_request(request) == "de" else ""
+        return page(request, f"docs/{language_dir}{selected.slug}.html", {})
 
     @app.get("/search", response_class=HTMLResponse, include_in_schema=False)
     async def search_page(request: Request) -> Response:
@@ -1559,6 +1618,37 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
         return Response(
             sitemap_xml(origin, root / "templates"),
             media_type="application/xml",
+            headers={"Cache-Control": "public, max-age=3600"},
+        )
+
+    # The two reference documents, subscribable. Both refresh themselves daily
+    # and may only gain knowledge, and until now the only way to notice a new
+    # advisory was to reopen /catalogue and remember what had been there.
+    #
+    # These are the one kind of page about which `public, max-age` is right
+    # (ADR 0031): they describe what *this service* knows, name no instance
+    # and hold no uuid, exactly like the contracts and the sitemap.
+    @app.get(ADVISORIES_PATH, include_in_schema=False)
+    async def advisories_atom(request: Request) -> Response:
+        origin = site_origin(str(request.base_url), settings.public_base_url)
+        database = await stored_database(app.state.backend, settings)
+        return Response(
+            advisories_feed(
+                advisory_catalogue(database),
+                origin=origin,
+                updated=await database_updated(app.state.backend, settings),
+            ),
+            media_type=ATOM_MEDIA_TYPE,
+            headers={"Cache-Control": "public, max-age=3600"},
+        )
+
+    @app.get(SCHEDULE_PATH, include_in_schema=False)
+    async def release_schedule_atom(request: Request) -> Response:
+        origin = site_origin(str(request.base_url), settings.public_base_url)
+        schedule = await stored_schedule(app.state.backend, settings)
+        return Response(
+            schedule_feed(schedule, origin=origin),
+            media_type=ATOM_MEDIA_TYPE,
             headers={"Cache-Control": "public, max-age=3600"},
         )
 
@@ -1835,6 +1925,17 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
         store: ScanStore = app.state.store
         limiter: RateLimiter = app.state.limiter
         report = await store.purge_target(hostname)
+        # A cached comparison names two instances and is not a scan, so it is
+        # not in the walk above - but it is a scan result's arithmetic, and
+        # "it expires within five minutes anyway" is the argument ADR 0007
+        # refuses for the result itself. Its keys are counted into the same
+        # receipt so that `remaining == 0` keeps meaning what it says.
+        erased, left = await app.state.comparisons.purge_target(hostname)
+        report = replace(
+            report,
+            keys_deleted=report.keys_deleted + erased,
+            remaining=report.remaining + left,
+        )
         cooldown_keys = await limiter.forget_target(hostname)
         receipt = build_receipt(
             target=hostname,
@@ -1968,6 +2069,180 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
             )
         return page(request, "compare.html", {**context, "comparison": comparison})
 
+    def _upload_error(
+        request: Request,
+        translate: Translator,
+        key: str,
+        *,
+        status: int = 422,
+        current: str = "",
+    ) -> Response:
+        """
+        The compare page, with one of this service's own sentences on it.
+
+        Chosen by key and never composed from the upload: the file name, its
+        content and any parser message stay out of the response entirely. The
+        uuid is echoed because the reader typed it and has to correct it; the
+        file field is not, because a browser will not refill it anyway.
+        """
+        return page(
+            request,
+            "compare.html",
+            {"t": translate, "current": current, "error": translate(key)},
+            status=status,
+        )
+
+    @app.post("/compare", response_class=HTMLResponse, include_in_schema=False)
+    async def compare_upload(request: Request) -> Response:
+        """
+        A report from somebody's disk against a scan this service still holds.
+
+        The question is the one the page above answers, asked by the reader
+        who has the earlier scan as a *file* rather than as a uuid - because
+        they downloaded it, or because the scan it came from expired hours
+        ago. Nothing else changes: the arithmetic is still
+        `workflows.compare_documents`, so an uploaded baseline and a stored
+        one cannot produce two different verdicts about the same pair.
+
+        What does change is where the earlier document came from, and that is
+        the whole of the security story here. It is the only structure this
+        application parses that it did not write, so it crosses one boundary -
+        `imports.parse_report` - which does not hand back what it was given
+        but an allow-listed rebuild of it. A key nobody named there reaches
+        nothing downstream.
+
+        The file itself is read once, into memory, and is never written
+        anywhere. What survives the request is the comparison drawn from it,
+        held under a fresh capability for at most five minutes so that a
+        reload and a link back to the answer keep working - and no longer,
+        because holding somebody's evidence is what this service exists not to
+        do. See [ADR 0057](../adr/0057-an-uploaded-report-is-evidence-not-a-scan.md).
+        """
+        translate = translator_for(request)
+        # Before the limiter and before the parse, for the same reason the
+        # submission form checks it first: a cross-site POST must not be able
+        # to spend a borrowed browser's allowance or its parsing budget.
+        if cross_site_post(request, settings):
+            LOGGER.info("compare_upload_cross_site")
+            return _cross_site_response(request, wants_html(request))
+
+        limiter: RateLimiter = app.state.limiter
+        decision = await limiter.check_upload(client_address(request, settings))
+        if not decision.allowed:
+            response = page(
+                request,
+                "compare.html",
+                {"t": translate, "error": translate("compare.upload.error.rate_limit")},
+                status=429,
+            )
+            if decision.retry_after:
+                response.headers["Retry-After"] = str(decision.retry_after)
+            return response
+
+        try:
+            # Bounded twice over: `RequestBodyLimit` has already refused
+            # anything past a megabyte, and these stop a body within it from
+            # being a thousand small parts instead of one file.
+            form = await request.form(max_files=1, max_fields=8)
+        except (ValueError, RuntimeError):
+            return _upload_error(request, translate, "compare.upload.error.unreadable")
+
+        try:
+            current = str(form.get("current") or "").strip()[:64]
+            upload = form.get("report")
+            if not isinstance(upload, StarletteUploadFile):
+                return _upload_error(
+                    request, translate, "compare.upload.error.missing", current=current
+                )
+            # One byte past the ceiling is enough to know it is over it, and
+            # is all that is ever held.
+            raw = await upload.read(MAX_UPLOAD_BYTES + 1)
+        finally:
+            # Starlette spills a large part to a temporary file. Closing the
+            # form is what removes it, and it happens whatever went wrong
+            # above rather than only on the path that read successfully.
+            await form.close()
+
+        if not current:
+            return _upload_error(request, translate, "compare.upload.error.no_current")
+
+        record = await app.state.store.get(current)
+        if record is None:
+            return _upload_error(
+                request,
+                translate,
+                "compare.error.unknown.current",
+                status=404,
+                current=current,
+            )
+        if record.state != STATE_COMPLETED or record.result is None:
+            return _upload_error(
+                request,
+                translate,
+                "compare.error.unfinished.current",
+                status=409,
+                current=current,
+            )
+
+        try:
+            imported = parse_report(raw)
+        except ReportRejected as exc:
+            # The file's own text never reaches the page: the sentence a
+            # reader is shown is this service's, chosen by key. An error page
+            # is exactly where a hostile upload would like to be quoted.
+            LOGGER.info("compare_upload_rejected key=%s", exc.key)
+            return _upload_error(
+                request, translate, exc.key, status=exc.status, current=current
+            )
+
+        comparison = compare_documents(
+            UPLOADED_BASELINE,
+            current,
+            # A family the uploaded format never recorded is removed from both
+            # documents, not from one. See `imports.restrict_to`.
+            restrict_to(imported.document, imported.carries),
+            restrict_to(record.result, imported.carries),
+            baseline_page=NO_PAGE,
+        )
+        comparison["source"] = _import_notes(imported)
+
+        token = new_token()
+        await app.state.comparisons.save(token, comparison)
+        # Post/Redirect/Get: a reload re-reads the cached answer instead of
+        # asking the reader's browser to send the file a second time.
+        return RedirectResponse(f"/compare/{token}", status_code=303)
+
+    @app.get("/compare/{token}", response_class=HTMLResponse, include_in_schema=False)
+    async def compare_result(request: Request, token: str) -> Response:
+        """
+        One cached comparison, for as long as it is cached.
+
+        The token is the whole of the authorisation, exactly as a scan uuid
+        is: unknown, malformed and expired are one 404, and nothing lists
+        them. Five minutes after it was issued there is nothing behind it -
+        which is the answer to "where did my uploaded report go".
+        """
+        translate = translator_for(request)
+        comparison = await app.state.comparisons.get(token)
+        if comparison is None:
+            return page(
+                request,
+                "compare.html",
+                {"t": translate, "error": translate("compare.upload.error.expired")},
+                status=404,
+            )
+        return page(
+            request,
+            "compare.html",
+            {
+                "t": translate,
+                "comparison": comparison,
+                "expires_in_minutes": max(
+                    1, await app.state.comparisons.expires_in(token) // 60
+                ),
+            },
+        )
+
     @app.get("/api/scans/{identifier}/export/{fmt}")
     async def scan_export(request: Request, identifier: str, fmt: str) -> Response:
         """
@@ -2003,6 +2278,41 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
             raw_body,
             media_type=MEDIA_TYPES[fmt],
             headers=headers,
+        )
+
+    @app.get("/api/scans/{identifier}/badge.svg")
+    async def scan_badge(request: Request, identifier: str) -> Response:
+        """
+        One finished scan as a grade somebody can embed.
+
+        The uuid is still the whole of the authorisation, so this answers the
+        same 404 and the same 409 the export does - a badge that quietly said
+        "unknown" for a uuid that does not exist would be a way to ask whether
+        one does.
+
+        It keeps the service-wide `no-store`. Every route that opts into a
+        public cache publishes metadata about *this service*
+        ([ADR 0031](../adr/0031-a-response-is-uncacheable-until-a-route-opts-in.md));
+        this one is a statement about somebody's instance, and a shared cache
+        holding it is exactly what that rule exists to prevent. The scan's own
+        TTL is the other half: a badge lasts as long as the result it draws,
+        and then goes back to being a 404.
+        """
+        record = await app.state.store.get(identifier)
+        if record is None:
+            return JSONResponse({"detail": "Not found."}, status_code=404)
+        if record.state != STATE_COMPLETED or record.result is None:
+            return JSONResponse(
+                {"detail": "This scan has no result yet.", "state": record.state},
+                status_code=409,
+            )
+        return Response(
+            render_badge(record.result.get("rating")),
+            media_type="image/svg+xml",
+            # An SVG is a document, and a browser asked to render one as a
+            # page would run what it contained. This one contains no script,
+            # and says so in the way a browser enforces.
+            headers={"Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'"},
         )
 
     @app.get("/api/scans/{identifier}")

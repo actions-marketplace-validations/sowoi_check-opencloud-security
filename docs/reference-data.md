@@ -1,11 +1,9 @@
 # Keeping the release schedule and advisories current
 
-Two verdicts depend on data rather than on the instance. End of life comes
-from a release schedule, and known vulnerabilities come from an advisory
-database. Both ship inside the package, so a host that only upgrades the
-package every few months rates instances against a picture of OpenCloud that
-is months old. That means a new release it has never heard of, and an
-advisory published after the package was built.
+The scanner uses a release schedule to determine support status and an advisory database
+to identify known vulnerabilities. Both are bundled with the package and can become
+outdated between package upgrades. Refreshing them separately lets the scanner recognise
+newer releases and advisories.
 
 `check-opencloud-scanner refresh-data` closes that gap without a package
 upgrade. This page covers what it fetches and how it checks the data, how to

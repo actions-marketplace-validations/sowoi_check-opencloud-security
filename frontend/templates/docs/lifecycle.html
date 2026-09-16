@@ -11,17 +11,15 @@
   <p class="lede">{{ t('docs.lifecycle.description') }}</p>
 </section>
 
-{% if locale != 'en' %}
+{% if locale not in ('en', 'de') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
 <article class="docs-article card section-gap" data-reveal lang="en">
-<p>Three checks are about the running version: whether one could be determined
-at all, and whether it leaks somewhere it does not need to. They are
-distinct from <a href="/documentation/reference#end-of-life-detection">end-of-life detection</a> and
-the update check, which decide whether a <em>known</em> version is still supported -
-these three exist upstream of that, because both depend on actually having a
-real version to reason about.</p>
+<p>These checks establish whether the scanner knows the running version and whether the
+instance publishes it in unnecessary places. They complement <a href="/documentation/reference#end-of-life-detection">end-of-life
+detection</a> and the update check, both of which need
+a reliable version number.</p>
 <!-- TOC -->
 <ul>
 <li><a href="#version-and-lifecycle-disclosure-what-this-scanner-checks-and-why">Version and lifecycle disclosure: what this scanner checks, and why</a></li>

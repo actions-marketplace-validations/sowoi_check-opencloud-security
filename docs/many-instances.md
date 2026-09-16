@@ -1,8 +1,8 @@
 # Checking a fleet of instances
 
-One check per instance is simple until there are twenty of them, each with its
-own port, its own release track and its own list of accepted findings. This
-page covers the three shapes that scale, from smallest to largest.
+Multiple instances often need different ports, release tracks and waivers. This guide
+shows when to use a shared command, how to keep a configuration file per instance and
+how to schedule the resulting checks.
 
 <!-- TOC -->
 * [Checking a fleet of instances](#checking-a-fleet-of-instances)

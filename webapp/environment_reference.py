@@ -15,6 +15,10 @@ REFERENCE: dict[str, dict[str, str]] = {
         "default": "3600",
         "description": "Seconds a scan stays readable. Also the TTL on every key",
     },
+    "COMPARISON_TTL": {
+        "default": "300",
+        "description": "Seconds a comparison against an uploaded report stays readable. Clamped to 300; shorter is honoured",
+    },
     "MAX_WORKERS": {
         "default": "5",
         "description": "Scans running at once",

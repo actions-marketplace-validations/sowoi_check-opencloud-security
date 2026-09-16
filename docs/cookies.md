@@ -1,13 +1,11 @@
 # Cookie attributes: what this scanner checks, and why
 
-Every `Set-Cookie` header the public response actually sends is inspected for
-three attributes browsers use to limit what a cookie can be used for. Nothing
-is guessed and no cookie value is retained - only the attributes on cookies
-OpenCloud or its reverse proxy already sent are read.
+The scanner inspects the `Set-Cookie` headers in public responses for four cookie
+protections. It reads the attributes set by OpenCloud or its reverse proxy and does not
+retain cookie values.
 
-If the scanned response sets no cookie at all, none of these three checks
-appear in the result: there is nothing to grade, and a check that always
-passed because it never ran would be misleading.
+If the response sets no cookies, these checks are omitted. An unperformed check is not
+reported as a pass.
 
 <!-- TOC -->
 * [Cookie attributes: what this scanner checks, and why](#cookie-attributes-what-this-scanner-checks-and-why)
@@ -33,23 +31,21 @@ proxy's own session or CSRF cookie rather than one OpenCloud itself sets - see
 
 ## 2. Can page scripts read the cookie: `cookieHttpOnly`
 
-Without `HttpOnly`, JavaScript running on the page can read the cookie
-through `document.cookie`. A cookie that carries a session or CSRF token has
-no legitimate reason to be readable by page scripts; being readable only
-means that a single successful cross-site scripting injection can steal it
-outright, turning what would otherwise be a contained UI bug into full
-session theft.
+Without `HttpOnly`, scripts running on the page can read a cookie through
+`document.cookie`. For session cookies this increases the impact of an injected script.
+Some CSRF-token designs deliberately require JavaScript access, so assess the cookie’s
+purpose before changing the attribute.
 
-**Fix:** set `HttpOnly` unless a browser script must deliberately read that
-specific cookie - a genuine requirement for most consent or preference
-cookies, but not for anything used to authenticate a request.
+**Fix:** use `HttpOnly` for cookies that scripts do not need to read, especially session
+cookies. Confirm the application’s requirements before applying the attribute to every
+cookie.
 
 ## 3. Is the cookie sent on cross-site requests: `cookieSameSite`
 
-Without a `SameSite` attribute, a cookie is attached to requests that
-originate from another site - the mechanism behind cross-site request
-forgery (CSRF), where a page the victim never intended to trust triggers a
-request that carries their OpenCloud session along with it.
+`SameSite` controls when the browser includes a cookie in cross-site requests. Many
+current browsers apply a Lax-like default when it is omitted, but an explicit value
+makes the intended behavior clear. The check reports the missing attribute rather than
+proving that a CSRF attack is possible.
 
 **Fix:** set `SameSite=Lax` or `SameSite=Strict` unless a documented
 cross-site flow genuinely needs `SameSite=None` (which additionally requires
@@ -58,23 +54,17 @@ top-level navigation such as clicking a shared link to arrive signed in.
 
 ## 4. Does the cookie name carry a prefix: `cookiePrefix`
 
-The three attributes above all govern how a cookie is *read*. None of them
-governs how one is *written*, and that is the gap the `__Host-` and
-`__Secure-` name prefixes close. A cookie called `session` can be overwritten
-by any sibling subdomain, or over plain HTTP on the same host, however
-carefully its `Secure` and `HttpOnly` flags were set - the browser has no way
-to know which of the two writers is the real application. A cookie called
-`__Host-session` can only be set over HTTPS, with `Path=/` and no `Domain`,
-so nothing but the exact origin can touch it. The prefix is enforced on the
-name itself, before any attribute is consulted, which is what makes it the
-one cookie protection an attacker on a neighbouring subdomain cannot work
-around.
+Cookie-name prefixes add rules for setting a cookie. Supporting browsers require
+`__Secure-` cookies to be set securely with `Secure`. `__Host-` additionally requires
+`Path=/` and forbids `Domain`, binding the cookie to the host that set it. This helps
+prevent a sibling subdomain from setting a competing parent-domain cookie. It does not
+isolate cookies by port.
 
 The check reports two different failures, because they have one fix:
 
 - **A cookie that claims a prefix it does not honour** - `__Host-` with a
-  `Domain` attribute, with a `Path` other than `/`, or without `Secure`. Every
-  browser rejects such a cookie outright, so this is not a theoretical
+  `Domain` attribute, with a `Path` other than `/`, or without `Secure`. Supporting
+  browsers reject such a cookie, so this is not a theoretical
   weakness: the session it carries silently does not work. The detail names
   which rule was broken.
 - **No observed cookie carrying a prefix at all**, which is the ordinary

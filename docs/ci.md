@@ -1,9 +1,8 @@
 # Running the check from CI
 
-A scheduled pipeline is a reasonable place for this check when you have no
-monitoring system, or when you want a second opinion that runs from outside
-your own network. It is not a replacement for one: a pipeline that stops
-running is silent, and silence is indistinguishable from a healthy instance.
+Use a scheduled CI pipeline for regular scans or to check an instance from another
+network. Monitor whether the pipeline runs as well as what it reports: a missed job
+produces no scan result.
 
 Whatever the platform, three things decide whether it works:
 
@@ -213,10 +212,9 @@ get the result somewhere people look, keep the job green and post the outcome:
           } >> "$GITHUB_STEP_SUMMARY"
 ```
 
-Or set `--webhook-url` and let the check report itself - see
-[Webhook recipes](webhook-recipes.md). That route survives the workflow being
-disabled after sixty days of repository inactivity, which the summary does
-not.
+Alternatively, set `--webhook-url` to deliver the result directly; see [Webhook
+recipes](webhook-recipes.md). Delivery still depends on the workflow running. If
+scheduled runs are disabled, neither summaries nor webhooks are produced.
 
 ### The JSON document instead
 
@@ -302,10 +300,9 @@ keeps the job out of ordinary commit pipelines.
 
 ## Using the container image instead of installing
 
-No image is published to a registry, so a container job builds it first. It
-runs as an unprivileged user and carries a `HEALTHCHECK` - see
-[Docker](installation.md#docker). Build it once, push it to your own registry,
-and pin the tag:
+This example builds the plugin image from the checkout. The published
+`okxo/opencloud-scanner` image is another option when you select the plugin with
+`--entrypoint check-opencloud-security`.
 
 ```shell
 docker build -f docker/Dockerfile \

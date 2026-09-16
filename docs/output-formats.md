@@ -1,9 +1,8 @@
 # Machine-readable output: `--format json`, `sarif`, `junit`
 
-The scanner's default output is a single Nagios-style line, because that is
-what a monitoring system expects. `--format` (`COS_FORMAT`) switches that
-line for a document instead, when whatever consumes the result is not a
-monitoring plugin but a script, a dashboard, or a CI pipeline.
+The plugin’s default output is a Nagios status line with performance data. Use
+`--format` (`COS_FORMAT`) to choose a document or metrics format for scripts, dashboards
+and CI pipelines.
 
 `--format json`, `--format sarif`, or `--format junit` all print **one
 combined document for every scanned host** - never one document per host,
@@ -14,7 +13,10 @@ downstream has to special-case a single-host run.
 **The exit code keeps its Nagios meaning under every format** - `0`
 (OK), `1` (WARNING), `2` (CRITICAL), `3` (UNKNOWN). A CI step gates on the
 exit code exactly the way an Icinga check does; the document these flags
-produce is a separate, additional artifact, not a replacement for it.
+produce is a separate, additional artifact, not a replacement for it. The two
+metric formats, `prometheus` and `otlp`, are the exception: they report a
+scan rather than judging it, so a finding travels as a sample and the process
+exits `0`.
 
 <!-- TOC -->
 * [Machine-readable output: `--format json`, `sarif`, `junit`](#machine-readable-output---format-json-sarif-junit)
@@ -22,6 +24,7 @@ produce is a separate, additional artifact, not a replacement for it.
   * [`sarif`](#sarif)
   * [`junit`](#junit)
   * [`checkmk`](#checkmk)
+  * [`otlp`](#otlp)
   * [Choosing a format](#choosing-a-format)
 <!-- TOC -->
 
@@ -99,12 +102,45 @@ services. It is also only needed for the agent-side route: a Checkmk server
 running the plugin as an active check reads the default `nagios` output
 natively. [Checkmk](checkmk.md) has both, and the metric table.
 
+## `otlp`
+
+The metrics the Prometheus exposition publishes, rendered as OTLP/JSON: one
+`ExportMetricsServiceRequest` holding every scanned host, which is the body an
+OpenTelemetry collector accepts at `POST /v1/metrics` over OTLP/HTTP.
+
+```shell
+check-opencloud-security --host opencloud.example.com --format otlp \
+  | curl -sf -X POST http://collector.example.com:4318/v1/metrics \
+      -H 'Content-Type: application/json' --data-binary @-
+```
+
+The plugin prints the document and never dials the collector itself: where
+the metrics go, through which proxy and with which credential is the
+collector's configuration, not a scan's. Piping it at `curl` from the same
+timer that already runs the check keeps that split, and keeps the plugin free
+of an instrumentation stack a monitoring host never asked for.
+
+Several hosts become several data points on the same metrics, distinguished
+by their `host` attribute, exactly as they become repeated samples in a
+scrape. Every metric is a gauge - the current reading of something - and the
+names, attributes and values are the exposition's, so one dashboard query
+works against either pipeline. [Prometheus and Grafana](prometheus.md#what-the-exporter-publishes)
+has the metric table both formats share.
+
+Like `--format prometheus`, **this format exits `0` even for an instance that
+would have alerted**, and reports a failed scan as
+`opencloud_security_scrape_success 0` rather than as an exit code. A metrics
+pipeline has no other way to tell an unreachable instance from a scan that
+stopped running; where the exit code is the point, use `nagios`, `json`,
+`sarif` or `junit`.
+
 ## Choosing a format
 
 | Format     | Use it when...                                                          |
 |:-----------|:-------------------------------------------------------------------------|
 | `nagios`   | Default. A monitoring system reads the exit code and the one-line output |
 | `prometheus` | A scrape target or textfile collector wants metrics directly - see [Prometheus and Grafana](prometheus.md) |
+| `otlp`     | An OpenTelemetry collector should receive those same metrics at `/v1/metrics` |
 | `json`     | Something else parses the result programmatically                        |
 | `sarif`    | A code-scanning dashboard (GitHub, GitLab) should list the findings      |
 | `junit`    | A CI system renders test results and should render findings the same way |

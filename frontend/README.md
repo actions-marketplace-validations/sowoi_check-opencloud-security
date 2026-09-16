@@ -1,10 +1,8 @@
 # The frontend
 
-Everything the browser sees: twelve hand-written templates, the generated CLI
-documentation templates, one stylesheet, six small scripts, the SVGs drawn
-for this project and the three self-hosted typefaces.
-No framework, no build step, no
-`node_modules`, and nothing loaded from anywhere but `/static`.
+This directory contains the server-rendered pages, generated guides and local browser
+assets. CSS, JavaScript, images and fonts are served from `/static`; the frontend has no
+JavaScript framework or package build step.
 
 The service that renders these is [`webapp/`](../webapp/README.md); the
 operator's guide is [`docs/webapp.md`](../docs/webapp.md). Neither this
@@ -72,8 +70,8 @@ does not parse Markdown.
 
 ## The rules
 
-These are not style preferences. They are the product: the pitch is that this
-service is quiet, and a page that quietly fetched a font would make it a lie.
+These rules keep scan addresses and capability-bearing report URLs out of third-party
+requests, and keep the interface usable without client-side enhancements.
 
 - **No third-party anything.** No CDN, no font service, no analytics, no
   tracking pixel, no embedded video. All three typefaces - Space Grotesk,
@@ -105,9 +103,8 @@ service is quiet, and a page that quietly fetched a font would make it a lie.
 - **Nothing that phones home.** `Referrer-Policy: no-referrer`, `noindex`, and
   no analytics of any kind. The scan is nobody's business but the visitor's.
 
-Two things must survive every redesign, because they are what makes a rate
-limit read as a nudge rather than a door: the **trademark notice** and the
-**"run it yourself" pointer** to the project on GitHub.
+Keep the trademark notice and the link to running the scanner locally visible through
+any redesign. Rate-limit messages should explain the wait and offer that alternative.
 
 ## Editing the design
 
@@ -137,15 +134,9 @@ Change a colour there, not at the call site. The dark theme is a
 a second stylesheet, and a token added without a dark value will look wrong on
 half the machines that visit.
 
-The voice of the design is set by five things: display headings in Space
-Grotesk (`--font-display`), data in JetBrains Mono (`--mono`) - labels,
-counters, addresses, findings, the address field itself - hairline rules
-instead of filled chrome, frosted panes that blur and over-saturate the
-backdrop and carry one lit edge along their top-left, and the aurora that
-drifts behind all of it. The ornaments are the halo the `.brackets` class
-breathes around the form that starts a scan, and the reticle mark inside the
-command bar. Keep that list short - the design works because those are the
-only voices. [`DESIGN.md`](../DESIGN.md) is the long version.
+The design uses Space Grotesk for headings, JetBrains Mono for data, thin rules,
+translucent panels and a restrained animated background. Reuse these elements instead of
+introducing unrelated styles. [DESIGN.md](../DESIGN.md) describes the system in detail.
 
 Two media queries carry real obligations:
 
@@ -153,8 +144,8 @@ Two media queries carry real obligations:
   every transition. Any new animation belongs in that block too.
 - `prefers-color-scheme: dark`, as above.
 
-Grades and severities have their own colour pairs. Keep a rating's colour tied
-to its meaning - a green **F** would be a very expensive joke.
+Grades and severities have semantic color pairs. Reuse those tokens so that a rating has
+the same meaning on every page.
 
 ## Languages
 
@@ -165,12 +156,11 @@ and French with identical keys, placeholders and inline markup. Templates call
 Measured values and remote error text are evidence, not interface copy, and
 must remain verbatim.
 
-The server chooses a language from the explicit `cos_locale` cookie, then the
-weighted `Accept-Language` header, then English. The switcher posts to
-`/language`, works without JavaScript and may return only to a validated local
-path. `lang.js` only submits the form when the select changes. Generated guide
-bodies remain English under `lang="en"` with a localized notice; their page
-chrome is translated.
+The server chooses the language from `cos_locale`, then the weighted `Accept-Language`
+header, then English. The switcher posts to `/language` and returns only to a validated
+local path. It works without JavaScript; `lang.js` submits it automatically when the
+selection changes. Generated guide bodies use English or German templates. French and
+Spanish currently receive the English body with a translated notice.
 
 ## The template contract
 

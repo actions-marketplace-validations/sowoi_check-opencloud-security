@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.reference-data.description') }}</p>
 </section>
 
-{% if locale != 'en' %}
+{% if locale not in ('en', 'de') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -28,12 +28,10 @@
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="en">
-<p>Two verdicts depend on data rather than on the instance. End of life comes
-from a release schedule, and known vulnerabilities come from an advisory
-database. Both ship inside the package, so a host that only upgrades the
-package every few months rates instances against a picture of OpenCloud that
-is months old. That means a new release it has never heard of, and an
-advisory published after the package was built.</p>
+<p>The scanner uses a release schedule to determine support status and an advisory database
+to identify known vulnerabilities. Both are bundled with the package and can become
+outdated between package upgrades. Refreshing them separately lets the scanner recognise
+newer releases and advisories.</p>
 <p><code>check-opencloud-scanner refresh-data</code> closes that gap without a package
 upgrade. This page covers what it fetches and how it checks the data, how to
 run it daily, and how to point the check at the result.</p>

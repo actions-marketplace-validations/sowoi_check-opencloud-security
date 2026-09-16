@@ -65,7 +65,12 @@ from opencloud_local_scan.baseline import (
 from opencloud_local_scan.completion import enable as enable_completion
 from opencloud_local_scan.hardening import describe as describe_hardening
 from opencloud_local_scan.hardening import is_actionable
-from opencloud_local_scan.prometheus import render as render_prometheus_metrics
+from opencloud_local_scan.metrics import MetricFamily
+from opencloud_local_scan.metrics import collect as collect_metrics
+from opencloud_local_scan.otlp import render as render_otlp_metrics
+from opencloud_local_scan.prometheus import (
+    render_families as render_prometheus_families,
+)
 from opencloud_local_scan.releases import MODES as UPDATE_SOURCES
 from opencloud_local_scan.scanner import _NoRedirectSession, _PinnedHTTPAdapter
 from opencloud_local_scan.selfupdate import self_update_note
@@ -2207,16 +2212,18 @@ def build_arg_parser() -> argparse.ArgumentParser:
     output.add_argument(
         "--format",
         dest="output_format",
-        choices=("nagios", "prometheus", "json", "sarif", "junit", "checkmk"),
+        choices=("nagios", "prometheus", "otlp", "json", "sarif", "junit", "checkmk"),
         default=_env("FORMAT") or "nagios",
         help=(
             "Output format for a one-shot scan: 'nagios', Prometheus text "
-            "exposition, 'checkmk' (one Checkmk local check line per host), "
-            "or a machine-readable document for every host combined - 'json' "
-            "(an array of the webhook payload shape), 'sarif' (2.1.0, for a "
-            "code-scanning dashboard) or 'junit' XML (one testsuite per "
-            "host). The exit code keeps its Nagios meaning under every "
-            "format. "
+            "exposition, 'otlp' (the same metrics as OTLP/JSON, to pipe at a "
+            "collector's /v1/metrics), 'checkmk' (one Checkmk local check "
+            "line per host), or a machine-readable document for every host "
+            "combined - 'json' (an array of the webhook payload shape), "
+            "'sarif' (2.1.0, for a code-scanning dashboard) or 'junit' XML "
+            "(one testsuite per host). The exit code keeps its Nagios meaning "
+            "under every format except the two metric ones, which report a "
+            "failed scan as a sample and exit 0. "
             f"Default: nagios (env: {ENV_PREFIX}FORMAT)."
         ),
     )
@@ -3119,8 +3126,16 @@ def _render_checkmk(
     return "\n".join(lines)
 
 
-def _prometheus_scan(context: ScanContext) -> str:
-    """Run one scan and render either its metrics or a scrape-success failure sample."""
+def _scan_metric_families(context: ScanContext) -> list[MetricFamily]:
+    """
+    Run one scan and read it as metric families, for whichever metric format
+    asked - the exposition, the exporter or OTLP.
+
+    A scan that fails is still a reading: the families come back carrying the
+    duration and a scrape-success sample of zero, so a collector learns that
+    this instance could not be reached rather than silently keeping the last
+    numbers that worked.
+    """
     start = time.perf_counter()
     try:
         response = _call_with_retry(
@@ -3135,19 +3150,24 @@ def _prometheus_scan(context: ScanContext) -> str:
             description=f"Scanning {context.host}",
         )
     except (ScanError, *REQUEST_ERRORS) as exc:
-        LOGGER.info("Prometheus scan of %s failed: %s", context.host, exc)
-        return render_prometheus_metrics(
+        LOGGER.info("Metrics scan of %s failed: %s", context.host, exc)
+        return collect_metrics(
             context.host,
             None,
             duration_seconds=time.perf_counter() - start,
             success=False,
         )
-    return render_prometheus_metrics(
+    return collect_metrics(
         context.host,
         response,
         duration_seconds=time.perf_counter() - start,
         success=True,
     )
+
+
+def _prometheus_scan(context: ScanContext) -> str:
+    """Run one scan and render either its metrics or a scrape-success failure sample."""
+    return render_prometheus_families(_scan_metric_families(context))
 
 
 def _prometheus_metrics(hosts: list[str], args: argparse.Namespace) -> str:
@@ -3175,6 +3195,30 @@ def _prometheus_metrics(hosts: list[str], args: argparse.Namespace) -> str:
                 declarations.add(line)
             lines.append(line)
     return "\n".join(lines) + "\n"
+
+
+def _otlp_metrics(hosts: list[str], args: argparse.Namespace) -> dict[str, Any]:
+    """
+    Collect one OTLP/JSON document covering every requested host.
+
+    The host pool is the Prometheus one, for the same reason: several hosts
+    are scanned in parallel while each worker scans its own instance serially,
+    so the pools never nest. Unlike the text exposition the result is one
+    document however many hosts there are - several JSON objects in a row do
+    not parse as one, which is the rule --format json, sarif and junit already
+    follow.
+    """
+    contexts = [_build_context(host, args) for host in hosts]
+    if len(contexts) == 1:
+        return render_otlp_metrics([_scan_metric_families(contexts[0])])
+    with ThreadPoolExecutor(
+        max_workers=_host_worker_count(hosts, args),
+        thread_name_prefix="opencloud-otlp",
+    ) as pool:
+        collections = list(
+            pool.map(_scan_metric_families, map(_serial_host_context, contexts))
+        )
+    return render_otlp_metrics(collections)
 
 
 class _PrometheusExporter:
@@ -3353,6 +3397,10 @@ def main() -> None:
 
     if args.output_format == "prometheus":
         print(_prometheus_metrics(hosts, args), end="")
+        return
+
+    if args.output_format == "otlp":
+        print(json.dumps(_otlp_metrics(hosts, args), indent=2))
         return
 
     if args.output_format in {"json", "sarif", "junit", "checkmk"}:

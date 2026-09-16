@@ -36,6 +36,8 @@ webapp/
 ├── ratelimit.py      the client limit and the per-target cooldown
 ├── audit.py          the optional audit trail, pseudonymised
 ├── store.py          one Redis namespace per scan, TTL on every key
+├── comparisons.py    the five minutes a comparison against an upload lives
+├── imports.py        an uploaded report, rebuilt from an allow-list
 ├── queue.py          handing a scan to the worker pool
 ├── tasks.py          the ARQ worker; `python -m webapp.tasks`
 ├── runner.py         where a request becomes ScannerSettings
@@ -84,13 +86,12 @@ Three layers, and the boundary between them is the point:
 **serves**. If a change here starts deciding whether a finding is acceptable,
 it belongs in the scanner or the plugin instead.
 
-The HTML frontend is translated from stable string catalogues. An explicit
-language cookie wins over the browser's weighted `Accept-Language` list, with
-English as the fallback; every HTML response varies on both inputs. The
-accessible switcher is a POST that stores only a validated locale and returns
-only to a validated local path. OpenAPI, Arazzo, discovery, MCP and exports
-remain English contracts, while scan evidence remains exactly as measured.
-See ADR 0020.
+The HTML interface uses English, German, French and Spanish string catalogues. A
+language cookie takes precedence over `Accept-Language`, with English as fallback;
+responses vary on both. The switcher validates the language and local return path.
+Public guides have English and German bodies; French and Spanish currently use the
+English body. API contracts and measured evidence retain their original technical
+values. See ADR 0020 and ADR 0058.
 
 ## Running it
 
@@ -149,6 +150,8 @@ A small surface, and this is all of it.
 | `GET` | `/` | The landing page and the form |
 | `GET` | `/how-it-works`, `/grades`, `/documentation`, `/search`, `/api`, `/ai`, `/privacy`, `/about` | The content pages the landing page links to; HTML only, never in the schema |
 | `GET` | `/compare` | Two finished scans compared, from `?baseline=` and `?current=`; HTML only, and never in the schema because it renders results |
+| `POST` | `/compare` | The earlier side as an uploaded JSON or CSV report instead of a uuid; **303** to `/compare/{token}`. HTML only, and no MCP tool - an agent has `compare_scans` |
+| `GET` | `/compare/{token}` | One comparison drawn from an uploaded report, for the five minutes it is cached |
 | `GET` | `/cli` | **301** to `/documentation#oneliner`; the Docker one-liners moved onto that page |
 | `POST` | `/` | The form submission; **303** to `/scan/{uuid}` |
 | `POST` | `/api/scans` | The same handler for API clients; **202** with the uuid |
@@ -157,9 +160,12 @@ A small surface, and this is all of it.
 | `GET` | `/scan/{uuid}` | The progress and result page |
 | `GET` | `/api/scans/{uuid}` | The state, and the result once there is one |
 | `GET` | `/api/scans/{uuid}/export/{format}` | The finished scan as `json`, `csv`, `sarif` or `pdf` |
+| `GET` | `/api/scans/{uuid}/badge.svg` | The grade as a small SVG, for as long as that scan exists |
 | `DELETE` | `/api/purge` | Erases everything held for one instance and returns a signed receipt; **404** until a token is configured |
 | `GET` | `/arazzo.json` | The API as Arazzo workflows, beside the schema and behind the same switch |
 | `GET` | `/healthz` | Pings Redis, reads queue depth, and requires a live worker heartbeat; returns the aggregate depth or a 503 when unavailable |
+| `GET` | `/advisories.atom` | The advisory database as an Atom feed - what a scan is rated against, subscribable |
+| `GET` | `/release-schedule.atom` | The OpenCloud release lines and when each stops receiving fixes, as Atom |
 | `GET` | `/robots.txt` | Generated. Points at the sitemap and keeps crawlers out of `/scan/` and `/api/` |
 | `GET` | `/agents.txt` | Generated. Capability declaration in the [agents-txt.com](https://agents-txt.com) format: discovery document, contracts, MCP and WebMCP endpoints |
 | `GET` | `/agents.json` | The structured sibling `agents.txt` names - the same document `/.well-known/ai.json` serves |
@@ -283,6 +289,23 @@ Each carries the remediation plan the scanner produced: a summary line and one
 entry per fix in the CSV, `runs[0].properties.remediation` in the SARIF, a
 "What gets you to A+" section in the PDF, and `remediationPlan` in the JSON,
 which is the scanner's own document.
+
+`GET /api/scans/{uuid}/badge.svg` is the fifth rendering and the smallest: the
+grade, drawn by `badge.py` as a self-contained SVG with no script, no external
+font and no request anywhere else - an embedded image that fetched a badge
+service would hand it the result URL in a referrer on every view. It carries
+the letter and nothing the scanned instance chose: no hostname, no product, no
+version. Like every other reading of a uuid it answers **404** for an unknown
+or expired one and **409** while a scan is still running, and it keeps the
+service-wide `no-store`, because ADR 0031's cacheable routes describe this
+service and this one describes somebody's instance.
+
+**A badge lives as long as its scan does** - one hour by default
+(`COS_WEB_RESULT_TTL`), after which the image stops resolving. It is for a
+ticket, a chat message or a dashboard while the result is current, not for a
+README on a deployment with this service's default lifetime. Publishing the
+URL also publishes the uuid, which is the whole of the authorisation for the
+full result.
 
 When `COS_WEB_EXPORT_SIGNING_KEY` is set, the response also carries
 `X-COS-Signature: HMAC-SHA256=<hex>`. The signature covers the exact response
@@ -639,7 +662,9 @@ The other standing restrictions:
   extra ports on a host a stranger named is not something to do uninvited.
 - **Nothing is stored.** Every key has a TTL, Redis persists nothing, and the
   log carries lifecycle markers and uuids - never a target, a client address
-  or a result. An operator who needs an audit trail can turn one on with
+  or a result. An uploaded report is not written anywhere at all; only the
+  comparison drawn from it is, for five minutes, under a capability and inside
+  the erasure endpoint's reach. An operator who needs an audit trail can turn one on with
   `COS_WEB_AUDIT_LOG`, and keep it past the container with
   `COS_WEB_AUDIT_LOG_FILE`; addresses stay fingerprints either way. See
   [What gets logged](../docs/webapp.md#what-gets-logged).
@@ -657,6 +682,7 @@ before the first deployment:
 |:---------|:--------|:---------------|
 | `COS_WEB_REDIS_URL` | `redis://127.0.0.1:6379/0` | `memory://` runs without Redis, for a single process |
 | `COS_WEB_RESULT_TTL` | `3600` | How long a result lives, and the TTL on every key |
+| `COS_WEB_COMPARISON_TTL` | `300` | How long a comparison against an uploaded report lives. Clamped to 300; shorter is honoured |
 | `COS_WEB_MAX_WORKERS` | `5` | Scans at once. The whole of this service's load on the outside world |
 | `COS_WEB_SCAN_CONCURRENCY` | `4` | Probes in flight within one scan |
 | `COS_WEB_IP_RATE_LIMIT` / `_WINDOW` | `10` / `60` | The client limit. `0` disables |
