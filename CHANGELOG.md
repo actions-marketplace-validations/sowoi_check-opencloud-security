@@ -25,6 +25,12 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ### Fixed
 
+- **The operator documents no longer carry broken images.** The repository's
+  Markdown points at files beside it, which resolve to nothing once a page is
+  served from `/admin/docs/`. The architecture diagram is now served from this
+  origin, as `img-src 'self'` requires; the two interface screenshots are
+  megabytes each and show the page the reader is already on, so they become
+  links to the repository rather than weight in the bundle.
 - **The two generated operator documents now look like the rest of the area.**
   `Architecture` and `Operations` never loaded `admin.css`, so the tab strip
   above them rendered as bare links and neither page carried the signed-in

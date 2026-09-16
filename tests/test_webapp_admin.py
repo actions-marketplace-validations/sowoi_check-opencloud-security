@@ -1628,3 +1628,27 @@ def test_the_operator_index_carries_the_areas_text_in_the_readers_language():
     assert german["locale"] == "de"
     overview = next(page for page in german["pages"] if page["path"] == "/admin")
     assert overview["title"] == "Betriebsbereich"
+
+
+def test_the_operator_documents_show_only_images_this_service_serves():
+    """A page under `img-src 'self'` must not point at an image it cannot show.
+
+    The repository's Markdown links images beside it, which resolve to
+    nothing once the page is served from `/admin/docs/`. The diagram is
+    copied into the frontend and served from this origin; the interface
+    screenshots are megabytes each, so they become links to the repository
+    rather than broken images or a heavier bundle.
+    """
+    with TestClient(create_app(_admin_settings())) as client:
+        architecture = client.get(
+            "/admin/docs/architecture", headers=FORWARDED
+        ).text
+        operations = client.get("/admin/docs/operations", headers=FORWARDED).text
+
+        assert 'src="/static/img/architecture-three-layers.png"' in architecture
+        assert client.get("/static/img/architecture-three-layers.png").status_code == 200
+
+        # Nothing anywhere still points at a path relative to the document.
+        for body in (architecture, operations):
+            assert 'src="img/' not in body
+        assert "blob/main/img/admin-area-dark.png" in operations
