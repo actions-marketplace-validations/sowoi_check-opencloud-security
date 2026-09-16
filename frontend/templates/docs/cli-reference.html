@@ -16,11 +16,9 @@
 {% endif %}
 
 <article class="docs-article card section-gap" data-reveal lang="en">
-<p>Every command-line option the plugin accepts, what it defaults to, and the
-environment variable that sets the same thing. This lives on its own page
-because it is a lookup table rather than something to read: the
-<a href="/documentation/reference">main README</a> is the guided tour, and this is the index at the
-back.</p>
+<p>This page lists every plugin option, its default and the corresponding environment
+variable. Use it to look up a setting; the <a href="/documentation/reference">main README</a> explains the
+workflows and provides examples.</p>
 <p>Precedence between the three ways of setting anything is always the same:
 <strong>command-line flag &gt; environment variable &gt; configuration file &gt; default.</strong>
 See <a href="/documentation/reference#configuration-file-and-secrets">Configuration file and secrets</a>
@@ -143,7 +141,7 @@ for the naming rules.</p>
 </tr>
 <tr>
 <td><code>--format</code></td>
-<td>One-shot output format: <code>nagios</code>, <code>prometheus</code>, <code>checkmk</code>, <code>json</code>, <code>sarif</code> or <code>junit</code></td>
+<td>One-shot output format: <code>nagios</code>, <code>prometheus</code>, <code>otlp</code>, <code>checkmk</code>, <code>json</code>, <code>sarif</code> or <code>junit</code></td>
 <td><code>nagios</code></td>
 <td><code>COS_FORMAT</code></td>
 </tr>

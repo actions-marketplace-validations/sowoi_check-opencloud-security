@@ -212,7 +212,7 @@ lines you want can be found without reading the other forty.</p>
 </tr>
 <tr>
 <td><code>--format</code></td>
-<td><code>nagios</code>, <code>prometheus</code>, <code>checkmk</code>, <code>json</code>, <code>sarif</code> or <code>junit</code></td>
+<td><code>nagios</code>, <code>prometheus</code>, <code>otlp</code>, <code>checkmk</code>, <code>json</code>, <code>sarif</code> or <code>junit</code></td>
 </tr>
 <tr>
 <td><code>--ignore-hardening</code></td>
@@ -272,9 +272,22 @@ Deployment needs, alongside publishing port <code>9102</code>.</p>
 <code>opencloud_security_scan_duration_seconds</code> and
 <code>opencloud_security_scrape_success</code>. The <code>host</code> label identifies the configured
 target; rating also carries <code>domain</code>, <code>product</code> and <code>version</code>.</p>
+<p><code>--format=otlp</code> reports those same metrics as OTLP/JSON - one
+<code>ExportMetricsServiceRequest</code> for however many hosts were scanned, which is
+what an OpenTelemetry collector accepts at <code>/v1/metrics</code>:</p>
+<pre><code class="language-shell">check-opencloud-security --host opencloud.example.com --format=otlp \
+  | curl -sf -X POST http://collector.example.com:4318/v1/metrics \
+      -H 'Content-Type: application/json' --data-binary @-
+</code></pre>
+<p>Both metric formats report a failed scan as
+<code>opencloud_security_scrape_success 0</code> and exit <code>0</code>, because a collector that
+stopped receiving samples cannot tell an unreachable instance from a cron job
+nobody noticed had stopped. Use <code>--format nagios</code> where the exit code is the
+point.</p>
 <p>The <a href="/documentation/prometheus">Prometheus and Grafana guide</a> has the ServiceMonitor,
-the alerting rules, what to graph, and the legacy textfile/Pushgateway
-patterns; <a href="/documentation/kubernetes">Kubernetes</a> has the manifests.</p>
+the alerting rules, what to graph, the OTLP recipe and the legacy
+textfile/Pushgateway patterns; <a href="/documentation/kubernetes">Kubernetes</a> has the
+manifests and the Helm chart.</p>
 <h2 id="machine-readable-output-for-ci-jsonsarifjunit">Machine-readable output for CI (json/sarif/junit)</h2>
 <p><code>--format json</code>, <code>--format sarif</code> or <code>--format junit</code> print one combined
 document for every scanned host - never one per host, even for a single one, so
