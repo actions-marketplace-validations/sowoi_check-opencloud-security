@@ -15,7 +15,8 @@ docker run --rm -p 9102:9102 check-opencloud-security \
 ```
 
 For a batch job, `--format=prometheus` prints one text exposition payload and
-exits. Both modes require no extra dependency.
+exits, and `--format=otlp` prints the same metrics as the OTLP/JSON body an
+OpenTelemetry collector accepts. Every mode requires no extra dependency.
 
 The textfile collector and Pushgateway patterns below remain useful when a
 scheduled scan is a better fit than a long-running exporter.
@@ -31,6 +32,7 @@ up by Icinga2's Graphite/InfluxDB writers directly.
   * [What there is to graph](#what-there-is-to-graph)
   * [node_exporter textfile collector](#node_exporter-textfile-collector)
   * [Pushgateway](#pushgateway)
+  * [OpenTelemetry collector](#opentelemetry-collector)
   * [Alerting rules](#alerting-rules)
   * [Grafana](#grafana)
 <!-- TOC -->
@@ -177,6 +179,32 @@ instance, or it will be alerting on a server that no longer exists:
 ```shell
 curl -X DELETE http://pushgateway.example.com:9091/metrics/job/opencloud_security/instance/opencloud.example.com
 ```
+
+## OpenTelemetry collector
+
+`--format otlp` renders the metrics in this table as one OTLP/JSON
+`ExportMetricsServiceRequest`, which is what a collector accepts at
+`/v1/metrics` over OTLP/HTTP. The plugin prints it; `curl` posts it, from the
+same [systemd timer or cron job](scheduling.md) that already runs the scan:
+
+```shell
+check-opencloud-security --host opencloud.example.com,other.example.com \
+  --format otlp \
+  | curl -sf -X POST http://collector.example.com:4318/v1/metrics \
+      -H 'Content-Type: application/json' --data-binary @-
+```
+
+The metric names and the `host` attribute are the exporter's, so a query
+written against a scrape works against a collector's output too, and the
+alerting rules below need no translation beyond your backend's own label
+conventions. Where the collector lives, which proxy reaches it and what
+credential it wants are the collector's business and stay in `curl`'s
+arguments rather than becoming scanner settings.
+
+A scan that fails still reports: `opencloud_security_scrape_success` arrives
+as `0`, with the duration beside it and no findings at all, so an instance
+that could not be reached is visible as such instead of keeping the numbers
+from the last run that worked.
 
 ## Alerting rules
 

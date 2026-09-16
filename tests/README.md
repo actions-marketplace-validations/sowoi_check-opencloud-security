@@ -87,6 +87,7 @@ is needed.
 | [`test_perfdata.py`](test_perfdata.py) | Plugin output: perfdata, hardening reporting, formatting. |
 | [`test_output_formats.py`](test_output_formats.py) | `--format json/sarif/junit` for one host and for several. |
 | [`test_prometheus.py`](test_prometheus.py) | Prometheus rendering and the native `/metrics` exporter. |
+| [`test_otlp.py`](test_otlp.py) | `--format otlp`: the same metrics as the exposition, as a collector's body. |
 | [`test_webhook.py`](test_webhook.py) | The optional webhook notification. |
 | [`test_baseline.py`](test_baseline.py) | `--baseline` and `--warn-on-new`: report only what changed. |
 | [`test_multi_host.py`](test_multi_host.py) | Host parsing, target validation, retries and runs across several hosts. |
@@ -146,6 +147,7 @@ is needed.
 | [`test_webapp_pages.py`](test_webapp_pages.py) | The informational pages can be reached, describe themselves, and link back. |
 | [`test_webapp_exports.py`](test_webapp_exports.py) | Exporting a scan as a file, and refusing malformed export requests. |
 | [`test_webapp_compare.py`](test_webapp_compare.py) | The comparison page between two scans agrees with `compare_scans`. |
+| [`test_webapp_compare_upload.py`](test_webapp_compare_upload.py) | An uploaded report is rebuilt from an allow-list, never kept, and the comparison drawn from it expires within five minutes. |
 | [`test_webapp_result_continuity.py`](test_webapp_result_continuity.py) | The tab title follows the scan, later scans offer a comparison, and the page warns before a report expires. |
 | [`test_webapp_fragment.py`](test_webapp_fragment.py) | The configuration fragment on a report page, in every flavour and within the CSP. |
 | [`test_webapp_tls_overview.py`](test_webapp_tls_overview.py) | TLS facts shown next to the grade, without the web layer judging them. |
@@ -174,6 +176,7 @@ is needed.
 | [`test_homebrew_formula.py`](test_homebrew_formula.py) | The Homebrew formula matches its generator and the runtime imports. |
 | [`test_github_action.py`](test_github_action.py) | The published GitHub Action uses only flags and variables the plugin accepts. |
 | [`test_contrib_assets.py`](test_contrib_assets.py) | The Grafana dashboard, Prometheus rules and Checkmk check match the exporter. |
+| [`test_helm_chart.py`](test_helm_chart.py) | The Helm chart renders, and its flags are the plugin's own. |
 | [`test_docker_wizard.py`](test_docker_wizard.py) | `docker/setup-wizard.py` writes a valid compose file, keeps credentials in `.env` only, and never overwrites an existing deployment. |
 | [`test_wizard_release.py`](test_wizard_release.py) | The Docker wizard attached to a release reports its version and ships with a checksum. |
 

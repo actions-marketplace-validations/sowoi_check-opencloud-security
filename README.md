@@ -237,7 +237,7 @@ The handful you will actually type most days:
 | `-d, --debug` | Explain the rating and every finding, at length |
 | `--check-hardening` | Also report missing hardening measures and security headers |
 | `-w, --warning` / `-c, --critical` | The ratings (0-5) at or below which the check warns or goes critical |
-| `--format` | `nagios`, `prometheus`, `checkmk`, `json`, `sarif` or `junit` |
+| `--format` | `nagios`, `prometheus`, `otlp`, `checkmk`, `json`, `sarif` or `junit` |
 | `--ignore-hardening` | Accept a finding you are not going to fix, by name |
 | `--baseline` / `--warn-on-new` | Alert only on findings that are new or worse than last run |
 
@@ -301,9 +301,26 @@ It publishes `opencloud_security_rating_score`,
 `opencloud_security_scrape_success`. The `host` label identifies the configured
 target; rating also carries `domain`, `product` and `version`.
 
+`--format=otlp` reports those same metrics as OTLP/JSON - one
+`ExportMetricsServiceRequest` for however many hosts were scanned, which is
+what an OpenTelemetry collector accepts at `/v1/metrics`:
+
+```shell
+check-opencloud-security --host opencloud.example.com --format=otlp \
+  | curl -sf -X POST http://collector.example.com:4318/v1/metrics \
+      -H 'Content-Type: application/json' --data-binary @-
+```
+
+Both metric formats report a failed scan as
+`opencloud_security_scrape_success 0` and exit `0`, because a collector that
+stopped receiving samples cannot tell an unreachable instance from a cron job
+nobody noticed had stopped. Use `--format nagios` where the exit code is the
+point.
+
 The [Prometheus and Grafana guide](docs/prometheus.md) has the ServiceMonitor,
-the alerting rules, what to graph, and the legacy textfile/Pushgateway
-patterns; [Kubernetes](docs/kubernetes.md) has the manifests.
+the alerting rules, what to graph, the OTLP recipe and the legacy
+textfile/Pushgateway patterns; [Kubernetes](docs/kubernetes.md) has the
+manifests and the Helm chart.
 
 # Machine-readable output for CI (json/sarif/junit)
 

@@ -1,10 +1,8 @@
 # CLI option reference
 
-Every command-line option the plugin accepts, what it defaults to, and the
-environment variable that sets the same thing. This lives on its own page
-because it is a lookup table rather than something to read: the
-[main README](../README.md) is the guided tour, and this is the index at the
-back.
+This page lists every plugin option, its default and the corresponding environment
+variable. Use it to look up a setting; the [main README](../README.md) explains the
+workflows and provides examples.
 
 Precedence between the three ways of setting anything is always the same:
 **command-line flag > environment variable > configuration file > default.**
@@ -46,7 +44,7 @@ check-opencloud-security --host <Hostname> --check-hardening
 | `--no-debug-ports`            | Skip probing the OpenCloud debug ports                                                                                                       | *False*                                         | `COS_NO_DEBUG_PORTS`            |
 | `--all-addresses`             | Also check version, headers, hardening and demo accounts on every resolved address                                                           | *False*                                         | `COS_ALL_ADDRESSES`             |
 | `--concurrency`               | Maximum parallel host workers; one is used per host up to this ceiling                                                                       | `5`                                             | `COS_CONCURRENCY`               |
-| `--format`                    | One-shot output format: `nagios`, `prometheus`, `checkmk`, `json`, `sarif` or `junit`                                                        | `nagios`                                        | `COS_FORMAT`                    |
+| `--format`                    | One-shot output format: `nagios`, `prometheus`, `otlp`, `checkmk`, `json`, `sarif` or `junit`                                                        | `nagios`                                        | `COS_FORMAT`                    |
 | `--prometheus-listen-port`    | Serve native `/metrics` on this port until stopped                                                                                           | disabled                                        | `COS_PROMETHEUS_LISTEN_PORT`    |
 | `--prometheus-listen-addr`    | Bind address for the native Prometheus exporter                                                                                              | `127.0.0.1`                                     | `COS_PROMETHEUS_LISTEN_ADDR`    |
 | `--scrape-interval`           | Seconds to cache exporter scan results (`0` scans on every scrape)                                                                           | `60`                                            | `COS_SCRAPE_INTERVAL`           |

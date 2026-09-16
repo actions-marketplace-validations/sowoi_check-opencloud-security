@@ -12,6 +12,38 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+### Added
+
+- **`--format otlp` hands the scan's metrics to an OpenTelemetry collector.**
+  The eight metrics the Prometheus exporter publishes, rendered as one
+  OTLP/JSON `ExportMetricsServiceRequest` covering every scanned host - the
+  body a collector accepts at `/v1/metrics`. Pipe it at `curl` from the timer
+  that already runs the check: the plugin prints the document and never dials
+  the collector itself, so where the metrics go and which credential reaches
+  them stay out of a scan. Like `--format prometheus` it exits `0` whatever
+  the instance scored and reports an unreachable one as
+  `opencloud_security_scrape_success 0`, because a metrics pipeline has no
+  other way to tell that apart from a scan that stopped running. The names,
+  labels and values are the exporter's: both formats now render one reading of
+  the scan rather than each deciding for itself what a waived measure counts
+  as - see
+  [ADR 0054](adr/0054-metrics-are-collected-once-and-rendered-twice.md).
+
+- **A Helm chart installs the Kubernetes deployment this project documents.**
+  [`contrib/helm/check-opencloud-security`](contrib/helm/check-opencloud-security)
+  renders the scheduled scan as a `CronJob` and, when asked for, the shared
+  scan service with a `NetworkPolicy` naming the instances it may reach.
+  Four values have no default and an install that omits one is refused rather
+  than rendered: the image tag, because the release schedule ships inside the
+  image and `latest` would move the verdict under a running alert; the hosts,
+  because a Job with no host scans nothing daily while looking like
+  monitoring; the scan service's token, because an untokened one scans any
+  host its callers name; and that policy's allowlist, because a policy with no
+  egress rule is a different policy rather than an unfinished one. The chart
+  writes no `Secret` and carries no version of its own - every credential is
+  read from one you created and named. `tests/test_helm_chart.py` holds every
+  flag it can emit against the plugin's own argument parser.
+
 ### Changed
 
 - **The bundled release schedule and advisory database were re-checked against
