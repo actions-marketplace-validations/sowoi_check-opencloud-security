@@ -12,6 +12,8 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+## [1.24.1] - 2026-09-16
+
 ### Added
 
 - **The frontend is tested in a real browser.** `tests/test_webapp_browser_ux.py`
