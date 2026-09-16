@@ -92,15 +92,33 @@ def _touches_block(rel: str, tool: str, tool_input: dict, current: str) -> str |
     return None
 
 
-def decide(rel: str, tool: str, tool_input: dict, current: str) -> tuple[str, str] | None:
-    """Return (decision, reason) for an edit to ``rel``, or None to allow it."""
+_PRIVACY_FILES = (".claude/hooks/privacy_allowlist.txt", ".claude/hooks/privacy_guard.py")
+
+
+def path_rule(rel: str, whole_file: bool = False) -> tuple[str, str] | None:
+    """The decision that depends on the path alone.
+
+    ``whole_file`` is for writes that cannot be inspected line by line (a
+    Bash redirect, ``sed -i``, ``cp``): those also ask before touching
+    pyproject.toml, where only the version line is the user's.
+    """
     for pattern, reason in _GENERATED:
         if fnmatch.fnmatch(rel, pattern):
             return "deny", reason
-
-    if rel in (".claude/hooks/privacy_allowlist.txt", ".claude/hooks/privacy_guard.py"):
+    if rel in _PRIVACY_FILES:
         return "ask", ("This changes what the privacy guard lets into commits (real hosts, personal data). "
                        "Only the user approves that - confirm they asked for this exact change.")
+    if whole_file and rel == "pyproject.toml":
+        return "ask", ("A shell command is about to rewrite pyproject.toml, which holds the version only the "
+                       "user may change - confirm this was asked for, or use the Edit tool.")
+    return None
+
+
+def decide(rel: str, tool: str, tool_input: dict, current: str) -> tuple[str, str] | None:
+    """Return (decision, reason) for an edit to ``rel``, or None to allow it."""
+    rule = path_rule(rel)
+    if rule:
+        return rule
 
     reason = _touches_block(rel, tool, tool_input, current)
     if reason:

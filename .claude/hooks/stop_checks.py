@@ -20,7 +20,7 @@ import shutil
 import subprocess  # nosec B404
 import sys
 
-_MISSING_DEPENDENCY = ("ModuleNotFoundError", "ImportError")
+_MISSING_DEPENDENCY = ("ModuleNotFoundError:", "ImportError:")
 
 # (label, command, path prefixes that trigger it, blocking)
 _CHECKS = (
@@ -92,7 +92,7 @@ def main() -> int:
         if result.returncode == 0:
             continue
         output = (result.stdout + result.stderr).strip().splitlines()[-15:]
-        if any(marker in line for line in output for marker in _MISSING_DEPENDENCY):
+        if output and output[-1].lstrip().startswith(_MISSING_DEPENDENCY):
             warnings.append(f"{label} skipped: the project environment is missing a dependency ({output[-1]})")
             continue
         message = "{} failed: python {}\n{}".format(label, " ".join(args), "\n".join(output))

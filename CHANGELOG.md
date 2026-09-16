@@ -54,6 +54,20 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   session run in the project's environment and report a missing dependency
   as skipped rather than as a stale file; the privacy guard only starts for
   `git` and `gh` commands. `tests/test_claude_hooks.py` covers all of it.
+- **The hooks close the gaps a review found.** The Bash guard now applies the
+  Edit guard's rules to shell writes (redirects, `tee`, `sed -i`, `cp`, `mv`,
+  `rm`), sees commands inside `$(...)`, backticks, `bash -c`, `eval`, braces,
+  background jobs and `xargs`, ignores quoted text, heredoc bodies and
+  comments, lets `ruff format --check`/`--diff` and redirected `git tag`
+  listings through, and reads `git push -o` values correctly. The privacy
+  guard matches values already on `main` as whole tokens only, reads diffs
+  without mistaking an added `++ ` line for a file header, checks merge
+  commits, checks the branch a push actually sends, reads `git commit -F`
+  message files and `gh` `-F`/`--body-file=` bodies (issues too), only widens
+  a commit check to the working tree for a real `git add`, `-a`/`-i`/`-o` or
+  pathspec, and asks when it cannot read the commits of a push. The session-end
+  generator checks treat only a traceback ending in an import error as a
+  missing dependency.
 - **`/preflight` runs in a read-only `preflight-runner` agent**, so its output
   stays out of the conversation and nothing is changed while it checks.
 - **`/patch-release`, `/minor-release` and `/major-release` are now one

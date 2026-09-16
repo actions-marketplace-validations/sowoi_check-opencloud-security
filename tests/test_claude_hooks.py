@@ -465,6 +465,226 @@ def test_this_file_passes_the_privacy_guard(judge, monkeypatch):
     assert judge({"tests/test_claude_hooks.py": text}) == {"block": [], "review": []}
 
 
+# --- guard_bash.py: reading a command ------------------------------------------
+
+@pytest.mark.parametrize("command", [
+    "echo $(git push -f)",
+    "`git push -f`",
+    "bash -c 'git push -f'",
+    'sh -c "gh pr merge 1"',
+    "eval 'git reset --hard'",
+    "{ git push -f; }",
+    "true & git push -f",
+    "xargs git push -f < /dev/null",
+    "xargs -0 git push -f",
+    "nohup git push -f",
+    "timeout 5 git push -f",
+    "! git push -f",
+    "git push -o ci.skip origin main",
+    'git commit -m "run `git push -f` now"',
+    "cat <<'X' > /tmp/notes\nbody\nX\ngit push -f",
+    "cat <<A <<B\na\nA\nb\nB\ngit push -f",
+])
+def test_the_bash_guard_sees_commands_inside_substitutions_and_shells(command):
+    """A refused command stays refused inside $(...), bash -c, eval, braces or xargs."""
+    assert guard_bash.check(command), command
+
+
+@pytest.mark.parametrize("command", [
+    "git commit -m \"$(cat <<'EOF'\nfix: don't `ruff format` or git push -f (never)\nEOF\n)\"",
+    "cat <<'X' > /tmp/notes.md\ngit push -f\nrm RELEASE.md\nX",
+    "git commit -m 'a; git push -f | b && c'",
+    "echo \"it's fine; git push -f\"",
+    "ls # git push -f",
+    "uvx ruff format --check .",
+    "uvx ruff format --diff .",
+    "git tag 2>/dev/null",
+    "git tag -l 2> /dev/null",
+    "git push origin release/1.24.1 2>&1 | tail -3",
+])
+def test_the_bash_guard_ignores_quoted_text_heredocs_and_read_only_forms(command):
+    """Quoted text, heredoc bodies, comments and read-only modes are not commands to refuse."""
+    assert guard_bash.decide(command, str(REPO_ROOT), str(REPO_ROOT)) is None, command
+
+
+@pytest.mark.parametrize("command", [
+    "echo x > RELEASE.md",
+    "cat notes >> RELEASE.md",
+    "tee RELEASE.md < notes",
+    "sed -i '' 's/a/b/' frontend/templates/docs/csp.html",
+    "sed -i.bak -e 's/a/b/' RELEASE.md",
+    "perl -pi -e 's/a/b/' RELEASE.md",
+    "cp /tmp/index.json frontend/static/search-index.json",
+    "rm frontend/templates/docs/csp.html",
+    'echo x > "RELEASE.md"',
+    f"echo x > {REPO_ROOT}/RELEASE.md",
+])
+def test_every_shell_write_form_to_a_generated_file_is_refused(command):
+    """A redirect, tee, sed -i, cp or rm is no way around the Edit guard."""
+    decision = guard_bash.decide(command, str(REPO_ROOT), str(REPO_ROOT))
+    assert decision and decision[0] == "deny", command
+
+
+@pytest.mark.parametrize("command", [
+    "printf '%s' x >> .claude/hooks/privacy_allowlist.txt",
+    "mv notes .claude/hooks/privacy_guard.py",
+    "sed -i '' 's/1.0.0/2.0.0/' pyproject.toml",
+])
+def test_the_bash_guard_asks_before_shell_writes_to_guarded_files(command):
+    """The privacy allowlist and pyproject.toml are the user's to change."""
+    decision = guard_bash.decide(command, str(REPO_ROOT), str(REPO_ROOT))
+    assert decision and decision[0] == "ask", command
+
+
+@pytest.mark.parametrize("command", [
+    "echo x > /tmp/scratch.txt",
+    "sed -n 1,5p RELEASE.md",
+    "sed 's/a/b/' RELEASE.md > /tmp/out",
+    "cp RELEASE.md /tmp/release.md",
+    "python scripts/build_search_index.py > /dev/null",
+    "echo ok >&2",
+    "ls &> /dev/null",
+])
+def test_the_bash_guard_allows_reads_and_writes_elsewhere(command):
+    """Reading a protected file, or writing somewhere else, is fine."""
+    assert guard_bash.decide(command, str(REPO_ROOT), str(REPO_ROOT)) is None, command
+
+
+def test_the_bash_guard_resolves_writes_from_the_working_directory():
+    """A relative path is resolved from the directory the command runs in."""
+    payload = {"tool_input": {"command": "echo x > ../RELEASE.md"}, "cwd": str(REPO_ROOT / "docs")}
+    code, output = _hook("guard_bash.py", payload)
+    assert code == 0 and _decision(output) == "deny"
+
+
+# --- stop_checks.py: what counts as a missing dependency -------------------------
+
+def test_the_stop_checks_block_a_failure_that_only_mentions_an_import_error(check_repo):
+    """Only a traceback ending in an import error means the environment is incomplete."""
+    _fake_check(check_repo, "security_advisories.py",
+                "import sys; print('ImportError: in the docs'); print('stale entry'); sys.exit(1)\n")
+    (check_repo / "CHANGELOG.md").write_text("### Security\n")
+    _, output = _hook("stop_checks.py", {}, project=check_repo)
+    assert output["decision"] == "block"
+
+
+# --- privacy_guard.py: reading diffs, commands and history -----------------------
+
+def test_a_line_starting_with_plus_plus_is_not_a_file_header():
+    """Added text such as `++ /dev/null` cannot hide the lines after it."""
+    source = privacy_guard.Source("staged")
+    patch = ("diff --git a/notes.md b/notes.md\n--- a/notes.md\n+++ b/notes.md\n@@ -0,0 +1,3 @@\n"
+             f"+intro\n++ /dev/null\n+see {INSTANCE_HOST}\n")
+    privacy_guard._parse_patch(patch, source)
+    assert [text for _, text in source.files["notes.md"]] == ["intro", "+ /dev/null", f"see {INSTANCE_HOST}"]
+
+
+def test_a_value_inside_a_longer_known_one_is_still_new(judge, repo):
+    """`main` knowing a longer host or address does not make a shorter one known."""
+    (repo / "docs" / "longer.md").write_text(f"my{INSTANCE_HOST} and 8{PUBLIC_IP}5\n")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "longer")
+    _git(repo, "update-ref", "refs/remotes/origin/main", "HEAD")
+    found = judge({"docs/guide.md": f"Run it against {INSTANCE_HOST} at {PUBLIC_IP}"})
+    assert len(found["block"]) == 2
+    assert judge({"docs/guide.md": f"Old box my{INSTANCE_HOST}"}) == {"block": [], "review": []}
+
+
+@pytest.mark.parametrize(("words", "stages", "files"), [
+    (["-m", "add a feature"], False, []),
+    (["-m", "fix", "-a"], True, []),
+    (["-am", "fix"], True, []),
+    (["--all", "-m", "fix"], True, []),
+    (["-m", "fix", "docs/leak.md"], True, []),
+    (["-F", "msg.txt"], False, ["msg.txt"]),
+    (["-Fmsg.txt"], False, ["msg.txt"]),
+    (["--file=msg.txt"], False, ["msg.txt"]),
+    (["-sF", "msg.txt"], False, ["msg.txt"]),
+    (["--amend", "--no-edit"], False, []),
+])
+def test_commit_options_are_read_as_git_reads_them(words, stages, files):
+    """Only -a/--all/-i/-o or a pathspec take working-tree content; -F names a message file."""
+    assert privacy_guard.commit_details(words) == (stages, files)
+
+
+def test_the_word_add_in_a_message_does_not_widen_the_check(repo):
+    """An untracked file is not judged for a commit that does not include it."""
+    (repo / "scratch.json").write_text(SCAN_RESULT)
+    code, output = _hook("privacy_guard.py", _commit_payload("git commit -m 'add a feature'"),
+                         "pre-tool-use", project=repo)
+    assert (code, output) == (0, {})
+
+
+def test_a_commit_of_named_paths_checks_the_working_tree(repo):
+    """`git commit <path>` commits what is on disk, so that is what gets checked."""
+    (repo / "docs" / "reference.md").write_text(f"Scan against {INSTANCE_HOST}\n")
+    _, output = _hook("privacy_guard.py", _commit_payload("git commit -m docs docs/reference.md"),
+                      "pre-tool-use", project=repo)
+    assert _decision(output) == "deny"
+
+
+@pytest.mark.parametrize("option", ["-F msg.txt", "-Fmsg.txt", "--file=msg.txt"])
+def test_a_commit_message_file_is_checked(repo, option):
+    """A message read from a file is a commit message like any other."""
+    (repo / "msg.txt").write_text(f"fix: scanned https://{INSTANCE_HOST}\n")
+    _, output = _hook("privacy_guard.py", {"tool_input": {"command": f"git commit {option}"}, "cwd": str(repo)},
+                      "pre-tool-use", project=repo)
+    assert _decision(output) == "deny"
+
+
+@pytest.mark.parametrize("command", [
+    "gh pr create --title t -F body.md",
+    "gh pr create --title t --body-file=body.md",
+    "gh issue comment 5 --body-file body.md",
+])
+def test_every_form_of_a_gh_body_file_is_checked(repo, command):
+    """The short -F and the = form of --body-file are read too, for issues as well."""
+    (repo / "body.md").write_text(f"Tested on https://{INSTANCE_HOST}\n")
+    _, output = _hook("privacy_guard.py", {"tool_input": {"command": command}, "cwd": str(repo)},
+                      "pre-tool-use", project=repo)
+    assert _decision(output) == "deny"
+
+
+def test_a_push_checks_the_branch_it_pushes(repo):
+    """Pushing another branch checks that branch, not the one checked out."""
+    _git(repo, "switch", "-q", "-c", "leaky")
+    (repo / "docs" / "leak.md").write_text(f"Contact {PERSON}\n")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "leak")
+    _git(repo, "switch", "-q", "feature")
+
+    def push(target: str) -> dict:
+        return _hook("privacy_guard.py", _commit_payload(f"git push origin {target}"),
+                     "pre-tool-use", project=repo)[1]
+
+    assert _decision(push("leaky")) == "deny"
+    assert _decision(push("leaky:review")) == "deny"
+    assert push("feature") == {}
+
+
+def test_a_push_checks_what_a_merge_commit_added(repo):
+    """Content added while committing a merge is part of what is pushed."""
+    _git(repo, "switch", "-q", "-c", "side")
+    (repo / "docs" / "side.md").write_text("Side work.\n")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "side")
+    _git(repo, "switch", "-q", "feature")
+    _git(repo, "merge", "-q", "--no-ff", "--no-commit", "side")
+    (repo / "docs" / "merge.md").write_text(f"Server at {PUBLIC_IP}\n")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "merge side")
+    _, output = _hook("privacy_guard.py", _commit_payload("git push -u origin feature"), "pre-tool-use", project=repo)
+    assert _decision(output) == "deny"
+    assert PUBLIC_IP in output["hookSpecificOutput"]["permissionDecisionReason"]
+
+
+def test_a_push_of_something_unreadable_asks(repo):
+    """Commits the guard cannot read are the user's call, not a silent pass."""
+    _, output = _hook("privacy_guard.py", _commit_payload("git push origin no-such-branch"),
+                      "pre-tool-use", project=repo)
+    assert _decision(output) == "ask"
+
+
 # --- .claude/settings.json -------------------------------------------------------
 
 def test_every_blocking_guard_fails_closed_and_the_privacy_guard_is_filtered():

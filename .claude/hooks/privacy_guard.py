@@ -20,15 +20,18 @@ Blocking findings:
 - credentials: private keys and well-known token formats.
 
 Review findings (any other new hostname, a role mailbox such as support@,
-a bearer token or JWT under tests/) are shown for confirmation, not blocked.
+a bearer token or JWT under tests/, commits that could not be read) are
+shown for confirmation, not blocked.
 
 Two entry points, both configured in .claude/settings.json:
 
 - ``PreToolUse`` (Bash): ``git commit`` checks the staged changes (and the
-  working tree when the command stages files itself) plus the message,
-  ``git push`` checks the commits it would push, ``gh pr create/edit`` checks
-  the body. A blocking finding denies the command, a review finding asks.
-- ``Stop``: checks the staged changes and every commit not yet pushed. A
+  working tree when the command stages files itself or names paths), the
+  message and any ``-F`` message file; ``git push`` checks every commit the
+  pushed refs would send, merges included; ``gh pr``/``gh issue`` commands
+  check their text and ``--body-file``/``-F`` file. A blocking finding denies
+  the command, a review finding asks.
+- ``Stop``: checks the staged changes and every commit no remote has yet. A
   blocking finding blocks the stop once, so the model deals with it; if it is
   still there, the user gets a warning. Review findings are only shown.
 
@@ -108,12 +111,19 @@ GENERATED_PATHS = ("frontend/static/search-index*.json", "webapp/data/admin-sear
 _EXPORT_NAME = re.compile(r"(?:^|/)scan-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.", re.IGNORECASE)
 
 
-def _git(*args: str) -> str:
+# --- git ----------------------------------------------------------------------
+
+def _run_git(*args: str) -> tuple[bool, str]:
     result = subprocess.run(  # nosec B603 B607
-        ["git", *args], cwd=ROOT, capture_output=True, text=True, check=False,
-        encoding="utf-8", errors="replace",
+        ["git", "-c", "core.quotePath=false", *args], cwd=ROOT, capture_output=True, text=True,
+        check=False, encoding="utf-8", errors="replace",
     )
-    return result.stdout if result.returncode == 0 else ""
+    return result.returncode == 0, result.stdout
+
+
+def _git(*args: str) -> str:
+    ok, out = _run_git(*args)
+    return out if ok else ""
 
 
 def _ref_exists(ref: str) -> bool:
@@ -127,13 +137,6 @@ def _base_ref() -> str | None:
     return None
 
 
-def _push_range() -> str | None:
-    """The commits `git push` would send: upstream..HEAD, else base..HEAD."""
-    upstream = _git("rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}").strip()
-    base = upstream or _base_ref()
-    return base + "..HEAD" if base else None
-
-
 # --- collecting what is new ---------------------------------------------------
 
 class Source:
@@ -143,6 +146,7 @@ class Source:
         self.label = label
         self.files: dict[str, list[tuple[int, str]]] = {}
         self.messages: list[str] = []
+        self.problems: list[str] = []
 
     def add_line(self, path: str, number: int, text: str) -> None:
         self.files.setdefault(path, []).append((number, text))
@@ -150,19 +154,43 @@ class Source:
     def add_path(self, path: str) -> None:
         self.files.setdefault(path, [])
 
+    def add_file(self, path: str, full_path: str) -> None:
+        """Every line of a file on disk (skipped when binary or huge)."""
+        self.add_path(path)
+        try:
+            if os.path.getsize(full_path) > 2_000_000:
+                return
+            with open(full_path, encoding="utf-8") as handle:
+                for number, text in enumerate(handle, 1):
+                    self.add_line(path, number, text.rstrip("\n"))
+        except (OSError, UnicodeDecodeError):
+            return
+
+
+def _header_path(text: str) -> str:
+    text = text.rstrip("\t")
+    if text.startswith('"') and text.endswith('"'):
+        text = text[1:-1]
+    return text[2:] if text.startswith(("a/", "b/")) else text
+
 
 def _parse_patch(text: str, source: Source) -> None:
-    path, number = None, 0
+    """Added lines of a unified diff; ---/+++ count as headers only before the first hunk."""
+    path, number, in_header = None, 0, False
     for line in text.splitlines():
-        if line.startswith("diff --git "):
-            match = re.search(r" b/(.+)$", line)
-            path = match.group(1) if match else None
+        if line.startswith(("diff --git ", "diff --cc ", "diff --combined ")):
+            in_header = True
+            match = re.search(r" b/(.+)$", line) or re.match(r"diff --(?:cc|combined) (.+)$", line)
+            path = _header_path(match.group(1)) if match else None
             if path:
                 source.add_path(path)
-        elif line.startswith("+++ "):
-            path = None if line[4:] == "/dev/null" else line[6:]
+        elif in_header and line.startswith("+++ "):
+            path = None if line[4:] == "/dev/null" else _header_path(line[4:])
+        elif in_header and not line.startswith("@@"):
+            continue
         elif line.startswith("@@"):
-            match = re.search(r"\+(\d+)", line)
+            in_header = False
+            match = re.match(r"@@+ [^@]*\+(\d+)", line)
             number = int(match.group(1)) if match else 0
         elif path and line.startswith("+"):
             source.add_line(path, number, line[1:])
@@ -175,24 +203,20 @@ def _diff(source: Source, *args: str) -> None:
 
 def _untracked(source: Source) -> None:
     for path in _git("ls-files", "--others", "--exclude-standard", "-z").split("\0"):
-        if not path:
-            continue
-        source.add_path(path)
-        full = os.path.join(ROOT, path)
-        try:
-            if os.path.getsize(full) > 2_000_000:
-                continue
-            with open(full, encoding="utf-8") as handle:
-                for number, text in enumerate(handle, 1):
-                    source.add_line(path, number, text.rstrip("\n"))
-        except (OSError, UnicodeDecodeError):
-            continue
+        if path:
+            source.add_file(path, os.path.join(ROOT, path))
 
 
-def _commits(source: Source, rev_range: str) -> None:
-    log = _git("log", "-p", "-U0", "--no-color", "--no-ext-diff", "--no-renames",
-               "--format=%x01%h%x02%B%x03", rev_range)
-    for chunk in log.split("\x01")[1:]:
+def _commits(source: Source, rev_args: list[str]) -> None:
+    """Messages and added lines of every commit in ``rev_args``, merge resolutions included."""
+    log = ["log", "-p", "-U0", "--no-color", "--no-ext-diff", "--no-renames", "--format=%x01%h%x02%B%x03"]
+    ok, out = _run_git(*log, "--diff-merges=first-parent", *rev_args)
+    if not ok:  # git before 2.31
+        ok, out = _run_git(*log, "-m", "--first-parent", *rev_args)
+    if not ok:
+        source.problems.append("could not read the commits of " + " ".join(rev_args))
+        return
+    for chunk in out.split("\x01")[1:]:
         _, _, rest = chunk.partition("\x02")
         message, _, patch = rest.partition("\x03")
         source.messages.append(message)
@@ -296,16 +320,24 @@ def _candidates(path: str, text: str):
             yield tier, kind, match.group(0)
 
 
+def _standalone(value: str) -> re.Pattern:
+    """``value`` as a whole token: not part of a longer host, address or word."""
+    if ":" in value:  # IPv6: a neighbouring hex group or colon makes it another address
+        before, after = r"(?<![\w.:%+-])", r"(?![\w:-]|\.\w)"
+    else:
+        before, after = r"(?<![\w.%+-])", r"(?![\w-]|\.\w)"
+    return re.compile(before + re.escape(value.lower()) + after)
+
+
 def _known_on_base(values: set[str], base: str | None) -> set[str]:
-    """The values that already appear somewhere on the base branch."""
+    """The values that already appear, as whole tokens, somewhere on the base branch."""
     if not base or not values:
         return set()
-    args = ["grep", "-F", "-i", "-o", "-h", "--no-color", "-I"]
+    args = ["grep", "-F", "-i", "-h", "--no-color", "-I"]
     for value in sorted(values):
         args += ["-e", value]
-    found = _git(*args, base, "--", ".", ":!.claude/hooks").splitlines()
-    known = {line.strip().lower() for line in found}
-    return {value for value in values if value.lower() in known}
+    text = _git(*args, base, "--", ".", ":!.claude/hooks").lower()
+    return {value for value in values if _standalone(value).search(text)}
 
 
 def _scan_output_kind(path: str, text: str) -> str | None:
@@ -332,7 +364,9 @@ def evaluate(sources: list[Source]) -> dict[str, list[str]]:
     allowlist = _load_allowlist()
     raw: list[tuple[str, str, str, str, str]] = []  # (tier, where, kind, value, source)
     structural: list[str] = []
+    problems: list[str] = []
     for source in sources:
+        problems += [f"{source.label}: {problem}" for problem in source.problems]
         for path, lines in source.files.items():
             if path in SKIP_PATHS or any(fnmatch.fnmatch(path, g) for g in GENERATED_PATHS):
                 continue
@@ -349,7 +383,7 @@ def evaluate(sources: list[Source]) -> dict[str, list[str]]:
                 raw.append((tier, "message", kind, value, source.label))
     values = {value for _, _, _, value, _ in raw if not _allowlisted(value, allowlist)}
     known = _known_on_base(values, base)
-    result = {BLOCK: list(dict.fromkeys(structural)), REVIEW: []}
+    result = {BLOCK: list(dict.fromkeys(structural)), REVIEW: problems}
     seen = set()
     for tier, where, kind, value, label in raw:
         if value not in values or value in known or (where, value) in seen:
@@ -379,13 +413,13 @@ def _block_report(findings: list[str]) -> str:
 
 def _review_report(findings: list[str]) -> str:
     return (
-        "Privacy guard: new hostnames or role addresses that are not on the base branch. Confirm each is "
-        "a public reference, not a real instance or a person (approved ones belong in "
-        ".claude/hooks/privacy_allowlist.txt):\n" + _bullets(findings)
+        "Privacy guard: new hostnames or role addresses that are not on the base branch, or commits it "
+        "could not read. Confirm each is a public reference, not a real instance or a person (approved "
+        "ones belong in .claude/hooks/privacy_allowlist.txt):\n" + _bullets(findings)
     )
 
 
-# --- entry points -------------------------------------------------------------
+# --- reading the Bash command -------------------------------------------------
 
 def _load_guard_bash():
     spec = importlib.util.spec_from_file_location("guard_bash", os.path.join(HOOK_DIR, "guard_bash.py"))
@@ -394,66 +428,152 @@ def _load_guard_bash():
     return module
 
 
-def _body_file(command: str) -> Source | None:
-    match = re.search(r"--body-file[= ]\s*(['\"]?)([^'\"\s]+)\1", command)
-    if not match:
-        return None
-    source = Source("pull request body")
-    try:
-        with open(os.path.join(ROOT, match.group(2)), encoding="utf-8") as handle:
-            for number, text in enumerate(handle, 1):
-                source.add_line(match.group(2), number, text.rstrip("\n"))
-    except (OSError, UnicodeDecodeError):
-        return None
+# `git commit` options that take a value (the value is the next word unless attached).
+_COMMIT_VALUE_OPTIONS = {"-m", "--message", "-C", "--reuse-message", "-c", "--reedit-message", "--author",
+                         "--date", "-t", "--template", "--trailer", "--cleanup", "--fixup", "--squash",
+                         "-S", "--gpg-sign"}
+_COMMIT_SHORT_WITH_VALUE = "mFCct"
+
+
+def commit_details(words: list[str]) -> tuple[bool, list[str]]:
+    """(takes content from the working tree, message files) for the words after `git commit`."""
+    stages, files, expect = False, [], None
+    for word in words:
+        if expect:
+            if expect == "file":
+                files.append(word)
+            expect = None
+        elif word in ("-F", "--file"):
+            expect = "file"
+        elif word.startswith("--file="):
+            files.append(word[len("--file="):])
+        elif word in _COMMIT_VALUE_OPTIONS:
+            expect = "value"
+        elif word.startswith("--"):
+            stages = stages or word.split("=")[0] in ("--all", "--include", "--only", "--pathspec-from-file")
+        elif word.startswith("-") and len(word) > 1:
+            letters = word[1:]
+            for index, letter in enumerate(letters):
+                if letter in "aio":
+                    stages = True
+                if letter in _COMMIT_SHORT_WITH_VALUE:
+                    attached = letters[index + 1:]
+                    if letter == "F":
+                        if attached:
+                            files.append(attached)
+                        else:
+                            expect = "file"
+                    elif not attached:
+                        expect = "value"
+                    break
+        else:
+            stages = True  # a pathspec: the working-tree content of those paths is committed
+    return stages, files
+
+
+def _option_files(words: list[str], names: tuple[str, ...]) -> list[str]:
+    """Values of ``names`` (e.g. --body-file, -F), attached or following."""
+    found = []
+    for index, word in enumerate(words):
+        for name in names:
+            if word == name and index + 1 < len(words):
+                found.append(words[index + 1])
+            elif name.startswith("--") and word.startswith(name + "="):
+                found.append(word[len(name) + 1:])
+            elif not name.startswith("--") and word.startswith(name) and len(word) > len(name):
+                found.append(word[len(name):])
+    return [f for f in found if f != "-"]
+
+
+def _file_source(label: str, cwd: str, paths: list[str]) -> Source:
+    source = Source(label)
+    for path in paths:
+        full = os.path.join(cwd, os.path.expanduser(path))
+        if os.path.isfile(full):
+            source.add_file(path, full)
+        else:
+            source.problems.append(f"could not read {path}")
     return source
 
 
-def pre_tool_use(command: str) -> dict[str, list[str]]:
+def _push_revisions(guard, words: list[str]) -> list[tuple[str, list[str]]]:
+    """(label, rev-list arguments) for what a `git push` with ``words`` sends."""
+    positional = guard.positional_push_arguments(words)
+    remote = positional[0] if positional else (
+        _git("config", "--get", f"branch.{_current_branch()}.remote").strip() or "origin")
+    not_on_remote = ["--not", f"--remotes={remote}"]
+    if "--all" in words or "--branches" in words:
+        return [(f"branches to push to {remote}", ["--branches", *not_on_remote])]
+    refspecs = positional[1:]
+    if not refspecs:
+        return [(f"commits to push to {remote}", ["HEAD", *not_on_remote])]
+    revisions = []
+    for spec in refspecs:
+        source = spec.lstrip("+").split(":", 1)[0]
+        if source:  # an empty source deletes a remote branch; the push guard refuses that
+            revisions.append((f"commits of {source} to push to {remote}", [source, *not_on_remote]))
+    return revisions
+
+
+def _current_branch() -> str:
+    return _git("symbolic-ref", "--quiet", "--short", "HEAD").strip() or "HEAD"
+
+
+def pre_tool_use(command: str, cwd: str | None = None) -> dict[str, list[str]]:
     guard = _load_guard_bash()
-    segments = guard._SEGMENT_SPLIT.split(command)
-    commit = any(re.match(guard._GIT + r"commit\b", s) for s in segments)
-    push = any(re.match(guard._GIT + r"push\b", s) for s in segments)
-    pull_request = any(re.match(guard._PREFIX + r"gh\s+pr\s+(?:create|edit|comment)\b", s) for s in segments)
-    if not (commit or push or pull_request):
+    cwd = cwd or ROOT
+    sources: list[Source] = []
+    commit_words, adds, pushes, public_texts = [], False, [], []
+    for segment in guard.segments(command):
+        if (match := segment.match(guard._GIT + r"commit\b")):
+            commit_words.append(segment.rest(match).words())
+        elif segment.match(guard._GIT + r"(?:add|stage)\b"):
+            adds = True
+        elif (match := segment.match(guard._GIT + r"push\b")):
+            pushes.append(segment.rest(match).words())
+        elif (match := segment.match(guard._PREFIX + r"gh\s+(?:pr|issue)\s+(?:create|edit|comment|review)\b")):
+            public_texts.append(segment.rest(match).words())
+    if not (commit_words or pushes or public_texts):
         return {BLOCK: [], REVIEW: []}
-    sources = []
-    if commit or pull_request:
-        text = Source("commit command" if commit else "pull request command")
+
+    if commit_words or public_texts:
+        text = Source("commit command" if commit_words else "gh command")
         text.messages.append(command)
         sources.append(text)
-    if commit:
+    if commit_words:
         staged = Source("staged")
         _diff(staged, "--cached")
         sources.append(staged)
-        stages_itself = re.search(r"\bgit\b[^;&|]*\badd\b|\bcommit\b[^;&|]*\s(?:-[a-zA-Z]*a[a-zA-Z]*|--all)\b", command)
-        if stages_itself:
+        details = [commit_details(words) for words in commit_words]
+        if adds or any(stages for stages, _ in details):
             working = Source("working tree")
             _diff(working)
             _untracked(working)
             sources.append(working)
-    if push:
-        rev_range = _push_range()
-        if rev_range:
-            commits = Source(f"commit in {rev_range}")
-            _commits(commits, rev_range)
+        message_files = [f for _, files in details for f in files if f != "-"]
+        if message_files:
+            messages = _file_source("commit message file", cwd, message_files)
+            messages.messages = ["\n".join(t for lines in messages.files.values() for _, t in lines)]
+            messages.files = {}
+            sources.append(messages)
+    for words in pushes:
+        for label, revisions in _push_revisions(guard, words):
+            commits = Source(label)
+            _commits(commits, revisions)
             sources.append(commits)
-    if pull_request:
-        body = _body_file(command)
-        if body:
-            sources.append(body)
+    for words in public_texts:
+        files = _option_files(words, ("--body-file", "-F"))
+        if files:
+            sources.append(_file_source("gh body file", cwd, files))
     return evaluate(sources)
 
 
 def stop() -> dict[str, list[str]]:
     staged = Source("staged")
     _diff(staged, "--cached")
-    sources = [staged]
-    rev_range = _push_range()
-    if rev_range:
-        commits = Source(f"unpushed commit ({rev_range})")
-        _commits(commits, rev_range)
-        sources.append(commits)
-    return evaluate(sources)
+    commits = Source("unpushed commit")
+    _commits(commits, ["HEAD", "--not", "--remotes"])
+    return evaluate([staged, commits])
 
 
 def main() -> int:
@@ -466,7 +586,7 @@ def main() -> int:
             return 2
         payload = {}
     if mode == "pre-tool-use":
-        found = pre_tool_use((payload.get("tool_input") or {}).get("command") or "")
+        found = pre_tool_use((payload.get("tool_input") or {}).get("command") or "", payload.get("cwd"))
         if found[BLOCK]:
             decision, reason = "deny", _block_report(found[BLOCK])
         elif found[REVIEW]:
