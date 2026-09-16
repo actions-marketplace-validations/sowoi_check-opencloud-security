@@ -12,6 +12,8 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+## [1.24.0] - 2026-09-16
+
 ### Documentation
 
 - Rewrite frontend explanations and operator documentation for clearer,
