@@ -168,11 +168,15 @@ def test_a_dark_system_preference_starts_in_the_dark_theme(browser, site):
     dark = new_page(browser, watch, color_scheme="dark")
     light = new_page(browser, PageWatch(), color_scheme="light")
     try:
-        colours = []
-        for tab in (dark, light):
-            tab.goto(site.base + "/")
-            colours.append(tab.evaluate(BODY_BACKGROUND))
-        assert colours[0] != colours[1]
+        light.goto(site.base + "/")
+        light_background = light.evaluate(BODY_BACKGROUND)
+        dark.goto(site.base + "/")
+        assert dark.evaluate("() => matchMedia('(prefers-color-scheme: dark)').matches")
+        # The repaint can trail the load, as it trails a toggle (Firefox in CI,
+        # WebKit locally): wait for it rather than sampling once.
+        dark.wait_for_function(
+            f"(light) => ({BODY_BACKGROUND})() !== light", arg=light_background, timeout=5_000
+        )
         dark.click("[data-theme-toggle]")
         assert dark.get_attribute("html", "data-theme") == "light"
     finally:
