@@ -12,6 +12,14 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+### Changed
+
+- **Reference data re-read and the generated documentation rebuilt.** The
+  OpenCloud release schedule is unchanged (production 7.2.4, rolling 8.0.0)
+  and the advisory database brought no new entries, so this release carries
+  the same ratings as the last one. The bundled documentation pages and the
+  four search indexes are regenerated against the new version.
+
 ## [1.23.2] - 2026-09-15
 
 ### Fixed
