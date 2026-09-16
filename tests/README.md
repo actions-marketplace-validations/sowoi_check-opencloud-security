@@ -188,6 +188,7 @@ is needed.
 |---|---|
 | [`test_check_pull_request.py`](test_check_pull_request.py) | `scripts/check_pull_request.py`: a changelog entry is present, and version bumps only move forward. |
 | [`test_claude_hooks.py`](test_claude_hooks.py) | The Claude Code hooks in `.claude/hooks/` keep refusing merges, force-pushes, hand edits to generated files, and real hosts, scan output or personal data in commits, and refuse when they cannot run. |
+| [`test_dependency_policy.py`](test_dependency_policy.py) | `scripts/check_dependencies.py`: every Python dependency has an approved, tested and reviewed record, or predates the policy, and the grandfather list never grows. |
 | [`test_release_notes.py`](test_release_notes.py) | `scripts/release_notes.py` turns `## [Unreleased]` into the release section. |
 | [`test_release_dry_run.py`](test_release_dry_run.py) | The release rehearsal matches the release, and publishing to PyPI happens last. |
 | [`test_security_advisories.py`](test_security_advisories.py) | Every `### Security` changelog entry has a decided record in `security/advisories/`. |

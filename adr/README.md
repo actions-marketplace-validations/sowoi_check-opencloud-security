@@ -35,7 +35,7 @@ project. Read the accepted records that affect an area before changing it.
 | [0026](0026-cli-plugin-gets-its-own-sarif-and-junit-export.md) | The CLI plugin gets its own SARIF/JUnit export, independent of the webapp's | Accepted |
 | [0027](0027-refreshed-reference-data-is-attested-not-merely-fetched.md) | Refreshed reference data is attested, not merely fetched | Accepted |
 | [0028](0028-headers-no-opencloud-sends-are-reported-but-never-alerted.md) | Headers no OpenCloud sends are reported but never alerted on | Accepted |
-| [0029](0029-a-comparison-is-two-live-results-and-one-arithmetic.md) | A comparison is two live results, judged by the plugin's own arithmetic | Accepted |
+| [0029](0029-a-comparison-is-two-live-results-and-one-arithmetic.md) | A comparison is two live results, judged by the plugin's own arithmetic | Accepted; comparing different instances superseded by ADR 0059 |
 | [0030](0030-a-listener-binds-loopback-and-a-wide-bind-needs-a-credential.md) | A listener binds loopback, and a wide bind needs a credential | Accepted |
 | [0031](0031-a-response-is-uncacheable-until-a-route-opts-in.md) | A response is uncacheable until a route opts in | Accepted |
 | [0032](0032-a-rescan-is-an-ordinary-submission-and-reading-a-limit-never-spends-it.md) | A rescan is an ordinary submission, and reading a limit never spends it | Accepted |
@@ -65,6 +65,8 @@ project. Read the accepted records that affect an area before changing it.
 | [0056](0056-the-reference-data-is-subscribable.md) | The reference data is subscribable | Accepted |
 | [0057](0057-an-uploaded-report-is-evidence-not-a-scan.md) | An uploaded report is evidence, not a scan | Accepted |
 | [0058](0058-public-guides-have-reviewed-german-sources.md) | Public guides have reviewed German sources | Accepted |
+| [0059](0059-a-comparison-refuses-two-different-instances.md) | A comparison refuses two different instances | Accepted |
+| [0060](0060-a-new-dependency-is-justified-tested-and-reviewed-first.md) | A new dependency is justified, tested and reviewed first | Accepted |
 
 ## Writing a new record
 

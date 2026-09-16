@@ -45,6 +45,7 @@ A tool that is not installed is reported as **skipped**, never as passed. Use
 | 9 | Wizard blueprints | `python scripts/embed_wizard_blueprints.py --check` |
 | 10 | Security advisories | `python scripts/security_advisories.py --check` |
 | 11 | Changelog and version guard | `python scripts/check_pull_request.py --base origin/main` |
+| 11a | Dependency policy | `uv run python scripts/check_dependencies.py --check --base origin/main` (a `proposed` record is a **warning** - it awaits the maintainer's approval - anything else fails) |
 | 12 | Biome | `npx --yes @biomejs/biome@2.5.13 lint --error-on-warnings` (needs Node) |
 | 13 | zizmor | `uvx zizmor@1.30.1 .github/workflows` |
 | 14 | ansible-lint | `cd ansible && uvx ansible-lint` (**only** from inside `ansible/`; skip unless `ansible/` changed) |

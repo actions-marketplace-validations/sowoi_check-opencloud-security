@@ -12,8 +12,37 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+### Changed
+
+- **A new Python dependency needs an approved review first.** Every package in
+  `pyproject.toml` and every `uvx` tool in a workflow needs a record in
+  `security/dependencies/` that says why it is needed, which tests exercise
+  it, what a security review found, and which maintainer approved it.
+  `scripts/check_dependencies.py`, run by a new `dependency-policy` job in the
+  supply-chain workflow, fails without one. The 33 dependencies already in use
+  are listed in `security/dependencies/grandfathered.txt`, which may only
+  shrink. The dependency-review action now fails a pull request that
+  introduces a known-vulnerable package instead of only commenting, and the
+  supply-chain workflow grants its attestation permissions to the one job that
+  attests. See
+  [ADR 0060](adr/0060-a-new-dependency-is-justified-tested-and-reviewed-first.md).
+- **Comparing two scans of different instances is refused.** The `/compare`
+  page, the report upload and the MCP tool `compare_scans` used to compare a
+  scan of one host with a scan of another and only show a warning. They now
+  answer 422 and compare nothing, matching the default of
+  `check-opencloud-scanner diff`. A report that names no instance is refused
+  the same way. `sameTarget` stays in the answer and is always `true`. See
+  [ADR 0059](adr/0059-a-comparison-refuses-two-different-instances.md), which
+  supersedes this part of ADR 0029.
+
 ### Documentation
 
+- **New German text addresses the reader as "du".** New and reworded strings
+  in the German web interface and guides use the informal form instead of
+  "Sie". Existing formal strings are listed in `tests/test_webapp_i18n.py`,
+  which fails on any other formal string; the list only shrinks as strings
+  are converted. The "Die beiden Scans betreffen unterschiedliche Instanzen"
+  message already uses the new form.
 - **The release skills build a release skeleton and never write a changelog
   entry.** `/patch-release`, `/minor-release` and `/major-release` now make
   exactly the version bump in `pyproject.toml`, a new `uv.lock` and the

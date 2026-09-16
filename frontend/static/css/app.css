@@ -1082,7 +1082,6 @@ main { flex: 1 0 auto; padding-bottom: 4.5rem; }
     box-shadow: 0 0 0 4px var(--brand-glow);
 }
 .compare-error { border-left: 3px solid var(--bad); }
-.compare-warning { border-left: 3px solid var(--fair); }
 .compare-verdict { margin: .2rem 0 .6rem; }
 .compare-verdict[data-verdict="improved"] { color: var(--good-ink); }
 .compare-verdict[data-verdict="regressed"] { color: var(--bad-ink); }

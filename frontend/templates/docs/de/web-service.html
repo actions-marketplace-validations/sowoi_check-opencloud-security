@@ -614,17 +614,20 @@ Aufruf neu berechnet und nicht gesondert gespeichert.</p>
 </tr>
 <tr>
 <td>Unterschiedliche Instanzen</td>
-<td>200 mit ausdrücklichem Hinweis</td>
+<td>422, kein Vergleich</td>
 </tr>
 </tbody>
 </table>
 <p>Die Seite wird nicht indexiert und bleibt außerhalb des OpenAPI-Schemas.
-Siehe <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0029-a-comparison-is-two-live-results-and-one-arithmetic.md">ADR 0029</a>.</p>
+Siehe <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0029-a-comparison-is-two-live-results-and-one-arithmetic.md">ADR 0029</a>
+und <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0059-a-comparison-refuses-two-different-instances.md">ADR 0059</a>.</p>
 <h2 id="comparing-against-a-report-you-uploaded">Vergleich mit einem hochgeladenen Bericht</h2>
 <p>Mit <code>POST /compare</code> laden Sie einen früher heruntergeladenen JSON- oder
 CSV-Bericht als Ausgangsstand hoch. Die zweite Seite ist ein noch verfügbarer,
 abgeschlossener Scan dieses Dienstes. Diese Funktion ist für den Browser
-vorgesehen; sie besitzt keinen eigenen API- oder MCP-Aufruf.</p>
+vorgesehen; sie besitzt keinen eigenen API- oder MCP-Aufruf. Ein Bericht
+einer anderen Instanz oder ohne Instanzangabe wird ebenfalls mit 422
+abgelehnt.</p>
 <p>Der Import rekonstruiert nur ausdrücklich zugelassene Felder nach Typ-, Längen-
 und Strukturprüfung. Es gelten 256 KB Dateigröße, striktes UTF-8, höchstens
 2.000 CSV-Zeilen, 20 JSON-Ebenen, 500 Listeneinträge und 300 Zeichen pro String.

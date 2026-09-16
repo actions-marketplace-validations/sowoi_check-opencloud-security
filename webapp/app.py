@@ -2060,11 +2060,18 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
         except WorkflowError as exc:
             # The rule stays where every surface enforces it; only the wording
             # is this layer's, because a reader gets the page in their own
-            # language and a workflow's message is English for an agent.
+            # language and a workflow's message is English for an agent. The
+            # same uuid twice is always the same instance, so anything else
+            # refused here is two different ones (ADR 0059).
+            key = (
+                "compare.error.same"
+                if baseline == current
+                else "compare.error.different_targets"
+            )
             return page(
                 request,
                 "compare.html",
-                {**context, "error": translate("compare.error.same")},
+                {**context, "error": translate(key)},
                 status=exc.status or 422,
             )
         return page(request, "compare.html", {**context, "comparison": comparison})
@@ -2195,15 +2202,26 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
                 request, translate, exc.key, status=exc.status, current=current
             )
 
-        comparison = compare_documents(
-            UPLOADED_BASELINE,
-            current,
-            # A family the uploaded format never recorded is removed from both
-            # documents, not from one. See `imports.restrict_to`.
-            restrict_to(imported.document, imported.carries),
-            restrict_to(record.result, imported.carries),
-            baseline_page=NO_PAGE,
-        )
+        try:
+            comparison = compare_documents(
+                UPLOADED_BASELINE,
+                current,
+                # A family the uploaded format never recorded is removed from
+                # both documents, not from one. See `imports.restrict_to`.
+                restrict_to(imported.document, imported.carries),
+                restrict_to(record.result, imported.carries),
+                baseline_page=NO_PAGE,
+            )
+        except WorkflowError as exc:
+            # The only refusal an upload can meet: a report of another
+            # instance, or of none it names (ADR 0059).
+            return _upload_error(
+                request,
+                translate,
+                "compare.error.different_targets",
+                status=exc.status or 422,
+                current=current,
+            )
         comparison["source"] = _import_notes(imported)
 
         token = new_token()

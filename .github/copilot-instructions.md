@@ -133,6 +133,17 @@ bug that fails closed harmed availability rather than security. Say which, in
 `declined_because`. Never publish an advisory - that is the maintainer's call,
 like the version bump. See `AGENTS.md`, "Security advisories".
 
+**A new Python dependency needs an approved record before it is used.** That
+covers `pyproject.toml` (dependencies, extras, groups, build requirements) and
+`uvx` tools in workflows. `security/dependencies/<name>.yml` justifies the
+package, names the tests that exercise it and holds a security review:
+vulnerabilities, maintenance, provenance, install time, network use, native
+code, transitive packages, license. `scripts/check_dependencies.py --check`
+fails without one and CI runs it. Draft the record as `proposed`. Only the
+maintainer sets `approved`, and `security/dependencies/grandfathered.txt`
+never gains a name. Prefer the standard library or an existing package. See
+`AGENTS.md`, "Adding a Python dependency", and ADR 0060.
+
 **The version has exactly one source: `pyproject.toml`.**
 `opencloud_local_scan.__version__` derives it (package metadata when installed,
 the file itself in a checkout) and the plugin imports that. Never write a
@@ -325,6 +336,16 @@ Keep OpenAPI, Arazzo, MCP, discovery documents and exports in English, and
 keep remote scan evidence verbatim. Generated guide bodies remain English
 under `lang="en"` with a localized notice and chrome. See
 [ADR 0020](../adr/0020-frontend-language-is-request-scoped.md).
+
+**German text addresses the reader informally, with "du".** Every new or
+reworded German string - in `webapp/locales/de.py` and in the guides under
+`docs/de/` - uses `du`/`dein`/`dir` and informal imperatives (`Prüfe`,
+`Starte`), never `Sie`/`Ihr`/`Ihnen`. Most existing German text is still
+formal; that is not a register to copy. When you reword a formal string,
+convert all of it rather than mixing both forms in one sentence.
+`tests/test_webapp_i18n.py` fails on a formal catalogue string whose key is not
+in `FORMAL_GERMAN_KEYS`, the list of strings that predate the guideline; that
+list only shrinks. Spanish and French keep their existing register.
 
 ## The agent-facing surfaces
 

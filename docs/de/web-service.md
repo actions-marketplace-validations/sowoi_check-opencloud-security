@@ -299,17 +299,20 @@ Aufruf neu berechnet und nicht gesondert gespeichert.
 | Ein Scan unbekannt oder abgelaufen | 404 mit Angabe der betroffenen Seite |
 | Ein Scan noch nicht fertig | 409 |
 | Zweimal dieselbe UUID | 422 |
-| Unterschiedliche Instanzen | 200 mit ausdrücklichem Hinweis |
+| Unterschiedliche Instanzen | 422, kein Vergleich |
 
 Die Seite wird nicht indexiert und bleibt außerhalb des OpenAPI-Schemas.
-Siehe [ADR 0029](../../adr/0029-a-comparison-is-two-live-results-and-one-arithmetic.md).
+Siehe [ADR 0029](../../adr/0029-a-comparison-is-two-live-results-and-one-arithmetic.md)
+und [ADR 0059](../../adr/0059-a-comparison-refuses-two-different-instances.md).
 
 ## Vergleich mit einem hochgeladenen Bericht {#comparing-against-a-report-you-uploaded}
 
 Mit `POST /compare` laden Sie einen früher heruntergeladenen JSON- oder
 CSV-Bericht als Ausgangsstand hoch. Die zweite Seite ist ein noch verfügbarer,
 abgeschlossener Scan dieses Dienstes. Diese Funktion ist für den Browser
-vorgesehen; sie besitzt keinen eigenen API- oder MCP-Aufruf.
+vorgesehen; sie besitzt keinen eigenen API- oder MCP-Aufruf. Ein Bericht
+einer anderen Instanz oder ohne Instanzangabe wird ebenfalls mit 422
+abgelehnt.
 
 Der Import rekonstruiert nur ausdrücklich zugelassene Felder nach Typ-, Längen-
 und Strukturprüfung. Es gelten 256 KB Dateigröße, striktes UTF-8, höchstens

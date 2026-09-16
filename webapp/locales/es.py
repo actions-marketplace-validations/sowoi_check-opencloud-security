@@ -1085,7 +1085,7 @@ MESSAGES: dict[str, str] = {
         "comparar. Analice la instancia de nuevo y compare el UUID nuevo con "
         "este."
     ),
-    "compare.different_targets": "Los análisis corresponden a instancias distintas. Téngalo en cuenta al comparar, por ejemplo, un sistema de pruebas con uno de producción.",
+    "compare.error.different_targets": "Los dos análisis corresponden a instancias distintas, por lo que no se comparan. Compare dos análisis de la misma instancia.",
     "compare.verdict.kicker": "Entre los dos análisis",
     "compare.verdict.improved": "Ha mejorado",
     "compare.verdict.unchanged": "No ha cambiado nada",

@@ -195,3 +195,155 @@ def _fields(value: str) -> tuple[str, ...]:
 
 def _tags(value: str) -> tuple[str, ...]:
     return tuple(re.findall(r"</?[^>]+>", value))
+
+
+# ----------------------------------------------------------- German register
+
+#: German is written in the informal "du" (see AGENTS.md, "Frontend prose").
+#: These keys predate that guideline and still address the reader as "Sie".
+#: The set may only shrink: rewrite a string to "du" and remove its key here.
+#: Never add a key - a new or reworded German string uses "du".
+FORMAL_GERMAN_KEYS = frozenset(
+    {
+        "about.project.body",
+        "about.project.origin",
+        "admin.lede",
+        "admin.search.remedy",
+        "api.clients.intro",
+        "api.lede",
+        "api.rules.body",
+        "catalogue.lede",
+        "cli.lede",
+        "cli.nodocker.body",
+        "cli.oneliner.body",
+        "cli.private.body",
+        "compare.error.same",
+        "compare.error.unfinished.baseline",
+        "compare.error.unfinished.current",
+        "compare.error.unknown.baseline",
+        "compare.error.unknown.current",
+        "compare.form.hint",
+        "compare.lede",
+        "compare.upload.error.expired",
+        "compare.upload.error.missing",
+        "compare.upload.error.no_current",
+        "compare.upload.error.rate_limit",
+        "compare.upload.error.unreadable",
+        "compare.upload.expires",
+        "compare.upload.lede",
+        "docs.index.lede",
+        "docs.index.quickstart.container",
+        "error.rate_limit.client",
+        "error.rate_limit.daily",
+        "error.rate_limit.probe",
+        "error.rate_limit.target",
+        "error.target.address_only",
+        "error.target.empty",
+        "error.target.wildcard_dns",
+        "footer.legal.scope",
+        "grade.0.improve",
+        "grade.1.improve",
+        "grade.2.improve",
+        "grade.3.improve",
+        "grade.4.improve",
+        "grade.5.improve",
+        "grades.improve.intro",
+        "grades.improve.release",
+        "grades.improve.rerun",
+        "grades.lede",
+        "grades.limits.body",
+        "how.faq.a2",
+        "how.faq.a5",
+        "how.pipeline.step3",
+        "index.assurance.aria",
+        "index.assurance.noaccount.body",
+        "index.description",
+        "index.error.self_host",
+        "index.field.hint",
+        "index.headline",
+        "index.lede",
+        "index.remember.summary",
+        "index.waivers.search.empty",
+        "notfound.lede",
+        "privacy.self_host",
+        "privacy.uploads.body",
+        "privacy.uploads.heading",
+        "result.excluded.waived.heading",
+        "result.export.lede",
+        "result.failed.body",
+        "result.feedback.prompt",
+        "result.fragment.caution",
+        "result.fragment.heading",
+        "result.fragment.lede",
+        "result.fragment.nothing",
+        "result.fragment.undecided",
+        "result.hardening.lede",
+        "result.progress.noscript",
+        "result.rescan.note",
+        "result.share.email.hint",
+        "result.share.lede",
+        "result.share.warning",
+        "search.status.idle",
+    }
+)
+
+#: "Sie", "Ihnen" and "Ihr..." capitalised in the middle of a sentence can only
+#: be the formal address. At the start of a sentence they may just as well mean
+#: "she" or "they", so those are left alone - the guideline still applies there,
+#: the test cannot tell.
+_FORMAL_GERMAN = re.compile(r"\b(?:Sie|Ihnen|Ihr(?:e[mnrs]?)?)\b")
+
+
+def _formal_address(value: str) -> list[str]:
+    text = re.sub(r"<[^>]+>", "", value)
+    found = []
+    for match in _FORMAL_GERMAN.finditer(text):
+        before = text[: match.start()].rstrip()
+        if before and before[-1] not in ".!?:-\u2013":
+            found.append(match.group(0))
+    return found
+
+
+@pytest.mark.parametrize(
+    ("text", "formal"),
+    [
+        ("Prüfe die Adresse und starte den Scan erneut.", False),
+        ("Prüfen Sie die Adresse.", True),
+        ("Das sind viele Berichte aus Ihrem Netz.", True),
+        ("Von Ihnen ausgenommene Befunde", True),
+        ("Wie sicher ist <em>Ihre</em> Instanz?", True),
+        # Third person at a sentence start: "they", not the reader.
+        ("Die Werte sind fest. Sie dienen zur Information.", False),
+        ("<strong>Der Scan erhält eine Kennung.</strong> Sie ermöglicht den Zugriff.", False),
+        ("OpenCloud prüft sie und ihre Werte.", False),
+    ],
+)
+def test_the_formal_address_detector_tells_the_reader_from_a_third_person(
+    text: str, formal: bool
+):
+    """A detector that flags "they" would push translators into worse German."""
+    assert bool(_formal_address(text)) is formal
+
+
+def test_new_german_strings_address_the_reader_informally():
+    """
+    The guideline for new German text is "du", and the catalogue must not drift back.
+
+    Most existing strings are formal, so copying a neighbour is the easy
+    mistake; this names the key that did it.
+    """
+    formal = {
+        key: _formal_address(value)
+        for key, value in CATALOGUES["de"].items()
+        if key not in FORMAL_GERMAN_KEYS and _formal_address(value)
+    }
+
+    assert formal == {}
+
+
+def test_the_formal_german_list_only_names_strings_that_are_still_formal():
+    """A key rewritten to "du" leaves the list, so the list keeps shrinking."""
+    assert FORMAL_GERMAN_KEYS <= CATALOGUES["de"].keys()
+    assert sorted(
+        key for key in FORMAL_GERMAN_KEYS if not _formal_address(CATALOGUES["de"][key])
+    ) == []

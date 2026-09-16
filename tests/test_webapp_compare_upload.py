@@ -551,6 +551,44 @@ def test_a_comparison_is_not_listed_anywhere(improved_pair):
     assert test_client.get("/api/comparisons").status_code == 404
 
 
+@pytest.mark.parametrize("domain", ["staging.example.com", ""])
+def test_a_report_of_another_instance_is_refused_and_nothing_is_cached(
+    improved_pair, domain
+):
+    """
+    A file from staging against a scan of production answers nothing.
+
+    Uploading the wrong file is the easiest way to get a confident verdict
+    about two unrelated instances, and a report that names no instance cannot
+    be shown to be the right one (ADR 0059). Nothing is held either: there is
+    no comparison to come back to.
+    """
+    earlier, _later = improved_pair
+    other = {**earlier, "domain": domain}
+    test_client = client()
+
+    posted = _upload(test_client, json.dumps(other).encode())
+
+    assert posted.status_code == 422
+    assert "different instances" in posted.text
+    assert "compare-verdict" not in posted.text
+    assert "staging.example.com" not in posted.text
+    backend = memory_backend(MEMORY_URL)
+    assert asyncio.run(backend.keys_matching("compare:*")) == []
+
+
+def test_a_report_of_the_same_instance_in_other_capitals_is_compared(
+    improved_pair,
+):
+    """A hostname is case-insensitive, so the refusal must be too."""
+    earlier, _later = improved_pair
+    shouted = {**earlier, "domain": earlier["domain"].upper() + "."}
+
+    posted = _upload(client(), json.dumps(shouted).encode())
+
+    assert posted.status_code == 303
+
+
 def test_a_hostile_string_in_an_uploaded_report_is_escaped_in_the_page(
     improved_pair,
 ):
@@ -559,10 +597,12 @@ def test_a_hostile_string_in_an_uploaded_report_is_escaped_in_the_page(
 
     The parser deliberately does not strip markup - escaping belongs to the
     template - so this is the test that says the template actually does it,
-    for a string that arrived in a file rather than from a scanned host.
+    for a string that arrived in a file rather than from a scanned host. The
+    scan time carries it, because a report of another instance is refused
+    before its domain could reach the page (ADR 0059).
     """
     earlier, _later = improved_pair
-    hostile = {**earlier, "domain": '<img src=x onerror="alert(1)">'}
+    hostile = {**earlier, "scannedAt": {"date": '<img src=x onerror="alert(1)">'}}
     test_client = client()
     posted = _upload(test_client, json.dumps(hostile).encode())
     page = test_client.get(posted.headers["location"])
