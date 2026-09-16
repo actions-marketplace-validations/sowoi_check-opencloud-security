@@ -4,10 +4,24 @@
 {% block title %}Operations{% endblock %}
 {% block description %}Keeping the data current, rebuilding what is generated, and where to look when the service misbehaves.{% endblock %}
 
+{% block head %}
+<link rel="stylesheet" href="/static/css/admin.css">
+{% endblock %}
+
 {% block content %}
+<section class="admin-band" role="note">
+  <span class="admin-band-dot" aria-hidden="true"></span>
+  <p class="flush">
+    {{ t('admin.band', user=operator.username) }}
+  </p>
+  {% if sign_out_url %}
+  <a class="admin-band-exit" href="{{ sign_out_url }}">{{ t('admin.band.signout') }}</a>
+  {% endif %}
+</section>
+
 {% include "_admin-tabs.html" %}
 
-<section class="page-head">
+<section class="page-head admin-head">
   <p class="kicker">{{ t('admin.docs.kicker') }}</p>
   <h1>Operations</h1>
   <p class="lede">Keeping the data current, rebuilding what is generated, and where to look when the service misbehaves.</p>
@@ -803,8 +817,8 @@ going quiet - press <em>Follow</em> for another. And <strong>without
 behind more than one replica you are watching the records of whichever
 replica answered; the card says so where that is the case. Configure the file
 if you need the whole trail.</p>
-<p><img alt="The operator's area: service state, the two reference-data refreshes and the search-index check" src="img/admin-area-dark.png"></p>
-<p><img alt="The audit card while following: each line a pseudonymised client and target fingerprint, never the real thing" src="img/admin-area-audit.png"></p>
+<p><a href="https://github.com/sowoi/check-opencloud-security/blob/main/img/admin-area-dark.png" rel="noopener noreferrer">The operator's area: service state, the two reference-data refreshes and the search-index check</a></p>
+<p><a href="https://github.com/sowoi/check-opencloud-security/blob/main/img/admin-area-audit.png" rel="noopener noreferrer">The audit card while following: each line a pseudonymised client and target fingerprint, never the real thing</a></p>
 <p>The area is never advertised: <code>noindex, nofollow, noarchive</code>, and absent from
 the sitemap, <code>llms.txt</code>, <code>/openapi.json</code>, the documentation manifest and the
 search index. It is deliberately <strong>not</strong> in <code>robots.txt</code> either, because a

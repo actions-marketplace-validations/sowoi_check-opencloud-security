@@ -4,10 +4,24 @@
 {% block title %}Architecture{% endblock %}
 {% block description %}How this repository is put together, and why the seams are where they are.{% endblock %}
 
+{% block head %}
+<link rel="stylesheet" href="/static/css/admin.css">
+{% endblock %}
+
 {% block content %}
+<section class="admin-band" role="note">
+  <span class="admin-band-dot" aria-hidden="true"></span>
+  <p class="flush">
+    {{ t('admin.band', user=operator.username) }}
+  </p>
+  {% if sign_out_url %}
+  <a class="admin-band-exit" href="{{ sign_out_url }}">{{ t('admin.band.signout') }}</a>
+  {% endif %}
+</section>
+
 {% include "_admin-tabs.html" %}
 
-<section class="page-head">
+<section class="page-head admin-head">
   <p class="kicker">{{ t('admin.docs.kicker') }}</p>
   <h1>Architecture</h1>
   <p class="lede">How this repository is put together, and why the seams are where they are.</p>
@@ -86,7 +100,7 @@ wrong file, however small it looks.</p>
     measure -- result document --&gt; serve
     judge -. &quot;RATE_MAP: grades come from&lt;br/&gt;here, never decided in serve&quot; .-&gt; serve
 </code></pre>
-<p><img alt="Three layers architecture diagram" src="img/architecture-three-layers.png"></p>
+<p><img alt="Three layers architecture diagram" src="/static/img/architecture-three-layers.png" loading="lazy"></p>
 <h3 id="measure-opencloud_local_scan">Measure: <code>opencloud_local_scan/</code></h3>
 <p>The scanner library. <code>scan()</code> probes an instance over HTTP and returns a
 result document; it has no notion of WARNING or CRITICAL and never gains one.</p>

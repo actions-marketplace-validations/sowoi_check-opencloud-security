@@ -10,12 +10,23 @@
   <p class="lede">{{ t('api.lede') }}</p>
 </section>
 
+{# The agent half of this page was /ai until the two were merged: somebody
+   wiring up software should not have to guess whether a curl call and an MCP
+   endpoint are documented in the same place. Two of the sections only exist
+   where the operator enabled the agent tools, so the contents list is built
+   the same way the page is - a deployment with MCP off must not advertise an
+   anchor that goes nowhere. #}
 {% set toc = [
   {"href": "#api", "label": t('api.submit.heading')},
   {"href": "#api-limits", "label": t('api.limits.heading')},
   {"href": "#api-schema", "label": t('api.schema.heading')},
   {"href": "#api-agents", "label": t('api.agents.heading')}
-] %}
+  ]
+  + ([
+      {"href": "#api-webmcp", "label": t('api.webmcp.heading')},
+      {"href": "#api-clients", "label": t('api.clients.heading')}
+    ] if mcp_enabled else [])
+  + [{"href": "#api-rules", "label": t('api.rules.heading')}] %}
 {% include "_toc.html" %}
 
 <section class="card section-gap" aria-labelledby="api" data-reveal>
@@ -57,10 +68,52 @@ curl https://scan.okxo.de/api/scans/&lt;uuid&gt;</code></pre>
   </p>
 </section>
 
+{# /ai redirects here permanently, so this anchor is a published address. #}
 <section class="card section-gap" aria-labelledby="api-agents" data-reveal>
   <p class="kicker">{{ t('api.agents.kicker') }}</p>
   <h2 id="api-agents">{{ t('api.agents.heading') }}</h2>
-  <p class="flush">{{ t.html('api.agents.body') }}</p>
+  <p>{{ t('api.agents.intro') }}</p>
+  <ul class="plain-list">
+    <li>{{ t.html('api.agents.discovery') }}</li>
+    <li>{{ t.html('api.agents.openapi') }}</li>
+    <li>{{ t.html('api.agents.arazzo') }}</li>
+    {% if mcp_enabled %}
+    {# The tool names are the protocol's, so they stay as they are inside a
+       sentence that does not. #}
+    <li>{{ t.html('api.agents.mcp', url=mcp_url) }}</li>
+    {% endif %}
+  </ul>
+  <p class="flush">
+    {% if mcp_enabled %}{{ t('api.agents.summary_mcp') }}{% else %}{{ t('api.agents.summary') }}{% endif %}
+  </p>
+</section>
+
+{% if mcp_enabled %}
+<section class="card section-gap" aria-labelledby="api-webmcp" data-reveal>
+  <p class="kicker">{{ t('api.webmcp.kicker') }}</p>
+  <h2 id="api-webmcp">{{ t('api.webmcp.heading') }}</h2>
+  <p>{{ t.html('api.webmcp.intro') }}</p>
+  <ul class="plain-list">
+    <li>{{ t.html('api.webmcp.landing') }}</li>
+    <li>{{ t.html('api.webmcp.result') }}</li>
+    <li>{{ t.html('api.webmcp.boundary') }}</li>
+  </ul>
+  <p class="flush">{{ t('api.webmcp.support') }}</p>
+</section>
+
+<section class="card section-gap" aria-labelledby="api-clients" data-reveal>
+  <p class="kicker">{{ t('api.clients.kicker') }}</p>
+  <h2 id="api-clients">{{ t('api.clients.heading') }}</h2>
+  <p>{{ t('api.clients.intro') }}</p>
+  <pre class="code-block"><code>{"type": "http", "url": "{{ mcp_url }}"}</code></pre>
+  <p class="flush">{{ t.html('api.clients.body', project=project_url) }}</p>
+</section>
+{% endif %}
+
+<section class="card section-gap" aria-labelledby="api-rules" data-reveal>
+  <p class="kicker">{{ t('api.rules.kicker') }}</p>
+  <h2 id="api-rules">{{ t('api.rules.heading') }}</h2>
+  <p class="flush">{{ t.html('api.rules.body', project=project_url) }}</p>
 </section>
 
 {% include "_page-nav.html" %}

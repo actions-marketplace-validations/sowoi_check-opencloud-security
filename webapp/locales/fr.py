@@ -409,7 +409,6 @@ MESSAGES: dict[str, str] = {
     "nav.search": "Rechercher",
     "nav.compare": "Comparer",
     "nav.api": "API",
-    "nav.ai": "IA",
     "nav.privacy": "Confidentialité",
     "nav.about": "À propos",
     # --------------------------------------------------- language switcher
@@ -478,14 +477,10 @@ MESSAGES: dict[str, str] = {
     "pagenav.docs.blurb": (
         "Installez, configurez et automatisez le scanner depuis un terminal."
     ),
-    "pagenav.api.title": "Analyser depuis un script",
+    "pagenav.api.title": "Analyser depuis un script ou un agent",
     "pagenav.api.blurb": (
-        "L'API JSON, les limites d'utilisation raisonnable et le schéma OpenAPI."
-    ),
-    "pagenav.ai.title": "Pour les agents IA",
-    "pagenav.ai.blurb": (
-        "Découverte, OpenAPI, flux de travail Arazzo et le point de terminaison "
-        "MCP."
+        "L'API JSON, les limites d'utilisation raisonnable, le schéma OpenAPI "
+        "et le point de terminaison MCP."
     ),
     "pagenav.privacy.title": "Ce que ce serveur conserve",
     "pagenav.privacy.blurb": (
@@ -1044,16 +1039,18 @@ MESSAGES: dict[str, str] = {
         "GitHub</a>."
     ),
     # ------------------------------------------------------------------- API
-    "api.title": "Analyser depuis un script",
+    "api.title": "Analyser depuis un script ou un agent",
     "api.description": (
         "L'API JSON derrière le formulaire : comment soumettre une analyse, "
-        "l'interroger, et ce que ce serveur refuse de laisser décider à "
-        "l'appelant."
+        "l'interroger, ce que ce serveur refuse de laisser décider à "
+        "l'appelant, et tout ce dont un logiciel a besoin pour le piloter - "
+        "OpenAPI, les flux de travail Arazzo et le point de terminaison MCP."
     ),
     "api.kicker": "L'API",
     "api.lede": (
         "Le formulaire est l'une des deux portes d'entrée ; l'autre est le "
-        "JSON, et c'est le même gestionnaire."
+        "JSON, et c'est le même gestionnaire. Un logiciel qui n'a pas été "
+        "écrit pour ce service trouve son chemin depuis la même page."
     ),
     "api.submit.kicker": "Soumettre et interroger",
     "api.submit.heading": "Soumettre et interroger",
@@ -1105,47 +1102,33 @@ MESSAGES: dict[str, str] = {
         "ReDoc sur <code>/redoc</code>) sont désactivées sur ce déploiement ; "
         "un opérateur les active avec <code>COS_WEB_ENABLE_DOCS=true</code>."
     ),
-    "api.agents.kicker": "Agents",
-    "api.agents.heading": "Pour les agents IA",
-    "api.agents.body": (
-        "Les logiciels qui n'ont pas été conçus pour ce service disposent de "
-        'leur propre page : <a href="/ai">pour les agents IA</a> rassemble en '
-        "un seul endroit le document de découverte, le schéma OpenAPI, les "
-        "flux de travail Arazzo et le point de terminaison MCP."
-    ),
-    # -------------------------------------------------------------------- AI
-    "ai.title": "Pour les agents IA",
-    "ai.description": (
-        "Tout ce dont un logiciel a besoin pour utiliser ce scanner : le "
-        "document de découverte, le schéma OpenAPI, les flux de travail Arazzo "
-        "et le point de terminaison MCP."
-    ),
-    "ai.kicker": "Invités machines",
-    "ai.lede": (
+    # ------------------------------------------------- API, for agents
+    "api.agents.kicker": "Invités machines",
+    "api.agents.heading": "Partez d'une seule adresse",
+    "api.agents.intro": (
+
         "Ce service est conçu pour être utilisable par des logiciels qui "
         "n'ont pas été écrits pour lui. Tout ce dont un agent a besoin est "
         "publié, ouvertement, sans compte : ce que l'API peut faire, comment "
         "ses appels s'assemblent en une tâche, et un moyen d'exécuter "
         "directement cette tâche."
     ),
-    "ai.discovery.kicker": "Découverte",
-    "ai.discovery.heading": "Partez d'une seule adresse",
-    "ai.discovery.discovery": (
+    "api.agents.discovery": (
         '<strong>Découverte</strong> - <a href="/.well-known/ai.json">'
         "/.well-known/ai.json</a> nomme tout ce qui suit, avec des URL "
         "absolues. Commencez ici."
     ),
-    "ai.discovery.openapi": (
+    "api.agents.openapi": (
         '<strong>OpenAPI</strong> - <a href="/openapi.json">/openapi.json</a>, '
         "chaque opération avec ses véritables codes de statut et formes de "
         "réponse."
     ),
-    "ai.discovery.arazzo": (
+    "api.agents.arazzo": (
         '<strong>Flux de travail Arazzo</strong> - <a href="/arazzo.json">'
         "/arazzo.json</a>, le cycle de vie d'une analyse : soumettre, "
         "interroger, détecter l'achèvement, exporter."
     ),
-    "ai.discovery.mcp": (
+    "api.agents.mcp": (
         "<strong>MCP</strong> - <code>{url}</code>, un point de terminaison "
         "Model Context Protocol via HTTP en flux continu. Outils : "
         "<code>scan_instance</code>, <code>scan_instances</code>, "
@@ -1160,14 +1143,14 @@ MESSAGES: dict[str, str] = {
         "un navigateur, c'est donc une adresse à configurer plutôt qu'une "
         "page à ouvrir."
     ),
-    "ai.discovery.summary": (
+    "api.agents.summary": (
         "Les trois documents décrivent un même service sous trois angles : "
         "OpenAPI dit ce que l'API peut faire, et Arazzo dit comment ces "
         "opérations s'assemblent en une tâche. Ils sont générés à partir du "
         "même code que celui exécuté par le serveur, si bien qu'aucun d'eux "
         "ne peut discrètement devenir obsolète."
     ),
-    "ai.discovery.summary_mcp": (
+    "api.agents.summary_mcp": (
         "Les trois documents décrivent un même service sous trois angles : "
         "OpenAPI dit ce que l'API peut faire, Arazzo dit comment ces "
         "opérations s'assemblent en une tâche, et MCP confie cette tâche à un "
@@ -1175,51 +1158,51 @@ MESSAGES: dict[str, str] = {
         "à partir du même code que celui exécuté par le serveur, si bien "
         "qu'aucun d'eux ne peut discrètement devenir obsolète."
     ),
-    "ai.webmcp.kicker": "Dans le navigateur",
-    "ai.webmcp.heading": "Utiliser la page comme outil",
-    "ai.webmcp.intro": (
+    "api.webmcp.kicker": "Dans le navigateur",
+    "api.webmcp.heading": "Utiliser la page comme outil",
+    "api.webmcp.intro": (
         "Un navigateur compatible avec le "
         '<a href="https://webmachinelearning.github.io/webmcp/" '
         'rel="noopener noreferrer">projet WebMCP</a> peut découvrir les actions '
         "de la page ouverte. Aucun autre client ne doit être configuré."
     ),
-    "ai.webmcp.landing": (
+    "api.webmcp.landing": (
         "Sur la page d'accueil, <code>scan_opencloud_security</code> met une "
         "analyse en file d'attente. Son schéma contient les canaux de publication, "
         "les formats de sortie et les dérogations proposés par cette page."
     ),
-    "ai.webmcp.result": (
+    "api.webmcp.result": (
         "Sur une page de résultat, <code>get_scan_result</code> lit l'analyse "
         "actuelle et <code>export_scan_report</code> télécharge JSON, CSV, SARIF "
         "ou PDF pour l'uuid déjà affiché."
     ),
-    "ai.webmcp.boundary": (
+    "api.webmcp.boundary": (
         "Chaque outil du navigateur appelle la même API JSON avec "
         "<code>Accept: application/json</code>. La protection SSRF, les limites, "
         "le délai par cible, la file et l'isolation par uuid restent appliqués."
     ),
-    "ai.webmcp.support": (
+    "api.webmcp.support": (
         "WebMCP est encore un projet et les navigateurs qui ne l'implémentent pas "
         "l'ignorent. Désactiver MCP pour ce déploiement retire aussi les outils du "
         "navigateur."
     ),
-    "ai.clients.kicker": "Configuration",
-    "ai.clients.heading": "Le connecter à un client",
-    "ai.clients.intro": (
+    "api.clients.kicker": "Configuration",
+    "api.clients.heading": "Le connecter à un client",
+    "api.clients.intro": (
         "La plupart des outils d'agents attendent une URL et un transport. "
         "Celui-ci est en HTTP en flux continu, sans authentification et sans "
         "compte :"
     ),
-    "ai.clients.body": (
+    "api.clients.body": (
         "Une configuration détaillée pour Claude Code, Claude Desktop, "
         "GitHub Copilot dans VS Code et en CLI, Cursor, Zed et Windsurf - "
         "contre ce déploiement ou l'un des vôtres - se trouve dans "
         '<a href="{project}/blob/main/docs/mcp.md" '
         'rel="noopener noreferrer">le guide MCP</a>.'
     ),
-    "ai.rules.kicker": "Les règles",
-    "ai.rules.heading": "Les mêmes règles que pour tout le monde",
-    "ai.rules.body": (
+    "api.rules.kicker": "Les règles",
+    "api.rules.heading": "Les mêmes règles que pour tout le monde",
+    "api.rules.body": (
         "Les règles sont les mêmes pour un agent que pour n'importe qui "
         "d'autre. Une analyse est asynchrone et l'uuid est le seul moyen d'y "
         "revenir ; un <code>429</code> est une invitation à ralentir plutôt "
@@ -1539,6 +1522,7 @@ MESSAGES: dict[str, str] = {
     "search.label": "Rechercher dans la documentation",
     "search.placeholder": "TLS, Docker, dérogations...",
     "search.submit": "Rechercher",
+    "search.scope.operator": "Espace d'exploitation",
     "search.status.idle": (
         "Saisissez un terme pour rechercher dans la documentation de cette "
         "version."
@@ -1577,12 +1561,8 @@ MESSAGES: dict[str, str] = {
     "search.page.api.title": "API",
     "search.page.api.summary": (
         "Soumettez des analyses, interrogez les résultats, exportez des "
-        "rapports et effacez les données conservées."
-    ),
-    "search.page.ai.title": "IA et MCP",
-    "search.page.ai.summary": (
-        "OpenAPI, Arazzo, découverte, outils MCP et invites lisibles par "
-        "machine."
+        "rapports et pilotez le service depuis un agent via OpenAPI, Arazzo "
+        "ou MCP."
     ),
     "search.page.privacy.title": "Confidentialité",
     "search.page.privacy.summary": (

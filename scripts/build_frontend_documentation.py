@@ -93,6 +93,52 @@ def _rewrite_relative_links(body: str, source_path: str) -> str:
     return re.sub(r'href="([^"]+)"', rewrite, body)
 
 
+#: Repository images the frontend serves itself, and the name each one takes
+#: under ``/static/img``. The content security policy is ``img-src 'self'``,
+#: so an image the frontend does not serve cannot be shown at all - a link to
+#: the repository is the honest alternative, and that is what every image not
+#: named here becomes.
+#:
+#: The line diagram is small and is the point of the section it sits in. The
+#: interface screenshots are megabytes each and show the very page an operator
+#: reading them is already looking at, which is not worth that in the bundle.
+SERVED_IMAGES = {"img/architecture-three-layers.png": "architecture-three-layers.png"}
+STATIC_IMAGE_DIR = REPO_ROOT / "frontend" / "static" / "img"
+_IMAGE = re.compile(r'<img alt="([^"]*)" src="([^"]+)">')
+
+
+def _rewrite_image_sources(body: str, source_path: str) -> str:
+    """Serve the images the frontend carries, and link to the rest.
+
+    Markdown written for the repository points at files beside it. A generated
+    page is served from a different address, so a relative source resolves to
+    a path that is not there - which is how these arrived as broken images.
+    """
+    source_dir = Path(source_path).parent
+
+    def rewrite(match: re.Match[str]) -> str:
+        alt, raw = match.group(1), html.unescape(match.group(2))
+        parts = urlsplit(raw)
+        if parts.scheme or parts.netloc or not parts.path:
+            return match.group(0)
+        try:
+            repository_path = (
+                (REPO_ROOT / source_dir / parts.path).resolve().relative_to(REPO_ROOT)
+            )
+        except ValueError:
+            return match.group(0)
+        served = SERVED_IMAGES.get(repository_path.as_posix())
+        if served is not None:
+            return f'<img alt="{alt}" src="/static/img/{served}" loading="lazy">'
+        target = f"{PROJECT_URL}/blob/main/{repository_path.as_posix()}"
+        return (
+            f'<a href="{html.escape(target, quote=True)}" '
+            f'rel="noopener noreferrer">{alt}</a>'
+        )
+
+    return _IMAGE.sub(rewrite, body)
+
+
 def _escape_jinja(body: str) -> str:
     """Make examples such as GitHub expressions inert inside Jinja."""
     return (
@@ -144,6 +190,7 @@ def render_page(slug: str) -> str:
     # already owns alignment, so generated prose must not carry it through.
     body = re.sub(r'\s+style="[^"]*"', "", body)
     body = _rewrite_relative_links(body, page.source)
+    body = _rewrite_image_sources(body, page.source)
     body = _escape_jinja(body)
     toc = _table_of_contents(body)
     toc_block = f"{toc}\n" if toc else ""
@@ -184,6 +231,12 @@ def render_operator_page(slug: str) -> str:
     repository's own English and are not translated; no `_page-nav.html`,
     because that navigates the public guides; and the operator tab strip at
     the top, so the area reads as one place rather than three.
+
+    The chrome around that strip is the area's, not the guides': `admin.css`
+    is what styles the tabs, the signed-in band and the ruled heading, so a
+    generated document loads it exactly as the hand-written tabs do. Without
+    it the strip renders as bare links and the area stops looking like one
+    place at the two tabs that are generated.
     """
     page = OPERATOR_DOCUMENTATION_BY_SLUG[slug]
     source = (REPO_ROOT / page.source).read_text(encoding="utf-8")
@@ -195,6 +248,7 @@ def render_operator_page(slug: str) -> str:
     )
     body = re.sub(r'\s+style="[^"]*"', "", body)
     body = _rewrite_relative_links(body, page.source)
+    body = _rewrite_image_sources(body, page.source)
     body = _escape_jinja(body)
     toc = _table_of_contents(body)
     toc_block = f"{toc}\n" if toc else ""
@@ -204,10 +258,24 @@ def render_operator_page(slug: str) -> str:
 {{% block title %}}{page.title}{{% endblock %}}
 {{% block description %}}{page.description}{{% endblock %}}
 
+{{% block head %}}
+<link rel="stylesheet" href="/static/css/admin.css">
+{{% endblock %}}
+
 {{% block content %}}
+<section class="admin-band" role="note">
+  <span class="admin-band-dot" aria-hidden="true"></span>
+  <p class="flush">
+    {{{{ t('admin.band', user=operator.username) }}}}
+  </p>
+  {{% if sign_out_url %}}
+  <a class="admin-band-exit" href="{{{{ sign_out_url }}}}">{{{{ t('admin.band.signout') }}}}</a>
+  {{% endif %}}
+</section>
+
 {{% include "_admin-tabs.html" %}}
 
-<section class="page-head">
+<section class="page-head admin-head">
   <p class="kicker">{{{{ t('admin.docs.kicker') }}}}</p>
   <h1>{page.title}</h1>
   <p class="lede">{page.description}</p>
@@ -289,8 +357,33 @@ def generated_pages() -> dict[Path, str]:
     }
 
 
+def served_images() -> dict[Path, Path]:
+    """Each repository image the frontend serves, and where it is served from."""
+    return {
+        STATIC_IMAGE_DIR / name: REPO_ROOT / source
+        for source, name in SERVED_IMAGES.items()
+    }
+
+
+def stale_images() -> list[Path]:
+    """Static image copies that are missing or no longer match the repository."""
+    return sorted(
+        target
+        for target, source in served_images().items()
+        if not target.exists() or target.read_bytes() != source.read_bytes()
+    )
+
+
+def write_images() -> None:
+    """Copy the served images the generated pages point at."""
+    STATIC_IMAGE_DIR.mkdir(parents=True, exist_ok=True)
+    for target, source in served_images().items():
+        target.write_bytes(source.read_bytes())
+
+
 def write_pages() -> None:
     """Write the manifest and remove generated pages no longer in it."""
+    write_images()
     expected = generated_pages()
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     OPERATOR_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -333,7 +426,7 @@ def main() -> int:
     )
     args = parser.parse_args()
     if args.check:
-        stale = stale_pages()
+        stale = stale_pages() + stale_images()
         if stale:
             for path in stale:
                 print(path.relative_to(REPO_ROOT), file=sys.stderr)

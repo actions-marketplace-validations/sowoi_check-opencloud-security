@@ -31,6 +31,8 @@ from tests.webapp_support import (  # noqa: F401 - the fixtures are autouse
     settings,
 )
 from webapp.app import create_app
+from webapp.i18n import LANGUAGE_COOKIE, SUPPORTED_LOCALES
+from webapp.search import ADMIN_INDEX_FILES, admin_search_document
 from webapp.settings import ADMIN_PROXY_SECRET_MINIMUM
 
 SECRET = "b" * 48
@@ -1549,3 +1551,133 @@ def test_the_operator_documents_stay_out_of_every_public_surface():
         # Not in robots either: a Disallow line is a public file naming the
         # path, which advertises that this deployment has an operator's area.
         assert slug not in robots.text
+
+
+# ----------------------------------------------- the area's own search index
+
+
+def test_the_operator_search_index_is_not_a_public_asset():
+    """The area's text must not be reachable the way the public index is.
+
+    The public index is a file under /static because every page in it is
+    public. This one carries the configuration tab, the rules tab and the
+    operations notes, so a deployment that served it the same way would
+    publish the area's contents to everybody who guessed the filename.
+    """
+    with TestClient(create_app(_admin_settings())) as client:
+        for path in (
+            "/static/admin-search-index.json",
+            "/static/search-index.admin.json",
+            "/webapp/data/admin-search-index.json",
+        ):
+            assert client.get(path).status_code == 404, path
+
+        public = client.get("/static/search-index.json").json()
+        assert all(
+            not entry["path"].startswith("/admin") for entry in public["pages"]
+        )
+
+
+def test_the_operator_search_index_answers_only_an_authorised_operator():
+    """An index of the area is a description of the area; it gets the area's guard."""
+    with TestClient(create_app(_admin_settings())) as client:
+        stranger = client.get("/admin/search-index.json")
+        assert stranger.status_code == 404
+
+        # Signed in at the proxy, but not on the guest list.
+        outsider = client.get(
+            "/admin/search-index.json",
+            headers={**FORWARDED, "x-authentik-username": "nobody"},
+        )
+        assert outsider.status_code == 404
+
+        operator = client.get("/admin/search-index.json", headers=FORWARDED)
+        assert operator.status_code == 200
+        paths = [entry["path"] for entry in operator.json()["pages"]]
+        assert "/admin/configuration" in paths
+        assert "/admin/docs/operations" in paths
+
+
+def test_the_operator_search_index_is_never_stored_by_a_cache():
+    """Signing out must not leave the area's text searchable in the browser."""
+    with TestClient(create_app(_admin_settings())) as client:
+        answer = client.get("/admin/search-index.json", headers=FORWARDED)
+
+    assert answer.headers["cache-control"] == "no-store"
+
+
+def test_the_search_page_offers_the_area_only_while_the_sign_in_lasts():
+    """The offer follows the proxy's header, so a sign-out removes it at once."""
+    with TestClient(create_app(_admin_settings())) as client:
+        signed_in = client.get("/search", headers=FORWARDED).text
+        assert "/admin/search-index.json" in signed_in
+
+        # The same page for the same person once the outpost stops
+        # authorising them: no attribute, so nothing to fetch.
+        signed_out = client.get("/search").text
+        assert "/admin/search-index.json" not in signed_out
+        assert "/admin" not in signed_out
+
+
+def test_the_operator_index_carries_the_areas_text_in_the_readers_language():
+    """An operator reading German searches the German area, not an English copy."""
+    with TestClient(create_app(_admin_settings())) as client:
+        german = client.get(
+            "/admin/search-index.json",
+            headers={**FORWARDED, "accept-language": "de"},
+        ).json()
+
+    assert german["locale"] == "de"
+    overview = next(page for page in german["pages"] if page["path"] == "/admin")
+    assert overview["title"] == "Betriebsbereich"
+
+
+def test_the_operator_index_is_chosen_from_a_table_not_built_from_a_cookie():
+    """A language cookie selects a file; it never spells one.
+
+    The cookie is a visitor's to write, so the file name must not be. Every
+    language this frontend has maps to one fixed name, and anything else -
+    a tag this frontend does not have, or a hand-written traversal - falls
+    back to the English index rather than sending this process off to read
+    whatever the cookie named.
+    """
+    assert set(ADMIN_INDEX_FILES) == set(SUPPORTED_LOCALES)
+    assert all(
+        "/" not in name and "\\" not in name and ".." not in name
+        for name in ADMIN_INDEX_FILES.values()
+    )
+
+    english = admin_search_document("en")
+    for cookie in ("../../../../etc/passwd", "klingon", "en/../de", ""):
+        assert admin_search_document(cookie) == english
+
+    with TestClient(create_app(_admin_settings())) as client:
+        client.cookies.set(LANGUAGE_COOKIE, "../../../../etc/passwd")
+        answer = client.get("/admin/search-index.json", headers=FORWARDED)
+
+    assert answer.status_code == 200
+    assert "locale" not in answer.json()
+
+
+def test_the_operator_documents_show_only_images_this_service_serves():
+    """A page under `img-src 'self'` must not point at an image it cannot show.
+
+    The repository's Markdown links images beside it, which resolve to
+    nothing once the page is served from `/admin/docs/`. The diagram is
+    copied into the frontend and served from this origin; the interface
+    screenshots are megabytes each, so they become links to the repository
+    rather than broken images or a heavier bundle.
+    """
+    with TestClient(create_app(_admin_settings())) as client:
+        architecture = client.get(
+            "/admin/docs/architecture", headers=FORWARDED
+        ).text
+        operations = client.get("/admin/docs/operations", headers=FORWARDED).text
+
+        assert 'src="/static/img/architecture-three-layers.png"' in architecture
+        assert client.get("/static/img/architecture-three-layers.png").status_code == 200
+
+        # Nothing anywhere still points at a path relative to the document.
+        for body in (architecture, operations):
+            assert 'src="img/' not in body
+        assert "blob/main/img/admin-area-dark.png" in operations
