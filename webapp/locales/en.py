@@ -437,7 +437,7 @@ MESSAGES: dict[str, str] = {
     "footer.note.run_yourself": "Run it yourself",
     "footer.version.title": "The scanner version that produced these results",
     "footer.version.label": "Backend v{version}",
-    "footer.legal.scope": "<strong>This scan covers only part of an instance’s security.</strong> It checks the reported version, matching advisories, TLS, headers and publicly visible settings, including the documented demo accounts. The grade summarizes those checks. It does not assess private files, the operating system, backups, account permissions or the surrounding network. Use the report alongside your other security checks; it is not a security certification or penetration test.",
+    "footer.legal.scope": "<strong>This check is not exhaustive, and a good grade is not a certificate.</strong> It reads the reported version, matching advisories, TLS, headers and publicly visible settings, including the documented demo accounts. A good grade means none of those went wrong - not that the instance is secure. It does not assess private files, the operating system, backups, account permissions or the surrounding network. Use the report alongside your other security checks; it is never a security audit or a penetration test.",
     "footer.legal.trademark": (
         "This is an independent community project. It is not affiliated with "
         "OpenCloud GmbH and is neither recommended nor supported by the "
@@ -778,7 +778,7 @@ MESSAGES: dict[str, str] = {
     "privacy.lede": "Scan results remain available for {minutes} minutes before expiring.",
     "privacy.retention.kicker": "Retention",
     "privacy.retention.heading": "Stored scan data",
-    "privacy.retention.body": "The target address, chosen waivers and result are stored under the scan’s random identifier for {minutes} minutes, then expire. The ordinary operational log records only that identifier and the creation, start and completion events. Usage limits use fingerprints of client addresses. An operator can also configure a separate audit log.",
+    "privacy.retention.body": "The target address, chosen waivers and result are stored under the scan’s random identifier for {minutes} minutes, then expire. The ordinary operational log records only that identifier and the creation, start and completion events. Usage limits use a one-way fingerprint of the client address. An operator can also configure a separate audit log.",
     "privacy.uploads.kicker": "Uploaded reports",
     "privacy.uploads.heading": "When you upload a report to compare",
     "privacy.uploads.body": "The uploaded file is read in memory to calculate the comparison. Its contents and filename are not retained. The comparison is available under a random identifier for {minutes} minutes so you can reload or share it. It then expires and cannot be reconstructed from the discarded upload.",

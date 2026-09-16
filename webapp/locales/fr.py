@@ -409,7 +409,7 @@ MESSAGES: dict[str, str] = {
     "footer.note.run_yourself": "Exécutez-le vous-même",
     "footer.version.title": "La version du scanner qui a produit ces résultats",
     "footer.version.label": "Backend v{version}",
-    "footer.legal.scope": "<strong>Cette analyse ne couvre qu’une partie de la sécurité d’une instance.</strong> Elle vérifie la version annoncée, les avis de sécurité correspondants, TLS, les en-têtes et les paramètres publics, y compris les comptes de démonstration documentés. La note résume ces vérifications. Elle ne porte pas sur les fichiers privés, le système d’exploitation, les sauvegardes, les droits des comptes ou le réseau environnant. Utilisez ce rapport en complément de vos autres contrôles ; il ne constitue ni une certification de sécurité ni un test d’intrusion.",
+    "footer.legal.scope": "<strong>Cette vérification n’est pas exhaustive et une bonne note n’est pas un certificat.</strong> Elle lit la version annoncée, les avis de sécurité correspondants, TLS, les en-têtes et les paramètres publics, y compris les comptes de démonstration documentés. Une bonne note signifie qu’aucun de ces points n’a échoué, pas que l’instance est sécurisée. Elle ne porte pas sur les fichiers privés, le système d’exploitation, les sauvegardes, les droits des comptes ou le réseau environnant. Utilisez ce rapport en complément de vos autres contrôles ; il ne constitue jamais un audit de sécurité ni un test d’intrusion.",
     "footer.legal.trademark": (
         "Il s'agit d'un projet communautaire indépendant. Il n'est pas affilié "
         "à OpenCloud GmbH et n'est ni recommandé ni pris en charge par cette "
@@ -748,7 +748,7 @@ MESSAGES: dict[str, str] = {
     "privacy.lede": "Les résultats restent disponibles pendant {minutes} minutes, puis expirent.",
     "privacy.retention.kicker": "Rétention",
     "privacy.retention.heading": "Données de l’analyse",
-    "privacy.retention.body": "L’adresse cible, les exceptions choisies et le résultat sont conservés pendant {minutes} minutes sous l’identifiant aléatoire de l’analyse. Ils expirent ensuite. Le journal courant ne contient que cet identifiant et les événements de création, de démarrage et de fin. Les limites d’utilisation reposent sur des empreintes des adresses des clients. L’opérateur peut aussi configurer un journal d’audit distinct.",
+    "privacy.retention.body": "L’adresse cible, les exceptions choisies et le résultat sont conservés pendant {minutes} minutes sous l’identifiant aléatoire de l’analyse. Ils expirent ensuite. Le journal courant ne contient que cet identifiant et les événements de création, de démarrage et de fin. Les limites d’utilisation reposent sur une empreinte à sens unique de l’adresse du client. L’opérateur peut aussi configurer un journal d’audit distinct.",
     "privacy.uploads.kicker": "Rapports téléversés",
     "privacy.uploads.heading": "Quand vous téléversez un rapport à comparer",
     "privacy.uploads.body": "Le fichier envoyé est lu en mémoire pour calculer la comparaison. Son contenu et son nom ne sont pas conservés. La comparaison reste accessible sous un identifiant aléatoire pendant {minutes} minutes, pour pouvoir la rouvrir ou la partager. Elle expire ensuite et ne peut pas être recalculée à partir du fichier supprimé.",

@@ -412,7 +412,7 @@ MESSAGES: dict[str, str] = {
     "footer.note.run_yourself": "Selbst ausführen",
     "footer.version.title": "Die Scanner-Version, die dieses Ergebnis erzeugt hat",
     "footer.version.label": "Backend v{version}",
-    "footer.legal.scope": "<strong>Dieser Scan erfasst nur einen Teil der Sicherheit einer Instanz.</strong> Er prüft die gemeldete Version, passende Sicherheitsmeldungen, TLS, Header und öffentlich sichtbare Einstellungen einschließlich der dokumentierten Demo-Konten. Die Note fasst diese Prüfungen zusammen. Private Dateien, Betriebssystem, Backups, Kontoberechtigungen und das umgebende Netzwerk werden nicht untersucht. Nutzen Sie den Bericht ergänzend zu Ihren übrigen Prüfungen; er ist weder Sicherheitszertifikat noch Penetrationstest.",
+    "footer.legal.scope": "<strong>Diese Prüfung ist nicht erschöpfend, und eine gute Note ist kein Zertifikat.</strong> Sie liest die gemeldete Version, passende Sicherheitsmeldungen, TLS, Header und öffentlich sichtbare Einstellungen einschließlich der dokumentierten Demo-Konten. Eine gute Note bedeutet, dass nichts davon fehlgeschlagen ist - nicht, dass die Instanz sicher ist. Private Dateien, Betriebssystem, Backups, Kontoberechtigungen und das umgebende Netzwerk werden nicht untersucht. Nutzen Sie den Bericht ergänzend zu Ihren übrigen Prüfungen; er ist niemals ein Sicherheitsaudit oder ein Penetrationstest.",
     "footer.legal.trademark": (
         "Dies ist ein unabhängiges Community-Projekt. Es steht in keiner "
         "Verbindung zur OpenCloud GmbH und wird von diesem Unternehmen weder "
@@ -727,7 +727,7 @@ MESSAGES: dict[str, str] = {
     "privacy.lede": "Scan-Ergebnisse bleiben {minutes} Minuten verfügbar und laufen danach ab.",
     "privacy.retention.kicker": "Speicherdauer",
     "privacy.retention.heading": "Gespeicherte Scandaten",
-    "privacy.retention.body": "Zieladresse, gewählte Ausnahmen und Ergebnis werden unter der zufälligen Scan-Kennung für {minutes} Minuten gespeichert. Danach laufen sie ab. Das normale Betriebslog nennt nur diese Kennung und die Ereignisse Erstellung, Start und Abschluss. Client-Adressen werden für die Nutzungsgrenzen als Fingerabdrücke verarbeitet. Ein Betreiber kann zusätzlich ein separates Audit-Log konfigurieren.",
+    "privacy.retention.body": "Zieladresse, gewählte Ausnahmen und Ergebnis werden unter der zufälligen Scan-Kennung für {minutes} Minuten gespeichert. Danach laufen sie ab. Das normale Betriebslog nennt nur diese Kennung und die Ereignisse Erstellung, Start und Abschluss. Client-Adressen werden für die Nutzungsgrenzen nur als Einweg-Fingerabdruck verarbeitet. Ein Betreiber kann zusätzlich ein separates Audit-Log konfigurieren.",
     "privacy.uploads.kicker": "Hochgeladene Berichte",
     "privacy.uploads.heading": "Wenn Sie einen Bericht zum Vergleich hochladen",
     "privacy.uploads.body": "Die hochgeladene Datei wird im Arbeitsspeicher für den Vergleich gelesen. Inhalt und Dateiname werden nicht aufbewahrt. Der Vergleich ist über eine zufällige Kennung {minutes} Minuten abrufbar, damit Sie ihn erneut öffnen oder teilen können. Danach läuft er ab und lässt sich ohne die verworfene Datei nicht erneut berechnen.",

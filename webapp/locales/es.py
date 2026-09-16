@@ -403,7 +403,7 @@ MESSAGES: dict[str, str] = {
     "footer.note.run_yourself": "Ejecutar localmente",
     "footer.version.title": "La versión del escáner que produjo estos resultados",
     "footer.version.label": "Backend v{version}",
-    "footer.legal.scope": "<strong>Este análisis solo cubre una parte de la seguridad de una instancia.</strong> Comprueba la versión declarada, los avisos de seguridad correspondientes, TLS, las cabeceras y la configuración pública, incluidas las cuentas de demostración documentadas. La nota resume esas comprobaciones. No evalúa los archivos privados, el sistema operativo, las copias de seguridad, los permisos de las cuentas ni la red. Utilice el informe como complemento de sus otras revisiones; no es una certificación de seguridad ni una prueba de penetración.",
+    "footer.legal.scope": "<strong>Esta comprobación no es exhaustiva y una buena nota no es un certificado.</strong> Lee la versión declarada, los avisos de seguridad correspondientes, TLS, las cabeceras y la configuración pública, incluidas las cuentas de demostración documentadas. Una buena nota significa que nada de eso falló, no que la instancia sea segura. No evalúa los archivos privados, el sistema operativo, las copias de seguridad, los permisos de las cuentas ni la red. Utilice el informe como complemento de sus otras revisiones; nunca es una auditoría de seguridad ni una prueba de penetración.",
     "footer.legal.trademark": (
         "Este es un proyecto comunitario independiente. No está afiliado a "
         "OpenCloud GmbH y la empresa ni lo recomienda ni lo respalda. "
@@ -724,7 +724,7 @@ MESSAGES: dict[str, str] = {
     "privacy.lede": "Los resultados están disponibles durante {minutes} minutos y después caducan.",
     "privacy.retention.kicker": "Retención",
     "privacy.retention.heading": "Mientras un análisis está activo",
-    "privacy.retention.body": "La dirección de destino, las excepciones elegidas y el resultado se guardan con el identificador aleatorio del análisis durante {minutes} minutos. Después caducan. El registro operativo normal solo recoge ese identificador y los eventos de creación, inicio y finalización. Los límites de uso utilizan huellas de las direcciones de los clientes. El operador puede configurar además un registro de auditoría independiente.",
+    "privacy.retention.body": "La dirección de destino, las excepciones elegidas y el resultado se guardan con el identificador aleatorio del análisis durante {minutes} minutos. Después caducan. El registro operativo normal solo recoge ese identificador y los eventos de creación, inicio y finalización. Los límites de uso utilizan una huella unidireccional de la dirección del cliente. El operador puede configurar además un registro de auditoría independiente.",
     "privacy.uploads.kicker": "Informes subidos",
     "privacy.uploads.heading": "Informes subidos para comparar",
     "privacy.uploads.body": "El archivo subido se lee en memoria para calcular la comparación. No se conservan su contenido ni su nombre. La comparación permanece disponible mediante un identificador aleatorio durante {minutes} minutos para que pueda volver a abrirla o compartirla. Después caduca y no puede reconstruirse a partir del archivo descartado.",
