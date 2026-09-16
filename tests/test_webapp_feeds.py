@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import xml.etree.ElementTree as ET
 
+from opencloud_local_scan.versions import load_release_schedule
 from tests.webapp_support import (  # noqa: F401 - the fixtures are autouse
     MEMORY_URL,
     _isolated_backend,
@@ -19,9 +20,8 @@ from tests.webapp_support import (  # noqa: F401 - the fixtures are autouse
     client,
     settings,
 )
-from webapp.advisories import advisory_catalogue, _bundled
+from webapp.advisories import _bundled, advisory_catalogue
 from webapp.feeds import advisories_feed, schedule_feed
-from opencloud_local_scan.versions import load_release_schedule
 
 ATOM = "{http://www.w3.org/2005/Atom}"
 

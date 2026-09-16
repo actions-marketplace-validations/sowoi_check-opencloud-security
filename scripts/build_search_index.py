@@ -4,9 +4,9 @@ Build the static frontend search index from its public-page manifest.
 
 One file per language, and the language files are overlays: the English index
 carries every page and its text, and ``search-index.<locale>.json`` carries
-the translated title, summary and - for the pages this project writes by hand
-- the translated text. A guide generated from the repository has an English
-body in one place rather than four.
+the translated title, summary and available translated body text. German
+guides have their own bodies; French and Spanish guide entries inherit the
+English body until those translations are available.
 
 The templates say ``t('some.key')`` rather than the sentence, so the strings
 are read out of the catalogues here. Nothing else changes: the manifest is
@@ -47,6 +47,8 @@ _PLACEHOLDER = re.compile(r"{[a-z_]+}")
 
 def _localised_source(template: str, translate: Translator) -> str:
     """The template with every literal catalogue lookup already resolved."""
+    if translate.locale == "de" and template.startswith("docs/"):
+        template = template.replace("docs/", "docs/de/", 1)
     source = (ROOT / "frontend" / "templates" / template).read_text(encoding="utf-8")
 
     def replace(match: re.Match[str]) -> str:
@@ -105,7 +107,7 @@ def render(locale: str = DEFAULT_LOCALE) -> str:
             "summary": _translated(page.summary_key, page.summary, translate),
         }
         # An overlay leaves out the English guide bodies it would only repeat.
-        if locale == DEFAULT_LOCALE or not _generated(page.template):
+        if locale in (DEFAULT_LOCALE, "de") or not _generated(page.template):
             entry["body"] = _body(page.template, translate)
         pages.append(entry)
     # The release this index was generated for. The body text is extracted

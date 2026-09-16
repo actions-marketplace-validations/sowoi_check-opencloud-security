@@ -1,9 +1,8 @@
 # Public link sharing: what this scanner checks, and why
 
-A public link turns "who has the URL" into the entire access control model
-for whatever it points at. Two checks read OpenCloud's public capabilities
-document to see what a link is allowed to do without a password, and whether
-it can be made to expire.
+For a public share link, possession of the URL may be enough to access its contents. The
+scanner reads OpenCloud’s capabilities to check whether links require passwords and
+whether automatic expiry is reported.
 
 <!-- TOC -->
 * [Public link sharing: what this scanner checks, and why](#public-link-sharing-what-this-scanner-checks-and-why)

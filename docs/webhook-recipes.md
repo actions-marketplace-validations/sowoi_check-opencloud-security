@@ -212,10 +212,10 @@ webhook:
 within the heartbeat interval, so a plugin that cannot run at all shows up as
 well.
 
-Uptime Kuma stores the JSON body it receives and shows it on the monitor, so
-the rating, the OpenCloud version and the reason for the state are visible in
-the heartbeat detail. To surface the state in the message column too, use the
-push URL's own query parameters alongside the webhook:
+A Push monitor records the status supplied through its own protocol. Do not rely on it
+to interpret the plugin’s generic JSON as an OpenCloud verdict. To report the measured
+state, map the plugin result to the Push URL’s `status` and `msg` parameters. These
+payload fields are useful when writing an adapter:
 
 | Field in the payload      | What it tells you in Uptime Kuma                         |
 |:--------------------------|:---------------------------------------------------------|
@@ -226,9 +226,8 @@ push URL's own query parameters alongside the webhook:
 | `update.availableVersion` | What to upgrade to                                       |
 | `duration_seconds`        | How long the scan took                                   |
 
-If you would rather have Uptime Kuma go down on *any* problem, keep
-`--webhook-on always` and add a keyword check on the JSON, or run a second
-Push monitor fed by a wrapper that only pushes when the plugin exits `0`:
+To mark any non-OK plugin result as down, use a wrapper that sends the appropriate Push
+status:
 
 ```shell
 check-opencloud-security --host opencloud.example.com \
@@ -236,8 +235,8 @@ check-opencloud-security --host opencloud.example.com \
   || curl -fsS 'https://kuma.example.com/api/push/<token>?status=down&msg=opencloud'
 ```
 
-The webhook route is the better one of the two: it pushes on every outcome and
-carries the detail, while the wrapper only carries up or down.
+Use the direct heartbeat to detect missing scheduled runs. Use the wrapper or a
+result-aware adapter when the monitor must also reflect the security check’s status.
 
 ## Slack, Mattermost, Discord
 

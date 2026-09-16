@@ -31,11 +31,9 @@ paths inside those files point one level up (`../config`, `../secrets`).
 
 ## Setting up the whole stack
 
-**Start with [`setup-wizard.py`](setup-wizard.py).** The compose files here
-are the two shapes this service usually takes, and if yours is one of them you
-can run one directly. Anything else - a different port, an on-premise instance
-the SSRF guard would otherwise refuse, encryption at rest, a sign-in on
-`/mcp` - is a question to answer rather than a file to edit into place.
+Use [`setup-wizard.py`](setup-wizard.py) to generate a deployment with your ports,
+network access, encryption and authentication settings. The included Compose files are
+ready-made alternatives for the standard stacks.
 
 ```bash
 cd docker
@@ -45,8 +43,8 @@ docker compose up -d
 # http://127.0.0.1:8811
 ```
 
-It needs no checkout of its own: it is one file, uses the standard library
-alone, and runs on a host that has Docker and nothing else installed yet.
+The wizard is a standalone Python script using only the standard library. Download it
+directly on a host with Python and Docker:
 
 ```bash
 base=https://github.com/sowoi/check-opencloud-security/releases/latest/download
@@ -57,16 +55,14 @@ chmod +x setup-wizard.py
 ./setup-wizard.py
 ```
 
-That is the copy attached to the latest release, not whatever `main` holds
-this minute: it reports that release with `--version`, the checksum beside it
-says the download arrived intact, and `gh attestation verify setup-wizard.py
---repo sowoi/check-opencloud-security` shows it was built by this project's
-release workflow.
+The download is attached to the latest release. `--version` identifies it; the checksum
+checks file integrity. Use `gh attestation verify setup-wizard.py --repo
+sowoi/check-opencloud-security` to verify its release-workflow provenance.
 
 [The flags, the presets and the Authentik answers](#the-setup-wizard) are
 below.
 
-Three things the wizard gets right that a hand-edited file often does not:
+The wizard configures three requirements for a public deployment:
 
 - **`COS_WEB_PUBLIC_BASE_URL` is required.** Canonical URLs, the sitemap and
   the discovery document must not be built from an incoming `Host` header, so

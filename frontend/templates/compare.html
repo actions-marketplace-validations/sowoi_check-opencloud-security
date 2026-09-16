@@ -36,7 +36,13 @@
     <dt>{{ t('compare.side.scanned') }}</dt>
     <dd>{{ side.scannedAt or t('compare.side.unknown') }}</dd>
   </dl>
+  {#
+    An uploaded baseline has no result page here - the file was read and
+    discarded - so there is nothing to offer rather than a dead link.
+  #}
+  {% if side.url %}
   <p class="flush"><a href="{{ side.url }}">{{ t('compare.side.open') }}</a></p>
+  {% endif %}
 </div>
 {% endmacro %}
 
@@ -69,6 +75,38 @@
     <button class="btn btn-primary" type="submit">{{ t('compare.form.submit') }}</button>
   </form>
   <p class="hint">{{ t.html('compare.form.hint') }}</p>
+</section>
+
+{#
+  The second way to ask the same question: the earlier side as a file rather
+  than as a uuid, for the reader whose earlier scan expired hours ago but who
+  kept the download. `enctype` is what makes the file a file; everything about
+  what happens to it afterwards is said plainly under the button, because a
+  page that asks somebody to upload a report about their own infrastructure
+  owes them that before they choose one.
+#}
+<section class="glass compare-panel" data-reveal>
+  <p class="kicker">{{ t('compare.upload.kicker') }}</p>
+  <h2>{{ t('compare.upload.heading') }}</h2>
+  <p class="lede">{{ t('compare.upload.lede') }}</p>
+  <form class="compare-form" action="/compare" method="post"
+        enctype="multipart/form-data">
+    <div class="compare-field">
+      <label for="compare-report">{{ t('compare.upload.field.report') }}</label>
+      <input id="compare-report" name="report" type="file"
+             accept=".json,.csv,application/json,text/csv" required>
+    </div>
+    <div class="compare-field">
+      <label for="compare-upload-current">{{ t('compare.upload.field.current') }}</label>
+      <input id="compare-upload-current" name="current" type="text" inputmode="latin"
+             autocomplete="off" spellcheck="false" maxlength="36"
+             placeholder="{{ t('compare.form.placeholder') }}"
+             value="{{ current }}">
+    </div>
+    <button class="btn btn-primary" type="submit">{{ t('compare.upload.submit') }}</button>
+  </form>
+  <p class="hint">{{ t.html('compare.upload.field.hint', kilobytes=upload_kilobytes) }}</p>
+  <p class="hint">{{ t('compare.upload.privacy', minutes=comparison_minutes) }}</p>
 </section>
 
 {% if error %}
@@ -117,6 +155,31 @@
     {{ scan_side(comparison.current, t('compare.side.current')) }}
   </div>
 </section>
+
+{#
+  Said before the three lists, not after them: a comparison drawn from a file
+  that was partly unreadable, or whose format could not record a whole family
+  of findings, is a comparison with holes in it - and the holes are invisible
+  in lists that otherwise look complete.
+#}
+{% if comparison.source %}
+<section class="card compare-source" data-reveal>
+  <p class="kicker">{{ t('compare.upload.source.kicker') }}</p>
+  <p{% if not comparison.source.dropped and not comparison.source.missingRecords %} class="flush"{% endif %}>
+    {{ t('compare.upload.source.' ~ comparison.source.format) }}
+  </p>
+  {% if comparison.source.dropped %}
+  <p{% if not comparison.source.missingRecords %} class="flush"{% endif %}>
+    {{ t('compare.upload.source.dropped', count=comparison.source.dropped) }}
+  </p>
+  {% endif %}
+  {% for record in comparison.source.missingRecords %}
+  <p{% if loop.last %} class="flush"{% endif %}>
+    {{ t('compare.upload.source.missing.' ~ record) }}
+  </p>
+  {% endfor %}
+</section>
+{% endif %}
 
 {#
   Introduced first: it is the only one of the three that needs acting on
@@ -192,7 +255,11 @@
 {% endif %}
 
 <section class="card" data-reveal>
+  {% if comparison.source %}
+  <p class="hint flush">{{ t('compare.upload.expires', minutes=expires_in_minutes or comparison_minutes) }}</p>
+  {% else %}
   <p class="hint flush">{{ t('compare.nothing_stored') }}</p>
+  {% endif %}
 </section>
 {% endif %}
 {% endblock %}

@@ -1,11 +1,9 @@
 # Version and lifecycle disclosure: what this scanner checks, and why
 
-Three checks are about the running version: whether one could be determined
-at all, and whether it leaks somewhere it does not need to. They are
-distinct from [end-of-life detection](../README.md#end-of-life-detection) and
-the update check, which decide whether a *known* version is still supported -
-these three exist upstream of that, because both depend on actually having a
-real version to reason about.
+These checks establish whether the scanner knows the running version and whether the
+instance publishes it in unnecessary places. They complement [end-of-life
+detection](../README.md#end-of-life-detection) and the update check, both of which need
+a reliable version number.
 
 <!-- TOC -->
 * [Version and lifecycle disclosure: what this scanner checks, and why](#version-and-lifecycle-disclosure-what-this-scanner-checks-and-why)

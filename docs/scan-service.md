@@ -1,11 +1,9 @@
 # Running the scanner as a service
 
-The package ships a second entry point, `check-opencloud-scanner`, which runs
-the very same scanner as a long-lived HTTP service so that several consumers
-can share one cached result. The
-[main README](../README.md#running-the-scanner-as-a-service) describes the
-endpoints and the rule that a wide bind needs a credential; this page is the
-deployment detail.
+Run `check-opencloud-scanner serve` to make the built-in scanner available as a
+persistent HTTP service. Several consumers can then share a cached result for each
+instance. The [main README](../README.md#running-the-scanner-as-a-service) lists the
+endpoints and token requirements; this guide covers deployment.
 
 This is **not** the public web application - that is
 [the scan service](webapp.md), which takes a URL from a stranger, queues it

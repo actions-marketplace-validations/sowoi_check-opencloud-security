@@ -18,7 +18,7 @@ listed username chooses a password and enrols a second factor, with nothing
 created in the admin interface. Without `COS_AUTHENTIK_ENROLLMENT_TOKEN` it
 creates no invitation.
 
-The blueprints contain no secrets. It reads the client ID, client secret,
+The blueprints contain no secrets. They read the client ID, client secret,
 redirect URI, and application slug from environment variables written to
 `docker/.env` by `docker/authentik-env.sh`. Keep that `.env` file private and
 do not put its values in this directory or commit them.

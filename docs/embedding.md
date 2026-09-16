@@ -1,13 +1,10 @@
 # Embedding OpenCloud in an iframe: what this scanner checks, and why
 
-OpenCloud's web client can be embedded in another site's page inside an
-`iframe` - a file picker or a preview panel dropped into a third-party
-application, for instance. That integration works by `postMessage`: the
-embedding page and the framed OpenCloud client exchange messages across the
-frame boundary, and optionally the parent can hand over an authenticated
-session to the frame. Both checks read the public `/config.json` the web
-client serves and ask the same question: **which origins is the embedded
-client willing to trust?**
+An application can embed the OpenCloud web client in an `iframe`, for example as a file
+picker or preview panel. The parent page and embedded client exchange messages through
+`postMessage`; delegated authentication also lets the parent supply a session. The
+scanner reads the public `/config.json` to check which origins the embedded client
+trusts.
 
 If `/config.json` cannot be read, or does not publish an `embed` block at
 all, both checks pass - embedding is simply not configured, so there is

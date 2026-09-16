@@ -46,7 +46,7 @@ _PADDING = 9
 
 
 def _segment_width(text: str) -> int:
-    return int(round(len(text) * _CHARACTER_WIDTH)) + 2 * _PADDING
+    return round(len(text) * _CHARACTER_WIDTH) + 2 * _PADDING
 
 
 def colour_for(rating: object) -> str:

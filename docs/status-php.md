@@ -1,8 +1,7 @@
 # Why OpenCloud still answers `/status.php`
 
-OpenCloud is a single Go binary. `/status.php` is not a PHP script running
-anywhere in it - the path is a compatibility shim, kept because the software
-OpenCloud replaced was PHP.
+OpenCloud is written in Go. Its `/status.php` route is a compatibility endpoint for
+existing clients, not a PHP script.
 
 <!-- TOC -->
 * [Why OpenCloud still answers `/status.php`](#why-opencloud-still-answers-statusphp)
@@ -14,22 +13,12 @@ OpenCloud replaced was PHP.
 
 ## Where the path comes from
 
-OpenCloud is the successor to ownCloud Infinite Scale (oCIS), built on the
-[CS3 APIs](https://github.com/cs3org) and [Reva](https://github.com/cs3org/reva),
-the same server framework oCIS used. ownCloud's original PHP server exposed an
-unauthenticated `/status.php` endpoint so that sync clients, mobile apps and
-monitoring scripts could ask "is this an ownCloud-compatible server, and what
-version is it?" in one request, before authenticating. Every server in that
-lineage - ownCloud, Nextcloud (a fork), oCIS, and now OpenCloud - has kept
-answering it, because a large ecosystem of clients still probes it first. This
-scanner refuses to rate a server that answers `/status.php` as ownCloud or
-Nextcloud rather than OpenCloud, for exactly that reason - see
-[Troubleshooting](troubleshooting.md). [What OpenCloud is, and how it differs
-from ownCloud and Nextcloud](what-is-opencloud.md) tells that lineage in full,
-and what changed at each fork.
-
-In OpenCloud's own source, the route is registered in the vendored Reva
-package it builds on:
+The endpoint preserves a familiar client interface while OpenCloud serves it
+from Go code. The `.php` suffix does not imply that PHP runs on the server.
+Several products expose a compatible endpoint, so the scanner checks the
+reported product before applying OpenCloud-specific rules. See
+[What OpenCloud is](what-is-opencloud.md) for the architecture and
+[Troubleshooting](troubleshooting.md) for product-identification failures.
 
 ```go
 // vendor/github.com/opencloud-eu/reva/v2/internal/http/services/owncloud/ocdav/ocdav.go

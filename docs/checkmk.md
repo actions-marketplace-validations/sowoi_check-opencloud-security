@@ -1,8 +1,8 @@
 # Checkmk
 
-Checkmk speaks Nagios, and this is a Nagios plugin, so the two fit together
-without an extension package. There are two ways round, and the difference is
-not cosmetic - it decides which machine opens the connection to your instance:
+Checkmk can read this plugin’s Nagios output directly. You can run it as an active check
+on the Checkmk server or as a local check on an agent host. Choose the machine that can
+reach the instance from the network you want to test.
 
 | | [Active check](#1-an-active-check-on-the-checkmk-server) | [Local check](#2-a-local-check-on-an-agent-host) |
 |:--|:--|:--|

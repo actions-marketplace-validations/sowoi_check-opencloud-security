@@ -34,7 +34,7 @@ MESSAGES: dict[str, str] = {
     "admin.tabs.rules": "Rules",
     "admin.config.title": "Configuration",
     "admin.config.lede": "Every COS_WEB_* variable this service reads, and the value it is running with.",
-    "admin.config.scope": "This is the web service's own environment, as this process read it at startup - not OpenCloud's configuration, and not the worker's, which reads the same variables in its own container. Values are shown as they are in effect after parsing; credentials are only ever shown as set or not set.",
+    "admin.config.scope": "These are this web process’s effective settings at startup. OpenCloud and the scan worker have their own configuration. Credentials are shown only as set or not set.",
     "admin.config.source.environment": "Set",
     "admin.config.source.default": "Default",
     "admin.config.secret.set": "Set (value hidden)",
@@ -83,7 +83,7 @@ MESSAGES: dict[str, str] = {
     "admin.rules.group.submissions": "Submission limits",
     "admin.rules.group.submissions.lede": "How often a client may ask, and how the service behaves under load.",
     "admin.rules.group.probe": "Probe block",
-    "admin.rules.group.probe.lede": "What it costs to use this service to find out what answers where.",
+    "admin.rules.group.probe.lede": "Limits on repeated requests to targets that cannot be scanned.",
     "admin.rules.group.targets": "What may be scanned",
     "admin.rules.group.targets.lede": "Checked before anything connects, and again for every redirect.",
     "admin.rules.group.scanner": "How hard a host is probed",
@@ -100,7 +100,7 @@ MESSAGES: dict[str, str] = {
     "admin.rules.rule.batch.body": "A batch carries at most {limit} targets, and each one counts against every limit.",
     "admin.rules.rule.queue.title": "Overload queues",
     "admin.rules.rule.queue.body": "{workers} scans run at once; further submissions wait in order and are never refused for load.",
-    "admin.rules.rule.agent_wait.title": "Agents do not sleep through a block",
+    "admin.rules.rule.agent_wait.title": "Automatic retry limit",
     "admin.rules.rule.agent_wait.body": "MCP and the workflows wait out a Retry-After of up to {wait} themselves, at most {attempts} attempts; a longer one is handed back to the caller.",
     "admin.rules.rule.probe_block.title": "Block after repeated strikes",
     "admin.rules.rule.probe_block.body": "{limit} strikes within {window} block the client's network for {block}.",
@@ -152,21 +152,14 @@ MESSAGES: dict[str, str] = {
     # Shown only where COS_WEB_ADMIN_SIGN_OUT_URL named where the provider in
     # front ends its session. This service has none of its own to end.
     "admin.band.signout": "Sign out",
-    "admin.lede": (
-        "What this deployment is doing, what it knows, and the two refreshes "
-        "the worker otherwise runs once a day. Nothing here can be asked about "
-        "a particular scan."
-    ),
+    "admin.lede": "Check the service state, review the reference data and run the worker’s daily refreshes manually.",
     "admin.noscript": (
         "The readings above are filled in by JavaScript. Without it, reload the "
         "page to see the current ones; both refresh buttons still work."
     ),
     "admin.state.kicker": "Now",
     "admin.state.heading": "Service state",
-    "admin.state.lede": (
-        "Counts and configured limits. No target, uuid or client address "
-        "appears here, because none of them is kept where this could read it."
-    ),
+    "admin.state.lede": "Current counts and configured limits. Individual scan details and client addresses are not available here.",
     "admin.state.worker": "Worker",
     "admin.state.worker.up": "Running",
     "admin.state.worker.down": "Not answering",
@@ -208,10 +201,7 @@ MESSAGES: dict[str, str] = {
     "admin.state.age.seconds": "Read {seconds}s ago",
     "admin.state.age.minutes": "Read {minutes}m ago",
     "admin.state.age.waiting": "Waiting for the first reading",
-    "admin.state.stale": (
-        "The service has not answered for a while. What is above is the last "
-        "reading it gave, not necessarily what is true now."
-    ),
+    "admin.state.stale": "The service has not responded recently. These are the last available readings and may be out of date.",
     "admin.state.refresh": "Read again",
     "admin.state.copy": "Copy diagnostics",
     "admin.state.copy.done": "Copied",
@@ -306,7 +296,7 @@ MESSAGES: dict[str, str] = {
     "admin.outcome.excluded": "Excluded. It is refused from the next request.",
     "admin.outcome.withdrawn": "Withdrawn. It can be scanned again.",
     "admin.actions.kicker": "Reference data",
-    "admin.actions.heading": "Refresh what the scanner rates against",
+    "admin.actions.heading": "Update reference data",
     "admin.actions.lede": (
         "The same two refreshes the worker runs daily, with the same rules: a "
         "schedule that lost a release line is refused, an advisory database "
@@ -377,7 +367,7 @@ MESSAGES: dict[str, str] = {
         "index and commit it. There is nothing to press here."
     ),
     "admin.audit.kicker": "Audit",
-    "admin.audit.heading": "The trail, as it is written",
+    "admin.audit.heading": "Audit log",
     "admin.audit.lede": (
         "Scan requests, rejections and triggered limits, arriving as they "
         "happen. Following starts a connection; nothing is streamed until you "
@@ -442,29 +432,12 @@ MESSAGES: dict[str, str] = {
     "lang.apply": "Change language",
     "lang.note": "The scan itself is unchanged; only this page is translated.",
     # ------------------------------------------------------------- footer
-    "footer.note.title": "A quiet service, by design.",
-    "footer.note.body": (
-        "Scans run from this server against the address you enter. Results live "
-        "in memory for {minutes} minutes and are then gone. Built on the "
-        "<code>check-opencloud-security</code> scanner - no trackers, no "
-        "accounts, no analytics."
-    ),
+    "footer.note.title": "About this service",
+    "footer.note.body": "Scans run from this server against the address you enter. Results are available for {minutes} minutes before expiring. Powered by <code>check-opencloud-security</code>, with no account required and no trackers or analytics.",
     "footer.note.run_yourself": "Run it yourself",
     "footer.version.title": "The scanner version that produced these results",
     "footer.version.label": "Backend v{version}",
-    "footer.legal.scope": (
-        "<strong>This check is not exhaustive, and a good grade is not a "
-        "certificate.</strong> It reads what a publicly reachable OpenCloud "
-        "instance shows an anonymous visitor: its version, the advisories "
-        "against that version, its transport, its headers and a set of "
-        "settings that are visible without logging in. An &ldquo;A&rdquo; "
-        "means none of those went wrong - not that the instance is secure. "
-        "Everything behind the login, the server it runs on, the network "
-        "around it, the data in it and the people with accounts on it are "
-        "outside what any unauthenticated scan can see. Treat the result as "
-        "one input among several, never as a security audit or a penetration "
-        "test."
-    ),
+    "footer.legal.scope": "<strong>This scan covers only part of an instance’s security.</strong> It checks the reported version, matching advisories, TLS, headers and publicly visible settings, including the documented demo accounts. The grade summarizes those checks. It does not assess private files, the operating system, backups, account permissions or the surrounding network. Use the report alongside your other security checks; it is not a security certification or penetration test.",
     "footer.legal.trademark": (
         "This is an independent community project. It is not affiliated with "
         "OpenCloud GmbH and is neither recommended nor supported by the "
@@ -514,36 +487,17 @@ MESSAGES: dict[str, str] = {
         "expired."
     ),
     "notfound.kicker": "Not found",
-    "notfound.lede": (
-        "Either the address does not exist, or it was a scan and that scan is "
-        "gone: results are held for {minutes} minutes and then dropped, so a "
-        "link from earlier today will not open. An identifier that never "
-        "existed looks exactly the same from here - this service cannot tell "
-        "you which, and deliberately does not try."
-    ),
+    "notfound.lede": "This page does not exist, or the scan result has expired. Results are available for {minutes} minutes. Start a new scan to get a current report.",
     "notfound.action": "Run a new scan",
     # ------------------------------------------------------- landing page
     "index.title": "OpenCloud Security Scanner",
-    "index.description": (
-        "Check an OpenCloud instance for known vulnerabilities, missing "
-        "hardening, weak security headers, and a pending update. Free, "
-        "independent and nothing is stored."
-    ),
-    "index.eyebrow": "Independent &middot; air-gapped &middot; nothing stored",
+    "index.description": "Check an OpenCloud instance for known vulnerabilities, missing hardening, weak security headers and available updates. Free to use, with no account required.",
+    "index.eyebrow": "Independent &middot; self-hosted assets &middot; temporary results",
     "index.headline": 'OpenCloud <em class="swash">Security Scanner</em>',
-    "index.lede": (
-        "Enter the address of an instance you are responsible for. This server "
-        "talks to it over HTTPS the way any visitor would, reads what it "
-        "publishes without logging in, and grades the result from "
-        "<strong>A+</strong> to <strong>F</strong>."
-    ),
+    "index.lede": "Enter an OpenCloud address you have permission to test. The scanner checks the instance’s publicly accessible settings, headers and software version, then gives it a grade from <strong>A+</strong> to <strong>F</strong>.",
     "index.form.kicker": "Scan request",
     "index.form.hint": "A few seconds &middot; no sign-up",
-    "index.error.self_host": (
-        "No hard feelings - the limits are what keep this small service on its "
-        "feet. The scanner is open source, so you can run this exact check "
-        "yourself, as often as you like:"
-    ),
+    "index.error.self_host": "Sorry for the wait. These limits help keep the service available to everyone. You can also run the open-source scanner on your own machine, as often as you need:",
     "index.field.label": "Address of the instance",
     "index.field.title": (
         "The instance base address: a hostname, optional port, and optional "
@@ -559,13 +513,10 @@ MESSAGES: dict[str, str] = {
         "Not a valid address: a hostname, optional port and a plain subfolder - "
         "no query, fragment or parameters."
     ),
-    "index.submit": "Start audit",
-    "index.submit.busy": "Starting audit...",
+    "index.submit": "Start scan",
+    "index.submit.busy": "Starting scan…",
     "index.track.label": "Release track",
-    "index.track.hint": (
-        "Decides how long this release is supported and which one it is told to "
-        "upgrade to."
-    ),
+    "index.track.hint": "Used to assess release support and recommend a suitable update.",
     "index.format.label": "Show me",
     "index.format.dashboard": "A dashboard",
     "index.format.json": "The raw JSON",
@@ -580,26 +531,19 @@ MESSAGES: dict[str, str] = {
     "index.remember.waivers.many": "{count} waived checks",
     "index.remember.apply": "Use them again",
     "index.remember.forget": "Forget them",
-    "index.waivers.hint": (
-        "A waived check stays in the report and is still shown - it just stops "
-        "holding the grade down. Only checks that actually failed can be waived."
-    ),
+    "index.waivers.hint": "A waived finding remains visible in the report but does not lower the grade. Waivers apply only to checks that failed.",
     "index.waivers.search.label": "Filter checks",
     "index.waivers.search.placeholder": "Search by name...",
     "index.waivers.search.empty": "No checks match your search.",
     "index.assurance.aria": "How this service handles your data",
-    "index.assurance.airgapped.title": "100% air-gapped",
-    "index.assurance.airgapped.body": (
-        "Every byte comes from this origin. No CDN, no font service, no analytics."
-    ),
-    "index.assurance.nostore.title": "No data stored",
+    "index.assurance.airgapped.title": "No external page assets",
+    "index.assurance.airgapped.body": "Fonts, scripts and images are served here. The page uses no CDN or analytics.",
+    "index.assurance.nostore.title": "Temporary storage",
     "index.assurance.nostore.body": (
         "The result lives in memory and is dropped the moment it expires."
     ),
     "index.assurance.noaccount.title": "No registration needed",
-    "index.assurance.noaccount.body": (
-        "No account, no sign-up, no email address, no waiting."
-    ),
+    "index.assurance.noaccount.body": "Start a scan without creating an account or providing an email address.",
     "index.assurance.ephemeral.title": "Ephemeral results",
     "index.assurance.ephemeral.body": (
         "The link stops working {minutes} minutes after the scan."
@@ -674,20 +618,13 @@ MESSAGES: dict[str, str] = {
         "names it - one advisory can be patched separately on several lines."
     ),
     "grade.1.headline": "A critical or high advisory matches",
-    "grade.1.meaning": (
-        "At least one advisory matching the installed version is rated critical "
-        "or high. This is a known way in, published and fixed."
-    ),
+    "grade.1.meaning": "At least one known vulnerability affecting the installed version is rated high or critical.",
     "grade.1.improve": (
         "Upgrade now, before anything else on the page. Nothing else that can be "
         "changed will raise the grade above this."
     ),
     "grade.0.headline": "Out of support",
-    "grade.0.meaning": (
-        "The release line receives no security fixes at all. This overrides every "
-        "other signal, including a waiver: an instance nobody patches cannot be "
-        "graded on how tidy its headers are."
-    ),
+    "grade.0.meaning": "This release line no longer receives security fixes. It receives an F regardless of other findings or waivers.",
     "grade.0.improve": (
         "Move to a supported release line. Which lines are supported, and for how "
         "long, is on the release schedule the scan reads."
@@ -699,11 +636,7 @@ MESSAGES: dict[str, str] = {
         "what holds one down, and the shortest way to the next one up."
     ),
     "grades.kicker": "The scale",
-    "grades.lede": (
-        "Every scan ends in one letter. It is worked out from two things - which "
-        "release the instance runs, and which checks failed - and this page is "
-        "the whole of that arithmetic, in the order the scanner does it."
-    ),
+    "grades.lede": "The grade combines the installed release’s support status and known vulnerabilities with the checks that failed. This page explains the starting grade, the limits imposed by findings and the changes that can improve it.",
     "grades.scale.kicker": "Six steps",
     "grades.scale.heading": "The scale, best first",
     "grades.scale.intro": (
@@ -724,64 +657,23 @@ MESSAGES: dict[str, str] = {
         "worst one that failed:"
     ),
     "grades.caps.at_best": "at best",
-    "grades.caps.shared": (
-        "Findings of the same severity share one ceiling, so fixing one of three "
-        "medium findings moves nothing until the last of them is gone. That is "
-        "why the result page orders the plan the way it does, and why it prints "
-        "the grade each step would actually reach."
-    ),
-    "grades.caps.rules": (
-        "Two rules sit above all of this. <strong>End of life overrides "
-        "everything</strong>, including a waiver: a release line that receives no "
-        "security fixes is an <strong>F</strong> no matter how clean the rest of "
-        "the report is. And <strong>being ahead of your track is not being behind "
-        "it</strong> - a release newer than the current one for the track you "
-        "declared is reported as ahead and never graded as unsupported."
-    ),
+    "grades.caps.shared": "Findings with the same severity impose the same grade limit. If three medium findings remain, fixing only one does not remove that limit. The remediation plan keeps all three steps and shows when the grade would improve.",
+    "grades.caps.rules": "Two rules take precedence. <strong>End of life always determines the grade</strong>: an unsupported release receives <strong>F</strong>, even with waivers. <strong>A release ahead of its declared track is not treated as outdated</strong>; the report identifies it as ahead of that track.",
     "grades.improve.kicker": "The shortest route",
-    "grades.improve.heading": "How this scanner helps you climb",
-    "grades.improve.intro": (
-        "A grade on its own is a scoreboard, which is not much use at four in the "
-        "afternoon. Every result page also carries the four things that turn it "
-        "into an afternoon's work:"
-    ),
-    "grades.improve.plan": (
-        "<strong>A remediation plan, in payoff order.</strong> Each step says what "
-        "to change and which grade the instance would hold once that step and "
-        "everything above it is done - so you can stop where the return does."
-    ),
-    "grades.improve.release": (
-        "<strong>The exact release to move to.</strong> Not \"upgrade\": the "
-        "version that fixes the advisory <em>on the line you are actually on</em>, "
-        "and never a jump onto a track you did not choose."
-    ),
+    "grades.improve.heading": "From findings to fixes",
+    "grades.improve.intro": "Each result includes the information you need to plan the work:",
+    "grades.improve.plan": "<strong>A prioritised remediation plan.</strong> Each step explains what to change and shows the grade you could reach after completing that step and all preceding ones.",
+    "grades.improve.release": "<strong>A specific release recommendation.</strong> The report identifies a version that fixes the advisory <em>on your release line</em>, while respecting your chosen track.",
     "grades.improve.explained": (
         "<strong>Every failed check, explained.</strong> What was measured, why it "
         "matters and the fix, with a link to the OpenCloud documentation for the "
         "setting behind it."
     ),
-    "grades.improve.waiver": (
-        "<strong>A waiver for the ones you have decided to live with.</strong> A "
-        "waived check stays in the report and stays visible - it simply stops "
-        "capping the grade, so a considered decision does not read as a failure "
-        "for ever. It cannot hide a check that is passing, and it cannot rescue an "
-        "end-of-life release."
-    ),
-    "grades.improve.rerun": (
-        "Run it again afterwards. The same instance, the same scan, and the letter "
-        "moves - which is the only proof that any of it worked."
-    ),
-    "grades.limits.kicker": "Honesty",
+    "grades.improve.waiver": "<strong>Exceptions for findings you accept.</strong> Waived findings remain visible but no longer limit the grade. A waiver applies only to a failed check and cannot change an end-of-life rating.",
+    "grades.improve.rerun": "Run another scan after making changes to check which findings have been resolved.",
+    "grades.limits.kicker": "Scope",
     "grades.limits.heading": "What a good grade is not",
-    "grades.limits.body": (
-        "An <strong>A+</strong> means nothing this scan looked at went wrong. It "
-        "is not a certificate, and it is not a penetration test. Everything behind "
-        "the login, the operating system, the container runtime, the backups, the "
-        "accounts and the people who hold them are outside what an unauthenticated "
-        "scan can see. Treat the letter as one input among several - "
-        '<a href="/how-it-works">how the scan works</a> lists what it reads, and '
-        "every result page repeats the limits underneath the grade."
-    ),
+    "grades.limits.body": "An <strong>A+</strong> means the checks used for the grade found no issue. It does not cover private files, the operating system, backups or account permissions. Use the report alongside those checks. See <a href=\"/how-it-works\">how the scan works</a> for its scope and limits.",
     # -------------------------------------------------------------- catalogue
     "catalogue.title": "What the scanner checks",
     "catalogue.description": (
@@ -789,11 +681,7 @@ MESSAGES: dict[str, str] = {
         "this scanner can report, independent of any single scan result."
     ),
     "catalogue.kicker": "Reference",
-    "catalogue.lede": (
-        "This is the whole set: every check below can appear on a result page, "
-        "and every advisory below is one a scan is rated against. Nothing here "
-        "depends on a particular instance."
-    ),
+    "catalogue.lede": "Browse the checks a scan can report and the advisory data used to assess a release. This catalogue describes the scanner’s coverage without scanning an instance.",
     "catalogue.checks.kicker": "Checks",
     "catalogue.checks.heading": "Every check, by category",
     "catalogue.checks.lede": (
@@ -818,11 +706,7 @@ MESSAGES: dict[str, str] = {
         "between pressing the button and reading the grade."
     ),
     "how.kicker": "The method",
-    "how.lede": (
-        "Everything this service reports it works out itself, by talking to the "
-        "address you enter over HTTPS the way any visitor would. Nothing is asked "
-        "of a third party, and nothing is logged in."
-    ),
+    "how.lede": "The scanner connects directly to the address you enter and evaluates the responses itself. It checks information available without an account and uses its release and advisory data to assess the installed version.",
     "how.tests.heading": "What gets tested",
     "how.tests.version.title": "Version and lifecycle",
     "how.tests.version.body": (
@@ -844,26 +728,14 @@ MESSAGES: dict[str, str] = {
     ),
     "how.pipeline.kicker": "The pipeline",
     "how.pipeline.heading": "What happens when you press the button",
-    "how.pipeline.lede": "Four steps, and the third one is where the queue comes in.",
+    "how.pipeline.lede": "Each scan goes through these four stages.",
     "how.pipeline.step1": (
         "<strong>Your address is checked.</strong> Private, loopback and cloud "
         "metadata addresses are refused before anything connects."
     ),
-    "how.pipeline.step2": (
-        "<strong>A scan gets a random identifier.</strong> That identifier is the "
-        "only way to reach the result. There is no list of scans, and no way to "
-        "guess one."
-    ),
-    "how.pipeline.step3": (
-        "<strong>It waits its turn.</strong> A fixed number of scans run at once. "
-        "If they are all busy yours queues and you are told where you are in line "
-        "- nothing is rejected because the service is popular."
-    ),
-    "how.pipeline.step4": (
-        "<strong>The result expires.</strong> After {minutes} minutes the "
-        "identifier stops working and the result is gone, with nothing written to "
-        "disk."
-    ),
+    "how.pipeline.step2": "<strong>The scan receives a random identifier.</strong> This identifier grants access to the result. There is no public list of scans.",
+    "how.pipeline.step3": "<strong>The scan joins the queue.</strong> A fixed number of scans can run at once. When all workers are busy, your scan waits and the page shows its position in the queue.",
+    "how.pipeline.step4": "<strong>The result expires.</strong> After {minutes} minutes, it can no longer be retrieved using its identifier.",
     "how.faq.kicker": "Questions",
     "how.faq.heading": "Frequently asked",
     "how.faq.q1": "Is this official OpenCloud software?",
@@ -874,15 +746,7 @@ MESSAGES: dict[str, str] = {
         "used here solely to name the software this tool checks."
     ),
     "how.faq.q2": "Does a good grade mean an instance is secure?",
-    "how.faq.a2": (
-        "No. The scan reads only what a publicly reachable instance shows an "
-        "anonymous visitor - its version, the advisories against that version, "
-        "its transport, its headers and a set of settings visible without "
-        "logging in. Everything behind the login, the server it runs on, the "
-        "network around it and the people with accounts on it are outside what "
-        "any unauthenticated scan can see. Treat a result as one input, never "
-        "as a security audit or a penetration test."
-    ),
+    "how.faq.a2": "No. The scan checks the reported version, matching advisories and settings visible from outside, with a limited test of the published demo credentials. It does not assess private files, the operating system, backups or account permissions. The report supports your security work; it does not replace an audit or penetration test.",
     "how.faq.q3": "How long do you keep a scan's result?",
     "how.faq.a3": (
         "In memory only, for {minutes} minutes, and then it is gone. No "
@@ -903,13 +767,7 @@ MESSAGES: dict[str, str] = {
         "limit and no third party in the middle."
     ),
     "how.faq.q6": "Does a scan tell me about a pending OpenCloud update?",
-    "how.faq.a6": (
-        "Yes. Every scan compares the reported release against the OpenCloud "
-        "release feed and reports a pending update or an unsupported release "
-        "the same way it reports a missing header - see "
-        '<a href="/documentation/reference#update-check">the update check</a> '
-        "for how the recommended release is worked out."
-    ),
+    "how.faq.a6": "Yes. The reported version is assessed against the available release data, including its support status and release track. See <a href=\"/documentation/reference#update-check\">the update check</a> for how the recommendation is calculated.",
     # --------------------------------------------------------------- privacy
     "privacy.title": "What this server keeps",
     "privacy.description": (
@@ -917,23 +775,14 @@ MESSAGES: dict[str, str] = {
         "log does and does not record."
     ),
     "privacy.kicker": "Privacy",
-    "privacy.lede": "Short answer: the scan, for {minutes} minutes, in memory.",
+    "privacy.lede": "Scan results remain available for {minutes} minutes before expiring.",
     "privacy.retention.kicker": "Retention",
-    "privacy.retention.heading": "While a scan is alive",
-    "privacy.retention.body": (
-        "The address you submit, the checks you chose to waive and the result live "
-        "in memory for {minutes} minutes, under a key derived from your scan's "
-        "random identifier, and are then dropped by the store itself. The "
-        "operational log records that a scan was created, started and finished, "
-        "identified by that random identifier alone - not the address, not the "
-        "result and not your IP address, which is only ever counted as a one-way "
-        "fingerprint for rate limiting."
-    ),
-    "privacy.self_host": (
-        "Prefer to run it yourself? The same scanner is a command line check and a "
-        "Python package. Nothing here talks to a third-party service in either "
-        "case."
-    ),
+    "privacy.retention.heading": "Stored scan data",
+    "privacy.retention.body": "The target address, chosen waivers and result are stored under the scan’s random identifier for {minutes} minutes, then expire. The ordinary operational log records only that identifier and the creation, start and completion events. Usage limits use fingerprints of client addresses. An operator can also configure a separate audit log.",
+    "privacy.uploads.kicker": "Uploaded reports",
+    "privacy.uploads.heading": "When you upload a report to compare",
+    "privacy.uploads.body": "The uploaded file is read in memory to calculate the comparison. Its contents and filename are not retained. The comparison is available under a random identifier for {minutes} minutes so you can reload or share it. It then expires and cannot be reconstructed from the discarded upload.",
+    "privacy.self_host": "The same scanner is available as a command-line program and Python library. When run locally, it connects directly from your machine to the instance.",
     # ----------------------------------------------------------- legal notice
     "legal.title": "Legal Notice",
     "legal.description": (
@@ -956,20 +805,10 @@ MESSAGES: dict[str, str] = {
         "community project."
     ),
     "about.kicker": "About",
-    "about.lede": (
-        "One is a file, sync and share platform. The other is a community check "
-        "that looks at it from the outside."
-    ),
+    "about.lede": "OpenCloud provides file storage, synchronisation and sharing. This independent scanner checks the security settings an instance exposes to visitors.",
     "about.platform.kicker": "The platform",
     "about.platform.heading": "About OpenCloud",
-    "about.platform.body": (
-        '<a href="https://opencloud.eu/" rel="noopener noreferrer">OpenCloud</a> '
-        "is the file, sync and share platform this tool checks - open source, "
-        "built in Germany, and documented at "
-        '<a href="https://docs.opencloud.eu/" rel="noopener noreferrer">'
-        "docs.opencloud.eu</a>, which is where every fix this scanner suggests is "
-        "written up properly. Thanks to the people who make it."
-    ),
+    "about.platform.body": "<a href=\"https://opencloud.eu/\" rel=\"noopener noreferrer\">OpenCloud</a> is an open-source platform for storing, synchronizing and sharing files. Its administration guides are available at <a href=\"https://docs.opencloud.eu/\" rel=\"noopener noreferrer\">docs.opencloud.eu</a>.",
     "about.platform.independent": (
         "This scanner is an independent community project. It is not affiliated "
         "with OpenCloud GmbH and is neither recommended nor supported by the "
@@ -984,14 +823,7 @@ MESSAGES: dict[str, str] = {
         "scanner library behind it. This page is one way to use it; a command on "
         "your own machine, with no rate limit and no queue, is the other."
     ),
-    "about.project.origin": (
-        "The project was created by <strong>Massoud Ahmed</strong> to give "
-        "OpenCloud users an independent alternative to "
-        "<code>scan.nextcloud.com</code>: a scanner built for OpenCloud's release "
-        "tracks, settings and deployment model, which can run entirely on the "
-        'operator\'s own machine. <a href="{project}" rel="noopener noreferrer">'
-        "The project is on GitHub</a>."
-    ),
+    "about.project.origin": "<strong>Massoud Ahmed</strong> created this project to check OpenCloud’s release tracks, settings and deployment model with a scanner operators can run on their own machines. <a href=\"{project}\" rel=\"noopener noreferrer\">Source code and contributions are on GitHub</a>.",
     # ------------------------------------------------------------------- API
     "api.title": "Scanning from a script or an agent",
     "api.description": (
@@ -1000,11 +832,7 @@ MESSAGES: dict[str, str] = {
         "drive it - OpenAPI, Arazzo workflows and the MCP endpoint."
     ),
     "api.kicker": "The API",
-    "api.lede": (
-        "The form is one of two front doors; the other is JSON, and it is the same "
-        "handler. Software that was not written for this service can find its way "
-        "in from the same page."
-    ),
+    "api.lede": "Use the JSON API to submit scans, check their progress and download results. Scripts and agents use the same scanning service and limits as the browser form.",
     "api.submit.kicker": "Submit & poll",
     "api.submit.heading": "Submit and poll",
     "api.submit.body": (
@@ -1017,11 +845,7 @@ MESSAGES: dict[str, str] = {
     ),
     "api.limits.kicker": "Fair use",
     "api.limits.heading": "Fair use",
-    "api.limits.enforced": (
-        "Fair use is enforced rather than requested: {client} submissions per "
-        "{window} minute(s) from one address, and {cooldown}, both answered with "
-        "<code>429</code> and a <code>Retry-After</code>."
-    ),
+    "api.limits.enforced": "This deployment allows {client} submissions per {window} minute(s) from one address, with {cooldown}. Exceeding either limit returns <code>429</code> and a <code>Retry-After</code> header.",
     "api.limits.cooldown": "one scan per target every {minutes} minute(s)",
     "api.limits.no_cooldown": "no per-target cooldown",
     "api.limits.daily": "At most {count} scans per network per day.",
@@ -1052,14 +876,9 @@ MESSAGES: dict[str, str] = {
         "turns them on with <code>COS_WEB_ENABLE_DOCS=true</code>."
     ),
     # ------------------------------------------------- API, for agents
-    "api.agents.kicker": "Machine guests",
+    "api.agents.kicker": "AI agents",
     "api.agents.heading": "Start from one address",
-    "api.agents.intro": (
-        "This service is meant to be usable by software that was not written for "
-        "it. Everything an agent needs is published, in the open, without an "
-        "account: what the API can do, how its calls combine into a task, and a "
-        "way to run that task directly."
-    ),
+    "api.agents.intro": "Agents can discover the API operations and scanning workflows through the public documents below. These descriptions are available without an account.",
     "api.agents.discovery": (
         "<strong>Discovery</strong> - "
         '<a href="/.well-known/ai.json">/.well-known/ai.json</a> names all of the '
@@ -1086,19 +905,8 @@ MESSAGES: dict[str, str] = {
         "certificate and the handshake. It answers the protocol rather than a "
         "browser, so it is an address to configure rather than a page to open."
     ),
-    "api.agents.summary": (
-        "The three documents describe one service from three angles: OpenAPI says "
-        "what the API can do, and Arazzo says how those operations combine into a "
-        "task. They are generated from the same code the server runs, so none of "
-        "them can quietly go out of date."
-    ),
-    "api.agents.summary_mcp": (
-        "The three documents describe one service from three angles: OpenAPI says "
-        "what the API can do, Arazzo says how those operations combine into a "
-        "task, and MCP hands that task to an agent as a tool it can call. They are "
-        "generated from the same code the server runs, so none of them can quietly "
-        "go out of date."
-    ),
+    "api.agents.summary": "OpenAPI defines the available operations; Arazzo describes how to combine them into a scan workflow. Both documents are generated from the service code.",
+    "api.agents.summary_mcp": "OpenAPI defines the operations, Arazzo describes the workflows, and MCP exposes those workflows as tools for agents. They use the same service implementation.",
     "api.webmcp.kicker": "In the browser",
     "api.webmcp.heading": "Use the page as a tool",
     "api.webmcp.intro": (
@@ -1127,11 +935,8 @@ MESSAGES: dict[str, str] = {
         "it. Turning MCP off for this deployment removes the browser tools too."
     ),
     "api.clients.kicker": "Configuration",
-    "api.clients.heading": "Wiring it into a client",
-    "api.clients.intro": (
-        "Most agent tools take a URL and a transport. This one is streamable HTTP, "
-        "with no authentication and no account:"
-    ),
+    "api.clients.heading": "Configure an agent client",
+    "api.clients.intro": "Configure your client with the endpoint URL and the streamable HTTP transport. If the operator requires authentication, you will also need to sign in.",
     "api.clients.body": (
         "Worked configuration for Claude Code, Claude Desktop, GitHub Copilot in "
         "VS Code and the CLI, Cursor, Zed and Windsurf - against this deployment or "
@@ -1149,20 +954,10 @@ MESSAGES: dict[str, str] = {
         "- it is the same code, on your machine, with no limits."
     ),
     # -------------------------------- Docker one-liners, on /documentation
-    "cli.lede": (
-        "Handing an address to a stranger's server is a reasonable thing to "
-        "hesitate over. You do not have to: this page is the same check, as one "
-        "command on your own machine."
-    ),
+    "cli.lede": "Run the scanner on your own machine to keep the scan under your control and avoid this service’s rate limits. The commands below use the same scanner as this website.",
     "cli.oneliner.kicker": "The one-liner",
     "cli.oneliner.heading": "One command, nothing installed",
-    "cli.oneliner.body": (
-        "That is the whole thing. It prints the same verdict this site draws - the "
-        "grade, the release lifecycle, the advisories and every failed check - and "
-        "exits with the Nagios status code, so the same line works in a script, a "
-        "pipeline or a cron job. Nothing is sent anywhere: the container talks to "
-        "your instance and to nobody else."
-    ),
+    "cli.oneliner.body": "The command prints the grade, release support status, matching advisories and failed checks. Its Nagios exit code lets you use it in monitoring, scripts, CI or cron jobs. The scan runs in the container and connects directly to your instance.",
     "cli.json.kicker": "As JSON",
     "cli.json.heading": "The whole result document",
     "cli.json.body": (
@@ -1172,20 +967,10 @@ MESSAGES: dict[str, str] = {
     ),
     "cli.private.kicker": "Your own network",
     "cli.private.heading": "The instances this site will not scan",
-    "cli.private.body": (
-        "A public service that would scan private addresses is a public service "
-        "that can be pointed at somebody else's internal network, so this one "
-        "refuses. Your own machine has no such problem: a staging box, a name only "
-        "your resolver knows or an instance that never leaves the LAN all work from "
-        "the command line."
-    ),
+    "cli.private.body": "Run the command-line scanner from a machine that can reach your internal instance. It supports private addresses and internal DNS names. Public scanning services restrict these targets to prevent requests into their own internal networks.",
     "cli.nodocker.kicker": "No Docker?",
     "cli.nodocker.heading": "Without a container",
-    "cli.nodocker.body": (
-        "The check is an ordinary Python program on PyPI, so <code>uv</code> or "
-        "<code>pipx</code> will fetch and run it without installing anything "
-        "permanently."
-    ),
+    "cli.nodocker.body": "The scanner is also available from PyPI. Use <code>uv</code> to run it on demand or <code>pipx</code> to install it in an isolated Python environment.",
     # ------------------------------------------------ CLI documentation index
     "docs.index.title": "CLI documentation",
     "docs.index.description": (
@@ -1194,11 +979,7 @@ MESSAGES: dict[str, str] = {
     ),
     "docs.index.kicker": "Documentation",
     "docs.index.heading": "Run the scanner from your terminal",
-    "docs.index.lede": (
-        "The practical CLI reference, collected from the project README and the "
-        "guides under <code>docs/</code>. Start with one command; keep the rest "
-        "for when the check becomes part of monitoring, CI or a fleet."
-    ),
+    "docs.index.lede": "Install the scanner, run your first check and configure it for regular use. The <code>docs/</code> guides cover monitoring, CI, deployment and the checks behind each finding.",
     "docs.index.toc.quickstart": "Quick start",
     "docs.index.toc.commands": "Commands",
     "docs.index.toc.options": "Useful options",
@@ -1321,11 +1102,7 @@ MESSAGES: dict[str, str] = {
     ),
     # --------------------------------------------------- generated guide pages
     "docs.guide.kicker": "CLI documentation",
-    "docs.guide.english_notice": (
-        "This guide is generated from the project's documentation and is "
-        "available in English only. The page around it is translated; the text "
-        "below is not."
-    ),
+    "docs.guide.english_notice": "This guide is available in English and German. The English version is shown for your selected language.",
     "docs.guide.toc.heading": "On this page",
     "docs.guide.toc.aria": "On this page",
     # ---------------------------------------------------------------- compare
@@ -1339,11 +1116,7 @@ MESSAGES: dict[str, str] = {
     ),
     "compare.eyebrow": "Did the fixes work?",
     "compare.heading": "Compare two scans",
-    "compare.lede": (
-        "Paste the uuid of an earlier scan and the uuid of a later one. Both "
-        "results have to still exist - this service keeps no history to look "
-        "an expired scan up in."
-    ),
+    "compare.lede": "Enter the UUIDs of an earlier and a later scan. Both results must still be available. If the earlier result has expired, use a downloaded report in the form below.",
     "compare.form.baseline": "Earlier scan",
     "compare.form.current": "Later scan",
     "compare.form.placeholder": "The uuid from a result page address",
@@ -1373,11 +1146,7 @@ MESSAGES: dict[str, str] = {
         "Both fields name the same scan, so there is nothing to compare. Scan "
         "the instance again and compare the new uuid with this one."
     ),
-    "compare.different_targets": (
-        "These two scans describe different instances. The comparison is "
-        "still shown - staging against production is a fair question - but "
-        "every number below then answers a different one."
-    ),
+    "compare.different_targets": "These scans describe different instances. Keep that in mind when interpreting changes, for example between staging and production.",
     "compare.verdict.kicker": "Between the two scans",
     "compare.verdict.improved": "It got better",
     "compare.verdict.unchanged": "Nothing changed",
@@ -1387,11 +1156,7 @@ MESSAGES: dict[str, str] = {
     # Said plainly, because a grade that did not move is the case people
     # misread as a failed remediation: findings of one severity share a single
     # cap, so several fixes can land before the letter changes.
-    "compare.rating.same": (
-        "The grade did not move. That is not a failed remediation on its own - "
-        "findings of one severity share a single cap, so several fixes can "
-        "land before the letter changes. Read the lists below."
-    ),
+    "compare.rating.same": "The grade is unchanged, but findings may still have been resolved. Several findings can impose the same grade limit. The lists below show the individual changes.",
     "compare.side.baseline": "Earlier",
     "compare.side.current": "Later",
     "compare.side.target": "Instance",
@@ -1412,6 +1177,82 @@ MESSAGES: dict[str, str] = {
         "This comparison was worked out from the two results and stored "
         "nowhere. Reload the page and it is worked out again; let either "
         "result expire and it can no longer be asked for at all."
+    ),
+    # ------------------------------------------------- comparing against a file
+    # The second way onto the page above: the earlier side arrives as a report
+    # somebody downloaded, because they kept it or because the scan it came
+    # from expired. Only where it came from changes; the arithmetic does not.
+    "compare.upload.kicker": "Have a report already?",
+    "compare.upload.heading": "Compare an earlier report with a scan",
+    "compare.upload.lede": (
+        "Upload a report you downloaded earlier - JSON or CSV - and compare it "
+        "with a scan from this service. Useful when the earlier scan has long "
+        "since expired but you kept the file."
+    ),
+    "compare.upload.field.report": "Earlier report",
+    "compare.upload.field.current": "Later scan",
+    "compare.upload.field.hint": (
+        "The <code>.json</code> or <code>.csv</code> file from the downloads on "
+        "a result page. Up to {kilobytes} KB."
+    ),
+    "compare.upload.submit": "Compare with this file",
+    "compare.upload.privacy": (
+        "The file is read once, in memory, to work out the comparison, and is "
+        "never written to disk or kept. The comparison itself is held for "
+        "{minutes} minutes so that this page can be reloaded, and then it is "
+        "gone too."
+    ),
+    "compare.upload.source.kicker": "Where the earlier side came from",
+    "compare.upload.source.json": (
+        "The earlier side was read from a JSON report you uploaded. It has no "
+        "result page here - the file was read and discarded."
+    ),
+    "compare.upload.source.csv": (
+        "The earlier side was read from a CSV report you uploaded. It has no "
+        "result page here - the file was read and discarded."
+    ),
+    "compare.upload.source.dropped": (
+        "{count} line(s) in the file were not named the way this scanner names "
+        "its findings and were left out of the comparison."
+    ),
+    "compare.upload.source.missing.httpsEnforced": (
+        "The uploaded file does not record whether HTTPS was enforced, so that "
+        "measure was left out of both sides rather than guessed at. A CSV "
+        "downloaded before this was added is one such file."
+    ),
+    "compare.upload.source.missing.update": (
+        "The uploaded file does not record whether an update was pending, so "
+        "pending updates were left out of both sides rather than guessed at. A "
+        "CSV downloaded before this was added is one such file."
+    ),
+    "compare.upload.expires": (
+        "This comparison disappears in about {minutes} minutes, and the link to "
+        "it stops working. Nothing here can rebuild it: the file it was drawn "
+        "from is gone."
+    ),
+    "compare.upload.error.missing": (
+        "No file was uploaded. Choose the JSON or CSV report you downloaded "
+        "earlier."
+    ),
+    "compare.upload.error.no_current": "Enter the UUID of the scan you want to compare with this report.",
+    "compare.upload.error.empty": "That file is empty.",
+    "compare.upload.error.too_large": "The file exceeds the {kilobytes} KB size limit.",
+    "compare.upload.error.unreadable": (
+        "That file could not be read as JSON or as CSV. Upload the file exactly "
+        "as it was downloaded, without opening and re-saving it."
+    ),
+    "compare.upload.error.not_a_report": (
+        "That file does not look like a scan report from this service. The "
+        "downloads on a result page are what this expects."
+    ),
+    "compare.upload.error.rate_limit": (
+        "That is a lot of reports from your network in a short time. Give it a "
+        "minute and try again."
+    ),
+    "compare.upload.error.expired": (
+        "This comparison has expired. Comparisons drawn from an uploaded file "
+        "are kept for {minutes} minutes only, and the file itself was never "
+        "kept at all - upload it again to ask the same question."
     ),
     # ----------------------------------------------------------------- search
     "search.title": "Search",
@@ -1552,7 +1393,7 @@ MESSAGES: dict[str, str] = {
     "result.description": (
         "The result of one public scan, readable only with its own identifier."
     ),
-    "result.kicker": "Field report",
+    "result.kicker": "Security scan",
     "result.heading": "Scan result",
     "result.track.title": "The release track this scan was rated against",
     "result.track.label": "{track} track",
@@ -1598,11 +1439,7 @@ MESSAGES: dict[str, str] = {
         "The scan could not be completed. Opening what came back."
     ),
     "result.failed.fallback": "The scan could not be completed.",
-    "result.failed.body": (
-        "Nothing was graded, because nothing usable came back. Check that the "
-        "address is right, that the instance is reachable from the public "
-        "internet, and that it is an OpenCloud instance."
-    ),
+    "result.failed.body": "The scanner could not obtain enough information to assign a grade. Check the address, confirm that it runs OpenCloud and make sure it is reachable from this service.",
     "result.document.kicker": "Result document",
     "result.document.heading": "Result document",
     "result.document.lede": (
@@ -1668,13 +1505,7 @@ MESSAGES: dict[str, str] = {
     "result.plan.heading": "What gets you to {label}",
     "result.plan.then": "then {label}",
     "result.plan.still": "still {label}",
-    "result.plan.note": (
-        "The order is the one that pays off soonest, and the grade beside a step "
-        "is what the rating would be once that step and everything above it is "
-        "done. Findings of the same severity share one cap, so the grade moves "
-        "only when the last of them is gone - which is why a step can be necessary "
-        "and still promise nothing on its own."
-    ),
+    "result.plan.note": "The plan prioritises changes that improve the grade. The grade beside each step assumes that you have completed it and all preceding steps. Findings of equal severity share a rating limit, so several fixes may be needed before the grade improves.",
     "result.plan.blocked.heading": "Holding the grade down, and not fixable",
     "result.plan.blocked.note": (
         "OpenCloud hardcodes these, so no setting reaches them. They are the "
@@ -1708,10 +1539,7 @@ MESSAGES: dict[str, str] = {
     ),
     "result.hardening.kicker": "Hardening",
     "result.hardening.heading": "Hardening worth adding",
-    "result.hardening.lede": (
-        "Settings that are not switched on. None of these is an active "
-        "vulnerability; each one removes a way in."
-    ),
+    "result.hardening.lede": "These settings add protection against common risks. Review the explanation and suggested fix for each one.",
     "result.hardening.tag": "hardening",
     "result.header.tag": "header",
     # ------------------------------------------------- configuration fragment
@@ -1730,26 +1558,16 @@ MESSAGES: dict[str, str] = {
     "result.fragment.copy": "Copy",
     "result.fragment.copied": "Copied",
     "result.fragment.copy_failed": "Could not copy",
-    "result.fragment.nothing": (
-        "Nothing here is set this way. What is open belongs in {flavours}."
-    ),
+    "result.fragment.nothing": "No remaining finding can be addressed in this format. Use {flavours} for the relevant configuration.",
     "result.fragment.elsewhere": (
         "These are fixed somewhere else - they belong in {flavours}:"
     ),
-    "result.fragment.undecided": (
-        "These have no value to paste: the right one is a decision about this "
-        "deployment, and the finding's own Fix line is the whole answer."
-    ),
+    "result.fragment.undecided": "These findings need a setting chosen for your deployment. Follow each finding’s fix instructions to determine the value.",
     # ------------------------------------------------------------ scan again
     "result.rescan": "Scan again",
     "result.rescan.ready": "Ready to scan this instance again.",
     "result.rescan.wait": "Ready to scan again in {countdown}.",
-    "result.rescan.note": (
-        "Same target, same waivers, same release track - so the next result "
-        "is comparable with this one. The wait is what keeps this small "
-        "service on its feet; the scanner is open source and runs on your own "
-        "machine with no limits at all:"
-    ),
+    "result.rescan.note": "The next scan uses the same target, waivers and release track so you can compare the results. Please wait for the cooldown, or run the open-source scanner on your own machine without limits:",
     "result.rescan.self_host": "run it yourself",
     "result.excluded.kicker": "Excluded",
     "result.excluded.heading": "Reported, but not counted",
@@ -1757,11 +1575,8 @@ MESSAGES: dict[str, str] = {
     "result.excluded.waived.note": (
         "They still failed. They just did not hold the grade down."
     ),
-    "result.excluded.unfixable.heading": "Nobody can change these",
-    "result.excluded.unfixable.note": (
-        "OpenCloud hardcodes these flags, so they read the same on every instance "
-        "in existence. They are shown for completeness and excluded from the grade."
-    ),
+    "result.excluded.unfixable.heading": "Fixed by OpenCloud’s implementation",
+    "result.excluded.unfixable.note": "These flags are hardcoded in OpenCloud and cannot be configured by an operator. They are included for reference and do not affect the grade.",
     "result.scope.kicker": "Scope",
     "result.scope.heading": "What this scan cannot see",
     "result.scope.body": (
@@ -1846,10 +1661,7 @@ MESSAGES: dict[str, str] = {
     ),
     "result.share.kicker": "Share",
     "result.share.heading": "Share this report",
-    "result.share.lede": (
-        "By email, or on your own clipboard. Nothing is sent through this "
-        "service and no other company is asked to help."
-    ),
+    "result.share.lede": "Copy the link or a text summary, or open a draft in your email client. This service does not send the report for you.",
     "result.share.warning": (
         "The address of this page is the only thing protecting it: anyone who "
         "has it can read the report until it expires. Posting it in a channel "

@@ -11,19 +11,16 @@
   <p class="lede">{{ t('docs.embedding.description') }}</p>
 </section>
 
-{% if locale != 'en' %}
+{% if locale not in ('en', 'de') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
 <article class="docs-article card section-gap" data-reveal lang="en">
-<p>OpenCloud's web client can be embedded in another site's page inside an
-<code>iframe</code> - a file picker or a preview panel dropped into a third-party
-application, for instance. That integration works by <code>postMessage</code>: the
-embedding page and the framed OpenCloud client exchange messages across the
-frame boundary, and optionally the parent can hand over an authenticated
-session to the frame. Both checks read the public <code>/config.json</code> the web
-client serves and ask the same question: <strong>which origins is the embedded
-client willing to trust?</strong></p>
+<p>An application can embed the OpenCloud web client in an <code>iframe</code>, for example as a file
+picker or preview panel. The parent page and embedded client exchange messages through
+<code>postMessage</code>; delegated authentication also lets the parent supply a session. The
+scanner reads the public <code>/config.json</code> to check which origins the embedded client
+trusts.</p>
 <p>If <code>/config.json</code> cannot be read, or does not publish an <code>embed</code> block at
 all, both checks pass - embedding is simply not configured, so there is
 nothing for either origin restriction to fail.</p>

@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.examples.description') }}</p>
 </section>
 
-{% if locale != 'en' %}
+{% if locale not in ('en', 'de') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -28,9 +28,8 @@
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="en">
-<p>Complete, copy-and-paste invocations for the situations that come up most
-often. Every example uses <code>opencloud.example.com</code> as the host - substitute
-your own, and scan only instances you are responsible for.</p>
+<p>These examples cover common ways to run the scanner. Replace <code>opencloud.example.com</code>
+with your instance’s address and scan only systems you have permission to test.</p>
 <p>Longer, platform-specific examples have pages of their own:
 <a href="/documentation/kubernetes">Kubernetes</a>, <a href="/documentation/ci">CI pipelines</a>,
 <a href="/documentation/prometheus">Prometheus and Grafana</a>,

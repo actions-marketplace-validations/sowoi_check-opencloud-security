@@ -36,6 +36,8 @@ webapp/
 ├── ratelimit.py      the client limit and the per-target cooldown
 ├── audit.py          the optional audit trail, pseudonymised
 ├── store.py          one Redis namespace per scan, TTL on every key
+├── comparisons.py    the five minutes a comparison against an upload lives
+├── imports.py        an uploaded report, rebuilt from an allow-list
 ├── queue.py          handing a scan to the worker pool
 ├── tasks.py          the ARQ worker; `python -m webapp.tasks`
 ├── runner.py         where a request becomes ScannerSettings
@@ -84,13 +86,12 @@ Three layers, and the boundary between them is the point:
 **serves**. If a change here starts deciding whether a finding is acceptable,
 it belongs in the scanner or the plugin instead.
 
-The HTML frontend is translated from stable string catalogues. An explicit
-language cookie wins over the browser's weighted `Accept-Language` list, with
-English as the fallback; every HTML response varies on both inputs. The
-accessible switcher is a POST that stores only a validated locale and returns
-only to a validated local path. OpenAPI, Arazzo, discovery, MCP and exports
-remain English contracts, while scan evidence remains exactly as measured.
-See ADR 0020.
+The HTML interface uses English, German, French and Spanish string catalogues. A
+language cookie takes precedence over `Accept-Language`, with English as fallback;
+responses vary on both. The switcher validates the language and local return path.
+Public guides have English and German bodies; French and Spanish currently use the
+English body. API contracts and measured evidence retain their original technical
+values. See ADR 0020 and ADR 0058.
 
 ## Running it
 
@@ -149,6 +150,8 @@ A small surface, and this is all of it.
 | `GET` | `/` | The landing page and the form |
 | `GET` | `/how-it-works`, `/grades`, `/documentation`, `/search`, `/api`, `/ai`, `/privacy`, `/about` | The content pages the landing page links to; HTML only, never in the schema |
 | `GET` | `/compare` | Two finished scans compared, from `?baseline=` and `?current=`; HTML only, and never in the schema because it renders results |
+| `POST` | `/compare` | The earlier side as an uploaded JSON or CSV report instead of a uuid; **303** to `/compare/{token}`. HTML only, and no MCP tool - an agent has `compare_scans` |
+| `GET` | `/compare/{token}` | One comparison drawn from an uploaded report, for the five minutes it is cached |
 | `GET` | `/cli` | **301** to `/documentation#oneliner`; the Docker one-liners moved onto that page |
 | `POST` | `/` | The form submission; **303** to `/scan/{uuid}` |
 | `POST` | `/api/scans` | The same handler for API clients; **202** with the uuid |
@@ -659,7 +662,9 @@ The other standing restrictions:
   extra ports on a host a stranger named is not something to do uninvited.
 - **Nothing is stored.** Every key has a TTL, Redis persists nothing, and the
   log carries lifecycle markers and uuids - never a target, a client address
-  or a result. An operator who needs an audit trail can turn one on with
+  or a result. An uploaded report is not written anywhere at all; only the
+  comparison drawn from it is, for five minutes, under a capability and inside
+  the erasure endpoint's reach. An operator who needs an audit trail can turn one on with
   `COS_WEB_AUDIT_LOG`, and keep it past the container with
   `COS_WEB_AUDIT_LOG_FILE`; addresses stay fingerprints either way. See
   [What gets logged](../docs/webapp.md#what-gets-logged).
@@ -677,6 +682,7 @@ before the first deployment:
 |:---------|:--------|:---------------|
 | `COS_WEB_REDIS_URL` | `redis://127.0.0.1:6379/0` | `memory://` runs without Redis, for a single process |
 | `COS_WEB_RESULT_TTL` | `3600` | How long a result lives, and the TTL on every key |
+| `COS_WEB_COMPARISON_TTL` | `300` | How long a comparison against an uploaded report lives. Clamped to 300; shorter is honoured |
 | `COS_WEB_MAX_WORKERS` | `5` | Scans at once. The whole of this service's load on the outside world |
 | `COS_WEB_SCAN_CONCURRENCY` | `4` | Probes in flight within one scan |
 | `COS_WEB_IP_RATE_LIMIT` / `_WINDOW` | `10` / `60` | The client limit. `0` disables |

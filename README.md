@@ -172,9 +172,9 @@ sudo apt install ./check-opencloud-security_<version>_all.deb       # Debian, Ub
 sudo dnf install ./check-opencloud-security-<version>-1.noarch.rpm  # RHEL, Fedora
 ```
 
-Both put the check in `/usr/lib/nagios/plugins/` and configure nothing until
-you say so - the details are in
-[Installing the plugin](docs/installation.md#debian-ubuntu-rhel-fedora-deb-and-rpm).
+Both install the check in `/usr/lib/nagios/plugins/`. Monitoring configuration is a
+separate step; see [Installing the
+plugin](docs/installation.md#debian-ubuntu-rhel-fedora-deb-and-rpm).
 
 Prefer not to put Python on the host? The published image carries both entry
 points:
@@ -218,16 +218,11 @@ check-opencloud-security --host <Hostname> --check-hardening
 
 ## Options
 
-The full table - every flag, its default and the environment variable that
-sets the same thing - is **[the CLI option reference](docs/cli-reference.md)**.
-It moved to its own page because it is a lookup table fifty rows long, and
-having it here meant everything below it started halfway down the file.
+The [CLI option reference](docs/cli-reference.md) lists every flag, default and
+corresponding environment variable. Use `--help` for the same options grouped by task.
 
-`--help` prints the same options grouped under nine headings - which instance
-to check, what to probe, how the result is judged, version and update
-information, comparing against an earlier run, how the scan runs, what is
-printed, posting the result elsewhere, and the program itself - so the dozen
-lines you want can be found without reading the other forty.
+The main groups cover targets, probes, rating thresholds, release information,
+comparisons, execution, output and notifications.
 
 The handful you will actually type most days:
 
@@ -488,27 +483,20 @@ The plugin has **one** backend: the scanner in
 [`opencloud_local_scan/`](opencloud_local_scan/README.md), which runs in the
 plugin process and works the verdict out itself.
 
-That is deliberate. A hosted scanner can only see what is reachable from the
-internet, refuses IP addresses and internal hostnames, rate-limits its callers
-and learns about your instance in the process. Scanning locally has none of
-those constraints.
+The scanner connects from the host where you run the plugin. It can therefore check
+private addresses and internal hostnames without sending the target or its results to a
+hosted scanning service.
 
 There is nothing to enable and no `--scan-backend` flag to pass. Everything
 below describes what the built-in scanner does and how to tune it.
 
 ## What the scanner checks
 
-Everything is read from what the instance publishes without authentication:
-`/status.php` for the product and `productversion`, the capabilities document,
-the security headers, the OpenID Connect discovery document, and the paths and
-ports that ought not to answer at all. On top of that come the additional
-checks (`extraChecks` in the JSON, disabled with `--no-extra-checks`): TLS and
-certificates, whether the zone is signed and who may issue it a certificate,
-cookie attributes, CORS and `TRACE`, unauthenticated Graph, WebDAV and OCS
-endpoints, exposed deployment files, a collaboration backend's admin console
-where one is published beside the instance, directory listings, the documented
-demo accounts, debug endpoints and ports, iframe embedding, basic auth and
-version disclosure.
+The scanner reads `/status.php`, capabilities, security headers and OIDC discovery, then
+probes paths and ports that should require authentication or remain private. Additional
+checks cover TLS, DNS, cookies, CORS, TRACE, exposed files, debug services and iframe
+settings. It also tests the published demo credentials against the instance’s own
+identity provider. Use `--no-extra-checks` to disable the additional probes.
 
 A failed additional check caps the rating (critical -> `D`, high -> `C`, medium
 -> `A`, low -> `A+`); set `scanner.extra_checks_rating: false` to report them
@@ -779,13 +767,10 @@ performance metric; with `--update-warning` a pending update turns an otherwise
 `OK` result into `WARNING`. A failing update check never aborts the security
 check.
 
-**The recommendation follows your track, not the newest release overall.** A
-release feed only knows the newest release, and on OpenCloud that is always a
-rolling one; recommending it to a production or LTS instance would quietly move
-it onto a three-week support window. `--release-track` says which track you are
-on when the schedule should not work it out for itself. Both, with the tables
-that say what is recommended for which installed version, are in
-**[Release tracks, end of life and the update recommendation](docs/release-lifecycle.md)**.
+**Update recommendations stay on your release track.** Production and LTS installations
+are offered a release from their own track, while the newest overall release is reported
+separately. Set `--release-track` to override automatic detection. See [Release tracks,
+end of life and the update recommendation](docs/release-lifecycle.md).
 
 # Configuration file and secrets
 All settings can live in a file instead of the command line, and the quickest
@@ -926,9 +911,8 @@ for the wildcards, what a waiver will not do, and why a configuration file is
 the better home for one.
 
 # Explaining a rating
-A rating on its own is a verdict without an argument. `-d` / `--debug` (or
-`COS_DEBUG=1`) adds the reasoning to the output: where the rating started, what
-pulled it down, and what every identifier in the report means.
+Use `--debug` (`COS_DEBUG=1`) to see how the rating was calculated and what each finding
+means. The explanation includes the starting score and every check that limits it.
 
 ```shell
 check-opencloud-security --host opencloud.example.com --check-hardening --debug
@@ -976,13 +960,12 @@ plugin output.
 
 # What would raise the rating
 
-Knowing why a rating is a C is only half of what an operator wants. The other
-half is which two things to fix to make it an A+, and in which order.
+The remediation plan lists the changes that would improve the rating, in the order the
+scanner calculates their effect.
 
-Every scan result carries a `remediationPlan`, worked out by replaying the
-rating arithmetic with one finding removed at a time. Because it is a replay
-of the same code that produced the rating, the predicted grades cannot drift
-away from the real ones - and because it is derived, nothing extra is stored.
+Every result includes `remediationPlan`, calculated with the same rating function after
+removing findings one step at a time. The plan is derived from the result and needs no
+separate storage.
 
 ```shell
 python -m opencloud_local_scan.cli scan opencloud.example.com | jq .remediationPlan
@@ -1090,11 +1073,9 @@ the document as it is and treats silence as a failure, so a check that stopped
 running shows up too.
 
 # Reporting only what changed
-A check that runs every five minutes reports the same finding until someone
-fixes it, which is how people learn to acknowledge an alert and stop reading
-it. `--baseline` writes the findings of each run to a file and compares the
-next run against it; `--warn-on-new` then reports `OK` while the picture is
-unchanged, and its normal status as soon as anything is new or worse:
+Use `--baseline` to save each run’s findings and compare the next run with them. With
+`--warn-on-new`, an unchanged result reports OK; a new finding or a lower rating
+restores the normal alert state.
 
 ```bash
 check-opencloud-security -H opencloud.example.com \
@@ -1112,9 +1093,8 @@ has been in the baseline.
 rules that keep a baseline from hiding anything.
 
 # Is the plugin itself up to date?
-The plugin reports on OpenCloud's updates but says nothing about its own age,
-and a check running an old advisory database is a blind spot. `--self-update-check`
-asks PyPI once a day and appends a note:
+`--self-update-check` checks PyPI at most once a day and adds a note when a newer plugin
+is available. Updating the plugin also refreshes its bundled release and advisory data.
 
 ```
 Plugin update available: check-opencloud-security 1.2.0 is published, this is 1.1.0 (upgrade with --upgrade-self)
@@ -1232,17 +1212,14 @@ Additional checks failed (1): basicAuthDisabled
 Update check (feed, installed 7.2.3): up to date | rating=4;@0:3;@0:1;0;5 vulnerabilities=0;;;0; time=1.835s;;;0; hardenings_missing=3;;;0; extra_checks_failed=1;;;0; update_available=0;;;0;1
 ```
 
-The rating dropped to `B` because `basicAuthDisabled` is also an additional
-check, and a failed `medium` check caps the rating at `4`. A hardening measure
-that is *only* a hardening measure raises the state to WARNING without
-lowering the grade. Add `--debug` to have the check spell that out, along with
-what each identifier means - see
-[Explaining a rating](#explaining-a-rating).
+The failed `medium` check limits the rating to `4` (`A`). A measure that is only
+evaluated by `--check-hardening` can raise the monitoring state to WARNING without
+changing the grade. Use `--debug` to see which rule applies; see [Explaining a
+rating](#explaining-a-rating).
 
 # Deployment guides
-The longer deployment walk-throughs live in [`docs/`](docs/README.md), so that
-this file stays the reference for the options themselves. The index there is
-grouped by what you are trying to do; the ones people reach for first:
+The [documentation index](docs/README.md) groups deployment instructions and worked
+examples by task. These are the most common starting points:
 
 | Guide | What it covers |
 |:------|:---------------|

@@ -12,7 +12,40 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+### Documentation
+
+- Rewrite frontend explanations and operator documentation for clearer,
+  consistent wording in English, German, French and Spanish. Clarify scan
+  coverage, temporary storage, alert timing and configuration instructions.
+- Add German versions of all public guides under `docs/de/`, generated German
+  frontend pages and German guide search content. Preserve section links across
+  languages; French and Spanish continue to use English guide bodies.
+
 ### Added
+
+- **The comparison page takes the earlier scan as an uploaded report.**
+  `/compare` needed both scans to still exist, and the baseline worth
+  comparing against is usually older than the hour a result lives. It now also
+  accepts the JSON or CSV file from a result page's downloads: upload the
+  report you kept, name a scan that has not expired, and the page answers the
+  same question with the same arithmetic - `workflows.compare_documents`, which
+  is the plugin's own `--baseline` comparison, so a reader, an agent and an
+  operator's alerting still cannot disagree about one pair. The file is the
+  only structure this service parses that it did not write, so it crosses one
+  boundary: `webapp/imports.py` does not hand back what it was given but a
+  result document rebuilt key by key from an allow-list, capped at 256 KB,
+  strict UTF-8, with identifiers dropped and counted unless they are spelled
+  the way this scanner spells its own. The file is read once in memory and
+  written nowhere - not its contents, not its name, which nothing reads. What
+  survives is the comparison, under a fresh uuid4 for at most five minutes so
+  a reload and a shared link keep working; `COS_WEB_COMPARISON_TTL` can
+  shorten that window and cannot widen it. Unknown, malformed and expired
+  tokens are one 404, and nothing lists them, and `DELETE /api/purge` erases a
+  cached comparison along with the scans of the instance it names rather than
+  leaving it to its own clock. A browser feature only: no MCP
+  tool and not in the OpenAPI schema, because an agent already has
+  `compare_scans` and two uuids. See
+  [ADR 0057](adr/0057-an-uploaded-report-is-evidence-not-a-scan.md).
 
 - **`--format otlp` hands the scan's metrics to an OpenTelemetry collector.**
   The eight metrics the Prometheus exporter publishes, rendered as one
@@ -71,6 +104,15 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   [ADR 0056](adr/0056-the-reference-data-is-subscribable.md).
 
 ### Changed
+
+- **The CSV export records two facts the findings table cannot carry.** A
+  `Update available` row and an `HTTPS enforced` row now sit with the header
+  block, because both are single measurements that live outside the per-finding
+  table and a report read back without them cannot tell "no" from "never
+  recorded". A file downloaded before this is still readable: the comparison
+  leaves those two measurements out of *both* sides rather than guessing at
+  them, and says on the page that it did. Anything parsing that CSV by row
+  position rather than by label will need adjusting.
 
 - **The bundled release schedule and advisory database were re-checked against
   their published sources.** Neither moved: the schedule still names OpenCloud

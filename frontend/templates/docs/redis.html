@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.redis.description') }}</p>
 </section>
 
-{% if locale != 'en' %}
+{% if locale not in ('en', 'de') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -33,11 +33,9 @@
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="en">
-<p>Redis is the only moving part of the scan service that is not this project's
-own code, and the only place a scan exists between the moment somebody submits
-it and the moment it expires. This page is about running it: what goes in it,
-how long any of it stays, how to give it a password, and what to do when it
-stops answering.</p>
+<p>Redis holds the web service’s queue, temporary scan results, reference data and shared
+operational state. This guide covers authentication, network access, retention, memory
+limits and recovery from connection failures.</p>
 <p>It applies to the <strong>web application</strong> in <a href="https://github.com/sowoi/check-opencloud-security/blob/main/webapp/README.md"><code>webapp/</code></a>.
 The command line plugin does not use Redis at all: <code>check-opencloud-security</code>
 talks to an OpenCloud instance, prints a line and exits.</p>
@@ -79,9 +77,10 @@ what that changes and what else is worth doing.</p>
    advisory database the worker re-reads once a day, the worker's heartbeat,
    and the rate limit counters.</li>
 </ol>
-<p>What Redis is <strong>not</strong> here is a database. Nothing in it is authoritative,
-nothing in it is worth recovering, and every key expires. A cold start with an
-empty Redis loses nothing except results whose owners can run the scan again.</p>
+<p>Most Redis state can be recreated, but clearing it discards queued work, readable
+results, rate-limit state and exclusions added through the operator area. Keep
+exclusions that must survive a reset in <code>COS_WEB_BLOCKED_TARGETS</code>. Scan data expires
+automatically; do not assume every operational key has the same lifetime.</p>
 <h2 id="what-is-stored-and-for-how-long">What is stored, and for how long</h2>
 <table>
 <thead>
@@ -175,9 +174,10 @@ empty Redis loses nothing except results whose owners can run the scan again.</p
 uuids all answer with the same 404, so an expired result is indistinguishable
 from one that never existed. There is no endpoint that enumerates scans, and
 adding one would turn every result into a public document.</p>
-<p><strong>The rate limit keys hold fingerprints, not addresses.</strong> A client IP is
-hashed with <code>COS_WEB_AUDIT_SALT</code> before it is counted, so a dump of Redis is
-not a list of who scanned what. See <a href="/documentation/web-service#what-gets-logged">what gets logged</a>.</p>
+<p><strong>Rate-limit keys contain fingerprints instead of client addresses.</strong> They use
+<code>COS_WEB_RATE_LIMIT_SALT</code>; audit records use the separate <code>COS_WEB_AUDIT_SALT</code>.
+Configure a shared rate-limit salt when running multiple web processes. See
+<a href="/documentation/web-service#what-gets-logged">logging</a>.</p>
 <p>Redis is therefore, for as long as a TTL lasts, a copy of the addresses people
 submitted and the security findings for each. That is the reason for the two
 sections below.</p>
@@ -294,10 +294,10 @@ address is found by scanners within minutes.</p>
 <h2 id="persistence-or-the-deliberate-lack-of-it">Persistence, or the deliberate lack of it</h2>
 <p>The shipped Redis runs with <code>--save ""</code> and <code>--appendonly no</code>. It writes
 nothing to disk, on purpose.</p>
-<p>A dump file would be a copy of everybody's scans sitting on a disk, surviving
-the TTL that was supposed to have removed them, and turning up in whatever
-backs that disk up. Nothing in Redis needs to survive a restart: a scan whose
-result is gone can be run again in half a minute.</p>
+<p>Persistence and backups can retain scan data beyond its expiry in the running store. The
+default stack therefore disables both snapshots and append-only persistence. A restart
+loses temporary results and other Redis-managed state, including operator-added
+exclusions; keep durable exclusions in the environment.</p>
 <p>Do not add a volume to the <code>redis</code> service. If you are using a managed Redis
 that persists by default, either accept that results outlive their TTL in
 somebody else's backups or turn persistence off for that instance.</p>
@@ -312,14 +312,13 @@ a deployment strangers can reach, the answer is still <code>none</code>.</p>
 <pre><code>--maxmemory 256mb
 --maxmemory-policy allkeys-lru
 </code></pre>
-<p>256 MB is generous for the shipped worker count. A result document is a few
-kilobytes and every key already carries a TTL, so the cap is a backstop rather
-than a working limit: it is what stops a queue that nobody is draining from
-consuming the host.</p>
-<p><code>allkeys-lru</code> is the right policy here precisely because nothing is
-authoritative. Under pressure Redis drops the least recently used key, which
-is the oldest result nobody has come back for, and the visitor sees the same
-404 they would have seen a few minutes later anyway.</p>
+<p>The shipped memory limit is a starting point for the default worker count. Monitor
+actual usage as scan volume and retention increase. A memory cap prevents an undrained
+queue from consuming the host’s available memory.</p>
+<p><code>allkeys-lru</code> may evict any key under memory pressure, based on approximate recent use.
+It is not limited to old scan results: queue state, counters and operator-managed data
+can also be affected. Treat eviction as a capacity signal and investigate it rather than
+relying on TTL alone.</p>
 <p>Raise the cap if you raise <code>COS_WEB_RESULT_TTL</code> a long way, or run a fleet
 scan of hundreds of instances. Watch <code>evicted_keys</code>:</p>
 <pre><code class="language-bash">docker compose exec redis redis-cli info stats | grep evicted_keys

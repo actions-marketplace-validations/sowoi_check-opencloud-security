@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.reference.description') }}</p>
 </section>
 
-{% if locale != 'en' %}
+{% if locale not in ('en', 'de') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -111,9 +111,9 @@ an <code>.rpm</code>:</p>
 <pre><code class="language-shell">sudo apt install ./check-opencloud-security_&lt;version&gt;_all.deb       # Debian, Ubuntu
 sudo dnf install ./check-opencloud-security-&lt;version&gt;-1.noarch.rpm  # RHEL, Fedora
 </code></pre>
-<p>Both put the check in <code>/usr/lib/nagios/plugins/</code> and configure nothing until
-you say so - the details are in
-<a href="/documentation/installation#debian-ubuntu-rhel-fedora-deb-and-rpm">Installing the plugin</a>.</p>
+<p>Both install the check in <code>/usr/lib/nagios/plugins/</code>. Monitoring configuration is a
+separate step; see <a href="/documentation/installation#debian-ubuntu-rhel-fedora-deb-and-rpm">Installing the
+plugin</a>.</p>
 <p>Prefer not to put Python on the host? The published image carries both entry
 points:</p>
 <pre><code class="language-shell">docker run --rm --entrypoint check-opencloud-security \
@@ -176,15 +176,10 @@ ship <em>inside</em> the package (see
 <pre><code class="language-shell">check-opencloud-security --host &lt;Hostname&gt; --check-hardening
 </code></pre>
 <h3 id="options">Options</h3>
-<p>The full table - every flag, its default and the environment variable that
-sets the same thing - is <strong><a href="/documentation/cli-reference">the CLI option reference</a></strong>.
-It moved to its own page because it is a lookup table fifty rows long, and
-having it here meant everything below it started halfway down the file.</p>
-<p><code>--help</code> prints the same options grouped under nine headings - which instance
-to check, what to probe, how the result is judged, version and update
-information, comparing against an earlier run, how the scan runs, what is
-printed, posting the result elsewhere, and the program itself - so the dozen
-lines you want can be found without reading the other forty.</p>
+<p>The <a href="/documentation/cli-reference">CLI option reference</a> lists every flag, default and
+corresponding environment variable. Use <code>--help</code> for the same options grouped by task.</p>
+<p>The main groups cover targets, probes, rating thresholds, release information,
+comparisons, execution, output and notifications.</p>
 <p>The handful you will actually type most days:</p>
 <table>
 <thead>
@@ -513,24 +508,17 @@ disabled.</p>
 <p>The plugin has <strong>one</strong> backend: the scanner in
 <a href="/documentation/scanner"><code>opencloud_local_scan/</code></a>, which runs in the
 plugin process and works the verdict out itself.</p>
-<p>That is deliberate. A hosted scanner can only see what is reachable from the
-internet, refuses IP addresses and internal hostnames, rate-limits its callers
-and learns about your instance in the process. Scanning locally has none of
-those constraints.</p>
+<p>The scanner connects from the host where you run the plugin. It can therefore check
+private addresses and internal hostnames without sending the target or its results to a
+hosted scanning service.</p>
 <p>There is nothing to enable and no <code>--scan-backend</code> flag to pass. Everything
 below describes what the built-in scanner does and how to tune it.</p>
 <h3 id="what-the-scanner-checks">What the scanner checks</h3>
-<p>Everything is read from what the instance publishes without authentication:
-<code>/status.php</code> for the product and <code>productversion</code>, the capabilities document,
-the security headers, the OpenID Connect discovery document, and the paths and
-ports that ought not to answer at all. On top of that come the additional
-checks (<code>extraChecks</code> in the JSON, disabled with <code>--no-extra-checks</code>): TLS and
-certificates, whether the zone is signed and who may issue it a certificate,
-cookie attributes, CORS and <code>TRACE</code>, unauthenticated Graph, WebDAV and OCS
-endpoints, exposed deployment files, a collaboration backend's admin console
-where one is published beside the instance, directory listings, the documented
-demo accounts, debug endpoints and ports, iframe embedding, basic auth and
-version disclosure.</p>
+<p>The scanner reads <code>/status.php</code>, capabilities, security headers and OIDC discovery, then
+probes paths and ports that should require authentication or remain private. Additional
+checks cover TLS, DNS, cookies, CORS, TRACE, exposed files, debug services and iframe
+settings. It also tests the published demo credentials against the instance’s own
+identity provider. Use <code>--no-extra-checks</code> to disable the additional probes.</p>
 <p>A failed additional check caps the rating (critical -&gt; <code>D</code>, high -&gt; <code>C</code>, medium
 -&gt; <code>A</code>, low -&gt; <code>A+</code>); set <code>scanner.extra_checks_rating: false</code> to report them
 without touching the rating.</p>
@@ -847,13 +835,10 @@ as new as the installed package.</p>
 performance metric; with <code>--update-warning</code> a pending update turns an otherwise
 <code>OK</code> result into <code>WARNING</code>. A failing update check never aborts the security
 check.</p>
-<p><strong>The recommendation follows your track, not the newest release overall.</strong> A
-release feed only knows the newest release, and on OpenCloud that is always a
-rolling one; recommending it to a production or LTS instance would quietly move
-it onto a three-week support window. <code>--release-track</code> says which track you are
-on when the schedule should not work it out for itself. Both, with the tables
-that say what is recommended for which installed version, are in
-<strong><a href="/documentation/release-lifecycle">Release tracks, end of life and the update recommendation</a></strong>.</p>
+<p><strong>Update recommendations stay on your release track.</strong> Production and LTS installations
+are offered a release from their own track, while the newest overall release is reported
+separately. Set <code>--release-track</code> to override automatic detection. See <a href="/documentation/release-lifecycle">Release tracks,
+end of life and the update recommendation</a>.</p>
 <h2 id="configuration-file-and-secrets">Configuration file and secrets</h2>
 <p>All settings can live in a file instead of the command line, and the quickest
 way to write one is to let the plugin ask:</p>
@@ -989,9 +974,8 @@ true</code>, because a waiver suppresses an alert and not the evidence:</p>
 for the wildcards, what a waiver will not do, and why a configuration file is
 the better home for one.</p>
 <h2 id="explaining-a-rating">Explaining a rating</h2>
-<p>A rating on its own is a verdict without an argument. <code>-d</code> / <code>--debug</code> (or
-<code>COS_DEBUG=1</code>) adds the reasoning to the output: where the rating started, what
-pulled it down, and what every identifier in the report means.</p>
+<p>Use <code>--debug</code> (<code>COS_DEBUG=1</code>) to see how the rating was calculated and what each finding
+means. The explanation includes the starting score and every check that limits it.</p>
 <pre><code class="language-shell">check-opencloud-security --host opencloud.example.com --check-hardening --debug
 </code></pre>
 <pre><code class="language-text">--- Why this rating ---
@@ -1028,12 +1012,11 @@ it can be read without rerunning the check:</p>
 goes to stderr while the explanation goes to stdout with the rest of the
 plugin output.</p>
 <h2 id="what-would-raise-the-rating">What would raise the rating</h2>
-<p>Knowing why a rating is a C is only half of what an operator wants. The other
-half is which two things to fix to make it an A+, and in which order.</p>
-<p>Every scan result carries a <code>remediationPlan</code>, worked out by replaying the
-rating arithmetic with one finding removed at a time. Because it is a replay
-of the same code that produced the rating, the predicted grades cannot drift
-away from the real ones - and because it is derived, nothing extra is stored.</p>
+<p>The remediation plan lists the changes that would improve the rating, in the order the
+scanner calculates their effect.</p>
+<p>Every result includes <code>remediationPlan</code>, calculated with the same rating function after
+removing findings one step at a time. The plan is derived from the result and needs no
+separate storage.</p>
 <pre><code class="language-shell">python -m opencloud_local_scan.cli scan opencloud.example.com | jq .remediationPlan
 </code></pre>
 <p><code>--debug</code> prints the same list under the explanation:</p>
@@ -1126,11 +1109,9 @@ its own JSON - Slack, Discord, ntfy, Alertmanager - along with
 the document as it is and treats silence as a failure, so a check that stopped
 running shows up too.</p>
 <h2 id="reporting-only-what-changed">Reporting only what changed</h2>
-<p>A check that runs every five minutes reports the same finding until someone
-fixes it, which is how people learn to acknowledge an alert and stop reading
-it. <code>--baseline</code> writes the findings of each run to a file and compares the
-next run against it; <code>--warn-on-new</code> then reports <code>OK</code> while the picture is
-unchanged, and its normal status as soon as anything is new or worse:</p>
+<p>Use <code>--baseline</code> to save each run’s findings and compare the next run with them. With
+<code>--warn-on-new</code>, an unchanged result reports OK; a new finding or a lower rating
+restores the normal alert state.</p>
 <pre><code class="language-bash">check-opencloud-security -H opencloud.example.com \
     --check-hardening \
     --baseline /var/lib/check_opencloud/baseline.json \
@@ -1143,9 +1124,8 @@ has been in the baseline.</p>
 (<code>text</code>, <code>markdown</code>, <code>slack</code>, <code>json</code>), what counts as a regression, and the
 rules that keep a baseline from hiding anything.</p>
 <h2 id="is-the-plugin-itself-up-to-date">Is the plugin itself up to date?</h2>
-<p>The plugin reports on OpenCloud's updates but says nothing about its own age,
-and a check running an old advisory database is a blind spot. <code>--self-update-check</code>
-asks PyPI once a day and appends a note:</p>
+<p><code>--self-update-check</code> checks PyPI at most once a day and adds a note when a newer plugin
+is available. Updating the plugin also refreshes its bundled release and advisory data.</p>
 <pre><code>Plugin update available: check-opencloud-security 1.2.0 is published, this is 1.1.0 (upgrade with --upgrade-self)
 </code></pre>
 <p>It is off by default, cached under <code>${XDG_CACHE_HOME:-~/.cache}/check-opencloud-security/</code>,
@@ -1267,16 +1247,13 @@ Missing hardening: basicAuthDisabled, cspWithoutUnsafeInline, publicLinkPassword
 Additional checks failed (1): basicAuthDisabled
 Update check (feed, installed 7.2.3): up to date | rating=4;@0:3;@0:1;0;5 vulnerabilities=0;;;0; time=1.835s;;;0; hardenings_missing=3;;;0; extra_checks_failed=1;;;0; update_available=0;;;0;1
 </code></pre>
-<p>The rating dropped to <code>B</code> because <code>basicAuthDisabled</code> is also an additional
-check, and a failed <code>medium</code> check caps the rating at <code>4</code>. A hardening measure
-that is <em>only</em> a hardening measure raises the state to WARNING without
-lowering the grade. Add <code>--debug</code> to have the check spell that out, along with
-what each identifier means - see
-<a href="#explaining-a-rating">Explaining a rating</a>.</p>
+<p>The failed <code>medium</code> check limits the rating to <code>4</code> (<code>A</code>). A measure that is only
+evaluated by <code>--check-hardening</code> can raise the monitoring state to WARNING without
+changing the grade. Use <code>--debug</code> to see which rule applies; see <a href="#explaining-a-rating">Explaining a
+rating</a>.</p>
 <h2 id="deployment-guides">Deployment guides</h2>
-<p>The longer deployment walk-throughs live in <a href="/documentation"><code>docs/</code></a>, so that
-this file stays the reference for the options themselves. The index there is
-grouped by what you are trying to do; the ones people reach for first:</p>
+<p>The <a href="/documentation">documentation index</a> groups deployment instructions and worked
+examples by task. These are the most common starting points:</p>
 <table>
 <thead>
 <tr>

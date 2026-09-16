@@ -93,6 +93,7 @@ VARIABLES: tuple[Variable, ...] = (
     # Where state lives and how much work runs at once.
     Variable("REDIS_URL", "storage", "redis_url"),
     Variable("RESULT_TTL", "storage", "result_ttl"),
+    Variable("COMPARISON_TTL", "storage", "comparison_ttl"),
     Variable("MAX_WORKERS", "storage", "max_workers"),
     Variable("JOB_TIMEOUT", "storage", "job_timeout"),
     # How one scan behaves against the instance.

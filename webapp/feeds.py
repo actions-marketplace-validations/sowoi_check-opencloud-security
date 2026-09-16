@@ -216,6 +216,6 @@ def schedule_feed(schedule: ReleaseSchedule, *, origin: str) -> str:
         ),
         self_url=f"{origin}{SCHEDULE_PATH}",
         alternate_url=f"{origin}/grades",
-        updated=_timestamp(schedule.updated or date.today()),
+        updated=_timestamp(schedule.updated or datetime.now(timezone.utc).date()),
         entries=entries,
     )

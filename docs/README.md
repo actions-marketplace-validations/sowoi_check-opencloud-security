@@ -1,9 +1,8 @@
 # Documentation
 
-The [main README](../README.md) is the reference: every option, every setting
-and what the scanner actually checks. These pages are the longer material that
-was crowding it out - the deployment guides, and worked examples for the
-places this check tends to end up.
+Start with the [main README](../README.md) for installation, common commands and an
+overview of the checks. The guides below cover deployment, integrations and individual
+findings. [German guides](de/README.md) are also available in the web frontend.
 
 > **Just want a scan?** [scan.okxo.de](https://scan.okxo.de) runs the web
 > application from this repository - paste an address and read the result, no
@@ -28,7 +27,7 @@ places this check tends to end up.
 
 | Page | What it covers |
 |:-----|:---------------|
-| [What OpenCloud is, and how it differs from ownCloud and Nextcloud](what-is-opencloud.md) | The fork history behind all three projects, and the architecture, storage and release differences that follow from it |
+| [What OpenCloud is](what-is-opencloud.md) | OpenCloud’s architecture, release tracks and the limits of an external scan |
 
 ## Using the plugin
 
@@ -44,8 +43,8 @@ places this check tends to end up.
 
 ## Securing the instance itself
 
-Everything a scan cannot see. This scanner grades what an instance shows the
-internet; the page below is the rest of the job.
+An external scan cannot verify audit logging, firewall policy, backups or the full
+sign-in configuration. These guides cover those parts of operating OpenCloud.
 
 | Page | What it covers |
 |:-----|:---------------|

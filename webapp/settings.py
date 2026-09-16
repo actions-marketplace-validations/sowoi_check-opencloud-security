@@ -20,6 +20,11 @@ ENV_PREFIX = "COS_WEB_"
 
 DEFAULT_REDIS_URL = "redis://127.0.0.1:6379/0"
 DEFAULT_RESULT_TTL_SECONDS = 3600
+# A comparison against an uploaded report is the one thing this service holds
+# that cannot be recomputed, because the upload it was drawn from is discarded
+# as soon as it has been read. Five minutes is the outside edge, enforced in
+# `comparisons.clamp_ttl`: an operator may shorten this window, never widen it.
+DEFAULT_COMPARISON_TTL_SECONDS = 300
 DEFAULT_MAX_WORKERS = 5
 DEFAULT_SCAN_CONCURRENCY = 4
 DEFAULT_SCAN_TIMEOUT_SECONDS = 15
@@ -200,6 +205,10 @@ class WebSettings:
 
     result_ttl: int = DEFAULT_RESULT_TTL_SECONDS
     """How long a finished scan stays readable before Redis expires it."""
+
+    comparison_ttl: int = DEFAULT_COMPARISON_TTL_SECONDS
+    """How long a comparison against an uploaded report stays readable.
+    Clamped to five minutes whatever is configured; shorter is honoured."""
 
     max_workers: int = DEFAULT_MAX_WORKERS
     """How many scans the worker pool runs at once. Never client-configurable."""
@@ -581,6 +590,9 @@ class WebSettings:
         return cls(
             redis_url=_env("REDIS_URL") or DEFAULT_REDIS_URL,
             result_ttl=_env_int("RESULT_TTL", DEFAULT_RESULT_TTL_SECONDS, minimum=30),
+            comparison_ttl=_env_int(
+                "COMPARISON_TTL", DEFAULT_COMPARISON_TTL_SECONDS, minimum=30
+            ),
             max_workers=_env_int("MAX_WORKERS", DEFAULT_MAX_WORKERS, minimum=1),
             scan_concurrency=_env_int(
                 "SCAN_CONCURRENCY", DEFAULT_SCAN_CONCURRENCY, minimum=1

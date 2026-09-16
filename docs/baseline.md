@@ -1,9 +1,8 @@
 # Reporting only what changed
 
-A check that runs every five minutes reports the same finding until somebody
-fixes it, which is how people learn to acknowledge an alert and stop reading
-it. `--baseline` writes the findings of each run to a file and compares the
-next run against it, and `--warn-on-new` acts on the comparison.
+Use `--baseline` to save each scan’s findings and compare them with the next run. Add
+`--warn-on-new` to alert only when findings are new or have become worse. Existing
+problems remain visible in the report.
 
 The [main README](../README.md#reporting-only-what-changed) has the short
 version. This page is the full behaviour: the diff formats, what counts as a

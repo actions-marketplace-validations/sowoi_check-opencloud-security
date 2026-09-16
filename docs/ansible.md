@@ -1,11 +1,9 @@
 # Automated deployment with Ansible
 
-Prefer not to click through Icinga Director or configure hosts by hand?
-[`ansible/`](../ansible/README.md) contains ready-to-use playbooks that install
-and configure check-opencloud-security - native or Docker - on one or more
-Icinga2 hosts, including the `CheckCommand` and `Service` objects described in
-[Icinga Director](icinga-director.md) and
-[Icinga2 / Nagios](installation.md#icinga2--nagios).
+The playbooks in [`ansible/`](../ansible/README.md) install and configure the plugin on
+one or more Icinga2 hosts, using either a native installation or Docker. They also
+create the `CheckCommand` and `Service` objects described in [Icinga
+Director](icinga-director.md) and [Icinga2 / Nagios](installation.md#icinga2--nagios).
 
 This page is the short version. [`ansible/README.md`](../ansible/README.md) is
 the reference, and it is the file kept in step with the roles themselves.

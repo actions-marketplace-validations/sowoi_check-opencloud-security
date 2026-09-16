@@ -735,12 +735,26 @@ async def _result_document(
     )
 
 
-def _compared_side(identifier: str, document: Mapping[str, Any]) -> dict[str, Any]:
-    """How one of the two scans is named in the answer."""
+#: Passed as ``baseline_page`` when the earlier side did not come from a scan
+#: this service still holds - an uploaded report, which has no page here.
+NO_PAGE = ""
+
+
+def _compared_side(
+    identifier: str, document: Mapping[str, Any], url: str | None
+) -> dict[str, Any]:
+    """
+    How one of the two scans is named in the answer.
+
+    ``url`` is the page the side can be reopened at, or ``None`` where there
+    is none. A side that arrived as an uploaded file has no result page here -
+    the file was read and discarded - so the reader is offered nothing to
+    click rather than a link to a uuid that was never this service's to issue.
+    """
     scanned_at = document.get("scannedAt")
     return {
         "uuid": identifier,
-        "url": f"/scan/{identifier}",
+        "url": url,
         "target": _safe_text(document.get("domain")),
         "rating": document.get("rating"),
         "version": _safe_token(document.get("version")),
@@ -778,6 +792,8 @@ def compare_documents(
     current_identifier: str,
     before: dict[str, Any],
     after: dict[str, Any],
+    *,
+    baseline_page: str | None = None,
 ) -> dict[str, Any]:
     """
     What changed between two whole scanner documents.
@@ -825,8 +841,16 @@ def compare_documents(
 
     return {
         "ok": True,
-        "baseline": _compared_side(baseline_identifier, before),
-        "current": _compared_side(current_identifier, after),
+        # :data:`NO_PAGE` is "this side has no page at all", which is a
+        # different answer from the default of "the usual one for this uuid".
+        "baseline": _compared_side(
+            baseline_identifier,
+            before,
+            f"/scan/{baseline_identifier}" if baseline_page is None else (baseline_page or None),
+        ),
+        "current": _compared_side(
+            current_identifier, after, f"/scan/{current_identifier}"
+        ),
         # False means the two documents describe different instances. Not
         # refused - comparing staging with production is a fair question - but
         # said plainly, because every other number below then answers a

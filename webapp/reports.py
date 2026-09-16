@@ -193,6 +193,23 @@ def csv_report(result: dict[str, Any]) -> str:
     _write(writer, "Version", summary.get("version") or "unknown")
     _write(writer, "Release track", summary.get("releaseType") or "unknown")
     _write(writer, "End of life", "yes" if summary.get("eol") else "no")
+    # Written as a fact of its own rather than left to the fix steps, because
+    # this file is also read back: `webapp.imports` compares a pending update
+    # like any other finding, and a row that is simply absent cannot be told
+    # apart from one that said "none". See ADR 0057.
+    updates = summary.get("updates") or {}
+    _write(
+        writer,
+        "Update available",
+        str(updates.get("availableVersion") or "unknown")
+        if updates.get("available")
+        else "no",
+    )
+    # Written for the same reason, and it is the one finding the findings
+    # table below cannot carry: "HTTPS is not enforced" is measured in
+    # `setup.https`, not in the hardening block the rows are drawn from.
+    https = summary.get("https") or {}
+    _write(writer, "HTTPS enforced", "no" if https.get("enforced") is False else "yes")
     _write(
         writer, "Rating", f"{summary.get('rating')}", rating_label(summary.get("rating"))
     )

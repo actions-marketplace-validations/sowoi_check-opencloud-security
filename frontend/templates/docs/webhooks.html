@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.webhooks.description') }}</p>
 </section>
 
-{% if locale != 'en' %}
+{% if locale not in ('en', 'de') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -234,10 +234,10 @@ webhook:
 <a href="/documentation/scheduling#cron">cron</a>. Uptime Kuma goes red when no push arrives
 within the heartbeat interval, so a plugin that cannot run at all shows up as
 well.</p>
-<p>Uptime Kuma stores the JSON body it receives and shows it on the monitor, so
-the rating, the OpenCloud version and the reason for the state are visible in
-the heartbeat detail. To surface the state in the message column too, use the
-push URL's own query parameters alongside the webhook:</p>
+<p>A Push monitor records the status supplied through its own protocol. Do not rely on it
+to interpret the plugin’s generic JSON as an OpenCloud verdict. To report the measured
+state, map the plugin result to the Push URL’s <code>status</code> and <code>msg</code> parameters. These
+payload fields are useful when writing an adapter:</p>
 <table>
 <thead>
 <tr>
@@ -272,15 +272,14 @@ push URL's own query parameters alongside the webhook:</p>
 </tr>
 </tbody>
 </table>
-<p>If you would rather have Uptime Kuma go down on <em>any</em> problem, keep
-<code>--webhook-on always</code> and add a keyword check on the JSON, or run a second
-Push monitor fed by a wrapper that only pushes when the plugin exits <code>0</code>:</p>
+<p>To mark any non-OK plugin result as down, use a wrapper that sends the appropriate Push
+status:</p>
 <pre><code class="language-shell">check-opencloud-security --host opencloud.example.com \
   &amp;&amp; curl -fsS 'https://kuma.example.com/api/push/&lt;token&gt;?status=up' \
   || curl -fsS 'https://kuma.example.com/api/push/&lt;token&gt;?status=down&amp;msg=opencloud'
 </code></pre>
-<p>The webhook route is the better one of the two: it pushes on every outcome and
-carries the detail, while the wrapper only carries up or down.</p>
+<p>Use the direct heartbeat to detect missing scheduled runs. Use the wrapper or a
+result-aware adapter when the monitor must also reflect the security check’s status.</p>
 <h2 id="slack-mattermost-discord">Slack, Mattermost, Discord</h2>
 <p>These expect their own JSON. For the common case, <code>--webhook-format slack</code>
 or <code>--webhook-format discord</code> posts it directly - no adapter needed:</p>

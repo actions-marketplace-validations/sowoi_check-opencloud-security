@@ -1,10 +1,8 @@
 # TLS and certificates: what this scanner checks, and why
 
-Everything on this page happens before a single byte of HTTP is exchanged.
-OpenCloud's proxy terminates TLS itself on port 9200 (or whatever sits in
-front of it does), and this scanner reads what that transport actually
-negotiated - protocol version, certificate, chain, cipher suite - the same
-way a browser or a sync client would, without any special access.
+The scanner examines the TLS connection, the certificate presented by the server and
+related DNS records. These checks describe the connection from the scanner’s network
+position; they do not enumerate every configuration a different client might encounter.
 
 <!-- TOC -->
 * [TLS and certificates: what this scanner checks, and why](#tls-and-certificates-what-this-scanner-checks-and-why)
@@ -94,14 +92,13 @@ intermediate, without the root - which is what most issuers publish as a
 
 Two independent checks, both about time, in opposite directions:
 
-- **`tlsCertificate`** - remaining validity is below `--tls-min-days` (14 by
+- **`tlsCertificate`** - remaining validity is below `scanner.tls_min_days` (14 by
   default). Unlike most findings, this one has a date on it: it will fail
   whether or not anybody acts, so the usual cause is worth checking directly
   - an automated issuer that stopped renewing, or a reload that never reaches
   the process actually serving TLS.
 - **`tlsCertificateLifetime`** (low) - the certificate's validity period is
-  *longer* than the 398 days the CA/Browser Forum caps publicly trusted
-  certificates at. That points at a private authority or a hand-issued
+  *longer* than the scanner’s 398-day lifetime threshold. That points at a private authority or a hand-issued
   certificate, and the risk is the key: a certificate valid for years stays
   valid for years after the key behind it leaks, with nothing forcing the
   rotation that a short-lived certificate does on its own.
@@ -199,17 +196,14 @@ certificate it already fetched, using the same `openssl x509 -text` call that
 reads the key and signature algorithm - no extra connection and no extra
 process.
 
-Chrome and Safari refuse a publicly trusted certificate without SCTs
-outright, so this is an outage waiting for the next browser release rather
-than only a transparency gap, which is why it is a `medium` finding.
+The check looks specifically for SCTs embedded in the certificate. Missing embedded SCTs
+produce a `medium` finding, but do not by themselves prove a browser will reject the
+connection: Certificate Transparency evidence can also be delivered through other
+mechanisms.
 
-**The check only runs where the question is fair.** A private or self-signed
-authority cannot publish to a log, and OpenCloud generates a self-signed
-certificate during `opencloud init` - so on a large share of instances the
-honest answer is that the question does not apply. `tlsCertificateTransparency`
-is therefore withheld entirely unless the chain reaches a public root. It is
-also withheld when the local OpenSSL does not decode the extension at all:
-an absent finding is an unknown, never a pass.
+`tlsCertificateTransparency` is evaluated only when the chain reaches a public root.
+Private or self-signed certificates are outside this check’s scope. If the local OpenSSL
+cannot decode the extension, the finding is omitted rather than recorded as a pass.
 
 **Fix:** reissue through a certificate authority that embeds SCTs. Every
 public one has done so for years, Let's Encrypt included; a trusted
