@@ -123,6 +123,12 @@ test = [
     "markdown>=3.10.3",
     "openapi-spec-validator>=0.9.0",
     "pytest-cov>=7.0.0",
+    # Browser tests of the web application (tests/test_webapp_browser_*.py):
+    # real rendering, JavaScript and the Content-Security-Policy, which the
+    # ASGI test client never executes. Test-only, and the tests skip when the
+    # package or its Firefox build is missing. Reviewed in
+    # security/dependencies/playwright.yml; ADR 0061.
+    "playwright>=1.63.0",
 ]
 
 [tool.pytest.ini_options]

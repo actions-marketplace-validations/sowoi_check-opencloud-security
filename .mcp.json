@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--group",
+        "test",
+        "playwright",
+        "mcp",
+        "--config",
+        ".claude/playwright-mcp.json"
+      ]
+    }
+  }
+}

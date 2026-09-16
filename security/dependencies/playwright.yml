@@ -1,0 +1,105 @@
+# A dependency record. See security/dependencies/README.md.
+name: playwright
+import_name: playwright
+status: proposed
+approved_by: ""
+scopes:
+  - group:test
+reviewed_version: "1.63.0"
+justification: |
+  Browser tests of the web application (tests/test_webapp_browser_ux.py,
+  tests/test_webapp_browser_e2e.py): the ASGI test client renders templates
+  but never executes them, so nothing in the suite ran the 19 frontend
+  scripts, applied app.css or enforced the Content-Security-Policy. The first
+  run found three shipped defects that no existing test could see - an
+  address `pattern` browsers reject under the `v` flag (client-side
+  validation silently off), a findings list pushed off phone screens by
+  unbreakable environment-variable names, and a filter status line a
+  `display` rule kept visible despite `hidden`. Test-only: it lives in the
+  `test` dependency group, never in the runtime, an extra or the wheel, and
+  the tests skip when it or its browser build is missing.
+
+  The same package also provides the Playwright MCP server (`playwright mcp`)
+  that `.mcp.json` starts through `uv run --group test` for agent-driven
+  browser checks of a locally running app - configured WebKit-only, isolated,
+  headless and loopback-only in `.claude/playwright-mcp.json`.
+alternatives_considered: |
+  - The standard library and the existing test stack (httpx2, starlette's
+    TestClient, openapi-spec-validator): none runs JavaScript or CSS.
+  - pytest-playwright: only fixtures, ~40 lines in tests/browser_support.py
+    replace it, and it would add pytest-base-url, python-slugify and
+    text-unidecode for nothing.
+  - Selenium: needs a separate driver binary per browser and has no built-in
+    download, network or console observation; more moving parts for the same
+    result.
+  - A Node test runner (the npm @playwright/test): a second language
+    toolchain and lockfile in CI for tests that must share the Python fake
+    instance and the in-process worker.
+  - Writing our own: a browser automation protocol client is not a few dozen
+    lines.
+  - For the MCP server, the npm package @playwright/mcp (0.0.81, Apache-2.0,
+    no install scripts, OSV clean) through npx: rejected because it needs a
+    Node.js installation and pulls a second, pre-release playwright-core
+    (1.64.0-alpha) that nobody reviewed, while the reviewed wheel already
+    contains the same server.
+tests:
+  - tests/browser_support.py
+  - tests/test_webapp_browser_ux.py
+  - tests/test_webapp_browser_e2e.py
+  - .github/workflows/browser-tests.yml
+review:
+  reviewer: "Drafted by an agent (Claude Code), for maintainer review"
+  reviewed_on: "2026-09-16"
+  known_vulnerabilities: |
+    `uvx pip-audit --disable-pip --no-deps -r <(playwright==1.63.0,
+    greenlet==3.5.6, pyee==13.0.1, typing-extensions==4.16.0)`: no known
+    vulnerabilities. OSV (api.osv.dev) for each of the four at those versions:
+    none. OSV has no advisory for the PyPI package `playwright` in any
+    version.
+  maintenance: |
+    Published by Microsoft (github.com/microsoft/playwright-python, not
+    archived, pushed 2026-09-15, ~15k stars), released in step with the Node
+    project roughly monthly (1.58.0 .. 1.63.0 are the six most recent). The
+    repository has a SECURITY.md pointing to the Microsoft Security Response
+    Center.
+  provenance: |
+    Wheels on PyPI from the project's publisher account. PyPI's integrity API
+    returns no PEP 740 attestation for 1.63.0 (404), so provenance rests on the
+    account rather than a verified build - worth a look by the approver. The
+    lock pins the version and wheel hashes.
+  install_time: |
+    Wheels only (py3-none for macOS x86_64/arm64/universal2, manylinux x86_64
+    and aarch64, Windows x86/x64/arm64); no sdist build, nothing runs at
+    install. Each wheel bundles a Node.js runtime and the Playwright driver
+    (~130 MB unpacked, package.json without install scripts). Browsers are NOT
+    installed with the package: `playwright install <browser>` downloads them
+    on request, from Microsoft's mirrors only (cdn.playwright.dev and
+    playwright.download.prss.microsoft.com, per the driver's registry) -
+    including the Chromium ("Chrome for Testing") builds we do not use.
+  runtime_network: |
+    The Python package talks only to its bundled driver over a pipe. The
+    driver bundle contains no telemetry: the only "telemetry" strings are
+    Firefox preferences that switch data reporting off, and Chromium is
+    started with --disable-background-networking, --disable-component-update,
+    --disable-sync and --disable-client-side-phishing-detection. Browsers
+    reach the network only when told to. On top of that the tests launch every
+    browser behind a proxy that does not exist with only loopback bypassing it,
+    and fail on any request that leaves 127.0.0.1 (tests/browser_support.py).
+    Chromium is refused by the fixture: its builds are Google's, and AGENTS.md
+    "Third parties" keeps the project away from Google (ADR 0061). The
+    browsers used are WebKit and Firefox.
+  native_code: |
+    The bundled Node.js binary runs as a subprocess (the driver). greenlet is
+    a C extension (wheels for CPython 3.10 through 3.15). No eval/pickle of
+    untrusted input on our side: the tests drive our own application on
+    loopback.
+  transitive_dependencies: |
+    Adds greenlet 3.5.6 (MIT AND PSF-2.0, C extension, wheels for every
+    supported Python; widely used, maintained by the gevent project) and
+    pyee 13.0.1 (MIT, pure Python event emitter, depends only on
+    typing-extensions). typing-extensions 4.16.0 was already in the lock.
+    pip-audit and OSV: no known vulnerabilities in any of them.
+  license: |
+    Apache-2.0 (playwright; the bundled Node.js is MIT), MIT and PSF-2.0
+    (greenlet), MIT (pyee). All compatible with this project's GPL-3.0 for
+    use as a test-only tool; nothing is redistributed in the wheel.

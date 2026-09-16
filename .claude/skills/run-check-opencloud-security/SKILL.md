@@ -14,12 +14,35 @@ needed.
 
 ## Prerequisites
 
-`uv` on PATH. For browser screenshots only, a one-time Chromium download
-(~95 MB, into `~/Library/Caches/ms-playwright`):
+`uv` on PATH. For browser screenshots, the browser tests and the Playwright
+MCP server, a one-time WebKit download (~70 MB, into
+`~/Library/Caches/ms-playwright`). Never Chromium - its builds are Google's
+(ADR 0061):
 
 ```bash
-uv run --extra web --with playwright python -m playwright install chromium
+uv run --group test playwright install webkit
 ```
+
+## Drive the app from an agent: Playwright MCP
+
+`.mcp.json` registers `playwright`, the MCP server bundled with the reviewed
+`playwright` package (`uv run --group test playwright mcp`, configured in
+`.claude/playwright-mcp.json`: WebKit, headless, isolated, and unable to
+reach anything but loopback). Start `driver.py web` (below), then use the
+`browser_*` tools against `http://127.0.0.1:8811`. Snapshots land in the
+ignored `.playwright-mcp/`. The first use asks you to approve the project
+server.
+
+## Browser tests
+
+```bash
+uv run pytest tests/test_webapp_browser_ux.py tests/test_webapp_browser_e2e.py -q
+PLAYWRIGHT_BROWSER=firefox uv run pytest tests/test_webapp_browser_e2e.py -q   # second engine
+```
+
+They start their own app and fake instances, so nothing needs to be running.
+On macOS 27 Playwright's Firefox does not start ("Could not find profile
+folder") - the modules skip; use WebKit.
 
 ## Pick the layer the change touches
 
@@ -87,7 +110,7 @@ In the browser: open the landing page, fill `#target_url`, click Start audit,
 wait on `/scan/{uuid}` for the result, screenshot it and print any console errors.
 
 ```bash
-uv run --extra web --with playwright python $D browse --target "$T"
+uv run --extra web --group test python $D browse --target "$T"
 ```
 
 Screenshots land in `/tmp/cos-shots/` (set `COS_DRIVER_SHOTS` to change it):
@@ -133,11 +156,10 @@ uv run pytest                                                         # full sui
   `animation: rise … backwards` with delays up to .35s. Reduced motion
   shortens the duration but not the delay, so the content stays at opacity 0.
   The driver waits until `.scan-form` is opaque before taking the screenshot.
-- **Known console error on `/`:** Chromium rejects the `pattern` attribute of
-  `#target_url` ("Invalid character in character class" under the `/v`
-  flag, caused by the unescaped `-` in `[A-Za-z0-9._~-]`). The browser then
-  skips client-side validation of that field. It's an existing bug, not
-  something the driver causes.
+- **The address `pattern` must be valid under the `v` regex flag.** Browsers
+  compile it that way and silently skip validation when it is not (an
+  unescaped `-` in a character class was the cause once).
+  `test_the_address_pattern_is_a_valid_expression_for_the_browser` guards it.
 - **Hardcoded release numbers go stale.** The bundled schedule changes with
   every OpenCloud release, and `run_scan` rates against today's date. A
   profile that was "current" can become end-of-life, so read the latest
@@ -154,4 +176,4 @@ uv run pytest                                                         # full sui
   to bind on address ('127.0.0.1', 8811)`**: a previous `web` is still running. Run `lsof -ti:8811 -sTCP:LISTEN | xargs kill`, or pass `--port`
   (and `--base http://127.0.0.1:<port>` to `api`/`browse`).
 - **`browse` fails with `Executable doesn't exist`**: run the one-time
-  `playwright install chromium` from Prerequisites.
+  `playwright install webkit` from Prerequisites.

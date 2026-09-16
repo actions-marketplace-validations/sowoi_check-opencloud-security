@@ -33,6 +33,8 @@ that same local scanner for a URL a stranger submits.
 ```bash
 uv run pytest                                       # full suite (~75s)
 uv run pytest tests/test_webapp_api.py              # the web application (no Redis needed)
+uv run playwright install webkit                    # once: the browser for the tests below and the MCP server
+uv run pytest tests/test_webapp_browser_*.py        # the frontend in a real browser (ADR 0061)
 uvx ruff check .                                    # linting, as CI runs it
 uv run mypy --config-file mypy.ini                  # type checking
 cd ansible && ansible-lint                          # must be run from ansible/
@@ -51,6 +53,9 @@ cd docker && docker compose up --build              # web + worker + redis, loca
 
 Notes that will otherwise cost you time:
 - `pytest` exists **only** under `uv run`.
+- Browsers are **WebKit or Firefox, never Chromium** (Google's builds), and
+  always behind the dead proxy in `tests/browser_support.py`. The `playwright`
+  MCP server in `.mcp.json` is the same reviewed package, loopback only.
 - Only `ruff check` is enforced, **never `ruff format`** — do not reformat the tree.
 - `ansible-lint` is clean only from inside `ansible/`; from the repo root it reports false positives.
 - `requires-python = ">=3.10"`: no `tomllib`, no 3.11+ syntax, no backslashes inside f-string expressions.

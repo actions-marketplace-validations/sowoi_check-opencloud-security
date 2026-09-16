@@ -12,6 +12,40 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+### Added
+
+- **The frontend is tested in a real browser.** `tests/test_webapp_browser_ux.py`
+  and `tests/test_webapp_browser_e2e.py` drive the web application in WebKit
+  (and Firefox in CI, `.github/workflows/browser-tests.yml`) through
+  Playwright: every public page runs clean under its Content-Security-Policy,
+  fits a phone screen and hides what is marked hidden; navigation, theme,
+  language, form validation, waiver search, site search and back-to-top
+  behave; and a visitor's journeys work from the form to the report - the
+  waiting page's hand-over, severity filters, all four exports, waivers,
+  keyboard only, without JavaScript and in German. No browser can reach
+  anything but loopback, and Chromium is never used because its builds are
+  Google's. New test dependency `playwright` (record
+  `security/dependencies/playwright.yml`, awaiting maintainer approval); see
+  [ADR 0061](adr/0061-the-frontend-is-tested-in-real-browsers-that-cannot-leave-loopback.md).
+- **Agents can drive the running app through the Playwright MCP server.**
+  `.mcp.json` starts the server bundled with the same `playwright` package,
+  configured in `.claude/playwright-mcp.json` for WebKit, an isolated
+  headless profile and loopback only - no Node.js installation needed.
+
+### Fixed
+
+- **The scan form validates the address in the browser again.** Browsers
+  compile the field's `pattern` with the `v` flag, under which the unescaped
+  `-` in `[A-Za-z0-9._~-]` is an error, so WebKit and Chromium silently
+  skipped client-side validation and sent malformed addresses to the server.
+- **The catalogue and reports no longer scroll sideways on phones.** A
+  remediation naming a long environment variable had no break opportunity,
+  and the findings list grew to fit it - 319 pixels past a 390-pixel screen on
+  `/catalogue`.
+- **The findings filter note is hidden until a filter is chosen.** A
+  `display: flex` rule outranked the `hidden` attribute, so every report showed
+  an empty "showing only" line with a "show all" link.
+
 ### Changed
 
 - **A new Python dependency needs an approved review first.** Every package in
