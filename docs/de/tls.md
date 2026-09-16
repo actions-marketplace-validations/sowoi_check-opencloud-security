@@ -1,5 +1,3 @@
-# TLS and certificate checks explained
-
 # TLS- und Zertifikatsprüfungen
 
 Der Scanner untersucht die TLS-Verbindung zur Instanz oder zu ihrem vorgeschalteten Proxy: Protokoll, Zertifikat, Zertifikatskette und ausgehandelte Cipher Suite. Ergänzend prüft er DNS-Angaben und vergleicht gegebenenfalls IPv4 und IPv6. Dafür ist kein besonderer Zugriff auf die Instanz nötig.
@@ -22,7 +20,7 @@ TLS 1.0 und 1.1 sind seit RFC 8996 veraltet.
 - **`tlsProtocol`** prüft, ob die tatsächlich ausgehandelte Verbindung mindestens TLS 1.2 verwendet.
 - **`tlsDeprecatedProtocol`** prüft zusätzlich mit kurzen, auf ältere Versionen beschränkten Verbindungen, ob der Server diese noch akzeptiert. Eine erfolgreiche TLS-1.3-Verbindung allein belegt nicht, dass ältere Versionen deaktiviert sind.
 
-Entfernen Sie veraltete Versionen aus der Serverkonfiguration, statt nur neuere zu bevorzugen.
+Entferne veraltete Versionen aus der Serverkonfiguration, statt nur neuere zu bevorzugen.
 
 ## 4. Passender Hostname: `tlsHostname` {#4-does-the-certificate-cover-this-name-tlshostname}
 
@@ -30,11 +28,11 @@ Die Subject Alternative Names des Zertifikats müssen den gescannten Namen abdec
 
 ## 5. Vollständige Zertifikatskette: `tlsChain` {#5-is-the-chain-complete-tlschain}
 
-Eine unvollständige Kette, häufig durch ein fehlendes Zwischenzertifikat, kann in einem Browser mit Cache funktionieren und in anderen Clients scheitern. Liefern Sie das Serverzertifikat zusammen mit allen benötigten Zwischenzertifikaten aus, üblicherweise als `fullchain`. Das Root-Zertifikat wird normalerweise nicht mitgesendet.
+Eine unvollständige Kette, häufig durch ein fehlendes Zwischenzertifikat, kann in einem Browser mit Cache funktionieren und in anderen Clients scheitern. Liefere das Serverzertifikat zusammen mit allen benötigten Zwischenzertifikaten aus, üblicherweise als `fullchain`. Das Root-Zertifikat wird normalerweise nicht mitgesendet.
 
 ## 6. Gültigkeitsdauer {#6-is-the-certificate-about-to-expire-or-issued-for-too-long}
 
-- **`tlsCertificate`** prüft die verbleibende Gültigkeit gegen `scanner.tls_min_days`, standardmäßig 14 Tage. Prüfen Sie bei einem Befund die automatische Erneuerung und ob der TLS-Prozess das neue Zertifikat geladen hat.
+- **`tlsCertificate`** prüft die verbleibende Gültigkeit gegen `scanner.tls_min_days`, standardmäßig 14 Tage. Prüfe bei einem Befund die automatische Erneuerung und ob der TLS-Prozess das neue Zertifikat geladen hat.
 - **`tlsCertificateLifetime`** meldet mit `low`, wenn die gesamte ausgestellte Laufzeit die im Scanner festgelegte Grenze von 398 Tagen überschreitet. Dies ist der Prüfwert dieser Implementierung und keine Aussage über die jeweils aktuellen Ausstellungsregeln öffentlicher Zertifizierungsstellen.
 
 ## 7. Cipher Suite und Zertifikatseigenschaften {#7-is-the-negotiated-cipher-suite-and-certificate-policy-sound}
@@ -67,7 +65,7 @@ DNSSEC ermöglicht die Prüfung signierter DNS-Antworten. Der Scanner befragt au
 | Weder Validierung noch Signaturen, DNSSEC-Anfrage aber verstanden | fehlgeschlagen |
 | DNSSEC nicht unterstützt oder keine Antwort | Prüfung fehlt im Ergebnis |
 
-Der Befund hat `low`. Aktivieren Sie DNSSEC bei Ihrem DNS-Anbieter und veröffentlichen Sie den zugehörigen DS-Eintrag in der übergeordneten Zone. Siehe [ADR 0038](../../adr/0038-a-dnssec-answer-nobody-could-have-given-is-not-a-finding.md).
+Der Befund hat `low`. Aktiviere DNSSEC bei deinem DNS-Anbieter und veröffentliche den zugehörigen DS-Eintrag in der übergeordneten Zone. Siehe [ADR 0038](../../adr/0038-a-dnssec-answer-nobody-could-have-given-is-not-a-finding.md).
 
 ## 10. OCSP-Stapling: `tlsOcspStapling` {#10-is-revocation-actually-checkable-tlsocspstapling}
 
@@ -81,7 +79,7 @@ Fehlende eingebettete SCTs werden mit `medium` gemeldet. Dies ist eine begrenzte
 
 Die Prüfung läuft nur bei einer Kette zu einer öffentlichen Vertrauenswurzel und wenn das lokale OpenSSL die Erweiterung auswerten kann. Andernfalls fehlt der Befund. Selbstsignierte und private Zertifikate werden dadurch nicht pauschal abgewertet.
 
-**Behebung:** Prüfen Sie die Ausstellung bei Ihrer Zertifizierungsstelle und lassen Sie bei Bedarf ein Zertifikat mit eingebetteten SCTs ausstellen.
+**Behebung:** Prüfe die Ausstellung bei deiner Zertifizierungsstelle und lass bei Bedarf ein Zertifikat mit eingebetteten SCTs ausstellen.
 
 ## 12. TLS Early Data: `tlsEarlyData` {#12-is-a-replayable-0-rtt-flight-invited-tlsearlydata}
 
@@ -89,7 +87,7 @@ TLS 1.3 kann bei einer wiederaufgenommenen Sitzung Daten schon mit dem ersten Ve
 
 Der Scanner liest `Max Early Data` aus den Session-Tickets desselben `openssl s_client`-Aufrufs, der auch Stapling untersucht. Er prüft nicht, wie die Anwendung wiederholte Anfragen behandelt. Deshalb hat der Befund `low`. Fehlt eine auswertbare Angabe, bleibt das Ergebnis unbekannt.
 
-**Behebung:** Deaktivieren Sie Early Data am TLS-Endpunkt, wenn Sie es nicht gezielt benötigen. Lassen Sie es nur aktiv, wenn die Anwendung die damit verbundenen Wiederholungsrisiken berücksichtigt.
+**Behebung:** Deaktiviere Early Data am TLS-Endpunkt, wenn du es nicht gezielt benötigst. Lass es nur aktiv, wenn die Anwendung die damit verbundenen Wiederholungsrisiken berücksichtigt.
 
 ## Grenzen der Messung {#what-is-deliberately-left-unmeasured}
 
@@ -105,7 +103,7 @@ Der Verbindungsaufbau erfolgt in dieser Reihenfolge:
 2. Falls nötig HTTPS ohne Verifikation; `tlsTrusted` bleibt als Fehler sichtbar.
 3. Falls nötig HTTP; dies führt zu `httpsAvailable` mit `critical`.
 
-`--insecure` (`COS_INSECURE`) überspringt die Verifikationsanforderung. Eine nicht vertrauenswürdige Kette bleibt im Bericht, senkt dann aber die Note nicht. Für interne Zertifizierungsstellen können Sie stattdessen ein eigenes CA-Bundle konfigurieren.
+`--insecure` (`COS_INSECURE`) überspringt die Verifikationsanforderung. Eine nicht vertrauenswürdige Kette bleibt im Bericht, senkt dann aber die Note nicht. Für interne Zertifizierungsstellen kannst du stattdessen ein eigenes CA-Bundle konfigurieren.
 
 ## Schweregrad und Bewertung {#severity-and-rating-impact}
 

@@ -11,12 +11,11 @@
   <p class="lede">{{ t('docs.hardening.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de') %}
+{% if locale not in ('en', 'de', 'fr') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
 <article class="docs-article card section-gap" data-reveal lang="de">
-<h1 id="hartungsmanahmen-und-ausnahmen">Härtungsmaßnahmen und Ausnahmen</h1>
 <p>Die kurzen Kennungen der Härtungsmaßnahmen erscheinen in Alarmen und Berichten. Dieser Leitfaden erklärt die Befunde, die passenden Einstellungen und den Umgang mit bewusst akzeptierten Ausnahmen.</p>
 <p><code>--debug</code> zeigt die Erklärung direkt neben jedem Befund an. Wie die Maßnahmen in Ausgabe und Metriken eingehen, steht im <a href="/documentation/reference#hardening-checks">Haupt-README</a>.</p>
 <h2 id="what-each-measure-means">Bedeutung der Maßnahmen</h2>
@@ -107,11 +106,11 @@
 <li><strong><code>publicLinkExpirationEnforced</code></strong> ist im Frontend-Dienst fest auf <code>false</code> gesetzt. Es gibt keine Variable, mit der die Prüfung bestanden werden könnte.</li>
 <li><strong><code>userEnumerationRestricted</code></strong> ist fest auf den eingeschränkten Zustand gesetzt und besteht daher immer.</li>
 </ul>
-<p>Die Werte bleiben im Ergebnisdokument und in <code>--debug</code> sichtbar. Sie werden aus der Zeile „Missing hardening“, der Metrik <code>hardenings_missing</code> und dem Webhook ausgeschlossen, damit nicht behebbare Befunde keine dauerhaften Alarme erzeugen.</p>
-<p>Auch <code>cspWithoutUnsafeInline</code> schlägt mit OpenClouds Standard-CSP fehl. Diese Richtlinie ist jedoch konfigurierbar. Testen Sie eine strengere CSP vor dem Einsatz, da die Weboberfläche sowie Office- und Anmeldeintegrationen Inline-Skripte oder -Styles benötigen können. Näheres erklärt der <a href="/documentation/csp">CSP-Leitfaden</a>.</p>
+<p>Die Werte bleiben im Ergebnisdokument und in <code>--debug</code> sichtbar. Der Befund wird aus der Zeile „Missing hardening“, der Metrik <code>hardenings_missing</code> und dem Webhook ausgeschlossen, damit nicht behebbare Befunde keine dauerhaften Alarme erzeugen.</p>
+<p>Auch <code>cspWithoutUnsafeInline</code> schlägt mit OpenClouds Standard-CSP fehl. Diese Richtlinie ist jedoch konfigurierbar. Teste eine strengere CSP vor dem Einsatz, da die Weboberfläche sowie Office- und Anmeldeintegrationen Inline-Skripte oder -Styles benötigen können. Näheres erklärt der <a href="/documentation/csp">CSP-Leitfaden</a>.</p>
 <p>Aus Capabilities abgeleitete Prüfungen erscheinen nur, wenn die Instanz das jeweilige Feld tatsächlich liefert. Ältere Releases erhalten dadurch keine Befunde für unbekannte Einstellungen.</p>
 <h2 id="accepting-a-finding-you-are-not-going-to-fix">Befunde bewusst ausnehmen</h2>
-<p>Eine Einstellung kann in Ihrer Umgebung erforderlich sein, etwa Basic Auth für ein Migrationstool. Mit <code>--ignore-hardening</code> nehmen Sie einen solchen Befund anhand seiner Kennung aus der Alarmierung und Bewertung aus:</p>
+<p>Eine Einstellung kann in deiner Umgebung erforderlich sein, etwa Basic Auth für ein Migrationstool. Mit <code>--ignore-hardening</code> nimm einen solchen Befund anhand seiner Kennung aus der Alarmierung und Bewertung aus:</p>
 <pre><code class="language-bash">check-opencloud-security --host opencloud.example.com --check-hardening \
     --ignore-hardening cspWithoutUnsafeInline \
     --ignore-hardening basicAuthDisabled
@@ -119,7 +118,7 @@
 <p>Die Option ist wiederholbar, akzeptiert kommagetrennte Listen und unterstützt Shell-Platzhalter für Kennungen mit Pfad oder Port:</p>
 <pre><code class="language-bash">--ignore-hardening 'debugPort:*,exposed:/status.php'
 </code></pre>
-<p>Sie gilt für Härtungsmaßnahmen, Headernamen, <code>httpsEnforced</code> und die Kennungen zusätzlicher Prüfungen. So wird beispielsweise <code>basicAuthDisabled</code> an allen Stellen einheitlich ausgenommen.</p>
+<p>du gilt für Härtungsmaßnahmen, Headernamen, <code>httpsEnforced</code> und die Kennungen zusätzlicher Prüfungen. So wird beispielsweise <code>basicAuthDisabled</code> an allen Stellen einheitlich ausgenommen.</p>
 <p>Ein ausgenommener Befund:</p>
 <ul>
 <li>senkt die Bewertung nicht mehr,</li>
@@ -134,7 +133,7 @@
 <li><strong>Nur tatsächlich fehlgeschlagene Prüfungen werden ausgenommen.</strong> Eine bestandene Prüfung wird nicht nachträglich als ignoriert markiert.</li>
 <li><strong>Das Supportende lässt sich nicht ausnehmen.</strong> Eine Version ohne Sicherheitsupdates erhält auch mit <code>--ignore-hardening '*'</code> die End-of-Life-Bewertung.</li>
 </ul>
-<p>Halten Sie Ausnahmen möglichst in der Konfigurationsdatei fest und begründen Sie jede davon in einem Kommentar:</p>
+<p>Halte Ausnahmen möglichst in der Konfigurationsdatei fest und begründen jede davon in einem Kommentar:</p>
 <pre><code class="language-yaml">scanner:
   release_track: production
   ignore_hardenings:

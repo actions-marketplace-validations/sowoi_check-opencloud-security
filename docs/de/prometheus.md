@@ -1,10 +1,8 @@
-# OpenCloud security metrics for Prometheus and Grafana
-
 # Prometheus, Grafana und OpenTelemetry
 
 Das Plugin enthält einen Prometheus-Exporter. Mit `--prometheus-listen-port 9102` stellt es `/metrics` bereit. Ergebnisse werden für `--scrape-interval` Sekunden zwischengespeichert, standardmäßig 60. Nur bei `0` löst jeder Abruf einen neuen Scan aus.
 
-Der Exporter lauscht standardmäßig auf `127.0.0.1`. Für einen Container oder entfernte Scraper verwenden Sie `--prometheus-listen-addr 0.0.0.0` und beschränken den Zugriff über Firewall oder NetworkPolicy:
+Der Exporter lauscht standardmäßig auf `127.0.0.1`. Für einen Container oder entfernte Scraper verwende `--prometheus-listen-addr 0.0.0.0` und beschränken den Zugriff über Firewall oder NetworkPolicy:
 
 ```shell
 docker run --rm -p 9102:9102 check-opencloud-security \
@@ -30,7 +28,7 @@ cp contrib/prometheus/alerts.yml /etc/prometheus/rules/opencloud-security.yml
 promtool check rules /etc/prometheus/rules/opencloud-security.yml
 ```
 
-Das Dashboard bietet eine Auswahl nach `Instance` und kann damit mehrere Hosts darstellen. Passen Sie Scanintervall, Scrape-Intervall und die Dauer `for:` der Alarmregeln gemeinsam an. `for:` misst, wie lange eine Bedingung bei der Regelauswertung ununterbrochen erfüllt ist; es zählt keine unabhängigen Scans.
+Das Dashboard bietet eine Auswahl nach `Instance` und kann damit mehrere Hosts darstellen. Passt du Scanintervall, Scrape-Intervall und die Dauer `for:` der Alarmregeln gemeinsam an. `for:` misst, wie lange eine Bedingung bei der Regelauswertung ununterbrochen erfüllt ist; es zählt keine unabhängigen Scans.
 
 Die späteren Beispiele mit `jq` verwenden eigene, kürzere Metriknamen. Die beiden mitgelieferten Dateien passen zu den Namen des nativen Exporters, nicht zu diesen Beispielen.
 
@@ -48,7 +46,7 @@ Die späteren Beispiele mit `jq` verwenden eigene, kürzere Metriknamen. Die bei
 | `opencloud_security_scan_duration_seconds` | `host` | Scandauer |
 | `opencloud_security_scrape_success` | `host` | `0`, wenn der zugrunde liegende Scan fehlgeschlagen ist |
 
-Bei einem fehlgeschlagenen Scan erscheinen nur Dauer und Erfolgsstatus. Frühere Befunde werden nicht erneut als aktuell ausgegeben. Prüfen Sie deshalb zuerst `opencloud_security_scrape_success`.
+Bei einem fehlgeschlagenen Scan erscheinen nur Dauer und Erfolgsstatus. Frühere Befunde werden nicht erneut als aktuell ausgegeben. Prüfe deshalb zuerst `opencloud_security_scrape_success`.
 
 `opencloud_security_end_of_life` ist von der Zahl verbleibender Tage getrennt. Bei Rolling und Production kann das Ende noch undatiert sein, da es vom nächsten Release abhängt. Eine fehlende Tageszahl bedeutet nicht, dass der Support heute endet.
 
@@ -70,7 +68,7 @@ rating=5;@0:3;@0:1;0;5 vulnerabilities=0;;;0; time=1.234s;;;0;
 | `update_available` | `1` bei verfügbarer neuerer Version |
 | `support_days_left` | Verbleibende Supporttage; nach dem Enddatum negativ |
 
-Mit `support_days_left` können Sie rechtzeitig vor einem bekannten Supportende warnen.
+Mit `support_days_left` kannst du rechtzeitig vor einem bekannten Supportende warnen.
 
 ## Textfile Collector von node_exporter {#node_exporter-textfile-collector}
 
@@ -107,11 +105,11 @@ chmod 644 "$OUT"
 
 `opencloud_scan_success` macht einen fehlgeschlagenen Scan sichtbar. Ohne einen eigenen Erfolgswert könnten zuletzt gespeicherte Messwerte weiterhin wie ein aktuelles Ergebnis aussehen.
 
-`lifecycle.daysRemaining` ist `null`, wenn das Supportende noch nicht datiert ist. Im Beispiel wird daraus mit `// 0` eine Null. Wenn Ihre Alarme dies als „endet heute“ interpretieren, lassen Sie diese Metrik stattdessen mit `select(.lifecycle.daysRemaining != null)` weg.
+`lifecycle.daysRemaining` ist `null`, wenn das Supportende noch nicht datiert ist. Im Beispiel wird daraus mit `// 0` eine Null. Wenn deine Alarme dies als „endet heute“ interpretieren, lass diese Metrik stattdessen mit `select(.lifecycle.daysRemaining != null)` weg.
 
 ## Pushgateway {#pushgateway}
 
-Verwenden Sie einen eigenen Gruppierungsschlüssel pro Host, um Ergebnisse getrennt zu halten:
+Verwende einen eigenen Gruppierungsschlüssel pro Host, um Ergebnisse getrennt zu halten:
 
 ```shell
 check-opencloud-scanner scan --compact opencloud.example.com \
@@ -124,7 +122,7 @@ check-opencloud-scanner scan --compact opencloud.example.com \
       http://pushgateway.example.com:9091/metrics/job/opencloud_security/instance/opencloud.example.com
 ```
 
-Pushgateway bewahrt die letzte übertragene Metrik auf. Löschen Sie die Gruppe, wenn Sie eine Instanz außer Betrieb nehmen:
+Pushgateway bewahrt die letzte übertragene Metrik auf. Lösche die Gruppe, wenn du eine Instanz außer Betrieb nimmst:
 
 ```shell
 curl -X DELETE http://pushgateway.example.com:9091/metrics/job/opencloud_security/instance/opencloud.example.com
@@ -141,13 +139,13 @@ check-opencloud-security --host opencloud.example.com,other.example.com \
       -H 'Content-Type: application/json' --data-binary @-
 ```
 
-Metriknamen und das Attribut `host` entsprechen dem Exporter. Berücksichtigen Sie bei Abfragen die Label-Konventionen Ihres Backends. Collector-Adresse, Proxy und Zugangsdaten werden beim Versand konfiguriert.
+Metriknamen und das Attribut `host` entsprechen dem Exporter. Berücksichtige bei Abfragen die Label-Konventionen Ihres Backends. Collector-Adresse, Proxy und Zugangsdaten werden beim Versand konfiguriert.
 
 Auch ein fehlgeschlagener Scan liefert `opencloud_security_scrape_success` mit `0` und die Dauer, aber keine Befunde. So lässt sich ein nicht erreichbares Ziel von einem erfolgreichen Scan unterscheiden.
 
 ## Alarmregeln {#alerting-rules}
 
-Für den nativen Exporter verwenden Sie [`contrib/prometheus/alerts.yml`](../../contrib/prometheus/alerts.yml). Diese Datei wird mit den tatsächlich ausgegebenen Metriknamen gepflegt und getestet.
+Für den nativen Exporter verwende [`contrib/prometheus/alerts.yml`](../../contrib/prometheus/alerts.yml). Diese Datei wird mit den tatsächlich ausgegebenen Metriknamen gepflegt und getestet.
 
 Die folgenden Regeln verwenden dagegen die kürzeren Namen der `jq`-Beispiele:
 
@@ -185,15 +183,15 @@ groups:
           summary: "The OpenCloud security scan has not produced a result"
 ```
 
-Wählen Sie `for:` nach der gewünschten Verzögerung und der Verfügbarkeit der Messwerte. Ein gecachtes Ergebnis kann eine Bedingung über mehrere Auswertungen erfüllen, ohne dass inzwischen ein neuer Scan stattgefunden hat.
+Wähle `for:` nach der gewünschten Verzögerung und der Verfügbarkeit der Messwerte. Ein gecachtes Ergebnis kann eine Bedingung über mehrere Auswertungen erfüllen, ohne dass inzwischen ein neuer Scan stattgefunden hat.
 
 ## Grafana {#grafana}
 
-Importieren Sie [`contrib/grafana/dashboard.json`](../../contrib/grafana/dashboard.json) und wählen Sie die Prometheus-Datenquelle. Das Dashboard zeigt Scanstatus, Note und Supportstatus, den Bewertungsverlauf, offene Befunde, Sicherheitshinweise nach Schweregrad und die installierten Versionen.
+importiere [`contrib/grafana/dashboard.json`](../../contrib/grafana/dashboard.json) und wähle die Prometheus-Datenquelle. Das Dashboard zeigt Scanstatus, Note und Supportstatus, den Bewertungsverlauf, offene Befunde, Sicherheitshinweise nach Schweregrad und die installierten Versionen.
 
-Für ein eigenes Dashboard verwenden Sie eine Skala von `0` bis `5`, bei der höhere Werte besser sind. Schwellwerte bei `3` (gelb) und `1` (rot) entsprechen den Plugin-Standards. Ordnen Sie die Zahlen den Noten zu: `5 → A+`, `4 → A`, `3 → C`, `2 → D`, `1 → E`, `0 → F`.
+Für ein eigenes Dashboard verwende eine Skala von `0` bis `5`, bei der höhere Werte besser sind. Schwellwerte bei `3` (gelb) und `1` (rot) entsprechen den Plugin-Standards. ordne die Zahlen den Noten zu: `5 → A+`, `4 → A`, `3 → C`, `2 → D`, `1 → E`, `0 → F`.
 
-Zeigen Sie die Version neben der Bewertung an, damit ein möglicher Updatebedarf direkt erkennbar ist.
+Zeige die Version neben der Bewertung an, damit ein möglicher Updatebedarf direkt erkennbar ist.
 
 ---
 

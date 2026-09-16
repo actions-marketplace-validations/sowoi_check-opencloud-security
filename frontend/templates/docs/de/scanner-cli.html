@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.scanner-cli.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de') %}
+{% if locale not in ('en', 'de', 'fr') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -28,7 +28,6 @@
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="de">
-<h1 id="die-befehle-von-check-opencloud-scanner">Die Befehle von check-opencloud-scanner</h1>
 <p>Das Paket installiert zwei Programme:</p>
 <ul>
 <li><strong><code>check-opencloud-security</code></strong> führt Scans aus und liefert anhand der Schwellwerte Nagios-/Icinga-Statuscodes von <code>0</code> bis <code>3</code>. Seine Optionen stehen in der <a href="/documentation/cli-reference">CLI-Referenz</a>.</li>
@@ -151,7 +150,7 @@ Hardening: + Content-Security-Policy
 ...
 Rating: A+ (5) -&gt; D (2)
 </code></pre>
-<p>Der Befehl liest zwei Dateien und führt keinen Scan aus. <code>+</code> kennzeichnet neue, <code>-</code> behobene Befunde. Er zeigt außerdem Änderungen an Bewertung, Version und Supportzeitraum. Für einen automatisch gespeicherten Vergleich mit dem letzten Lauf verwenden Sie stattdessen eine <a href="/documentation/baseline">Baseline</a>.</p>
+<p>Der Befehl liest zwei Dateien und führt keinen Scan aus. <code>+</code> kennzeichnet neue, <code>-</code> behobene Befunde. Er zeigt außerdem Änderungen an Bewertung, Version und Supportzeitraum. Für einen automatisch gespeicherten Vergleich mit dem letzten Lauf verwende stattdessen eine <a href="/documentation/baseline">Baseline</a>.</p>
 <table>
 <thead>
 <tr>
@@ -270,7 +269,7 @@ check-opencloud-scanner explain                                         # the wh
 </tr>
 </tbody>
 </table>
-<p>Tragen Sie die Dateien anschließend in die Konfiguration ein und prüfen Sie ihre Lesbarkeit unter dem Benutzer des Checks. Eine unlesbare eigene Zeitplandatei deaktiviert die End-of-Life-Prüfung. Details stehen unter <a href="/documentation/reference-data">Referenzdaten aktualisieren</a>.</p>
+<p>Trage die Dateien anschließend in die Konfiguration ein und prüfe ihre Lesbarkeit unter dem Benutzer des Checks. Eine unlesbare eigene Zeitplandatei deaktiviert die End-of-Life-Prüfung. Details stehen unter <a href="/documentation/reference-data">Referenzdaten aktualisieren</a>.</p>
 <h2 id="serve-the-scan-service"><code>serve</code>: HTTP-Dienst betreiben</h2>
 <pre><code class="language-bash">check-opencloud-scanner serve
 check-opencloud-scanner serve --listen 0.0.0.0 --token &quot;$(cat /run/secrets/scanner_token)&quot;
@@ -323,7 +322,7 @@ check-opencloud-scanner serve --listen 0.0.0.0 --token &quot;$(cat /run/secrets/
 <pre><code class="language-bash">check-opencloud-scanner configure
 check-opencloud-scanner -c /etc/check-opencloud-security/.env.json configure
 </code></pre>
-<p>Der Assistent erklärt die Einstellungen und speichert sie als JSON mit Dateirechten nur für den Eigentümer. Er bietet <code>./.env.json</code>, <code>~/.config/check-opencloud-security/.env.json</code> und <code>/etc/check-opencloud-security/.env.json</code> an; über <code>-c</code> können Sie einen anderen Pfad wählen. Es ist derselbe Assistent wie bei <code>check-opencloud-security --configure</code>.</p>
+<p>Der Assistent erklärt die Einstellungen und speichert sie als JSON mit Dateirechten nur für den Eigentümer. Er bietet <code>./.env.json</code>, <code>~/.config/check-opencloud-security/.env.json</code> und <code>/etc/check-opencloud-security/.env.json</code> an; über <code>-c</code> kannst du einen anderen Pfad wählen. Es ist derselbe Assistent wie bei <code>check-opencloud-security --configure</code>.</p>
 <table>
 <thead>
 <tr>

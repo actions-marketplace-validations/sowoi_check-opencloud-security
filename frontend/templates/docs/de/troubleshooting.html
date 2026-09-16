@@ -11,45 +11,44 @@
   <p class="lede">{{ t('docs.troubleshooting.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de') %}
+{% if locale not in ('en', 'de', 'fr') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
 <article class="docs-article card section-gap" data-reveal lang="de">
-<h1 id="fehlersuche">Fehlersuche</h1>
 <p><strong><code>UNKNOWN: ... /status.php is unreachable</code></strong></p>
-<p>Der Monitoring-Host muss die Instanz direkt erreichen können, da das Plugin den Scan selbst ausführt. Prüfen Sie Adresse und Port. OpenClouds eigener Proxy lauscht auf <strong>9200</strong>; verwenden Sie dafür <code>--host opencloud.example.com:9200</code> oder <code>--port 9200</code>.</p>
+<p>Der Monitoring-Host muss die Instanz direkt erreichen können, da das Plugin den Scan selbst ausführt. Prüfe Adresse und Port. OpenClouds eigener Proxy lauscht auf <strong>9200</strong>; verwende dafür <code>--host opencloud.example.com:9200</code> oder <code>--port 9200</code>.</p>
 <p><strong><code>UNKNOWN: No OpenCloud instance found at ...</code></strong></p>
-<p><code>/status.php</code> liefert kein OpenCloud-Statusdokument. Prüfen Sie, ob an der Adresse OpenCloud läuft und der Reverse Proxy diesen Pfad weiterleitet. <code>--debug</code> zeigt die Antwort.</p>
-<p><strong><code>UNKNOWN: ... is not an OpenCloud instance: /status.php reports ownCloud</code></strong></p>
+<p><code>/status.php</code> liefert kein OpenCloud-Statusdokument. Prüfe, ob an der Adresse OpenCloud läuft und der Reverse Proxy diesen Pfad weiterleitet. <code>--debug</code> zeigt die Antwort.</p>
+<p><strong><code>UNKNOWN: ... Is not an OpenCloud instance: /status.php reports ownCloud</code></strong></p>
 <p>Der Endpunkt antwortet, meldet aber ein anderes Produkt. Da dessen Releases, Schwachstellen und Standardeinstellungen von OpenCloud abweichen, beendet der Scanner die Prüfung. Weitere Hintergründe stehen unter <a href="/documentation/what-is-opencloud#why-this-matters-for-a-security-scan">Was ist OpenCloud?</a>.</p>
 <p><strong>Zertifikatsfehler bei einer neuen Instanz</strong></p>
-<p><code>opencloud init</code> erzeugt ein selbstsigniertes Zertifikat. Mit <code>--insecure</code> können Sie die Prüfung fortsetzen: Die nicht vertrauenswürdige Kette bleibt sichtbar, beeinflusst die Note aber nicht. Alternativ stellen Sie einen Reverse Proxy mit einem vertrauenswürdigen Zertifikat davor.</p>
+<p><code>opencloud init</code> erzeugt ein selbstsigniertes Zertifikat. Mit <code>--insecure</code> kannst du die Prüfung fortsetzen: Die nicht vertrauenswürdige Kette bleibt sichtbar, beeinflusst die Note aber nicht. Alternativ stelle einen Reverse Proxy mit einem vertrauenswürdigen Zertifikat davor.</p>
 <p><strong>Die Versionsnummer wirkt falsch (<code>0.1.0</code>)</strong></p>
-<p>Dies ist die feste Kompatibilitätsangabe, nicht die tatsächliche Release-Version. Siehe <a href="/documentation/scanner-checks#reading-the-version-correctly">Die Version richtig lesen</a>. Wenn keine bessere Angabe verfügbar ist, meldet das Plugin <code>legacyVersion</code>. Aktualisieren Sie die Instanz oder ermöglichen Sie den Zugriff auf <code>/ocs/v1.php/cloud/capabilities</code>.</p>
+<p>Dies ist die feste Kompatibilitätsangabe, nicht die tatsächliche Release-Version. Siehe <a href="/documentation/scanner-checks#reading-the-version-correctly">Die Version richtig lesen</a>. Wenn keine bessere Angabe verfügbar ist, meldet das Plugin <code>legacyVersion</code>. Aktualisiere die Instanz oder ermögliche den Zugriff auf <code>/ocs/v1.php/cloud/capabilities</code>.</p>
 <p><strong>Alle Pfade werden als öffentlich zugänglich gemeldet</strong></p>
-<p>Prüfen Sie die Fallback-Regel des Reverse Proxys. Möglicherweise liefert er auch für nicht existierende Pfade <code>200</code>, einschließlich des Kontrollpfads des Scanners.</p>
+<p>Prüfe die Fallback-Regel des Reverse Proxys. Möglicherweise liefert er auch für nicht existierende Pfade <code>200</code>, einschließlich des Kontrollpfads des Scanners.</p>
 <p><strong>Sicherheitsheader fehlen, obwohl OpenCloud sie sendet</strong></p>
 <p>Ein vorgeschalteter Proxy kann Header entfernen oder die Anfrage selbst beantworten. <a href="/documentation/reverse-proxy">Reverse Proxys</a> enthält die benötigten Einstellungen für nginx, Apache, Caddy, Traefik und HAProxy.</p>
 <p><strong>Der Scan dauert lange</strong></p>
-<p>Die Prüfung eines von der Firewall blockierten Debug-Ports kann jeweils <code>debug_port_timeout</code> Sekunden dauern. Verwenden Sie <code>--no-debug-ports</code>, reduzieren Sie <code>COS_SCANNER_DEBUG_PORT_TIMEOUT</code> oder die Portliste, oder führen Sie Anfragen mit <code>--concurrency</code> parallel aus. Siehe <a href="/documentation/scanner-checks#speeding-the-scan-up">Scans beschleunigen</a>.</p>
+<p>Die Prüfung eines von der Firewall blockierten Debug-Ports kann jeweils <code>debug_port_timeout</code> Sekunden dauern. Verwende <code>--no-debug-ports</code>, reduziere <code>COS_SCANNER_DEBUG_PORT_TIMEOUT</code> oder die Portliste, oder führe Anfragen mit <code>--concurrency</code> parallel aus. Siehe <a href="/documentation/scanner-checks#speeding-the-scan-up">Scans beschleunigen</a>.</p>
 <p><strong><code>UNKNOWN</code> bei der Update-Prüfung oder GitHub-Ratenlimit</strong></p>
-<p>Ohne Token steht pro IP-Adresse nur ein gemeinsames Kontingent für API-Anfragen zur Verfügung. Hinterlegen Sie <code>--release-token</code> oder verwenden Sie <code>--update-source bundled</code> beziehungsweise <code>pinned</code>, um die Abfrage ohne Netzwerkzugriff durchzuführen.</p>
+<p>Ohne Token steht pro IP-Adresse nur ein gemeinsames Kontingent für API-Anfragen zur Verfügung. Hinterlege <code>--release-token</code> oder verwende <code>--update-source bundled</code> beziehungsweise <code>pinned</code>, um die Abfrage ohne Netzwerkzugriff durchzuführen.</p>
 <p><strong>Docker: <code>permission denied while trying to connect to the Docker socket</code></strong></p>
-<p>Der Benutzer von Icinga2, cron oder systemd braucht Zugriff auf den Docker-Daemon. Richten Sie diesen entsprechend Ihrer Sicherheitsvorgaben ein, etwa über die Gruppe <code>docker</code> oder einen gezielt erlaubten <code>sudo</code>-Aufruf.</p>
+<p>Der Benutzer von Icinga2, cron oder systemd braucht Zugriff auf den Docker-Daemon. Richte diesen entsprechend deiner Sicherheitsvorgaben ein, etwa über die Gruppe <code>docker</code> oder einen gezielt erlaubten <code>sudo</code>-Aufruf.</p>
 <p><strong>Keine Ausgabe von cron oder systemd</strong></p>
 <ul>
-<li>Verwenden Sie den vollständigen Programmpfad und setzen Sie <code>COS_HOST</code> ausdrücklich. Beide übernehmen die Umgebung einer Login-Shell nicht automatisch; siehe <a href="/documentation/scheduling">Zeitplanung</a>.</li>
-<li>Lesen Sie bei systemd das Log mit <code>journalctl -u check-opencloud-security.service</code>, bei cron die konfigurierte Logdatei.</li>
+<li>Verwende den vollständigen Programmpfad und setze <code>COS_HOST</code> ausdrücklich. Beide übernehmen die Umgebung einer Login-Shell nicht automatisch; siehe <a href="/documentation/scheduling">Zeitplanung</a>.</li>
+<li>Lies bei systemd das Log mit <code>journalctl -u check-opencloud-security.service</code>, bei cron die konfigurierte Logdatei.</li>
 </ul>
 <p><strong><code>--warn-on-new</code> meldet trotz eines Problems OK</strong></p>
-<p>Mit Baseline beeinflussen nur neue oder verschlechterte Befunde den Status. Der vollständige Zustand steht weiterhin in der Ausgabe; <code>Suppressed by --warn-on-new:</code> nennt den regulären Status. Entfernen Sie die Option, wenn jeder Durchlauf diesen Status zurückgeben soll, oder löschen Sie die Baseline-Datei für einen Neustart des Vergleichs. Das Supportende wird nie unterdrückt. Siehe <a href="/documentation/reference#reporting-only-what-changed">Nur Änderungen melden</a>.</p>
+<p>Mit Baseline beeinflussen nur neue oder verschlechterte Befunde den Status. Der vollständige Zustand steht weiterhin in der Ausgabe; <code>Suppressed by --warn-on-new:</code> nennt den regulären Status. Entferne die Option, wenn jeder Durchlauf diesen Status zurückgeben soll, oder lösche die Baseline-Datei für einen Neustart des Vergleichs. Das Supportende wird nie unterdrückt. Siehe <a href="/documentation/reference#reporting-only-what-changed">Nur Änderungen melden</a>.</p>
 <p><strong><code>--warn-on-new needs --baseline PATH</code></strong></p>
-<p>Geben Sie eine Baseline-Datei an, die der Monitoring-Benutzer schreiben darf, etwa <code>/var/lib/check_opencloud/baseline.json</code>.</p>
+<p>Gib eine Baseline-Datei an, die der Monitoring-Benutzer schreiben darf, etwa <code>/var/lib/check_opencloud/baseline.json</code>.</p>
 <p><strong><code>Baseline could not be written</code></strong></p>
-<p>Prüfen Sie, ob das Verzeichnis existiert oder angelegt werden darf und der Monitoring-Benutzer Schreibrechte besitzt. Die Bewertung der Instanz bleibt unverändert. Solange keine Baseline gespeichert wird, behandelt <code>--warn-on-new</code> jeden Durchlauf als ersten Scan.</p>
+<p>Prüfe, ob das Verzeichnis existiert oder angelegt werden darf und der Monitoring-Benutzer Schreibrechte besitzt. Die Bewertung der Instanz bleibt unverändert. Solange keine Baseline gespeichert wird, behandelt <code>--warn-on-new</code> jeden Durchlauf als ersten Scan.</p>
 <p><strong>Kein Hinweis von <code>--self-update-check</code></strong></p>
-<p>Das Ergebnis wird einen Tag zwischengespeichert. Für eine erneute Abfrage löschen Sie <code>${XDG_CACHE_HOME:-~/.cache}/check-opencloud-security/pypi-version.json</code>. Der Check bleibt auch bei nicht erreichbarem PyPI, einer Blockierung durch den Proxy oder einer installierten Version oberhalb des veröffentlichten Releases still. Er verändert den Exitcode nicht.</p>
+<p>Das Ergebnis wird einen Tag zwischengespeichert. Für eine erneute Abfrage lösche <code>${XDG_CACHE_HOME:-~/.cache}/check-opencloud-security/pypi-version.json</code>. Der Check bleibt auch bei nicht erreichbarem PyPI, einer Blockierung durch den Proxy oder einer installierten Version oberhalb des veröffentlichten Releases still. Er verändert den Exitcode nicht.</p>
 <p><strong>Exitcodes</strong></p>
 <table>
 <thead>
@@ -78,7 +77,7 @@
 </tbody>
 </table>
 <p><strong>Weitere Hilfe</strong></p>
-<p>Erstellen Sie ein Issue mit der <code>--debug</code>-Ausgabe. Bei einem unzutreffenden Befund verwenden Sie die Vorlage <a href="https://github.com/sowoi/check-opencloud-security/issues/new?template=wrong_finding.yml">Wrong finding</a>. Tokens werden in der Diagnoseausgabe maskiert; prüfen Sie die Ausgabe dennoch vor dem Veröffentlichen und entfernen Sie produktive Hostnamen und Zugangsdaten. Siehe <a href="https://github.com/sowoi/check-opencloud-security/blob/main/CODE_OF_CONDUCT.md">Verhaltenskodex</a>.</p>
+<p>erstellst du ein Issue mit der <code>--debug</code>-Ausgabe. Bei einem unzutreffenden Befund verwende die Vorlage <a href="https://github.com/sowoi/check-opencloud-security/issues/new?template=wrong_finding.yml">Wrong finding</a>. Tokens werden in der Diagnoseausgabe maskiert; prüfe die Ausgabe dennoch vor dem Veröffentlichen und entferne produktive Hostnamen und Zugangsdaten. Siehe <a href="https://github.com/sowoi/check-opencloud-security/blob/main/CODE_OF_CONDUCT.md">Verhaltenskodex</a>.</p>
 <hr>
 <p><a href="/documentation">Zur Dokumentationsübersicht</a> | <a href="/documentation/reference">Zum Haupt-README</a></p>
 </article>

@@ -11,16 +11,15 @@
   <p class="lede">{{ t('docs.configuration.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de') %}
+{% if locale not in ('en', 'de', 'fr') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
 <article class="docs-article card section-gap" data-reveal lang="de">
-<h1 id="zugangsdaten-in-der-konfiguration">Zugangsdaten in der Konfiguration</h1>
-<p>GitHub-Token, Webhook-URL und Dienst-Token müssen nicht im Klartext in der Konfiguration oder Prozessumgebung stehen. Stattdessen können Sie auf eine Datei, eine Umgebungsvariable oder eine andere Quelle verweisen. Das Plugin liest den Wert erst, wenn es ihn benötigt.</p>
+<p>GitHub-Token, Webhook-URL und Dienst-Token müssen nicht im Klartext in der Konfiguration oder Prozessumgebung stehen. Stattdessen kannst du auf eine Datei, eine Umgebungsvariable oder eine andere Quelle verweisen. Das Plugin liest den Wert erst, wenn es ihn benötigt.</p>
 <p>Wo das Plugin seine Konfigurationsdatei sucht und wie die Schlüssel den Umgebungsvariablen entsprechen, erklärt <a href="/documentation/reference#configuration-file-and-secrets">Konfigurationsdatei und Zugangsdaten</a>. Ein vollständig kommentiertes Beispiel liegt unter <code>config/check-opencloud-security.example.yml</code>.</p>
 <h2 id="reference-forms">Unterstützte Verweise</h2>
-<p>Anstelle eines Werts können Sie eines dieser vier Präfixe verwenden:</p>
+<p>Anstelle eines Werts kannst du eines dieser vier Präfixe verwenden:</p>
 <table>
 <thead>
 <tr>
@@ -47,9 +46,9 @@
 </tr>
 </tbody>
 </table>
-<p>Alternativ können Sie <code>_file</code> an einen Schlüssel oder eine Variable anhängen: <code>COS_RELEASES_TOKEN_FILE=/run/secrets/token</code> oder <code>token_file: /run/secrets/token</code>. Abschließende Zeilenumbrüche werden entfernt; eine mit <code>echo secret &gt; file</code> erstellte Datei funktioniert daher ebenfalls.</p>
+<p>Alternativ kannst du <code>_file</code> an einen Schlüssel oder eine Variable anhängen: <code>COS_RELEASES_TOKEN_FILE=/run/secrets/token</code> oder <code>token_file: /run/secrets/token</code>. Abschließende Zeilenumbrüche werden entfernt; eine mit <code>echo secret &gt; file</code> erstellte Datei funktioniert daher ebenfalls.</p>
 <h2 id="outside-a-container">Außerhalb eines Containers</h2>
-<p><code>secret://name</code> sucht im Verzeichnis <code>secrets.dir</code> (<code>COS_SECRETS_DIR</code>). Der Standard <code>/run/secrets</code> entspricht dem üblichen Mountpfad von Docker und Kubernetes. Für eine native Installation geben Sie Ihr eigenes Verzeichnis an:</p>
+<p><code>secret://name</code> sucht im Verzeichnis <code>secrets.dir</code> (<code>COS_SECRETS_DIR</code>). Der Standard <code>/run/secrets</code> entspricht dem üblichen Mountpfad von Docker und Kubernetes. Für eine native Installation gib Ihr eigenes Verzeichnis an:</p>
 <pre><code class="language-shell">mkdir -p /etc/check-opencloud-security/secrets
 printf '%s' '&lt;github-token&gt;' &gt; /etc/check-opencloud-security/secrets/releases_token
 chmod 600 /etc/check-opencloud-security/secrets/*
@@ -58,7 +57,7 @@ export COS_SECRETS_DIR=/etc/check-opencloud-security/secrets
 check-opencloud-security --host opencloud.example.com \
   --release-token 'secret://releases_token'
 </code></pre>
-<p>Vorlagen für die Secret-Dateien finden Sie unter <a href="https://github.com/sowoi/check-opencloud-security/blob/main/secrets/README.md"><code>secrets/</code></a>. Kopieren Sie diese und ersetzen Sie die Platzhalter durch Ihre Werte.</p>
+<p>Vorlagen für die Secret-Dateien findest du unter <a href="https://github.com/sowoi/check-opencloud-security/blob/main/secrets/README.md"><code>secrets/</code></a>. Kopiere diese und ersetze die Platzhalter durch deine Werte.</p>
 </article>
 
 {% include "_page-nav.html" %}

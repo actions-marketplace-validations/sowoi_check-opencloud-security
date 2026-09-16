@@ -1,5 +1,3 @@
-# Content-Security-Policy checks explained
-
 # Content-Security-Policy prüfen
 
 Eine Content-Security-Policy (CSP) legt fest, welche Quellen der Browser für Skripte, Styles, Frames und andere Inhalte verwenden darf. Eine passende Richtlinie kann die Auswirkungen eingeschleuster Inhalte und Skripte begrenzen. Der Scanner prüft sowohl das Vorhandensein des Headers als auch bestimmte Freigaben für Skriptausführung.
@@ -10,7 +8,7 @@ Eine Content-Security-Policy (CSP) legt fest, welche Quellen der Browser für Sk
 
 > Die Antwort enthält keine CSP, die die Quellen für Skripte, Styles und Frames einschränkt.
 
-OpenCloud liefert standardmäßig eine CSP. Fehlt sie, prüfen Sie zuerst, ob ein vorgeschalteter Reverse Proxy den Header entfernt oder selbst antwortet. Beispiele für nginx, Apache, Caddy, Traefik und HAProxy stehen unter [Reverse Proxys](../reverse-proxy.md).
+OpenCloud liefert standardmäßig eine CSP. Fehlt sie, prüfe zuerst, ob ein vorgeschalteter Reverse Proxy den Header entfernt oder selbst antwortet. Beispiele für nginx, Apache, Caddy, Traefik und HAProxy stehen unter [Reverse Proxys](../reverse-proxy.md).
 
 ## 2. Skriptausführung einschränken: `cspWithoutUnsafeInline` {#2-is-the-policy-actually-restrictive-cspwithoutunsafeinline}
 
@@ -25,9 +23,9 @@ Die Prüfung akzeptiert `unsafe-inline`, wenn die Richtlinie zugleich eine Nonce
 
 ## Die Richtlinie anpassen {#fixing-it}
 
-Verweisen Sie mit `PROXY_CSP_CONFIG_FILE_LOCATION` auf eine eigene `csp.yaml` oder ersetzen Sie die Standardrichtlinie über `PROXY_CSP_CONFIG_FILE_OVERRIDE_LOCATION`. Entfernen Sie nicht benötigte Freigaben für `unsafe-inline` und `unsafe-eval`. Eine Nonce- oder Hash-basierte Richtlinie, gegebenenfalls mit `strict-dynamic`, setzt passende Änderungen an den ausgelieferten Skripten voraus.
+Verweise mit `PROXY_CSP_CONFIG_FILE_LOCATION` auf eine eigene `csp.yaml` oder ersetze die Standardrichtlinie über `PROXY_CSP_CONFIG_FILE_OVERRIDE_LOCATION`. Entferne nicht benötigte Freigaben für `unsafe-inline` und `unsafe-eval`. Eine Nonce- oder Hash-basierte Richtlinie, gegebenenfalls mit `strict-dynamic`, setzt passende Änderungen an den ausgelieferten Skripten voraus.
 
-Testen Sie die Weboberfläche sowie Office- und Anmeldeintegrationen vor der Übernahme. Eine strengere Richtlinie kann benötigte Skripte oder Styles blockieren.
+Teste die Weboberfläche sowie Office- und Anmeldeintegrationen vor der Übernahme. Eine strengere Richtlinie kann benötigte Skripte oder Styles blockieren.
 
 Referenz: [Umgebungsvariablen des OpenCloud-Proxy-Dienstes](https://docs.opencloud.eu/docs/dev/server/services/proxy/environment-variables).
 

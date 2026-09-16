@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.examples.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de') %}
+{% if locale not in ('en', 'de', 'fr') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -28,9 +28,8 @@
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="de">
-<h1 id="anwendungsbeispiele">Anwendungsbeispiele</h1>
-<p>Die folgenden Aufrufe decken typische Einsatzfälle ab. Ersetzen Sie <code>opencloud.example.com</code> durch Ihre Instanz und prüfen Sie nur Systeme, für die Sie eine Erlaubnis haben.</p>
-<p>Ausführliche Integrationsbeispiele finden Sie unter <a href="/documentation/kubernetes">Kubernetes</a>, <a href="/documentation/ci">CI-Pipelines</a>, <a href="/documentation/prometheus">Prometheus und Grafana</a>, <a href="/documentation/webhooks">Webhooks</a> und <a href="/documentation/many-instances">Mehrere Instanzen</a>.</p>
+<p>Die folgenden Aufrufe decken typische Einsatzfälle ab. Ersetze <code>opencloud.example.com</code> durch deine Instanz und prüfe nur Systeme, für die du eine Erlaubnis haben.</p>
+<p>Ausführliche Integrationsbeispiele findest du unter <a href="/documentation/kubernetes">Kubernetes</a>, <a href="/documentation/ci">CI-Pipelines</a>, <a href="/documentation/prometheus">Prometheus und Grafana</a>, <a href="/documentation/webhooks">Webhooks</a> und <a href="/documentation/many-instances">Mehrere Instanzen</a>.</p>
 <h2 id="the-basics">Grundlagen</h2>
 <pre><code class="language-bash"># The smallest useful check
 check-opencloud-security --host opencloud.example.com
@@ -94,7 +93,7 @@ check-opencloud-security --host opencloud.example.com --check-hardening \
     --ignore-hardening basicAuthDisabled --debug
 </code></pre>
 <h2 id="both-together-in-a-configuration-file">Kanal und Ausnahmen in der Konfigurationsdatei</h2>
-<p>Für dauerhafte Einstellungen eignet sich eine Konfigurationsdatei. Begründen Sie Ausnahmen in Kommentaren und halten Sie fest, wann sie erneut geprüft werden sollen:</p>
+<p>Für dauerhafte Einstellungen eignet sich eine Konfigurationsdatei. Begründe Ausnahmen in Kommentaren und halte fest, wann sie erneut geprüft werden sollen:</p>
 <pre><code class="language-yaml"># /etc/check-opencloud-security/config.yml
 host: opencloud.example.com
 check_hardening: true

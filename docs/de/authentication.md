@@ -1,5 +1,3 @@
-# Authentication checks explained
-
 # Authentifizierung prüfen
 
 Der Scanner prüft den Schutz von Endpunkten, HTTP Basic Auth, bekannte Demokonten und die öffentlich erkennbaren Anmeldeeinstellungen. Dazu liest er die Capabilities und das OpenID-Connect-Discovery-Dokument. Er errät keine Zugangsdaten. Die einzige Prüfung mit Passwörtern verwendet die unten beschriebenen veröffentlichten Demozugänge. Weitere Grenzen stehen unter [Prüfumfang](../scanner-checks.md#what-the-scan-deliberately-does-not-answer).
@@ -16,7 +14,7 @@ Diese Pfade werden ohne Zugangsdaten abgefragt:
 
 `401`, `403`, `405`, `501`, eine Weiterleitung zur Anmeldung und `404` gelten für diese Prüfung als geschützter Zugriff. `405` und `501` können entstehen, wenn ein Proxy `GET` auf einer WebDAV-Sammlung nicht unterstützt; `404` deckt absichtlich verborgene Pfade ab. Andere Antworten, insbesondere `200` mit geschützten Inhalten, führen zum Befund. Ein nicht erreichbarer Endpunkt wird hier als bestanden behandelt, da ein Netzwerkfehler keinen offenen Zugriff belegt.
 
-**Bei einem Befund:** Rufen Sie den genannten Pfad selbst auf und prüfen Sie die Antwort. Auch eine eigene Fehlerseite eines Proxys oder Caches kann die Ursache sein. Sind tatsächlich geschützte Daten ohne Sitzung zugänglich, schließen Sie den Zugriff und behandeln Sie die betreffenden Inhalte als offengelegt.
+**Bei einem Befund:** rufst du den genannten Pfad selbst auf und prüfe die Antwort. Auch eine eigene Fehlerseite eines Proxys oder Caches kann die Ursache sein. Sind tatsächlich geschützte Daten ohne Sitzung zugänglich, schließe den Zugriff und behandle die betreffenden Inhalte als offengelegt.
 
 ## 2. HTTP Basic Auth: `basicAuthDisabled` {#2-does-the-proxy-still-offer-http-basic-authentication-basicauthdisabled}
 
@@ -24,7 +22,7 @@ Ein `Basic`-Challenge im Header `WWW-Authenticate` zeigt, dass der Endpunkt Benu
 
 CalDAV-, CardDAV- und viele WebDAV-Clients benötigen diesen Mechanismus. Der Scanner bewertet ihn deshalb mit `medium`, bei erkanntem externem Anbieter für die interaktive Anmeldung mit `low`. Siehe [Anmeldeanbieter erkennen](../scanner-checks.md#who-signs-users-in).
 
-**Behebung:** Setzen Sie `PROXY_ENABLE_BASIC_AUTH=false`, wenn kein Client Basic Auth benötigt. Andernfalls verwenden Sie widerrufbare App-Tokens statt Kontopasswörtern.
+**Behebung:** Setze `PROXY_ENABLE_BASIC_AUTH=false`, wenn kein Client Basic Auth benötigt. Andernfalls verwende widerrufbare App-Tokens statt Kontopasswörtern.
 
 ## 3. Veröffentlichte Demokonten: `demoUsersDisabled` {#3-do-the-documented-demo-accounts-still-sign-in-demousersdisabled}
 
@@ -32,7 +30,7 @@ CalDAV-, CardDAV- und viele WebDAV-Clients benötigen diesen Mechanismus. Der Sc
 
 Funktionierende Demozugänge sind ein `critical`-Befund und begrenzen die Note auf `D`.
 
-**Behebung:** Setzen Sie `IDM_CREATE_DEMO_USERS=false` und löschen Sie bereits angelegte Demokonten. Die Einstellung allein entfernt sie nicht. Untersuchen Sie einen öffentlich erreichbaren funktionierenden Administrator-Demozugang als möglichen unbefugten Zugriff, da das Passwort veröffentlicht ist.
+**Behebung:** Setze `IDM_CREATE_DEMO_USERS=false` und lösche bereits angelegte Demokonten. Die Einstellung allein entfernt sie nicht. Untersuche einen öffentlich erreichbaren funktionierenden Administrator-Demozugang als möglichen unbefugten Zugriff, da das Passwort veröffentlicht ist.
 
 ## 4. Kontensuche: `userEnumerationRestricted` {#4-is-account-search-restricted-to-shared-groups-userenumerationrestricted}
 
@@ -44,17 +42,17 @@ Die Capabilities geben an, ob Benutzer nur innerhalb gemeinsamer Gruppen gesucht
 
 Der Scanner vergleicht `password_policy.min_characters` mit `8`. Dies betrifft **Passwörter öffentlicher Freigabelinks**, nicht Kontopasswörter. Ob Links überhaupt ein Passwort benötigen, wird unter [Freigaben](../sharing.md) geprüft.
 
-**Behebung:** Setzen Sie `OC_PASSWORD_POLICY_DISABLED=false` und `OC_PASSWORD_POLICY_MIN_CHARACTERS` auf mindestens `8`. Die [Linkpasswort-Richtlinie][link-password] beschreibt weitere Anforderungen und Sperrlisten.
+**Behebung:** Setze `OC_PASSWORD_POLICY_DISABLED=false` und `OC_PASSWORD_POLICY_MIN_CHARACTERS` auf mindestens `8`. Die [Linkpasswort-Richtlinie][link-password] beschreibt weitere Anforderungen und Sperrlisten.
 
 ## 5a. Zeichenanforderungen: `passwordPolicyComplexity` {#5a-does-it-still-ask-for-more-than-length-passwordpolicycomplexity}
 
 OpenCloud verlangt standardmäßig mindestens einen Kleinbuchstaben, einen Großbuchstaben, eine Ziffer und ein Sonderzeichen. Die Prüfung liest die vier Mindestwerte und besteht, wenn jeder mindestens `1` ist.
 
-Sie ergänzt die Mindestlängenprüfung, ohne deren bisherige Bedeutung zu verändern. Ein langes Passwort könnte die Längenprüfung bestehen, obwohl die konfigurierten Zeichenanforderungen abgesenkt wurden.
+Die Prüfung ergänzt die Mindestlängenprüfung, ohne deren bisherige Bedeutung zu verändern. Ein langes Passwort könnte die Längenprüfung bestehen, obwohl die konfigurierten Zeichenanforderungen abgesenkt wurden.
 
 Die Prüfung erscheint nur, wenn alle vier Werte veröffentlicht werden. Eine deaktivierte Richtlinie wird durch `passwordPolicyEnforced` erfasst; fehlende Einzelwerte werden nicht als Fehler ausgelegt.
 
-**Behebung:** Setzen Sie `OC_PASSWORD_POLICY_MIN_LOWERCASE_CHARACTERS`, `OC_PASSWORD_POLICY_MIN_UPPERCASE_CHARACTERS`, `OC_PASSWORD_POLICY_MIN_DIGITS` und `OC_PASSWORD_POLICY_MIN_SPECIAL_CHARACTERS` auf mindestens `1`.
+**Behebung:** Setze `OC_PASSWORD_POLICY_MIN_LOWERCASE_CHARACTERS`, `OC_PASSWORD_POLICY_MIN_UPPERCASE_CHARACTERS`, `OC_PASSWORD_POLICY_MIN_DIGITS` und `OC_PASSWORD_POLICY_MIN_SPECIAL_CHARACTERS` auf mindestens `1`.
 
 ## 6. Identitätsanbieter erkennen: `identityProviderDetected` {#6-can-the-identity-provider-be-found-at-all-identityproviderdetected}
 
@@ -68,7 +66,7 @@ Es werden weder Formulare ausgefüllt noch Zugangsdaten gesendet. Häufig verhin
 
 Liegt der Issuer auf einem anderen Host, wird der Anbieter als extern gekennzeichnet. Erkannte Produkte wie Keycloak, Authentik oder Authelia werden mit ihren Sicherheitshinweisen verknüpft. Weder ein externer noch der eingebaute Anbieter ist für sich genommen ein Befund.
 
-**Behebung:** Prüfen Sie die Weiterleitung von `/.well-known/` im [Reverse Proxy](../reverse-proxy.md) und die Konfiguration des tatsächlich verwendeten Anbieters.
+**Behebung:** Prüfe die Weiterleitung von `/.well-known/` im [Reverse Proxy](../reverse-proxy.md) und die Konfiguration des tatsächlich verwendeten Anbieters.
 
 ## 7. Einstellungen im Discovery-Dokument {#7-what-the-discovery-document-says-about-how-sign-in-is-protected}
 
@@ -97,7 +95,7 @@ Folgende Felder werden nicht bewertet. Die Einordnung beruht auf `InitializeMeta
 
 | Feld | Grund |
 |:--|:--|
-| `token_endpoint_auth_methods_supported` | `client_secret_basic` ist nicht allein problematisch; `none` wird von öffentlichen Clients benötigt. lico bietet beides an. |
+| `token_endpoint_auth_methods_supported` | `client_secret_basic` ist nicht allein problematisch; `none` wird von öffentlichen Clients benötigt. Lico bietet beides an. |
 | `request_object_signing_alg_values_supported` | Betrifft Request-Objekte, nicht ID-Tokens. OpenCloud-Clients verwenden diese Objekte nicht. |
 | `scopes_supported`, `claims_supported` | Beschreiben mögliche Anfragen, nicht die tatsächlich erteilten Berechtigungen eines Clients. |
 | `subject_types_supported` | lico liefert `public`. `pairwise` ist eine Datenschutzfunktion für andere Einsatzmodelle und keine allgemeine Voraussetzung. |

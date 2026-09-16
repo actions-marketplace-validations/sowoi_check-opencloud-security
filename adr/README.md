@@ -68,6 +68,7 @@ project. Read the accepted records that affect an area before changing it.
 | [0059](0059-a-comparison-refuses-two-different-instances.md) | A comparison refuses two different instances | Accepted |
 | [0060](0060-a-new-dependency-is-justified-tested-and-reviewed-first.md) | A new dependency is justified, tested and reviewed first | Accepted |
 | [0061](0061-the-frontend-is-tested-in-real-browsers-that-cannot-leave-loopback.md) | The frontend is tested in real browsers that cannot leave loopback | Proposed |
+| [0062](0062-public-guides-have-reviewed-french-sources.md) | Public guides have French source pages | Accepted |
 
 ## Writing a new record
 

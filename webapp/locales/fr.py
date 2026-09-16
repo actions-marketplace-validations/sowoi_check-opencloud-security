@@ -1101,7 +1101,7 @@ MESSAGES: dict[str, str] = {
     ),
     # --------------------------------------------------- generated guide pages
     "docs.guide.kicker": "Documentation en ligne de commande",
-    "docs.guide.english_notice": "Ce guide est disponible en anglais et en allemand. La version anglaise est affichée pour la langue sélectionnée.",
+    "docs.guide.english_notice": "Ce guide est disponible en anglais, allemand et français. La version anglaise est affichée pour la langue sélectionnée.",
     "docs.guide.toc.heading": "Sur cette page",
     "docs.guide.toc.aria": "Sur cette page",
     # ---------------------------------------------------------------- compare

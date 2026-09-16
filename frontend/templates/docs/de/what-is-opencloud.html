@@ -11,12 +11,11 @@
   <p class="lede">{{ t('docs.what-is-opencloud.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de') %}
+{% if locale not in ('en', 'de', 'fr') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
 <article class="docs-article card section-gap" data-reveal lang="de">
-<h1 id="was-ist-opencloud">Was ist OpenCloud?</h1>
 <p><a href="https://opencloud.eu/">OpenCloud</a> ist eine quelloffene Plattform zum Speichern, Synchronisieren und Teilen von Dateien. Dieser Scanner ist auf ihre Versionen, Einstellungen und Bereitstellungsweise zugeschnitten. Ein kompatibler Statusendpunkt allein genügt nicht, um andere Produkte damit zu bewerten.</p>
 <h2 id="where-opencloud-comes-from">Herkunft</h2>
 <p>OpenCloud entstand als Fork von ownCloud Infinite Scale (oCIS), einer in Go geschriebenen Neuentwicklung des ownCloud-Servers. OpenCloud GmbH wurde mit Unterstützung der <a href="https://www.heinlein-support.de/">Heinlein-Gruppe</a> gegründet. Die <a href="https://opencloud.eu/en/press/heinlein-group-strengthens-open-source-ecosystem-germany-founding-opencloud-gmbh">Mitteilung zur Gründung</a> beschreibt den Hintergrund.</p>
@@ -61,7 +60,7 @@
 <p>Für Backups müssen trotzdem die verwendeten Speicher, Metadaten, Konfigurationen und gegebenenfalls externe Dienste berücksichtigt werden. Eine von außen erreichbare Dateiplattform zeigt dem Scanner nur einen Teil dieses Betriebszustands.</p>
 <h2 id="why-this-matters-for-a-security-scan">Bedeutung für den Sicherheitsscan</h2>
 <p>Verwandte Produkte können denselben <code>/status.php</code>-Pfad beantworten, besitzen aber eigene Releases, Sicherheitshinweise und Standardkonfigurationen. Eine Bewertung mit den falschen Referenzdaten wäre irreführend.</p>
-<p>Der Scanner prüft deshalb <code>product</code> und <code>productname</code> und bewertet nur eine als OpenCloud erkannte Instanz. Bei einem anderen Produkt müssen Sie das passende Prüfwerkzeug verwenden; siehe <a href="/documentation/troubleshooting">Fehlersuche</a>.</p>
+<p>Der Scanner prüft deshalb <code>product</code> und <code>productname</code> und bewertet nur eine als OpenCloud erkannte Instanz. Bei einem anderen Produkt musst du das passende Prüfwerkzeug verwenden; siehe <a href="/documentation/troubleshooting">Fehlersuche</a>.</p>
 <p>Dieses Projekt ist unabhängig von OpenCloud GmbH. „OpenCloud“ und zugehörige Marken gehören ihren jeweiligen Inhabern und werden hier nur zur Bezeichnung der geprüften Software verwendet. Der vollständige Hinweis steht in der <a href="/documentation">Dokumentationsübersicht</a>.</p>
 </article>
 

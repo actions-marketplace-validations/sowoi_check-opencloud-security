@@ -1,10 +1,8 @@
-# Deploy the OpenCloud Security Scanner with Ansible
-
 # Bereitstellung mit Ansible
 
 Die Playbooks unter [`ansible/`](../../ansible/README.md) installieren und konfigurieren das Plugin auf einem oder mehreren Icinga2-Hosts. Sie unterstützen die native Installation und Docker und legen die in [Icinga Director](../icinga-director.md) sowie [Icinga2 / Nagios](../installation.md#icinga2--nagios) beschriebenen `CheckCommand`- und `Service`-Objekte an.
 
-Dieser Leitfaden erklärt die ersten Schritte. Die vollständige, mit den Rollen gepflegte Referenz finden Sie im [Ansible-README](../../ansible/README.md).
+Dieser Leitfaden erklärt die ersten Schritte. Die vollständige, mit den Rollen gepflegte Referenz findest du im [Ansible-README](../../ansible/README.md).
 
 ## Die passende Rolle wählen {#which-role-to-use}
 
@@ -13,7 +11,7 @@ Dieser Leitfaden erklärt die ersten Schritte. Die vollständige, mit den Rollen
 | `opencloud_check_native` | Eigenes virtualenv mit Symlink im Nagios-Plugin-Verzeichnis | Monitoring-Hosts mit Python |
 | `opencloud_check_docker` | Auf dem Zielhost gebautes Image, aufgerufen mit `docker run` | Hosts, auf denen keine Python-Pakete installiert werden sollen |
 
-Beide Rollen erzeugen dieselben Icinga2-Objekte. Beim Wechsel zwischen ihnen müssen Sie die Service-Definition nicht neu schreiben.
+Beide Rollen erzeugen dieselben Icinga2-Objekte. Beim Wechsel zwischen ihnen musst du die Service-Definition nicht neu schreiben.
 
 ## Erste Schritte {#quick-start}
 
@@ -48,15 +46,15 @@ opencloud_check_update_warning=true
 opencloud_check_interval=24h
 ```
 
-Setzen Sie `opencloud_check_host` ausdrücklich. Der Standard `inventory_hostname` passt nur, wenn auf dem angesprochenen Host tatsächlich die zu prüfende OpenCloud-Instanz läuft.
+Setze `opencloud_check_host` ausdrücklich. Der Standard `inventory_hostname` passt nur, wenn auf dem angesprochenen Host tatsächlich die zu prüfende OpenCloud-Instanz läuft.
 
-Verwenden Sie für `opencloud_check_interval` zunächst `24h` oder mehr. Jeder Durchlauf führt einen vollständigen Scan gegen die Instanz aus. Für die meisten Versions- und Konfigurationsprüfungen sind Abfragen im Minutentakt nicht nötig.
+Verwende für `opencloud_check_interval` zunächst `24h` oder mehr. Jeder Durchlauf führt einen vollständigen Scan gegen die Instanz aus. Für die meisten Versions- und Konfigurationsprüfungen sind Abfragen im Minutentakt nicht nötig.
 
 Die [Variablenreferenz](../../ansible/README.md#variable-reference) enthält auch die rollenspezifischen Einstellungen.
 
 ## Änderungen an einer Rolle prüfen {#before-you-commit-a-change-to-the-role}
 
-Führen Sie `ansible-lint` aus dem Verzeichnis `ansible/` aus. Vom Repository-Stamm aus wird die vorgesehene Konfiguration nicht korrekt angewendet und es können unzutreffende Meldungen entstehen.
+Führe `ansible-lint` aus dem Verzeichnis `ansible/` aus. Vom Repository-Stamm aus wird die vorgesehene Konfiguration nicht korrekt angewendet und es können unzutreffende Meldungen entstehen.
 
 ```shell
 cd ansible

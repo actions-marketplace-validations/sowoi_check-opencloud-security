@@ -11,14 +11,13 @@
   <p class="lede">{{ t('docs.kubernetes.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de') %}
+{% if locale not in ('en', 'de', 'fr') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
 <article class="docs-article card section-gap" data-reveal lang="de">
-<h1 id="kubernetes">Kubernetes</h1>
-<p>Auf Kubernetes können Sie den Scanner als zeitgesteuerten <code>CronJob</code> oder als dauerhaftes <code>Deployment</code> des <a href="/documentation/reference#running-the-scanner-as-a-service">Scan-Dienstes</a> betreiben. Der Dienst eignet sich für mehrere Anwendungen, die ein Ergebnis gemeinsam nutzen; für regelmäßige Prüfungen genügt meist der CronJob.</p>
-<p>Bauen Sie das Image wie unter <a href="/documentation/installation#docker">Docker</a> beschrieben und übertragen Sie es in Ihre Registry. Ersetzen Sie in den Beispielen <code>registry.example.com/check-opencloud-security:1.1.0</code>. Verwenden Sie einen festen Tag, da Release-Zeitplan und bekannte Versionen Teil des Images sind.</p>
+<p>Auf Kubernetes kannst du den Scanner als zeitgesteuerten <code>CronJob</code> oder als dauerhaftes <code>Deployment</code> des <a href="/documentation/reference#running-the-scanner-as-a-service">Scan-Dienstes</a> betreiben. Der Dienst eignet sich für mehrere Anwendungen, die ein Ergebnis gemeinsam nutzen; für regelmäßige Prüfungen genügt meist der CronJob.</p>
+<p>Baue das Image wie unter <a href="/documentation/installation#docker">Docker</a> beschrieben und übertrage es in deine Registry. Ersetze in den Beispielen <code>registry.example.com/check-opencloud-security:1.1.0</code>. Verwende einen festen Tag, da Release-Zeitplan und bekannte Versionen Teil des Images sind.</p>
 <h2 id="the-helm-chart">Helm-Chart</h2>
 <p><a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/helm/check-opencloud-security"><code>contrib/helm/check-opencloud-security</code></a> enthält beide Varianten. Das Chart wird aus einem Checkout installiert und ist nicht in einer Registry veröffentlicht:</p>
 <pre><code class="language-shell">helm install opencloud-security contrib/helm/check-opencloud-security \
@@ -26,7 +25,7 @@
   --set image.tag=&lt;the release you pinned&gt; \
   --set 'cronJob.hosts={opencloud.example.com,other.example.com}'
 </code></pre>
-<p>Dieser Aufruf richtet den zeitgesteuerten Scan ein. Mit <code>scanService.enabled=true</code> ergänzen Sie den Dienst. Die jeweils benötigten Werte müssen ausdrücklich gesetzt werden:</p>
+<p>Dieser Aufruf richtet den zeitgesteuerten Scan ein. Mit <code>scanService.enabled=true</code> ergänze den Dienst. Die jeweils benötigten Werte müssen ausdrücklich gesetzt werden:</p>
 <table>
 <thead>
 <tr>
@@ -53,8 +52,8 @@
 </tr>
 </tbody>
 </table>
-<p>Das Chart erzeugt keine Zugangsdaten. Erstellen Sie die Secrets vorher und verweisen Sie darauf. Die vollständige Wertetabelle steht im <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/helm/check-opencloud-security/README.md">Chart-README</a>.</p>
-<p>Die folgenden Manifeste können Sie auch direkt anwenden oder als Grundlage für die Prüfung des gerenderten Charts verwenden.</p>
+<p>Das Chart erzeugt keine Zugangsdaten. Erstellst du die Secrets vorher und verweise darauf. Die vollständige Wertetabelle steht im <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/helm/check-opencloud-security/README.md">Chart-README</a>.</p>
+<p>Die folgenden Manifeste kannst du auch direkt anwenden oder als Grundlage für die Prüfung des gerenderten Charts verwenden.</p>
 <h2 id="a-scheduled-scan">Zeitgesteuerter Scan</h2>
 <p>Ein <code>CronJob</code> entspricht dem <a href="/documentation/scheduling">systemd-Timer</a>. Da Kubernetes den Exitcode auswertet, erscheinen WARNING und CRITICAL als fehlgeschlagene Jobs.</p>
 <pre><code class="language-yaml">apiVersion: batch/v1
@@ -110,7 +109,7 @@ kubectl create job --from=cronjob/opencloud-security opencloud-security-now \
 kubectl logs job/opencloud-security-now --namespace monitoring
 </code></pre>
 <h2 id="sending-the-result-somewhere">Ergebnisse versenden</h2>
-<p>Mit einem Webhook erhalten Sie neben dem Jobstatus auch den Grund für den Befund. Siehe <a href="/documentation/webhooks">Webhook-Beispiele</a> und <a href="/documentation/webhooks#uptime-kuma">Uptime Kuma</a>:</p>
+<p>Mit einem Webhook erhältst du neben dem Jobstatus auch den Grund für den Befund. Siehe <a href="/documentation/webhooks">Webhook-Beispiele</a> und <a href="/documentation/webhooks#uptime-kuma">Uptime Kuma</a>:</p>
 <pre><code class="language-yaml">              args:
                 - --host=opencloud.example.com
                 - --check-hardening
@@ -121,7 +120,7 @@ kubectl logs job/opencloud-security-now --namespace monitoring
                   valueFrom:
                     secretKeyRef: {name: opencloud-security, key: webhook-url}
 </code></pre>
-<p>Verwenden Sie für Push-Empfänger <code>--webhook-on=always</code>, wenn auch erfolgreiche Durchläufe gemeldet werden sollen. Beim Standard <code>critical</code> erfährt der Empfänger nur von kritischen Ergebnissen und kann einen erfolgreichen Lauf nicht von einem ausgebliebenen Job unterscheiden.</p>
+<p>Verwende für Push-Empfänger <code>--webhook-on=always</code>, wenn auch erfolgreiche Durchläufe gemeldet werden sollen. Beim Standard <code>critical</code> erfährt der Empfänger nur von kritischen Ergebnissen und kann einen erfolgreichen Lauf nicht von einem ausgebliebenen Job unterscheiden.</p>
 <h2 id="the-scan-service">Scan-Dienst</h2>
 <p>Der Dienst stellt einen gemeinsamen Ergebniscache für Dashboards, Skripte und andere Verbraucher bereit. Das Monitoring-Plugin verwendet ihn nicht; es führt seine Scans selbst aus.</p>
 <pre><code class="language-yaml">apiVersion: apps/v1
@@ -178,7 +177,7 @@ spec:
   curl -sS -H &quot;Authorization: $TOKEN&quot; \
   'http://opencloud-scanner.monitoring:8811/api/scan?url=opencloud.example.com'
 </code></pre>
-<p>Beschränken Sie die ausgehenden Verbindungen des Pods mit einer <code>NetworkPolicy</code> auf die vorgesehenen Instanzen. Wer den Dienst aufrufen darf, sollte ihn nicht auf beliebige interne Clusterziele richten können.</p>
+<p>Beschränke die ausgehenden Verbindungen des Pods mit einer <code>NetworkPolicy</code> auf die vorgesehenen Instanzen. Wer den Dienst aufrufen darf, sollte ihn nicht auf beliebige interne Clusterziele richten können.</p>
 <hr>
 <p><a href="/documentation">Zur Dokumentationsübersicht</a> | <a href="/documentation/reference">Zum Haupt-README</a></p>
 </article>

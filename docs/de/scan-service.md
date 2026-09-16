@@ -1,10 +1,8 @@
-# Run the OpenCloud scanner as a local HTTP service
-
 # Den Scanner als HTTP-Dienst betreiben
 
 `check-opencloud-scanner serve` betreibt den eingebauten Scanner als dauerhaften HTTP-Dienst. Mehrere lokale Anwendungen können dadurch ein zwischengespeichertes Ergebnis gemeinsam nutzen. Das [Haupt-README](../../README.md#running-the-scanner-as-a-service) beschreibt die Endpunkte und die Tokenpflicht beim Lauschen außerhalb von Loopback. Hier geht es um die Bereitstellung.
 
-Für einen Dienst mit Browseroberfläche und Warteschlange verwenden Sie die separate [Webanwendung](../webapp.md).
+Für einen Dienst mit Browseroberfläche und Warteschlange verwende die separate [Webanwendung](../webapp.md).
 
 ## Im Container {#in-a-container}
 
@@ -43,7 +41,7 @@ docker compose -f docker-compose.monitoring.yml run --rm check
 
 Ein einfaches `docker compose up` in diesem Verzeichnis startet dagegen die [öffentliche Webanwendung](../webapp.md). Für deren Einrichtung steht **`docker/setup-wizard.py`** bereit. Der Assistent fragt Adresse, Scanlimits, Löschberechtigungen und TLS-Terminierung ab. Er schreibt eine kommentierte Compose-Datei, eine `.env` mit den benötigten Zugangsdaten und auf Wunsch die Konfiguration für nginx, Apache, Caddy oder Traefik. Er benötigt Python und dessen Standardbibliothek; zusätzliche Python-Pakete sind nicht erforderlich. Näheres steht im [Docker-README](../../docker/README.md#setting-up-the-whole-stack).
 
-Git ignoriert im Verzeichnis `secrets/` alle Dateien außer den Vorlagen `*.example`. Details finden Sie im [Secrets-README](../../secrets/README.md).
+Git ignoriert im Verzeichnis `secrets/` alle Dateien außer den Vorlagen `*.example`. Details findest du im [Secrets-README](../../secrets/README.md).
 
 ## Marken und Unabhängigkeit
 

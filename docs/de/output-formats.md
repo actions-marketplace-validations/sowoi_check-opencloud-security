@@ -1,12 +1,10 @@
-# Machine-readable OpenCloud scan output: JSON, SARIF and JUnit
-
 # Ausgabeformate
 
-Standardmäßig gibt das Plugin eine Nagios-Statuszeile mit Performancedaten aus. Mit `--format` (`COS_FORMAT`) wählen Sie stattdessen ein Format für Skripte, Dashboards oder CI-Pipelines.
+Standardmäßig gibt das Plugin eine Nagios-Statuszeile mit Performancedaten aus. Mit `--format` (`COS_FORMAT`) wähle stattdessen ein Format für Skripte, Dashboards oder CI-Pipelines.
 
 `json`, `sarif` und `junit` erzeugen jeweils **ein gemeinsames Dokument für alle gescannten Hosts**. Das Format bleibt auch bei nur einem Host gleich.
 
-Die Exitcodes behalten ihre Nagios-Bedeutung: `0` für OK, `1` für WARNING, `2` für CRITICAL und `3` für UNKNOWN. Eine CI-Pipeline kann damit den Status auswerten und das Dokument zusätzlich als Artefakt speichern. Die Metrikformate `prometheus` und `otlp` bilden eine Ausnahme: Sie geben Befunde als Messwerte aus und beenden den Prozess mit `0`.
+Die Exitcodes behalten ihre Nagios-Bedeutung: `0` für OK, `1` für WARNING, `2` für CRITICAL und `3` für UNKNOWN. Eine CI-Pipeline kann damit den Status auswerten und das Dokument zusätzlich als Artefakt speichern. Die Metrikformate `prometheus` und `otlp` bilden eine Ausnahme: Du gibst Befunde als Messwerte aus und beenden den Prozess mit `0`.
 
 ## `json` {#json}
 
@@ -25,7 +23,7 @@ check-opencloud-security --host opencloud.example.com --format sarif \
   > opencloud-security.sarif
 ```
 
-In GitHub Actions können Sie die Datei anschließend hochladen. `continue-on-error: true` stellt sicher, dass der Upload auch bei einem nicht erfolgreichen Scanstatus ausgeführt wird:
+In GitHub Actions kannst du die Datei anschließend hochladen. `continue-on-error: true` stellt sicher, dass der Upload auch bei einem nicht erfolgreichen Scanstatus ausgeführt wird:
 
 ```yaml
 - name: Scan OpenCloud
@@ -47,7 +45,7 @@ check-opencloud-security --host opencloud.example.com --format junit \
   > opencloud-security.xml
 ```
 
-Richten Sie den JUnit-Reporter Ihres CI-Systems auf diese Datei aus, um die Befunde als Testergebnisse anzuzeigen.
+Richte den JUnit-Reporter Ihres CI-Systems auf diese Datei aus, um die Befunde als Testergebnisse anzuzeigen.
 
 ## `checkmk` {#checkmk}
 
@@ -69,11 +67,11 @@ check-opencloud-security --host opencloud.example.com --format otlp \
       -H 'Content-Type: application/json' --data-binary @-
 ```
 
-Das Plugin schreibt nur das Dokument auf die Standardausgabe. Den Versand übernehmen Sie beispielsweise mit `curl` im bestehenden Timer. Collector-Adresse, Proxy und Zugangsdaten konfigurieren Sie beim Versand.
+Das Plugin schreibt nur das Dokument auf die Standardausgabe. Den Versand übernimm beispielsweise mit `curl` im bestehenden Timer. Collector-Adresse, Proxy und Zugangsdaten konfiguriere beim Versand.
 
 Jeder Host wird über das Attribut `host` unterschieden. Alle Metriken sind Gauges, also aktuelle Messwerte. Namen und Werte entsprechen dem Prometheus-Exporter; je nach Backend können Attributnamen anders abgebildet werden. Die gemeinsame Tabelle steht unter [Prometheus und Grafana](../prometheus.md#what-the-exporter-publishes).
 
-Wie `--format prometheus` beendet sich dieses Format auch bei Befunden mit `0`. Ein fehlgeschlagener Scan liefert `opencloud_security_scrape_success 0`. Wenn der Exitcode die Alarmierung steuern soll, verwenden Sie `nagios`, `json`, `sarif` oder `junit`.
+Wie `--format prometheus` beendet sich dieses Format auch bei Befunden mit `0`. Ein fehlgeschlagener Scan liefert `opencloud_security_scrape_success 0`. Wenn der Exitcode die Alarmierung steuern soll, verwende `nagios`, `json`, `sarif` oder `junit`.
 
 ## Das passende Format wählen {#choosing-a-format}
 

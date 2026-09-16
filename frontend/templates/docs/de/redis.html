@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.redis.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de') %}
+{% if locale not in ('en', 'de', 'fr') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -33,10 +33,9 @@
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="de">
-<h1 id="redis-fur-den-scan-webdienst">Redis für den Scan-Webdienst</h1>
 <p>Redis speichert Warteschlange, Scanstatus, Ergebnisse und gemeinsam genutzte Betriebsdaten des Webdienstes. Dieser Leitfaden beschreibt Verbindung, Zugriffsschutz, Speicherbedarf und Fehlersuche.</p>
 <p>Er gilt für die <a href="https://github.com/sowoi/check-opencloud-security/blob/main/webapp/README.md">Webanwendung</a>. Das CLI-Plugin benötigt kein Redis; es verbindet sich direkt mit OpenCloud und beendet sich nach dem Scan.</p>
-<p>Für den Passwortschutz der mitgelieferten Compose-Bereitstellung setzen Sie <code>COS_REDIS_PASSWORD</code> in <code>docker/.env</code> und wenden die Konfiguration mit <code>docker compose up -d</code> an.</p>
+<p>Für den Passwortschutz der mitgelieferten Compose-Bereitstellung setze <code>COS_REDIS_PASSWORD</code> in <code>docker/.env</code> und wenden die Konfiguration mit <code>docker compose up -d</code> an.</p>
 <h2 id="table-of-contents">Inhaltsübersicht</h2>
 <p>Die folgenden Abschnitte behandeln Datenhaltung, Verbindung, Schutz und Betrieb.</p>
 <h2 id="what-redis-is-used-for">Aufgaben von Redis</h2>
@@ -134,7 +133,7 @@
 </tbody>
 </table>
 <p>Die UUID berechtigt zum Abruf eines Scans. Ungültige, unbekannte und abgelaufene UUIDs erhalten denselben <code>404</code>; es gibt keine öffentliche Scanliste.</p>
-<p>Ratenlimit-Schlüssel verwenden mit <code>COS_WEB_AUDIT_SALT</code> abgeleitete Fingerabdrücke statt Klartext-Client-Adressen. Scanmetadaten enthalten während ihrer Lebensdauer jedoch die eingereichten Ziele. Schützen Sie daher den Zugriff auf Redis. Siehe <a href="/documentation/web-service#what-gets-logged">Protokollierung</a>.</p>
+<p>Ratenlimit-Schlüssel verwenden mit <code>COS_WEB_AUDIT_SALT</code> abgeleitete Fingerabdrücke statt Klartext-Client-Adressen. Scanmetadaten enthalten während ihrer Lebensdauer jedoch die eingereichten Ziele. Schütze daher den Zugriff auf Redis. Siehe <a href="/documentation/web-service#what-gets-logged">Protokollierung</a>.</p>
 <h2 id="configuring-the-connection">Verbindung konfigurieren</h2>
 <p>Webanwendung und Worker lesen dieselbe <code>COS_WEB_REDIS_URL</code>:</p>
 <table>
@@ -167,16 +166,16 @@
 </tr>
 </tbody>
 </table>
-<p>Kodieren Sie Sonderzeichen wie <code>@</code>, <code>:</code>, <code>/</code> und <code>#</code> im Passwort für URLs. Die Generatoren <a href="https://github.com/sowoi/check-opencloud-security/blob/main/docker/setup-wizard.py"><code>docker/setup-wizard.py</code></a> und <a href="https://github.com/sowoi/check-opencloud-security/blob/main/docker/authentik-env.sh"><code>docker/authentik-env.sh</code></a> erzeugen URL-taugliche Werte.</p>
+<p>Kodiere Sonderzeichen wie <code>@</code>, <code>:</code>, <code>/</code> und <code>#</code> im Passwort für URLs. Die Generatoren <a href="https://github.com/sowoi/check-opencloud-security/blob/main/docker/setup-wizard.py"><code>docker/setup-wizard.py</code></a> und <a href="https://github.com/sowoi/check-opencloud-security/blob/main/docker/authentik-env.sh"><code>docker/authentik-env.sh</code></a> erzeugen URL-taugliche Werte.</p>
 <h2 id="running-without-redis">Ohne Redis testen</h2>
 <p><code>COS_WEB_REDIS_URL=memory://</code> verwendet einen Speicher im Webprozess. Er eignet sich für Tests und zum Ansehen der Oberfläche ohne zusätzliche Infrastruktur.</p>
-<p>Dieser Modus ersetzt keine produktive Warteschlange: Ein anderer Prozess kann den Zustand nicht sehen, und ein Neustart löscht ihn. Für Webanwendung und getrennten Worker verwenden Sie Redis.</p>
+<p>Dieser Modus ersetzt keine produktive Warteschlange: Ein anderer Prozess kann den Zustand nicht sehen, und ein Neustart löscht ihn. Für Webanwendung und getrennten Worker verwende Redis.</p>
 <h2 id="the-password">Passwortschutz</h2>
 <p>Ein erreichbarer Redis ohne Zugangsschutz kann seine Daten unberechtigten Clients bereitstellen. Ein Hostscan kann dies beispielsweise so melden:</p>
 <pre><code>WARNING: Redis does not require authentication and is not protected by
 network restriction
 </code></pre>
-<p>Setzen Sie ein Passwort:</p>
+<p>Setze ein Passwort:</p>
 <pre><code class="language-bash">cd docker
 printf 'COS_REDIS_PASSWORD=%s\n' &quot;$(openssl rand -base64 36 | tr -d '/+=')&quot; &gt;&gt; .env
 chmod 600 .env
@@ -184,14 +183,14 @@ docker compose up -d
 </code></pre>
 <p>Die Compose-Dateien verwenden <code>COS_REDIS_PASSWORD</code> für <code>--requirepass</code> und für die Verbindungs-URLs der beiden Anwendungscontainer. Ohne Wert bleibt der Passwortschutz aus. Für einen regulären Betrieb sollte er gesetzt sein.</p>
 <p>Der Setup-Assistent erzeugt das Passwort in einer <code>.env</code> mit Modus <code>0600</code>. Auch <code>authentik-env.sh</code> ergänzt einen fehlenden Wert und erhält einen bereits vorhandenen.</p>
-<p>Prüfen Sie die wirksame Einstellung:</p>
+<p>Prüfe die wirksame Einstellung:</p>
 <pre><code class="language-bash">docker compose exec -e REDISCLI_AUTH= redis redis-cli ping
 # NOAUTH Authentication required.        &lt;- what you want to see
 docker compose exec redis redis-cli ping
 # PONG                                   &lt;- authenticated, via REDISCLI_AUTH
 </code></pre>
 <p>Der Container-Healthcheck liest das Passwort über <code>REDISCLI_AUTH</code>, damit es nicht als <code>-a</code>-Argument in der Prozessliste erscheint.</p>
-<p>Bei einem Passwortwechsel müssen Redis, Webanwendung und Worker dieselbe neue Konfiguration übernehmen. Ihre Verbindungsdaten werden beim Start gelesen.</p>
+<p>Bei einem Passwortwechsel müssen Redis, Webanwendung und Worker dieselbe neue Konfiguration übernehmen. Deine Verbindungsdaten werden beim Start gelesen.</p>
 <h2 id="network-isolation">Netzwerkzugriff begrenzen</h2>
 <p>Die mitgelieferten Compose-Dateien veröffentlichen keinen Redis-Port. Redis liegt nur im internen Netzwerk:</p>
 <pre><code class="language-yaml">networks:
@@ -199,35 +198,35 @@ docker compose exec redis redis-cli ping
     internal: true
 </code></pre>
 <p>Webanwendung und Worker sind zusätzlich mit dem Netz für ihre ausgehenden Verbindungen verbunden. Redis benötigt diesen Zugang nicht.</p>
-<p>Bei einer eigenen Installation begrenzen Sie den Zugriff durch Bind-Adresse, Firewall und private Netzsegmente. Veröffentlichen Sie Port 6379 nicht im Internet.</p>
+<p>Bei einer eigenen Installation begrenze den Zugriff durch Bind-Adresse, Firewall und private Netzsegmente. Veröffentliche Port 6379 nicht im Internet.</p>
 <h2 id="persistence-or-the-deliberate-lack-of-it">Persistenz</h2>
 <p>Standardmäßig läuft Redis mit <code>--save ""</code> und <code>--appendonly no</code>. Scanergebnisse werden damit nicht durch Redis auf Datenträger geschrieben.</p>
-<p>Snapshots und Backups können Ergebnisse über ihre TTL hinaus aufbewahren. Aktivieren Sie Persistenz nur mit einer bewussten Entscheidung zu Aufbewahrung und Zugriffsschutz.</p>
-<p>Der Setup-Assistent bietet Persistenz für private Bereitstellungen an, etwa wenn wartende Scans einen Neustart überstehen sollen. Standard bleibt keine Persistenz. Bei aktivierter Ergebnisverschlüsselung enthält der gespeicherte Ergebnisinhalt Chiffretext; den Schlüssel müssen Sie getrennt schützen. Nicht alle Betriebsmetadaten werden dadurch verschlüsselt.</p>
+<p>Snapshots und Backups können Ergebnisse über ihre TTL hinaus aufbewahren. Aktiviere Persistenz nur mit einer bewussten Entscheidung zu Aufbewahrung und Zugriffsschutz.</p>
+<p>Der Setup-Assistent bietet Persistenz für private Bereitstellungen an, etwa wenn wartende Scans einen Neustart überstehen sollen. Standard bleibt keine Persistenz. Bei aktivierter Ergebnisverschlüsselung enthält der gespeicherte Ergebnisinhalt Chiffretext; den Schlüssel musst du getrennt schützen. Nicht alle Betriebsmetadaten werden dadurch verschlüsselt.</p>
 <h2 id="memory-and-eviction">Speicher und Verdrängung</h2>
 <pre><code>--maxmemory 256mb
 --maxmemory-policy allkeys-lru
 </code></pre>
-<p>Das Speicherlimit begrenzt den Verbrauch bei wachsenden Warteschlangen und vielen Ergebnissen. Passen Sie es an Workerzahl, Ergebnisgröße und TTL an.</p>
-<p><code>allkeys-lru</code> kann unter Speicherdruck beliebige wenig genutzte Schlüssel entfernen, auch bevor deren TTL abläuft. Dadurch können Ergebnisse früher verschwinden; auch andere Redis-Zustände können betroffen sein. Beobachten Sie die Verdrängungszähler:</p>
+<p>Das Speicherlimit begrenzt den Verbrauch bei wachsenden Warteschlangen und vielen Ergebnissen. Passt du es an Workerzahl, Ergebnisgröße und TTL an.</p>
+<p><code>allkeys-lru</code> kann unter Speicherdruck beliebige wenig genutzte Schlüssel entfernen, auch bevor deren TTL abläuft. Dadurch können Ergebnisse früher verschwinden; auch andere Redis-Zustände können betroffen sein. Beobachte die Verdrängungszähler:</p>
 <pre><code class="language-bash">docker compose exec redis redis-cli info stats | grep evicted_keys
 </code></pre>
 <p>Regelmäßige Verdrängung ist ein Anlass, Kapazität, Last und Aufbewahrungsdauer zu prüfen.</p>
 <h2 id="an-external-or-managed-redis">Externes oder verwaltetes Redis</h2>
-<p>Tragen Sie die externe Adresse in <code>COS_WEB_REDIS_URL</code> ein und entfernen Sie gegebenenfalls den lokalen Redis-Service aus Compose.</p>
+<p>Trage die externe Adresse in <code>COS_WEB_REDIS_URL</code> ein und entferne gegebenenfalls den lokalen Redis-Service aus Compose.</p>
 <ul>
-<li>Verwenden Sie <code>rediss://</code> für TLS.</li>
-<li>Trennen Sie die Daten dieser Anwendung über eine eigene Instanz oder geeignete Datenbankzuordnung.</li>
-<li>Prüfen Sie die Verdrängungsregeln. Bei <code>noeviction</code> scheitern neue Schreibvorgänge, sobald das Limit erreicht ist.</li>
-<li>Prüfen Sie Snapshots, Backups und die tatsächliche Löschdauer.</li>
+<li>Verwende <code>rediss://</code> für TLS.</li>
+<li>Trenne die Daten dieser Anwendung über eine eigene Instanz oder geeignete Datenbankzuordnung.</li>
+<li>Prüfe die Verdrängungsregeln. Bei <code>noeviction</code> scheitern neue Schreibvorgänge, sobald das Limit erreicht ist.</li>
+<li>Prüfe Snapshots, Backups und die tatsächliche Löschdauer.</li>
 </ul>
 <h2 id="kubernetes">Kubernetes</h2>
 <p>Für die Webanwendung benötigen Web-Pods und Worker eine eigene Redis-Bereitstellung oder einen externen Dienst. Der <a href="/documentation/kubernetes">Kubernetes-Leitfaden</a> behandelt zusätzlich den davon unabhängigen lokalen Scan-Dienst.</p>
 <ul>
 <li>Zugangsdaten gehören in ein <code>Secret</code>, nicht in eine <code>ConfigMap</code>.</li>
 <li>Eine <code>NetworkPolicy</code> sollte nur den vorgesehenen Web- und Worker-Pods Zugriff erlauben.</li>
-<li>Verwenden Sie einen internen <code>ClusterIP</code>-Service statt <code>LoadBalancer</code>, <code>NodePort</code> oder öffentlichem Ingress.</li>
-<li>Richten Sie persistente Volumes nur ein, wenn die oben beschriebene Aufbewahrung bewusst gewünscht ist.</li>
+<li>Verwende einen internen <code>ClusterIP</code>-Service statt <code>LoadBalancer</code>, <code>NodePort</code> oder öffentlichem Ingress.</li>
+<li>Richte persistente Volumes nur ein, wenn die oben beschriebene Aufbewahrung bewusst gewünscht ist.</li>
 </ul>
 <h2 id="health-and-monitoring">Zustand überwachen</h2>
 <p><code>GET /healthz</code> liefert <code>503</code>, wenn die Warteschlange nicht gelesen werden kann oder kein aktueller Worker-Heartbeat vorliegt. Es zeigt Warteschlangentiefe und Zustand der Referenzdatenaktualisierung, aber keine einzelnen Scans.</p>
@@ -300,7 +299,7 @@ docker compose exec redis redis-cli ping
 </tr>
 </tbody>
 </table>
-<p>Die Anwendungslogs nennen Lebenszyklusereignisse und UUIDs, keine Zieladressen oder Ergebnisse. Untersuchen Sie deshalb insbesondere Scans, deren Verarbeitung nicht über <code>queued</code> hinauskommt, und die allgemeinen Dienstzustände.</p>
+<p>Die Anwendungslogs nennen Lebenszyklusereignisse und UUIDs, keine Zieladressen oder Ergebnisse. Untersuche deshalb insbesondere Scans, deren Verarbeitung nicht über <code>queued</code> hinauskommt, und die allgemeinen Dienstzustände.</p>
 </article>
 
 {% include "_page-nav.html" %}

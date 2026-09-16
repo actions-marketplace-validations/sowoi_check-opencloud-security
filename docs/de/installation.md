@@ -1,8 +1,6 @@
-# Installing the OpenCloud Security Scanner plugin
-
 # Installation und Monitoring-Anbindung
 
-Dieser Leitfaden beschreibt die Installation, Aktualisierung und Shell-Vervollständigung sowie die Einbindung in Icinga2 und Nagios. Die beiden häufigsten Installationswege finden Sie auch im [Haupt-README](../../README.md#installation).
+Dieser Leitfaden beschreibt die Installation, Aktualisierung und Shell-Vervollständigung sowie die Einbindung in Icinga2 und Nagios. Die beiden häufigsten Installationswege findest du auch im [Haupt-README](../../README.md#installation).
 
 ## pipx, uv oder pip {#using-pipx-uv-pip-recommended}
 
@@ -28,7 +26,7 @@ pip install check-opencloud-security
 
 Releases enthalten eine CycloneDX-SBOM und eine Sigstore-Herkunftsattestierung. [Downloads prüfen](../../SECURITY.md#verifying-what-you-downloaded) erklärt die Verifikation.
 
-Für unveröffentlichte Änderungen können Sie direkt aus dem Repository installieren: `pipx install git+https://github.com/sowoi/check-opencloud-security.git`. Entsprechende Aufrufe sind auch mit `uv tool install` und `pip install` möglich.
+Für unveröffentlichte Änderungen kannst du direkt aus dem Repository installieren: `pipx install git+https://github.com/sowoi/check-opencloud-security.git`. Entsprechende Aufrufe sind auch mit `uv tool install` und `pip install` möglich.
 
 ### Aktualisieren {#updating}
 
@@ -36,9 +34,9 @@ Für unveröffentlichte Änderungen können Sie direkt aus dem Repository instal
 check-opencloud-security --upgrade-self
 ```
 
-Der Befehl erkennt den Installationsweg und wählt den passenden Paketmanager. `--upgrade-self=check` zeigt den vorgesehenen Befehl nur an. Einen Git-Checkout aktualisieren Sie selbst mit `git pull`.
+Der Befehl erkennt den Installationsweg und wählt den passenden Paketmanager. `--upgrade-self=check` zeigt den vorgesehenen Befehl nur an. Einen Git-Checkout aktualisiere selbst mit `git pull`.
 
-Die Paketmanager können Sie auch direkt aufrufen:
+Die Paketmanager kannst du auch direkt aufrufen:
 
 ```shell
 pipx upgrade check-opencloud-security          # pipx
@@ -50,11 +48,11 @@ uv tool upgrade --all                          # ... or every uv tool at once
 pip install --upgrade check-opencloud-security # pip
 ```
 
-`check-opencloud-security --version` zeigt den installierten Stand, [CHANGELOG.md](../../CHANGELOG.md) die Änderungen. Eine Installation aus einer Git-URL erneuern Sie mit `--force` bei pipx/uv oder `--upgrade --force-reinstall` bei pip.
+`check-opencloud-security --version` zeigt den installierten Stand, [CHANGELOG.md](../../CHANGELOG.md) die Änderungen. Eine Installation aus einer Git-URL erneuere sie mit `--force` bei pipx/uv oder `--upgrade --force-reinstall` bei pip.
 
-Halten Sie das Paket aktuell: Es enthält auch den Release-Zeitplan und die Referenzdaten für die [End-of-Life-Erkennung](../../README.md#end-of-life-detection).
+Halte das Paket aktuell: Es enthält auch den Release-Zeitplan und die Referenzdaten für die [End-of-Life-Erkennung](../../README.md#end-of-life-detection).
 
-Zum Entfernen verwenden Sie `pipx uninstall check-opencloud-security`, `uv tool uninstall check-opencloud-security` oder `pip uninstall check-opencloud-security`.
+Zum Entfernen verwende `pipx uninstall check-opencloud-security`, `uv tool uninstall check-opencloud-security` oder `pip uninstall check-opencloud-security`.
 
 **Installation aus einem Checkout:**
 
@@ -68,7 +66,7 @@ uv sync                                       # create .venv from uv.lock
 uv run check-opencloud-security --host opencloud.example.com
 ```
 
-Alternativ installieren Sie den Checkout mit pip anhand von `pyproject.toml`:
+Alternativ installiere den Checkout mit pip anhand von `pyproject.toml`:
 
 ```shell
 pip install .
@@ -77,7 +75,7 @@ pip install requests PyYAML
 python3 check_opencloud_security.py --host opencloud.example.com
 ```
 
-Falls ein Bereitstellungswerkzeug eine `requirements.txt` benötigt, erzeugen Sie diese aus der Lockdatei:
+Falls ein Bereitstellungswerkzeug eine `requirements.txt` benötigt, erzeuge diese aus der Lockdatei:
 
 ```shell
 uv export --no-dev --no-emit-project --format requirements.txt -o requirements.txt
@@ -103,14 +101,14 @@ pipx inject check-opencloud-security argcomplete
 uv tool install --with argcomplete check-opencloud-security --force
 ```
 
-Registrieren Sie für **bash** beide Befehle in `~/.bashrc`:
+Registriere für **bash** beide Befehle in `~/.bashrc`:
 
 ```shell
 eval "$(register-python-argcomplete check-opencloud-security)"
 eval "$(register-python-argcomplete check-opencloud-scanner)"
 ```
 
-Unter **zsh** verwenden Sie dieselben Zeilen in `~/.zshrc` und führen davor einmal `autoload -U bashcompinit && bashcompinit` aus. Unter **fish** schreiben Sie die Ausgabe in eine Completion-Datei:
+Unter **zsh** verwende dieselben Zeilen in `~/.zshrc` und führen davor einmal `autoload -U bashcompinit && bashcompinit` aus. Unter **fish** schreibe die Ausgabe in eine Completion-Datei:
 
 ```shell
 register-python-argcomplete --shell fish check-opencloud-security \
@@ -155,7 +153,7 @@ Ein CheckCommand mit `PluginDir + "/check_opencloud_security"` kann den vorhande
 
 ### Konfiguration {#configuring-it}
 
-Das Paket legt kein Standardziel fest. Kopieren Sie die benötigten Beispiele und tragen Sie Ihre eigenen Werte ein:
+Das Paket legt kein Standardziel fest. Kopiere die benötigten Beispiele und trage deine eigenen Werte ein:
 
 ```shell
 sudo cp /usr/share/doc/check-opencloud-security/config.example.yml \
@@ -165,7 +163,7 @@ sudo cp /usr/share/doc/check-opencloud-security/env.example \
         /etc/check-opencloud-security/env      # for the systemd units
 ```
 
-Alternativ führt Sie `check-opencloud-security --configure` durch die Einstellungen.
+Alternativ führt du `check-opencloud-security --configure` durch die Einstellungen.
 
 Die Units benötigen vor dem Aktivieren die konfigurierte `env`-Datei:
 
@@ -174,11 +172,11 @@ sudo systemctl enable --now check-opencloud-security.timer
 sudo systemctl enable --now check-opencloud-security-refresh.timer
 ```
 
-Der zweite Timer aktualisiert Release-Zeitplan und Schwachstellendaten getrennt vom installierten Paket. Konfigurieren Sie den Scanner so, dass er die erzeugten Dateien liest; siehe [Referenzdaten](../reference-data.md).
+Der zweite Timer aktualisiert Release-Zeitplan und Schwachstellendaten getrennt vom installierten Paket. Konfiguriere den Scanner so, dass er die erzeugten Dateien liest; siehe [Referenzdaten](../reference-data.md).
 
 ### Aktualisieren und entfernen {#updating-and-removing-it}
 
-Verwenden Sie `apt` oder `dnf`. `--upgrade-self` erkennt eine Distributionsinstallation und verweigert eine zusätzliche Installation über pip.
+Verwende `apt` oder `dnf`. `--upgrade-self` erkennt eine Distributionsinstallation und verweigert eine zusätzliche Installation über pip.
 
 ```shell
 sudo apt install --only-upgrade check-opencloud-security   # or: dnf upgrade
@@ -191,7 +189,7 @@ Eigene Dateien unter `/etc/check-opencloud-security/` bleiben beim Entfernen erh
 
 Die Startskripte suchen nach Python 3.10 oder neuer: zuerst über `$COS_PYTHON`, dann `python3`, anschließend `python3.14` bis `python3.10`. Jeder Kandidat wird anhand seiner tatsächlichen Version geprüft. So können etwa auf RHEL zusätzliche Python-Versionen verwendet werden, auch wenn `python3` noch auf eine ältere Version zeigt.
 
-Ohne geeigneten Interpreter endet der Check mit **3 (UNKNOWN)**. Über `COS_PYTHON` können Sie einen Pfad vorgeben:
+Ohne geeigneten Interpreter endet der Check mit **3 (UNKNOWN)**. Über `COS_PYTHON` kannst du einen Pfad vorgeben:
 
 ```shell
 sudo dnf install python3.12
@@ -212,14 +210,14 @@ Layout und Abhängigkeiten stehen in [`packaging/nfpm.yaml`](../../packaging/nfp
 
 ## macOS und Linux mit Homebrew {#macos-and-linux-workstations-homebrew}
 
-Homebrew eignet sich für Arbeitsrechner, auf denen Sie den Scanner manuell verwenden und mit `brew` verwalten möchten:
+Homebrew eignet sich für Arbeitsrechner, auf denen du den Scanner manuell verwenden und mit `brew` verwalten möchtest:
 
 ```shell
 brew install sowoi/tap/check-opencloud-security
 check-opencloud-security --host opencloud.example.com
 ```
 
-Die Formel liegt in einem eigenen Tap. Aktualisieren Sie sie mit `brew upgrade`; `--upgrade-self` verweigert Änderungen an einer Homebrew-Installation, damit die Paketverwaltung zuständig bleibt.
+Die Formel liegt in einem eigenen Tap. Aktualisiere sie mit `brew upgrade`; `--upgrade-self` verweigert Änderungen an einer Homebrew-Installation, damit die Paketverwaltung zuständig bleibt.
 
 Die Formel wird aus dem veröffentlichten PyPI-Paket erzeugt. Hinweise für die Pflege des Taps stehen im [Packaging-README](../../packaging/README.md#homebrew) und in [`scripts/build_homebrew_formula.py`](../../scripts/build_homebrew_formula.py).
 
@@ -234,7 +232,7 @@ docker run --rm --entrypoint check-opencloud-security \
 
 Da der Standardbefehl die Webanwendung startet, wählt `--entrypoint` hier das Plugin. Weitere Varianten stehen unter [Scanner mit Docker](../docker-oneliner.md).
 
-Für einen eigenen Checkout bauen Sie mit dem Repository-Stamm als Build-Kontext:
+Für einen eigenen Checkout baue mit dem Repository-Stamm als Build-Kontext:
 
 ```shell
 git clone https://github.com/sowoi/check-opencloud-security.git
@@ -256,15 +254,15 @@ docker run --rm -e COS_HOST=opencloud.example.com check-opencloud-security
 
 Der Image-`HEALTHCHECK` prüft lokal, ob Paket, Zeitplan und Advisory-Datenbank lesbar sind. Er benötigt kein Netzwerk. Ein einmaliger Check-Container beendet sich meist vor dem ersten Healthcheck. Die Monitoring-Compose-Datei verwendet für den dauerhaften Dienst stattdessen `/healthz`.
 
-Der Check-Container muss keine Ports veröffentlichen, benötigt aber Zugriff auf die Instanz. Passen Sie bei Bedarf das Netzwerk mit `--network host` oder `--add-host` an. Er läuft als unprivilegierter Benutzer `nagios` und liefert dieselben Exitcodes wie die native Installation.
+Der Check-Container muss keine Ports veröffentlichen, benötigt aber Zugriff auf die Instanz. Passt du bei Bedarf das Netzwerk mit `--network host` oder `--add-host` an. Er läuft als unprivilegierter Benutzer `nagios` und liefert dieselben Exitcodes wie die native Installation.
 
-Sie können ein selbst gebautes Image in Ihre Registry übertragen, etwa mit `docker tag check-opencloud-security registry.example.com/check-opencloud-security` und anschließendem `docker push`, und auf den Monitoring-Hosts verwenden.
+Du kannst ein selbst gebautes Image in deine Registry übertragen, etwa mit `docker tag check-opencloud-security registry.example.com/check-opencloud-security` und anschließendem `docker push`, und auf den Monitoring-Hosts verwenden.
 
 ## Icinga2 / Nagios {#icinga2-nagios}
 
-- Suchen Sie bei pipx, uv oder pip den installierten Programmpfad, etwa mit `which check-opencloud-security`, und verwenden Sie ihn direkt oder über einen Symlink im Plugin-Verzeichnis.
-- Bei direkter Verwendung des Skripts legen Sie `check_opencloud_security.py` im Plugin-Verzeichnis ab.
-- Erstellen Sie den CheckCommand:
+- Suche bei pipx, uv oder pip den installierten Programmpfad, etwa mit `which check-opencloud-security`, und verwende ihn direkt oder über einen Symlink im Plugin-Verzeichnis.
+- Bei direkter Verwendung des Skripts lege `check_opencloud_security.py` im Plugin-Verzeichnis ab.
+- Erstelle den CheckCommand:
 
 ```
 object CheckCommand "check_opencloud_security" {
@@ -326,7 +324,7 @@ object CheckCommand "check_opencloud_security" {
 }
 ```
 
-Legen Sie anschließend den Service an:
+Lege anschließend den Service an:
 
 ```
 object Service "Service: OpenCloud Security Scan" {
@@ -337,7 +335,7 @@ object Service "Service: OpenCloud Security Scan" {
 }
 ```
 
-Ein vollständiger Scan erzeugt mehrere HTTP-Anfragen und Debug-Port-Verbindungen. Wählen Sie ein zur Änderungsfrequenz passendes Intervall; stündliche oder tägliche Prüfungen reichen häufig aus. Die optionale GitHub-Update-Abfrage unterliegt zusätzlich dem Kontingent der Quelle.
+Ein vollständiger Scan erzeugt mehrere HTTP-Anfragen und Debug-Port-Verbindungen. Wähle ein zur Änderungsfrequenz passendes Intervall; stündliche oder tägliche Prüfungen reichen häufig aus. Die optionale GitHub-Update-Abfrage unterliegt zusätzlich dem Kontingent der Quelle.
 
 ### Docker im CheckCommand verwenden {#using-the-docker-image-instead}
 

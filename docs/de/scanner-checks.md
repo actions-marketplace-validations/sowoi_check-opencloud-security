@@ -1,8 +1,8 @@
-# What the OpenCloud Security Scanner reads, and what it does not
+# Was der OpenCloud Security Scanner liest und was nicht
 
 Diese Übersicht beschreibt, welche Daten der Scanner von einer Instanz abruft,
 welche Prüfungen die Bewertung beeinflussen und wo eine Prüfung von außen an
-Grenzen stößt. Einzelheiten finden Sie in den Leitfäden zu [TLS](../tls.md),
+Grenzen stößt. Einzelheiten findest du in den Leitfäden zu [TLS](../tls.md),
 [CSP](../csp.md), [Cookies](../cookies.md), [Authentifizierung](../authentication.md),
 [Freigaben](../sharing.md), [öffentlich erreichbaren Diensten](../exposure.md),
 [Einbettung](../embedding.md) und [Release-Unterstützung](../lifecycle.md).
@@ -29,9 +29,9 @@ Der Scanner liest folgende Informationen direkt von der Instanz:
   `Cross-Origin-Opener-Policy`, `Cross-Origin-Resource-Policy` und
   `Cross-Origin-Embedder-Policy`. OpenCloud setzt sie standardmäßig nicht.
   Fehlende Werte werden erklärt, lösen aber weder einen Alarm noch eine
-  schlechtere Bewertung aus. Testen Sie insbesondere
-  `Cross-Origin-Embedder-Policy: require-corp` mit Ihrer Office-Integration,
-  bevor Sie den Header aktivieren; eingebundene Dienste müssen dazu passende
+  schlechtere Bewertung aus. Teste insbesondere
+  `Cross-Origin-Embedder-Policy: require-corp` mit deiner Office-Integration,
+  bevor du den Header aktivierst; eingebundene Dienste müssen dazu passende
   Ressourcenfreigaben senden. Siehe [ADR 0028](../../adr/0028-headers-no-opencloud-sends-are-reported-but-never-alerted.md).
 - `securityTxtPublished` unter `setup.advisoryChecks`: Enthält
   `/.well-known/security.txt` einen `Contact`-Eintrag gemäß RFC 9116?
@@ -48,7 +48,7 @@ Der Scanner liest folgende Informationen direkt von der Instanz:
   und die daraus berechnete Bewertung von `0` bis `5`.
 
 Die folgenden zusätzlichen Prüfungen erscheinen unter `extraChecks`.
-Mit `--no-extra-checks` lassen sie sich ausschalten.
+Mit `--no-extra-checks` lass sich ausschalten.
 
 | Prüfung | Schweregrad | Was ein Fehlschlag bedeutet |
 |:--|:--|:--|
@@ -115,7 +115,7 @@ abzuwerten. Lediglich `basicAuthDisabled` fällt bei externem Provider von
 Discovery-Dokument und den `Location`-Header; er meldet sich nicht an.
 
 Ist kein Provider erkennbar, schlägt `identityProviderDetected` mit `low` fehl.
-Prüfen Sie dann insbesondere, ob der Reverse Proxy `/.well-known/`
+Prüfe dann insbesondere, ob der Reverse Proxy `/.well-known/`
 weiterleitet. [OpenClouds Anleitung][opencloud-idp] beschreibt die Einrichtung.
 
 ### Die Demo-Konten {#the-demo-accounts}
@@ -126,10 +126,10 @@ zusätzlich die veröffentlichten Demo-Zugangsdaten.
 an; `dennis` besitzt Administratorrechte. Funktioniert eine Anmeldung, ist
 `demoUsersDisabled` kritisch und begrenzt die Note auf `D`.
 
-Dies ist die einzige Prüfung, die Zugangsdaten sendet. Sie verwendet nur die
+Dies ist die einzige Prüfung, die Zugangsdaten sendet. SIE verwendet nur die
 veröffentlichten Paare und ausschließlich den Provider auf der Origin der
 Instanz. Externe Identity Provider werden damit nicht angesprochen. Das
-Ausschalten der Einstellung löscht vorhandene Konten nicht: Entfernen Sie diese
+Ausschalten der Einstellung löscht vorhandene Konten nicht: Entferne diese
 zusätzlich.
 
 ### Was vor der Instanz steht {#what-is-in-front-of-the-instance}
@@ -159,10 +159,10 @@ einem erfundenen Hostnamen an, einmal in `Host`, einmal in
 Solche URLs bestimmen das Ziel einer Anmeldung. Ohne weitere Bedingungen
 betrifft die manipulierte Antwort zunächst den Aufrufer selbst; deshalb ist der
 Schweregrad `medium`. Ein gemeinsamer Cache oder ungeprüft weitergereichte
-Client-Header können die Wirkung auf andere Benutzer ausweiten. Setzen Sie
-`OC_URL` und lassen Sie den Proxy die Forwarded-Header selbst festlegen.
+Client-Header können die Wirkung auf andere Benutzer ausweiten. Setze
+`OC_URL` und lass den Proxy die Forwarded-Header selbst festlegen.
 
-Wird nur `Host` in einer Weiterleitung wiederholt, prüfen Sie auch den
+Wird nur `Host` in einer Weiterleitung wiederholt, prüfe auch den
 Standard-VHost. Ohne ausdrückliche Ablehnung unbekannter Namen kann der Proxy
 sie an den zuerst geladenen Dienst weitergeben; siehe
 [häufige Proxy-Fehler](../reverse-proxy.md#mistakes-that-cost-a-grade).
@@ -190,7 +190,7 @@ Verwaltungskonsole, `companionEditorHttps` die angekündigten Editor-Adressen.
 
 Der Scanner folgt keinem fremden Editor-Host aus dem Dokument. Andernfalls
 könnte die geprüfte Instanz das nächste Verbindungsziel bestimmen. Bei einem
-separaten Host fehlen diese Befunde; prüfen Sie den Office-Dienst mit dafür
+separaten Host fehlen diese Befunde; prüfe den Office-Dienst mit dafür
 geeigneten Werkzeugen. Siehe [ADR 0036](../../adr/0036-a-companion-service-is-probed-only-where-the-scan-was-pointed.md).
 
 ### Was ein Scan von außen nicht beantworten kann {#what-the-scan-deliberately-does-not-answer}
@@ -201,7 +201,7 @@ geeigneten Werkzeugen. Siehe [ADR 0036](../../adr/0036-a-companion-service-is-pr
   WOPI-Geheimnisse, Berechtigungen oder die Einstellungen des anderen Dienstes.
 - **Geschützte Inhalte:** Der Scanner verwendet keine Benutzerzugänge. Die
   ausdrücklich beschriebenen Demo-Zugangsdaten sind die einzige Ausnahme.
-- **Firewall, Anmelderichtlinien und Backups:** Diese müssen Sie im Betrieb
+- **Firewall, Anmelderichtlinien und Backups:** Diese musst du im Betrieb
   gesondert kontrollieren.
 
 Der Leitfaden [OpenCloud sicher betreiben](../secure-deployment.md) behandelt diese
@@ -222,8 +222,8 @@ Einbindung regelmäßiger Scans.
 Nur `productversion` nennt das tatsächliche Release. `version` und
 `versionstring` sind Kompatibilitätswerte. Der Scanner bevorzugt
 `productversion`, verwendet ersatzweise die Capabilities und setzt
-`legacyVersion: true`, wenn nur ein Platzhalter verfügbar ist. Prüfen Sie auch
-in eigenen Monitoring-Skripten, welches Feld Sie auswerten.
+`legacyVersion: true`, wenn nur ein Platzhalter verfügbar ist. Prüfe auch
+in eigenen Monitoring-Skripten, welches Feld Du wertest aus.
 
 ## Debug-Ports {#debug-ports}
 
@@ -302,7 +302,7 @@ Bei ausgeschaltetem `scanner.ipv6_enabled` entfallen IPv6-Adressen.
 Ausgenommene Prüfungen werden nicht verglichen. Bei nur einer Adresse entfällt
 der Befund samt Zusatzanfragen. `addressObservations` enthält die Messungen.
 
-Die Funktion ist standardmäßig aus. Sie verursacht etwa ein Dutzend Anfragen
+Die Funktion ist standardmäßig aus. SIE verursacht etwa ein Dutzend Anfragen
 je Adresse einschließlich Demo-Anmeldung. Server hinter einer einzigen
 Loadbalancer-Adresse, rotierende DNS-Antworten und GeoDNS schränken die
 Aussagekraft ein. Der öffentliche Webdienst verwendet sie nicht; siehe

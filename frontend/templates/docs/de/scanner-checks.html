@@ -11,14 +11,14 @@
   <p class="lede">{{ t('docs.scanner-checks.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de') %}
+{% if locale not in ('en', 'de', 'fr') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
 <article class="docs-article card section-gap" data-reveal lang="de">
 <p>Diese Übersicht beschreibt, welche Daten der Scanner von einer Instanz abruft,
 welche Prüfungen die Bewertung beeinflussen und wo eine Prüfung von außen an
-Grenzen stößt. Einzelheiten finden Sie in den Leitfäden zu <a href="/documentation/tls">TLS</a>,
+Grenzen stößt. Einzelheiten findest du in den Leitfäden zu <a href="/documentation/tls">TLS</a>,
 <a href="/documentation/csp">CSP</a>, <a href="/documentation/cookies">Cookies</a>, <a href="/documentation/authentication">Authentifizierung</a>,
 <a href="/documentation/sharing">Freigaben</a>, <a href="/documentation/exposure">öffentlich erreichbaren Diensten</a>,
 <a href="/documentation/embedding">Einbettung</a> und <a href="/documentation/lifecycle">Release-Unterstützung</a>.</p>
@@ -43,9 +43,9 @@ Grenzen stößt. Einzelheiten finden Sie in den Leitfäden zu <a href="/document
   <code>Cross-Origin-Opener-Policy</code>, <code>Cross-Origin-Resource-Policy</code> und
   <code>Cross-Origin-Embedder-Policy</code>. OpenCloud setzt sie standardmäßig nicht.
   Fehlende Werte werden erklärt, lösen aber weder einen Alarm noch eine
-  schlechtere Bewertung aus. Testen Sie insbesondere
-  <code>Cross-Origin-Embedder-Policy: require-corp</code> mit Ihrer Office-Integration,
-  bevor Sie den Header aktivieren; eingebundene Dienste müssen dazu passende
+  schlechtere Bewertung aus. Teste insbesondere
+  <code>Cross-Origin-Embedder-Policy: require-corp</code> mit deiner Office-Integration,
+  bevor du den Header aktivierst; eingebundene Dienste müssen dazu passende
   Ressourcenfreigaben senden. Siehe <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0028-headers-no-opencloud-sends-are-reported-but-never-alerted.md">ADR 0028</a>.</li>
 <li><code>securityTxtPublished</code> unter <code>setup.advisoryChecks</code>: Enthält
   <code>/.well-known/security.txt</code> einen <code>Contact</code>-Eintrag gemäß RFC 9116?
@@ -62,7 +62,7 @@ Grenzen stößt. Einzelheiten finden Sie in den Leitfäden zu <a href="/document
   und die daraus berechnete Bewertung von <code>0</code> bis <code>5</code>.</li>
 </ul>
 <p>Die folgenden zusätzlichen Prüfungen erscheinen unter <code>extraChecks</code>.
-Mit <code>--no-extra-checks</code> lassen sie sich ausschalten.</p>
+Mit <code>--no-extra-checks</code> lass sich ausschalten.</p>
 <table>
 <thead>
 <tr>
@@ -273,7 +273,7 @@ abzuwerten. Lediglich <code>basicAuthDisabled</code> fällt bei externem Provide
 <code>medium</code> auf <code>low</code>. Für diese Erkennung liest der Scanner nur das
 Discovery-Dokument und den <code>Location</code>-Header; er meldet sich nicht an.</p>
 <p>Ist kein Provider erkennbar, schlägt <code>identityProviderDetected</code> mit <code>low</code> fehl.
-Prüfen Sie dann insbesondere, ob der Reverse Proxy <code>/.well-known/</code>
+Prüfe dann insbesondere, ob der Reverse Proxy <code>/.well-known/</code>
 weiterleitet. <a href="https://docs.opencloud.eu/docs/admin/configuration/authentication-and-user-management/external-idp">OpenClouds Anleitung</a> beschreibt die Einrichtung.</p>
 <h3 id="the-demo-accounts">Die Demo-Konten</h3>
 <p>Nennt die Discovery den eingebauten Provider der Instanz, prüft der Scanner
@@ -281,10 +281,10 @@ zusätzlich die veröffentlichten Demo-Zugangsdaten.
 <code>IDM_CREATE_DEMO_USERS=true</code> legt fünf <a href="https://docs.opencloud.eu/docs/admin/resources/demo-user/">dokumentierte Konten</a>
 an; <code>dennis</code> besitzt Administratorrechte. Funktioniert eine Anmeldung, ist
 <code>demoUsersDisabled</code> kritisch und begrenzt die Note auf <code>D</code>.</p>
-<p>Dies ist die einzige Prüfung, die Zugangsdaten sendet. Sie verwendet nur die
+<p>Dies ist die einzige Prüfung, die Zugangsdaten sendet. SIE verwendet nur die
 veröffentlichten Paare und ausschließlich den Provider auf der Origin der
 Instanz. Externe Identity Provider werden damit nicht angesprochen. Das
-Ausschalten der Einstellung löscht vorhandene Konten nicht: Entfernen Sie diese
+Ausschalten der Einstellung löscht vorhandene Konten nicht: Entferne diese
 zusätzlich.</p>
 <h3 id="what-is-in-front-of-the-instance">Was vor der Instanz steht</h3>
 <p><code>reverseProxy</code> erfasst Hinweise auf einen vorgeschalteten Dienst, etwa einen
@@ -305,9 +305,9 @@ einem erfundenen Hostnamen an, einmal in <code>Host</code>, einmal in
 <p>Solche URLs bestimmen das Ziel einer Anmeldung. Ohne weitere Bedingungen
 betrifft die manipulierte Antwort zunächst den Aufrufer selbst; deshalb ist der
 Schweregrad <code>medium</code>. Ein gemeinsamer Cache oder ungeprüft weitergereichte
-Client-Header können die Wirkung auf andere Benutzer ausweiten. Setzen Sie
-<code>OC_URL</code> und lassen Sie den Proxy die Forwarded-Header selbst festlegen.</p>
-<p>Wird nur <code>Host</code> in einer Weiterleitung wiederholt, prüfen Sie auch den
+Client-Header können die Wirkung auf andere Benutzer ausweiten. Setze
+<code>OC_URL</code> und lass den Proxy die Forwarded-Header selbst festlegen.</p>
+<p>Wird nur <code>Host</code> in einer Weiterleitung wiederholt, prüfe auch den
 Standard-VHost. Ohne ausdrückliche Ablehnung unbekannter Namen kann der Proxy
 sie an den zuerst geladenen Dienst weitergeben; siehe
 <a href="/documentation/reverse-proxy#mistakes-that-cost-a-grade">häufige Proxy-Fehler</a>.
@@ -330,7 +330,7 @@ wenn ein Office-Dienst auf derselben Origin veröffentlicht wird und unter
 Verwaltungskonsole, <code>companionEditorHttps</code> die angekündigten Editor-Adressen.</p>
 <p>Der Scanner folgt keinem fremden Editor-Host aus dem Dokument. Andernfalls
 könnte die geprüfte Instanz das nächste Verbindungsziel bestimmen. Bei einem
-separaten Host fehlen diese Befunde; prüfen Sie den Office-Dienst mit dafür
+separaten Host fehlen diese Befunde; prüfe den Office-Dienst mit dafür
 geeigneten Werkzeugen. Siehe <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0036-a-companion-service-is-probed-only-where-the-scan-was-pointed.md">ADR 0036</a>.</p>
 <h3 id="what-the-scan-deliberately-does-not-answer">Was ein Scan von außen nicht beantworten kann</h3>
 <ul>
@@ -340,7 +340,7 @@ geeigneten Werkzeugen. Siehe <a href="https://github.com/sowoi/check-opencloud-s
   WOPI-Geheimnisse, Berechtigungen oder die Einstellungen des anderen Dienstes.</li>
 <li><strong>Geschützte Inhalte:</strong> Der Scanner verwendet keine Benutzerzugänge. Die
   ausdrücklich beschriebenen Demo-Zugangsdaten sind die einzige Ausnahme.</li>
-<li><strong>Firewall, Anmelderichtlinien und Backups:</strong> Diese müssen Sie im Betrieb
+<li><strong>Firewall, Anmelderichtlinien und Backups:</strong> Diese musst du im Betrieb
   gesondert kontrollieren.</li>
 </ul>
 <p>Der Leitfaden <a href="/documentation/secure-deployment">OpenCloud sicher betreiben</a> behandelt diese
@@ -353,8 +353,8 @@ Einbindung regelmäßiger Scans.</p>
 <p>Nur <code>productversion</code> nennt das tatsächliche Release. <code>version</code> und
 <code>versionstring</code> sind Kompatibilitätswerte. Der Scanner bevorzugt
 <code>productversion</code>, verwendet ersatzweise die Capabilities und setzt
-<code>legacyVersion: true</code>, wenn nur ein Platzhalter verfügbar ist. Prüfen Sie auch
-in eigenen Monitoring-Skripten, welches Feld Sie auswerten.</p>
+<code>legacyVersion: true</code>, wenn nur ein Platzhalter verfügbar ist. Prüfe auch
+in eigenen Monitoring-Skripten, welches Feld Du wertest aus.</p>
 <h2 id="debug-ports">Debug-Ports</h2>
 <p>OpenCloud-Dienste haben Debug-Listener für <code>/healthz</code>, <code>/readyz</code>, <code>/metrics</code>,
 <code>/config</code> und <code>/debug/pprof</code>. Darüber können Versionsdaten und Konfigurationen
@@ -457,7 +457,7 @@ Bei ausgeschaltetem <code>scanner.ipv6_enabled</code> entfallen IPv6-Adressen.</
 </table>
 <p>Ausgenommene Prüfungen werden nicht verglichen. Bei nur einer Adresse entfällt
 der Befund samt Zusatzanfragen. <code>addressObservations</code> enthält die Messungen.</p>
-<p>Die Funktion ist standardmäßig aus. Sie verursacht etwa ein Dutzend Anfragen
+<p>Die Funktion ist standardmäßig aus. SIE verursacht etwa ein Dutzend Anfragen
 je Adresse einschließlich Demo-Anmeldung. Server hinter einer einzigen
 Loadbalancer-Adresse, rotierende DNS-Antworten und GeoDNS schränken die
 Aussagekraft ein. Der öffentliche Webdienst verwendet sie nicht; siehe

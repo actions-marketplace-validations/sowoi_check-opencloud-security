@@ -1,5 +1,3 @@
-# Public link sharing checks explained
-
 # Öffentliche Freigabelinks prüfen
 
 Bei einem öffentlichen Freigabelink kann bereits die URL den Zugriff ermöglichen. Der Scanner liest in den Capabilities, ob Links ein Passwort benötigen und ob eine automatische Ablaufregel gemeldet wird.
@@ -10,7 +8,7 @@ Die Felder `enforced_for` geben die Passwortpflicht je Freigabetyp an: schreibge
 
 OpenCloud verlangt standardmäßig Passwörter für schreibgeschützte Links, aber nicht für beschreibbare. Letztere können je nach Freigabetyp das Hochladen oder Ändern von Dateien ohne zusätzliche Anmeldung erlauben.
 
-**Behebung:** Setzen Sie `OC_SHARING_PUBLIC_SHARE_MUST_HAVE_PASSWORD=true` und `OC_SHARING_PUBLIC_WRITEABLE_SHARE_MUST_HAVE_PASSWORD=true`. Verwenden Sie diese globalen Namen statt der veralteten `FRONTEND_OCS_*`-Varianten. Die Anforderungen an das Linkpasswort selbst prüft [`passwordPolicyEnforced`](../authentication.md#5-is-the-link-password-policy-strong-enough-passwordpolicyenforced).
+**Behebung:** Setze `OC_SHARING_PUBLIC_SHARE_MUST_HAVE_PASSWORD=true` und `OC_SHARING_PUBLIC_WRITEABLE_SHARE_MUST_HAVE_PASSWORD=true`. Verwende diese globalen Namen statt der veralteten `FRONTEND_OCS_*`-Varianten. Die Anforderungen an das Linkpasswort selbst prüft [`passwordPolicyEnforced`](../authentication.md#5-is-the-link-password-policy-strong-enough-passwordpolicyenforced).
 
 ## 2. Automatischer Ablauf: `publicLinkExpirationEnforced` {#2-do-public-links-expire-automatically-publiclinkexpirationenforced}
 
@@ -20,7 +18,7 @@ Der Scanner liest `files_sharing.public.expire_date.enabled`. OpenCloud legt die
 
 Der Wert bleibt im Katalog, damit eine spätere Änderung der Capability erkennbar wird. Für `userEnumerationRestricted` gilt derselbe Ansatz; siehe [Kontensuche](../authentication.md#4-is-account-search-restricted-to-shared-groups-userenumerationrestricted).
 
-Wenn Sie einen verbindlichen Ablauf benötigen, legen Sie ihn pro Freigabe fest oder setzen Sie einen gesonderten Prozess zur planmäßigen Rücknahme von Freigaben ein. Eine allgemeine Einstellung für den hier gemessenen Wert steht derzeit nicht zur Verfügung.
+Wenn du einen verbindlichen Ablauf benötigst, lege ihn pro Freigabe fest oder setze einen gesonderten Prozess zur planmäßigen Rücknahme von Freigaben ein. Eine allgemeine Einstellung für den hier gemessenen Wert steht derzeit nicht zur Verfügung.
 
 ## Weitere Sharing-Capabilities {#what-else-is-in-that-document-and-why-none-of-it-is-checked}
 

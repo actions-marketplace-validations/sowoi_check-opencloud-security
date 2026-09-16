@@ -1,5 +1,3 @@
-# Cookie attribute checks explained
-
 # Cookie-Attribute prüfen
 
 Der Scanner untersucht die `Set-Cookie`-Header der öffentlichen Antworten auf vier Schutzmaßnahmen. Er speichert keine Cookie-Werte. Geprüft werden nur die Attribute der Cookies, die OpenCloud oder ein vorgeschalteter Proxy tatsächlich sendet.
@@ -10,19 +8,19 @@ Setzt die untersuchte Antwort keine Cookies, erscheinen diese Prüfungen nicht i
 
 Ohne `Secure` kann der Browser ein Cookie auch über unverschlüsseltes HTTP senden, sofern die übrigen Regeln dies zulassen. Wird es dabei mitgelesen, kann ein Angreifer den Wert möglicherweise wiederverwenden.
 
-**Behebung:** Setzen Sie `Secure` für Cookies, die ausschließlich über HTTPS übertragen werden sollen. Bei TLS-Terminierung im Reverse Proxy kann es sich um dessen Sitzungs- oder CSRF-Cookies handeln. Die Konfiguration gehört dann in den Proxy; siehe [Reverse Proxys](../reverse-proxy.md).
+**Behebung:** Setze `Secure` für Cookies, die ausschließlich über HTTPS übertragen werden sollen. Bei TLS-Terminierung im Reverse Proxy kann es sich um dessen Sitzungs- oder CSRF-Cookies handeln. Die Konfiguration gehört dann in den Proxy; siehe [Reverse Proxys](../reverse-proxy.md).
 
 ## 2. Zugriff durch Seitenskripte begrenzen: `cookieHttpOnly` {#2-can-page-scripts-read-the-cookie-cookiehttponly}
 
 Ohne `HttpOnly` kann JavaScript auf der Seite das Cookie über `document.cookie` lesen. Bei einer XSS-Schwachstelle kann dadurch auch der Cookie-Wert gestohlen werden. Besonders relevant ist dies für Sitzungscookies.
 
-**Behebung:** Setzen Sie `HttpOnly`, wenn das Cookie nicht von einem Browserskript gelesen werden muss. Einige CSRF-Verfahren sowie Einstellungen oder Einwilligungen benötigen absichtlich lesbare Cookies. Prüfen Sie daher die Funktion des jeweiligen Cookies, bevor Sie das Attribut ergänzen.
+**Behebung:** Setze `HttpOnly`, wenn das Cookie nicht von einem Browserskript gelesen werden muss. Einige CSRF-Verfahren sowie Einstellungen oder Einwilligungen benötigen absichtlich lesbare Cookies. Prüfe daher die Funktion des jeweiligen Cookies, bevor du das Attribut ergänzen.
 
 ## 3. Websiteübergreifende Anfragen begrenzen: `cookieSameSite` {#3-is-the-cookie-sent-on-cross-site-requests-cookiesamesite}
 
 `SameSite` legt fest, wann der Browser ein Cookie bei websiteübergreifenden Anfragen mitsendet, und kann so zum Schutz vor CSRF beitragen. Browser wenden bei einem fehlenden Attribut eigene Standardregeln an. Die Prüfung verlangt eine ausdrückliche Einstellung, damit das Verhalten nicht davon abhängt.
 
-**Behebung:** Verwenden Sie `SameSite=Lax` oder `SameSite=Strict`, sofern die Anwendung keinen websiteübergreifenden Ablauf mit `SameSite=None` benötigt. `None` erfordert zusätzlich `Secure`. `Lax` erlaubt unter anderem bestimmte Navigationen auf oberster Ebene, etwa das Öffnen eines geteilten Links.
+**Behebung:** Verwende `SameSite=Lax` oder `SameSite=Strict`, sofern die Anwendung keinen websiteübergreifenden Ablauf mit `SameSite=None` benötigt. `None` erfordert zusätzlich `Secure`. `Lax` erlaubt unter anderem bestimmte Navigationen auf oberster Ebene, etwa das Öffnen eines geteilten Links.
 
 ## 4. Cookie-Präfixe verwenden: `cookiePrefix` {#4-does-the-cookie-name-carry-a-prefix-cookieprefix}
 
@@ -33,7 +31,7 @@ Die Prüfung unterscheidet zwei Fälle:
 - **Ungültiges Präfix:** Ein Cookie heißt etwa `__Host-…`, besitzt aber `Domain`, einen anderen Pfad als `/` oder kein `Secure`. Browser, die die Präfixregeln unterstützen, lehnen es ab. Die Detailmeldung nennt die verletzte Regel.
 - **Kein beobachtetes Cookie verwendet ein Präfix.** Der Scanner meldet die fehlende zusätzliche Schutzmaßnahme.
 
-**Behebung:** Benennen Sie das Sitzungscookie in `__Host-<name>` um und setzen Sie `Secure`, `Path=/` und kein `Domain`. Muss das Cookie über Subdomains hinweg gelten, kommt `__Secure-<name>` infrage. Nehmen Sie die Änderung dort vor, wo das Cookie erzeugt wird: in OpenCloud, im Reverse Proxy oder beim Identitätsanbieter.
+**Behebung:** Benenne das Sitzungscookie in `__Host-<name>` um und setze `Secure`, `Path=/` und kein `Domain`. Muss das Cookie über Subdomains hinweg gelten, kommt `__Secure-<name>` infrage. Nimm die Änderung dort vor, wo das Cookie erzeugt wird: in OpenCloud, im Reverse Proxy oder beim Identitätsanbieter.
 
 ## Schweregrad und Bewertung {#severity-and-rating-impact}
 

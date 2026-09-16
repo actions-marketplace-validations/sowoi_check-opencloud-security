@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.scanner.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de') %}
+{% if locale not in ('en', 'de', 'fr') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -104,7 +104,7 @@ Nur <code>productversion</code> bezeichnet das installierte Release.
 <code>versions.select_version()</code> bevorzugt dieses Feld, fragt ersatzweise die
 Capabilities ab und verwirft bekannte Platzhalter. Ist keine verwertbare
 Version vorhanden, enthält das Ergebnis <code>legacyVersion</code>; EOL-, Update- und
-Schwachstellenprüfungen entfallen. Verwenden Sie auch in eigenen Skripten
+Schwachstellenprüfungen entfallen. Verwende auch in eigenen Skripten
 <code>productversion</code>.</p>
 <h2 id="rating-algorithm">Wie die Bewertung entsteht</h2>
 <p>Der Scanner wertet diese Bedingungen in der angegebenen Reihenfolge aus:</p>
@@ -152,8 +152,8 @@ Schwachstellenprüfungen entfallen. Verwenden Sie auch in eigenen Skripten
 <p>Anschließend begrenzen fehlgeschlagene Zusatzprüfungen den Wert: kritisch auf
 <code>2</code> (<code>D</code>), hoch auf <code>3</code> (<code>C</code>), mittel auf <code>4</code> (<code>A</code>), niedrig auf <code>5</code> (<code>A+</code>).
 Eine solche Grenze verbessert niemals eine bereits schlechtere Bewertung.</p>
-<p>Beachten Sie die Monitoring-Schwellen: Ein kritischer Einzelbefund mit Note <code>D</code>
-führt beim Standard <code>--critical 1</code> zu WARNING. Wählen Sie <code>--critical 2</code>, wenn
+<p>Beachte die Monitoring-Schwellen: Ein kritischer Einzelbefund mit Note <code>D</code>
+führt beim Standard <code>--critical 1</code> zu WARNING. Wähle <code>--critical 2</code>, wenn
 dieser Befund CRITICAL auslösen soll. Um Zusatzbefunde ohne Einfluss auf die
 Note zu erfassen:</p>
 <pre><code class="language-yaml">scanner:
@@ -320,7 +320,7 @@ steht zusätzlich unter <code>newestRelease</code>.</p>
 </tbody>
 </table>
 <p>Standard ist <code>auto</code>. Bei einem nicht erreichbaren Feed bleibt die Prüfung mit
-den Daten des installierten Pakets möglich. Wählen Sie <code>feed</code>, wenn Sie einen
+den Daten des installierten Pakets möglich. Wähle <code>feed</code>, wenn du einen
 fehlgeschlagenen Abruf ausdrücklich sehen möchten.</p>
 <p>Standardquelle ist die GitHub-Releases-API. <code>parse_release_feed()</code> versteht
 auch ein einzelnes <code>{"tag_name": ...}</code>-Dokument und Release-Listen. Entwürfe
@@ -338,11 +338,11 @@ und Vorabversionen werden ausgelassen; interne Spiegel können diese Formate
 Sigstore-Attestierung zu verifizieren. Er verwirft Zeitpläne, die gebündelte
 Release-Linien verlieren, sowie Sicherheitsmeldungen ohne Versionsgrenzen.
 Die Zieldateien werden atomar ersetzt; das installierte Paket bleibt unverändert.
-Verweisen Sie mit <code>scanner.release_schedule</code> und <code>scanner.vulnerability_db</code>
+Verweise mit <code>scanner.release_schedule</code> und <code>scanner.vulnerability_db</code>
 auf diese Dateien. Der mitgelieferte
 <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/systemd/check-opencloud-security-refresh.timer">systemd-Timer</a>
 kann den Abruf täglich ausführen.</p>
-<p>Für die Signaturprüfung benötigen Sie das Extra <code>signing</code>:</p>
+<p>Für die Signaturprüfung benötigst du das Extra <code>signing</code>:</p>
 <pre><code class="language-console">$ pip install 'check-opencloud-security[signing]'
 </code></pre>
 <p>Ohne dieses Extra gelten nur die Strukturprüfungen; der Befehl warnt davor.
@@ -361,7 +361,7 @@ Attestierungsprüfung abgerufen. Der Befehl weist im Log darauf hin; siehe
 einen Pull Request für <code>data/vulnerabilities.json</code>. Dabei kommen nur Einträge
 hinzu. Entfernen einer Meldung erfordert eine bewusste Bearbeitung.</p>
 <p>Eine leere Liste <code>vulnerabilities</code> bedeutet, dass keine geladene Meldung zur
-Version passt. Sie bestätigt nicht die Vollständigkeit der Quellen. Eigene
+Version passt. SIE bestätigt nicht die Vollständigkeit der Quellen. Eigene
 Datenbanken lassen sich ergänzen:</p>
 <pre><code class="language-yaml">scanner:
   vulnerability_db: /etc/check-opencloud-security/advisories.json
@@ -581,8 +581,8 @@ oder einen CSP-Dateipfad, erscheint sie unter <code>Fragment.undecided</code> st
 scheinbar fertiger Konfigurationswert.</p>
 <h2 id="debug-ports">Debug-Ports</h2>
 <p>Debug-Listener liefern unter anderem <code>/healthz</code>, <code>/readyz</code>, <code>/metrics</code>,
-<code>/config</code> und <code>/debug/pprof</code>. Sie können Versionen und Konfigurationen offenlegen
-und Profiling erlauben. Standardmäßig binden sie an Loopback, sofern
+<code>/config</code> und <code>/debug/pprof</code>. Du kannst Versionen und Konfigurationen offenlegen
+und Profiling erlauben. Standardmäßig binde an Loopback, sofern
 <code>&lt;SERVICE&gt;_DEBUG_ADDR</code> nichts anderes festlegt.</p>
 <table>
 <thead>
@@ -759,7 +759,7 @@ Gültigkeit, Restlaufzeit, Namen, Kettenlänge und weitere Messwerte:</p>
 </code></pre>
 <p><code>null</code> bedeutet „nicht ermittelt“. Fehlende Laufzeitunterstützung, ein nicht
 vorhandenes <code>openssl</code> oder ein fehlender OCSP-Responder können einzelne
-Prüfungen verhindern. Sie werden dann nicht als bestanden ausgewiesen; siehe
+Prüfungen verhindern. SIE werden dann nicht als bestanden ausgewiesen; siehe
 <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0013-transport-security-is-measured-not-assumed.md">ADR 0013</a>.</p>
 <p>Auch ein nicht vertrauenswürdiges Zertifikat wird auf Ablauf, Namen und
 Laufzeit untersucht. <code>probe_deprecated</code> öffnet zusätzliche Handshakes für alte

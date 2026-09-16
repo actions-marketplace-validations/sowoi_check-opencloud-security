@@ -1,8 +1,8 @@
-# OpenCloud Security Scanner CLI reference
+# CLI-Referenz des OpenCloud Security Scanners
 
 ## Schnellstart {#quick-start}
 
-Installieren Sie das Plugin und prüfen Sie Ihre Instanz:
+Installiere das Plugin und prüfe deine Instanz:
 
 ```shell
 pipx install check-opencloud-security     # or: uv tool install / pip install
@@ -17,7 +17,7 @@ Vertrauenskette sichtbar, beeinflusst aber die Bewertung nicht:
 check-opencloud-security --host opencloud.example.com:9200 --insecure
 ```
 
-Für den dauerhaften Einsatz finden Sie unten Installations- und Monitoring-Anleitungen.
+Für den dauerhaften Einsatz findest du unten Installations- und Monitoring-Anleitungen.
 
 ## Funktionen {#features}
 
@@ -36,7 +36,7 @@ Für den dauerhaften Einsatz finden Sie unten Installations- und Monitoring-Anle
 
 ## Voraussetzungen {#prerequisites}
 
-Sie benötigen Python ab 3.10 oder Docker. `requests` und `PyYAML` werden bei der
+Du benötigst Python ab 3.10 oder Docker. `requests` und `PyYAML` werden bei der
 Python-Installation automatisch mitinstalliert. Der Monitoring-Host muss die
 OpenCloud-Instanz erreichen können; diese muss dafür nicht öffentlich sein.
 
@@ -57,7 +57,7 @@ sudo apt install ./check-opencloud-security_<version>_all.deb       # Debian, Ub
 sudo dnf install ./check-opencloud-security-<version>-1.noarch.rpm  # RHEL, Fedora
 ```
 
-Sie installieren das Plugin unter `/usr/lib/nagios/plugins/`, ohne eine
+Du installierst das Plugin unter `/usr/lib/nagios/plugins/`, ohne eine
 Monitoring-Konfiguration zu aktivieren. Alternativ enthält das Docker-Image
 beide Kommandozeilenprogramme:
 
@@ -66,7 +66,7 @@ docker run --rm --entrypoint check-opencloud-security \
   okxo/opencloud-scanner:latest --host opencloud.example.com
 ```
 
-Da das Image standardmäßig den Webdienst startet, wählen Sie das Plugin mit
+Da das Image standardmäßig den Webdienst startet, wähle das Plugin mit
 `--entrypoint`. Weitere Varianten stehen unter [Scannen mit Docker](../docker-oneliner.md).
 
 | Einrichtung | Anleitung |
@@ -81,7 +81,7 @@ Da das Image standardmäßig den Webdienst startet, wählen Sie das Plugin mit
 
 Releases enthalten eine CycloneDX-SBOM und eine Sigstore-Attestierung; siehe
 [Downloads prüfen](../../SECURITY.md#verifying-what-you-downloaded).
-Halten Sie auch das Plugin aktuell: Sein Paket enthält Release-Zeitplan und
+Halte auch das Plugin aktuell: Sein Paket enthält Release-Zeitplan und
 Sicherheitsmeldungen.
 
 ## Kommandozeile {#cli-usage}
@@ -143,8 +143,7 @@ check-opencloud-security --host opencloud.example.com \
   --prometheus-listen-port 9102
 ```
 
-Er bindet standardmäßig an `127.0.0.1`. Für Container oder Kubernetes verwenden
-Sie bei Bedarf `--prometheus-listen-addr 0.0.0.0` und beschränken Port 9102 per
+Er bindet standardmäßig an `127.0.0.1`. Für Container oder Kubernetes verwende bei Bedarf `--prometheus-listen-addr 0.0.0.0` und beschränken Port 9102 per
 Firewall oder NetworkPolicy.
 
 Die Metriken erfassen Bewertung, Schwachstellen, fehlende Schutzmaßnahmen,
@@ -163,7 +162,7 @@ check-opencloud-security --host opencloud.example.com --format=otlp \
 
 Beide Metrikformate geben bei einem fehlgeschlagenen Scan
 `opencloud_security_scrape_success 0` aus und enden mit Exitcode 0.
-Für eine Überwachung über Exitcodes verwenden Sie `nagios`.
+Für eine Überwachung über Exitcodes verwende `nagios`.
 Die Leitfäden zu [Prometheus](../prometheus.md) und [Kubernetes](../kubernetes.md)
 enthalten Alarmregeln, ServiceMonitor, OTLP-Beispiele und Helm-Chart.
 
@@ -189,7 +188,7 @@ Siehe [Ausgabeformate](../output-formats.md) und [CI-Anleitung](../ci.md).
 Auf dem Checkmk-Server lässt sich das Plugin als aktiver Nagios-Check unter
 **Setup → Services → Other services → Integrate Nagios plugins** einbinden.
 
-Alternativ führen Sie es als lokalen Check auf einem Agent-Host aus, der die
+Alternativ führe es als lokalen Check auf einem Agent-Host aus, der die
 Instanz erreichen kann:
 
 ```shell
@@ -201,14 +200,14 @@ check-opencloud-security --host opencloud.example.com --format checkmk
 ```
 
 [Das mitgelieferte Skript](../../contrib/checkmk/opencloud_security) verwendet diesen
-Aufruf. Installieren Sie es in einem Intervallverzeichnis wie `local/3600/`,
+Aufruf. Installiere es in einem Intervallverzeichnis wie `local/3600/`,
 damit nicht jeder Agent-Abruf einen neuen Scan auslöst. Der Dienstname enthält
 die geprüfte Instanz. Einzelheiten: [Checkmk](../checkmk.md).
 
 ## GitHub Action {#github-action}
 
 [`action.yml`](../../action.yml) führt den Check als Workflow-Schritt aus. Der Runner
-muss die Instanz erreichen können; für interne Ziele benötigen Sie einen
+muss die Instanz erreichen können; für interne Ziele benötigst du einen
 passend angebundenen eigenen Runner. Die Befunde gelten für dessen Netzwerksicht.
 
 ```yaml
@@ -234,7 +233,7 @@ jobs:
           releases-token: ${{ github.token }}
 ```
 
-Wählen Sie einen Release-Tag oder setzen Sie `version` ausdrücklich. Ein
+Wähle einen Release-Tag oder setze `version` ausdrücklich. Ein
 Versions-Tag installiert das entsprechende Paket; bei Branch- oder
 Commit-Referenzen ohne Versionsvorgabe wird das neueste Release installiert
 und eine Warnung ausgegeben.
@@ -276,7 +275,7 @@ check-opencloud-security
 ```
 
 Scans lesen weder `.netrc` noch `HTTP_PROXY`, `HTTPS_PROXY` oder die
-CA-Bundle-Variablen von Requests. Setzen Sie einen Proxy über `--proxy`/
+CA-Bundle-Variablen von Requests. Setze einen Proxy über `--proxy`/
 `COS_PROXY` und eine eigene CA über `--ca-file`/`COS_SCANNER_TLS_CA_FILE`.
 Ein auf geprüfte Adressen beschränkter Webhook kann keinen auflösenden Proxy
 verwenden; dafür ist die ausdrückliche Freigabe `--allow-private-webhooks` nötig.
@@ -319,7 +318,7 @@ Verifikation und zuletzt HTTP. Fehlende Vertrauenswürdigkeit wird als
 
 `--insecure` beginnt ohne Verifikation und nimmt die fehlende Vertrauenskette
 aus der Bewertung. Andere Zertifikatsprüfungen bleiben bestehen. Für interne
-Zertifizierungsstellen verwenden Sie möglichst ein eigenes CA-Bundle.
+Zertifizierungsstellen verwende möglichst ein eigenes CA-Bundle.
 
 ### Debug-Ports {#debug-ports}
 
@@ -368,7 +367,7 @@ Die [offizielle Lifecycle-Seite][lifecycle] beschreibt die Kanäle.
 
 [lifecycle]: https://docs.opencloud.eu/docs/admin/resources/lifecycle/
 
-Den aktuellen Veröffentlichungsstand finden Sie auf der offiziellen
+Den aktuellen Veröffentlichungsstand findest du auf der offiziellen
 [Lifecycle-Seite][lifecycle]. Die folgenden Ausgaben
 zeigen Beispiele für ein abgelaufenes und ein noch unterstütztes Release:
 
@@ -463,8 +462,7 @@ fehlgeschlagener Abruf auf den Paketstand zurück. Das Ergebnis erscheint als
 Zusatzzeile und Metrik `update_available`. `--update-warning` hebt ein sonstiges
 OK bei ausstehendem Update auf WARNING an; ein Abruffehler bricht den Scan nicht ab.
 
-Die Empfehlung bleibt im passenden Release-Kanal. Mit `--release-track` legen
-Sie diesen ausdrücklich fest; siehe [Release-Lifecycle](../release-lifecycle.md).
+Die Empfehlung bleibt im passenden Release-Kanal. Mit `--release-track` lege diesen ausdrücklich fest; siehe [Release-Lifecycle](../release-lifecycle.md).
 
 ## Konfigurationsdatei und Geheimnisse {#configuration-file-and-secrets}
 
@@ -481,7 +479,7 @@ Die JSON-Datei erhält Modus `0600` und wird anschließend automatisch gefunden:
 check-opencloud-security          # no arguments needed any more
 ```
 
-Mit `--configure --config <pfad>` wählen Sie den Speicherort. Vor dem Ersetzen
+Mit `--configure --config <pfad>` wähle den Speicherort. Vor dem Ersetzen
 einer vorhandenen Datei zeigt der Assistent sie an und verlangt Bestätigung.
 Für den Scanner lautet der entsprechende Befehl `check-opencloud-scanner configure`.
 
@@ -522,7 +520,7 @@ jeweiligen Grenze lösen den Zustand aus. Bekannte Schwachstellen ergeben
 mindestens WARNING; ein abgelaufenes Release immer CRITICAL.
 
 Ein kritischer Zusatzbefund begrenzt die Note auf `D` (`2`) und ergibt daher
-standardmäßig WARNING. Setzen Sie `--critical 2`, wenn er CRITICAL auslösen soll.
+standardmäßig WARNING. Setze `--critical 2`, wenn er CRITICAL auslösen soll.
 Beide Schwellen müssen zwischen 0 und 5 liegen; `critical` darf `warning` nicht
 überschreiten. Eine unbekannte Bewertung ergibt UNKNOWN.
 
@@ -634,7 +632,7 @@ Derselbe Plan erscheint im Webbericht, in den Exporten und im MCP-Werkzeug
 
 ## Webhook-Benachrichtigungen {#webhook-notifications}
 
-Mit `--webhook-url` oder `COS_WEBHOOK_URL` aktivieren Sie Benachrichtigungen:
+Mit `--webhook-url` oder `COS_WEBHOOK_URL` aktiviere Benachrichtigungen:
 
 ```shell
 check-opencloud-security --host opencloud.example.com \
@@ -656,7 +654,7 @@ Die Zustellung verwendet `--retries` und `--backoff-factor`. Bei Fehlern wird
 erhalten. Mehrere Hosts erzeugen getrennte Nachrichten. Fehlgeschlagene Scans
 lösen bei `unknown` oder `always` ebenfalls eine Benachrichtigung aus.
 
-Verwenden Sie Webhooks ergänzend zur Überwachung. Nach ausgeschöpften
+Verwende Webhooks ergänzend zur Überwachung. Nach ausgeschöpften
 Wiederholungen erfolgt keine spätere Zustellung. Die [Webhook-Anleitung](../webhook-recipes.md)
 erklärt Payload, Signaturprüfung und Empfängeradapter einschließlich
 Uptime-Kuma-Push-Monitoren.

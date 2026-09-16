@@ -1,13 +1,11 @@
-# OpenCloud security scanner webhook recipes
-
 # Webhook-Beispiele
 
-Der [Webhook](../../README.md#webhook-notifications) sendet standardmäßig das JSON-Ergebnis des Plugins. Mit `--webhook-format` können Sie direkt Slack-, Discord-, ntfy- oder Gotify-Nachrichten erzeugen. Für andere Empfänger verwenden Sie das generische Dokument oder einen eigenen Adapter.
+Der [Webhook](../../README.md#webhook-notifications) sendet standardmäßig das JSON-Ergebnis des Plugins. Mit `--webhook-format` kannst du direkt Slack-, Discord-, ntfy- oder Gotify-Nachrichten erzeugen. Für andere Empfänger verwende das generische Dokument oder einen eigenen Adapter.
 
 Dabei gelten zwei Regeln:
 
 - **Ein Zustellfehler verändert den Checkstatus nicht.** Das Plugin ergänzt `Webhook delivery failed` und behält den gemessenen Exitcode bei.
-- **Schützen Sie URL und Tokens.** Webhook-URLs enthalten häufig bereits die Zugangsberechtigung. Verwenden Sie `COS_WEBHOOK_URL` oder einen Secret-Verweis in der [Konfiguration](../../README.md#configuration-file-and-secrets).
+- **Schütze URL und Tokens.** Webhook-URLs enthalten häufig bereits die Zugangsberechtigung. Verwende `COS_WEBHOOK_URL` oder einen Secret-Verweis in der [Konfiguration](../../README.md#configuration-file-and-secrets).
 
 ## Die wichtigsten Felder {#the-payload-in-short}
 
@@ -99,7 +97,7 @@ Jeder POST enthält anschließend:
 X-COS-Signature: sha256=<hex>
 ```
 
-`<hex>` ist die HMAC-SHA256-Signatur der **unveränderten Request-Bytes**. Prüfen Sie genau den empfangenen Body. Erneutes Serialisieren des JSON kann Leerzeichen oder Schlüsselreihenfolge verändern und ergibt dann einen anderen Hash.
+`<hex>` ist die HMAC-SHA256-Signatur der **unveränderten Request-Bytes**. Prüfe genau den empfangenen Body. Erneutes Serialisieren des JSON kann Leerzeichen oder Schlüsselreihenfolge verändern und ergibt dann einen anderen Hash.
 
 ```python
 import hashlib
@@ -113,17 +111,17 @@ def verify(raw_body: bytes, header: str, secret: str) -> bool:
     return hmac.compare_digest(expected, header or "")
 ```
 
-Verwenden Sie `hmac.compare_digest` für den Vergleich. In FastAPI liefert `await request.body()` die Rohdaten, in Flask `request.get_data()`. Lesen Sie den Body vor dem Parsen, wenn Ihr Framework sonst nur ein JSON-Objekt bereitstellt.
+Verwende `hmac.compare_digest` für den Vergleich. In FastAPI liefert `await request.body()` die Rohdaten, in Flask `request.get_data()`. Lies den Body vor dem Parsen, wenn Ihr Framework sonst nur ein JSON-Objekt bereitstellt.
 
 - Die Signatur umfasst auch die von `slack`, `discord`, `ntfy` und `gotify` erzeugten Dokumente. Die Dienste selbst müssen den zusätzlichen Header nicht auswerten.
 - Ohne konfiguriertes Geheimnis wird kein Signaturheader gesendet. Ein Empfänger mit Signaturpflicht muss eine solche Anfrage ablehnen.
-- Behandeln Sie das Signaturgeheimnis wie jede andere Zugangsinformation und halten Sie es aus ausgeschriebenen Kommandozeilen heraus.
+- Behandle das Signaturgeheimnis wie jede andere Zugangsinformation und halte es aus ausgeschriebenen Kommandozeilen heraus.
 
 ## Uptime Kuma {#uptime-kuma}
 
 Ein **Push**-Monitor erwartet regelmäßige Meldungen und kann dadurch auch ausgebliebene Läufe erkennen.
 
-**1. Monitor anlegen:** Wählen Sie *Add New Monitor → Push* und benennen Sie den Monitor nach der Instanz. Uptime Kuma liefert eine URL wie `https://kuma.example.com/api/push/<token>`. Setzen Sie das Heartbeat-Intervall etwas höher als das tatsächliche Scanintervall, damit ein langsamer Lauf nicht sofort als Ausfall gilt.
+**1. Monitor anlegen:** Wähle *Add New Monitor → Push* und benenne den Monitor nach der Instanz. Uptime Kuma liefert eine URL wie `https://kuma.example.com/api/push/<token>`. Setze das Heartbeat-Intervall etwas höher als das tatsächliche Scanintervall, damit ein langsamer Lauf nicht sofort als Ausfall gilt.
 
 **2. Webhook konfigurieren:** Mit `--webhook-on always` werden auch erfolgreiche Durchläufe gemeldet:
 
@@ -133,7 +131,7 @@ check-opencloud-security --host opencloud.example.com \
   --webhook-on always
 ```
 
-Oder verwenden Sie eine Konfigurationsdatei:
+Oder verwende eine Konfigurationsdatei:
 
 ```yaml
 host: opencloud.example.com
@@ -142,9 +140,9 @@ webhook:
   on: always
 ```
 
-**3. Regelmäßig ausführen:** Richten Sie einen [systemd-Timer](../scheduling.md#systemd-timer) oder [Cronjob](../scheduling.md#cron) ein. Bleibt die Meldung länger als das Heartbeat-Intervall aus, erkennt Uptime Kuma einen Ausfall.
+**3. Regelmäßig ausführen:** Richte einen [systemd-Timer](../scheduling.md#systemd-timer) oder [Cronjob](../scheduling.md#cron) ein. Bleibt die Meldung länger als das Heartbeat-Intervall aus, erkennt Uptime Kuma einen Ausfall.
 
-Prüfen Sie, welche Status- und Detailfelder Ihr Push-Empfänger tatsächlich auswertet. Der generische JSON-Payload enthält:
+Prüfe, welche Status- und Detailfelder Ihr Push-Empfänger tatsächlich auswertet. Der generische JSON-Payload enthält:
 
 | Feld | Inhalt |
 |:--|:--|
@@ -177,7 +175,7 @@ check-opencloud-security --host opencloud.example.com \
 
 Mattermost akzeptiert das Slack-Format ebenso wie passende Webhook-Eingänge von [matrix-hookshot](https://matrix-org.github.io/matrix-hookshot/). Discord bietet einen kompatiblen Eingang unter `<webhook-url>/slack`.
 
-Für zusätzliche Felder, eigene Farben oder abweichende Empfänger können Sie einen Adapter verwenden:
+Für zusätzliche Felder, eigene Farben oder abweichende Empfänger kannst du einen Adapter verwenden:
 
 ```python
 #!/usr/bin/env python3
@@ -217,7 +215,7 @@ class Handler(BaseHTTPRequestHandler):
 HTTPServer(("127.0.0.1", 8099), Handler).serve_forever()
 ```
 
-Binden Sie ihn an Loopback und betreiben Sie ihn neben dem Check. Ein ungeschützter öffentlicher Adapter könnte von Dritten zum Versand von Chatnachrichten verwendet werden.
+Binde ihn an Loopback und betreibe ihn neben dem Check. Ein ungeschützter öffentlicher Adapter könnte von Dritten zum Versand von Chatnachrichten verwendet werden.
 
 ## ntfy und Gotify {#ntfy-and-gotify}
 
@@ -234,9 +232,9 @@ check-opencloud-security --host opencloud.example.com \
   --webhook-format gotify
 ```
 
-**ntfy:** Geben Sie die Topic-URL an. Das Plugin übernimmt das Topic in das JSON und sendet an die Wurzel desselben Servers, wie es das ntfy-JSON-Protokoll verlangt. Protokoll, Host und Port bleiben gleich. Eine URL ohne Topic wird beim Start abgelehnt. Siehe [ADR 0040](../../adr/0040-a-push-format-may-rewrite-the-path-never-the-host.md).
+**ntfy:** Gib die Topic-URL an. Das Plugin übernimmt das Topic in das JSON und sendet an die Wurzel desselben Servers, wie es das ntfy-JSON-Protokoll verlangt. Protokoll, Host und Port bleiben gleich. Eine URL ohne Topic wird beim Start abgelehnt. Siehe [ADR 0040](../../adr/0040-a-push-format-may-rewrite-the-path-never-the-host.md).
 
-**Gotify:** Verwenden Sie möglichst `X-Gotify-Key` über einen Webhook-Header statt `?token=...` in der URL. So landet das Token nicht in üblichen URL-Logs vorgeschalteter Komponenten. `--webhook-secret` kann den Body unabhängig davon signieren.
+**Gotify:** Verwende möglichst `X-Gotify-Key` über einen Webhook-Header statt `?token=...` in der URL. So landet das Token nicht in üblichen URL-Logs vorgeschalteter Komponenten. `--webhook-secret` kann den Body unabhängig davon signieren.
 
 Die Priorität folgt dem Status: CRITICAL wird bei ntfy `urgent` und bei Gotify `8`, WARNING `default` beziehungsweise `5`, UNKNOWN `high` beziehungsweise `5`. OK wird nur mit `always` gesendet und verwendet die niedrigste Priorität.
 
@@ -287,7 +285,7 @@ check-opencloud-security --host opencloud.example.com --webhook-url \
 }]
 ```
 
-Senden Sie nur Statuswerte, die alarmieren sollen, und stimmen Sie Ablaufzeit und Wiederholungsintervall auf den Scanplan ab. Wenn Sie bereits Metriken bereitstellen, ist die Anbindung über [Prometheus](../prometheus.md) meist einfacher.
+Sende nur Statuswerte, die alarmieren sollen, und stimme Ablaufzeit und Wiederholungsintervall auf den Scanplan ab. Wenn du bereits Metriken bereitstellen, ist die Anbindung über [Prometheus](../prometheus.md) meist einfacher.
 
 ## Empfänger ohne erreichbare Instanz testen {#testing-a-receiver-without-an-instance}
 
@@ -298,7 +296,7 @@ check-opencloud-security --host does-not-exist.example.com \
   --webhook-url http://127.0.0.1:8099/ --webhook-on always
 ```
 
-Für das vollständige Erfolgsformat verwenden Sie eine Instanz, die Sie prüfen dürfen. `--debug` protokolliert die Zustellung, aber nicht den Body. Um den Payload zu prüfen, verwenden Sie einen lokalen Testempfänger, der POST-Anfragen annimmt und deren Body anzeigt.
+Für das vollständige Erfolgsformat verwende eine Instanz, die Du prüfst dürfen. `--debug` protokolliert die Zustellung, aber nicht den Body. Um den Payload zu prüfen, verwende einen lokalen Testempfänger, der POST-Anfragen annimmt und deren Body anzeigt.
 
 ---
 

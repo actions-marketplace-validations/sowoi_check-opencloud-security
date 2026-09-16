@@ -1,14 +1,12 @@
-# OpenCloud security checks in CI pipelines
-
 # Scans in CI-Pipelines
 
-Eine geplante Pipeline eignet sich für regelmäßige Scans oder für Prüfungen aus einem anderen Netzwerk. Überwachen Sie auch, ob die Pipeline tatsächlich läuft: Ein ausgebliebener Job liefert keinen Scanstatus.
+Eine geplante Pipeline eignet sich für regelmäßige Scans oder für Prüfungen aus einem anderen Netzwerk. Überwache auch, ob die Pipeline tatsächlich läuft: Ein ausgebliebener Job liefert keinen Scanstatus.
 
 Für alle Plattformen gelten dieselben Voraussetzungen:
 
-- **Der Runner muss die Instanz erreichen.** Für private Ziele benötigen Sie einen Runner mit Zugriff auf das interne Netzwerk.
+- **Der Runner muss die Instanz erreichen.** Für private Ziele benötigst du einen Runner mit Zugriff auf das interne Netzwerk.
 - **Der Standort bestimmt das Ergebnis.** TLS, HTTPS-Weiterleitungen und Debug-Ports werden aus Sicht des Runner-Netzes geprüft.
-- **Der Exitcode steuert den Jobstatus.** `0` bedeutet OK, `1` WARNING, `2` CRITICAL und `3` UNKNOWN. Über `--warning` und `--critical` bestimmen Sie die Bewertungsschwellen.
+- **Der Exitcode steuert den Jobstatus.** `0` bedeutet OK, `1` WARNING, `2` CRITICAL und `3` UNKNOWN. Über `--warning` und `--critical` bestimme die Bewertungsschwellen.
 
 ## GitHub Actions {#github-actions}
 
@@ -39,7 +37,7 @@ jobs:
 
 Die Action installiert die festgelegte Version, scannt die Instanz, schreibt `opencloud-security.json` und ergänzt die Jobzusammenfassung. Standardmäßig schlägt der Job bei WARNING, CRITICAL oder UNKNOWN fehl.
 
-**Verwenden Sie einen festen Tag.** Referenzdaten werden mit dem Paket ausgeliefert und können die Bewertung beeinflussen. `@v1.16.0` installiert genau Version 1.16.0. Bei einem Branch- oder SHA-Verweis ohne ausdrückliche Versionsangabe wird das neueste Release installiert und eine Warnung ausgegeben.
+**Verwende einen festen Tag.** Referenzdaten werden mit dem Paket ausgeliefert und können die Bewertung beeinflussen. `@v1.16.0` installiert genau Version 1.16.0. Bei einem Branch- oder SHA-Verweis ohne ausdrückliche Versionsangabe wird das neueste Release installiert und eine Warnung ausgegeben.
 
 | Eingabe | Standard | Funktion |
 |:--|:--|:--|
@@ -74,7 +72,7 @@ Die Ausgaben heißen `exit-code`, `status`, `rating`, `rating-label`, `message` 
 
 Mit `fail-on: never` bleibt der Scan-Schritt erfolgreich. Ein späterer Schritt kann dann anhand der ausgegebenen Werte entscheiden, wie weiter verfahren wird.
 
-Vergewissern Sie sich vor dem Einsatz, dass der Runner die Instanz erreicht. Für Ziele hinter einer Firewall eignet sich ein selbst betriebener Runner im passenden Netzwerk.
+Vergewissere dich vor dem Einsatz, dass der Runner die Instanz erreicht. Für Ziele hinter einer Firewall eignet sich ein selbst betriebener Runner im passenden Netzwerk.
 
 ### Befunde im Code-Scanning-Dashboard {#feeding-the-code-scanning-dashboard}
 
@@ -103,11 +101,11 @@ jobs:
           category: opencloud-security
 ```
 
-Lassen Sie den Scan-Schritt mit `fail-on: never` fortfahren, damit die Datei auch bei Befunden hochgeladen wird. Werten Sie die hochgeladenen Befunde anschließend aus.
+Lass den Scan-Schritt mit `fail-on: never` fortfahren, damit die Datei auch bei Befunden hochgeladen wird. Werte die hochgeladenen Befunde anschließend aus.
 
 ### Installation im eigenen Workflow {#installing-it-yourself-instead}
 
-Sie können das Paket auch selbst installieren und denselben Befehl ohne die Action ausführen:
+Du kannst das Paket auch selbst installieren und denselben Befehl ohne die Action ausführen:
 
 ```yaml
 name: OpenCloud security check
@@ -138,11 +136,11 @@ jobs:
         run: check-opencloud-security
 ```
 
-Legen Sie die Paketversion fest, damit ein neues Release mit geänderten Referenzdaten nicht unbemerkt die Pipeline verändert. Mit `workflow_dispatch` können Sie nach einer Korrektur sofort einen weiteren Scan starten.
+Lege die Paketversion fest, damit ein neues Release mit geänderten Referenzdaten nicht unbemerkt die Pipeline verändert. Mit `workflow_dispatch` kannst du nach einer Korrektur sofort einen weiteren Scan starten.
 
 ### Ergebnisse weitergeben {#reporting-rather-than-failing}
 
-Wenn nach dem Scan weitere Schritte laufen sollen, erfassen Sie den Status und schreiben Sie das Ergebnis in die Jobzusammenfassung:
+Wenn nach dem Scan weitere Schritte laufen sollen, erfasse den Status und schreibe das Ergebnis in die Jobzusammenfassung:
 
 ```yaml
       - name: Scan the instance
@@ -173,7 +171,7 @@ Alternativ versendet das Plugin über `--webhook-url` eine Nachricht; siehe [Web
 
 ### Einzelne JSON-Felder auswerten {#the-json-document-instead}
 
-Für eigene Prüfregeln verwenden Sie das vollständige JSON von `check-opencloud-scanner`. Die Felder sind im [Bibliotheks-README](../../opencloud_local_scan/README.md) dokumentiert.
+Für eigene Prüfregeln verwende das vollständige JSON von `check-opencloud-scanner`. Die Felder sind im [Bibliotheks-README](../../opencloud_local_scan/README.md) dokumentiert.
 
 ```yaml
       - name: Scan and keep the result
@@ -188,7 +186,7 @@ Für eigene Prüfregeln verwenden Sie das vollständige JSON von `check-openclou
           path: scan.json
 ```
 
-`jq -e` liefert einen Fehlercode, wenn der Ausdruck falsch ist. Damit können Sie etwa `.EOL`, `.rating`, `.updates.available` oder `.lifecycle.daysRemaining` als Pipeline-Bedingung verwenden.
+`jq -e` liefert einen Fehlercode, wenn der Ausdruck falsch ist. Damit kannst du etwa `.EOL`, `.rating`, `.updates.available` oder `.lifecycle.daysRemaining` als Pipeline-Bedingung verwenden.
 
 ### Nachweis der OpenCloud-Kompatibilität {#opencloud-compatibility-evidence}
 
@@ -223,13 +221,13 @@ opencloud-security:
     exit_codes: [1]
 ```
 
-Mit `allow_failure.exit_codes` erlauben Sie ausgewählte Statuswerte. `1` toleriert WARNING; `3` toleriert einen nicht abgeschlossenen Scan. Entscheiden Sie ausdrücklich, ob ein solcher Fehler den Job scheitern lassen soll.
+Mit `allow_failure.exit_codes` erlaube ausgewählte Statuswerte. `1` toleriert WARNING; `3` toleriert einen nicht abgeschlossenen Scan. Entscheide ausdrücklich, ob ein solcher Fehler den Job scheitern lassen soll.
 
-Legen Sie den Zeitplan unter *Build → Pipeline schedules* an. Der `rules`-Block beschränkt den Job auf geplante Durchläufe.
+Lege den Zeitplan unter *Build → Pipeline schedules* an. Der `rules`-Block beschränkt den Job auf geplante Durchläufe.
 
 ## Ein eigenes Container-Image verwenden {#using-the-container-image-instead-of-installing}
 
-Bauen Sie das Plugin-Image wie unter [Docker](../installation.md#docker) beschrieben, übertragen Sie es in Ihre Registry und legen Sie den Tag fest. Es läuft als unprivilegierter Benutzer und enthält einen `HEALTHCHECK`:
+Baue das Plugin-Image wie unter [Docker](../installation.md#docker) beschrieben, übertrage es in deine Registry und lege den Tag fest. Es läuft als unprivilegierter Benutzer und enthält einen `HEALTHCHECK`:
 
 ```shell
 docker build -f docker/Dockerfile \
@@ -244,7 +242,7 @@ docker run --rm \
 
 ## Zugangsdaten sicher übergeben {#do-not-put-the-token-on-the-command-line}
 
-Übergeben Sie Secrets über Umgebungsvariablen wie `COS_RELEASES_TOKEN` und `COS_WEBHOOK_URL` oder als [Secret-Verweis](../../README.md#configuration-file-and-secrets). Vermeiden Sie Zugangsdaten in ausgeschriebenen Kommandozeilen. Das Plugin maskiert Tokens in seiner Diagnoseausgabe, kann aber weder Shell-Traces noch die Logausgabe anderer Programme bereinigen.
+Übergib Secrets über Umgebungsvariablen wie `COS_RELEASES_TOKEN` und `COS_WEBHOOK_URL` oder als [Secret-Verweis](../../README.md#configuration-file-and-secrets). Vermeide Zugangsdaten in ausgeschriebenen Kommandozeilen. Das Plugin maskiert Tokens in seiner Diagnoseausgabe, kann aber weder Shell-Traces noch die Logausgabe anderer Programme bereinigen.
 
 ---
 

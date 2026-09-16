@@ -1,5 +1,3 @@
-# Scan a fleet with the OpenCloud Security Scanner
-
 # Mehrere Instanzen prüfen
 
 Bei mehreren Instanzen unterscheiden sich oft Port, Release-Kanal und akzeptierte Befunde. Dieser Leitfaden zeigt gemeinsame Aufrufe, getrennte Konfigurationsdateien und die automatisierte Ausführung über mehrere Hosts.
@@ -13,15 +11,15 @@ check-opencloud-security --check-hardening \
   --host opencloud1.example.com,opencloud2.example.com:9200,[2001:db8::1]
 ```
 
-Alle weiteren Optionen gelten für die gesamte Liste. Nutzen Sie getrennte Aufrufe, wenn einzelne Instanzen andere Einstellungen wie `--insecure` oder abweichende Ausnahmen benötigen.
+Alle weiteren Optionen gelten für die gesamte Liste. Nutze getrennte Aufrufe, wenn einzelne Instanzen andere Einstellungen wie `--insecure` oder abweichende Ausnahmen benötigen.
 
-Ein gemeinsamer Monitoring-Check hat auch nur einen gemeinsamen Statusverlauf. Für getrennte Historien und Alarme richten Sie einen Check pro Instanz ein.
+Ein gemeinsamer Monitoring-Check hat auch nur einen gemeinsamen Statusverlauf. Für getrennte Historien und Alarme richte einen Check pro Instanz ein.
 
 `--webhook-digest` fasst die Webhook-Benachrichtigungen dieser Hostliste zu höchstens einer Nachricht zusammen. Es werden nur Hosts berücksichtigt, die `--webhook-on` erfüllen. Die Zusammenfassung gilt innerhalb eines Prozesses. Bei getrennten Aufrufen, etwa in der folgenden Dateischleife, sendet weiterhin jeder Aufruf seinen eigenen Webhook.
 
 ## Eine Konfigurationsdatei pro Instanz {#one-configuration-file-per-instance}
 
-Speichern Sie die instanzspezifischen Einstellungen in jeweils einer Datei:
+Speichere die instanzspezifischen Einstellungen in jeweils einer Datei:
 
 ```yaml
 # /etc/check-opencloud-security/prod-eu.yml
@@ -45,9 +43,9 @@ releases:
 check-opencloud-security --config /etc/check-opencloud-security/prod-eu.yml
 ```
 
-Es gilt die Reihenfolge **Kommandozeile > Umgebungsvariable > Konfigurationsdatei > Standard**. Für einzelne Durchläufe können Sie Dateieinstellungen daher gezielt überschreiben. Die vollständige Syntax einschließlich `secret://` steht unter [Konfigurationsdatei und Zugangsdaten](../../README.md#configuration-file-and-secrets).
+Es gilt die Reihenfolge **Kommandozeile > Umgebungsvariable > Konfigurationsdatei > Standard**. Für einzelne Durchläufe kannst du Dateieinstellungen daher gezielt überschreiben. Die vollständige Syntax einschließlich `secret://` steht unter [Konfigurationsdatei und Zugangsdaten](../../README.md#configuration-file-and-secrets).
 
-Erstellen Sie die erste Datei mit `check-opencloud-security --configure --config /etc/check-opencloud-security/prod-eu.yml` und verwenden Sie sie als Vorlage für weitere Instanzen.
+Erstelle die erste Datei mit `check-opencloud-security --configure --config /etc/check-opencloud-security/prod-eu.yml` und verwende sie als Vorlage für weitere Instanzen.
 
 ## Alle Dateien durchlaufen {#a-loop-over-the-files}
 
@@ -77,7 +75,7 @@ Die Funktion `rank` bildet die tatsächliche Reihenfolge der Nagios-Status ab: `
 
 Der Netzwerkstandort bestimmt, was der Scanner beobachten kann:
 
-- Eine interne Instanz benötigt einen Scanner mit Zugriff auf das interne Netzwerk. Öffnen Sie dafür nicht unnötig die Firewall nach außen.
+- Eine interne Instanz benötigt einen Scanner mit Zugriff auf das interne Netzwerk. Öffne dafür nicht unnötig die Firewall nach außen.
 - TLS und HTTPS-Weiterleitungen werden so bewertet, wie sie am gewählten Zugangspunkt erscheinen. Terminiert ein Loadbalancer TLS, misst der Scanner dessen Verbindung.
 - Debug-Port-Prüfungen sollten aus einem Netzwerk erfolgen, aus dem diese Ports nicht erreichbar sein sollen. Ein lokaler Scan auf dem Server kann andere Ergebnisse liefern als ein externer Scan.
 
@@ -85,12 +83,12 @@ Wenn mehrere Dashboards oder Skripte dasselbe Ergebnis benötigen, können sie d
 
 ## Ausnahmen regelmäßig prüfen {#keeping-the-waivers-honest}
 
-Prüfen Sie `ignore_hardenings` regelmäßig auf Einträge, die nicht mehr benötigt werden:
+Prüfe `ignore_hardenings` regelmäßig auf Einträge, die nicht mehr benötigt werden:
 
 - Ein ausgenommener Befund bleibt mit `"ignored": true` im Ergebnis und wird von `--debug` erklärt. Siehe [Befunde ausnehmen](../hardening.md#accepting-a-finding-you-are-not-going-to-fix).
 - Nur tatsächlich fehlgeschlagene Prüfungen werden als ignoriert markiert. Eine bestandene Prüfung wird dadurch nicht zu einem ignorierten Befund.
 
-Vergleichen Sie dazu einen Scan ohne Ausnahmen mit dem bisherigen Ergebnis:
+Vergleiche dazu einen Scan ohne Ausnahmen mit dem bisherigen Ergebnis:
 
 ```shell
 for config in /etc/check-opencloud-security/*.yml; do
@@ -104,7 +102,7 @@ done
 
 ## Nur bei Änderungen alarmieren {#only-alerting-on-what-changed}
 
-Mit einer Baseline und `--warn-on-new` können Sie bekannte, unveränderte Befunde von der erneuten Alarmierung ausnehmen:
+Mit einer Baseline und `--warn-on-new` kannst du bekannte, unveränderte Befunde von der erneuten Alarmierung ausnehmen:
 
 ```shell
 for config in /etc/check-opencloud-security/*.yml; do
@@ -116,14 +114,14 @@ done
 
 Eine Datei kann die Baselines aller Hosts enthalten, auch bei einer kommagetrennten `--host`-Liste.
 
-Beachten Sie dabei:
+Beachte dabei:
 
 - Der Monitoring-Benutzer benötigt Schreibrechte auf das Verzeichnis. Die Datei wird atomar und nur für den Eigentümer zugänglich geschrieben. Ein Schreibfehler wird gemeldet, ändert aber nicht die Bewertung der Instanz.
-- Verwenden Sie konsistente Hostangaben. `opencloud.example.com` und `https://opencloud.example.com/` werden gleich normalisiert. Eine IP-Adresse wie `10.0.0.5` wird dagegen nicht mit dem zugehörigen DNS-Namen zusammengeführt.
+- Verwende konsistente Hostangaben. `opencloud.example.com` und `https://opencloud.example.com/` werden gleich normalisiert. Eine IP-Adresse wie `10.0.0.5` wird dagegen nicht mit dem zugehörigen DNS-Namen zusammengeführt.
 
 Versionen nach ihrem Supportende lösen weiterhin bei jedem Durchlauf einen Alarm aus. Details stehen unter [Nur Änderungen melden](../../README.md#reporting-only-what-changed).
 
-Aktivieren Sie `--self-update-check` für einen der Aufrufe, um von neuen Plugin-Versionen zu erfahren. Die Abfrage wird einen Tag zwischengespeichert und beeinflusst den Exitcode nicht.
+aktiviere `--self-update-check` für einen der Aufrufe, um von neuen Plugin-Versionen zu erfahren. Die Abfrage wird einen Tag zwischengespeichert und beeinflusst den Exitcode nicht.
 
 ## Zeitplanung {#scheduling-the-whole-thing}
 
@@ -131,7 +129,7 @@ Aktivieren Sie `--self-update-check` für einen der Aufrufe, um von neuen Plugin
 - Ohne Monitoring-System: die Dateischleife über einen [systemd-Timer oder Cronjob](../scheduling.md) starten.
 - Kubernetes: einen [`CronJob`](../kubernetes.md) verwenden.
 
-Verteilen Sie die Startzeiten. Gleichzeitige Scans belasten Netzwerk und Release-Quelle und teilen sich gegebenenfalls deren Ratenlimit.
+Verteile die Startzeiten. Gleichzeitige Scans belasten Netzwerk und Release-Quelle und teilen sich gegebenenfalls deren Ratenlimit.
 
 ---
 

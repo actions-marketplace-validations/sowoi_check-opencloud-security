@@ -11,13 +11,12 @@
   <p class="lede">{{ t('docs.cli-reference.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de') %}
+{% if locale not in ('en', 'de', 'fr') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
 <article class="docs-article card section-gap" data-reveal lang="de">
-<h1 id="cli-optionen-des-monitoring-plugins">CLI-Optionen des Monitoring-Plugins</h1>
-<p>Hier finden Sie alle Optionen von <code>check-opencloud-security</code>, ihre Standardwerte und die zugehörigen Umgebungsvariablen. Das <a href="/documentation/reference">Haupt-README</a> erklärt den Einsatz mit Beispielen.</p>
+<p>Hier findest du alle Optionen von <code>check-opencloud-security</code>, ihre Standardwerte und die zugehörigen Umgebungsvariablen. Das <a href="/documentation/reference">Haupt-README</a> erklärt den Einsatz mit Beispielen.</p>
 <p>Es gilt stets <strong>Kommandozeile &gt; Umgebungsvariable &gt; Konfigurationsdatei &gt; Standard</strong>. Details stehen unter <a href="/documentation/reference#configuration-file-and-secrets">Konfiguration</a> und <a href="/documentation/reference#environment-variables">Umgebungsvariablen</a>. <code>check-opencloud-security -h</code> zeigt die Optionen im Terminal.</p>
 <h2 id="command">Befehl</h2>
 <pre><code class="language-shell">check-opencloud-security --host &lt;Hostname&gt; --check-hardening

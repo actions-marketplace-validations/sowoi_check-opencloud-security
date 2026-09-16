@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.reference-data.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de') %}
+{% if locale not in ('en', 'de', 'fr') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -28,14 +28,13 @@
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="de">
-<h1 id="release-zeitplan-und-schwachstellendaten-aktualisieren">Release-Zeitplan und Schwachstellendaten aktualisieren</h1>
 <p>Der Scanner bewertet den Supportstatus anhand eines Release-Zeitplans und bekannte Schwachstellen anhand einer Datenbank. Beide Dateien werden mit dem Paket ausgeliefert. Wenn Paketupdates seltener erfolgen, können neuere Releases oder Sicherheitshinweise darin fehlen.</p>
 <p><code>check-opencloud-scanner refresh-data</code> aktualisiert diese Daten unabhängig vom Programm. Dieser Leitfaden beschreibt die Quellen, ihre Prüfung und die Einrichtung eines täglichen Laufs.</p>
 <h2 id="when-you-need-it">Wann eine Aktualisierung sinnvoll ist</h2>
 <ul>
 <li><strong>Die installierte OpenCloud-Version fehlt im Zeitplan.</strong> Im Ergebnis steht dann <code>"scheduleStale": true</code>; siehe <a href="/documentation/release-lifecycle">Release-Lebenszyklus</a>.</li>
 <li><strong>Seit dem Paketbau wurden Sicherheitshinweise veröffentlicht.</strong> Die gebündelte Datenbank kennt sie noch nicht.</li>
-<li><strong>Sie aktualisieren das Scanner-Paket nach einem eigenen Zeitplan.</strong> Die Referenzdaten sollen trotzdem aktuell bleiben.</li>
+<li><strong>du aktualisierst das Scanner-Paket nach einem eigenen Zeitplan.</strong> Die Referenzdaten sollen trotzdem aktuell bleiben.</li>
 </ul>
 <p>Regelmäßige Paketupdates liefern ebenfalls neue Daten. Die <a href="/documentation/web-service">Webanwendung</a> besitzt eigene Aktualisierungen zur Laufzeit und benötigt diesen Befehl nicht.</p>
 <h2 id="running-a-refresh">Aktualisierung ausführen</h2>
@@ -77,7 +76,7 @@
 </tbody>
 </table>
 <p>Bei Netzwerkfehlern, unzulässigen Dokumenten oder ungültigen Signaturen endet der Befehl mit <code>1</code> und einer Meldung auf stderr. Erst wenn beide Dokumente akzeptiert sind, werden Dateien ersetzt. Fehlerhafte Quelldaten überschreiben dadurch nicht den vorhandenen Stand.</p>
-<p>Mit <code>-vv</code> sehen Sie die Signaturprüfung im Detail:</p>
+<p>Mit <code>-vv</code> siehst du die Signaturprüfung im Detail:</p>
 <pre><code class="language-bash">check-opencloud-scanner -vv refresh-data --output-dir /var/lib/check-opencloud-security
 </code></pre>
 <h2 id="where-the-data-comes-from-and-how-it-is-checked">Quellen und Datenprüfung</h2>
@@ -87,7 +86,7 @@
 <p>Dafür wird das optionale Extra <code>signing</code> benötigt:</p>
 <pre><code class="language-bash">pipx install 'check-opencloud-security[signing]'
 </code></pre>
-<p>Bei einer bestehenden pipx-Installation ergänzen Sie <code>--force</code>. Weitere Installationswege stehen unter <a href="/documentation/installation">Installation</a>.</p>
+<p>Bei einer bestehenden pipx-Installation ergänze <code>--force</code>. Weitere Installationswege stehen unter <a href="/documentation/installation">Installation</a>.</p>
 <table>
 <thead>
 <tr>
@@ -113,7 +112,7 @@
 <p>Ohne das Extra erscheint pro Datei eine Warnung, der Lauf kann dennoch erfolgreich sein:</p>
 <pre><code class="language-text">WARNING check_opencloud.refresh_data: Refreshing the release schedule without verifying its signature: the 'signing' extra (sigstore) is not installed. Install the 'signing' extra (pip install check-opencloud-security[signing]) to verify it.
 </code></pre>
-<p>In diesem Fall ist die Herkunft nicht kryptografisch geprüft. Installieren Sie <code>signing</code>, wenn Sie die Attestierungen verifizieren möchten.</p>
+<p>In diesem Fall ist die Herkunft nicht kryptografisch geprüft. Installiere <code>signing</code>, wenn du die Attestierungen verifizieren möchtest.</p>
 <h3 id="the-checks-that-apply-either-way">Immer geltende Prüfungen</h3>
 <p>Eine gültige Signatur ersetzt keine Inhaltsprüfung. Deshalb gelten unabhängig davon folgende Regeln:</p>
 <ul>
@@ -122,13 +121,13 @@
 <li><strong>Dateien werden einzeln atomar ersetzt.</strong> Leser sehen keine teilweise geschriebene Datei.</li>
 </ul>
 <h2 id="using-the-refreshed-files">Die aktualisierten Dateien verwenden</h2>
-<p>Der Befehl ändert keine Dateien im installierten Paket. Tragen Sie die neuen Pfade in die Konfiguration ein:</p>
+<p>Der Befehl ändert keine Dateien im installierten Paket. Trage die neuen Pfade in die Konfiguration ein:</p>
 <pre><code class="language-yaml">scanner:
   release_schedule: /var/lib/check-opencloud-security/release_schedule.json
   vulnerability_db:
     - /var/lib/check-opencloud-security/vulnerabilities.json
 </code></pre>
-<p>Oder setzen Sie die Umgebungsvariablen:</p>
+<p>Oder setze die Umgebungsvariablen:</p>
 <pre><code class="language-bash">COS_SCANNER_RELEASE_SCHEDULE=/var/lib/check-opencloud-security/release_schedule.json
 COS_SCANNER_VULNERABILITY_DB=/var/lib/check-opencloud-security/vulnerabilities.json
 </code></pre>
@@ -137,15 +136,15 @@ COS_SCANNER_VULNERABILITY_DB=/var/lib/check-opencloud-security/vulnerabilities.j
 <li><code>release_schedule</code> <strong>ersetzt</strong> den gebündelten Zeitplan.</li>
 <li><code>vulnerability_db</code> <strong>ergänzt</strong> die gebündelte Datenbank. Doppelte Kennungen werden zusammengeführt.</li>
 </ul>
-<p>Plugin und <code>check-opencloud-scanner scan</code> lesen dieselben Einstellungen. Prüfen Sie das Ergebnis über die JSON-Ausgabe:</p>
+<p>Plugin und <code>check-opencloud-scanner scan</code> lesen dieselben Einstellungen. Prüfe das Ergebnis über die JSON-Ausgabe:</p>
 <pre><code class="language-bash">check-opencloud-scanner -c /etc/check-opencloud-security/config.yml \
     scan opencloud.example.com | jq '.advisorySources, .lifecycle.scheduleUpdated'
 </code></pre>
 <p><code>scheduleUpdated</code> sollte das Datum des aktualisierten Zeitplans zeigen; <code>advisorySources</code> sollte die zusätzliche Datei aufführen.</p>
-<p><strong>Prüfen Sie die Lesbarkeit nach jeder Änderung von Pfad oder Benutzer:</strong></p>
+<p><strong>Prüfe die Lesbarkeit nach jeder Änderung von Pfad oder Benutzer:</strong></p>
 <ul>
 <li>Eine fehlende oder unlesbare Zeitplandatei deaktiviert die End-of-Life-Prüfung. Es gibt keinen Rückfall auf die gebündelte Datei. Die Ausgabe meldet <code>Release lifecycle: unknown (no release schedule available)</code>, <code>scheduleUpdated</code> ist <code>null</code>. Eine eigentlich nicht mehr unterstützte Version kann dadurch allein anhand der übrigen Prüfungen bewertet werden.</li>
-<li>Eine fehlende oder unlesbare Advisory-Datei wird mit einer Warnung auf stderr übersprungen. Sie kann trotzdem in <code>advisorySources</code> stehen; kontrollieren Sie daher auch die Warnmeldungen.</li>
+<li>Eine fehlende oder unlesbare Advisory-Datei wird mit einer Warnung auf stderr übersprungen. SIE kann trotzdem in <code>advisorySources</code> stehen; kontrolliere daher auch die Warnmeldungen.</li>
 </ul>
 <h2 id="running-it-daily-with-systemd">Täglicher Lauf mit systemd</h2>
 <p>Unter <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/systemd"><code>contrib/systemd/</code></a> liegen der <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/systemd/check-opencloud-security-refresh.service">Refresh-Service</a> und der <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/systemd/check-opencloud-security-refresh.timer">Timer</a>. <code>StateDirectory=</code> erlaubt dem Service das Schreiben unter <code>/var/lib/check-opencloud-security</code>. Der Timer läuft täglich mit einer zufälligen Verzögerung von bis zu einer Stunde und holt ausgefallene Läufe nach.</p>
@@ -155,29 +154,29 @@ sudo systemctl enable --now check-opencloud-security-refresh.timer
 sudo systemctl start check-opencloud-security-refresh.service   # a first run now
 journalctl -u check-opencloud-security-refresh.service
 </code></pre>
-<p><strong>Refresh und Check müssen mit passenden Dateirechten laufen.</strong> Die erzeugten Dateien haben Modus <code>0600</code>. Der Service verwendet standardmäßig <code>User=check-opencloud-security</code>; ein Check als <code>nagios</code> oder <code>icinga</code> kann diese Dateien daher nicht lesen. Verwenden Sie denselben Benutzer oder passen Sie den Refresh-Service über ein Drop-in an:</p>
+<p><strong>Refresh und Check müssen mit passenden Dateirechten laufen.</strong> Die erzeugten Dateien haben Modus <code>0600</code>. Der Service verwendet standardmäßig <code>User=check-opencloud-security</code>; ein Check als <code>nagios</code> oder <code>icinga</code> kann diese Dateien daher nicht lesen. Verwende denselben Benutzer oder passt du den Refresh-Service über ein Drop-in an:</p>
 <pre><code class="language-bash">sudo systemctl edit check-opencloud-security-refresh.service
 # [Service]
 # User=nagios
 </code></pre>
-<p><code>ExecStart=</code> erwartet <code>/usr/bin/check-opencloud-scanner</code>, den Installationspfad der <code>.deb</code>- und <code>.rpm</code>-Pakete. Bei pipx oder pip passen Sie ihn an. Alternativ verwenden Sie einen täglichen Cronjob; siehe <a href="/documentation/scheduling">Zeitplanung</a>.</p>
+<p><code>ExecStart=</code> erwartet <code>/usr/bin/check-opencloud-scanner</code>, den Installationspfad der <code>.deb</code>- und <code>.rpm</code>-Pakete. Bei pipx oder pip passt du ihn an. Alternativ verwende einen täglichen Cronjob; siehe <a href="/documentation/scheduling">Zeitplanung</a>.</p>
 <h2 id="mirrors-and-hosts-without-internet-access">Spiegelquellen und Rechner ohne Internetzugang</h2>
 <p>Der Standardabruf benötigt HTTPS-Zugriff auf <code>raw.githubusercontent.com</code>, für die Verifikation außerdem auf die GitHub-Attestierungs-API und die Sigstore-Vertrauensdaten.</p>
-<p><strong>Auf einem anderen Rechner aktualisieren:</strong> Führen Sie dort einen verifizierten Refresh mit <code>signing</code> aus und übertragen Sie beide Dateien über einen vertrauenswürdigen Weg auf den isolierten Rechner. Die Dateien benötigen dort keine weiteren Quellen.</p>
+<p><strong>Auf einem anderen Rechner aktualisieren:</strong> Führe dort einen verifizierten Refresh mit <code>signing</code> aus und übertrage beide Dateien über einen vertrauenswürdigen Weg auf den isolierten Rechner. Die Dateien benötigen dort keine weiteren Quellen.</p>
 <p><strong>Eine interne Spiegelquelle verwenden:</strong> <code>--schedule-url</code> erwartet eine Kopie der OpenCloud-Lebenszyklusseite. <code>--advisory-url</code> erwartet einen OSV-kompatiblen Abfrageendpunkt; dessen Antwort ergänzt die gebündelte Datenbank:</p>
 <pre><code class="language-bash">check-opencloud-scanner refresh-data \
     --output-dir /var/lib/check-opencloud-security \
     --schedule-url https://mirror.example.com/opencloud/lifecycle/ \
     --advisory-url https://mirror.example.com/osv/v1/query
 </code></pre>
-<p>Bei diesen Optionen entfällt die Signaturprüfung mit einem ausdrücklichen Hinweis. Die Strukturprüfungen bleiben aktiv. Verwenden Sie nur Quellen, deren Bereitstellung Sie kontrollieren.</p>
+<p>Bei diesen Optionen entfällt die Signaturprüfung mit einem ausdrücklichen Hinweis. Die Strukturprüfungen bleiben aktiv. Verwende nur Quellen, deren Bereitstellung Du kontrollierst.</p>
 <h2 id="your-own-advisories">Eigene Sicherheitshinweise</h2>
-<p><code>scanner.vulnerability_db</code> akzeptiert eine Liste von Dateien. Sie können eigene Hinweise neben den aktualisierten Daten einbinden. Unterstützt werden das native Format <code>{"advisories": [...]}</code>, das GitHub-Advisory-API-Format und OSV-Dokumente. Das <a href="/documentation/reference#advisory-database">Haupt-README</a> erklärt die Zuordnung zu Versionen. <code>scanner.vulnerability_feed</code> fragt stattdessen bei jedem Scan einen Feed ab.</p>
+<p><code>scanner.vulnerability_db</code> akzeptiert eine Liste von Dateien. Du kannst eigene Hinweise neben den aktualisierten Daten einbinden. Unterstützt werden das native Format <code>{"advisories": [...]}</code>, das GitHub-Advisory-API-Format und OSV-Dokumente. Das <a href="/documentation/reference#advisory-database">Haupt-README</a> erklärt die Zuordnung zu Versionen. <code>scanner.vulnerability_feed</code> fragt stattdessen bei jedem Scan einen Feed ab.</p>
 <h2 id="points-worth-knowing">Weitere Hinweise</h2>
 <ul>
 <li>Der Refresh ändert ausschließlich Daten. Neue Prüfungen und Bewertungsregeln benötigen weiterhin ein Paketupdate.</li>
 <li>Eine leere Liste <code>vulnerabilities</code> bedeutet nur, dass kein konfigurierter Datenbankeintrag zur Version passt. Sie ist kein Nachweis umfassender Sicherheit.</li>
-<li>Aktualisieren Sie die Dateien, die der Check tatsächlich liest. Das Standardziel liegt im Home-Verzeichnis des ausführenden Benutzers.</li>
+<li>Aktualisiere die Dateien, die der Check tatsächlich liest. Das Standardziel liegt im Home-Verzeichnis des ausführenden Benutzers.</li>
 <li>Die <a href="/documentation/web-service">Webanwendung</a> nutzt eigene Aktualisierungen in ihrem laufenden Betrieb.</li>
 </ul>
 </article>

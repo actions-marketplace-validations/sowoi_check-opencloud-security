@@ -48,7 +48,11 @@ def _section(source: str, start: str | None, end: str | None) -> str:
     # same title, while a selected README range keeps its first section and
     # demotes it below the page title later.
     if start is None:
-        source = re.sub(r"\A# [^\n]+\n+", "", source, count=1)
+        # Translated source files keep the English title followed by the translated
+        # title so that the Markdown remains easy to compare with its source.
+        # Neither belongs inside the article: the frontend renders the
+        # localized page title in its header.
+        source = re.sub(r"\A(?:# [^\n]+\n+)+", "", source, count=1)
     source = re.split(
         r"\n## (?:Trademarks and affiliation|Marken und Unabhängigkeit)\n",
         source,
@@ -69,12 +73,13 @@ def _rewrite_relative_links(body: str, source_path: str) -> str:
         str((REPO_ROOT / page.source).resolve()): page.slug
         for page in DOCUMENTATION_PAGES
     }
-    local.update(
-        {
-            str((REPO_ROOT / "docs" / "de" / f"{page.slug}.md").resolve()): page.slug
-            for page in DOCUMENTATION_PAGES
-        }
-    )
+    for language in ("de", "fr"):
+        local.update(
+            {
+                str((REPO_ROOT / "docs" / language / f"{page.slug}.md").resolve()): page.slug
+                for page in DOCUMENTATION_PAGES
+            }
+        )
 
     def rewrite(match: re.Match[str]) -> str:
         raw = html.unescape(match.group(1))
@@ -188,7 +193,7 @@ def _table_of_contents(body: str, language: str = "en") -> str:
 
 def render_page(slug: str, language: str = "en") -> str:
     """Render one manifest entry as a complete Jinja template."""
-    if language not in ("en", "de"):
+    if language not in ("en", "de", "fr"):
         raise ValueError(f"unsupported guide language: {language}")
     page = DOCUMENTATION_BY_SLUG[slug]
     source_path = page.source if language == "en" else f"docs/{language}/{slug}.md"
@@ -198,7 +203,7 @@ def render_page(slug: str, language: str = "en") -> str:
         page.start_heading if language == "en" else None,
         page.end_heading if language == "en" else None,
     )
-    if page.demote_headings and language == "en":
+    if page.demote_headings:
         selected = _demote_headings(selected)
     body = markdown.markdown(
         selected,
@@ -227,7 +232,7 @@ def render_page(slug: str, language: str = "en") -> str:
   <p class="lede">{{{{ t('docs.{page.slug}.description') }}}}</p>
 </section>
 
-{{% if locale not in ('en', 'de') %}}
+{{% if locale not in ('en', 'de', 'fr') %}}
 <p class="hint section-gap" lang="{{{{ locale }}}}">{{{{ t('docs.guide.english_notice') }}}}</p>
 {{% endif %}}
 
@@ -372,6 +377,10 @@ def generated_pages() -> dict[Path, str]:
             for page in DOCUMENTATION_PAGES
         },
         **{
+            OUTPUT_DIR / "fr" / f"{page.slug}.html": render_page(page.slug, "fr")
+            for page in DOCUMENTATION_PAGES
+        },
+        **{
             OPERATOR_OUTPUT_DIR / f"{page.slug}.html": render_operator_page(page.slug)
             for page in OPERATOR_DOCUMENTATION_PAGES
         },
@@ -406,7 +415,8 @@ def write_pages() -> None:
     """Write the manifest and remove generated pages no longer in it."""
     write_images()
     expected = generated_pages()
-    (OUTPUT_DIR / "de").mkdir(parents=True, exist_ok=True)
+    for language in ("de", "fr"):
+        (OUTPUT_DIR / language).mkdir(parents=True, exist_ok=True)
     OPERATOR_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     for path in (*OUTPUT_DIR.rglob("*.html"), *OPERATOR_OUTPUT_DIR.rglob("*.html")):
         if path not in expected and path.read_text(encoding="utf-8").startswith(

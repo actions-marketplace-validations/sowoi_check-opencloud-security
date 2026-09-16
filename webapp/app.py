@@ -1447,7 +1447,8 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
         selected = DOCUMENTATION_BY_SLUG.get(slug)
         if selected is None:
             return not_found(request)
-        language_dir = "de/" if locale_for_request(request) == "de" else ""
+        language = locale_for_request(request)
+        language_dir = f"{language}/" if language in {"de", "fr"} else ""
         return page(request, f"docs/{language_dir}{selected.slug}.html", {})
 
     @app.get("/search", response_class=HTMLResponse, include_in_schema=False)

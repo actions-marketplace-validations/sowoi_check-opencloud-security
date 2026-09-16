@@ -60,6 +60,7 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   supply-chain workflow grants its attestation permissions to the one job that
   attests. See
   [ADR 0060](adr/0060-a-new-dependency-is-justified-tested-and-reviewed-first.md).
+
 - **Comparing two scans of different instances is refused.** The `/compare`
   page, the report upload and the MCP tool `compare_scans` used to compare a
   scan of one host with a scan of another and only show a warning. They now
@@ -68,7 +69,6 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   the same way. `sameTarget` stays in the answer and is always `true`. See
   [ADR 0059](adr/0059-a-comparison-refuses-two-different-instances.md), which
   supersedes this part of ADR 0029.
-
 ### Documentation
 
 - **New German text addresses the reader as "du".** New and reworded strings
@@ -135,6 +135,16 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   stays out of the conversation and nothing is changed while it checks.
 - **`/patch-release`, `/minor-release` and `/major-release` are now one
   `/release <patch|minor|major>` skill.**
+- **German guide pages no longer repeat their title inside the article.** The
+  frontend generator removes the source and translated Markdown title before
+  rendering the page header; German sources keep their headings and key
+  external references in German, and the Spanish agent-client guidance uses
+  the formal form of address consistently.
+- **French guide sources are now available in the frontend.** Every public
+  guide has a matching `docs/fr/` source, generated French template and search
+  index entry. Spanish guide pages continue to use the explicit English
+  fallback until their own source set is reviewed. See
+  [ADR 0062](adr/0062-public-guides-have-french-sources.md).
 
 ## [1.24.0] - 2026-09-16
 
@@ -143,9 +153,10 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 - Rewrite frontend explanations and operator documentation for clearer,
   consistent wording in English, German, French and Spanish. Clarify scan
   coverage, temporary storage, alert timing and configuration instructions.
-- Add German versions of all public guides under `docs/de/`, generated German
-  frontend pages and German guide search content. Preserve section links across
-  languages; French and Spanish continue to use English guide bodies.
+- Add German and French versions of all public guides under `docs/de/` and
+  `docs/fr/`, with generated frontend pages and language-specific search
+  content. Preserve section links across languages; Spanish continues to use
+  the explicit English fallback.
 
 ### Added
 

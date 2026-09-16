@@ -1,5 +1,3 @@
-# Iframe embedding checks explained
-
 # OpenCloud in einem iframe einbetten
 
 Der OpenCloud-Webclient kann als Dateiauswahl oder Vorschau in eine andere Anwendung eingebettet werden. Die übergeordnete Seite und der eingebettete Client tauschen über `postMessage` Nachrichten aus. Bei delegierter Authentifizierung kann die übergeordnete Seite außerdem eine Sitzung an den Client übergeben.
@@ -10,7 +8,7 @@ Der Scanner liest das öffentliche `/config.json` und prüft, welchen Ursprünge
 
 Der Scanner liest `options.embed.messagesOrigin`. Bei `WEB_OPTION_EMBED_MESSAGES_ORIGIN=*` akzeptiert der eingebettete Client `postMessage`-Nachrichten von jeder Seite, die ihn einbettet. So kann auch eine fremde Website den Client in einem versteckten oder irreführend dargestellten Frame laden und als übergeordnete Seite Nachrichten senden.
 
-**Behebung:** Setzen Sie `WEB_OPTION_EMBED_MESSAGES_ORIGIN` auf den genauen Ursprung der erlaubten Seite, also Protokoll, Host und Port ohne Platzhalter oder Pfad. Deaktivieren Sie die Einbettung, wenn sie nicht benötigt wird.
+**Behebung:** Setze `WEB_OPTION_EMBED_MESSAGES_ORIGIN` auf den genauen Ursprung der erlaubten Seite, also Protokoll, Host und Port ohne Platzhalter oder Pfad. Deaktiviere die Einbettung, wenn sie nicht benötigt wird.
 
 ## 2. Delegierte Authentifizierung absichern: `webEmbedDelegatedAuthenticationRestricted` {#2-does-delegated-authentication-accept-an-unvalidated-origin-webembeddelegatedauthenticationrestricted}
 
@@ -18,7 +16,7 @@ Bei delegierter Authentifizierung übergibt die übergeordnete Seite ihre Sitzun
 
 Da dies die Authentifizierung betrifft, hat der Befund den Schweregrad `critical`; die unbeschränkte Nachrichtenübermittlung hat `high`.
 
-**Behebung:** Tragen Sie den genauen vertrauenswürdigen Ursprung unter `WEB_OPTION_EMBED_DELEGATE_AUTHENTICATION_ORIGIN` ein oder deaktivieren Sie die delegierte Authentifizierung. Eine aktivierte delegierte Authentifizierung mit gesetztem Ursprung löst diesen Befund nicht aus.
+**Behebung:** Trage den genauen vertrauenswürdigen Ursprung unter `WEB_OPTION_EMBED_DELEGATE_AUTHENTICATION_ORIGIN` ein oder deaktiviere die delegierte Authentifizierung. Eine aktivierte delegierte Authentifizierung mit gesetztem Ursprung löst diesen Befund nicht aus.
 
 ## Schweregrad und Bewertung {#severity-and-rating-impact}
 

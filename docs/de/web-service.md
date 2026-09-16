@@ -1,12 +1,12 @@
-# Deploy the OpenCloud Security Scanner web service
+# Den OpenCloud Security Scanner als Webdienst betreiben
 
 Der Webdienst führt den eingebauten Scanner aus und zeigt die Bewertung von
 **A+** bis **F** im Browser. Ergebnisse bleiben standardmäßig eine Stunde in
 Redis verfügbar. Der Scanner ist derselbe wie im Monitoring-Plugin.
 
-Unter [scan.okxo.de](https://scan.okxo.de) steht eine öffentliche Installation
+Unter [scan.example.com](https://scan.example.com) steht eine öffentliche Installation
 bereit. Eine eigene Installation erlaubt passende Netzwerkanbindung und selbst
-gewählte Betriebsgrenzen. Sie erhalten den Webdienst als Release-Archiv
+gewählte Betriebsgrenzen. Du erhältst den Webdienst als Release-Archiv
 `check_opencloud_security_web.tar.gz` oder als Container-Image. Das PyPI-Paket
 enthält ausschließlich Plugin und Scanner-Bibliothek.
 
@@ -16,8 +16,8 @@ legt der Betreiber fest. Besucher benötigen für öffentliche Scans kein Konto.
 Die Oberfläche ist auf Deutsch, Englisch, Französisch und Spanisch verfügbar.
 Die erste Auswahl folgt der Browsersprache; der Sprachschalter speichert eine
 bewusste Auswahl in einem `HttpOnly`-/`SameSite=Lax`-Cookie. Die Leitfäden stehen
-auf Deutsch und Englisch bereit. Bei französischer oder spanischer Oberfläche
-werden sie vorerst auf Englisch angezeigt. API-Dokumente, Exportdaten und
+auf Deutsch und Französisch bereit. Bei spanischer Oberfläche werden sie
+vorerst auf Englisch angezeigt. API-Dokumente, Exportdaten und
 Scan-Befunde behalten ihre technischen Originalwerte.
 
 ## Inhalt {#contents}
@@ -62,8 +62,8 @@ docker compose -f docker-compose.dockerhub.yml up -d
 # http://127.0.0.1:8811
 ```
 
-Zum Bauen aus dem Checkout verwenden Sie `docker compose up --build -d` ohne
-`-f`. Vor öffentlicher Nutzung prüfen Sie insbesondere:
+Zum Bauen aus dem Checkout verwende `docker compose up --build -d` ohne
+`-f`. Vor öffentlicher Nutzung prüfe insbesondere:
 
 - `COS_WEB_PUBLIC_BASE_URL`: die tatsächliche öffentliche Adresse statt localhost.
 - `COS_REDIS_PASSWORD`: Schutz des Speichers für laufende Scans und Ergebnisse.
@@ -87,7 +87,7 @@ Weitere Varianten beschreibt die [Docker-Dokumentation](../../docker/README.md).
 
 ### Ohne Container {#without-containers}
 
-Starten Sie aus dem Checkout Redis, Webanwendung und Worker getrennt:
+Starte aus dem Checkout Redis, Webanwendung und Worker getrennt:
 
 ```bash
 pip install ".[web,mcp]"    # the mcp extra is optional; it serves /mcp
@@ -97,7 +97,7 @@ COS_WEB_REDIS_URL=redis://127.0.0.1:6379/0 \
     uvicorn webapp.app:app --host 127.0.0.1 --port 8811
 ```
 
-Ein eigenes Release-Archiv bauen Sie mit:
+Ein eigenes Release-Archiv baue mit:
 
 ```bash
 python scripts/build_web_bundle.py
@@ -120,8 +120,8 @@ eine interne Installation, `--non-interactive` übernimmt die vorgegebenen Werte
 `--sign-in` aktiviert die Token-Prüfung auf `/mcp` und fragt Issuer, Audience und
 Schlüsselquelle ab. `--with-authentik` stellt einen Provider samt Datenbank und
 Blueprints bereit. Die Optionen sind unabhängig: Ein bereitgestellter Provider
-aktiviert für sich allein noch keinen Zugriffsschutz. Wählen Sie beide, wenn der
-neue Provider MCP schützen soll, und testen Sie die Token-Prüfung vor Freigabe.
+aktiviert für sich allein noch keinen Zugriffsschutz. Wähle beide, wenn der
+neue Provider MCP schützen soll, und teste die Token-Prüfung vor Freigabe.
 
 Bei interaktiver Einrichtung bietet der Assistent Authentik an, wenn MCP-Anmeldung
 oder Operator-Bereich gewünscht sind. Er fragt auch SMTP ab; das Passwort kommt
@@ -280,7 +280,7 @@ scan:{uuid}:metadata    target, waivers, timestamps
 Wer die UUID kennt, kann das zugehörige Ergebnis abrufen. Es gibt keine
 Auflistung aller Scans. Unbekannte, ungültige und abgelaufene UUIDs liefern
 dieselbe **404**. Auch während der Wartezeit erhalten die Scan-Schlüssel eine TTL.
-Behandeln Sie Ergebnislinks deshalb als Zugang zum Bericht.
+Behandle Ergebnislinks deshalb als Zugang zum Bericht.
 
 ## Zwei Scans vergleichen {#comparing-two-scans}
 
@@ -299,20 +299,17 @@ Aufruf neu berechnet und nicht gesondert gespeichert.
 | Ein Scan unbekannt oder abgelaufen | 404 mit Angabe der betroffenen Seite |
 | Ein Scan noch nicht fertig | 409 |
 | Zweimal dieselbe UUID | 422 |
-| Unterschiedliche Instanzen | 422, kein Vergleich |
+| Unterschiedliche Instanzen | 200 mit ausdrücklichem Hinweis |
 
 Die Seite wird nicht indexiert und bleibt außerhalb des OpenAPI-Schemas.
-Siehe [ADR 0029](../../adr/0029-a-comparison-is-two-live-results-and-one-arithmetic.md)
-und [ADR 0059](../../adr/0059-a-comparison-refuses-two-different-instances.md).
+Siehe [ADR 0029](../../adr/0029-a-comparison-is-two-live-results-and-one-arithmetic.md).
 
 ## Vergleich mit einem hochgeladenen Bericht {#comparing-against-a-report-you-uploaded}
 
-Mit `POST /compare` laden Sie einen früher heruntergeladenen JSON- oder
+Mit `POST /compare` lade einen früher heruntergeladenen JSON- oder
 CSV-Bericht als Ausgangsstand hoch. Die zweite Seite ist ein noch verfügbarer,
 abgeschlossener Scan dieses Dienstes. Diese Funktion ist für den Browser
-vorgesehen; sie besitzt keinen eigenen API- oder MCP-Aufruf. Ein Bericht
-einer anderen Instanz oder ohne Instanzangabe wird ebenfalls mit 422
-abgelehnt.
+vorgesehen; sie besitzt keinen eigenen API- oder MCP-Aufruf.
 
 Der Import rekonstruiert nur ausdrücklich zugelassene Felder nach Typ-, Längen-
 und Strukturprüfung. Es gelten 256 KB Dateigröße, striktes UTF-8, höchstens
@@ -365,7 +362,7 @@ COS_WEB_BLOCKED_TARGETS="opencloud.example.com;.example.org;203.0.113.0/24"
 
 Erlaubt sind Hostnamen, Domain-Suffixe mit führendem Punkt oder `*.`, IP-Adressen
 und CIDR-Netze. Suffixe schließen die Domain selbst ein. Namen werden als Namen
-verglichen, Netze mit jeder aufgelösten Adresse. Verwenden Sie eine Netzsperre,
+verglichen, Netze mit jeder aufgelösten Adresse. Verwende eine Netzsperre,
 wenn auch andere Namen für dieselbe Adresse gesperrt sein sollen.
 
 Die Prüfung erfolgt bei Annahme, vor dem Scan und bei Weiterleitungen.
@@ -373,7 +370,7 @@ Ungültige Einträge oder mehr als 253 Zeichen verhindern den Start.
 Besucher erfahren nur, dass das Ziel ausgeschlossen wurde, nicht den passenden
 Konfigurationseintrag. Siehe [ADR 0043](../../adr/0043-an-operators-exclusion-outranks-every-allowance.md).
 
-Der Operator-Bereich kann weitere Einträge in Redis verwalten. Sie gelten ab der
+Der Operator-Bereich kann weitere Einträge in Redis verwalten. SIE gelten ab der
 nächsten Anfrage in allen Prozessen, auch für wartende Aufträge. Einträge aus
 der Umgebung lassen sich dort nicht entfernen; äquivalente Schreibweisen werden
 als derselbe Ausschluss behandelt. Dauerhafte Vorgaben gehören in die Umgebung,
@@ -407,7 +404,7 @@ Tippfehler, fehlende DNS-Auflösung und unzulässige Schemata ebenfalls nicht.
 Erneute Sperren innerhalb des Wiederholungsfensters dauern sechsmal länger,
 bis zum eingestellten Maximum. Der Worker erhält dafür einen Fingerabdruck,
 keine Client-Adresse. API und Worker verwenden dieselben Zähler. MCP-Workflows
-können kurze `Retry-After`-Zeiten abwarten; längere Wartezeiten geben sie zurück.
+können kurze `Retry-After`-Zeiten abwarten; längere Wartezeiten gib zurück.
 
 Der Webdienst beendet den Scan, sobald eine Antwort ein anderes Produkt zeigt,
 statt weitere Protokollvarianten zu versuchen. Bei fehlender Antwort bleiben
@@ -468,7 +465,7 @@ Client-Adressen sind stets Fingerabdrücke. Ziele ebenfalls, sofern nicht
 `COS_WEB_AUDIT_LOG_TARGETS=true` für den internen Betrieb gesetzt wurde.
 
 Ein zufälliger Salt gilt pro Prozess. `COS_WEB_AUDIT_SALT` ermöglicht die
-Zuordnung über Neustarts hinweg; Rotation beendet diese Zuordnung. Schützen Sie
+Zuordnung über Neustarts hinweg; Rotation beendet diese Zuordnung. Schütze
 einen festen Salt wie ein Geheimnis: Wer ihn kennt, kann vermutete Adressen
 selbst hashen. Eingabefeldnamen werden begrenzt, von Steuerzeichen bereinigt
 und als JSON maskiert.
@@ -476,7 +473,7 @@ und als JSON maskiert.
 #### Über die Container-Laufzeit hinaus aufbewahren {#keeping-the-trail-past-the-container}
 
 Standardmäßig gehen Audit-Ereignisse an die Prozessausgabe. Für dauerhafte
-Aufbewahrung verwenden Sie einen eingebundenen Speicherort:
+Aufbewahrung verwende einen eingebundenen Speicherort:
 
 ```yaml
 services:
@@ -508,14 +505,14 @@ mkdir -p /srv/opencloud-scan/audit
 sudo chown 10001 /srv/opencloud-scan/audit
 ```
 
-Bei Rootless Docker setzen Sie die Eigentumsrechte innerhalb des User-Namespace:
+Bei Rootless Docker setze die Eigentumsrechte innerhalb des User-Namespace:
 
 ```bash
 docker run --rm --user 0 --entrypoint chown \
   -v /srv/opencloud-scan/audit:/target redis:8.10-alpine 10001 /target
 ```
 
-Verwenden Sie ein anderes Verzeichnis als für Redis, das mit anderer UID schreibt.
+Verwende ein anderes Verzeichnis als für Redis, das mit anderer UID schreibt.
 
 #### Rotation durch logrotate {#letting-the-hosts-logrotate-keep-it}
 
@@ -543,7 +540,7 @@ sudo logrotate --debug /etc/logrotate.d/opencloud-scan-audit   # changes nothing
 ```
 
 `create 0600 10001 10001` hält die Ersatzdatei für den Container beschreibbar und
-für andere unlesbar. Verwenden Sie kein `copytruncate`, da zwischen Kopieren und
+für andere unlesbar. Verwende kein `copytruncate`, da zwischen Kopieren und
 Kürzen Einträge verloren gehen können. Genau eine Stelle darf rotieren:
 entweder `service` oder eine installierte externe Richtlinie.
 
@@ -553,7 +550,7 @@ Verbindungs- und Bandbreitengrenzen gehören an den Proxy.
 
 Jeder Scan läuft in einem Kindprozess. Bei Timeout oder Abbruch beendet der
 Worker diesen samt Probe-Threads, bevor er einen weiteren Auftrag übernimmt.
-Planen Sie Speicher und PID-Limits für einen zusätzlichen Python-Prozess pro
+Plane Speicher und PID-Limits für einen zusätzlichen Python-Prozess pro
 aktivem Scan ein; siehe [ADR 0053](../../adr/0053-a-scan-timeout-ends-its-process.md).
 
 ## Reverse Proxy {#putting-it-behind-a-reverse-proxy}
@@ -562,7 +559,7 @@ Der [Proxy-Leitfaden](../reverse-proxy.md) enthält Konfigurationen für nginx,
 Apache httpd, Caddy, Traefik und HAProxy. Der Assistent kann die ersten vier
 erzeugen, einschließlich TLS, MCP-Streaming und gegebenenfalls Forward Auth.
 
-Aktivieren Sie `COS_WEB_TRUST_FORWARDED_FOR` nur hinter einem eigenen Proxy.
+aktiviere `COS_WEB_TRUST_FORWARDED_FOR` nur hinter einem eigenen Proxy.
 `COS_WEB_TRUSTED_PROXY_HOPS` zählt von rechts im `X-Forwarded-For`-Header.
 Zu wenige Hops fassen Besucher unter einer Proxy-Adresse zusammen; zu viele
 können einen vom Client vorgegebenen Wert als Adresse übernehmen.
@@ -661,14 +658,14 @@ X-COS-Signature: HMAC-SHA256=d68d9da7f04a4dcf38de5c64545141dc02c50c7476e76687e74
 ```
 
 Die Prüfung benötigt dasselbe geheime Schlüsselmaterial. Das ist keine
-öffentlich prüfbare Signatur; geben Sie den Schlüssel nicht an Besucher weiter.
-Erzeugen Sie einen langen Zufallswert:
+öffentlich prüfbare Signatur; gib den Schlüssel nicht an Besucher weiter.
+Erzeuge einen langen Zufallswert:
 
 ```bash
 openssl rand -hex 32
 ```
 
-Speichern Sie den Header zusammen mit der Datei:
+Speichere den Header zusammen mit der Datei:
 
 ```bash
 curl -sS -D headers.txt -o result.pdf \
@@ -676,7 +673,7 @@ curl -sS -D headers.txt -o result.pdf \
 grep -i '^x-cos-signature' headers.txt
 ```
 
-Prüfen Sie die unveränderten Download-Bytes, nicht neu formatiertes JSON:
+Prüfe die unveränderten Download-Bytes, nicht neu formatiertes JSON:
 
 ```bash
 COS_WEB_EXPORT_SIGNING_KEY='<key-from-secret-store>' \
@@ -752,7 +749,7 @@ Hostname oder vollständige URL. `deleted` zählt entfernte Schlüssel;
 außerhalb dieses Löschvorgangs und werden in `notes` genannt.
 
 `targetFingerprint` ist nur mit `COS_WEB_PURGE_SIGNING_KEY` gesetzt.
-Den signierten Beleg prüfen Sie mit:
+Den signierten Beleg prüfe mit:
 
 ```python
 from webapp.purge import verify

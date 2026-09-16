@@ -1,10 +1,8 @@
-# OpenCloud Security Scanner worked examples
-
 # Anwendungsbeispiele
 
-Die folgenden Aufrufe decken typische Einsatzfälle ab. Ersetzen Sie `opencloud.example.com` durch Ihre Instanz und prüfen Sie nur Systeme, für die Sie eine Erlaubnis haben.
+Die folgenden Aufrufe decken typische Einsatzfälle ab. Ersetze `opencloud.example.com` durch deine Instanz und prüfe nur Systeme, für die du eine Erlaubnis haben.
 
-Ausführliche Integrationsbeispiele finden Sie unter [Kubernetes](../kubernetes.md), [CI-Pipelines](../ci.md), [Prometheus und Grafana](../prometheus.md), [Webhooks](../webhook-recipes.md) und [Mehrere Instanzen](../many-instances.md).
+Ausführliche Integrationsbeispiele findest du unter [Kubernetes](../kubernetes.md), [CI-Pipelines](../ci.md), [Prometheus und Grafana](../prometheus.md), [Webhooks](../webhook-recipes.md) und [Mehrere Instanzen](../many-instances.md).
 
 ## Grundlagen {#the-basics}
 
@@ -80,7 +78,7 @@ check-opencloud-security --host opencloud.example.com --check-hardening \
 
 ## Kanal und Ausnahmen in der Konfigurationsdatei {#both-together-in-a-configuration-file}
 
-Für dauerhafte Einstellungen eignet sich eine Konfigurationsdatei. Begründen Sie Ausnahmen in Kommentaren und halten Sie fest, wann sie erneut geprüft werden sollen:
+Für dauerhafte Einstellungen eignet sich eine Konfigurationsdatei. Begründe Ausnahmen in Kommentaren und halte fest, wann sie erneut geprüft werden sollen:
 
 ```yaml
 # /etc/check-opencloud-security/config.yml

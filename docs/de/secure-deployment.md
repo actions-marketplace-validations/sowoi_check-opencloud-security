@@ -1,10 +1,8 @@
-# Running OpenCloud in a secure infrastructure
-
 # OpenCloud sicher betreiben
 
-Der Scanner prüft den von außen sichtbaren Zustand einer OpenCloud-Instanz. Für einen sicheren Betrieb müssen Sie zusätzlich Anmeldung, Protokollierung, Netzregeln, Datensicherung und den Umgang mit Freigaben gestalten. Dieser Leitfaden verbindet diese Aufgaben mit regelmäßigen Scans.
+Der Scanner prüft den von außen sichtbaren Zustand einer OpenCloud-Instanz. Für einen sicheren Betrieb musst du zusätzlich Anmeldung, Protokollierung, Netzregeln, Datensicherung und den Umgang mit Freigaben gestalten. Dieser Leitfaden verbindet diese Aufgaben mit regelmäßigen Scans.
 
-Die verlinkte OpenCloud-Dokumentation beschreibt die Einstellungen der jeweiligen Version. Prüfen Sie sie vor einer Änderung und melden Sie Abweichungen gern als [Issue](https://github.com/sowoi/check-opencloud-security/issues).
+Die verlinkte OpenCloud-Dokumentation beschreibt die Einstellungen der jeweiligen Version. Prüfe vor einer Änderung und melde Abweichungen gern als [Issue](https://github.com/sowoi/check-opencloud-security/issues).
 
 ## Aufbau der Bereitstellung {#the-shape-of-a-defensible-deployment}
 
@@ -66,7 +64,7 @@ Die Variablen sind unabhängig vom Anbieter. Quelle: [OpenCloud-Anleitung für e
 
 Bei aktiviertem Autoprovisioning muss der Anbieter den Zugriff auf die OpenCloud-Anwendung begrenzen, etwa auf eine festgelegte Gruppe. Eine erfolgreiche Anmeldung am Anbieter allein soll nicht automatisch jedem Organisationskonto Zugriff auf OpenCloud geben.
 
-Wenn Rollen aus OIDC-Claims kommen, deaktivieren Sie die zusätzliche automatische Standardrolle mit `GRAPH_ASSIGN_DEFAULT_USER_ROLE=false`.
+Wenn Rollen aus OIDC-Claims kommen, deaktiviere die zusätzliche automatische Standardrolle mit `GRAPH_ASSIGN_DEFAULT_USER_ROLE=false`.
 
 ### Keycloak {#keycloak}
 
@@ -78,13 +76,13 @@ Die [Keycloak-Anleitung](../identity-providers.md#tutorial-a-keycloak) enthält 
 - Exakte Redirect-URIs, einschließlich der Loopback-Weiterleitung mit variablem Port für Desktop-Clients.
 - Issuer wie `https://id.example.com/realms/opencloud`.
 
-Ein *User Client Role*-Mapper kann Rollen im Claim `roles` bereitstellen. Richten Sie eine passende Passwort- und Mehrfaktorrichtlinie ein und testen Sie sie mindestens für administrative Konten.
+Ein *User Client Role*-Mapper kann Rollen im Claim `roles` bereitstellen. Richte eine passende Passwort- und Mehrfaktorrichtlinie ein und teste sie mindestens für administrative Konten.
 
 ### Authentik {#authentik}
 
 Die [Authentik-Anleitung](../identity-providers.md#tutorial-b-authentik) beschreibt die Einrichtung für OpenCloud. Die mitgelieferte [Authentik-Stackkonfiguration](../authentik.md) dieses Projekts schützt dagegen den Scan-Dienst.
 
-Für OpenCloud benötigen Sie öffentliche OAuth2/OpenID-Provider mit PKCE, passende Redirects und eine Gruppenzuordnung für den Anwendungszugriff. Übernehmen Sie den Issuer exakt, etwa `https://id.example.com/application/o/<application-slug>/` einschließlich Schrägstrich.
+Für OpenCloud benötigst du öffentliche OAuth2/OpenID-Provider mit PKCE, passende Redirects und eine Gruppenzuordnung für den Anwendungszugriff. Übernimm den Issuer exakt, etwa `https://id.example.com/application/o/<application-slug>/` einschließlich Schrägstrich.
 
 Die [Blueprints](../../authentik/blueprints) zeigen, wie Provider und Regeln als Dateien bereitgestellt werden können.
 
@@ -110,13 +108,13 @@ access_control:
 
 WebDAV-, CalDAV-, CardDAV- und manche Backup-Clients verwenden HTTP Basic Auth statt OIDC. Mit `PROXY_ENABLE_BASIC_AUTH=true` steht ihnen ein Weg offen, der den interaktiven Anmeldeablauf mit zweitem Faktor nicht durchläuft.
 
-Lassen Sie die Option deaktiviert, wenn sie nicht benötigt wird. Verwenden Sie für notwendige Clients eigene widerrufbare App-Tokens statt Kontopasswörtern. Der [Authentifizierungsleitfaden](../authentication.md) erklärt die Bewertung.
+Lass die Option deaktiviert, wenn sie nicht benötigt wird. Verwende für notwendige Clients eigene widerrufbare App-Tokens statt Kontopasswörtern. Der [Authentifizierungsleitfaden](../authentication.md) erklärt die Bewertung.
 
 ## 2. Audit-Log aktivieren und auswerten {#2-turn-the-audit-log-on-then-read-it}
 
 ### Audit-Dienst starten {#the-audit-service-does-not-run-by-default}
 
-OpenClouds [Audit-Dienst](https://docs.opencloud.eu/docs/dev/server/services/audit/) gehört nicht zum Standard-Dienstsatz. Aktivieren Sie ihn ausdrücklich:
+OpenClouds [Audit-Dienst](https://docs.opencloud.eu/docs/dev/server/services/audit/) gehört nicht zum Standard-Dienstsatz. Aktiviere ihn ausdrücklich:
 
 ```bash
 # Add it to the services that run, alongside the default set.
@@ -129,7 +127,7 @@ Er erfasst unter anderem:
 - Benutzerverwaltung wie das Anlegen und Löschen von Konten.
 - Freigaben, öffentliche Links und Änderungen von Berechtigungen.
 
-Der Scanner kann eine zu offene Freigaberichtlinie erkennen. Für tatsächlich ausgeführte Freigabeaktionen benötigen Sie dagegen Betriebs- und Auditdaten.
+Der Scanner kann eine zu offene Freigaberichtlinie erkennen. Für tatsächlich ausgeführte Freigabeaktionen benötigst du dagegen Betriebs- und Auditdaten.
 
 Die [Audit-Referenz](https://docs.opencloud.eu/docs/dev/server/services/audit/environment-variables) beschreibt die Konfiguration:
 
@@ -144,11 +142,11 @@ Die [Audit-Referenz](https://docs.opencloud.eu/docs/dev/server/services/audit/en
 | `AUDIT_EVENTS_AUTH_USERNAME` / `_PASSWORD` | leer | Zugangsdaten für einen über das Netz erreichbaren Broker |
 | `AUDIT_EVENTS_ENABLE_TLS` | `false` | Bei Netzwerkverbindungen TLS aktivieren |
 
-Prüfen Sie nach der Einrichtung mit bekannten Testaktionen, ob die erwarteten Ereignisse tatsächlich ankommen. Ein gestarteter Prozess allein belegt keine vollständige Protokollierung.
+Prüfe nach der Einrichtung mit bekannten Testaktionen, ob die erwarteten Ereignisse tatsächlich ankommen. Ein gestarteter Prozess allein belegt keine vollständige Protokollierung.
 
 ### Logs außerhalb der Instanz speichern {#getting-the-log-off-the-box}
 
-Leiten Sie Auditdaten an einen getrennten Sammler weiter:
+Leite Auditdaten an einen getrennten Sammler weiter:
 
 ```yaml
 # docker-compose fragment: hand stdout to the host's journal, which a
@@ -161,11 +159,11 @@ services:
         tag: opencloud
 ```
 
-Der sendende Dienst sollte Einträge hinzufügen, aber vorhandene Daten nicht löschen oder umschreiben dürfen. Verwenden Sie getrennte Berechtigungen und eine festgelegte Aufbewahrungsdauer, unabhängig davon, ob Sie Loki, einen Syslog-Server oder einen anderen Sammler einsetzen.
+Der sendende Dienst sollte Einträge hinzufügen, aber vorhandene Daten nicht löschen oder umschreiben dürfen. Verwende getrennte Berechtigungen und eine festgelegte Aufbewahrungsdauer, unabhängig davon, ob du Loki, einen Syslog-Server oder einen anderen Sammler einsetzen.
 
 ### Geeignete Alarmregeln {#what-to-actually-alert-on}
 
-Beginnen Sie mit Ereignissen, die in Ihrer Umgebung konkrete Maßnahmen auslösen:
+Beginne mit Ereignissen, die in deiner Umgebung konkrete Maßnahmen auslösen:
 
 - Öffentliche Links ohne Passwort oder Ablaufdatum, besonders in sonst nicht geteilten Bereichen.
 - Erweiterte Freigabeberechtigungen.
@@ -175,7 +173,7 @@ Beginnen Sie mit Ereignissen, die in Ihrer Umgebung konkrete Maßnahmen auslöse
 
 ### Aufbewahrung und Datenschutz {#retention-and-the-law}
 
-Audit-Logs können personenbezogene Informationen über Datei- und Kontozugriffe enthalten. Legen Sie Zweck, Zugriffsrechte und Aufbewahrungsdauer fest und setzen Sie die Löschung im Sammler um. Beziehen Sie die zuständigen Datenschutzverantwortlichen in die für Ihre Organisation geltenden Anforderungen ein.
+Audit-Logs können personenbezogene Informationen über Datei- und Kontozugriffe enthalten. Lege Zweck, Zugriffsrechte und Aufbewahrungsdauer fest und setze die Löschung im Sammler um. Beziehe die zuständigen Datenschutzverantwortlichen in die für deine Organisation geltenden Anforderungen ein.
 
 ## 3. Netzwerkzugriffe beschränken {#3-firewall-it-properly}
 
@@ -194,7 +192,7 @@ Der Scanner prüft ausgewählte Backend- und Debug-Zugänge, nicht jede Firewall
 
 ### Docker und Host-Firewall {#a-host-firewall-that-works-with-docker}
 
-Veröffentlichte Container-Ports werden über Docker-eigene Firewall-Regeln verarbeitet. Verlassen Sie sich daher nicht allein auf eine Anzeige von UFW.
+Veröffentlichte Container-Ports werden über Docker-eigene Firewall-Regeln verarbeitet. Verlasse sich daher nicht allein auf eine Anzeige von UFW.
 
 **An Loopback binden:**
 
@@ -206,9 +204,9 @@ services:
       - "127.0.0.1:9200:9200"
 ```
 
-Wenn der Reverse Proxy im selben Docker-Netz liegt, können Sie die Host-Portfreigabe ganz weglassen und OpenCloud über den Dienstnamen erreichen.
+Wenn der Reverse Proxy im selben Docker-Netz liegt, kannst du die Host-Portfreigabe ganz weglassen und OpenCloud über den Dienstnamen erreichen.
 
-**Ausgehende und weitergeleitete Pakete gezielt filtern:** Prüfen Sie die Docker-Daemon-Konfiguration und die Regelkette Ihres verwendeten Backends:
+**Ausgehende und weitergeleitete Pakete gezielt filtern:** Prüfe die Docker-Daemon-Konfiguration und die Regelkette Ihres verwendeten Backends:
 
 ```json
 {
@@ -238,7 +236,7 @@ table inet filter {
 }
 ```
 
-Passen Sie Regeln an Schnittstellen, Backend und vorhandene Regeln an. Prüfen Sie die tatsächliche Erreichbarkeit von einem anderen Host aus. Für ausgewählte Ports können Sie `nmap -Pn -p 9200,9205,9233 opencloud.example.com` verwenden; der Scanner ergänzt seine eigenen konfigurierten Prüfungen:
+Passe Regeln an Schnittstellen, Backend und vorhandene Regeln an. Prüfe die tatsächliche Erreichbarkeit von einem anderen Host aus. Für ausgewählte Ports kannst du `nmap -Pn -p 9200,9205,9233 opencloud.example.com` verwenden; der Scanner ergänzt seine eigenen konfigurierten Prüfungen:
 
 ```bash
 check-opencloud-security --host opencloud.example.com --check-hardening --debug
@@ -246,35 +244,35 @@ check-opencloud-security --host opencloud.example.com --check-hardening --debug
 
 ### Ausgehende Verbindungen {#egress-matters-too}
 
-Beschränken Sie auch ausgehenden Verkehr auf die benötigten Ziele: DNS, Zeitdienst, Zertifikatsausstellung, Paketquellen sowie konfigurierte Speicher-, Mail- und Identitätsdienste. Welche Ausnahmen nötig sind, hängt von Ihrer Bereitstellung ab.
+Beschränke auch ausgehenden Verkehr auf die benötigten Ziele: DNS, Zeitdienst, Zertifikatsausstellung, Paketquellen sowie konfigurierte Speicher-, Mail- und Identitätsdienste. Welche Ausnahmen nötig sind, hängt von deiner Bereitstellung ab.
 
 ## 4. Host und Daten schützen {#4-underneath-it-all-the-host-and-the-data}
 
-- Halten Sie Betriebssystem und OpenCloud aktuell. Der Scanner erkennt den Release-Status, installiert aber keine Updates.
-- Verschlüsseln Sie Datenträger entsprechend Ihrem Schutzbedarf und planen Sie Schlüsselverwaltung und Wiederherstellung.
-- Testen Sie Backups durch Wiederherstellung und halten Sie eine gegen Änderungen durch das Produktivsystem geschützte Kopie vor.
-- Geben Sie Dienstkonten nur die nötigen Rechte. Die [systemd-Beispiele](../../contrib/systemd) zeigen Härtungsoptionen; prüfen Sie eigene Units mit `systemd-analyze security <unit>`.
-- Trennen Sie Reverse Proxy und Dateidienst mindestens in eigene Prozesse beziehungsweise Container mit passenden Zugriffsrechten.
+- Halte Betriebssystem und OpenCloud aktuell. Der Scanner erkennt den Release-Status, installiert aber keine Updates.
+- Verschlüssele Datenträger entsprechend deinem Schutzbedarf und plane Schlüsselverwaltung und Wiederherstellung.
+- Teste Backups durch Wiederherstellung und halte eine gegen Änderungen durch das Produktivsystem geschützte Kopie vor.
+- Gib Dienstkonten nur die nötigen Rechte. Die [systemd-Beispiele](../../contrib/systemd) zeigen Härtungsoptionen; prüfe eigene Units mit `systemd-analyze security <unit>`.
+- Trenne Reverse Proxy und Dateidienst mindestens in eigene Prozesse beziehungsweise Container mit passenden Zugriffsrechten.
 
 ## 5. Hinweise für Benutzer und Administration {#5-what-the-people-using-it-should-know}
 
-Sichere Freigaben hängen auch von verständlichen Regeln und geeigneten Voreinstellungen ab. Besprechen Sie die folgenden Punkte mit den Personen, die OpenCloud verwenden.
+Sichere Freigaben hängen auch von verständlichen Regeln und geeigneten Voreinstellungen ab. Besprich die folgenden Punkte mit den Personen, die OpenCloud verwenden.
 
 ### Für Benutzer {#for-everybody-with-an-account}
 
-- Behandeln Sie öffentliche Links als Zugangsberechtigung und ergänzen Sie Passwort und Ablaufdatum, wenn die Freigabe dies erfordert.
-- Prüfen Sie den freigegebenen Ordner und seine Unterordner vor dem Teilen.
-- Richten Sie einen zweiten Faktor ein; nutzen Sie unterstützte Passkeys oder Sicherheitsschlüssel, wo möglich.
-- Verwenden Sie eigene App-Tokens für Clients und widerrufen Sie nicht mehr benötigte Tokens.
+- Behandle öffentliche Links als Zugangsberechtigung und ergänze Passwort und Ablaufdatum, wenn die Freigabe dies erfordert.
+- Prüfe den freigegebenen Ordner und seine Unterordner vor dem Teilen.
+- Richte einen zweiten Faktor ein; nutze unterstützte Passkeys oder Sicherheitsschlüssel, wo möglich.
+- Verwende eigene App-Tokens für Clients und widerrufe nicht mehr benötigte Tokens.
 - Bereits heruntergeladene Dateien lassen sich durch das Zurücknehmen eines Links nicht zurückholen.
-- Melden Sie versehentliche Freigaben frühzeitig, damit Zugriffe begrenzt und Logs geprüft werden können.
+- Melde versehentliche Freigaben frühzeitig, damit Zugriffe begrenzt und Logs geprüft werden können.
 
 ### Für Administratoren {#for-administrators}
 
-- Prüfen Sie öffentliche Links und Berechtigungen regelmäßig.
-- Dokumentieren Sie den Austritt von Benutzern einschließlich IdP-Konto, App-Tokens und Freigaben.
-- Ermitteln Sie typische Nutzungsmuster als Grundlage für Alarmregeln.
-- Halten Sie Ansprechpartner und Zuständigkeiten für Sicherheitsvorfälle fest.
+- Prüfe öffentliche Links und Berechtigungen regelmäßig.
+- Dokumentiere den Austritt von Benutzern einschließlich IdP-Konto, App-Tokens und Freigaben.
+- Ermittle typische Nutzungsmuster als Grundlage für Alarmregeln.
+- Halte Ansprechpartner und Zuständigkeiten für Sicherheitsvorfälle fest.
 
 ## 6. Regelmäßige Scans einbinden {#6-where-this-scanner-fits-continuous-monitoring}
 
@@ -282,11 +280,11 @@ Sichere Freigaben hängen auch von verständlichen Regeln und geeigneten Voreins
 
 Ein einmaliger Scan beschreibt nur einen Zeitpunkt. Später können Zertifikate ablaufen, Proxy-Regeln geändert, Debug-Ports veröffentlicht, Releases abgelöst oder neue Schwachstellen bekannt werden.
 
-Regelmäßige Scans machen solche Änderungen aus dem gewählten Netzwerk sichtbar. Wählen Sie ein Intervall passend zu Änderungsrisiko und Scanlast und überwachen Sie auch ausgebliebene Läufe.
+Regelmäßige Scans machen solche Änderungen aus dem gewählten Netzwerk sichtbar. Wähle ein Intervall passend zu Änderungsrisiko und Scanlast und überwache auch ausgebliebene Läufe.
 
 ### Beispielkonfiguration {#a-monitoring-setup-that-is-worth-having}
 
-Starten Sie mit diesem Aufruf und passen Sie ihn anhand von [Zeitplanung](../scheduling.md) oder [Icinga2 / Nagios](../installation.md#icinga2--nagios) an:
+Starte mit diesem Aufruf und passe ihn anhand von [Zeitplanung](../scheduling.md) oder [Icinga2 / Nagios](../installation.md#icinga2--nagios) an:
 
 ```bash
 check-opencloud-security \
@@ -300,15 +298,15 @@ check-opencloud-security \
 
 - `--check-hardening` berücksichtigt Header und Härtungsmaßnahmen.
 - `--baseline` mit `--warn-on-new` beschränkt wiederholte Alarme auf neue oder verschlechterte Befunde; siehe [Änderungsvergleich](../../README.md#reporting-only-what-changed).
-- Ein Webhook gibt Ergebnisse an Ihren Benachrichtigungsweg weiter.
-- `--ignore-hardening` dokumentiert bewusst akzeptierte Befunde. Sie bleiben im Bericht sichtbar; siehe [Ausnahmen](../hardening.md#accepting-a-finding-you-are-not-going-to-fix).
+- Ein Webhook gibt Ergebnisse an deinen Benachrichtigungsweg weiter.
+- `--ignore-hardening` dokumentiert bewusst akzeptierte Befunde. Der Befund bleibt im Bericht sichtbar; siehe [Ausnahmen](../hardening.md#accepting-a-finding-you-are-not-going-to-fix).
 
-Für mehrere Instanzen lesen Sie [Mehrere Instanzen prüfen](../many-instances.md), für Zeitreihen [Prometheus und Grafana](../prometheus.md).
+Für mehrere Instanzen lies [Mehrere Instanzen prüfen](../many-instances.md), für Zeitreihen [Prometheus und Grafana](../prometheus.md).
 
 ### Grenzen des Scanners {#what-it-deliberately-will-not-tell-you}
 
 - Inhalte, Berechtigungen und Abläufe hinter einer Anmeldung werden nicht vollständig geprüft.
-- Die tatsächliche Durchsetzung eines zweiten Faktors und die Rollenzuordnung müssen Sie am Anbieter testen.
+- Die tatsächliche Durchsetzung eines zweiten Faktors und die Rollenzuordnung musst du am Anbieter testen.
 - Betrieb und Auswertung des Audit-Logs sind von außen nicht nachweisbar.
 - Portprüfungen zeigen nur die Wirkung bestimmter Netzregeln aus Sicht des Scanners.
 - Es werden keine Exploits und keine erratenen Passwörter verwendet. Die dokumentierte Ausnahme betrifft veröffentlichte Demokonten.
@@ -317,7 +315,7 @@ Die vollständige Beschreibung steht unter [Grenzen des Scans](../scanner-checks
 
 ## Checkliste {#checklist}
 
-Passen Sie die Liste an Ihre Umgebung an:
+Passe die Liste an deine Umgebung an:
 
 - [ ] Öffentlicher Zugriff nur auf HTTPS und gegebenenfalls HTTP-Weiterleitung
 - [ ] Backend- und Debug-Ports von außen geprüft und gesperrt
