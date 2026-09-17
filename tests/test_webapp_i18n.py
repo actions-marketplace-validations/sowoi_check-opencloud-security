@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from pathlib import Path
 from string import Formatter
 
 import pytest
@@ -21,6 +22,8 @@ from webapp.i18n import (
     safe_next_path,
 )
 from webapp.locales import CATALOGUES
+
+GERMAN_GUIDES = Path(__file__).resolve().parent.parent / "docs" / "de"
 
 FRONTEND_PATHS = (
     "/",
@@ -199,93 +202,8 @@ def _tags(value: str) -> tuple[str, ...]:
 
 # ----------------------------------------------------------- German register
 
-#: German is written in the informal "du" (see AGENTS.md, "Frontend prose").
-#: These keys predate that guideline and still address the reader as "Sie".
-#: The set may only shrink: rewrite a string to "du" and remove its key here.
-#: Never add a key - a new or reworded German string uses "du".
-FORMAL_GERMAN_KEYS = frozenset(
-    {
-        "about.project.body",
-        "about.project.origin",
-        "admin.lede",
-        "admin.search.remedy",
-        "api.clients.intro",
-        "api.lede",
-        "api.rules.body",
-        "catalogue.lede",
-        "cli.lede",
-        "cli.nodocker.body",
-        "cli.oneliner.body",
-        "cli.private.body",
-        "compare.error.same",
-        "compare.error.unfinished.baseline",
-        "compare.error.unfinished.current",
-        "compare.error.unknown.baseline",
-        "compare.error.unknown.current",
-        "compare.form.hint",
-        "compare.lede",
-        "compare.upload.error.expired",
-        "compare.upload.error.missing",
-        "compare.upload.error.no_current",
-        "compare.upload.error.rate_limit",
-        "compare.upload.error.unreadable",
-        "compare.upload.expires",
-        "compare.upload.lede",
-        "docs.index.lede",
-        "docs.index.quickstart.container",
-        "error.rate_limit.client",
-        "error.rate_limit.daily",
-        "error.rate_limit.probe",
-        "error.rate_limit.target",
-        "error.target.address_only",
-        "error.target.empty",
-        "error.target.wildcard_dns",
-        "footer.legal.scope",
-        "grade.0.improve",
-        "grade.1.improve",
-        "grade.2.improve",
-        "grade.3.improve",
-        "grade.4.improve",
-        "grade.5.improve",
-        "grades.improve.intro",
-        "grades.improve.release",
-        "grades.improve.rerun",
-        "grades.lede",
-        "grades.limits.body",
-        "how.faq.a2",
-        "how.faq.a5",
-        "how.pipeline.step3",
-        "index.assurance.aria",
-        "index.assurance.noaccount.body",
-        "index.description",
-        "index.error.self_host",
-        "index.field.hint",
-        "index.headline",
-        "index.lede",
-        "index.remember.summary",
-        "index.waivers.search.empty",
-        "notfound.lede",
-        "privacy.self_host",
-        "privacy.uploads.body",
-        "privacy.uploads.heading",
-        "result.excluded.waived.heading",
-        "result.export.lede",
-        "result.failed.body",
-        "result.feedback.prompt",
-        "result.fragment.caution",
-        "result.fragment.heading",
-        "result.fragment.lede",
-        "result.fragment.nothing",
-        "result.fragment.undecided",
-        "result.hardening.lede",
-        "result.progress.noscript",
-        "result.rescan.note",
-        "result.share.email.hint",
-        "result.share.lede",
-        "result.share.warning",
-        "search.status.idle",
-    }
-)
+#: German is written in the informal "du" (see AGENTS.md, "Frontend prose"),
+#: in the catalogue and in the guides under `docs/de/` alike.
 
 #: "Sie", "Ihnen" and "Ihr..." capitalised in the middle of a sentence can only
 #: be the formal address. At the start of a sentence they may just as well mean
@@ -325,25 +243,35 @@ def test_the_formal_address_detector_tells_the_reader_from_a_third_person(
     assert bool(_formal_address(text)) is formal
 
 
-def test_new_german_strings_address_the_reader_informally():
+def test_german_strings_address_the_reader_informally():
     """
-    The guideline for new German text is "du", and the catalogue must not drift back.
+    German text is "du", and the catalogue must not drift back.
 
-    Most existing strings are formal, so copying a neighbour is the easy
-    mistake; this names the key that did it.
+    Copying a register from another project is the easy mistake; this names
+    the key that did it.
     """
     formal = {
         key: _formal_address(value)
         for key, value in CATALOGUES["de"].items()
-        if key not in FORMAL_GERMAN_KEYS and _formal_address(value)
+        if _formal_address(value)
     }
 
     assert formal == {}
 
 
-def test_the_formal_german_list_only_names_strings_that_are_still_formal():
-    """A key rewritten to "du" leaves the list, so the list keeps shrinking."""
-    assert FORMAL_GERMAN_KEYS <= CATALOGUES["de"].keys()
-    assert sorted(
-        key for key in FORMAL_GERMAN_KEYS if not _formal_address(CATALOGUES["de"][key])
-    ) == []
+def test_german_guides_address_the_reader_informally():
+    """The German guide sources follow the same register as the catalogue."""
+    formal = {}
+    for path in sorted(GERMAN_GUIDES.glob("*.md")):
+        # Code blocks and inline code are commands and identifiers, not prose.
+        prose = re.sub(
+            r"^```.*?^```",
+            lambda block: "\n" * block[0].count("\n"),
+            path.read_text(encoding="utf-8"),
+            flags=re.MULTILINE | re.DOTALL,
+        )
+        prose = re.sub(r"`[^`\n]*`", "", prose)
+        for number, line in enumerate(prose.splitlines(), start=1):
+            if _formal_address(line):
+                formal[f"{path.name}:{number}"] = line
+    assert formal == {}

@@ -45,7 +45,7 @@ check-opencloud-security --host opencloud.example.com --format junit \
   > opencloud-security.xml
 ```
 
-Richte den JUnit-Reporter Ihres CI-Systems auf diese Datei aus, um die Befunde als Testergebnisse anzuzeigen.
+Richte den JUnit-Reporter deines CI-Systems auf diese Datei aus, um die Befunde als Testergebnisse anzuzeigen.
 
 ## `checkmk` {#checkmk}
 

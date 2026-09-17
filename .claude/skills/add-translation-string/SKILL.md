@@ -31,11 +31,7 @@ fails otherwise.
   `COS_WEB_*`, header names, code spans).
 - **German always uses the informal "du"** - `du`, `dein`, `dir`, and
   imperatives like `Prüfe`, `Starte`, `Gib ... ein` - never `Sie`, `Ihr`,
-  `Ihnen`. This holds for every new or reworded string, even though most
-  existing entries are still formal: do not copy a neighbour's register.
-  Rewording an existing formal string? Convert the whole string to "du" and
-  remove its key from `FORMAL_GERMAN_KEYS` in `tests/test_webapp_i18n.py`.
-  Never add a key to that set.
+  `Ihnen`. `tests/test_webapp_i18n.py` fails on any formal German string.
 - **Spanish and French** keep the register the existing entries in that file
   use (check neighbouring strings).
 - Placeholders (`{name}`) and markup (`<code>`, `<em>`, `<a href=...>`) must be

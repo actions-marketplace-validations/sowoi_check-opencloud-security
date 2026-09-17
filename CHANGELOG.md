@@ -12,6 +12,14 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+### Changed
+
+- **The German interface and guides now address the reader as "du"
+  throughout.** The remaining formal strings in the German catalogue and the
+  last formal sentences in `docs/de/` are rewritten, and the test that
+  tolerated a list of older formal strings now fails on any formal German
+  string, in the catalogue and in the German guides alike.
+
 ### Fixed
 
 - **The browser tests pass in Firefox again.** Playwright's Firefox drops an

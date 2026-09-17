@@ -215,7 +215,7 @@ chmod 644 &quot;$OUT&quot;
   | curl -sf -X POST http://collector.example.com:4318/v1/metrics \
       -H 'Content-Type: application/json' --data-binary @-
 </code></pre>
-<p>Metriknamen und das Attribut <code>host</code> entsprechen dem Exporter. Berücksichtige bei Abfragen die Label-Konventionen Ihres Backends. Collector-Adresse, Proxy und Zugangsdaten werden beim Versand konfiguriert.</p>
+<p>Metriknamen und das Attribut <code>host</code> entsprechen dem Exporter. Berücksichtige bei Abfragen die Label-Konventionen deines Backends. Collector-Adresse, Proxy und Zugangsdaten werden beim Versand konfiguriert.</p>
 <p>Auch ein fehlgeschlagener Scan liefert <code>opencloud_security_scrape_success</code> mit <code>0</code> und die Dauer, aber keine Befunde. So lässt sich ein nicht erreichbares Ziel von einem erfolgreichen Scan unterscheiden.</p>
 <h2 id="alerting-rules">Alarmregeln</h2>
 <p>Für den nativen Exporter verwende <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/prometheus/alerts.yml"><code>contrib/prometheus/alerts.yml</code></a>. Diese Datei wird mit den tatsächlich ausgegebenen Metriknamen gepflegt und getestet.</p>

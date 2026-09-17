@@ -247,7 +247,7 @@ Du kannst `COS_WEB_ENABLE_MCP=false` auch direkt in der Umgebung des ASGI-Prozes
 
 `erase_instance_data` löscht gespeicherte Scans eines Hostnamens, einschließlich Ergebnissen anderer Benutzer. Die Funktion ist als löschend markiert und erfordert ein vom Betreiber gesetztes `COS_WEB_PURGE_TOKEN`.
 
-Die Berechtigung kommt über einen Request-Header, nicht als Tool-Argument. Verwende die Secret-Eingabe Ihres Clients:
+Die Berechtigung kommt über einen Request-Header, nicht als Tool-Argument. Verwende die Secret-Eingabe deines Clients:
 
 ```json
 {

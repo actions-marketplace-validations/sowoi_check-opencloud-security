@@ -111,7 +111,7 @@ def verify(raw_body: bytes, header: str, secret: str) -> bool:
     return hmac.compare_digest(expected, header or "")
 ```
 
-Verwende `hmac.compare_digest` für den Vergleich. In FastAPI liefert `await request.body()` die Rohdaten, in Flask `request.get_data()`. Lies den Body vor dem Parsen, wenn Ihr Framework sonst nur ein JSON-Objekt bereitstellt.
+Verwende `hmac.compare_digest` für den Vergleich. In FastAPI liefert `await request.body()` die Rohdaten, in Flask `request.get_data()`. Lies den Body vor dem Parsen, wenn dein Framework sonst nur ein JSON-Objekt bereitstellt.
 
 - Die Signatur umfasst auch die von `slack`, `discord`, `ntfy` und `gotify` erzeugten Dokumente. Die Dienste selbst müssen den zusätzlichen Header nicht auswerten.
 - Ohne konfiguriertes Geheimnis wird kein Signaturheader gesendet. Ein Empfänger mit Signaturpflicht muss eine solche Anfrage ablehnen.
@@ -142,7 +142,7 @@ webhook:
 
 **3. Regelmäßig ausführen:** Richte einen [systemd-Timer](../scheduling.md#systemd-timer) oder [Cronjob](../scheduling.md#cron) ein. Bleibt die Meldung länger als das Heartbeat-Intervall aus, erkennt Uptime Kuma einen Ausfall.
 
-Prüfe, welche Status- und Detailfelder Ihr Push-Empfänger tatsächlich auswertet. Der generische JSON-Payload enthält:
+Prüfe, welche Status- und Detailfelder dein Push-Empfänger tatsächlich auswertet. Der generische JSON-Payload enthält:
 
 | Feld | Inhalt |
 |:--|:--|

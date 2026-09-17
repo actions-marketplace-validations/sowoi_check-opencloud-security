@@ -206,7 +206,7 @@ services:
 
 Wenn der Reverse Proxy im selben Docker-Netz liegt, kannst du die Host-Portfreigabe ganz weglassen und OpenCloud über den Dienstnamen erreichen.
 
-**Ausgehende und weitergeleitete Pakete gezielt filtern:** Prüfe die Docker-Daemon-Konfiguration und die Regelkette Ihres verwendeten Backends:
+**Ausgehende und weitergeleitete Pakete gezielt filtern:** Prüfe die Docker-Daemon-Konfiguration und die Regelkette deines Backends:
 
 ```json
 {

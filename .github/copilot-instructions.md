@@ -337,15 +337,12 @@ keep remote scan evidence verbatim. Generated guide bodies remain English
 under `lang="en"` with a localized notice and chrome. See
 [ADR 0020](../adr/0020-frontend-language-is-request-scoped.md).
 
-**German text addresses the reader informally, with "du".** Every new or
-reworded German string - in `webapp/locales/de.py` and in the guides under
-`docs/de/` - uses `du`/`dein`/`dir` and informal imperatives (`Prüfe`,
-`Starte`), never `Sie`/`Ihr`/`Ihnen`. Most existing German text is still
-formal; that is not a register to copy. When you reword a formal string,
-convert all of it rather than mixing both forms in one sentence.
-`tests/test_webapp_i18n.py` fails on a formal catalogue string whose key is not
-in `FORMAL_GERMAN_KEYS`, the list of strings that predate the guideline; that
-list only shrinks. Spanish and French keep their existing register.
+**German text addresses the reader informally, with "du".** Every German
+string - in `webapp/locales/de.py` and in the guides under `docs/de/` - uses
+`du`/`dein`/`dir` and informal imperatives (`Prüfe`, `Starte`), never
+`Sie`/`Ihr`/`Ihnen`. `tests/test_webapp_i18n.py` fails on a formal string in
+the catalogue or in a German guide. Spanish (formal "usted", in the catalogue
+and under `docs/es/`) and French keep their existing register.
 
 ## The agent-facing surfaces
 

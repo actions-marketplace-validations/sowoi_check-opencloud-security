@@ -139,7 +139,7 @@ check-opencloud-security --host opencloud.example.com,other.example.com \
       -H 'Content-Type: application/json' --data-binary @-
 ```
 
-Metriknamen und das Attribut `host` entsprechen dem Exporter. Berücksichtige bei Abfragen die Label-Konventionen Ihres Backends. Collector-Adresse, Proxy und Zugangsdaten werden beim Versand konfiguriert.
+Metriknamen und das Attribut `host` entsprechen dem Exporter. Berücksichtige bei Abfragen die Label-Konventionen deines Backends. Collector-Adresse, Proxy und Zugangsdaten werden beim Versand konfiguriert.
 
 Auch ein fehlgeschlagener Scan liefert `opencloud_security_scrape_success` mit `0` und die Dauer, aber keine Befunde. So lässt sich ein nicht erreichbares Ziel von einem erfolgreichen Scan unterscheiden.
 

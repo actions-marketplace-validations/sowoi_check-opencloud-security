@@ -106,7 +106,7 @@ Testnachrichten, der Worker die übrigen Nachrichten.
 | `AUTHENTIK_EMAIL_FROM` | `authentik@localhost` | Absenderadresse |
 
 Aktiviere `USE_TLS` und `USE_SSL` nicht gleichzeitig. Wähle die
-Variante, die Ihr Mailserver unterstützt:
+Variante, die dein Mailserver unterstützt:
 
 ```bash
 cat >> docker/.env <<'EOF'

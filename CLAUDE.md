@@ -144,10 +144,9 @@ CLI flags    ───┘        (flat COS_ names)     (builds)       (dataclass
   analytics, CDNs, sign-in, share buttons, or card metadata naming them.
   Enforced by `tests/test_webapp_seo.py` and the third-party check in
   `tests/test_webapp_api.py`.
-- **New German text uses the informal "du"**, never `Sie`/`Ihr`/`Ihnen` —
-  in `webapp/locales/de.py` and `docs/de/` alike, even though most existing
-  German is still formal. Don't copy a neighbour's register;
-  `FORMAL_GERMAN_KEYS` in `tests/test_webapp_i18n.py` only shrinks.
+- **German text uses the informal "du"**, never `Sie`/`Ihr`/`Ihnen` —
+  in `webapp/locales/de.py` and `docs/de/` alike; `tests/test_webapp_i18n.py`
+  fails on a formal string in either.
 - **The frontend is fully self-hosted**, no CDN/Bootstrap/Tailwind/font
   service. CSP has no `unsafe-inline` — no `style=`, `<style>`, `onclick`, or
   inline `<script>`; use utility classes / `[data-...]` rules in `app.css`
