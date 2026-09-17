@@ -6,8 +6,8 @@ Docker. También crean los objetos `CheckCommand` y `Service` descritos en
 [Icinga Director](../icinga-director.md) y en
 [Icinga2 / Nagios](../installation.md#icinga2--nagios).
 
-Esta página es la versión breve. [`ansible/README.md`](../../ansible/README.md)
-es la referencia y el archivo que se mantiene al día con los propios roles.
+Esta página resume el procedimiento. La referencia completa está en
+[`ansible/README.md`](../../ansible/README.md), que se mantiene al día con los roles.
 
 <!-- TOC -->
 * [Despliegue automatizado con Ansible](#automated-deployment-with-ansible)

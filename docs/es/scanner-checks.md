@@ -1,8 +1,8 @@
 # Qué lee el escáner de seguridad de OpenCloud y qué no
 
-El inventario completo de lo que un análisis obtiene de una instancia: los
-puntos de acceso que lee, cada comprobación adicional que ejecuta y cuánto
-pesa, qué observaciones se registran pero nunca se califican y las preguntas
+Este inventario describe todo lo que un análisis obtiene de una instancia: los
+puntos de acceso que lee, cada comprobación adicional que ejecuta y su impacto,
+qué observaciones se registran pero nunca se califican y las preguntas
 que un análisis desde fuera no puede responder.
 
 El [README principal](../../README.md#the-built-in-scanner) lo resume en un

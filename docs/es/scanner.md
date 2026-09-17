@@ -8,8 +8,8 @@ ajustes observables públicamente y devuelve un documento de resultado con una
 nota de `0` a `5`. También prueba las credenciales de demostración
 documentadas contra el proveedor de identidad propio de la instancia.
 
-La escala de notas sigue las notas de la API de análisis de Nextcloud, para
-que los umbrales, los datos de rendimiento, los webhooks y los paneles
+La escala de notas sigue la de la API de análisis de Nextcloud, para que los
+umbrales, los datos de rendimiento, los webhooks y los paneles
 existentes conserven su significado.
 
 | Módulo | Finalidad |

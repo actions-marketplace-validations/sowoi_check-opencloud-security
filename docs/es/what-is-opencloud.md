@@ -1,7 +1,7 @@
 # Qué es OpenCloud
 
 [OpenCloud](https://opencloud.eu/) es una plataforma de código abierto para
-almacenar, sincronizar y compartir archivos. Este escáner está hecho para sus
+almacenar, sincronizar y compartir archivos. Este escáner está pensado para sus
 canales de publicación, su configuración y sus puntos de acceso públicos. Esta
 página explica la arquitectura en la que se basan esas comprobaciones.
 

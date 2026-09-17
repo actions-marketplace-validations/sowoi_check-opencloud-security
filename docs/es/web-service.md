@@ -2,8 +2,8 @@
 
 La aplicación web ejecuta el escáner incorporado y presenta sus hallazgos con
 una nota de **A+** a **F**. Por defecto, los resultados permanecen disponibles
-en Redis durante una hora. La capa web presenta el resultado del escáner sin
-definir una calificación propia.
+en Redis durante una hora. La capa web se limita a presentar el resultado del
+escáner; no calcula una calificación propia.
 
 Pruebe el servicio público en [scan.okxo.de](https://scan.okxo.de) para un
 análisis puntual. Las instrucciones siguientes explican cómo alojar su propio

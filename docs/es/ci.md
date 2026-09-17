@@ -1,9 +1,9 @@
 # Comprobaciones de seguridad de OpenCloud en canalizaciones de CI
 
-Use una canalización de CI programada para análisis periódicos o para
-comprobar una instancia desde otra red. Vigile tanto si la canalización se
-ejecuta como lo que notifica: un trabajo que no se ejecuta no produce ningún
-resultado de análisis.
+Utilice una canalización de CI programada para análisis periódicos o para
+comprobar una instancia desde otra red. Compruebe que la canalización se
+ejecuta y entienda lo que notifica: un trabajo que no se ejecuta no produce
+ningún resultado de análisis.
 
 Sea cual sea la plataforma, tres cosas deciden si funciona:
 

@@ -1,6 +1,6 @@
 # Canales de publicación de OpenCloud, fin de vida y recomendaciones de actualización
 
-OpenCloud mantiene en paralelo los canales rolling, production y LTS. Por eso,
+OpenCloud mantiene en paralelo los canales Rolling, Production y LTS. Por eso,
 el estado de soporte de una versión depende tanto de su canal como de su
 número. Esta guía explica cómo usa el escáner las líneas de versiones y el
 calendario incluido, cómo elige una actualización y cómo aplica

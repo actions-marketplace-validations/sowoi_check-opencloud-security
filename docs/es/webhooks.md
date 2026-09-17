@@ -3,7 +3,7 @@
 El [webhook](../../README.md#webhook-notifications) envía por defecto el
 documento JSON propio del complemento. Es deliberado: contiene el veredicto
 completo, no una frase ya redactada. `--webhook-format` puede generarlo
-directamente con la forma propia de Slack o Discord (consulte
+directamente con el formato de Slack o Discord (consulte
 [más abajo](#slack-mattermost-discord)), o como notificación push para
 [ntfy o Gotify](#ntfy-and-gotify); cualquier otro receptor sigue necesitando el
 documento genérico y unas pocas líneas de traducción entre medias.

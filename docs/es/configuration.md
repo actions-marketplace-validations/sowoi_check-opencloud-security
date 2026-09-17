@@ -5,8 +5,8 @@ referencia a su origen. Los tokens de GitHub, las URL de webhooks y los tokens
 de servicio pueden leerse de un archivo, de una variable de entorno o de un
 comando en el momento en que se necesitan.
 
-El archivo en sí, dónde se busca y cómo se corresponden sus claves con las
-variables de entorno se describe en
+El propio archivo, su ubicación y la correspondencia entre sus claves y las
+variables de entorno se describen en
 [Archivo de configuración y secretos](../../README.md#configuration-file-and-secrets);
 `config/check-opencloud-security.example.yml` es un ejemplo comentado por completo.
 
