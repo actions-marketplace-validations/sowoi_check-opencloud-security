@@ -27,6 +27,7 @@ import asyncio
 import os
 import threading
 from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -230,6 +231,24 @@ def launch(playwright: Any) -> Any:
         pytest.skip(f"{BROWSER} cannot be launched here ({message}); run `playwright install {BROWSER}`")
 
 
+@contextmanager
+def dark_system_browser(browser: Any) -> Iterator[tuple[Any, dict[str, Any]]]:
+    """A browser whose operating system prefers dark, and the context options that keep it so.
+
+    Playwright's Firefox drops an emulated colour scheme once a response sends
+    `Cross-Origin-Opener-Policy: same-origin`, as every page here does, so
+    Firefox gets its own instance with a dark system theme instead.
+    """
+    if browser.browser_type.name != "firefox":
+        yield browser, {"color_scheme": "dark"}
+        return
+    dark = browser.browser_type.launch(proxy=DEAD_PROXY, firefox_user_prefs={"ui.systemUsesDarkTheme": 1})
+    try:
+        yield dark, {"color_scheme": "no-override"}
+    finally:
+        dark.close()
+
+
 @pytest.fixture(scope="module", name="site")
 def site_fixture() -> Iterator[LiveSite]:
     """One live site per test module, with a hardened, a weak and an end-of-life target."""
@@ -298,8 +317,10 @@ def submit_scan(page: Any, site: LiveSite, target: str, **form: Any) -> str:
 
 def wait_until_final(page: Any, timeout: int = 60_000) -> None:
     """Wait for the result page to reload into its finished state."""
+    # The poll can land between the reload and the new document's <body>
+    # (Firefox), so a missing body counts as "not yet", not as an error.
     page.wait_for_function(
-        "() => ['completed', 'failed'].includes(document.body.getAttribute('data-scan-state'))",
+        "() => ['completed', 'failed'].includes(document.body?.getAttribute('data-scan-state'))",
         timeout=timeout,
     )
     page.wait_for_load_state("load")
