@@ -1168,6 +1168,7 @@ MESSAGES: dict[str, str] = {
         "espera son las descargas de una página de resultado."
     ),
     "compare.upload.error.rate_limit": "Se han subido varios informes desde su red en poco tiempo. Espere un minuto y vuelva a intentarlo.",
+    "compare.upload.error.blocked": "Varios destinos recientes de su red no eran instancias de OpenCloud accesibles, así que este servicio se toma una pausa con su red, subidas incluidas. El analizador y su comparación también se ejecutan sin límites en su propia máquina.",
     "compare.upload.error.expired": "Este enlace ha caducado. Los resultados de una comparación se conservan durante {minutes} minutos; vuelva a subir el archivo para repetirla.",
     "search.title": "Buscar",
     "search.description": (
@@ -1591,6 +1592,12 @@ MESSAGES: dict[str, str] = {
     ),
     "result.export.pdf": "Informe en PDF",
     "result.export.pdf.hint": "Para un ticket, una revisión o una copia impresa.",
+    "result.export.html": "Descargar el informe",
+    "result.export.html.hint": (
+        "Un fichero que sigue siendo legible cuando este enlace caduque. Se "
+        "abre sin conexión, no hace ninguna petición de red y no se "
+        "actualiza."
+    ),
     "result.export.csv": "CSV",
     "result.export.csv.hint": "Una fila por hallazgo, para una hoja de cálculo.",
     "result.export.sarif": "SARIF",

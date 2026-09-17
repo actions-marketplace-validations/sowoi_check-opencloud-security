@@ -1205,6 +1205,12 @@ MESSAGES: dict[str, str] = {
         "Cela fait beaucoup de rapports depuis votre réseau en peu de temps. "
         "Attendez une minute et réessayez."
     ),
+    "compare.upload.error.blocked": (
+        "Plusieurs adresses analysées récemment depuis votre réseau ne se sont "
+        "pas révélées être OpenCloud ; ce service fait donc une pause avec "
+        "votre réseau, envois de rapports compris. Le scanner et sa "
+        "comparaison s'exécutent aussi sans aucune limite sur votre machine."
+    ),
     "compare.upload.error.expired": "Ce lien a expiré. Une comparaison reste disponible pendant {minutes} minutes ; envoyez à nouveau le fichier pour la refaire.",
     "search.title": "Recherche",
     "search.description": (
@@ -1676,6 +1682,12 @@ MESSAGES: dict[str, str] = {
     ),
     "result.export.pdf": "Rapport PDF",
     "result.export.pdf.hint": "Pour un ticket, une revue ou une impression.",
+    "result.export.html": "Télécharger le rapport",
+    "result.export.html.hint": (
+        "Un fichier encore lisible après l'expiration de ce lien. Il s'ouvre "
+        "hors ligne, n'effectue aucune requête réseau et ne se met pas à "
+        "jour."
+    ),
     "result.export.csv": "CSV",
     "result.export.csv.hint": "Une ligne par constat, pour un tableur.",
     "result.export.sarif": "SARIF",

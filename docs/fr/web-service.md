@@ -464,6 +464,7 @@ shape-checked. A key nobody named there reaches nothing downstream.
 | Finding identifiers | dropped unless spelled the way this scanner spells its own, and the count of everything that could not be read is shown |
 | Rate limit | its own bucket, with the client limit's numbers - a parse costs this service work and costs nobody else's instance anything |
 | Cross-site POST | refused before the limiter and before the parse |
+| A network serving a probe block | refused before both, and before the file is read: the block is a judgement about the client, not about one endpoint |
 
 **A fact the format never recorded is removed from both sides rather than
 guessed at.** The CSV is a flat table of findings; whether an update was
@@ -499,6 +500,7 @@ leave something out of an erasure - that is the argument
 | The file is empty, too large, not UTF-8, or not JSON or CSV | **422**, or **413** for size, in this service's own words - a rejected upload is never quoted back |
 | The file parses but is not a scan report | **422** |
 | Too many uploads from one network | **429** with `Retry-After` |
+| The network is serving a probe block | **429** with `Retry-After`, for as long as the block has left to run |
 | `GET /compare/{token}` after five minutes | **404**, exactly as for a token that never existed |
 
 ## The SSRF guard

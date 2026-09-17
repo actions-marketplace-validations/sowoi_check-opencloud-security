@@ -200,6 +200,7 @@ from .reports import (
     MEDIA_TYPES,
     csv_report,
     export_filename,
+    html_report,
     pdf_report,
     sarif_report,
 )
@@ -2161,6 +2162,36 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
             return _cross_site_response(request, wants_html(request))
 
         limiter: RateLimiter = app.state.limiter
+        # A network serving a probe block is refused here too. The block is a
+        # judgement about the *client* - its recent scans kept turning out not
+        # to be OpenCloud - and a client this service has stopped working for
+        # does not get to hand it a file to parse instead (ADR 0051). Asked
+        # before the upload bucket, as `accept_submission` asks it before the
+        # client limit, so a blocked client's refusals do not also run down an
+        # allowance it will want back when the block ends.
+        blocked = await limiter.check_probe_block(address)
+        if not blocked.allowed:
+            audit.rate_limited(
+                client=address,
+                scope=REASON_RATE_LIMIT_PROBE,
+                retry_after=blocked.retry_after,
+            )
+            LOGGER.info("compare_upload_blocked")
+            response = page(
+                request,
+                "compare.html",
+                {
+                    "t": translate,
+                    "error": _upload_sentence(
+                        translate, "compare.upload.error.blocked"
+                    ),
+                },
+                status=429,
+            )
+            if blocked.retry_after:
+                response.headers["Retry-After"] = str(blocked.retry_after)
+            return response
+
         decision = await limiter.check_upload(address)
         if not decision.allowed:
             # Recorded like every other limit that triggered. This is the one
@@ -2859,6 +2890,8 @@ def _render_export(result: dict[str, Any], fmt: str, identifier: str) -> bytes |
         return json.dumps(sarif_report(result), indent=2)
     if fmt == "pdf":
         return pdf_report(result, identifier=identifier)
+    if fmt == "html":
+        return html_report(result, identifier=identifier)
     return json.dumps(result, indent=2)
 
 

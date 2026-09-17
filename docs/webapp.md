@@ -463,6 +463,7 @@ shape-checked. A key nobody named there reaches nothing downstream.
 | Finding identifiers | dropped unless spelled the way this scanner spells its own, and the count of everything that could not be read is shown |
 | Rate limit | its own bucket, with the client limit's numbers - a parse costs this service work and costs nobody else's instance anything |
 | Cross-site POST | refused before the limiter and before the parse |
+| A network serving a probe block | refused before both, and before the file is read: the block is a judgement about the client, not about one endpoint |
 
 **A fact the format never recorded is removed from both sides rather than
 guessed at.** The CSV is a flat table of findings; whether an update was
@@ -498,6 +499,7 @@ leave something out of an erasure - that is the argument
 | The file is empty, too large, not UTF-8, or not JSON or CSV | **422**, or **413** for size, in this service's own words - a rejected upload is never quoted back |
 | The file parses but is not a scan report | **422** |
 | Too many uploads from one network | **429** with `Retry-After` |
+| The network is serving a probe block | **429** with `Retry-After`, for as long as the block has left to run |
 | `GET /compare/{token}` after five minutes | **404**, exactly as for a token that never existed |
 
 ## The SSRF guard
@@ -1027,13 +1029,27 @@ self-hosting hint if it was a limit, **400** or **422** otherwise.
 
 ### `GET /api/scans/{uuid}/export/{format}`
 
-A finished scan as a file: `json`, `csv`, `sarif` or `pdf`.
+A finished scan as a file: `json`, `csv`, `sarif`, `pdf` or `html`.
 
 ```bash
 curl -sS -OJ http://127.0.0.1:8811/api/scans/0f4a1f22-.../export/pdf
 ```
 
-All four carry the remediation plan - the ordered fix list with the grade each
+`html` is the report as **one standalone file**. A result link is a capability
+with a time limit, which is right for a page a stranger can reach and wrong
+for the evidence somebody needs at the end of the quarter, so this is the same
+report without the service under it: the styling is inside the document, there
+is no script, no image, no font service and no stylesheet to fetch, and
+opening it makes no network request at all. The documentation links are the
+only addresses in it and are followed only if the reader chooses to. It
+carries the findings, the ignored ones with their waiver reasons, the
+remediation plan, the coverage gaps and the reference data the scan was judged
+against, and it says plainly that it is a copy: it keeps working after the
+link expires, it does not update, and erasing the scan does not erase it.
+There is nothing to operate in it - no form, no rescan control, no polling and
+no erasure token.
+
+All five carry the remediation plan - the ordered fix list with the grade each
 step reaches - as summary and step rows in the CSV,
 `runs[0].properties.remediation` in the SARIF, a "What gets you to A+" section
 in the PDF and `remediationPlan` in the JSON.

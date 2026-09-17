@@ -80,7 +80,7 @@ PENDING_STATES = (STATE_QUEUED, STATE_RUNNING)
 TERMINAL_STATES = (STATE_COMPLETED, STATE_FAILED)
 
 #: Export formats the service renders from a finished scan.
-EXPORT_FORMATS = ("json", "csv", "sarif", "pdf")
+EXPORT_FORMATS = ("json", "csv", "sarif", "pdf", "html")
 
 #: Statuses that mean "wait, then try the same call again".
 RETRYABLE_STATUSES = (429, 503)

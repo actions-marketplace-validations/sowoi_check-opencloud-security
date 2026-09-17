@@ -863,6 +863,10 @@ Una clave que nadie ha nombrado ahí no llega a nada posterior.</p>
 <td>POST entre sitios</td>
 <td>se rechaza antes del limitador y antes del procesamiento</td>
 </tr>
+<tr>
+<td>Una red con un bloqueo por sondeo</td>
+<td>se rechaza antes de ambos y antes de leer el archivo: el bloqueo juzga al cliente, no a un único endpoint</td>
+</tr>
 </tbody>
 </table>
 <p><strong>Un dato que el formato nunca registró se elimina de ambos lados en lugar de
@@ -926,6 +930,10 @@ resultado.</p>
 <tr>
 <td>Demasiadas subidas desde una misma red</td>
 <td><strong>429</strong> con <code>Retry-After</code></td>
+</tr>
+<tr>
+<td>La red tiene un bloqueo por sondeo</td>
+<td><strong>429</strong> con <code>Retry-After</code>, mientras dure el bloqueo</td>
 </tr>
 <tr>
 <td><code>GET /compare/{token}</code> pasados cinco minutos</td>

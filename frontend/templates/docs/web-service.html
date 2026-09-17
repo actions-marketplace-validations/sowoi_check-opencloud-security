@@ -836,6 +836,10 @@ shape-checked. A key nobody named there reaches nothing downstream.</p>
 <td>Cross-site POST</td>
 <td>refused before the limiter and before the parse</td>
 </tr>
+<tr>
+<td>A network serving a probe block</td>
+<td>refused before both, and before the file is read: the block is a judgement about the client, not about one endpoint</td>
+</tr>
 </tbody>
 </table>
 <p><strong>A fact the format never recorded is removed from both sides rather than
@@ -895,6 +899,10 @@ leave something out of an erasure - that is the argument
 <tr>
 <td>Too many uploads from one network</td>
 <td><strong>429</strong> with <code>Retry-After</code></td>
+</tr>
+<tr>
+<td>The network is serving a probe block</td>
+<td><strong>429</strong> with <code>Retry-After</code>, for as long as the block has left to run</td>
 </tr>
 <tr>
 <td><code>GET /compare/{token}</code> after five minutes</td>
@@ -1340,10 +1348,23 @@ target pays a cooldown for a batch that never ran.</p>
 the reason the first target was refused - <strong>429</strong> with <code>Retry-After</code> and the
 self-hosting hint if it was a limit, <strong>400</strong> or <strong>422</strong> otherwise.</p>
 <h3 id="get-apiscansuuidexportformat"><code>GET /api/scans/{uuid}/export/{format}</code></h3>
-<p>A finished scan as a file: <code>json</code>, <code>csv</code>, <code>sarif</code> or <code>pdf</code>.</p>
+<p>A finished scan as a file: <code>json</code>, <code>csv</code>, <code>sarif</code>, <code>pdf</code> or <code>html</code>.</p>
 <pre><code class="language-bash">curl -sS -OJ http://127.0.0.1:8811/api/scans/0f4a1f22-.../export/pdf
 </code></pre>
-<p>All four carry the remediation plan - the ordered fix list with the grade each
+<p><code>html</code> is the report as <strong>one standalone file</strong>. A result link is a capability
+with a time limit, which is right for a page a stranger can reach and wrong
+for the evidence somebody needs at the end of the quarter, so this is the same
+report without the service under it: the styling is inside the document, there
+is no script, no image, no font service and no stylesheet to fetch, and
+opening it makes no network request at all. The documentation links are the
+only addresses in it and are followed only if the reader chooses to. It
+carries the findings, the ignored ones with their waiver reasons, the
+remediation plan, the coverage gaps and the reference data the scan was judged
+against, and it says plainly that it is a copy: it keeps working after the
+link expires, it does not update, and erasing the scan does not erase it.
+There is nothing to operate in it - no form, no rescan control, no polling and
+no erasure token.</p>
+<p>All five carry the remediation plan - the ordered fix list with the grade each
 step reaches - as summary and step rows in the CSV,
 <code>runs[0].properties.remediation</code> in the SARIF, a "What gets you to A+" section
 in the PDF and <code>remediationPlan</code> in the JSON.</p>

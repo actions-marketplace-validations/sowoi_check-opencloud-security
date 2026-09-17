@@ -490,6 +490,7 @@ Una clave que nadie ha nombrado ahí no llega a nada posterior.
 | Identificadores de hallazgos | se descartan salvo que se escriban como los escribe este escáner, y se muestra el número de todo lo que no se ha podido leer |
 | Límite de frecuencia | un cupo propio, con los mismos números que el límite por cliente: procesar cuesta trabajo a este servicio y no le cuesta nada a la instancia de nadie |
 | POST entre sitios | se rechaza antes del limitador y antes del procesamiento |
+| Una red con un bloqueo por sondeo | se rechaza antes de ambos y antes de leer el archivo: el bloqueo juzga al cliente, no a un único endpoint |
 
 **Un dato que el formato nunca registró se elimina de ambos lados en lugar de
 adivinarse.** El CSV es una tabla plana de hallazgos; si había una
@@ -529,6 +530,7 @@ resultado.
 | El archivo está vacío, es demasiado grande, no es UTF-8 o no es JSON ni CSV | **422**, o **413** por tamaño, con las palabras de este servicio: una subida rechazada nunca se cita de vuelta |
 | El archivo se puede procesar, pero no es un informe de análisis | **422** |
 | Demasiadas subidas desde una misma red | **429** con `Retry-After` |
+| La red tiene un bloqueo por sondeo | **429** con `Retry-After`, mientras dure el bloqueo |
 | `GET /compare/{token}` pasados cinco minutos | **404**, exactamente igual que para un token que nunca existió |
 
 ## La protección contra SSRF {#the-ssrf-guard}

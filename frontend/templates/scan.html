@@ -867,6 +867,11 @@
       <span class="hint">{{ t('result.export.pdf.hint') }}</span>
     </li>
     <li>
+      <a class="btn btn-quiet" href="/api/scans/{{ scan.uuid }}/export/html"
+         download>{{ t('result.export.html') }}</a>
+      <span class="hint">{{ t('result.export.html.hint') }}</span>
+    </li>
+    <li>
       <a class="btn btn-quiet" href="/api/scans/{{ scan.uuid }}/export/csv"
          download>{{ t('result.export.csv') }}</a>
       <span class="hint">{{ t('result.export.csv.hint') }}</span>

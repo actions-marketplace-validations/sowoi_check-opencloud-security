@@ -1241,6 +1241,12 @@ MESSAGES: dict[str, str] = {
         "That is a lot of reports from your network in a short time. Give it a "
         "minute and try again."
     ),
+    "compare.upload.error.blocked": (
+        "Several of the addresses scanned from your network recently did not "
+        "turn out to be OpenCloud, so this service is taking a break from your "
+        "network for a while - uploads included. The scanner and its "
+        "comparison run on your own machine with no limits at all."
+    ),
     "compare.upload.error.expired": (
         "This comparison has expired. Comparisons drawn from an uploaded file "
         "are kept for {minutes} minutes only, and the file itself was never "
@@ -1671,6 +1677,11 @@ MESSAGES: dict[str, str] = {
     ),
     "result.export.pdf": "PDF report",
     "result.export.pdf.hint": "For a ticket, a review or a printout.",
+    "result.export.html": "Download the report",
+    "result.export.html.hint": (
+        "One file that still reads after this link expires. Opens offline, "
+        "makes no network request, and does not update."
+    ),
     "result.export.csv": "CSV",
     "result.export.csv.hint": "One row per finding, for a spreadsheet.",
     "result.export.sarif": "SARIF",

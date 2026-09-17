@@ -85,6 +85,24 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   guessed. Uploaded reports pass both blocks through the same bounded
   allow-list (ADR 0057). No new scan history is stored. See
   [ADR 0066](adr/0066-a-result-records-the-conditions-it-was-produced-under.md).
+- **A scan can be downloaded as one standalone HTML report.** A result link
+  is a capability with a time limit, which is right for a page a stranger can
+  reach and wrong for the evidence somebody needs at the end of the quarter.
+  `GET /api/scans/{uuid}/export/html` is the same report without the service
+  under it: the styling travels inside the document, and there is no script, no
+  image, no font service and no stylesheet to fetch, so opening the file makes
+  no network request at all - the documentation links are the only addresses in
+  it and are followed only if the reader chooses to. It carries the findings,
+  the ignored ones with their waiver reasons, the remediation plan, the
+  coverage gaps and the reference data the scan was judged against, marking
+  what an older report does not record rather than leaving it blank. It says
+  plainly that it is a copy that outlives the link, does not update, and is not
+  erased when the scan is. There is nothing to operate in it: no form, no
+  rescan control, no polling, no erasure token. Every string in it comes from
+  the scanned instance or from an operator's waiver, so all of it is escaped
+  and a `javascript:` reference renders as text rather than as a link. The
+  download sits beside the existing exports on the result page in all four
+  languages; the report itself is English, as every export is.
 
 ### Security
 

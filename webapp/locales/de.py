@@ -1178,6 +1178,12 @@ MESSAGES: dict[str, str] = {
         "Das sind viele Berichte aus deinem Netz in kurzer Zeit. Warte eine "
         "Minute und versuche es erneut."
     ),
+    "compare.upload.error.blocked": (
+        "Mehrere zuletzt aus deinem Netz angefragte Ziele waren keine "
+        "erreichbaren OpenCloud-Instanzen. Dieser Dienst legt deshalb eine "
+        "Pause ein - auch für Uploads. Der Scanner und sein Vergleich laufen "
+        "ohne jede Begrenzung auch auf deinem eigenen Rechner."
+    ),
     "compare.upload.error.expired": (
         "Dieser Vergleich ist abgelaufen. Vergleiche aus einer "
         "hochgeladenen Datei werden nur {minutes} Minuten vorgehalten, und "
@@ -1611,6 +1617,12 @@ MESSAGES: dict[str, str] = {
     "result.export.lede": "Lade denselben Bericht in einem der vier Formate herunter. Die Downloads sind verfügbar, bis der Scan abläuft.",
     "result.export.pdf": "PDF-Bericht",
     "result.export.pdf.hint": "Für ein Ticket, eine Überprüfung oder einen Ausdruck.",
+    "result.export.html": "Bericht herunterladen",
+    "result.export.html.hint": (
+        "Eine Datei, die noch lesbar ist, wenn dieser Link abgelaufen ist. "
+        "Sie öffnet offline, stellt keine Netzwerkanfrage und aktualisiert "
+        "sich nicht."
+    ),
     "result.export.csv": "CSV",
     "result.export.csv.hint": "Eine Zeile pro Befund, für eine Tabellenkalkulation.",
     "result.export.sarif": "SARIF",

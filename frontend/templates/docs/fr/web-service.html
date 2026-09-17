@@ -837,6 +837,10 @@ shape-checked. A key nobody named there reaches nothing downstream.</p>
 <td>Cross-site POST</td>
 <td>refused before the limiter and before the parse</td>
 </tr>
+<tr>
+<td>A network serving a probe block</td>
+<td>refused before both, and before the file is read: the block is a judgement about the client, not about one endpoint</td>
+</tr>
 </tbody>
 </table>
 <p><strong>A fact the format never recorded is removed from both sides rather than
@@ -896,6 +900,10 @@ leave something out of an erasure - that is the argument
 <tr>
 <td>Too many uploads from one network</td>
 <td><strong>429</strong> with <code>Retry-After</code></td>
+</tr>
+<tr>
+<td>The network is serving a probe block</td>
+<td><strong>429</strong> with <code>Retry-After</code>, for as long as the block has left to run</td>
 </tr>
 <tr>
 <td><code>GET /compare/{token}</code> after five minutes</td>

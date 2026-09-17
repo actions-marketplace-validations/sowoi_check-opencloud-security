@@ -198,7 +198,7 @@ def test_a_finished_scan_advertises_where_its_exports_live(finished_scan):
 
     assert payload["done"] is True
     assert payload["exports"]["pdf"] == f"/api/scans/{IDENTIFIER}/export/pdf"
-    assert set(payload["exports"]) == {"json", "csv", "sarif", "pdf"}
+    assert set(payload["exports"]) == {"json", "csv", "sarif", "pdf", "html"}
 
 
 def test_the_result_page_offers_every_export_as_a_download(finished_scan):
@@ -206,7 +206,7 @@ def test_the_result_page_offers_every_export_as_a_download(finished_scan):
     page = client().get(f"/scan/{IDENTIFIER}")
 
     assert page.status_code == 200
-    for fmt in ("pdf", "csv", "sarif", "json"):
+    for fmt in ("pdf", "html", "csv", "sarif", "json"):
         assert f'href="/api/scans/{IDENTIFIER}/export/{fmt}"' in page.text
     # The CSP forbids inline anything, so a download must not need a handler.
     assert "onclick" not in page.text
