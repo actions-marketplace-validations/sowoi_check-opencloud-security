@@ -34,6 +34,11 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   Firefox a browser whose system theme is dark instead; and waiting for a
   finished scan tolerates the moment during the result page's reload when the
   new document has no body yet.
+- **The MCP sign-in no longer warns about `validate_token_resource` at
+  startup.** The token verifier already checks a token's audience against
+  `COS_WEB_MCP_AUTH_AUDIENCE`, so the MCP SDK is now told explicitly not to
+  also require the token's resource to equal the resource URL, which would
+  have refused valid tokens once SDK 3.0 turns that check on by default.
 
 ## [1.24.1] - 2026-09-16
 
