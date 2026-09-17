@@ -35,7 +35,7 @@ curl -H "Authorization: Bearer <token>" \
 
 ## The monitoring compose file
 
-A ready-made [`docker/docker-compose.monitoring.yml`](../docker/docker-compose.monitoring.yml)
+A ready-made [`docker/docker-compose.monitoring.yml`](../../docker/docker-compose.monitoring.yml)
 starts the scanner plus a check container, including a health check and Docker
 secrets:
 
@@ -64,7 +64,7 @@ file, a `.env` holding the Redis password and every other credential that file
 refers to, and - when you name one - the nginx, Apache, Caddy or Traefik
 configuration to go with it. It is one stdlib-only Python file, so it runs on
 a host with Docker and nothing else -
-see [`docker/README.md`](../docker/README.md#setting-up-the-whole-stack).
+see [`docker/README.md`](../../docker/README.md#setting-up-the-whole-stack).
 
 Everything in `secrets/` except the `*.example` templates is git-ignored - see
-[`secrets/README.md`](../secrets/README.md).
+[`secrets/README.md`](../../secrets/README.md).

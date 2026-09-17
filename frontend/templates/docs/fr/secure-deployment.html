@@ -238,7 +238,7 @@ OpenCloud. The provider configuration is the same shape:</p>
 <li>Bind the application to a group so that not every Authentik user gets an
   OpenCloud account, then turn <code>PROXY_AUTOPROVISION_ACCOUNTS</code> on.</li>
 </ul>
-<p><a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/authentik/blueprints"><code>authentik/blueprints/</code></a> in this repository is a
+<p><a href="https://github.com/sowoi/check-opencloud-security/blob/main/authentik/blueprints"><code>authentik/blueprints/</code></a> in this repository is a
 worked example of provisioning a provider from a file rather than by clicking,
 which is worth copying whatever you are configuring.</p>
 <h3 id="authelia">Authelia</h3>
@@ -498,7 +498,7 @@ denying the rest.</p>
   hypothesis. Keep one copy offline or on write-once storage - ransomware
   looks for the backup first.</li>
 <li><strong>Least privilege for the service account.</strong> The systemd units in
-  <a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/contrib/systemd"><code>contrib/systemd/</code></a> show the pattern:
+  <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/systemd"><code>contrib/systemd/</code></a> show the pattern:
   <code>DynamicUser=yes</code>, <code>ProtectSystem=strict</code>, <code>NoNewPrivileges=yes</code>, an empty
   <code>CapabilityBoundingSet=</code>. Run <code>systemd-analyze security &lt;unit&gt;</code> on yours.</li>
 <li><strong>Separate the reverse proxy from OpenCloud</strong>, on different hosts or at

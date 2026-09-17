@@ -302,7 +302,7 @@ a lifecycle document that loses a bundled release line, refuses unbounded
 advisories, and replaces each file atomically. It never writes into the
 installed package. Point `scanner.release_schedule` and
 `scanner.vulnerability_db` at the two generated files, then run the supplied
-[`check-opencloud-security-refresh.timer`](../contrib/systemd/check-opencloud-security-refresh.timer)
+[`check-opencloud-security-refresh.timer`](../../contrib/systemd/check-opencloud-security-refresh.timer)
 daily. A network failure leaves the previous files untouched.
 
 Signature verification needs the `signing` extra:
@@ -325,7 +325,7 @@ previous files exactly where they were.
 
 Passing `--schedule-url` or `--advisory-url` queries that source live and
 unverified, for an air-gapped mirror or a fork, and says so in the log. See
-[ADR 0027](../adr/0027-refreshed-reference-data-is-attested-not-merely-fetched.md).
+[ADR 0027](../../adr/0027-refreshed-reference-data-is-attested-not-merely-fetched.md).
 
 `data/vulnerabilities.json` carries the advisories published against
 OpenCloud, and is regenerated daily by
@@ -470,11 +470,11 @@ the software as a fault in this deployment. It holds two entries:
   and no `includeSubDomains`, so the header on every stock instance asks for
   something the preload list refuses. Whether the domain is *on* the list is
   deliberately not measured - see
-  [ADR 0037](../adr/0037-preload-eligibility-is-measured-list-membership-is-not.md).
+  [ADR 0037](../../adr/0037-preload-eligibility-is-measured-list-membership-is-not.md).
 
 The block is `{}` rather than a dictionary of `false` when the extra checks
 are off, because an observation nobody made is not one that failed. See
-[ADR 0034](../adr/0034-an-advisory-observation-need-not-be-a-header.md).
+[ADR 0034](../../adr/0034-an-advisory-observation-need-not-be-a-header.md).
 
 The `identityProvider` observation names an external provider when its OIDC
 issuer identifies one. For Keycloak, Authelia and Authentik it also includes
@@ -630,7 +630,7 @@ The first address is the reference; severity follows the worst difference
 (demo accounts as `demoUsersDisabled`, another release `high`, anything else
 `medium`); waived names are not compared. With one address, or with the
 setting off (the default), there is no finding and the list is empty. See
-[ADR 0042](../adr/0042-every-resolved-address-is-compared-only-when-the-operator-asks.md).
+[ADR 0042](../../adr/0042-every-resolved-address-is-compared-only-when-the-operator-asks.md).
 
 ## Concurrency
 
@@ -735,7 +735,7 @@ performed - `get_unverified_chain()` needs Python 3.13, the deprecated-protocol
 probe needs a build that still speaks one, stapling needs the `openssl`
 command and a certificate that names a responder - is left out of the findings
 entirely rather than recorded as passed. See
-[ADR 0013](../adr/0013-transport-security-is-measured-not-assumed.md).
+[ADR 0013](../../adr/0013-transport-security-is-measured-not-assumed.md).
 
 The certificate is decoded from what the server presented whether or not it
 verified, so an instance with the self-signed certificate `opencloud init`
@@ -794,7 +794,7 @@ never connected to.
 Every setting in `ScannerSettings` and `ReleaseSettings` can also come from a
 configuration file (YAML, or JSON when the name ends in `.json`), an
 environment variable or a secret provider - see
-[`config/check-opencloud-security.example.yml`](../config/check-opencloud-security.example.yml)
+[`config/check-opencloud-security.example.yml`](../../config/check-opencloud-security.example.yml)
 and the [Configuration file and secrets](../README.md#configuration-file-and-secrets)
 section of the main README. `check-opencloud-scanner configure` writes such a
 file interactively.

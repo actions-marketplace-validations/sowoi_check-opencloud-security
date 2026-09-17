@@ -83,7 +83,7 @@ The TLS expiry window, the debug-port list and the advisory sources have no
 command-line flag. They are configured through the
 [configuration file](../README.md#configuration-file-and-secrets) or their
 `COS_SCANNER_*` environment variables, and
-[`config/check-opencloud-security.example.yml`](../config/check-opencloud-security.example.yml)
+[`config/check-opencloud-security.example.yml`](../../config/check-opencloud-security.example.yml)
 lists every one of them with a comment.
 
 ## Where to go next

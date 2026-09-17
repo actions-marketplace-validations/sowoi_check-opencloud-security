@@ -258,8 +258,8 @@ with per-application policies.
 
 > This repository already ships an Authentik stack, but for a different
 > purpose: it protects [the scan service's own MCP endpoint](authentik.md) and
-> [operator's area](../ADMIN.md), not OpenCloud.
-> [`authentik/blueprints/`](../authentik/blueprints/) is a worked example of
+> [operator's area](../../ADMIN.md), not OpenCloud.
+> [`authentik/blueprints/`](../../authentik/blueprints/) is a worked example of
 > provisioning a provider from a file, which is worth copying whatever you are
 > configuring.
 

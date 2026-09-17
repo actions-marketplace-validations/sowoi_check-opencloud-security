@@ -40,13 +40,13 @@ up by Icinga2's Graphite/InfluxDB writers directly.
 
 ## The files to copy
 
-Two of them, both in [`contrib/`](../contrib/README.md), both reading the
+Two of them, both in [`contrib/`](../../contrib/README.md), both reading the
 metric names the native exporter publishes:
 
 | File | What to do with it |
 |:--|:--|
-| [`contrib/prometheus/alerts.yml`](../contrib/prometheus/alerts.yml) | Copy into `/etc/prometheus/rules/` and add it to `rule_files:` |
-| [`contrib/grafana/dashboard.json`](../contrib/grafana/dashboard.json) | Grafana - Dashboards - New - Import, then pick the data source |
+| [`contrib/prometheus/alerts.yml`](../../contrib/prometheus/alerts.yml) | Copy into `/etc/prometheus/rules/` and add it to `rule_files:` |
+| [`contrib/grafana/dashboard.json`](../../contrib/grafana/dashboard.json) | Grafana - Dashboards - New - Import, then pick the data source |
 
 ```shell
 cp contrib/prometheus/alerts.yml /etc/prometheus/rules/opencloud-security.yml
@@ -207,7 +207,7 @@ from the last run that worked.
 ## Alerting rules
 
 For the native exporter, copy
-[`contrib/prometheus/alerts.yml`](../contrib/prometheus/alerts.yml) rather
+[`contrib/prometheus/alerts.yml`](../../contrib/prometheus/alerts.yml) rather
 than the block below - it is maintained against the real metric names and
 tested against them.
 
@@ -254,7 +254,7 @@ the same cached failure remains visible; it does not wait for a second daily sca
 
 ## Grafana
 
-Import [`contrib/grafana/dashboard.json`](../contrib/grafana/dashboard.json)
+Import [`contrib/grafana/dashboard.json`](../../contrib/grafana/dashboard.json)
 and pick your Prometheus data source. It draws the scan-health tile first, the
 grade and the lifecycle beside it, then the grade over time, the open
 findings, the advisories by severity, and a table of what is running where.

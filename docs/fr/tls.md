@@ -171,7 +171,7 @@ This is a low finding, and the fix is at the domain's own zone rather than in
 OpenCloud: sign the zone at the DNS provider, then publish the resulting DS
 record at the *parent* zone - an unsigned delegation leaves a signed zone
 unprotected. See
-[ADR 0038](../adr/0038-a-dnssec-answer-nobody-could-have-given-is-not-a-finding.md).
+[ADR 0038](../../adr/0038-a-dnssec-answer-nobody-could-have-given-is-not-a-finding.md).
 
 ## 10. Is revocation actually checkable: `tlsOcspStapling`
 

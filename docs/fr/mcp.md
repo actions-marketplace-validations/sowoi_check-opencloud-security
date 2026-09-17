@@ -240,7 +240,7 @@ Arazzo documents. That is the whole point of the discovery document - see
 and `https://scan.example.com/llms.txt` point at the same document for a fetcher
 that goes looking for one of those two filenames first, in the informal
 conventions some agent frameworks and crawlers already use - see [Working on
-the agent-facing surfaces](../AGENTS.md#working-on-the-agent-facing-surfaces).
+the agent-facing surfaces](../../AGENTS.md#working-on-the-agent-facing-surfaces).
 
 ## Clients that only speak stdio
 
@@ -267,7 +267,7 @@ you are going to bridge at all.
 
 The hosted service is convenient; your own is unlimited, and no address of
 yours leaves your network. Everything below is the stack from
-[`docker/`](../docker/README.md), described in full in [the public scan
+[`docker/`](../../docker/README.md), described in full in [the public scan
 service](../webapp.md).
 
 ```bash

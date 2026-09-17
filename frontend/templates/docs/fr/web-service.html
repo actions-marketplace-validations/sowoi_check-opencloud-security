@@ -165,7 +165,7 @@ address, since neither has a useful default outside a compose file:</p>
     -e COS_WEB_PUBLIC_BASE_URL=http://127.0.0.1:8811 \
     okxo/opencloud-scanner:latest
 </code></pre>
-<p><a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/docker/README.md"><code>docker/README.md</code></a> covers the stacks in full, including
+<p><a href="https://github.com/sowoi/check-opencloud-security/blob/main/docker/README.md"><code>docker/README.md</code></a> covers the stacks in full, including
 the Authentik one, and the Docker Hub description carries a plain <code>docker run</code>
 recipe for all three containers.</p>
 <h3 id="without-containers">Without containers</h3>
@@ -209,7 +209,7 @@ provider yet. When it is asked for, so are its mail settings
 identity provider that cannot send a password recovery locks out the one
 account it starts with; the password comes from <code>AUTHENTIK_EMAIL_PASSWORD</code> in
 the environment rather than from a flag.
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/docker/README.md#the-setup-wizard"><code>docker/README.md</code></a> has the flags. It
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docker/README.md#the-setup-wizard"><code>docker/README.md</code></a> has the flags. It
 is unrelated to <code>check-opencloud-security --configure</code>, which sets up a
 monitoring check rather than a container deployment.</p>
 <h2 id="what-a-visitor-can-ask-for">What a visitor can ask for</h2>
@@ -656,7 +656,7 @@ Redis. Nothing is written to the repository - <code>README.md</code> and the bun
 JSON stay CI's business. Turn the refresh off for a deployment with no
 outbound access, which then behaves exactly as it did before. <code>/healthz</code>
 reports the schedule's date and the time of the last successful read, and
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/adr/0016-the-release-schedule-refreshes-itself.md">ADR 0016</a> holds the
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0016-the-release-schedule-refreshes-itself.md">ADR 0016</a> holds the
 reasoning.</p>
 <p><code>COS_WEB_ADVISORY_REFRESH</code> does the same for the other half of what a rating
 is made of, and it matters more. The advisory database decides whether an
@@ -678,7 +678,7 @@ off for a deployment with no outbound access, which then rates against the
 bundled file exactly as the plugin does on a monitoring host. <code>/healthz</code>
 reports how many advisories it would rate against and when it last asked -
 counts and dates, never a finding - and
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/adr/0017-the-advisory-database-refreshes-itself.md">ADR 0017</a> holds the
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0017-the-advisory-database-refreshes-itself.md">ADR 0017</a> holds the
 reasoning.</p>
 <h2 id="how-a-scan-flows-through-it">How a scan flows through it</h2>
 <pre><code class="language-text">POST /api/scans ──► client rate limit ──► SSRF guard ──► waiver allow-list
@@ -727,12 +727,12 @@ what is new, what is still open, and how the grade moved. A finished result
 page links to it with its own uuid already filled in, so only the earlier one
 has to be pasted.</p>
 <p>Comparisons use <code>opencloud_local_scan.baseline</code> through <code>workflows.compare_documents</code>,
-the same calculation used by the CLI and the <code>compare_scans</code> MCP tool. See <a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/adr/0029-a-comparison-is-two-live-results-and-one-arithmetic.md">ADR
+the same calculation used by the CLI and the <code>compare_scans</code> MCP tool. See <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0029-a-comparison-is-two-live-results-and-one-arithmetic.md">ADR
 0029</a>.</p>
 <p><strong>Nothing is stored.</strong> The comparison is worked out from two results that both
 still exist and is written nowhere: this service keeps no scan history
-(<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/adr/0002-no-scan-result-caching.md">ADR 0002</a>) and a uuid is a capability
-with a TTL (<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/adr/0007-erasure-on-request.md">ADR 0007</a>). A stored
+(<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0002-no-scan-result-caching.md">ADR 0002</a>) and a uuid is a capability
+with a TTL (<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0007-erasure-on-request.md">ADR 0007</a>). A stored
 comparison would be a scan result under another name, outliving the results it
 describes and exempt from their erasure. The one case where a comparison <em>is</em>
 held - because the file it was drawn from is gone and nothing could recompute
@@ -766,7 +766,7 @@ exempt from.</p>
 </tr>
 <tr>
 <td>The two scans describe different instances</td>
-<td><strong>422</strong>, not compared. "Did the fix work" is a question about one instance, and two hosts compared by accident is a wrong answer nobody notices - <code>check-opencloud-scanner diff</code> refuses them too. See <a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/adr/0059-a-comparison-refuses-two-different-instances.md">ADR 0059</a></td>
+<td><strong>422</strong>, not compared. "Did the fix work" is a question about one instance, and two hosts compared by accident is a wrong answer nobody notices - <code>check-opencloud-scanner diff</code> refuses them too. See <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0059-a-comparison-refuses-two-different-instances.md">ADR 0059</a></td>
 </tr>
 </tbody>
 </table>
@@ -780,7 +780,7 @@ the earlier side as a <strong>file</strong> instead: the JSON or the CSV from th
 on a result page, uploaded from the reader's own disk, compared against a scan
 of this service that has not expired. Same page, same arithmetic, same
 verdicts - only where the earlier document came from changes. See
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/adr/0057-an-uploaded-report-is-evidence-not-a-scan.md">ADR 0057</a>.
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0057-an-uploaded-report-is-evidence-not-a-scan.md">ADR 0057</a>.
 A report of a different instance than the scan it is compared with, or one
 that names no instance, is refused with 422 the same way.</p>
 <p>It is a browser feature and stays one: HTML only, never in the OpenAPI schema,
@@ -860,7 +860,7 @@ namespace as well as the scan one and deletes every cached comparison naming
 that instance on either side, counting the keys into the same receipt so
 <code>remaining: 0</code> keeps meaning what it says. A five-minute TTL is not a reason to
 leave something out of an erasure - that is the argument
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/adr/0007-erasure-on-request.md">ADR 0007</a> refuses for the result itself.</p>
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0007-erasure-on-request.md">ADR 0007</a> refuses for the result itself.</p>
 <table>
 <thead>
 <tr>
@@ -960,7 +960,7 @@ scanning target here however public it looks:</p>
 <li>it <strong>outranks <code>COS_WEB_ALLOWED_HOSTS</code> and <code>COS_WEB_ALLOW_PRIVATE_TARGETS</code></strong>.
   Those exist to loosen the guard; this one answers whether the service scans
   that address at all, and loosening must not reopen it. See
-  <a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/adr/0043-an-operators-exclusion-outranks-every-allowance.md">ADR 0043</a>;</li>
+  <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0043-an-operators-exclusion-outranks-every-allowance.md">ADR 0043</a>;</li>
 <li>an entry that is none of those four shapes <strong>refuses startup</strong>, in the web
   process and in the worker alike. A typo here is otherwise invisible: the
   service comes up, answers normally, and scans exactly what it was told not
@@ -999,9 +999,9 @@ has an <em>Exclusions</em> card that adds and withdraws entries, and:</p>
   trail rather than a rejected target.</li>
 </ul>
 <p>The card is the one thing in that area that writes; see
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/adr/0044-the-operator-area-may-write-the-exclusions.md">ADR 0044</a> for the
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0044-the-operator-area-may-write-the-exclusions.md">ADR 0044</a> for the
 four properties that made it acceptable there, and
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/ADMIN.md#the-operators-area-at-admin">ADMIN.md</a> for the area itself.</p>
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/ADMIN.md#the-operators-area-at-admin">ADMIN.md</a> for the area itself.</p>
 <h2 id="rate-limiting">Rate limiting</h2>
 <p>Every limit lives in Redis and expires on its own:</p>
 <ul>
@@ -1179,10 +1179,10 @@ volumes:
 <li><strong>A file that cannot be written stops the process</strong>, with the path in the
   message. Reporting an audit trail that silently goes nowhere is worse than
   keeping none, and it is the same reasoning as
-  <a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/adr/0008-refuse-to-start-without-the-encryption-key.md">ADR 0008</a>.</li>
+  <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0008-refuse-to-start-without-the-encryption-key.md">ADR 0008</a>.</li>
 </ul>
 <p>A named volume is the simplest answer and the one
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/docker/setup-wizard.py"><code>docker/setup-wizard.py</code></a> offers first. A bind
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docker/setup-wizard.py"><code>docker/setup-wizard.py</code></a> offers first. A bind
 mount to a host directory works identically — for existing log shipping or
 backups — but the directory has to exist and be owned by uid <code>10001</code>, the
 unprivileged user the image runs as, before the stack starts:</p>
@@ -1246,17 +1246,17 @@ proxy too.</p>
 and reaps that process and its probe threads before the worker takes another
 job. The worker therefore needs permission to spawn processes; allow for one
 additional Python process per active scan when sizing memory and PID limits.
-See <a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/adr/0053-a-scan-timeout-ends-its-process.md">ADR 0053</a>.</p>
+See <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0053-a-scan-timeout-ends-its-process.md">ADR 0053</a>.</p>
 <h2 id="putting-it-behind-a-reverse-proxy">Putting it behind a reverse proxy</h2>
 <p>Worked configuration for nginx, Apache httpd, Caddy, Traefik and HAProxy -
 including the streaming the MCP endpoint needs and the paths a proxy must not
 rewrite - is in <a href="/documentation/reverse-proxy">Reverse proxies</a>.</p>
-<p><a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/docker/setup-wizard.py"><code>docker/setup-wizard.py</code></a> will write that file for
+<p><a href="https://github.com/sowoi/check-opencloud-security/blob/main/docker/setup-wizard.py"><code>docker/setup-wizard.py</code></a> will write that file for
 you for the first four: answer its reverse proxy question and the
 configuration lands beside the generated compose file, with TLS, the
 unbuffered <code>/mcp</code> stream, an <code>X-Forwarded-For</code> a client cannot choose, and -
 where this stack provides the outpost - the forward auth in front of <code>/admin</code>.
-See <a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/docker/README.md#the-reverse-proxy">the wizard's own notes</a>.</p>
+See <a href="https://github.com/sowoi/check-opencloud-security/blob/main/docker/README.md#the-reverse-proxy">the wizard's own notes</a>.</p>
 <p>The short version:</p>
 <p>Terminate TLS in front, pass <code>X-Forwarded-For</code>, and only then set
 <code>COS_WEB_TRUST_FORWARDED_FOR=true</code>.</p>
@@ -1428,7 +1428,7 @@ on somebody's instance, and this service has none of those.</p>
 scan has not finished, <strong>404</strong> for an unknown or expired uuid. The <code>no-store</code>
 is the service-wide default it never opts out of: every route that is publicly
 cacheable publishes metadata about <em>this service</em>
-(<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/adr/0031-a-response-is-uncacheable-until-a-route-opts-in.md">ADR 0031</a>),
+(<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0031-a-response-is-uncacheable-until-a-route-opts-in.md">ADR 0031</a>),
 and a badge is a statement about somebody's instance.</p>
 <h3 id="delete-apipurge"><code>DELETE /api/purge</code></h3>
 <p>Erasure on request - the operator's side of a GDPR Article 17 message - plus a
@@ -1593,7 +1593,7 @@ the SSRF guard, rate limits, cooldown, queue, or capability checks.</p>
 service sent one. This is the contract the <code>/mcp</code> tools already used, and the
 statuses behind it are rendered into the page from <code>webapp/workflows.py</code>
 rather than written into the script. See
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/adr/0041-a-browser-tool-answers-a-failure-rather-than-throwing.md">ADR 0041</a>.</p>
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0041-a-browser-tool-answers-a-failure-rather-than-throwing.md">ADR 0041</a>.</p>
 <p><code>POST /</code> and <code>GET /scan/{uuid}</code> negotiate JSON for browser-side tools and
 other clients. <code>Accept: application/json</code> requests a structured response, and
 <code>output_format=json</code> does the same. HTML remains the default for ordinary
@@ -1624,7 +1624,7 @@ control. They are carried as escaped <code>type="text"</code>, never as markup, 
 reader cannot be made to render somebody else's HTML.</p>
 <p>These are the only reference-data routes that opt into a public cache
 (<code>max-age=3600</code>). They name no instance, carry no uuid and take no parameter -
-the test <a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/adr/0031-a-response-is-uncacheable-until-a-route-opts-in.md">ADR 0031</a>
+the test <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0031-a-response-is-uncacheable-until-a-route-opts-in.md">ADR 0031</a>
 sets for being cacheable at all - and they must never learn to take one: a
 feed filtered by hostname would be a question about somebody's instance.
 Entry ids are URNs of the advisory or release line rather than URLs of this
@@ -1688,7 +1688,7 @@ docker/
 ├── Dockerfile                    the plugin image, unrelated to the web application
 └── docker-compose.monitoring.yml the plugin's own stack, also unrelated
 </code></pre>
-<p><a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/webapp/README.md"><code>webapp/README.md</code></a> covers the same ground from the
+<p><a href="https://github.com/sowoi/check-opencloud-security/blob/main/webapp/README.md"><code>webapp/README.md</code></a> covers the same ground from the
 other side: the API surface, how to reach Swagger, what a request may not ask
 for and how to run a frontend of your own.</p>
 <p>The boundary the rest of the project keeps applies here too:

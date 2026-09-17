@@ -213,7 +213,7 @@ get the result somewhere people look, keep the job green and post the outcome:
 ```
 
 Alternatively, set `--webhook-url` to deliver the result directly; see [Webhook
-recipes](webhook-recipes.md). Delivery still depends on the workflow running. If
+recipes](../webhook-recipes.md). Delivery still depends on the workflow running. If
 scheduled runs are disabled, neither summaries nor webhooks are produced.
 
 ### The JSON document instead
@@ -221,7 +221,7 @@ scheduled runs are disabled, neither summaries nor webhooks are produced.
 For anything that has to make a decision - a policy gate, a dashboard, an
 issue filed automatically - use the scanner rather than the plugin. It prints
 the full result document, and every field in it is documented in
-[the library README](../opencloud_local_scan/README.md).
+[the library README](../../opencloud_local_scan/README.md).
 
 ```yaml
       - name: Scan and keep the result

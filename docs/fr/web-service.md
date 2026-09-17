@@ -114,7 +114,7 @@ docker run --rm -p 8811:8811 \
     okxo/opencloud-scanner:latest
 ```
 
-[`docker/README.md`](../docker/README.md) covers the stacks in full, including
+[`docker/README.md`](../../docker/README.md) covers the stacks in full, including
 the Authentik one, and the Docker Hub description carries a plain `docker run`
 recipe for all three containers.
 
@@ -171,7 +171,7 @@ provider yet. When it is asked for, so are its mail settings
 identity provider that cannot send a password recovery locks out the one
 account it starts with; the password comes from `AUTHENTIK_EMAIL_PASSWORD` in
 the environment rather than from a flag.
-[`docker/README.md`](../docker/README.md#the-setup-wizard) has the flags. It
+[`docker/README.md`](../../docker/README.md#the-setup-wizard) has the flags. It
 is unrelated to `check-opencloud-security --configure`, which sets up a
 monitoring check rather than a container deployment.
 
@@ -314,7 +314,7 @@ Redis. Nothing is written to the repository - `README.md` and the bundled
 JSON stay CI's business. Turn the refresh off for a deployment with no
 outbound access, which then behaves exactly as it did before. `/healthz`
 reports the schedule's date and the time of the last successful read, and
-[ADR 0016](../adr/0016-the-release-schedule-refreshes-itself.md) holds the
+[ADR 0016](../../adr/0016-the-release-schedule-refreshes-itself.md) holds the
 reasoning.
 
 `COS_WEB_ADVISORY_REFRESH` does the same for the other half of what a rating
@@ -338,7 +338,7 @@ off for a deployment with no outbound access, which then rates against the
 bundled file exactly as the plugin does on a monitoring host. `/healthz`
 reports how many advisories it would rate against and when it last asked -
 counts and dates, never a finding - and
-[ADR 0017](../adr/0017-the-advisory-database-refreshes-itself.md) holds the
+[ADR 0017](../../adr/0017-the-advisory-database-refreshes-itself.md) holds the
 reasoning.
 
 ## How a scan flows through it
@@ -402,12 +402,12 @@ has to be pasted.
 
 Comparisons use `opencloud_local_scan.baseline` through `workflows.compare_documents`,
 the same calculation used by the CLI and the `compare_scans` MCP tool. See [ADR
-0029](../adr/0029-a-comparison-is-two-live-results-and-one-arithmetic.md).
+0029](../../adr/0029-a-comparison-is-two-live-results-and-one-arithmetic.md).
 
 **Nothing is stored.** The comparison is worked out from two results that both
 still exist and is written nowhere: this service keeps no scan history
-([ADR 0002](../adr/0002-no-scan-result-caching.md)) and a uuid is a capability
-with a TTL ([ADR 0007](../adr/0007-erasure-on-request.md)). A stored
+([ADR 0002](../../adr/0002-no-scan-result-caching.md)) and a uuid is a capability
+with a TTL ([ADR 0007](../../adr/0007-erasure-on-request.md)). A stored
 comparison would be a scan result under another name, outliving the results it
 describes and exempt from their erasure. The one case where a comparison *is*
 held - because the file it was drawn from is gone and nothing could recompute
@@ -423,7 +423,7 @@ The answers it can give:
 | Either uuid is unknown or expired | **404**, naming *which* of the two is gone - "one of them has expired" sends somebody looking through both |
 | Either scan has not finished | **409**: there is nothing to compare yet, and 404 would send a reader to scan again while their scan is still running |
 | The same uuid twice | **422**. An empty diff of a scan against itself reads as "nothing is wrong" |
-| The two scans describe different instances | **422**, not compared. "Did the fix work" is a question about one instance, and two hosts compared by accident is a wrong answer nobody notices - `check-opencloud-scanner diff` refuses them too. See [ADR 0059](../adr/0059-a-comparison-refuses-two-different-instances.md) |
+| The two scans describe different instances | **422**, not compared. "Did the fix work" is a question about one instance, and two hosts compared by accident is a wrong answer nobody notices - `check-opencloud-scanner diff` refuses them too. See [ADR 0059](../../adr/0059-a-comparison-refuses-two-different-instances.md) |
 
 Like `/scan/{uuid}` and for the same reason, the page renders results and is
 therefore never indexed and never in the OpenAPI schema, and each uuid remains
@@ -437,7 +437,7 @@ the earlier side as a **file** instead: the JSON or the CSV from the downloads
 on a result page, uploaded from the reader's own disk, compared against a scan
 of this service that has not expired. Same page, same arithmetic, same
 verdicts - only where the earlier document came from changes. See
-[ADR 0057](../adr/0057-an-uploaded-report-is-evidence-not-a-scan.md).
+[ADR 0057](../../adr/0057-an-uploaded-report-is-evidence-not-a-scan.md).
 A report of a different instance than the scan it is compared with, or one
 that names no instance, is refused with 422 the same way.
 
@@ -488,7 +488,7 @@ namespace as well as the scan one and deletes every cached comparison naming
 that instance on either side, counting the keys into the same receipt so
 `remaining: 0` keeps meaning what it says. A five-minute TTL is not a reason to
 leave something out of an erasure - that is the argument
-[ADR 0007](../adr/0007-erasure-on-request.md) refuses for the result itself.
+[ADR 0007](../../adr/0007-erasure-on-request.md) refuses for the result itself.
 
 | Situation | Answer |
 |:----------|:-------|
@@ -564,7 +564,7 @@ COS_WEB_BLOCKED_TARGETS="opencloud.example.com;.example.org;203.0.113.0/24"
 - it **outranks `COS_WEB_ALLOWED_HOSTS` and `COS_WEB_ALLOW_PRIVATE_TARGETS`**.
   Those exist to loosen the guard; this one answers whether the service scans
   that address at all, and loosening must not reopen it. See
-  [ADR 0043](../adr/0043-an-operators-exclusion-outranks-every-allowance.md);
+  [ADR 0043](../../adr/0043-an-operators-exclusion-outranks-every-allowance.md);
 - an entry that is none of those four shapes **refuses startup**, in the web
   process and in the worker alike. A typo here is otherwise invisible: the
   service comes up, answers normally, and scans exactly what it was told not
@@ -604,9 +604,9 @@ has an *Exclusions* card that adds and withdraws entries, and:
   trail rather than a rejected target.
 
 The card is the one thing in that area that writes; see
-[ADR 0044](../adr/0044-the-operator-area-may-write-the-exclusions.md) for the
+[ADR 0044](../../adr/0044-the-operator-area-may-write-the-exclusions.md) for the
 four properties that made it acceptable there, and
-[ADMIN.md](../ADMIN.md#the-operators-area-at-admin) for the area itself.
+[ADMIN.md](../../ADMIN.md#the-operators-area-at-admin) for the area itself.
 
 ## Rate limiting
 
@@ -817,10 +817,10 @@ Three things follow from that, and each is deliberate:
 - **A file that cannot be written stops the process**, with the path in the
   message. Reporting an audit trail that silently goes nowhere is worse than
   keeping none, and it is the same reasoning as
-  [ADR 0008](../adr/0008-refuse-to-start-without-the-encryption-key.md).
+  [ADR 0008](../../adr/0008-refuse-to-start-without-the-encryption-key.md).
 
 A named volume is the simplest answer and the one
-[`docker/setup-wizard.py`](../docker/setup-wizard.py) offers first. A bind
+[`docker/setup-wizard.py`](../../docker/setup-wizard.py) offers first. A bind
 mount to a host directory works identically — for existing log shipping or
 backups — but the directory has to exist and be owned by uid `10001`, the
 unprivileged user the image runs as, before the stack starts:
@@ -900,7 +900,7 @@ Each running scan uses a child process. A job timeout or cancellation stops
 and reaps that process and its probe threads before the worker takes another
 job. The worker therefore needs permission to spawn processes; allow for one
 additional Python process per active scan when sizing memory and PID limits.
-See [ADR 0053](../adr/0053-a-scan-timeout-ends-its-process.md).
+See [ADR 0053](../../adr/0053-a-scan-timeout-ends-its-process.md).
 
 ## Putting it behind a reverse proxy
 
@@ -908,12 +908,12 @@ Worked configuration for nginx, Apache httpd, Caddy, Traefik and HAProxy -
 including the streaming the MCP endpoint needs and the paths a proxy must not
 rewrite - is in [Reverse proxies](reverse-proxy.md).
 
-[`docker/setup-wizard.py`](../docker/setup-wizard.py) will write that file for
+[`docker/setup-wizard.py`](../../docker/setup-wizard.py) will write that file for
 you for the first four: answer its reverse proxy question and the
 configuration lands beside the generated compose file, with TLS, the
 unbuffered `/mcp` stream, an `X-Forwarded-For` a client cannot choose, and -
 where this stack provides the outpost - the forward auth in front of `/admin`.
-See [the wizard's own notes](../docker/README.md#the-reverse-proxy).
+See [the wizard's own notes](../../docker/README.md#the-reverse-proxy).
 
 The short version:
 
@@ -1149,7 +1149,7 @@ on somebody's instance, and this service has none of those.
 scan has not finished, **404** for an unknown or expired uuid. The `no-store`
 is the service-wide default it never opts out of: every route that is publicly
 cacheable publishes metadata about *this service*
-([ADR 0031](../adr/0031-a-response-is-uncacheable-until-a-route-opts-in.md)),
+([ADR 0031](../../adr/0031-a-response-is-uncacheable-until-a-route-opts-in.md)),
 and a badge is a statement about somebody's instance.
 
 ### `DELETE /api/purge`
@@ -1346,7 +1346,7 @@ A browser tool answers a failure rather than throwing one: `ok: false` with
 service sent one. This is the contract the `/mcp` tools already used, and the
 statuses behind it are rendered into the page from `webapp/workflows.py`
 rather than written into the script. See
-[ADR 0041](../adr/0041-a-browser-tool-answers-a-failure-rather-than-throwing.md).
+[ADR 0041](../../adr/0041-a-browser-tool-answers-a-failure-rather-than-throwing.md).
 
 `POST /` and `GET /scan/{uuid}` negotiate JSON for browser-side tools and
 other clients. `Accept: application/json` requests a structured response, and
@@ -1387,7 +1387,7 @@ reader cannot be made to render somebody else's HTML.
 
 These are the only reference-data routes that opt into a public cache
 (`max-age=3600`). They name no instance, carry no uuid and take no parameter -
-the test [ADR 0031](../adr/0031-a-response-is-uncacheable-until-a-route-opts-in.md)
+the test [ADR 0031](../../adr/0031-a-response-is-uncacheable-until-a-route-opts-in.md)
 sets for being cacheable at all - and they must never learn to take one: a
 feed filtered by hostname would be a question about somebody's instance.
 Entry ids are URNs of the advisory or release line rather than URLs of this
@@ -1461,7 +1461,7 @@ docker/
 └── docker-compose.monitoring.yml the plugin's own stack, also unrelated
 ```
 
-[`webapp/README.md`](../webapp/README.md) covers the same ground from the
+[`webapp/README.md`](../../webapp/README.md) covers the same ground from the
 other side: the API surface, how to reach Swagger, what a request may not ask
 for and how to run a frontend of your own.
 

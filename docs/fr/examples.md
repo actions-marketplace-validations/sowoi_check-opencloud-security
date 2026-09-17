@@ -6,7 +6,7 @@ avec l’adresse de votre instance et analysez uniquement les systèmes que vous
 Longer, platform-specific examples have pages of their own:
 [Kubernetes](kubernetes.md), [CI pipelines](ci.md),
 [Prometheus and Grafana](prometheus.md),
-[webhook adapters](webhook-recipes.md) and
+[webhook adapters](../webhook-recipes.md) and
 [fleets of instances](many-instances.md).
 
 <!-- TOC -->

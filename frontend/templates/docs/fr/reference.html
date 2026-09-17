@@ -322,7 +322,7 @@ where it should run from:</p>
   check-opencloud-security --host opencloud.example.com --format checkmk</code></p>
 <p><code>text
   0 "OpenCloud_Security_opencloud.example.com" rating=5|vulnerabilities=0|… OK: Server is up to date…</code></p>
-<p><a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/fr/contrib/checkmk/opencloud_security"><code>contrib/checkmk/opencloud_security</code></a> is
+<p><a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/checkmk/opencloud_security"><code>contrib/checkmk/opencloud_security</code></a> is
   that call as a ready-to-install script.</p>
 <p>The scanned instance names the service, because the host running the agent is
 rarely the instance being scanned. <strong>Install the local check in a numeric
@@ -505,7 +505,7 @@ disabled.</p>
 <a href="#configuration-file-and-secrets">Configuration file and secrets</a>.</p>
 <h2 id="the-built-in-scanner">The built-in scanner</h2>
 <p>The plugin has <strong>one</strong> backend: the scanner in
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/fr/opencloud_local_scan/README.md"><code>opencloud_local_scan/</code></a>, which runs in the
+<a href="/documentation/scanner"><code>opencloud_local_scan/</code></a>, which runs in the
 plugin process and works the verdict out itself.</p>
 <p>The scanner connects from the host where you run the plugin. It can therefore check
 private addresses and internal hostnames without sending the target or its results to a
@@ -599,7 +599,7 @@ nothing to compare and gets no finding at all. It sees what DNS sees: nodes
 behind one load-balancer address, or a resolver that hands out a rotating
 subset of the pool, stay out of reach. IPv6 addresses are skipped when
 <code>scanner.ipv6_enabled</code> is off. The public web service never offers it; see
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/fr/adr/0042-every-resolved-address-is-compared-only-when-the-operator-asks.md">ADR 0042</a>.</p>
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0042-every-resolved-address-is-compared-only-when-the-operator-asks.md">ADR 0042</a>.</p>
 <h3 id="end-of-life-detection">End-of-life detection</h3>
 <p>A version number on its own does not tell you whether an OpenCloud instance is
 still receiving security fixes, because OpenCloud maintains three kinds of
@@ -776,9 +776,9 @@ model, where an operator names their own instances. Reachable by strangers and
 unauthenticated, the same property makes it a way to read the inside of the
 network it runs on. So <code>--listen</code>/<code>COS_SERVICE_LISTEN</code> anywhere but loopback
 without <code>--token</code>/<code>COS_SERVICE_TOKEN</code> refuses to start rather than serving
-open. See <a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/fr/adr/0030-a-listener-binds-loopback-and-a-wide-bind-needs-a-credential.md">ADR 0030</a>.</p>
+open. See <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0030-a-listener-binds-loopback-and-a-wide-bind-needs-a-credential.md">ADR 0030</a>.</p>
 <p>Running it in a container, and the ready-made
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/fr/docker/docker-compose.monitoring.yml"><code>docker/docker-compose.monitoring.yml</code></a>
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docker/docker-compose.monitoring.yml"><code>docker/docker-compose.monitoring.yml</code></a>
 that starts the scanner plus a check container with Docker secrets, are in
 <strong><a href="/documentation/scan-service">Running the scanner as a service</a></strong>.</p>
 <p>The plain <code>docker compose up</code> in that directory is the public web application
@@ -858,7 +858,7 @@ scanner on its own is <code>check-opencloud-scanner configure</code>.</p>
 <code>./check-opencloud-security.yml</code>, <code>~/.config/check-opencloud-security/.env.json</code>
 or <code>/etc/check-opencloud-security/</code> (first match wins). A <code>.json</code> suffix is
 read as JSON, anything else as YAML - the two are interchangeable. See
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/fr/config/check-opencloud-security.example.yml"><code>config/check-opencloud-security.example.yml</code></a>
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/config/check-opencloud-security.example.yml"><code>config/check-opencloud-security.example.yml</code></a>
 for a fully commented example.</p>
 <pre><code class="language-yaml">host: opencloud.example.com
 check_hardening: true
@@ -1079,7 +1079,7 @@ it activates only once <code>--webhook-url</code> (or <code>COS_WEBHOOK_URL</cod
   from it and the publication itself goes to the server root, which is the
   only place ntfy reads JSON. A URL naming no topic is refused at startup
   rather than failing on every notification.
-  Anything else - Alertmanager, a custom receiver - still wants the</code>generic<code>document; [Webhook recipes](webhook-recipes.md) has one for each.
+  Anything else - Alertmanager, a custom receiver - still wants the</code>generic<code>document; [Webhook recipes](../webhook-recipes.md) has one for each.
 -</code>--webhook-header<code>/</code>COS_WEBHOOK_HEADERS<code>adds request headers, e.g. for
   authentication. Repeat the flag, or separate entries with</code>;<code>in the
   environment variable:</code>COS_WEBHOOK_HEADERS="X-Auth-Token: abc; X-Env: prod"<code>.
@@ -1101,10 +1101,10 @@ configured state produces its own notification. Scans that fail outright
 replacement. It is fire-and-forget and is not retried beyond the configured
 retry budget.</p>
 </blockquote>
-<p><strong><a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/fr/webhook-recipes.md">Webhook recipes</a></strong> has the full payload field by
+<p><strong><a href="/documentation/webhooks">Webhook recipes</a></strong> has the full payload field by
 field, how to verify its signature, and an adapter for each receiver that wants
 its own JSON - Slack, Discord, ntfy, Alertmanager - along with
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/fr/webhook-recipes.md#uptime-kuma">Uptime Kuma</a>, whose Push monitor takes
+<a href="/documentation/webhooks#uptime-kuma">Uptime Kuma</a>, whose Push monitor takes
 the document as it is and treats silence as a failure, so a check that stopped
 running shows up too.</p>
 <h2 id="reporting-only-what-changed">Reporting only what changed</h2>

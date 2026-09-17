@@ -327,7 +327,7 @@ by the SSRF guard is the address posted to. A URL naming no topic is refused
 when the check starts, rather than 400-ing on every notification for the life
 of the configuration. This is the only format whose URL is rewritten, and only
 ever its path - see
-[ADR 0040](../adr/0040-a-push-format-may-rewrite-the-path-never-the-host.md).
+[ADR 0040](../../adr/0040-a-push-format-may-rewrite-the-path-never-the-host.md).
 
 **For Gotify, keep the token out of the URL if you can.** `?token=...` works
 and is redacted in the plugin's own logs, but `--webhook-header 'X-Gotify-Key:

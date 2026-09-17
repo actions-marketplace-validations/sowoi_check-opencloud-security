@@ -268,7 +268,7 @@ where it should run from:
   0 "OpenCloud_Security_opencloud.example.com" rating=5|vulnerabilities=0|… OK: Server is up to date…
   ```
 
-  [`contrib/checkmk/opencloud_security`](contrib/checkmk/opencloud_security) is
+  [`contrib/checkmk/opencloud_security`](../../contrib/checkmk/opencloud_security) is
   that call as a ready-to-install script.
 
 The scanned instance names the service, because the host running the agent is
@@ -382,7 +382,7 @@ The same values can also come from a YAML file or a secret provider - see
 
 # The built-in scanner
 The plugin has **one** backend: the scanner in
-[`opencloud_local_scan/`](opencloud_local_scan/README.md), which runs in the
+[`opencloud_local_scan/`](../../opencloud_local_scan/README.md), which runs in the
 plugin process and works the verdict out itself.
 
 The scanner connects from the host where you run the plugin. It can therefore check
@@ -499,7 +499,7 @@ nothing to compare and gets no finding at all. It sees what DNS sees: nodes
 behind one load-balancer address, or a resolver that hands out a rotating
 subset of the pool, stay out of reach. IPv6 addresses are skipped when
 `scanner.ipv6_enabled` is off. The public web service never offers it; see
-[ADR 0042](adr/0042-every-resolved-address-is-compared-only-when-the-operator-asks.md).
+[ADR 0042](../../adr/0042-every-resolved-address-is-compared-only-when-the-operator-asks.md).
 
 ## End-of-life detection
 
@@ -625,10 +625,10 @@ model, where an operator names their own instances. Reachable by strangers and
 unauthenticated, the same property makes it a way to read the inside of the
 network it runs on. So `--listen`/`COS_SERVICE_LISTEN` anywhere but loopback
 without `--token`/`COS_SERVICE_TOKEN` refuses to start rather than serving
-open. See [ADR 0030](adr/0030-a-listener-binds-loopback-and-a-wide-bind-needs-a-credential.md).
+open. See [ADR 0030](../../adr/0030-a-listener-binds-loopback-and-a-wide-bind-needs-a-credential.md).
 
 Running it in a container, and the ready-made
-[`docker/docker-compose.monitoring.yml`](docker/docker-compose.monitoring.yml)
+[`docker/docker-compose.monitoring.yml`](../../docker/docker-compose.monitoring.yml)
 that starts the scanner plus a check container with Docker secrets, are in
 **[Running the scanner as a service](scan-service.md)**.
 
@@ -701,7 +701,7 @@ The file is read from `--config`, `COS_CONFIG_FILE`, `./.env.json`,
 `./check-opencloud-security.yml`, `~/.config/check-opencloud-security/.env.json`
 or `/etc/check-opencloud-security/` (first match wins). A `.json` suffix is
 read as JSON, anything else as YAML - the two are interchangeable. See
-[`config/check-opencloud-security.example.yml`](config/check-opencloud-security.example.yml)
+[`config/check-opencloud-security.example.yml`](../../config/check-opencloud-security.example.yml)
 for a fully commented example.
 
 ```yaml
@@ -942,7 +942,7 @@ check-opencloud-security --host opencloud.example.com \
   only place ntfy reads JSON. A URL naming no topic is refused at startup
   rather than failing on every notification.
   Anything else - Alertmanager, a custom receiver - still wants the `generic`
-  document; [Webhook recipes](webhook-recipes.md) has one for each.
+  document; [Webhook recipes](../webhook-recipes.md) has one for each.
 - `--webhook-header` / `COS_WEBHOOK_HEADERS` adds request headers, e.g. for
   authentication. Repeat the flag, or separate entries with `;` in the
   environment variable: `COS_WEBHOOK_HEADERS="X-Auth-Token: abc; X-Env: prod"`.
@@ -967,10 +967,10 @@ configured state produces its own notification. Scans that fail outright
 > replacement. It is fire-and-forget and is not retried beyond the configured
 > retry budget.
 
-**[Webhook recipes](webhook-recipes.md)** has the full payload field by
+**[Webhook recipes](../webhook-recipes.md)** has the full payload field by
 field, how to verify its signature, and an adapter for each receiver that wants
 its own JSON - Slack, Discord, ntfy, Alertmanager - along with
-[Uptime Kuma](webhook-recipes.md#uptime-kuma), whose Push monitor takes
+[Uptime Kuma](../webhook-recipes.md#uptime-kuma), whose Push monitor takes
 the document as it is and treats silence as a failure, so a check that stopped
 running shows up too.
 

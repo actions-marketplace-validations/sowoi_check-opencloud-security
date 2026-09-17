@@ -160,6 +160,7 @@ is needed.
 | [`test_webapp_share.py`](test_webapp_share.py) | Sharing a report never contacts a third party or leaks the capability link. |
 | [`test_webapp_seo.py`](test_webapp_seo.py) | Docs pages are indexable, results never are, there is no third-party card metadata, and the mobile nav fits. |
 | [`test_webapp_i18n.py`](test_webapp_i18n.py) | The frontend is translated without changing API contracts. |
+| [`test_translation_quality.py`](test_translation_quality.py) | Structural differences between the catalogues fail; prose heuristics warn. |
 | [`test_webapp_search.py`](test_webapp_search.py) | The browser search built at release, and what result data it may contain. |
 | [`test_frontend_documentation.py`](test_frontend_documentation.py) | Browser documentation generated from the Markdown guides. |
 

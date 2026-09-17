@@ -95,7 +95,7 @@ command exits `1`:
 
 The document is what [CI pipelines](ci.md) and [Prometheus](prometheus.md)
 consume, and what `diff` below compares. The
-[scanner library README](../opencloud_local_scan/README.md) describes its
+[scanner library README](../../opencloud_local_scan/README.md) describes its
 fields.
 
 ## `diff` - what changed between two saved results

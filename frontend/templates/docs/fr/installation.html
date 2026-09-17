@@ -58,7 +58,7 @@ in its own virtualenv:</p>
 <pre><code class="language-shell">pip install check-opencloud-security
 </code></pre>
 <p>Every release ships a CycloneDX SBOM and a Sigstore provenance attestation;
-see <a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/SECURITY.md#verifying-what-you-downloaded">Verifying what you downloaded</a>
+see <a href="https://github.com/sowoi/check-opencloud-security/blob/main/SECURITY.md#verifying-what-you-downloaded">Verifying what you downloaded</a>
 if you would rather not take the artifact on trust.</p>
 <p>To install the latest unreleased changes, point any of them at the repository
 instead: <code>pipx install git+https://github.com/sowoi/check-opencloud-security.git</code>
@@ -79,7 +79,7 @@ uv tool upgrade --all                          # ... or every uv tool at once
 pip install --upgrade check-opencloud-security # pip
 </code></pre>
 <p>Check what you are running with <code>check-opencloud-security --version</code>, and see
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/CHANGELOG.md">CHANGELOG.md</a> for what changed. A git installation is updated by
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/CHANGELOG.md">CHANGELOG.md</a> for what changed. A git installation is updated by
 re-running the same <code>install</code> command with <code>--force</code> (pipx/uv) or
 <code>--upgrade --force-reinstall</code> (pip).</p>
 <p>Keeping the package current matters more here than for a plugin that asks a
@@ -161,7 +161,7 @@ sudo dnf install &quot;./check-opencloud-security-${VERSION}-1.noarch.rpm&quot;
 </code></pre>
 <p>Each package has a <code>.sha256</code> beside it, and both are covered by the same
 Sigstore provenance attestation as the wheel - see
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/SECURITY.md#verifying-what-you-downloaded">Verifying what you downloaded</a>.</p>
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/SECURITY.md#verifying-what-you-downloaded">Verifying what you downloaded</a>.</p>
 <h3 id="what-it-installs">What it installs</h3>
 <table>
 <thead>
@@ -253,8 +253,8 @@ python scripts/build_distro_packages.py         # both, into distro-packages/
 python scripts/build_distro_packages.py --packager deb
 </code></pre>
 <p>The layout, the dependencies and everything else the packages declare live in
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/packaging/nfpm.yaml"><code>packaging/nfpm.yaml</code></a>. Why they are built this way is
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/adr/0039-the-plugin-ships-as-a-distribution-package-built-from-the-wheel.md">ADR 0039</a>.</p>
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/packaging/nfpm.yaml"><code>packaging/nfpm.yaml</code></a>. Why they are built this way is
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0039-the-plugin-ships-as-a-distribution-package-built-from-the-wheel.md">ADR 0039</a>.</p>
 <h2 id="macos-and-linux-workstations-homebrew">macOS and Linux workstations (Homebrew)</h2>
 <p>Use this on a laptop rather than on a monitoring host - somebody trying an
 instance by hand before wiring the check into Icinga. The argument is the one
@@ -270,8 +270,8 @@ current; <code>--upgrade-self</code> deliberately refuses on a Homebrew installa
 says so, because pip would write into the Cellar and the next <code>brew</code>
 operation would quietly undo it.</p>
 <p>The formula itself is generated from what PyPI published, by
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/scripts/build_homebrew_formula.py"><code>scripts/build_homebrew_formula.py</code></a> -
-see <a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/packaging/README.md#homebrew"><code>packaging/README.md</code></a> if you are
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/scripts/build_homebrew_formula.py"><code>scripts/build_homebrew_formula.py</code></a> -
+see <a href="https://github.com/sowoi/check-opencloud-security/blob/main/packaging/README.md#homebrew"><code>packaging/README.md</code></a> if you are
 maintaining the tap rather than installing from it.</p>
 <h2 id="docker">Docker</h2>
 <p>Use this if you would rather not install anything on the host. The image also
@@ -287,7 +287,7 @@ nothing built and nothing installed:</p>
 image's default command starts the web application, which is why the plugin is
 selected with <code>--entrypoint</code>.</p>
 <p>Build the image yourself instead when you want to run your own checkout.
-Everything Docker-related lives in <a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/docker"><code>docker/</code></a>, and the build context
+Everything Docker-related lives in <a href="https://github.com/sowoi/check-opencloud-security/blob/main/docker"><code>docker/</code></a>, and the build context
 is the repository root:</p>
 <pre><code class="language-shell">git clone https://github.com/sowoi/check-opencloud-security.git
 cd check-opencloud-security

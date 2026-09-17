@@ -2,7 +2,7 @@
 
 Start with the [main README](../README.md) for installation, common commands and an
 overview of the checks. The guides below cover deployment, integrations and individual
-findings. [German guides](de/README.md) are also available in the web frontend.
+findings. [German](de/), [French](fr/) and [Spanish](es/) guides are also available in the web frontend.
 
 > **Just want a scan?** [scan.okxo.de](https://scan.okxo.de) runs the web
 > application from this repository - paste an address and read the result, no

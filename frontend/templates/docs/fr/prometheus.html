@@ -62,7 +62,7 @@ up by Icinga2's Graphite/InfluxDB writers directly.</p>
 <!-- TOC -->
 
 <h2 id="the-files-to-copy">The files to copy</h2>
-<p>Two of them, both in <a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/contrib/README.md"><code>contrib/</code></a>, both reading the
+<p>Two of them, both in <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/README.md"><code>contrib/</code></a>, both reading the
 metric names the native exporter publishes:</p>
 <table>
 <thead>
@@ -73,11 +73,11 @@ metric names the native exporter publishes:</p>
 </thead>
 <tbody>
 <tr>
-<td><a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/contrib/prometheus/alerts.yml"><code>contrib/prometheus/alerts.yml</code></a></td>
+<td><a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/prometheus/alerts.yml"><code>contrib/prometheus/alerts.yml</code></a></td>
 <td>Copy into <code>/etc/prometheus/rules/</code> and add it to <code>rule_files:</code></td>
 </tr>
 <tr>
-<td><a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/contrib/grafana/dashboard.json"><code>contrib/grafana/dashboard.json</code></a></td>
+<td><a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/grafana/dashboard.json"><code>contrib/grafana/dashboard.json</code></a></td>
 <td>Grafana - Dashboards - New - Import, then pick the data source</td>
 </tr>
 </tbody>
@@ -279,7 +279,7 @@ that could not be reached is visible as such instead of keeping the numbers
 from the last run that worked.</p>
 <h2 id="alerting-rules">Alerting rules</h2>
 <p>For the native exporter, copy
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/contrib/prometheus/alerts.yml"><code>contrib/prometheus/alerts.yml</code></a> rather
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/prometheus/alerts.yml"><code>contrib/prometheus/alerts.yml</code></a> rather
 than the block below - it is maintained against the real metric names and
 tested against them.</p>
 <p>The rules below match the <strong><code>jq</code>-shaped</strong> names from the two recipes above,
@@ -320,7 +320,7 @@ which are shorter and different:</p>
 It does not count fresh scans. With daily scan data, <code>for: 5m</code> waits five minutes while
 the same cached failure remains visible; it does not wait for a second daily scan.</p>
 <h2 id="grafana">Grafana</h2>
-<p>Import <a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/contrib/grafana/dashboard.json"><code>contrib/grafana/dashboard.json</code></a>
+<p>Import <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/grafana/dashboard.json"><code>contrib/grafana/dashboard.json</code></a>
 and pick your Prometheus data source. It draws the scan-health tile first, the
 grade and the lifecycle beside it, then the grade over time, the open
 findings, the advisories by severity, and a table of what is running where.</p>

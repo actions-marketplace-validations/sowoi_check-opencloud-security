@@ -12,6 +12,35 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+### Added
+
+- **Translation quality checks.** `scripts/check_translations.py` compares the
+  four frontend catalogues and the translated guides against their English
+  source and separates what a machine can decide from what it cannot.
+  Structural differences - a missing or unknown key, changed `{placeholders}`,
+  a string `str.format` would refuse, changed or disallowed inline markup, a
+  translated `href`, a relative guide link that resolves to no file - are
+  errors and fail CI. Prose heuristics - the form of address a language uses,
+  a string left in English, a dropped product name, a glossary term rendered
+  two ways - are warnings that name a key for a reviewer, and `--strict` fails
+  on those too. Decisions about a warning are recorded in the script's
+  `ACCEPTED` table rather than by removing the check.
+- **[`TRANSLATING.md`](TRANSLATING.md), the style guide behind those checks.**
+  It records the register each language uses - German informal "du", French
+  polite "vous", Spanish polite "usted" - the agreed terminology, what happens
+  to example hostnames and placeholders, and the review workflow.
+
+### Fixed
+
+- **101 dead links in the French guides.** A guide under `docs/<language>/`
+  sits one directory deeper than its English source, so every path out of
+  `docs/` needed `../../` and had `../`. The generated French pages carried
+  the same mistake into the public documentation, where links to ADRs and
+  repository files pointed at GitHub addresses that did not exist. The
+  English guide index also linked to a German index that was never written;
+  it now points at the three translated guide directories.
+
+
 ## [1.24.2] - 2026-09-17
 
 ### Changed

@@ -121,7 +121,7 @@ the <code>main</code> branch of this project's repository. Those are the files a
 maintainer already reviewed and merged, in the pull requests the project's
 daily data workflows open. Nothing reaches your host that a person has not
 looked at. See
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/adr/0027-refreshed-reference-data-is-attested-not-merely-fetched.md">ADR 0027</a>.</p>
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0027-refreshed-reference-data-is-attested-not-merely-fetched.md">ADR 0027</a>.</p>
 <h3 id="signature-verification">Signature verification</h3>
 <p>Every change to those two files on <code>main</code> is attested with
 <a href="https://www.sigstore.dev/">Sigstore</a> by this repository's
@@ -217,11 +217,11 @@ loud:</strong></p>
   in <code>advisorySources</code>, so read the warning rather than the list.</li>
 </ul>
 <h2 id="running-it-daily-with-systemd">Running it daily with systemd</h2>
-<p><a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/contrib/systemd"><code>contrib/systemd/</code></a> has a hardened oneshot service and a
+<p><a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/systemd"><code>contrib/systemd/</code></a> has a hardened oneshot service and a
 timer for it:
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/contrib/systemd/check-opencloud-security-refresh.service"><code>check-opencloud-security-refresh.service</code></a>
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/systemd/check-opencloud-security-refresh.service"><code>check-opencloud-security-refresh.service</code></a>
 and
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/contrib/systemd/check-opencloud-security-refresh.timer"><code>check-opencloud-security-refresh.timer</code></a>.
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/systemd/check-opencloud-security-refresh.timer"><code>check-opencloud-security-refresh.timer</code></a>.
 The service writes to <code>/var/lib/check-opencloud-security</code> through
 <code>StateDirectory=</code> and may write nowhere else. The timer runs it daily,
 randomised within an hour, and catches up after downtime.</p>

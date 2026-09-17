@@ -72,7 +72,7 @@ against a real instance rather than a cached lookup, and nothing about an
 instance's rating changes from minute to minute.
 
 The full variable table, including the ones specific to each role, is in
-[`ansible/README.md`](../ansible/README.md#variable-reference).
+[`ansible/README.md`](../../ansible/README.md#variable-reference).
 
 ## Before you commit a change to the role
 
