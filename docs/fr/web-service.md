@@ -1,11 +1,11 @@
 # Exécuter le scanner comme service web
 
-L'application web exécute le scanner intégré et présente ses résultats avec une note
-de **A+** à **F**. Les résultats restent disponibles dans Redis pendant une heure par défaut. Le web
-La couche présente le résultat du scanner sans définir une notation séparée.
+L’application web exécute le scanner intégré et présente ses résultats avec une note
+de **A+** à **F**. Les résultats restent disponibles dans Redis pendant une heure par défaut.
+La couche web affiche le résultat du scanner sans définir de notation distincte.
 
-Try the public service at [scan.example.com](https://scan.example.com) for a one-off scan. The
-instructions below cover hosting your own service, including network access, retention
+Essayez le service public pour une analyse ponctuelle. Les instructions ci-dessous
+expliquent comment héberger votre propre service, notamment l’accès réseau, la conservation
 and usage limits.
 
 It is **not** on PyPI. `pip install check-opencloud-security` gets the plugin

@@ -1,8 +1,8 @@
 # Docker
 
-Lancez le scanner sur votre propre machine avec l'image Docker publiée. Il utilise la même
-scanner comme le [service web](../webapp.md), se connecte directement à votre instance et n'a pas
-limite de prix du site Web. Vous avez besoin de Docker, mais aucun compte avec le service de numérisation.
+Lancez le scanner sur votre machine avec l’image Docker publiée. Il utilise le même
+scanner que le [service web](../webapp.md), se connecte directement à votre instance et n’est
+pas soumis aux limites du site. Vous avez besoin de Docker, mais d’aucun compte sur ce service.
 
 ```shell
 docker run --rm --entrypoint check-opencloud-security \

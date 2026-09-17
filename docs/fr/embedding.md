@@ -1,10 +1,10 @@
 # Intégrer le scanner
 
-Une application peut intégrer le client web OpenCloud dans un `iframe`, par exemple comme fichier
-sélecteur ou panneau d'aperçu. La page mère et les messages d'échange de clients intégrés à travers
-`postMessage`; l'authentification déléguée permet également au parent de fournir une session. Les
-scanner lit le public `/config.json` pour vérifier les origines du client intégré
-des fiducies.
+Une application peut intégrer le client web OpenCloud dans un `iframe`, par exemple comme
+sélecteur de fichiers ou panneau d’aperçu. La page parente et le client intégré échangent
+des messages via `postMessage`; l’authentification déléguée permet aussi à la page parente
+de transmettre une session. Le scanner lit le `/config.json` public pour vérifier les
+origines autorisées du client intégré.
 
 If `/config.json` cannot be read, or does not publish an `embed` block at
 all, both checks pass - embedding is simply not configured, so there is

@@ -1,8 +1,9 @@
 # Surface d’exposition publique
 
-OpenCloud ne publie normalement pas d'index de répertoire, de fichiers de déploiement, de clés privées ou
-sa base de données d'identité via HTTP. Ces vérifications cherchent un serveur Web ou un proxy inversé
-qui expose ces fichiers, et pour les interfaces de débogage qui devraient rester privées.
+OpenCloud ne publie normalement ni index de répertoire, ni fichiers de déploiement, ni clés
+privées, ni base de données d’identité via HTTP. Ces vérifications recherchent un serveur
+web ou un proxy inverse qui exposerait ces fichiers, ainsi que des interfaces de débogage
+qui devraient rester privées.
 
 Before any of these run, the scan first requests a path that cannot possibly
 exist and remembers what comes back. OpenCloud's web frontend is a

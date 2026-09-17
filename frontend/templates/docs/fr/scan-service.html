@@ -16,13 +16,12 @@
 {% endif %}
 
 <article class="docs-article card section-gap" data-reveal lang="fr">
-<p>Exécuter <code>check-opencloud-scanner serve</code> pour rendre le scanner intégré disponible comme un
-service HTTP persistant. Plusieurs consommateurs peuvent alors partager un résultat mis en cache pour chaque
-- Oui. Le <a href="/documentation#running-the-scanner-as-a-service">README principal</a> énumère les
-les exigences relatives aux paramètres et aux jetons; ce guide couvre le déploiement.</p>
-<p>This is <strong>not</strong> the public web application - that is
-<a href="/documentation/web-service">the scan service</a>, which takes a URL from a stranger, queues it
-and renders the answer.</p>
+<p>Exécutez <code>check-opencloud-scanner serve</code> pour rendre le scanner intégré disponible comme
+service HTTP persistant. Plusieurs consommateurs peuvent alors partager un résultat mis en
+cache pour chaque instance. Le <a href="/documentation#running-the-scanner-as-a-service">README principal</a>
+décrit les paramètres et les jetons requis ; ce guide couvre le déploiement.</p>
+<p>Il ne s’agit pas de l’application web publique, qui accepte une URL, la place en file
+d’attente et affiche le résultat.</p>
 <!-- TOC -->
 <ul>
 <li><a href="#running-the-scanner-as-a-service">Running the scanner as a service</a></li>

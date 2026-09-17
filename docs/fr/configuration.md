@@ -1,13 +1,12 @@
 # Fichier de configuration et secrets
 
-Gardez les identifiants hors du fichier de configuration en se référant à leur source.
-Les jetons GitHub, webhook URL et les jetons de service peuvent être lus à partir d'un fichier, d'un environnement
-variable ou une commande au besoin.
+Gardez les identifiants hors du fichier de configuration en indiquant leur source.
+Les jetons GitHub, les URL de webhook et les jetons de service peuvent être lus depuis
+un fichier, une variable d’environnement ou une commande au moment voulu.
 
-The file itself, where it is looked for and how its keys map onto environment
-variables, is in
-[Configuration file and secrets](../README.md#configuration-file-and-secrets);
-`config/check-opencloud-security.example.yml` is a fully commented example.
+Le fichier lui-même, son emplacement et la correspondance de ses clés avec les
+variables d’environnement sont décrits dans [Configuration et secrets](../README.md#configuration-file-and-secrets).
+`config/check-opencloud-security.example.yml` fournit un exemple entièrement commenté.
 
 <!-- TOC -->
 * [Secrets in the configuration](#secrets-in-the-configuration)

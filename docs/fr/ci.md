@@ -1,7 +1,7 @@
 # Pipelines CI
 
 Utilisez un pipeline d'IC programmé pour des analyses régulières ou pour vérifier une instance d'un autre
-réseau. Surveiller si le pipeline fonctionne ainsi que ce qu'il rapporte: un travail manqué
+réseau. Vérifier que le pipeline fonctionne et comprendre ce qu’il signale : un travail manqué
 ne produit aucun résultat d'analyse.
 
 Whatever the platform, three things decide whether it works:

@@ -1,13 +1,13 @@
 # Notifications par webhook
 
-Le [webhook](../README.md#webhook-notifications) affiche le JSON propre du plugin
-document par défaut. C'est délibéré : il porte tout le verdict, pas un
-sentence prononcée. `--webhook-format` peut le rendre comme Slack ou Discord propre
-forme directement (voir [ci-dessous](#slack-matièremost-discord)), ou comme une poussée
-notification pour [ntfy ou Gotify](#ntfy-and-gotify); toute autre chose veut encore
-le document générique, et a besoin de quelques lignes de traduction entre les deux.
+Le [webhook](../README.md#webhook-notifications) envoie par défaut le document JSON
+du plugin, avec le statut et tous les constats. C’est volontaire : le récepteur reçoit
+le verdict complet. `--webhook-format` permet d’envoyer directement le format Slack ou
+Discord (voir [ci-dessous](#slack-matièremost-discord)), ou une notification push pour
+[ntfy ou Gotify](#ntfy-and-gotify). Pour les autres récepteurs, adaptez le document JSON
+générique au format attendu.
 
-Two rules apply to every recipe here:
+Deux règles s’appliquent à tous les exemples ci-dessous :
 
 - **A failing webhook never changes the check result.** The plugin appends
   `Webhook delivery failed` and still exits with the state it measured, so a

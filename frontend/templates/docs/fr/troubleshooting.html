@@ -17,14 +17,14 @@
 
 <article class="docs-article card section-gap" data-reveal lang="fr">
 <p><strong><code>UNKNOWN: ... /status.php is unreachable</code></strong>
-Le plugin scanne l'instance elle-même avec son scanner intégré, donc le
-l'hôte de surveillance doit l'atteindre directement. Vérifiez qu'il peut se connecter, et
-Rappelez-vous que le mandataire d'OpenCloud écoute sur <strong>9200</strong>, pas 443:
+Le plugin analyse directement l’instance avec son scanner intégré ; l’hôte de
+supervision doit donc pouvoir la joindre. Vérifiez la connexion et rappelez-vous que le
+proxy d’OpenCloud écoute sur <strong>9200</strong>, pas sur 443 :
 <code>---host opencloud.example.com:9200</code> ou <code>--port 9200</code>.</p>
 <p><strong><code>UNKNOWN: No OpenCloud instance found at ...</code></strong>
-<code>/status.php</code> did not answer with an OpenCloud status document. Either
-something other than OpenCloud is on that address, or a reverse proxy in front
-of it does not forward <code>/status.php</code>. Run with <code>--debug</code> to see the response.</p>
+<code>/status.php</code> n’a pas renvoyé de document de statut OpenCloud. L’adresse peut
+héberger un autre logiciel, ou le proxy inverse ne transmet pas <code>/status.php</code>.
+Relancez avec <code>--debug</code> pour afficher la réponse.</p>
 <p><strong><code>UNKNOWN: ... is not an OpenCloud instance: /status.php reports ownCloud</code></strong>
 ownCloud and Nextcloud serve the same <code>/status.php</code> - OpenCloud inherited the
 endpoint from them - so the address answered, just not for OpenCloud. Their

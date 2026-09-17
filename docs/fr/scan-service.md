@@ -1,13 +1,12 @@
 # Service du scanner
 
-Exécuter `check-opencloud-scanner serve` pour rendre le scanner intégré disponible comme un
-service HTTP persistant. Plusieurs consommateurs peuvent alors partager un résultat mis en cache pour chaque
-- Oui. Le [README principal](../README.md#running-the-scanner-as-a-service) énumère les
-les exigences relatives aux paramètres et aux jetons; ce guide couvre le déploiement.
+Exécutez `check-opencloud-scanner serve` pour rendre le scanner intégré disponible comme
+service HTTP persistant. Plusieurs consommateurs peuvent alors partager un résultat mis en
+cache pour chaque instance. Le [README principal](../README.md#running-the-scanner-as-a-service)
+décrit les paramètres et les jetons requis ; ce guide couvre le déploiement.
 
-This is **not** the public web application - that is
-[the scan service](../webapp.md), which takes a URL from a stranger, queues it
-and renders the answer.
+Il ne s’agit pas de l’application web publique, qui accepte une URL, la place en file
+d’attente et affiche le résultat.
 
 <!-- TOC -->
 * [Running the scanner as a service](#running-the-scanner-as-a-service)

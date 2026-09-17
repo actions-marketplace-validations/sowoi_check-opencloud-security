@@ -430,8 +430,8 @@ MESSAGES: dict[str, str] = {
     ),
     "pagenav.grades.title": "Ce que signifient les notes",
     "pagenav.grades.blurb": (
-        "Chaque échelon de A+ à F, ce qui plombe une note et comment la faire "
-        "remonter."
+        "Ce que signifient les notes de A+ à F et comment améliorer une "
+        "évaluation."
     ),
     "pagenav.catalogue.title": "Ce que le scanner vérifie",
     "pagenav.catalogue.blurb": (
@@ -454,7 +454,7 @@ MESSAGES: dict[str, str] = {
     ),
     "pagenav.about.title": "À propos d'OpenCloud",
     "pagenav.about.blurb": (
-        "La plateforme que ceci contrôle, et pourquoi ce projet en est "
+        "La plateforme analysée ici, et pourquoi ce projet en est "
         "indépendant."
     ),
     "pagenav.cta.title": "Analyser une instance",
@@ -462,7 +462,7 @@ MESSAGES: dict[str, str] = {
         "Retour au formulaire. Quelques secondes suffisent, sans inscription."
     ),
     # ---------------------------------------------------------------- 404
-    "notfound.title": "Rien ici",
+    "notfound.title": "Page introuvable",
     "notfound.description": (
         "L'adresse n'existe pas, ou l'analyse qu'elle désignait a déjà expiré."
     ),
@@ -698,7 +698,7 @@ MESSAGES: dict[str, str] = {
         "bouclage et de métadonnées cloud sont refusées avant toute "
         "connexion."
     ),
-    "how.pipeline.step2": "<strong>L’analyse reçoit un identifiant aléatoire.</strong> Il permet d’accéder au résultat. Il n’existe pas de liste publique des analyses.",
+    "how.pipeline.step2": "<strong>L’analyse reçoit un identifiant aléatoire.</strong> Cet identifiant donne accès au résultat. Il n’existe pas de liste publique des analyses.",
     "how.pipeline.step3": "<strong>L’analyse rejoint la file d’attente.</strong> Le nombre d’analyses simultanées est limité. Si tous les workers sont occupés, votre analyse attend et la page affiche sa position dans la file.",
     "how.pipeline.step4": "<strong>Le résultat expire.</strong> Après {minutes} minutes, il n’est plus accessible par son identifiant.",
     "how.faq.kicker": "Questions",
@@ -928,7 +928,7 @@ MESSAGES: dict[str, str] = {
     "cli.lede": "Exécutez le scanner sur votre machine pour garder la maîtrise de l’analyse et éviter les limites de ce service. Les commandes ci-dessous utilisent le même scanner que ce site.",
     "cli.oneliner.kicker": "La commande unique",
     "cli.oneliner.heading": "Une commande, rien à installer",
-    "cli.oneliner.body": "La commande affiche la note, le statut de support, les avis de sécurité applicables et les contrôles échoués. Son code de sortie Nagios permet de l’utiliser dans la supervision, des scripts, la CI ou des tâches cron. L’analyse s’exécute dans le conteneur et se connecte directement à votre instance.",
+    "cli.oneliner.body": "La commande affiche la note, le statut de support, les avis de sécurité applicables et les contrôles échoués. Son code de sortie Nagios permet de l’utiliser pour la supervision, les scripts, la CI ou les tâches cron. L’analyse s’exécute dans le conteneur et se connecte directement à votre instance.",
     "cli.json.kicker": "En JSON",
     "cli.json.heading": "L'intégralité du document de résultat",
     "cli.json.body": (
@@ -1378,7 +1378,7 @@ MESSAGES: dict[str, str] = {
     ),
     "result.compare.offer.link": "Voir ce qui a changé depuis",
     "result.progress.kicker": "En cours",
-    "result.progress.queued.title": "En attente d'un travailleur de scan",
+    "result.progress.queued.title": "En attente d’un worker",
     "result.progress.queued.detail": (
         "Tous les workers sont occupés. Votre analyse garde sa place dans la "
         "file et démarre dès que l’un d’eux se libère."
@@ -1393,7 +1393,7 @@ MESSAGES: dict[str, str] = {
     "result.progress.step.running": "En cours",
     "result.progress.step.done": "Résultat",
     "result.progress.estimate": "La plupart des analyses se terminent en moins d'une minute.",
-    "result.progress.elapsed": "il y a {duration}",
+    "result.progress.elapsed": "depuis {duration}",
     "result.progress.noscript": (
         "Cette page se met à jour elle-même grâce à JavaScript. Sans lui, "
         "rechargez la page dans quelques secondes pour voir le résultat."
@@ -1403,7 +1403,7 @@ MESSAGES: dict[str, str] = {
     ),
     "result.progress.queue.next": "Analyse en file d'attente. Vous êtes le prochain.",
     "result.progress.queue.waiting": (
-        "En attente qu'un travailleur de scan la prenne en charge."
+        "En attente qu’un worker la prenne en charge."
     ),
     "result.progress.done.title": "Rapport prêt",
     "result.progress.done.detail": "La note est disponible. Ouverture du rapport.",
@@ -1423,11 +1423,11 @@ MESSAGES: dict[str, str] = {
     "result.verdict.heading": "Note globale",
     "result.verdict.dial": "Note {label}, {rating} sur 5",
     "result.facts.instance": "Instance",
-    "result.facts.resolved": "Résolu vers",
+    "result.facts.resolved": "Adresses résolues",
     "result.facts.ipv6.heading": "Accessibilité IPv6",
     "result.facts.ipv6.note": (
         "Non vérifiée - ce déploiement n'a pas de connectivité IPv6 sortante, "
-        "c'est donc simplement noté ici plutôt que compté contre l'instance."
+        "c’est donc indiqué ici sans être pris en compte dans la note."
     ),
     "result.facts.product": "Produit",
     "result.facts.track": "Canal de version",
@@ -1457,7 +1457,7 @@ MESSAGES: dict[str, str] = {
     "result.facts.proxy.detected": "Détecté",
     "result.facts.office": "Bureautique",
     "result.facts.calendar": "Calendrier",
-    "result.facts.calendar.detected": "Quelque chose répond sur le chemin CalDAV",
+    "result.facts.calendar.detected": "Une réponse a été reçue sur le chemin CalDAV",
     "result.facts.newest": "Version la plus récente",
     "result.facts.score": "Score",
     "result.facts.score.value": "{rating} sur 5",
@@ -1481,7 +1481,7 @@ MESSAGES: dict[str, str] = {
     "result.plan.then": "puis {label}",
     "result.plan.still": "toujours {label}",
     "result.plan.note": "Le plan donne la priorité aux changements qui améliorent la note. La note indiquée à chaque étape suppose que cette étape et toutes les précédentes sont terminées. Les constats de même gravité partagent un plafond : plusieurs corrections peuvent donc être nécessaires avant que la note augmente.",
-    "result.plan.blocked.heading": "Ce qui plombe la note, sans pouvoir être corrigé",
+    "result.plan.blocked.heading": "Ce qui limite la note et ne peut pas être corrigé",
     "result.plan.blocked.note": (
         "Ces valeurs sont codées en dur dans OpenCloud et ne peuvent pas être "
         "modifiées dans la configuration. Le plan ne peut donc pas atteindre "
@@ -1548,7 +1548,7 @@ MESSAGES: dict[str, str] = {
     "result.rescan.self_host": "l'exécuter vous-même",
     "result.excluded.kicker": "Exclu",
     "result.excluded.heading": "Signalé, mais non comptabilisé",
-    "result.excluded.waived.heading": "Vous avez demandé à ignorer ceci",
+    "result.excluded.waived.heading": "Contrôles ignorés à votre demande",
     "result.excluded.waived.note": (
         "Ces contrôles ont échoué, mais vos exclusions les retirent du calcul "
         "de la note."
@@ -1630,7 +1630,7 @@ MESSAGES: dict[str, str] = {
     ),
     "result.raw.summary": "Afficher le JSON brut",
     "result.export.kicker": "Export",
-    "result.export.heading": "Emportez ce résultat avec vous",
+    "result.export.heading": "Exporter ce résultat",
     "result.export.lede": (
         "La même analyse, présentée de quatre façons. Chacune est générée à "
         "la demande et disparaît avec l'analyse elle-même."

@@ -1,6 +1,6 @@
 # Intégration Checkmk
 
-Checkmk peut lire cette sortie de plugins Nagios directement. Vous pouvez l'exécuter comme un contrôle actif
+Checkmk peut lire directement la sortie du plugin Nagios. Vous pouvez l’exécuter comme un contrôle actif
 sur le serveur Checkmk ou comme vérification locale sur un serveur d'agent. Choisissez la machine qui peut
 atteindre l'instance à partir du réseau que vous voulez tester.
 
