@@ -482,6 +482,9 @@
 {% if summary.tls and summary.tls.reachable %}
   {% set _ = toc.append({"href": "#tls", "label": t('result.tls.heading')}) %}
 {% endif %}
+{% if summary.coverage.gaps or not summary.coverage.available %}
+  {% set _ = toc.append({"href": "#coverage", "label": t('result.coverage.heading')}) %}
+{% endif %}
 {% set _ = toc.append({"href": "#scan-limits", "label": t('result.scope.heading')}) %}
 {% set _ = toc.append({"href": "#raw-document", "label": t('result.raw.heading')}) %}
 {% set _ = toc.append({"href": "#exports", "label": t('result.export.heading')}) %}
@@ -732,6 +735,38 @@
   {% endif %}
 </section>
 {% endif %}
+
+{#
+  What the scan did not measure. This is not the same list as "what a scan
+  can never see" below it: that one is about the method, this one is about
+  this run - a probe that was switched off, a name with one address, a
+  capabilities document the instance did not publish. A grade describes
+  evidence, so the gaps in the evidence belong beside it.
+#}
+<section class="card" data-reveal>
+  <p class="kicker">{{ t('result.coverage.kicker') }}</p>
+  <h2 id="coverage">{{ t('result.coverage.heading') }}</h2>
+  {% if not summary.coverage.available %}
+  <p class="hint">{{ t('result.coverage.unavailable') }}</p>
+  {% else %}
+  <p>{{ t('result.coverage.summary',
+          measured=summary.coverage.measured,
+          total=summary.coverage.counts.total) }}</p>
+  {% if summary.coverage.groups %}
+  <p class="hint">{{ t('result.coverage.note') }}</p>
+  {% for group in summary.coverage.groups %}
+  <h3 class="section-gap">{{ group.label }}</h3>
+  <ul class="plain-list">
+    {% for check in group.checks %}
+    <li>{{ check_name(check.id) }} - <span class="hint">{{ check.reasonLabel }}. {{ check.detail }}</span></li>
+    {% endfor %}
+  </ul>
+  {% endfor %}
+  {% else %}
+  <p class="hint">{{ t('result.coverage.complete') }}</p>
+  {% endif %}
+  {% endif %}
+</section>
 
 <section class="card" data-reveal>
   <p class="kicker">{{ t('result.scope.kicker') }}</p>

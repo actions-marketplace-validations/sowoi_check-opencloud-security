@@ -1495,6 +1495,43 @@ MESSAGES: dict[str, str] = {
     "result.rescan.note": "Der nächste Scan verwendet dasselbe Ziel, dieselben Ausnahmen und denselben Release-Kanal, damit die Ergebnisse vergleichbar bleiben. Warte bitte die Pause ab oder nutze den quelloffenen Scanner ohne Begrenzung auf deinem Rechner:",
     "result.rescan.self_host": "selbst betreiben",
     "result.excluded.kicker": "Ausgeschlossen",
+    "result.coverage.kicker": "Abdeckung",
+    "result.coverage.heading": "Was dieser Scan nicht gemessen hat",
+    "result.coverage.note": (
+        "Eine Note beschreibt die Belege, die dieser Scan gesammelt hat. "
+        "Diese Prüfungen kamen zu keinem Ergebnis, die Note sagt über sie "
+        "also nichts aus."
+    ),
+    "result.coverage.summary": (
+        "{measured} von {total} Prüfungen kamen zu einem Ergebnis."
+    ),
+    "result.coverage.complete": (
+        "Jede Prüfung, die dieser Scan vorgesehen hat, kam zu einem Ergebnis."
+    ),
+    "result.coverage.unavailable": (
+        "Dieser Bericht entstand, bevor Scans ihre Abdeckung festgehalten "
+        "haben; er sagt also nicht, welche Prüfungen gelaufen sind. Das ist "
+        "nicht dasselbe wie ein Scan ohne Lücken."
+    ),
+    "coverage.reason.not_applicable": "Trifft auf diese Instanz nicht zu",
+    "coverage.reason.probe_disabled": "Die Prüfung war für diesen Scan abgeschaltet",
+    "coverage.reason.prerequisite_missing": (
+        "Die Instanz hat nicht veröffentlicht, was dafür nötig wäre"
+    ),
+    "coverage.reason.timeout": "Nichts hat rechtzeitig geantwortet",
+    "coverage.reason.unreadable": "Die Antwort war nicht lesbar",
+    "coverage.reason.no_route": "Dieser Scanner hat keine Route zu dieser Adresse",
+    "coverage.group.hardening": "Härtungseinstellungen",
+    "coverage.group.header": "Sicherheits-Header",
+    "coverage.group.advisoryHeader": "Empfohlene Header",
+    "coverage.group.advisoryCheck": "Empfohlene Beobachtungen",
+    "coverage.group.extraCheck": "Zusatzprüfungen",
+    "coverage.group.tls": "Transportsicherheit",
+    "coverage.group.dns": "DNS",
+    "coverage.group.addressParity": "Adressen",
+    "coverage.group.capabilities": "Funktionen",
+    "coverage.group.updates": "Updates",
+    "coverage.group.integrations": "Integrationen",
     "result.excluded.heading": "Gemeldet, aber nicht gezählt",
     "result.excluded.waived.heading": "Von dir ausgenommene Befunde",
     "result.excluded.waived.note": (

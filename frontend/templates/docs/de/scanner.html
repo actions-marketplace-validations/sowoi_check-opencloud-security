@@ -25,6 +25,7 @@
   <a href="#update-check" lang="de">Verfügbare Updates</a>
   <a href="#vulnerabilities" lang="de">Sicherheitsmeldungen</a>
   <a href="#hardenings" lang="de">Schutzmaßnahmen</a>
+  <a href="#what-the-scan-covered" lang="de">Was der Scan abgedeckt hat</a>
   <a href="#debug-ports" lang="de">Debug-Ports</a>
   <a href="#every-resolved-address" lang="de">Alle aufgelösten Adressen</a>
   <a href="#concurrency" lang="de">Parallelität</a>
@@ -579,6 +580,105 @@ darstellen kann; <code>flavours_for</code> nennt passende Formate.</p>
 Entscheidung über die konkrete Installation, etwa eine erlaubte CORS-Origin
 oder einen CSP-Dateipfad, erscheint sie unter <code>Fragment.undecided</code> statt als
 scheinbar fertiger Konfigurationswert.</p>
+<h2 id="what-the-scan-covered">Was der Scan abgedeckt hat</h2>
+<p>Eine bestandene Prüfung und eine Prüfung, die nie gelaufen ist, hinterlassen
+in diesem Dokument dieselbe Spur: nichts. In <code>coverage</code> steht der Unterschied.
+Siehe <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0064-a-scan-records-what-it-did-not-measure.md">ADR 0064</a>.</p>
+<pre><code class="language-json">{
+  &quot;coverage&quot;: {
+    &quot;schema&quot;: 1,
+    &quot;counts&quot;: {&quot;passed&quot;: 49, &quot;failed&quot;: 10, &quot;not_checked&quot;: 12, &quot;inconclusive&quot;: 0, &quot;total&quot;: 71},
+    &quot;checks&quot;: [
+      {&quot;id&quot;: &quot;Content-Security-Policy&quot;, &quot;group&quot;: &quot;header&quot;, &quot;state&quot;: &quot;passed&quot;},
+      {&quot;id&quot;: &quot;directoryListing&quot;, &quot;group&quot;: &quot;extraCheck&quot;, &quot;state&quot;: &quot;failed&quot;},
+      {&quot;id&quot;: &quot;tlsInspection&quot;, &quot;group&quot;: &quot;tls&quot;, &quot;state&quot;: &quot;not_checked&quot;,
+       &quot;reason&quot;: &quot;not_applicable&quot;, &quot;detail&quot;: &quot;The instance answered over plain HTTP.&quot;}
+    ]
+  }
+}
+</code></pre>
+<p>Jede Prüfung, die der Scan vorgesehen hat, steht genau einmal darin, in einem
+von vier Zuständen:</p>
+<table>
+<thead>
+<tr>
+<th>Zustand</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>passed</code></td>
+<td>Die Prüfung lief und die Instanz hat sie erfüllt</td>
+</tr>
+<tr>
+<td><code>failed</code></td>
+<td>Die Prüfung lief und die Instanz hat sie nicht erfüllt</td>
+</tr>
+<tr>
+<td><code>not_checked</code></td>
+<td>Der Scanner hat die Prüfung nicht ausgeführt</td>
+</tr>
+<tr>
+<td><code>inconclusive</code></td>
+<td>Der Scanner hat geprüft und konnte nicht entscheiden</td>
+</tr>
+</tbody>
+</table>
+<p><code>passed</code> und <code>failed</code> tragen keinen Grund - eine Messung, die stattgefunden
+hat, braucht keine Entschuldigung. Die beiden anderen tragen immer einen, aus
+einer festen Menge:</p>
+<table>
+<thead>
+<tr>
+<th>Grund</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>not_applicable</code></td>
+<td>Die Prüfung kann auf diese Bereitstellung nicht zutreffen - kein Zertifikat bei einer Instanz über HTTP, keine zweite Adresse zum Vergleich</td>
+</tr>
+<tr>
+<td><code>probe_disabled</code></td>
+<td>Eine Einstellung hat die Prüfung für diesen Scan abgeschaltet</td>
+</tr>
+<tr>
+<td><code>prerequisite_missing</code></td>
+<td>Die Instanz hat nicht veröffentlicht, was die Prüfung liest</td>
+</tr>
+<tr>
+<td><code>timeout</code></td>
+<td>Nichts hat rechtzeitig geantwortet</td>
+</tr>
+<tr>
+<td><code>unreadable</code></td>
+<td>Etwas hat geantwortet und war nicht zu verstehen</td>
+</tr>
+<tr>
+<td><code>no_route</code></td>
+<td>Von dort, wo der Scan lief, gibt es keine Route zu dieser Adressfamilie</td>
+</tr>
+</tbody>
+</table>
+<p>Auf zwei Eigenschaften kannst du dich verlassen:</p>
+<ul>
+<li><strong>Die Gesamtzahl ist das, was dieser Scan vorgesehen hat</strong>, keine Konstante.
+  Die Prüfungen sind dynamisch - welche Pfade geprüft, welche Debug-Ports
+  gewählt und welche Adressen verglichen werden, hängt von der Instanz und den
+  Einstellungen ab -, also gibt es keinen festen Nenner.</li>
+<li><strong>Abdeckung ändert nie eine Note.</strong> Nichts in diesem Block erreicht die
+  Bewertung, die Schweregrade, die Alarmzeile, den Exit-Code oder die
+  Webhook-Nutzlast. Ein ausgenommener Fehlschlag bleibt hier <code>failed</code>; die
+  Annahme steht in <code>extraChecks[].ignored</code>, denn eine Ausnahme ist eine
+  Entscheidung über Alarme und nicht über Belege.</li>
+</ul>
+<p>Ein Dokument, das vor diesem Block entstanden ist, hat schlicht keinen
+Schlüssel <code>coverage</code> - ein Bericht, der nicht sagt, was er abgedeckt hat, und
+nicht ein Scan ohne Lücken. Lies ihn mit <code>coverage.coverage_of(result)</code>, das
+sowohl für einen fehlenden als auch für einen fehlerhaften Block <code>None</code>
+zurückgibt.</p>
 <h2 id="debug-ports">Debug-Ports</h2>
 <p>Debug-Listener liefern unter anderem <code>/healthz</code>, <code>/readyz</code>, <code>/metrics</code>,
 <code>/config</code> und <code>/debug/pprof</code>. Diese Endpunkte können Versionen und Konfigurationen

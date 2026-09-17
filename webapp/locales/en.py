@@ -1562,6 +1562,40 @@ MESSAGES: dict[str, str] = {
     "result.rescan.note": "The next scan uses the same target, waivers and release track so you can compare the results. Please wait for the cooldown, or run the open-source scanner on your own machine without limits:",
     "result.rescan.self_host": "run it yourself",
     "result.excluded.kicker": "Excluded",
+    "result.coverage.kicker": "Coverage",
+    "result.coverage.heading": "What this scan did not measure",
+    "result.coverage.note": (
+        "A grade describes the evidence this scan collected. These checks "
+        "reached no conclusion, so the grade says nothing about them."
+    ),
+    "result.coverage.summary": "{measured} of {total} checks reached a conclusion.",
+    "result.coverage.complete": (
+        "Every check this scan considered reached a conclusion."
+    ),
+    "result.coverage.unavailable": (
+        "This report was written before scans recorded their coverage, so it "
+        "does not say which checks ran. That is not the same as a scan with "
+        "no gaps."
+    ),
+    "coverage.reason.not_applicable": "Does not apply to this instance",
+    "coverage.reason.probe_disabled": "The probe was turned off for this scan",
+    "coverage.reason.prerequisite_missing": (
+        "The instance did not publish what this reads"
+    ),
+    "coverage.reason.timeout": "Nothing answered in time",
+    "coverage.reason.unreadable": "The answer could not be read",
+    "coverage.reason.no_route": "This scanner has no route to that address",
+    "coverage.group.hardening": "Hardening settings",
+    "coverage.group.header": "Security headers",
+    "coverage.group.advisoryHeader": "Advisory headers",
+    "coverage.group.advisoryCheck": "Advisory observations",
+    "coverage.group.extraCheck": "Extra checks",
+    "coverage.group.tls": "Transport security",
+    "coverage.group.dns": "DNS",
+    "coverage.group.addressParity": "Addresses",
+    "coverage.group.capabilities": "Capabilities",
+    "coverage.group.updates": "Updates",
+    "coverage.group.integrations": "Integrations",
     "result.excluded.heading": "Reported, but not counted",
     "result.excluded.waived.heading": "You asked to ignore these",
     "result.excluded.waived.note": (

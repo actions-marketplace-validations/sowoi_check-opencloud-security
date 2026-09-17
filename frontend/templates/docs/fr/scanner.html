@@ -25,6 +25,7 @@
   <a href="#update-check" lang="fr">Update check</a>
   <a href="#vulnerabilities" lang="fr">Vulnerabilities</a>
   <a href="#hardenings" lang="fr">Hardenings</a>
+  <a href="#what-the-scan-covered" lang="fr">What the scan covered</a>
   <a href="#debug-ports" lang="fr">Debug ports</a>
   <a href="#every-resolved-address" lang="fr">Every resolved address</a>
   <a href="#concurrency" lang="fr">Concurrency</a>
@@ -682,6 +683,102 @@ flavour reports what it cannot express in <code>Fragment.elsewhere</code> instea
 <p>All configuration names and values come from the catalogue. Settings that depend on the
 deployment, such as a CORS origin or CSP file path, appear in <code>Fragment.undecided</code>. They
 require an operator’s choice before a usable snippet can be generated.</p>
+<h2 id="what-the-scan-covered">What the scan covered</h2>
+<p>A passed check and a check that never ran leave the same shape in this
+document: nothing. <code>coverage</code> is where the difference is written down. See
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0064-a-scan-records-what-it-did-not-measure.md">ADR 0064</a>.</p>
+<pre><code class="language-json">{
+  &quot;coverage&quot;: {
+    &quot;schema&quot;: 1,
+    &quot;counts&quot;: {&quot;passed&quot;: 49, &quot;failed&quot;: 10, &quot;not_checked&quot;: 12, &quot;inconclusive&quot;: 0, &quot;total&quot;: 71},
+    &quot;checks&quot;: [
+      {&quot;id&quot;: &quot;Content-Security-Policy&quot;, &quot;group&quot;: &quot;header&quot;, &quot;state&quot;: &quot;passed&quot;},
+      {&quot;id&quot;: &quot;directoryListing&quot;, &quot;group&quot;: &quot;extraCheck&quot;, &quot;state&quot;: &quot;failed&quot;},
+      {&quot;id&quot;: &quot;tlsInspection&quot;, &quot;group&quot;: &quot;tls&quot;, &quot;state&quot;: &quot;not_checked&quot;,
+       &quot;reason&quot;: &quot;not_applicable&quot;, &quot;detail&quot;: &quot;The instance answered over plain HTTP.&quot;}
+    ]
+  }
+}
+</code></pre>
+<p>Every check the scan considered appears exactly once, in one of four states:</p>
+<table>
+<thead>
+<tr>
+<th>State</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>passed</code></td>
+<td>The check ran and the instance satisfied it</td>
+</tr>
+<tr>
+<td><code>failed</code></td>
+<td>The check ran and the instance did not satisfy it</td>
+</tr>
+<tr>
+<td><code>not_checked</code></td>
+<td>The scanner did not run the check</td>
+</tr>
+<tr>
+<td><code>inconclusive</code></td>
+<td>The scanner ran the check and could not decide</td>
+</tr>
+</tbody>
+</table>
+<p><code>passed</code> and <code>failed</code> carry no reason - a measurement that ran needs no
+excuse. The other two always carry one, from a closed set:</p>
+<table>
+<thead>
+<tr>
+<th>Reason</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>not_applicable</code></td>
+<td>The check cannot apply to this deployment - no certificate on a plain-HTTP instance, no second address to compare</td>
+</tr>
+<tr>
+<td><code>probe_disabled</code></td>
+<td>A setting turned the probe off for this scan</td>
+</tr>
+<tr>
+<td><code>prerequisite_missing</code></td>
+<td>The instance did not publish what the check reads</td>
+</tr>
+<tr>
+<td><code>timeout</code></td>
+<td>Nothing answered in time</td>
+</tr>
+<tr>
+<td><code>unreadable</code></td>
+<td>Something answered and could not be understood</td>
+</tr>
+<tr>
+<td><code>no_route</code></td>
+<td>There is no route to that address family from where the scan ran</td>
+</tr>
+</tbody>
+</table>
+<p>Two properties are worth relying on:</p>
+<ul>
+<li><strong>The total is what this scan considered</strong>, not a constant. The checks are
+  dynamic - which paths are probed, which debug ports are dialled, which
+  addresses are compared depend on the instance and the settings - so there is
+  no fixed denominator.</li>
+<li><strong>Coverage never changes a grade.</strong> Nothing in the block reaches the rating,
+  the severities, the alert line, the exit code or the webhook payload. A
+  waived failure stays <code>failed</code> here; the acceptance is in
+  <code>extraChecks[].ignored</code>, because a waiver is a decision about alerting and
+  not about evidence.</li>
+</ul>
+<p>A document written before this block existed simply has no <code>coverage</code> key,
+which is a report that does not say what it covered - not a scan without
+gaps. Read it with <code>coverage.coverage_of(result)</code>, which returns <code>None</code> for
+both a missing and a malformed block.</p>
 <h2 id="debug-ports">Debug ports</h2>
 <p>Every OpenCloud service runs a debug listener serving <code>/healthz</code>, <code>/readyz</code>,
 <code>/metrics</code>, <code>/config</code> and <code>/debug/pprof</code>. <code>/metrics</code> exposes the exact version

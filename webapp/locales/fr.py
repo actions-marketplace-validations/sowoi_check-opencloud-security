@@ -1547,6 +1547,45 @@ MESSAGES: dict[str, str] = {
     "result.rescan.note": "La prochaine analyse conserve la cible, les exclusions et le canal de versions pour permettre la comparaison. Veuillez attendre la fin du délai, ou exécuter le scanner open source sans limite sur votre machine :",
     "result.rescan.self_host": "l'exécuter vous-même",
     "result.excluded.kicker": "Exclu",
+    "result.coverage.kicker": "Couverture",
+    "result.coverage.heading": "Ce que cette analyse n'a pas mesuré",
+    "result.coverage.note": (
+        "Une note décrit les éléments recueillis par cette analyse. Ces "
+        "vérifications n'ont abouti à aucune conclusion : la note ne dit donc "
+        "rien à leur sujet."
+    ),
+    "result.coverage.summary": (
+        "{measured} vérifications sur {total} ont abouti à une conclusion."
+    ),
+    "result.coverage.complete": (
+        "Toutes les vérifications prévues par cette analyse ont abouti."
+    ),
+    "result.coverage.unavailable": (
+        "Ce rapport a été écrit avant que les analyses n'enregistrent leur "
+        "couverture ; il ne dit donc pas quelles vérifications ont eu lieu. "
+        "Ce n'est pas la même chose qu'une analyse sans lacune."
+    ),
+    "coverage.reason.not_applicable": "Ne s'applique pas à cette instance",
+    "coverage.reason.probe_disabled": (
+        "La vérification était désactivée pour cette analyse"
+    ),
+    "coverage.reason.prerequisite_missing": (
+        "L'instance n'a pas publié ce que cette vérification lit"
+    ),
+    "coverage.reason.timeout": "Rien n'a répondu à temps",
+    "coverage.reason.unreadable": "La réponse n'a pas pu être lue",
+    "coverage.reason.no_route": "Ce scanner n'a aucune route vers cette adresse",
+    "coverage.group.hardening": "Paramètres de durcissement",
+    "coverage.group.header": "En-têtes de sécurité",
+    "coverage.group.advisoryHeader": "En-têtes recommandés",
+    "coverage.group.advisoryCheck": "Observations recommandées",
+    "coverage.group.extraCheck": "Vérifications supplémentaires",
+    "coverage.group.tls": "Sécurité du transport",
+    "coverage.group.dns": "DNS",
+    "coverage.group.addressParity": "Adresses",
+    "coverage.group.capabilities": "Fonctionnalités",
+    "coverage.group.updates": "Mises à jour",
+    "coverage.group.integrations": "Intégrations",
     "result.excluded.heading": "Signalé, mais non comptabilisé",
     "result.excluded.waived.heading": "Contrôles ignorés à votre demande",
     "result.excluded.waived.note": (

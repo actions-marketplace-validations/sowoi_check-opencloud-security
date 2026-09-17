@@ -28,6 +28,7 @@ from opencloud_local_scan import (
     describe_hardening,
     failed_extra_checks,
 )
+from opencloud_local_scan.coverage import coverage_of, gaps
 from opencloud_local_scan.hardening import catalogue_id, is_actionable
 from opencloud_local_scan.remediation import SEVERITY_RATING_CAP
 from opencloud_local_scan.versions import RELEASE_TRACK_CHOICES, TRACK_AUTO
@@ -550,12 +551,67 @@ def summarise(
         "identityProvider": result.get("identityProvider") or {},
         "reverseProxy": result.get("reverseProxy") or {},
         "integrations": result.get("integrations") or {},
+        "coverage": _coverage(result, translate),
         "counts": {
             "critical": sum(1 for item in issues if item["tag"] == "critical"),
             "warning": sum(1 for item in issues if item["tag"] == "warning"),
             "info": sum(1 for item in issues if item["tag"] == "info"),
             "vulnerabilities": len(result.get("vulnerabilities") or []),
         },
+    }
+
+
+def _coverage(
+    result: Mapping[str, Any], translate: Translator | None = None
+) -> dict[str, Any]:
+    """
+    What the scan could not look at, grouped for a reader.
+
+    The scanner decided every state and reason; nothing is decided here. Two
+    things are added: the reason token becomes a sentence in the reader's
+    language, and a report written before the block existed is reported as
+    "not stated" rather than as a scan with no gaps at all.
+    """
+    translate = translate or Translator()
+    coverage = coverage_of(result)
+    if coverage is None:
+        return {"available": False, "counts": {}, "gaps": [], "groups": []}
+
+    listed = [
+        {
+            "id": entry.get("id"),
+            "group": entry.get("group"),
+            "state": entry.get("state"),
+            "reason": entry.get("reason"),
+            "detail": entry.get("detail") or "",
+            "title": describe_hardening(str(entry.get("id"))).title
+            or str(entry.get("id")),
+            "reasonLabel": translate(f"coverage.reason.{entry.get('reason')}"),
+            "groupLabel": translate(f"coverage.group.{entry.get('group')}"),
+        }
+        for entry in gaps(result)
+    ]
+    listed.sort(key=lambda item: (str(item["groupLabel"]), str(item["id"])))
+
+    groups: list[dict[str, Any]] = []
+    for entry in listed:
+        if not groups or groups[-1]["group"] != entry["group"]:
+            groups.append(
+                {
+                    "group": entry["group"],
+                    "label": entry["groupLabel"],
+                    "checks": [],
+                }
+            )
+        groups[-1]["checks"].append(entry)
+
+    counts = dict(coverage.get("counts") or {})
+    return {
+        "available": True,
+        "counts": counts,
+        "measured": int(counts.get("passed", 0)) + int(counts.get("failed", 0)),
+        "gaps": listed,
+        "groups": groups,
     }
 
 

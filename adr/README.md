@@ -70,6 +70,7 @@ project. Read the accepted records that affect an area before changing it.
 | [0061](0061-the-frontend-is-tested-in-real-browsers-that-cannot-leave-loopback.md) | The frontend is tested in real browsers that cannot leave loopback | Proposed |
 | [0062](0062-public-guides-have-reviewed-french-sources.md) | Public guides have French source pages | Accepted; its Spanish English-fallback statement superseded by ADR 0063 |
 | [0063](0063-public-guides-have-spanish-sources.md) | Public guides have Spanish sources | Accepted |
+| [0064](0064-a-scan-records-what-it-did-not-measure.md) | A scan records what it did not measure | Accepted |
 
 ## Writing a new record
 

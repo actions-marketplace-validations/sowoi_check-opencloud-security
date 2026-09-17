@@ -616,6 +616,66 @@ que dependen del despliegue, como un origen CORS o la ruta de un archivo CSP,
 aparecen en `Fragment.undecided`. Requieren una decisión del operador antes de
 poder generar un fragmento utilizable.
 
+## Lo que cubrió el análisis {#what-the-scan-covered}
+
+Una comprobación superada y una que nunca se ejecutó dejan la misma huella en
+este documento: ninguna. En `coverage` queda escrita la diferencia. Véase
+[ADR 0064](../../adr/0064-a-scan-records-what-it-did-not-measure.md).
+
+```json
+{
+  "coverage": {
+    "schema": 1,
+    "counts": {"passed": 49, "failed": 10, "not_checked": 12, "inconclusive": 0, "total": 71},
+    "checks": [
+      {"id": "Content-Security-Policy", "group": "header", "state": "passed"},
+      {"id": "directoryListing", "group": "extraCheck", "state": "failed"},
+      {"id": "tlsInspection", "group": "tls", "state": "not_checked",
+       "reason": "not_applicable", "detail": "The instance answered over plain HTTP."}
+    ]
+  }
+}
+```
+
+Cada comprobación que el análisis tuvo en cuenta aparece exactamente una vez,
+en uno de cuatro estados:
+
+| Estado | Significado |
+|:--|:--|
+| `passed` | La comprobación se ejecutó y la instancia la satisfizo |
+| `failed` | La comprobación se ejecutó y la instancia no la satisfizo |
+| `not_checked` | El escáner no ejecutó la comprobación |
+| `inconclusive` | El escáner la ejecutó y no pudo decidir |
+
+`passed` y `failed` no llevan motivo: una medición que se hizo no necesita
+excusa. Las otras dos llevan siempre uno, de un conjunto cerrado:
+
+| Motivo | Significado |
+|:--|:--|
+| `not_applicable` | La comprobación no puede aplicarse a este despliegue: no hay certificado en una instancia por HTTP simple, ni una segunda dirección que comparar |
+| `probe_disabled` | Un ajuste desactivó la comprobación en este análisis |
+| `prerequisite_missing` | La instancia no publicó lo que la comprobación lee |
+| `timeout` | Nada respondió a tiempo |
+| `unreadable` | Algo respondió y no se pudo entender |
+| `no_route` | No hay ruta hasta esa familia de direcciones desde donde se ejecutó el análisis |
+
+Hay dos propiedades en las que conviene apoyarse:
+
+- **El total es lo que tuvo en cuenta este análisis**, no una constante. Las
+  comprobaciones son dinámicas - qué rutas se sondean, qué puertos de
+  depuración se marcan y qué direcciones se comparan dependen de la instancia
+  y de los ajustes -, así que no hay un denominador fijo.
+- **La cobertura nunca cambia una nota.** Nada de este bloque llega a la
+  calificación, las gravedades, la línea de alerta, el código de salida ni la
+  carga del webhook. Un fallo eximido sigue siendo `failed` aquí; la
+  aceptación está en `extraChecks[].ignored`, porque una exención es una
+  decisión sobre las alertas y no sobre las pruebas.
+
+Un documento escrito antes de que existiera este bloque simplemente no tiene
+la clave `coverage`, que es un informe que no dice lo que cubrió y no un
+análisis sin lagunas. Léalo con `coverage.coverage_of(result)`, que devuelve
+`None` tanto para un bloque ausente como para uno mal formado.
+
 ## Puertos de depuración {#debug-ports}
 
 Cada servicio de OpenCloud ejecuta un servicio de depuración que sirve

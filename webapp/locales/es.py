@@ -1467,6 +1467,46 @@ MESSAGES: dict[str, str] = {
     "result.rescan.note": "El próximo análisis utiliza el mismo destino, las mismas exclusiones y el mismo canal para poder comparar los resultados. Espere a que termine el intervalo o ejecute el escáner de código abierto sin límites en su equipo:",
     "result.rescan.self_host": "ejecútelo usted mismo",
     "result.excluded.kicker": "Excluido",
+    "result.coverage.kicker": "Cobertura",
+    "result.coverage.heading": "Lo que este análisis no midió",
+    "result.coverage.note": (
+        "Una nota describe las pruebas que reunió este análisis. Estas "
+        "comprobaciones no llegaron a ninguna conclusión, así que la nota no "
+        "dice nada sobre ellas."
+    ),
+    "result.coverage.summary": (
+        "{measured} de {total} comprobaciones llegaron a una conclusión."
+    ),
+    "result.coverage.complete": (
+        "Todas las comprobaciones previstas en este análisis llegaron a una "
+        "conclusión."
+    ),
+    "result.coverage.unavailable": (
+        "Este informe se escribió antes de que los análisis registraran su "
+        "cobertura, así que no dice qué comprobaciones se hicieron. No es lo "
+        "mismo que un análisis sin lagunas."
+    ),
+    "coverage.reason.not_applicable": "No se aplica a esta instancia",
+    "coverage.reason.probe_disabled": (
+        "La comprobación estaba desactivada en este análisis"
+    ),
+    "coverage.reason.prerequisite_missing": (
+        "La instancia no publicó lo que esta comprobación lee"
+    ),
+    "coverage.reason.timeout": "Nada respondió a tiempo",
+    "coverage.reason.unreadable": "No se pudo leer la respuesta",
+    "coverage.reason.no_route": "Este escáner no tiene ruta hasta esa dirección",
+    "coverage.group.hardening": "Ajustes de refuerzo",
+    "coverage.group.header": "Cabeceras de seguridad",
+    "coverage.group.advisoryHeader": "Cabeceras recomendadas",
+    "coverage.group.advisoryCheck": "Observaciones recomendadas",
+    "coverage.group.extraCheck": "Comprobaciones adicionales",
+    "coverage.group.tls": "Seguridad del transporte",
+    "coverage.group.dns": "DNS",
+    "coverage.group.addressParity": "Direcciones",
+    "coverage.group.capabilities": "Funcionalidades",
+    "coverage.group.updates": "Actualizaciones",
+    "coverage.group.integrations": "Integraciones",
     "result.excluded.heading": "Reportado, pero no contabilizado",
     "result.excluded.waived.heading": "Pidió ignorar estos",
     "result.excluded.waived.note": "Siguieron fallando. Simplemente no frenaron la calificación.",

@@ -30,6 +30,24 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   polite "vous", Spanish polite "usted" - the agreed terminology, what happens
   to example hostnames and placeholders, and the review workflow.
 
+- **A scan now records what it did not measure.** The result document gains an
+  additive `coverage` block: every check the scan considered, in one of four
+  states - `passed`, `failed`, `not_checked` or `inconclusive` - and, whenever
+  there is no measurement, a machine-readable reason from a closed set
+  (`not_applicable`, `probe_disabled`, `prerequisite_missing`, `timeout`,
+  `unreadable`, `no_route`) with a sentence of detail. A passed check and a
+  check that never ran no longer look identical. The reason is what separates
+  a property of the deployment - no certificate to inspect on a plain-HTTP
+  instance - from a probe somebody turned off. The total is what that scan
+  considered rather than a fixed denominator, because the checks are dynamic.
+  Coverage explains a grade and never changes one: nothing in the block reaches
+  the rating, the severities, the alert line, the exit code or the webhook
+  payload, and a waived failure stays a failed measurement with its acceptance
+  recorded separately. A report written before this existed has no block, which
+  every reader treats as "does not say" rather than "nothing was missed". The
+  result page shows the gaps beside the grade in all four languages. See
+  [ADR 0064](adr/0064-a-scan-records-what-it-did-not-measure.md).
+
 ### Fixed
 
 - **101 dead links in the French guides.** A guide under `docs/<language>/`

@@ -411,6 +411,9 @@ feature. An older release therefore does not accumulate phantom findings, and
 `capabilitiesAvailable` in the result document says whether the second half of
 the table could be evaluated at all.
 
+Which of them was omitted, and why, is recorded in `coverage` - see
+[What the scan covered](#what-the-scan-covered).
+
 The additional probes also read the public web configuration: wildcard embed
 message origins fail `webEmbedMessageOriginRestricted`, delegated iframe
 authentication without an explicit origin fails
@@ -578,6 +581,65 @@ flavour reports what it cannot express in `Fragment.elsewhere` instead, and
 All configuration names and values come from the catalogue. Settings that depend on the
 deployment, such as a CORS origin or CSP file path, appear in `Fragment.undecided`. They
 require an operator’s choice before a usable snippet can be generated.
+
+## What the scan covered
+
+A passed check and a check that never ran leave the same shape in this
+document: nothing. `coverage` is where the difference is written down. See
+[ADR 0064](../adr/0064-a-scan-records-what-it-did-not-measure.md).
+
+```json
+{
+  "coverage": {
+    "schema": 1,
+    "counts": {"passed": 49, "failed": 10, "not_checked": 12, "inconclusive": 0, "total": 71},
+    "checks": [
+      {"id": "Content-Security-Policy", "group": "header", "state": "passed"},
+      {"id": "directoryListing", "group": "extraCheck", "state": "failed"},
+      {"id": "tlsInspection", "group": "tls", "state": "not_checked",
+       "reason": "not_applicable", "detail": "The instance answered over plain HTTP."}
+    ]
+  }
+}
+```
+
+Every check the scan considered appears exactly once, in one of four states:
+
+| State | Meaning |
+|:--|:--|
+| `passed` | The check ran and the instance satisfied it |
+| `failed` | The check ran and the instance did not satisfy it |
+| `not_checked` | The scanner did not run the check |
+| `inconclusive` | The scanner ran the check and could not decide |
+
+`passed` and `failed` carry no reason - a measurement that ran needs no
+excuse. The other two always carry one, from a closed set:
+
+| Reason | Meaning |
+|:--|:--|
+| `not_applicable` | The check cannot apply to this deployment - no certificate on a plain-HTTP instance, no second address to compare |
+| `probe_disabled` | A setting turned the probe off for this scan |
+| `prerequisite_missing` | The instance did not publish what the check reads |
+| `timeout` | Nothing answered in time |
+| `unreadable` | Something answered and could not be understood |
+| `no_route` | There is no route to that address family from where the scan ran |
+
+Two properties are worth relying on:
+
+- **The total is what this scan considered**, not a constant. The checks are
+  dynamic - which paths are probed, which debug ports are dialled, which
+  addresses are compared depend on the instance and the settings - so there is
+  no fixed denominator.
+- **Coverage never changes a grade.** Nothing in the block reaches the rating,
+  the severities, the alert line, the exit code or the webhook payload. A
+  waived failure stays `failed` here; the acceptance is in
+  `extraChecks[].ignored`, because a waiver is a decision about alerting and
+  not about evidence.
+
+A document written before this block existed simply has no `coverage` key,
+which is a report that does not say what it covered - not a scan without
+gaps. Read it with `coverage.coverage_of(result)`, which returns `None` for
+both a missing and a malformed block.
 
 ## Debug ports
 

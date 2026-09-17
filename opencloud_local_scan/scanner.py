@@ -61,6 +61,15 @@ from urllib3 import PoolManager
 from urllib3.exceptions import ConnectTimeoutError, NewConnectionError
 
 from .caa import check_caa_record
+from .coverage import (
+    NO_ROUTE,
+    NOT_APPLICABLE,
+    PREREQUISITE_MISSING,
+    PROBE_DISABLED,
+    TIMEOUT,
+    UNREADABLE,
+    CoverageRecorder,
+)
 from .dnssec import check_dnssec
 from .releases import ReleaseSettings, UpdateInfo, fetch_update_info
 from .remediation import SEVERITY_RATING_CAP as _SEVERITY_RATING_CAP
@@ -1516,6 +1525,11 @@ def _hsts_preload_eligible(hsts: str | None) -> bool:
         and max_age
         and max_age >= HSTS_PRELOAD_MIN_MAX_AGE
     )
+
+
+#: The advisory observations, named here so a scan with the extra checks
+#: turned off can still say which checks it did not make.
+ADVISORY_CHECK_NAMES: tuple[str, ...] = ("securityTxtPublished", "hstsPreloadEligible")
 
 
 def _check_advisory_checks(
@@ -2977,6 +2991,97 @@ def derive_hardenings(
     return dict(sorted(hardenings.items()))
 
 
+#: Every hardening :func:`derive_hardenings` can produce, and what the
+#: instance has to publish before it can be rated. The two are kept beside
+#: one another on purpose: a hardening added there without an entry here is
+#: one the coverage block cannot explain, and
+#: ``tests/test_coverage.py`` fails on exactly that.
+HARDENING_PREREQUISITES: dict[str, str] = {
+    "hstsLongMaxAge": "a Strict-Transport-Security header",
+    "hstsPreload": "a Strict-Transport-Security header",
+    "cspWithoutUnsafeInline": "a readable Content-Security-Policy header",
+    "basicAuthDisabled": "an authentication challenge",
+    "publicLinkPasswordEnforced": "a public-link password policy in its capabilities",
+    "publicLinkExpirationEnforced": "a public-link expiry setting in its capabilities",
+    "userEnumerationRestricted": "a user-enumeration setting in its capabilities",
+    "passwordPolicyEnforced": "a password policy in its capabilities",
+    "passwordPolicyComplexity": "password complexity rules in its capabilities",
+    "oidcPkceSupported": "the code challenge methods it accepts",
+    "oidcImplicitFlowDisabled": "the response types it offers",
+    "oidcSigningAlgorithmStrong": "the token signing algorithms it accepts",
+    "oidcEndpointsUseHttps": "its endpoint addresses",
+}
+
+#: The hardenings read out of the identity provider's discovery document.
+OPENID_HARDENINGS: frozenset[str] = frozenset(
+    {
+        "oidcPkceSupported",
+        "oidcImplicitFlowDisabled",
+        "oidcSigningAlgorithmStrong",
+        "oidcEndpointsUseHttps",
+    }
+)
+
+
+def record_hardening_coverage(
+    recorder: CoverageRecorder,
+    hardenings: Mapping[str, bool],
+    root_response: requests.Response | None,
+    identity_provider: Mapping[str, Any] | None,
+) -> None:
+    """
+    Say, for every hardening, whether it was rated and why it was not.
+
+    :func:`derive_hardenings` leaves a measure out when the instance did not
+    publish what it would have rated - which is right, and is what ADR 0013
+    asks for, and is indistinguishable from a pass to anybody reading the
+    block. This is where that difference gets written down.
+    """
+    detected = bool(
+        isinstance(identity_provider, Mapping) and identity_provider.get("detected")
+    )
+    external = bool(
+        isinstance(identity_provider, Mapping) and identity_provider.get("external")
+    )
+    for name, prerequisite in HARDENING_PREREQUISITES.items():
+        if name in hardenings:
+            recorder.measured(name, "hardening", hardenings[name])
+            continue
+        if name in OPENID_HARDENINGS and not detected:
+            recorder.skipped(
+                name,
+                "hardening",
+                NOT_APPLICABLE,
+                "No identity provider was detected in front of this instance.",
+            )
+            continue
+        if name == "oidcImplicitFlowDisabled" and detected and not external:
+            # The built-in provider offers the implicit response types and
+            # cannot be reconfigured, so this is not a gap in the scan - it
+            # is a check with nothing to say about this deployment.
+            recorder.skipped(
+                name,
+                "hardening",
+                NOT_APPLICABLE,
+                "The built-in identity provider cannot be reconfigured.",
+            )
+            continue
+        if root_response is None:
+            recorder.inconclusive(
+                name,
+                "hardening",
+                UNREADABLE,
+                "The instance did not return a page to read this from.",
+            )
+            continue
+        recorder.skipped(
+            name,
+            "hardening",
+            PREREQUISITE_MISSING,
+            f"The instance did not publish {prerequisite}.",
+        )
+
+
 @dataclass(frozen=True)
 class RatingCap:
     """One failed extra check that held the rating down."""
@@ -3410,6 +3515,50 @@ def scan(
             _check_advisory_checks(probe, root_response) if settings.extra_checks else {}
         )
 
+        # Coverage is recorded here, beside each decision, rather than derived
+        # afterwards from which keys are absent: absence is what it exists to
+        # explain, so reading it back would answer the question with itself.
+        coverage = CoverageRecorder()
+        record_hardening_coverage(coverage, hardenings, root_response, identity_provider)
+        for group, measured in (
+            ("header", headers),
+            ("advisoryHeader", advisory_headers),
+        ):
+            for name, present in measured.items():
+                if root_response is None:
+                    # `_check_headers` reports False for a page it never read,
+                    # because the rating has always counted it that way and a
+                    # scan must grade identical evidence identically. Coverage
+                    # is where the difference gets said out loud.
+                    coverage.inconclusive(
+                        name,
+                        group,
+                        UNREADABLE,
+                        "The instance did not return a page to read headers from.",
+                    )
+                else:
+                    coverage.measured(name, group, present)
+        if settings.extra_checks:
+            for name, satisfied in advisory_checks.items():
+                coverage.measured(name, "advisoryCheck", satisfied)
+        else:
+            for name in ADVISORY_CHECK_NAMES:
+                coverage.skipped(
+                    name,
+                    "advisoryCheck",
+                    PROBE_DISABLED,
+                    "The extra checks are turned off for this scan.",
+                )
+        if capabilities is None:
+            coverage.skipped(
+                "capabilities",
+                "capabilities",
+                PREREQUISITE_MISSING,
+                "The instance did not publish a capabilities document.",
+            )
+        else:
+            coverage.measured("capabilities", "capabilities", True)
+
         schedule = settings.release_schedule
         if schedule is None:
             schedule = load_release_schedule()
@@ -3485,13 +3634,146 @@ def scan(
         # alongside them. Two UDP queries, sequential rather than pooled: a
         # pool started here would nest inside the one the findings open later.
         dns_findings: list[Finding] = []
+        # Both return None for an unknown rather than for a pass - a bare IP,
+        # no resolver, or a query nothing answered - so whether an answer came
+        # back at all is what coverage has to record.
+        caa_answered = dnssec_answered = False
         if settings.extra_checks and probe.base_url.startswith("https://"):
-            for dns_check in (
-                check_caa_record(hostname, settings.timeout),
-                check_dnssec(hostname, settings.timeout),
-            ):
+            caa_check = check_caa_record(hostname, settings.timeout)
+            dnssec_check = check_dnssec(hostname, settings.timeout)
+            caa_answered = caa_check is not None
+            dnssec_answered = dnssec_check is not None
+            for dns_check in (caa_check, dnssec_check):
                 if dns_check is not None:
                     dns_findings.append(Finding(*dns_check))
+        https_used = probe.base_url.startswith("https://")
+        if not settings.extra_checks:
+            for check, group in (
+                ("tlsInspection", "tls"),
+                ("tlsByAddress", "addressParity"),
+                ("addressObservations", "addressParity"),
+                ("caaRecord", "dns"),
+                ("dnssec", "dns"),
+                ("office", "integrations"),
+                ("calendar", "integrations"),
+            ):
+                coverage.skipped(
+                    check,
+                    group,
+                    PROBE_DISABLED,
+                    "The extra checks are turned off for this scan.",
+                )
+        else:
+            for check in ("office", "calendar"):
+                coverage.measured(
+                    check, "integrations", bool(integrations[check].get("detected"))
+                )
+            if not https_used:
+                # There is no handshake to inspect and no certificate to ask
+                # who may issue one. That is a property of the deployment,
+                # not a gap in the scan.
+                for check, group in (
+                    ("tlsInspection", "tls"),
+                    ("caaRecord", "dns"),
+                    ("dnssec", "dns"),
+                ):
+                    coverage.skipped(
+                        check,
+                        group,
+                        NOT_APPLICABLE,
+                        "The instance answered over plain HTTP.",
+                    )
+            else:
+                if tls_inspection is None:
+                    coverage.inconclusive(
+                        "tlsInspection",
+                        "tls",
+                        UNREADABLE,
+                        "The TLS handshake produced nothing to inspect.",
+                    )
+                else:
+                    coverage.measured("tlsInspection", "tls", True)
+                for check, produced in (
+                    ("caaRecord", caa_answered),
+                    ("dnssec", dnssec_answered),
+                ):
+                    if produced:
+                        coverage.measured(check, "dns", True)
+                    else:
+                        coverage.inconclusive(
+                            check,
+                            "dns",
+                            TIMEOUT,
+                            "The DNS query returned no answer in time.",
+                        )
+            for check, ran, observed in (
+                ("tlsByAddress", https_used, bool(address_tls)),
+                ("addressObservations", True, bool(address_observations)),
+            ):
+                if not ran:
+                    coverage.skipped(
+                        check,
+                        "addressParity",
+                        NOT_APPLICABLE,
+                        "The instance answered over plain HTTP.",
+                    )
+                elif observed:
+                    coverage.measured(check, "addressParity", True)
+                elif not settings.check_all_addresses:
+                    coverage.skipped(
+                        check,
+                        "addressParity",
+                        PROBE_DISABLED,
+                        "Address comparison was not asked for.",
+                    )
+                elif len(_addresses_to_compare(settings, addresses)) < 2:
+                    coverage.skipped(
+                        check,
+                        "addressParity",
+                        NOT_APPLICABLE,
+                        "The name resolved to one address, which cannot "
+                        "disagree with itself.",
+                    )
+                else:
+                    coverage.inconclusive(
+                        check,
+                        "addressParity",
+                        UNREADABLE,
+                        "No address answered well enough to compare.",
+                    )
+        if not settings.ipv6_enabled:
+            coverage.skipped(
+                "ipv6Reachability",
+                "addressParity",
+                NO_ROUTE,
+                "This scanner has no IPv6 route, so IPv6 addresses were "
+                "not dialled.",
+            )
+        elif not addresses.get("ipv6"):
+            # The name publishes no IPv6 address. Nothing was missed, and
+            # calling that a failed reachability check would invent one.
+            coverage.skipped(
+                "ipv6Reachability",
+                "addressParity",
+                NOT_APPLICABLE,
+                "The name publishes no IPv6 address.",
+            )
+        else:
+            coverage.measured("ipv6Reachability", "addressParity", True)
+        if update_info.source == "disabled":
+            coverage.skipped(
+                "updateCheck",
+                "updates",
+                PROBE_DISABLED,
+                "The update check is turned off for this scan.",
+            )
+        elif update_info.error:
+            coverage.inconclusive(
+                "updateCheck", "updates", UNREADABLE, str(update_info.error)
+            )
+        else:
+            coverage.measured("updateCheck", "updates", update_info.available is not True)
+
         findings = (
             _collect_extra_findings(
                 probe,
@@ -3527,6 +3809,22 @@ def scan(
         # added above - can be waived, and so that the rating below is computed
         # from what the operator actually wants to be alerted about.
         ignored_names = _apply_waivers(settings, findings, hardenings, headers, https)
+
+        # After the waivers, and unchanged by them. A waived check is a check
+        # that failed and that somebody accepted; recording it as anything
+        # else would let a waiver quietly improve the coverage figure, which
+        # is the one number that is supposed to describe the evidence rather
+        # than the policy. The acceptance is in `extraChecks[].ignored`.
+        if settings.extra_checks:
+            for finding in findings:
+                coverage.measured(finding.id, "extraCheck", finding.passed)
+        else:
+            coverage.skipped(
+                "extraChecks",
+                "extraCheck",
+                PROBE_DISABLED,
+                "The extra checks are turned off for this scan.",
+            )
 
         explanation = _compute_rating(
             eol=eol,
@@ -3582,6 +3880,10 @@ def scan(
             "extraChecks": [finding.as_dict() for finding in findings],
             "advisorySources": database.sources,
             "capabilitiesAvailable": capabilities is not None,
+            # Additive, and read through `coverage.coverage_of`: a report
+            # written before this block existed is a report that does not
+            # say what it covered, not one that covered everything.
+            "coverage": coverage.as_dict(),
         }
         # Derived from the document above and stored nowhere else: the plan is
         # the rating's own arithmetic replayed with one finding removed at a time.
