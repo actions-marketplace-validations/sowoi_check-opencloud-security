@@ -14,6 +14,11 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ### Added
 
+- **The comparison journeys are covered in a real browser.** The Playwright
+  suite now downloads a scan report and uploads it as the baseline for a later
+  scan, follows the same-tab comparison offer through to its result, and
+  verifies that the capability-bearing scan history does not cross into
+  another tab.
 - **Translation quality checks.** `scripts/check_translations.py` compares the
   four frontend catalogues and the translated guides against their English
   source and separates what a machine can decide from what it cannot.

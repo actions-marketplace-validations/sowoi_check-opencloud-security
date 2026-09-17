@@ -16,6 +16,7 @@ import csv
 import io
 import json
 import uuid as uuid_module
+from pathlib import Path
 
 import pytest
 
@@ -189,6 +190,105 @@ def test_a_waived_check_stops_counting_and_is_listed_as_waived(page, site, watch
     listed = set(page.locator("[data-findings-list] .finding-head code").all_inner_texts())
     assert listed.isdisjoint(waivable)
     watch.assert_clean()
+
+
+def _save(page, selector: str, directory: Path) -> Path:
+    """Click a download link and keep the file, as a reader would."""
+    with page.expect_download() as info:
+        page.click(selector)
+    download = info.value
+    path = directory / download.suggested_filename
+    download.save_as(path)
+    return path
+
+
+def test_a_downloaded_report_uploads_back_and_compares_against_a_later_scan(
+    page, site, watch, tmp_path
+):
+    """
+    The journey ADR 0057 exists for: the earlier scan is gone, the file is not.
+
+    A reader scans an instance, keeps the download, scans again later and asks
+    what changed - with the file in place of a uuid nobody kept. The round trip
+    is the test: the export this application writes has to be a file its own
+    parser accepts, in a real browser, through a real multipart form.
+    """
+    earlier = submit_scan(page, site, site.targets["weak"])
+    report = _save(page, "a[href$='/export/json']", tmp_path)
+    later = submit_scan(page, site, site.targets["weak"])
+    assert earlier != later
+
+    page.goto(site.base + "/compare")
+    page.set_input_files("#compare-report", report)
+    page.fill("#compare-upload-current", later)
+    page.click("form.compare-form[method=post] button[type=submit]")
+
+    page.wait_for_url("**/compare/**")
+    # Nothing about the instance changed between the two scans, and the
+    # arithmetic is the plugin's own - so the answer is "unchanged", not an
+    # invented regression.
+    assert page.get_attribute(".compare-verdict", "data-verdict") == "unchanged"
+    # The page says where the earlier side came from, and offers no result
+    # page for it: that file was read and discarded.
+    assert page.locator(".compare-source").is_visible()
+    assert page.locator(f"a[href='/scan/{earlier}']").count() == 0
+    assert page.locator(f"a[href='/scan/{later}']").count() >= 1
+    assert shown_but_hidden(page) == []
+    watch.assert_clean()
+
+
+def test_a_second_scan_in_the_same_tab_offers_the_comparison_with_the_first(
+    page, site, watch
+):
+    """
+    Scan, fix, scan again - and the tab remembers the uuid nobody wrote down.
+
+    `compare-offer.js` keeps that history in sessionStorage alone, so the offer
+    has to appear on the second report of an instance and not on the first,
+    and the link it builds has to land on a comparison that actually works.
+    """
+    first = submit_scan(page, site, site.targets["hardened"])
+    offer = page.locator("[data-compare-offer]")
+    # Nothing to offer yet: this tab has seen one scan of this instance.
+    assert offer.is_hidden()
+
+    second = submit_scan(page, site, site.targets["hardened"])
+    offer.wait_for(state="visible")
+    link = page.locator("[data-compare-offer-link]")
+    assert f"baseline={first}" in (link.get_attribute("href") or "")
+    assert f"current={second}" in (link.get_attribute("href") or "")
+
+    link.click()
+    page.wait_for_url("**/compare?**")
+    assert page.input_value("#compare-baseline") == first
+    assert page.input_value("#compare-current") == second
+    assert page.get_attribute(".compare-verdict", "data-verdict") == "unchanged"
+    watch.assert_clean()
+
+
+def test_the_offer_does_not_follow_a_reader_into_another_tab(browser, site):
+    """
+    The history is the tab's, because each uuid in it is a credential.
+
+    sessionStorage rather than localStorage is the whole of that promise, so a
+    second tab that opens the same report must be offered nothing.
+    """
+    watch = PageWatch()
+    first_tab = new_page(browser, watch)
+    try:
+        submit_scan(first_tab, site, site.targets["eol"])
+        second = submit_scan(first_tab, site, site.targets["eol"])
+        first_tab.locator("[data-compare-offer]").wait_for(state="visible")
+
+        other_tab = first_tab.context.new_page()
+        other_tab.set_default_timeout(15_000)
+        watch.attach(other_tab)
+        other_tab.goto(f"{site.base}/scan/{second}")
+        other_tab.wait_for_load_state("load")
+        assert other_tab.locator("[data-compare-offer]").is_hidden()
+        watch.assert_clean()
+    finally:
+        first_tab.context.close()
 
 
 def test_a_scan_works_without_javascript(browser, site):
