@@ -486,8 +486,8 @@ Una clave que nadie ha nombrado ahí no llega a nada posterior.
 | Formato | se decide examinando los bytes, nunca el nombre del archivo, que nada lee y nunca se refleja en una página |
 | Filas CSV | 2000 |
 | Anidamiento JSON | 20 niveles |
-| Entradas por lista, caracteres por cadena | 500 y 300 |
-| Identificadores de hallazgos | se descartan salvo que se escriban como los escribe este escáner, y se muestra el número de líneas descartadas |
+| Entradas por bloque, caracteres por cadena | 500 y 300; un bloque con más entradas que esas se rechaza en lugar de leerse en parte |
+| Identificadores de hallazgos | se descartan salvo que se escriban como los escribe este escáner, y se muestra el número de todo lo que no se ha podido leer |
 | Límite de frecuencia | un cupo propio, con los mismos números que el límite por cliente: procesar cuesta trabajo a este servicio y no le cuesta nada a la instancia de nadie |
 | POST entre sitios | se rechaza antes del limitador y antes del procesamiento |
 
@@ -809,10 +809,13 @@ enrutarse y conservarse por separado:
 
 Tres eventos: `scan_requested` para un envío aceptado, `rate_limited` para un
 límite por cliente, un tiempo de espera por destino, un límite diario
-(`rate_limit_daily`) o un bloqueo por sondeo (`rate_limit_probe`) que
-realmente se ha activado, y `submission_rejected` para uno que nunca llegó a
-ser un análisis: `unsupported_fields`, `target_rejected`,
-`target_not_approved`.
+(`rate_limit_daily`), un bloqueo por sondeo (`rate_limit_probe`) o una subida
+de informes (`rate_limit_upload`) que realmente se ha activado, y
+`submission_rejected` para uno que nunca llegó a ser un análisis:
+`unsupported_fields`, `target_rejected`, `target_not_approved`, o para un
+informe subido que el analizador no ha podido leer (`report_rejected`, que
+lleva la clave del rechazo de este servicio en `fields` y ninguna parte del
+archivo).
 
 Lo importante del diseño es lo que sigue sin anotar:
 

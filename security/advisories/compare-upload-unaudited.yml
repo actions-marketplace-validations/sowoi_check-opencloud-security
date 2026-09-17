@@ -1,0 +1,56 @@
+# A security advisory record. See AGENTS.md, "Security advisories".
+#
+# One file per bullet under a `### Security` heading in CHANGELOG.md.
+# `state` is the decision; `verified` is the evidence it rests on.
+
+slug: compare-upload-unaudited
+state: declined
+changelog_version: "1.25.0"
+changelog_entry: "The report upload now reaches the audit trail."
+shipped: true
+severity: low
+package: web
+declined_because: |
+  Hardening, not a fixed vulnerability. Nothing was permitted that should
+  have been refused: the upload had its own rate-limit bucket, the cross-site
+  check and the parser's bounds from the release it shipped in. What was
+  missing is a record of the refusals, which affects an operator's ability to
+  see abuse rather than the service's ability to withstand it - and the
+  ordinary lifecycle log already carried a line for each. An operator running
+  1.24.x has nothing to upgrade away from.
+summary: >-
+  Refusals on the report upload path were absent from the optional audit
+  trail, so a spent upload limit and an unreadable file were invisible to it
+verified: |
+  git show v1.24.2:webapp/app.py | grep -c "rate_limit_upload\|report_rejected"
+  returns 0, while the same file carries "async def compare_upload" and calls
+  limiter.check_upload. The feature first shipped in 1.24.0: git ls-tree -r
+  --name-only v1.23.3 | grep webapp/imports.py is empty.
+description: |
+  ### Impact
+
+  With `COS_WEB_AUDIT_LOG=true` an operator gets a record of accepted scans,
+  triggered limits and rejected submissions. The report upload - the only
+  structure this service parses that it did not write - wrote none of them: a
+  client spending its upload allowance, and a file the parser refused, were
+  both absent from the trail, so the rate at which that parser was being fed
+  could not be seen in the place an operator looks for abuse.
+
+  ### Patches
+
+  Fixed in **1.25.0**. A spent upload limit is recorded as `rate_limited` with
+  the scope `rate_limit_upload`, and a refused file as `submission_rejected`
+  with the reason `report_rejected`. The record carries the key of this
+  service's own refusal and no part of the uploaded file.
+
+  ### Workarounds
+
+  Read the ordinary lifecycle log, which carried `compare_upload_rejected`
+  and the limiter's own lines throughout.
+
+  ### Note on distribution
+
+  The web application is **not** published to PyPI - the wheel and the sdist
+  exclude `webapp/` and `frontend/`. It ships as
+  `check_opencloud_security_web.tar.gz`. Installations of the
+  `check-opencloud-security` PyPI package are unaffected.

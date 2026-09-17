@@ -460,8 +460,8 @@ shape-checked. A key nobody named there reaches nothing downstream.
 | Format | decided by looking at the bytes, never at the file name - which is read by nothing and never reflected into a page |
 | CSV rows | 2 000 |
 | JSON nesting | 20 levels |
-| Entries per list, characters per string | 500 and 300 |
-| Finding identifiers | dropped unless spelled the way this scanner spells its own, and the count of dropped lines is shown |
+| Entries per block, characters per string | 500 and 300; a block carrying more entries than that is refused rather than read in part |
+| Finding identifiers | dropped unless spelled the way this scanner spells its own, and the count of everything that could not be read is shown |
 | Rate limit | its own bucket, with the client limit's numbers - a parse costs this service work and costs nobody else's instance anything |
 | Cross-site POST | refused before the limiter and before the parse |
 
@@ -755,10 +755,12 @@ routed and retained on its own:
 ```
 
 Three events: `scan_requested` for an accepted submission, `rate_limited` for
-a client limit, target cooldown, daily cap (`rate_limit_daily`) or probe block
-(`rate_limit_probe`) that actually triggered, and
-`submission_rejected` for one that never became a scan - `unsupported_fields`,
-`target_rejected`, `target_not_approved`.
+a client limit, target cooldown, daily cap (`rate_limit_daily`), probe block
+(`rate_limit_probe`) or report upload (`rate_limit_upload`) that actually
+triggered, and `submission_rejected` for one that never became a scan -
+`unsupported_fields`, `target_rejected`, `target_not_approved` - or for an
+uploaded report the parser would not read (`report_rejected`, carrying the key
+of this service's own refusal in `fields` and no part of the file).
 
 The point of the design is what it still does not write down:
 

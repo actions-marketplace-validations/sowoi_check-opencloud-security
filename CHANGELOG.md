@@ -66,7 +66,41 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   `scanner.temporary_waivers`. See
   [ADR 0065](adr/0065-a-waiver-may-carry-a-reason-and-a-deadline.md).
 
+### Security
+
+- **An uploaded report that carries more findings than a report can is now
+  refused rather than read in part.** `webapp/imports.py` capped every block
+  of a report to its first 500 entries and read the rest of the file as if
+  they had never been written. That is the one kind of hole the page cannot
+  name: everything past the cut reads as resolved on the earlier side and as
+  introduced on the later one, in a comparison that otherwise looks complete.
+  A block longer than the cap is now the same 422 as any other file that is
+  not a report this service wrote - the answer the CSV row limit already gave
+  a file that was too long. What is still read in part is still counted: an
+  entry that is not the shape its block is written in, and a waiver that is
+  not an identifier this scanner writes, now reach the count the page shows
+  beside the comparison instead of disappearing. The grade is read through the
+  same length cap as every other string in the file, so a quarter of a
+  megabyte of digits is not handed to `int` on the strength of an interpreter
+  default an operator can turn off. See
+  [ADR 0057](adr/0057-an-uploaded-report-is-evidence-not-a-scan.md).
+- **The report upload now reaches the audit trail.** It is the only structure
+  this service parses that it did not write, and it was the one refusal an
+  operator with `COS_WEB_AUDIT_LOG` on could not see: a spent upload limit and
+  a file the parser would not read are now `rate_limited` with the scope
+  `rate_limit_upload` and `submission_rejected` with the reason
+  `report_rejected`. The record carries the key of this service's own refusal
+  and no part of the file, because an audit trail is as attractive a place for
+  a hostile upload to be quoted as an error page is.
+
 ### Fixed
+
+- **Two sentences about a refused upload printed their own placeholder.** The
+  page that says a file is too large, and the one that says a comparison has
+  expired, are catalogue strings with a number in them, and both were rendered
+  without it - so a reader was told their file exceeded the "{kilobytes} KB"
+  limit. Every sentence on that path is now given the size limit and the
+  window a comparison lives for, from the settings that enforce them.
 
 - **101 dead links in the French guides.** A guide under `docs/<language>/`
   sits one directory deeper than its English source, so every path out of
