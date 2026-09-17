@@ -12,6 +12,8 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+## [1.25.0] - 2026-09-17
+
 ### Added
 
 - **The comparison journeys are covered in a real browser.** The Playwright
@@ -162,7 +164,6 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   repository files pointed at GitHub addresses that did not exist. The
   English guide index also linked to a German index that was never written;
   it now points at the three translated guide directories.
-
 
 ## [1.24.2] - 2026-09-17
 
