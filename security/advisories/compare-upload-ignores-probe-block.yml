@@ -1,0 +1,61 @@
+# A security advisory record. See AGENTS.md, "Security advisories".
+#
+# One file per bullet under a `### Security` heading in CHANGELOG.md.
+# `state` is the decision; `verified` is the evidence it rests on.
+
+slug: compare-upload-ignores-probe-block
+state: declined
+changelog_version: "1.25.0"
+changelog_entry: "A network serving a probe block can no longer upload a report either."
+shipped: true
+severity: low
+package: web
+declined_because: |
+  Hardening. The probe block exists to stop a client using this service to
+  find out things about hosts that are not its own (ADR 0051), and the upload
+  path reaches no host at all: it parses a file the client already has and
+  compares it with a scan the client already holds a uuid for. So the block
+  not covering it left no third party exposed and gave a blocked client
+  nothing it could not do before being blocked - only the parse itself, which
+  had its own rate-limit bucket throughout. Extending the block to it narrows
+  what a blocked network can still cost this service; it does not close a
+  defect any released version was vulnerable to.
+summary: >-
+  The probe block was enforced on the scan submission path only, so a blocked
+  network could still have reports parsed by POST /compare
+verified: |
+  git show v1.24.2:webapp/app.py - check_probe_block appears twice, in the
+  retry-after helper and in accept_submission, and zero times within
+  "async def compare_upload" .. "async def compare_result". The upload path
+  first shipped in 1.24.0: git ls-tree -r --name-only v1.23.3 | grep
+  webapp/imports.py is empty.
+description: |
+  ### Impact
+
+  A client network that earned a probe block - repeated scans of addresses
+  that did not turn out to be OpenCloud - was refused at `POST /api/scans` and
+  at the form, but not at `POST /compare`. It could therefore keep uploading
+  reports for the service to parse until its separate upload bucket ran out,
+  for the hour or more the block lasts.
+
+  Nothing else about the block leaked: the upload path contacts no host, reads
+  no scan the caller does not already hold the uuid for, and stores nothing
+  beyond the five-minute comparison.
+
+  ### Patches
+
+  Fixed in **1.25.0**. The block is checked before the upload's own bucket and
+  before the file is read, and answers the same 429 with `Retry-After` as
+  everywhere else.
+
+  ### Workarounds
+
+  None needed; a blocked client's uploads were already bounded by
+  `COS_WEB_IP_RATE_LIMIT`.
+
+  ### Note on distribution
+
+  The web application is **not** published to PyPI - the wheel and the sdist
+  exclude `webapp/` and `frontend/`. It ships as
+  `check_opencloud_security_web.tar.gz`. Installations of the
+  `check-opencloud-security` PyPI package are unaffected.

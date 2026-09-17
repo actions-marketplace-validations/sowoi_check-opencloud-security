@@ -122,6 +122,16 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   megabyte of digits is not handed to `int` on the strength of an interpreter
   default an operator can turn off. See
   [ADR 0057](adr/0057-an-uploaded-report-is-evidence-not-a-scan.md).
+- **A network serving a probe block can no longer upload a report either.**
+  The block ADR 0051 imposes on a client whose recent scans kept turning out
+  not to be OpenCloud was asked about on the submission path only, so the same
+  network could still hand `POST /compare` a file to parse - the one parser
+  here fed from outside, and work this service does whether or not a scan
+  follows. It is now asked before the upload's own bucket, as the submission
+  path asks it before the client limit, so a blocked client's refusals do not
+  run down an allowance it will want back when the block ends. The answer is
+  the 429 with `Retry-After` the block gives everywhere else, in its own
+  sentence in all four languages.
 - **The report upload now reaches the audit trail.** It is the only structure
   this service parses that it did not write, and it was the one refusal an
   operator with `COS_WEB_AUDIT_LOG` on could not see: a spent upload limit and
