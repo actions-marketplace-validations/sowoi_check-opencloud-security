@@ -12,6 +12,8 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+## [1.24.2] - 2026-09-17
+
 ### Changed
 
 - **The German interface and guides now address the reader as "du"
