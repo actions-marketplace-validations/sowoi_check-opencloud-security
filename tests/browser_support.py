@@ -254,6 +254,9 @@ def new_page(browser: Any, watch: PageWatch, **options: Any) -> Any:
     context = browser.new_context(**options)
     context.add_init_script(_CSP_RECORDER)
     page = context.new_page()
+    # Firefox (Playwright's build 1543 in CI) ignores the context's colour
+    # scheme and reduced motion, so apply them to the page as well.
+    page.emulate_media(color_scheme=options.get("color_scheme"), reduced_motion=options["reduced_motion"])
     page.set_default_timeout(15_000)
     watch.attach(page)
     return page

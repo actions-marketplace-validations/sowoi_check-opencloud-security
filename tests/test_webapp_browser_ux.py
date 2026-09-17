@@ -164,17 +164,12 @@ def test_the_theme_toggle_switches_and_is_remembered(page, site):
 
 def test_a_dark_system_preference_starts_in_the_dark_theme(browser, site):
     """Without a stored choice, the page follows the operating system."""
-    # One context at a time: with a light context open alongside, Firefox in CI
-    # never matched `prefers-color-scheme: dark` in the dark one.
+    watch = PageWatch()
+    dark = new_page(browser, watch, color_scheme="dark")
     light = new_page(browser, PageWatch(), color_scheme="light")
     try:
         light.goto(site.base + "/")
         light_background = light.evaluate(BODY_BACKGROUND)
-    finally:
-        light.context.close()
-
-    dark = new_page(browser, PageWatch(), color_scheme="dark")
-    try:
         dark.goto(site.base + "/")
         assert dark.evaluate("() => matchMedia('(prefers-color-scheme: dark)').matches")
         # The repaint can trail the load, as it trails a toggle (Firefox in CI,
@@ -186,6 +181,7 @@ def test_a_dark_system_preference_starts_in_the_dark_theme(browser, site):
         assert dark.get_attribute("html", "data-theme") == "light"
     finally:
         dark.context.close()
+        light.context.close()
 
 
 def test_choosing_a_language_translates_the_page_and_sticks(browser, site):

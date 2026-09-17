@@ -14,10 +14,11 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ### Fixed
 
-- **The browser tests pass in Firefox again.** The dark-theme test no longer
-  keeps a light and a dark page open at once, which in Firefox left both
-  light, and waiting for a finished scan tolerates the moment during the
-  result page's reload when the new document has no body yet.
+- **The browser tests pass in Firefox again.** A test page now applies its
+  colour scheme and reduced motion to the page as well as the browser
+  context, because Firefox ignored the context's dark preference, and waiting
+  for a finished scan tolerates the moment during the result page's reload
+  when the new document has no body yet.
 
 ## [1.24.1] - 2026-09-16
 
