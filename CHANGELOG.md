@@ -12,6 +12,13 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The browser tests pass in Firefox again.** The dark-theme test no longer
+  keeps a light and a dark page open at once, which in Firefox left both
+  light, and waiting for a finished scan tolerates the moment during the
+  result page's reload when the new document has no body yet.
+
 ## [1.24.1] - 2026-09-16
 
 ### Added

@@ -298,8 +298,10 @@ def submit_scan(page: Any, site: LiveSite, target: str, **form: Any) -> str:
 
 def wait_until_final(page: Any, timeout: int = 60_000) -> None:
     """Wait for the result page to reload into its finished state."""
+    # The poll can land between the reload and the new document's <body>
+    # (Firefox), so a missing body counts as "not yet", not as an error.
     page.wait_for_function(
-        "() => ['completed', 'failed'].includes(document.body.getAttribute('data-scan-state'))",
+        "() => ['completed', 'failed'].includes(document.body?.getAttribute('data-scan-state'))",
         timeout=timeout,
     )
     page.wait_for_load_state("load")
