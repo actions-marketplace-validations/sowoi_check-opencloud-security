@@ -37,6 +37,9 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
+from opencloud_local_scan.coverage import COVERAGE_SCHEMA
+from opencloud_local_scan.provenance import PROVENANCE_SCHEMA
+
 #: The largest upload that is read at all. Deliberately far below the
 #: 1 MiB `RequestBodyLimit` ceiling: a scan of one instance renders to a few
 #: tens of kilobytes in either format, and everything above that is either a
@@ -54,9 +57,17 @@ MAX_CSV_ROWS = 2_000
 #: bounds the *walk* afterwards, which is ordinary Python.
 MAX_JSON_DEPTH = 20
 
-#: Entries kept per list, and characters kept per string. Both are generous
-#: for a real report and small enough that a crafted one cannot make the
-#: comparison, the page or the cached document large.
+#: Entries a block may carry, and characters kept per string. Both are
+#: generous for a real report and small enough that a crafted one cannot make
+#: the comparison, the page or the cached document large.
+#:
+#: A block past the entry cap is *refused*, not truncated. Reading the first
+#: five hundred findings of a longer list would answer the reader's question
+#: from part of their evidence, and the part left out is exactly where the
+#: finding that mattered would be: everything after it reads as resolved on
+#: the earlier side and as introduced on the later one, with nothing on the
+#: page able to say the file was only partly read. :data:`MAX_CSV_ROWS`
+#: refuses a long file for the same reason.
 MAX_ENTRIES = 500
 MAX_TEXT = 300
 
@@ -67,6 +78,9 @@ MAX_TEXT = 300
 #: identifier would compare unequal to the real one and read as a finding that
 #: appeared or disappeared on its own.
 _IDENTIFIER = re.compile(r"\A[A-Za-z0-9][A-Za-z0-9 ._:/@+-]{0,119}\Z")
+#: A digest this project wrote: 64 hex characters, or the "none" it
+#: records when there was no reference data at all.
+_DIGEST = re.compile(r"\A(?:[0-9a-f]{64}|none)\Z")
 
 #: Severities the scanner writes. An upload claiming any other is recorded
 #: with none, because severity reaches a template as a CSS attribute.
@@ -140,8 +154,11 @@ class ImportedReport:
 
     dropped: int = 0
     """Entries left out because their identifier was not one this service
-    writes. Reported rather than swallowed: a comparison drawn from a file
-    that was partly unreadable is a comparison the reader should know about."""
+    writes, or because they were not the shape their block is written in.
+    Reported rather than swallowed: a comparison drawn from a file that was
+    partly unreadable is a comparison the reader should know about. A file
+    whose blocks are too long to read at all is refused instead, because that
+    is a hole the count could not describe - see :data:`MAX_ENTRIES`."""
 
     @property
     def missing_records(self) -> tuple[str, ...]:
@@ -413,6 +430,85 @@ def _csv_findings(
     return document, dropped
 
 
+def _provenance(source: Mapping[str, Any]) -> dict[str, Any]:
+    """
+    The conditions the uploaded scan ran under, if it recorded them.
+
+    Only the fields a comparison reads, each one retyped. A digest is checked
+    against its own shape rather than trusted: it reaches a comparison, and a
+    comparison renders it.
+    """
+    block = source.get("provenance")
+    if not isinstance(block, Mapping) or "schema" not in block:
+        return {}
+    advisory = block.get("advisoryData")
+    schedule = block.get("scheduleData")
+    waivers = block.get("waivers")
+    rebuilt: dict[str, Any] = {
+        "schema": PROVENANCE_SCHEMA,
+        "scannerVersion": _text(block.get("scannerVersion"))[:32],
+        "scannedAt": _text(block.get("scannedAt"))[:64],
+        "releaseTrack": _text(block.get("releaseTrack"))[:32],
+        "advisoryData": {
+            "digest": _digest(advisory.get("digest") if isinstance(advisory, Mapping) else None),
+            "count": _count(advisory.get("count") if isinstance(advisory, Mapping) else None),
+        },
+        "scheduleData": {
+            "digest": _digest(schedule.get("digest") if isinstance(schedule, Mapping) else None),
+            "updated": _text(schedule.get("updated") if isinstance(schedule, Mapping) else "")[:32]
+            or None,
+        },
+        "waivers": {
+            state: _patterns(waivers.get(state) if isinstance(waivers, Mapping) else None)
+            for state in ("active", "expired")
+        },
+    }
+    return {"provenance": rebuilt}
+
+
+def _coverage(source: Mapping[str, Any]) -> dict[str, Any]:
+    """How much of the uploaded scan reached a conclusion, if it said."""
+    block = source.get("coverage")
+    if not isinstance(block, Mapping) or not isinstance(block.get("checks"), list):
+        return {}
+    counts = block.get("counts")
+    if not isinstance(counts, Mapping):
+        return {}
+    return {
+        "coverage": {
+            "schema": COVERAGE_SCHEMA,
+            "counts": {
+                state: _count(counts.get(state))
+                for state in ("passed", "failed", "not_checked", "inconclusive", "total")
+            },
+            # The detail is not rebuilt: nothing in a comparison reads an
+            # individual entry, and an allow-list that copies a list of
+            # arbitrary objects is not an allow-list.
+            "checks": [],
+        }
+    }
+
+
+def _digest(value: object) -> str:
+    """A digest, or nothing. Anything that is not one of ours is dropped."""
+    text = _text(value)
+    return text if _DIGEST.match(text) else ""
+
+
+def _count(value: object) -> int:
+    """A non-negative count, clamped away from anything a template cannot print."""
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        return 0
+    return max(0, min(int(value), 100_000))
+
+
+def _patterns(value: object) -> list[str]:
+    """Waiver patterns from an upload, bounded in count and in length."""
+    if not isinstance(value, list):
+        return []
+    return [_text(item)[:128] for item in value[:64] if _text(item)]
+
+
 def _rebuild(source: Mapping[str, Any]) -> tuple[dict[str, Any], int]:
     """
     A result document built from an allow-list, and nothing else.
@@ -435,7 +531,9 @@ def _rebuild(source: Mapping[str, Any]) -> tuple[dict[str, Any], int]:
     }
 
     checks: list[dict[str, Any]] = []
-    for entry in _entries(source.get("extraChecks")):
+    entries, unreadable = _entries(source.get("extraChecks"))
+    dropped += unreadable
+    for entry in entries:
         identifier = _text(entry.get("id"))
         if not _IDENTIFIER.match(identifier):
             dropped += 1
@@ -451,7 +549,9 @@ def _rebuild(source: Mapping[str, Any]) -> tuple[dict[str, Any], int]:
     document["extraChecks"] = checks
 
     vulnerabilities: list[dict[str, Any]] = []
-    for entry in _entries(source.get("vulnerabilities")):
+    entries, unreadable = _entries(source.get("vulnerabilities"))
+    dropped += unreadable
+    for entry in entries:
         identifier = _text(entry.get("id") or entry.get("cve") or entry.get("title"))
         if not _IDENTIFIER.match(identifier):
             dropped += 1
@@ -483,6 +583,13 @@ def _rebuild(source: Mapping[str, Any]) -> tuple[dict[str, Any], int]:
         },
     }
 
+    # The two blocks a comparison explains itself with, rebuilt key by key
+    # like everything else here. An upload that carries neither is a report
+    # that cannot say what it was judged against, which the explanation
+    # reports as a limitation rather than guessing at.
+    document.update(_provenance(source))
+    document.update(_coverage(source))
+
     updates = source.get("updates")
     if isinstance(updates, Mapping) and updates.get("available"):
         document["updates"] = {
@@ -493,32 +600,52 @@ def _rebuild(source: Mapping[str, Any]) -> tuple[dict[str, Any], int]:
         document["updates"] = {}
 
     waived: list[str] = []
-    for name in _entries(source.get("ignored"), mappings_only=False):
+    names, _ = _entries(source.get("ignored"), mappings_only=False)
+    for name in names:
         text = _text(name)
         if _IDENTIFIER.match(text):
             waived.append(text)
+        else:
+            dropped += 1
     document["ignored"] = waived
 
     return document, dropped
 
 
-def _entries(value: Any, *, mappings_only: bool = True) -> list[Any]:
-    """At most :data:`MAX_ENTRIES` items of a list, or nothing."""
+def _too_many(count: int) -> None:
+    """Refuse a block no report this service wrote could have."""
+    if count > MAX_ENTRIES:
+        raise ReportRejected(
+            f"A block of the report carries more than {MAX_ENTRIES} entries.",
+            key="compare.upload.error.not_a_report",
+        )
+
+
+def _entries(value: Any, *, mappings_only: bool = True) -> tuple[list[Any], int]:
+    """
+    The items of one list, and how many of them could not be read.
+
+    An entry that is not the shape its block is written in carries no
+    identifier at all, so it is counted rather than passed over in silence -
+    the same rule an identifier this scanner never writes meets below.
+    """
     if not isinstance(value, list):
-        return []
-    items = value[:MAX_ENTRIES]
-    if mappings_only:
-        return [item for item in items if isinstance(item, Mapping)]
-    return items
+        return [], 0
+    _too_many(len(value))
+    if not mappings_only:
+        return list(value), 0
+    kept = [item for item in value if isinstance(item, Mapping)]
+    return kept, len(value) - len(kept)
 
 
 def _flags(value: Any) -> tuple[dict[str, bool], int]:
     """A block of ``name: bool`` measurements, names checked and count capped."""
     if not isinstance(value, Mapping):
         return {}, 0
+    _too_many(len(value))
     flags: dict[str, bool] = {}
     dropped = 0
-    for name, enabled in list(value.items())[:MAX_ENTRIES]:
+    for name, enabled in value.items():
         text = _text(name)
         if not _IDENTIFIER.match(text):
             dropped += 1
@@ -550,9 +677,18 @@ def _severity(value: Any) -> str:
 
 
 def _rating(value: Any) -> int | None:
-    """The 0-5 grade, or ``None`` where the report did not carry one."""
+    """
+    The 0-5 grade, or ``None`` where the report did not carry one.
+
+    Read through :func:`_text`, so the grade is capped like every other string
+    that crosses this boundary. ``int`` on a quarter of a megabyte of digits
+    is work chosen by whoever wrote the file - quadratic before 3.12 - and the
+    interpreter's own digit limit that would otherwise refuse it is a default
+    an operator can turn off. A grade is one character, so there is nothing to
+    lose by not relying on either.
+    """
     try:
-        rating = int(str(value).strip())
+        rating = int(_text(value))
     except (TypeError, ValueError):
         return None
     return rating if 0 <= rating <= 5 else None

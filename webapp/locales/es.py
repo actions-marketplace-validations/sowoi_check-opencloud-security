@@ -1168,6 +1168,7 @@ MESSAGES: dict[str, str] = {
         "espera son las descargas de una página de resultado."
     ),
     "compare.upload.error.rate_limit": "Se han subido varios informes desde su red en poco tiempo. Espere un minuto y vuelva a intentarlo.",
+    "compare.upload.error.blocked": "Varios destinos recientes de su red no eran instancias de OpenCloud accesibles, así que este servicio se toma una pausa con su red, subidas incluidas. El analizador y su comparación también se ejecutan sin límites en su propia máquina.",
     "compare.upload.error.expired": "Este enlace ha caducado. Los resultados de una comparación se conservan durante {minutes} minutos; vuelva a subir el archivo para repetirla.",
     "search.title": "Buscar",
     "search.description": (
@@ -1467,6 +1468,46 @@ MESSAGES: dict[str, str] = {
     "result.rescan.note": "El próximo análisis utiliza el mismo destino, las mismas exclusiones y el mismo canal para poder comparar los resultados. Espere a que termine el intervalo o ejecute el escáner de código abierto sin límites en su equipo:",
     "result.rescan.self_host": "ejecútelo usted mismo",
     "result.excluded.kicker": "Excluido",
+    "result.coverage.kicker": "Cobertura",
+    "result.coverage.heading": "Lo que este análisis no midió",
+    "result.coverage.note": (
+        "Una nota describe las pruebas que reunió este análisis. Estas "
+        "comprobaciones no llegaron a ninguna conclusión, así que la nota no "
+        "dice nada sobre ellas."
+    ),
+    "result.coverage.summary": (
+        "{measured} de {total} comprobaciones llegaron a una conclusión."
+    ),
+    "result.coverage.complete": (
+        "Todas las comprobaciones previstas en este análisis llegaron a una "
+        "conclusión."
+    ),
+    "result.coverage.unavailable": (
+        "Este informe se escribió antes de que los análisis registraran su "
+        "cobertura, así que no dice qué comprobaciones se hicieron. No es lo "
+        "mismo que un análisis sin lagunas."
+    ),
+    "coverage.reason.not_applicable": "No se aplica a esta instancia",
+    "coverage.reason.probe_disabled": (
+        "La comprobación estaba desactivada en este análisis"
+    ),
+    "coverage.reason.prerequisite_missing": (
+        "La instancia no publicó lo que esta comprobación lee"
+    ),
+    "coverage.reason.timeout": "Nada respondió a tiempo",
+    "coverage.reason.unreadable": "No se pudo leer la respuesta",
+    "coverage.reason.no_route": "Este escáner no tiene ruta hasta esa dirección",
+    "coverage.group.hardening": "Ajustes de refuerzo",
+    "coverage.group.header": "Cabeceras de seguridad",
+    "coverage.group.advisoryHeader": "Cabeceras recomendadas",
+    "coverage.group.advisoryCheck": "Observaciones recomendadas",
+    "coverage.group.extraCheck": "Comprobaciones adicionales",
+    "coverage.group.tls": "Seguridad del transporte",
+    "coverage.group.dns": "DNS",
+    "coverage.group.addressParity": "Direcciones",
+    "coverage.group.capabilities": "Funcionalidades",
+    "coverage.group.updates": "Actualizaciones",
+    "coverage.group.integrations": "Integraciones",
     "result.excluded.heading": "Reportado, pero no contabilizado",
     "result.excluded.waived.heading": "Pidió ignorar estos",
     "result.excluded.waived.note": "Siguieron fallando. Simplemente no frenaron la calificación.",
@@ -1551,6 +1592,12 @@ MESSAGES: dict[str, str] = {
     ),
     "result.export.pdf": "Informe en PDF",
     "result.export.pdf.hint": "Para un ticket, una revisión o una copia impresa.",
+    "result.export.html": "Descargar el informe",
+    "result.export.html.hint": (
+        "Un fichero que sigue siendo legible cuando este enlace caduque. Se "
+        "abre sin conexión, no hace ninguna petición de red y no se "
+        "actualiza."
+    ),
     "result.export.csv": "CSV",
     "result.export.csv.hint": "Una fila por hallazgo, para una hoja de cálculo.",
     "result.export.sarif": "SARIF",

@@ -64,7 +64,7 @@ sont expliqués par groupe dans
   rather than a fact about this deployment, so they are explained by <code>--debug</code>
   and never counted as a missing hardening, never alerted on and never allowed
   to change an exit code. See
-  <a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/adr/0028-headers-no-opencloud-sends-are-reported-but-never-alerted.md">ADR 0028</a>.
+  <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0028-headers-no-opencloud-sends-are-reported-but-never-alerted.md">ADR 0028</a>.
   Rehearse <code>Cross-Origin-Embedder-Policy: require-corp</code> before rolling it
   out - an office integration that embeds Collabora or a WOPI host stops
   loading unless that origin sends a <code>Cross-Origin-Resource-Policy</code> of its own</li>
@@ -74,7 +74,7 @@ sont expliqués par groupe dans
   none on any instance, so it is explained and never counted. The file has to
   carry the <code>Contact</code> field RFC 9116 requires - a 200 alone means nothing on
   an instance whose frontend answers every unknown path with its own shell.
-  See <a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/adr/0034-an-advisory-observation-need-not-be-a-header.md">ADR 0034</a></li>
+  See <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0034-an-advisory-observation-need-not-be-a-header.md">ADR 0034</a></li>
 <li>whether the <code>Strict-Transport-Security</code> header would actually be accepted
   for browser preloading, as <code>hstsPreloadEligible</code> under the same
   <code>setup.advisoryChecks</code>. <code>hstsPreload</code> already reports whether the header
@@ -86,7 +86,7 @@ sont expliqués par groupe dans
   why it is explained and never counted. Membership of the list itself is
   deliberately not measured: the only ways to know are to ask a third party
   for it or to ship tens of megabytes of it. See
-  <a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/adr/0037-preload-eligibility-is-measured-list-membership-is-not.md">ADR 0037</a></li>
+  <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0037-preload-eligibility-is-measured-list-membership-is-not.md">ADR 0037</a></li>
 <li><code>hardenings</code> derived from those headers and capabilities</li>
 <li>known vulnerabilities from the <a href="/documentation#advisory-database">advisory database</a> and
   the resulting rating (<code>0</code>-<code>5</code>)</li>
@@ -400,7 +400,7 @@ the editor addresses it advertises use HTTPS (<code>companionEditorHttps</code>)
 <p>The scanner probes only the submitted origin. It does not follow an editor hostname from
 the discovery document, because that would let the target choose another connection
 destination. A separately hosted editor therefore gets no finding from these checks.
-Assess that service with suitable editor-specific tools; see <a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/adr/0036-a-companion-service-is-probed-only-where-the-scan-was-pointed.md">ADR
+Assess that service with suitable editor-specific tools; see <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0036-a-companion-service-is-probed-only-where-the-scan-was-pointed.md">ADR
 0036</a>.</p>
 <h3 id="what-the-scan-deliberately-does-not-answer">What the scan deliberately does not answer</h3>
 <ul>
@@ -551,7 +551,7 @@ among them. It sees what DNS sees - nodes behind a single load-balancer
 address, a resolver returning a rotating subset, or GeoDNS answering for the
 monitoring host's location all limit what can be compared. The public web
 service never runs it
-(<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/adr/0042-every-resolved-address-is-compared-only-when-the-operator-asks.md">ADR 0042</a>).</p>
+(<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0042-every-resolved-address-is-compared-only-when-the-operator-asks.md">ADR 0042</a>).</p>
 </article>
 
 {% include "_page-nav.html" %}

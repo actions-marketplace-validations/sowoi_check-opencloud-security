@@ -98,6 +98,8 @@ from .audit import (
     REASON_RATE_LIMIT_PROBE,
     REASON_RATE_LIMIT_PURGE,
     REASON_RATE_LIMIT_TARGET,
+    REASON_RATE_LIMIT_UPLOAD,
+    REASON_REPORT_REJECTED,
     REASON_TARGET_NOT_APPROVED,
     REASON_TARGET_REJECTED,
     REASON_UNSUPPORTED_FIELDS,
@@ -198,6 +200,7 @@ from .reports import (
     MEDIA_TYPES,
     csv_report,
     export_filename,
+    html_report,
     pdf_report,
     sarif_report,
 )
@@ -2078,6 +2081,23 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
             )
         return page(request, "compare.html", {**context, "comparison": comparison})
 
+    def _upload_sentence(translate: Translator, key: str) -> str:
+        """
+        One of this service's own upload sentences, with its numbers filled in.
+
+        Several of them name the size limit or the window a comparison lives
+        for, and a sentence handed to a reader with a literal `{kilobytes}` in
+        it is a sentence that failed to say the one thing it was for. The two
+        numbers come from the settings that actually enforce them, and a
+        catalogue string that mentions neither is unaffected - `str.format`
+        ignores what it was not asked for.
+        """
+        return translate(
+            key,
+            kilobytes=MAX_UPLOAD_BYTES // 1024,
+            minutes=max(1, app.state.comparisons.ttl // 60),
+        )
+
     def _upload_error(
         request: Request,
         translate: Translator,
@@ -2097,7 +2117,11 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
         return page(
             request,
             "compare.html",
-            {"t": translate, "current": current, "error": translate(key)},
+            {
+                "t": translate,
+                "current": current,
+                "error": _upload_sentence(translate, key),
+            },
             status=status,
         )
 
@@ -2128,6 +2152,8 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
         do. See [ADR 0057](../adr/0057-an-uploaded-report-is-evidence-not-a-scan.md).
         """
         translate = translator_for(request)
+        audit: AuditLog = app.state.audit
+        address = client_address(request, settings)
         # Before the limiter and before the parse, for the same reason the
         # submission form checks it first: a cross-site POST must not be able
         # to spend a borrowed browser's allowance or its parsing budget.
@@ -2136,12 +2162,56 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
             return _cross_site_response(request, wants_html(request))
 
         limiter: RateLimiter = app.state.limiter
-        decision = await limiter.check_upload(client_address(request, settings))
-        if not decision.allowed:
+        # A network serving a probe block is refused here too. The block is a
+        # judgement about the *client* - its recent scans kept turning out not
+        # to be OpenCloud - and a client this service has stopped working for
+        # does not get to hand it a file to parse instead (ADR 0051). Asked
+        # before the upload bucket, as `accept_submission` asks it before the
+        # client limit, so a blocked client's refusals do not also run down an
+        # allowance it will want back when the block ends.
+        blocked = await limiter.check_probe_block(address)
+        if not blocked.allowed:
+            audit.rate_limited(
+                client=address,
+                scope=REASON_RATE_LIMIT_PROBE,
+                retry_after=blocked.retry_after,
+            )
+            LOGGER.info("compare_upload_blocked")
             response = page(
                 request,
                 "compare.html",
-                {"t": translate, "error": translate("compare.upload.error.rate_limit")},
+                {
+                    "t": translate,
+                    "error": _upload_sentence(
+                        translate, "compare.upload.error.blocked"
+                    ),
+                },
+                status=429,
+            )
+            if blocked.retry_after:
+                response.headers["Retry-After"] = str(blocked.retry_after)
+            return response
+
+        decision = await limiter.check_upload(address)
+        if not decision.allowed:
+            # Recorded like every other limit that triggered. This is the one
+            # parser in the service fed from outside, so an operator with a
+            # trail on has to be able to see the rate of it without reading
+            # the application log for a line that was never an event.
+            audit.rate_limited(
+                client=address,
+                scope=REASON_RATE_LIMIT_UPLOAD,
+                retry_after=decision.retry_after,
+            )
+            response = page(
+                request,
+                "compare.html",
+                {
+                    "t": translate,
+                    "error": _upload_sentence(
+                        translate, "compare.upload.error.rate_limit"
+                    ),
+                },
                 status=429,
             )
             if decision.retry_after:
@@ -2198,8 +2268,16 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
         except ReportRejected as exc:
             # The file's own text never reaches the page: the sentence a
             # reader is shown is this service's, chosen by key. An error page
-            # is exactly where a hostile upload would like to be quoted.
+            # is exactly where a hostile upload would like to be quoted - and
+            # so is an audit trail, which is why the record carries the key
+            # this service chose and no part of the file.
             LOGGER.info("compare_upload_rejected key=%s", exc.key)
+            audit.submission_rejected(
+                client=address,
+                reason=REASON_REPORT_REJECTED,
+                status=exc.status,
+                fields=(exc.key,),
+            )
             return _upload_error(
                 request, translate, exc.key, status=exc.status, current=current
             )
@@ -2248,7 +2326,12 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
             return page(
                 request,
                 "compare.html",
-                {"t": translate, "error": translate("compare.upload.error.expired")},
+                {
+                    "t": translate,
+                    "error": _upload_sentence(
+                        translate, "compare.upload.error.expired"
+                    ),
+                },
                 status=404,
             )
         return page(
@@ -2807,6 +2890,8 @@ def _render_export(result: dict[str, Any], fmt: str, identifier: str) -> bytes |
         return json.dumps(sarif_report(result), indent=2)
     if fmt == "pdf":
         return pdf_report(result, identifier=identifier)
+    if fmt == "html":
+        return html_report(result, identifier=identifier)
     return json.dumps(result, indent=2)
 
 

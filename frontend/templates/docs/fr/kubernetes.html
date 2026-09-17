@@ -36,7 +36,7 @@ version ship <em>inside</em> the image, so which tag you run is part of the verd
 <!-- TOC -->
 
 <h2 id="the-helm-chart">The Helm chart</h2>
-<p><a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/contrib/helm/check-opencloud-security"><code>contrib/helm/check-opencloud-security</code></a>
+<p><a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/helm/check-opencloud-security"><code>contrib/helm/check-opencloud-security</code></a>
 packages both of the manifests below. Install it from a checkout - it is not
 published to a registry, and reading what it will create is part of the point:</p>
 <pre><code class="language-shell">helm install opencloud-security contrib/helm/check-opencloud-security \
@@ -76,7 +76,7 @@ omits one is refused rather than rendered:</p>
 <p>Every credential is read from a <code>Secret</code> you created and named; the chart
 writes none, because a values file is committed and copied while a token in
 one is not easily unremembered. The
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/contrib/helm/check-opencloud-security/README.md">chart's README</a> has the
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/helm/check-opencloud-security/README.md">chart's README</a> has the
 full value table.</p>
 <p>The rest of this page is what the chart renders, for anyone who would rather
 apply the YAML directly or read it before installing.</p>
@@ -143,8 +143,8 @@ kubectl logs job/opencloud-security-now --namespace monitoring
 </code></pre>
 <h2 id="sending-the-result-somewhere">Sending the result somewhere</h2>
 <p>A failed job is a blunt signal. Add the webhook and the result arrives with
-the reason attached - see <a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/fr/webhook-recipes.md">Webhook recipes</a> and
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/fr/webhook-recipes.md#uptime-kuma">Uptime Kuma</a>:</p>
+the reason attached - see <a href="/documentation/webhooks">Webhook recipes</a> and
+<a href="/documentation/webhooks#uptime-kuma">Uptime Kuma</a>:</p>
 <pre><code class="language-yaml">              args:
                 - --host=opencloud.example.com
                 - --check-hardening

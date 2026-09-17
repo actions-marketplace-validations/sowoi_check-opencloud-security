@@ -821,12 +821,12 @@ shape-checked. A key nobody named there reaches nothing downstream.</p>
 <td>20 levels</td>
 </tr>
 <tr>
-<td>Entries per list, characters per string</td>
-<td>500 and 300</td>
+<td>Entries per block, characters per string</td>
+<td>500 and 300; a block carrying more entries than that is refused rather than read in part</td>
 </tr>
 <tr>
 <td>Finding identifiers</td>
-<td>dropped unless spelled the way this scanner spells its own, and the count of dropped lines is shown</td>
+<td>dropped unless spelled the way this scanner spells its own, and the count of everything that could not be read is shown</td>
 </tr>
 <tr>
 <td>Rate limit</td>
@@ -835,6 +835,10 @@ shape-checked. A key nobody named there reaches nothing downstream.</p>
 <tr>
 <td>Cross-site POST</td>
 <td>refused before the limiter and before the parse</td>
+</tr>
+<tr>
+<td>A network serving a probe block</td>
+<td>refused before both, and before the file is read: the block is a judgement about the client, not about one endpoint</td>
 </tr>
 </tbody>
 </table>
@@ -895,6 +899,10 @@ leave something out of an erasure - that is the argument
 <tr>
 <td>Too many uploads from one network</td>
 <td><strong>429</strong> with <code>Retry-After</code></td>
+</tr>
+<tr>
+<td>The network is serving a probe block</td>
+<td><strong>429</strong> with <code>Retry-After</code>, for as long as the block has left to run</td>
 </tr>
 <tr>
 <td><code>GET /compare/{token}</code> after five minutes</td>
@@ -1122,10 +1130,12 @@ routed and retained on its own:</p>
 {&quot;client&quot;: &quot;3c80d5f21ab94e77&quot;, &quot;event&quot;: &quot;submission_rejected&quot;, &quot;fields&quot;: [&quot;workers&quot;], &quot;reason&quot;: &quot;unsupported_fields&quot;, &quot;status&quot;: 422, &quot;timestamp&quot;: &quot;2026-08-19T10:15:09+00:00&quot;}
 </code></pre>
 <p>Three events: <code>scan_requested</code> for an accepted submission, <code>rate_limited</code> for
-a client limit, target cooldown, daily cap (<code>rate_limit_daily</code>) or probe block
-(<code>rate_limit_probe</code>) that actually triggered, and
-<code>submission_rejected</code> for one that never became a scan - <code>unsupported_fields</code>,
-<code>target_rejected</code>, <code>target_not_approved</code>.</p>
+a client limit, target cooldown, daily cap (<code>rate_limit_daily</code>), probe block
+(<code>rate_limit_probe</code>) or report upload (<code>rate_limit_upload</code>) that actually
+triggered, and <code>submission_rejected</code> for one that never became a scan -
+<code>unsupported_fields</code>, <code>target_rejected</code>, <code>target_not_approved</code> - or for an
+uploaded report the parser would not read (<code>report_rejected</code>, carrying the key
+of this service's own refusal in <code>fields</code> and no part of the file).</p>
 <p>The point of the design is what it still does not write down:</p>
 <ul>
 <li><strong>A client address is always a fingerprint</strong>, a truncated HMAC under the
@@ -1338,10 +1348,23 @@ target pays a cooldown for a batch that never ran.</p>
 the reason the first target was refused - <strong>429</strong> with <code>Retry-After</code> and the
 self-hosting hint if it was a limit, <strong>400</strong> or <strong>422</strong> otherwise.</p>
 <h3 id="get-apiscansuuidexportformat"><code>GET /api/scans/{uuid}/export/{format}</code></h3>
-<p>A finished scan as a file: <code>json</code>, <code>csv</code>, <code>sarif</code> or <code>pdf</code>.</p>
+<p>A finished scan as a file: <code>json</code>, <code>csv</code>, <code>sarif</code>, <code>pdf</code> or <code>html</code>.</p>
 <pre><code class="language-bash">curl -sS -OJ http://127.0.0.1:8811/api/scans/0f4a1f22-.../export/pdf
 </code></pre>
-<p>All four carry the remediation plan - the ordered fix list with the grade each
+<p><code>html</code> is the report as <strong>one standalone file</strong>. A result link is a capability
+with a time limit, which is right for a page a stranger can reach and wrong
+for the evidence somebody needs at the end of the quarter, so this is the same
+report without the service under it: the styling is inside the document, there
+is no script, no image, no font service and no stylesheet to fetch, and
+opening it makes no network request at all. The documentation links are the
+only addresses in it and are followed only if the reader chooses to. It
+carries the findings, the ignored ones with their waiver reasons, the
+remediation plan, the coverage gaps and the reference data the scan was judged
+against, and it says plainly that it is a copy: it keeps working after the
+link expires, it does not update, and erasing the scan does not erase it.
+There is nothing to operate in it - no form, no rescan control, no polling and
+no erasure token.</p>
+<p>All five carry the remediation plan - the ordered fix list with the grade each
 step reaches - as summary and step rows in the CSV,
 <code>runs[0].properties.remediation</code> in the SARIF, a "What gets you to A+" section
 in the PDF and <code>remediationPlan</code> in the JSON.</p>

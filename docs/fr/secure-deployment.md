@@ -174,7 +174,7 @@ OpenCloud. The provider configuration is the same shape:
 - Bind the application to a group so that not every Authentik user gets an
   OpenCloud account, then turn `PROXY_AUTOPROVISION_ACCOUNTS` on.
 
-[`authentik/blueprints/`](../authentik/blueprints/) in this repository is a
+[`authentik/blueprints/`](../../authentik/blueprints/) in this repository is a
 worked example of provisioning a provider from a file rather than by clicking,
 which is worth copying whatever you are configuring.
 
@@ -409,7 +409,7 @@ Briefly, because none of it is OpenCloud-specific and all of it is load-bearing:
   hypothesis. Keep one copy offline or on write-once storage - ransomware
   looks for the backup first.
 - **Least privilege for the service account.** The systemd units in
-  [`contrib/systemd/`](../contrib/systemd/) show the pattern:
+  [`contrib/systemd/`](../../contrib/systemd/) show the pattern:
   `DynamicUser=yes`, `ProtectSystem=strict`, `NoNewPrivileges=yes`, an empty
   `CapabilityBoundingSet=`. Run `systemd-analyze security <unit>` on yours.
 - **Separate the reverse proxy from OpenCloud**, on different hosts or at

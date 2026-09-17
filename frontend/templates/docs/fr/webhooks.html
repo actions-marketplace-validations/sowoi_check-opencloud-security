@@ -355,7 +355,7 @@ by the SSRF guard is the address posted to. A URL naming no topic is refused
 when the check starts, rather than 400-ing on every notification for the life
 of the configuration. This is the only format whose URL is rewritten, and only
 ever its path - see
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/adr/0040-a-push-format-may-rewrite-the-path-never-the-host.md">ADR 0040</a>.</p>
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0040-a-push-format-may-rewrite-the-path-never-the-host.md">ADR 0040</a>.</p>
 <p><strong>For Gotify, keep the token out of the URL if you can.</strong> <code>?token=...</code> works
 and is redacted in the plugin's own logs, but <code>--webhook-header 'X-Gotify-Key:
 ...'</code> keeps it out of the URL entirely - and out of any proxy log between the

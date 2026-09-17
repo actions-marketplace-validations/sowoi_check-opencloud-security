@@ -4,7 +4,7 @@ Redis speichert Warteschlange, Scanstatus, Ergebnisse und gemeinsam genutzte Bet
 
 Er gilt für die [Webanwendung](../../webapp/README.md). Das CLI-Plugin benötigt kein Redis; es verbindet sich direkt mit OpenCloud und beendet sich nach dem Scan.
 
-Für den Passwortschutz der mitgelieferten Compose-Bereitstellung setze `COS_REDIS_PASSWORD` in `docker/.env` und wenden die Konfiguration mit `docker compose up -d` an.
+Für den Passwortschutz der mitgelieferten Compose-Bereitstellung setze `COS_REDIS_PASSWORD` in `docker/.env` und wende die Konfiguration mit `docker compose up -d` an.
 
 ## Inhaltsübersicht {#table-of-contents}
 

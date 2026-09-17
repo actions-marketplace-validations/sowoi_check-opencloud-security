@@ -260,14 +260,14 @@ get the result somewhere people look, keep the job green and post the outcome:</
             echo '```'
           } &gt;&gt; &quot;$GITHUB_STEP_SUMMARY&quot;
 </code></pre>
-<p>Alternatively, set <code>--webhook-url</code> to deliver the result directly; see <a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/fr/webhook-recipes.md">Webhook
+<p>Alternatively, set <code>--webhook-url</code> to deliver the result directly; see <a href="/documentation/webhooks">Webhook
 recipes</a>. Delivery still depends on the workflow running. If
 scheduled runs are disabled, neither summaries nor webhooks are produced.</p>
 <h3 id="the-json-document-instead">The JSON document instead</h3>
 <p>For anything that has to make a decision - a policy gate, a dashboard, an
 issue filed automatically - use the scanner rather than the plugin. It prints
 the full result document, and every field in it is documented in
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/opencloud_local_scan/README.md">the library README</a>.</p>
+<a href="/documentation/scanner">the library README</a>.</p>
 <pre><code class="language-yaml">      - name: Scan and keep the result
         run: |
           check-opencloud-scanner scan --compact opencloud.example.com &gt; scan.json

@@ -80,7 +80,7 @@ the `main` branch of this project's repository. Those are the files a
 maintainer already reviewed and merged, in the pull requests the project's
 daily data workflows open. Nothing reaches your host that a person has not
 looked at. See
-[ADR 0027](../adr/0027-refreshed-reference-data-is-attested-not-merely-fetched.md).
+[ADR 0027](../../adr/0027-refreshed-reference-data-is-attested-not-merely-fetched.md).
 
 ### Signature verification
 
@@ -185,11 +185,11 @@ loud:**
 
 ## Running it daily with systemd
 
-[`contrib/systemd/`](../contrib/systemd/) has a hardened oneshot service and a
+[`contrib/systemd/`](../../contrib/systemd/) has a hardened oneshot service and a
 timer for it:
-[`check-opencloud-security-refresh.service`](../contrib/systemd/check-opencloud-security-refresh.service)
+[`check-opencloud-security-refresh.service`](../../contrib/systemd/check-opencloud-security-refresh.service)
 and
-[`check-opencloud-security-refresh.timer`](../contrib/systemd/check-opencloud-security-refresh.timer).
+[`check-opencloud-security-refresh.timer`](../../contrib/systemd/check-opencloud-security-refresh.timer).
 The service writes to `/var/lib/check-opencloud-security` through
 `StateDirectory=` and may write nowhere else. The timer runs it daily,
 randomised within an hour, and catches up after downtime.

@@ -22,6 +22,7 @@ from opencloud_local_scan.scanner import (
     scan,
 )
 from opencloud_local_scan.versions import load_release_schedule
+from opencloud_local_scan.waivers import scan_clock
 from tests.fake_opencloud import FakeOpenCloud, InstanceBehaviour
 
 TODAY = date(2026, 8, 12)
@@ -76,7 +77,7 @@ def test_a_waived_check_no_longer_caps_the_rating():
     """This is the point of the option: accepting a finding changes the grade."""
     findings = [Finding("basicAuthDisabled", "high", False, "basic auth is on")]
     settings = ScannerSettings(ignore_hardenings=("basicAuthDisabled",))
-    _apply_waivers(settings, findings, {}, {}, {"enforced": True})
+    _apply_waivers(settings, findings, {}, {}, {"enforced": True}, scan_clock())
 
     explanation = _compute_rating(
         eol=False,
@@ -99,7 +100,7 @@ def test_waiving_one_finding_leaves_the_others_capping():
         Finding("exposed:/data", "critical", False, "readable without auth"),
     ]
     settings = ScannerSettings(ignore_hardenings=("basicAuthDisabled",))
-    _apply_waivers(settings, findings, {}, {}, {"enforced": True})
+    _apply_waivers(settings, findings, {}, {}, {"enforced": True}, scan_clock())
 
     explanation = _compute_rating(
         eol=False,
@@ -119,7 +120,9 @@ def test_a_waiver_for_a_passing_check_changes_nothing():
     findings = [Finding("basicAuthDisabled", "high", True, "")]
     settings = ScannerSettings(ignore_hardenings=("basicAuthDisabled",))
 
-    ignored = _apply_waivers(settings, findings, {}, {}, {"enforced": True})
+    ignored, _ = _apply_waivers(
+        settings, findings, {}, {}, {"enforced": True}, scan_clock()
+    )
 
     assert ignored == []
     assert findings[0].ignored is False
@@ -129,7 +132,7 @@ def test_an_end_of_life_release_cannot_be_waived_away():
     """Waivers cover checks, not the fact that a release gets no security fixes."""
     findings = [Finding("basicAuthDisabled", "high", False, "basic auth is on")]
     settings = ScannerSettings(ignore_hardenings=("*",))
-    _apply_waivers(settings, findings, {}, {}, {"enforced": True})
+    _apply_waivers(settings, findings, {}, {}, {"enforced": True}, scan_clock())
 
     explanation = _compute_rating(
         eol=True,

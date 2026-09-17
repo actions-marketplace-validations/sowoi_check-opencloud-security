@@ -50,7 +50,7 @@ Read from the instance itself:
   rather than a fact about this deployment, so they are explained by `--debug`
   and never counted as a missing hardening, never alerted on and never allowed
   to change an exit code. See
-  [ADR 0028](../adr/0028-headers-no-opencloud-sends-are-reported-but-never-alerted.md).
+  [ADR 0028](../../adr/0028-headers-no-opencloud-sends-are-reported-but-never-alerted.md).
   Rehearse `Cross-Origin-Embedder-Policy: require-corp` before rolling it
   out - an office integration that embeds Collabora or a WOPI host stops
   loading unless that origin sends a `Cross-Origin-Resource-Policy` of its own
@@ -60,7 +60,7 @@ Read from the instance itself:
   none on any instance, so it is explained and never counted. The file has to
   carry the `Contact` field RFC 9116 requires - a 200 alone means nothing on
   an instance whose frontend answers every unknown path with its own shell.
-  See [ADR 0034](../adr/0034-an-advisory-observation-need-not-be-a-header.md)
+  See [ADR 0034](../../adr/0034-an-advisory-observation-need-not-be-a-header.md)
 - whether the `Strict-Transport-Security` header would actually be accepted
   for browser preloading, as `hstsPreloadEligible` under the same
   `setup.advisoryChecks`. `hstsPreload` already reports whether the header
@@ -72,7 +72,7 @@ Read from the instance itself:
   why it is explained and never counted. Membership of the list itself is
   deliberately not measured: the only ways to know are to ask a third party
   for it or to ship tens of megabytes of it. See
-  [ADR 0037](../adr/0037-preload-eligibility-is-measured-list-membership-is-not.md)
+  [ADR 0037](../../adr/0037-preload-eligibility-is-measured-list-membership-is-not.md)
 - `hardenings` derived from those headers and capabilities
 - known vulnerabilities from the [advisory database](../README.md#advisory-database) and
   the resulting rating (`0`-`5`)
@@ -264,7 +264,7 @@ The scanner probes only the submitted origin. It does not follow an editor hostn
 the discovery document, because that would let the target choose another connection
 destination. A separately hosted editor therefore gets no finding from these checks.
 Assess that service with suitable editor-specific tools; see [ADR
-0036](../adr/0036-a-companion-service-is-probed-only-where-the-scan-was-pointed.md).
+0036](../../adr/0036-a-companion-service-is-probed-only-where-the-scan-was-pointed.md).
 
 ### What the scan deliberately does not answer
 
@@ -399,4 +399,4 @@ among them. It sees what DNS sees - nodes behind a single load-balancer
 address, a resolver returning a rotating subset, or GeoDNS answering for the
 monitoring host's location all limit what can be compared. The public web
 service never runs it
-([ADR 0042](../adr/0042-every-resolved-address-is-compared-only-when-the-operator-asks.md)).
+([ADR 0042](../../adr/0042-every-resolved-address-is-compared-only-when-the-operator-asks.md)).

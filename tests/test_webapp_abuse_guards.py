@@ -12,6 +12,7 @@ where a stranger would meet it, with the negative case beside the positive.
 from __future__ import annotations
 
 import asyncio
+import io
 
 import pytest
 from fastapi.testclient import TestClient
@@ -93,6 +94,43 @@ def test_the_probe_block_covers_the_whole_network_that_earned_it():
 
     assert neighbour.status_code == 429
     assert elsewhere.status_code == 202
+
+
+def test_a_blocked_network_cannot_upload_a_report_either():
+    """
+    The block is about the client, not about one endpoint.
+
+    A network this service has stopped scanning for does not get to hand it a
+    file to parse instead: the report upload is the one parser here fed from
+    outside, and it costs this service work whether or not a scan follows.
+    """
+    test_client = client(**GUARDED)
+    for _ in range(5):
+        assert _submit(test_client, "http://10.0.0.1", "203.0.113.1").status_code == 400
+
+    refused = _upload(test_client, "203.0.113.1")
+
+    assert refused.status_code == 429
+    assert int(refused.headers["Retry-After"]) > 0
+    # Nothing was read and nothing was kept: the file never reached the parser,
+    # so no comparison exists to come back to.
+    assert asyncio.run(backend().keys_matching("compare:*")) == []
+    # And the block is the whole network's, not one address's.
+    assert _upload(test_client, "203.0.113.99").status_code == 429
+    # A network that earned nothing still gets as far as the uuid it named,
+    # which is the 404 an unknown scan answers with everywhere.
+    assert _upload(test_client, "198.51.100.1").status_code == 404
+
+
+def _upload(test_client, address: str):
+    """One report upload from one address, as the compare form sends it."""
+    return test_client.post(
+        "/compare",
+        data={"current": "c7a3d1d6-2d5c-4a5f-8b4c-1e4f9c8d2b31"},
+        files={"report": ("scan.json", io.BytesIO(b'{"rating": 3}'), "application/json")},
+        headers={"X-Forwarded-For": address},
+        follow_redirects=False,
+    )
 
 
 # ------------------------------------------------------------ refused targets

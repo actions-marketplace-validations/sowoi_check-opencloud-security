@@ -616,6 +616,125 @@ que dependen del despliegue, como un origen CORS o la ruta de un archivo CSP,
 aparecen en `Fragment.undecided`. Requieren una decisión del operador antes de
 poder generar un fragmento utilizable.
 
+## Lo que cubrió el análisis {#what-the-scan-covered}
+
+Una comprobación superada y una que nunca se ejecutó dejan la misma huella en
+este documento: ninguna. En `coverage` queda escrita la diferencia. Véase
+[ADR 0064](../../adr/0064-a-scan-records-what-it-did-not-measure.md).
+
+```json
+{
+  "coverage": {
+    "schema": 1,
+    "counts": {"passed": 49, "failed": 10, "not_checked": 12, "inconclusive": 0, "total": 71},
+    "checks": [
+      {"id": "Content-Security-Policy", "group": "header", "state": "passed"},
+      {"id": "directoryListing", "group": "extraCheck", "state": "failed"},
+      {"id": "tlsInspection", "group": "tls", "state": "not_checked",
+       "reason": "not_applicable", "detail": "The instance answered over plain HTTP."}
+    ]
+  }
+}
+```
+
+Cada comprobación que el análisis tuvo en cuenta aparece exactamente una vez,
+en uno de cuatro estados:
+
+| Estado | Significado |
+|:--|:--|
+| `passed` | La comprobación se ejecutó y la instancia la satisfizo |
+| `failed` | La comprobación se ejecutó y la instancia no la satisfizo |
+| `not_checked` | El escáner no ejecutó la comprobación |
+| `inconclusive` | El escáner la ejecutó y no pudo decidir |
+
+`passed` y `failed` no llevan motivo: una medición que se hizo no necesita
+excusa. Las otras dos llevan siempre uno, de un conjunto cerrado:
+
+| Motivo | Significado |
+|:--|:--|
+| `not_applicable` | La comprobación no puede aplicarse a este despliegue: no hay certificado en una instancia por HTTP simple, ni una segunda dirección que comparar |
+| `probe_disabled` | Un ajuste desactivó la comprobación en este análisis |
+| `prerequisite_missing` | La instancia no publicó lo que la comprobación lee |
+| `timeout` | Nada respondió a tiempo |
+| `unreadable` | Algo respondió y no se pudo entender |
+| `no_route` | No hay ruta hasta esa familia de direcciones desde donde se ejecutó el análisis |
+
+Hay dos propiedades en las que conviene apoyarse:
+
+- **El total es lo que tuvo en cuenta este análisis**, no una constante. Las
+  comprobaciones son dinámicas - qué rutas se sondean, qué puertos de
+  depuración se marcan y qué direcciones se comparan dependen de la instancia
+  y de los ajustes -, así que no hay un denominador fijo.
+- **La cobertura nunca cambia una nota.** Nada de este bloque llega a la
+  calificación, las gravedades, la línea de alerta, el código de salida ni la
+  carga del webhook. Un fallo eximido sigue siendo `failed` aquí; la
+  aceptación está en `extraChecks[].ignored`, porque una exención es una
+  decisión sobre las alertas y no sobre las pruebas.
+
+Un documento escrito antes de que existiera este bloque simplemente no tiene
+la clave `coverage`, que es un informe que no dice lo que cubrió y no un
+análisis sin lagunas. Léalo con `coverage.coverage_of(result)`, que devuelve
+`None` tanto para un bloque ausente como para uno mal formado.
+
+## En qué condiciones se ejecutó un análisis {#the-conditions-a-scan-ran-under}
+
+Dos análisis de la misma instancia pueden diferir sin que la instancia haya
+cambiado: la base de datos de avisos aprendió un CVE, se cerró una ventana de
+soporte, se actualizó el escáner, caducó una exención. `provenance` registra lo
+que se sabía en ese momento, para que una comparación pueda distinguir eso de
+un empeoramiento real. Véase
+[ADR 0066](../../adr/0066-a-result-records-the-conditions-it-was-produced-under.md).
+
+```json
+{
+  "provenance": {
+    "schema": 1,
+    "scannerVersion": "1.25.0",
+    "scannedAt": "2026-09-17T19:56:35.852320+00:00",
+    "releaseTrack": "auto",
+    "advisoryData": {"digest": "7ffa242f...", "count": 1},
+    "scheduleData": {"digest": "6e9468bf...", "updated": "2026-09-15"},
+    "waivers": {"active": [], "expired": []},
+    "coverage": {"measured": 59, "total": 71}
+  }
+}
+```
+
+
+`digest` es un SHA-256 sobre los campos identificativos de los datos de
+referencia en forma canónica, de modo que los mismos avisos producen el mismo
+valor sin importar cómo se serializaron, combinaron u ordenaron. Es un resumen
+y no una copia - incrustar la base de datos pondría megabytes de avisos ajenos
+en cada informe - y tampoco una ruta de fichero, que revelaría dónde guarda sus
+ficheros la máquina. `scheduleData.updated` es cuándo se *generó* el calendario,
+que no es cuándo se leyó; `scannedAt` es el análisis.
+
+`waivers` registra patrones y estados, nunca el texto del motivo: un motivo es
+prosa escrita para una persona, y una comparación que lo contrastara informaría
+de una errata corregida como si fuera un cambio de política.
+
+### Comparar dos resultados {#comparing-two-results}
+
+`check-opencloud-scanner diff` imprime los cambios que contribuyeron bajo el
+resumen existente, y `--format json` los entrega como `explanation`:
+
+| Categoría | Qué cambió |
+|:--|:--|
+| `instance` | La versión, o una comprobación que empezó o dejó de fallar |
+| `referenceData` | Los avisos, el calendario, el canal, o una ventana de soporte que simplemente venció |
+| `scanner` | La versión del escáner, o cuántas comprobaciones llegaron a una conclusión |
+| `policy` | Una exención caducó, se añadió o se retiró |
+| `unknown` | Algo se movió y nada de lo registrado lo explica |
+
+La redacción es deliberadamente prudente. Un resumen distinto establece que los
+datos de referencia difirieron; no establece que eso hiciera moverse ninguna
+nota concreta, y la frase lo dice así. Varios cambios pueden contribuir sin que
+se elija uno como la causa.
+
+`limitations` enumera lo que la comparación no pudo establecer, casi siempre que
+uno de los dos informes es anterior a estos bloques y por tanto no puede decir
+contra qué se juzgó ni cuánto se ejecutó. Eso se informa, no se supone.
+
 ## Puertos de depuración {#debug-ports}
 
 Cada servicio de OpenCloud ejecuta un servicio de depuración que sirve

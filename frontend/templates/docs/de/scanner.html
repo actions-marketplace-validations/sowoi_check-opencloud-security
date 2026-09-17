@@ -25,6 +25,8 @@
   <a href="#update-check" lang="de">Verfügbare Updates</a>
   <a href="#vulnerabilities" lang="de">Sicherheitsmeldungen</a>
   <a href="#hardenings" lang="de">Schutzmaßnahmen</a>
+  <a href="#what-the-scan-covered" lang="de">Was der Scan abgedeckt hat</a>
+  <a href="#the-conditions-a-scan-ran-under" lang="de">Unter welchen Bedingungen ein Scan lief</a>
   <a href="#debug-ports" lang="de">Debug-Ports</a>
   <a href="#every-resolved-address" lang="de">Alle aufgelösten Adressen</a>
   <a href="#concurrency" lang="de">Parallelität</a>
@@ -579,6 +581,179 @@ darstellen kann; <code>flavours_for</code> nennt passende Formate.</p>
 Entscheidung über die konkrete Installation, etwa eine erlaubte CORS-Origin
 oder einen CSP-Dateipfad, erscheint sie unter <code>Fragment.undecided</code> statt als
 scheinbar fertiger Konfigurationswert.</p>
+<h2 id="what-the-scan-covered">Was der Scan abgedeckt hat</h2>
+<p>Eine bestandene Prüfung und eine Prüfung, die nie gelaufen ist, hinterlassen
+in diesem Dokument dieselbe Spur: nichts. In <code>coverage</code> steht der Unterschied.
+Siehe <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0064-a-scan-records-what-it-did-not-measure.md">ADR 0064</a>.</p>
+<pre><code class="language-json">{
+  &quot;coverage&quot;: {
+    &quot;schema&quot;: 1,
+    &quot;counts&quot;: {&quot;passed&quot;: 49, &quot;failed&quot;: 10, &quot;not_checked&quot;: 12, &quot;inconclusive&quot;: 0, &quot;total&quot;: 71},
+    &quot;checks&quot;: [
+      {&quot;id&quot;: &quot;Content-Security-Policy&quot;, &quot;group&quot;: &quot;header&quot;, &quot;state&quot;: &quot;passed&quot;},
+      {&quot;id&quot;: &quot;directoryListing&quot;, &quot;group&quot;: &quot;extraCheck&quot;, &quot;state&quot;: &quot;failed&quot;},
+      {&quot;id&quot;: &quot;tlsInspection&quot;, &quot;group&quot;: &quot;tls&quot;, &quot;state&quot;: &quot;not_checked&quot;,
+       &quot;reason&quot;: &quot;not_applicable&quot;, &quot;detail&quot;: &quot;The instance answered over plain HTTP.&quot;}
+    ]
+  }
+}
+</code></pre>
+<p>Jede Prüfung, die der Scan vorgesehen hat, steht genau einmal darin, in einem
+von vier Zuständen:</p>
+<table>
+<thead>
+<tr>
+<th>Zustand</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>passed</code></td>
+<td>Die Prüfung lief und die Instanz hat sie erfüllt</td>
+</tr>
+<tr>
+<td><code>failed</code></td>
+<td>Die Prüfung lief und die Instanz hat sie nicht erfüllt</td>
+</tr>
+<tr>
+<td><code>not_checked</code></td>
+<td>Der Scanner hat die Prüfung nicht ausgeführt</td>
+</tr>
+<tr>
+<td><code>inconclusive</code></td>
+<td>Der Scanner hat geprüft und konnte nicht entscheiden</td>
+</tr>
+</tbody>
+</table>
+<p><code>passed</code> und <code>failed</code> tragen keinen Grund - eine Messung, die stattgefunden
+hat, braucht keine Entschuldigung. Die beiden anderen tragen immer einen, aus
+einer festen Menge:</p>
+<table>
+<thead>
+<tr>
+<th>Grund</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>not_applicable</code></td>
+<td>Die Prüfung kann auf diese Bereitstellung nicht zutreffen - kein Zertifikat bei einer Instanz über HTTP, keine zweite Adresse zum Vergleich</td>
+</tr>
+<tr>
+<td><code>probe_disabled</code></td>
+<td>Eine Einstellung hat die Prüfung für diesen Scan abgeschaltet</td>
+</tr>
+<tr>
+<td><code>prerequisite_missing</code></td>
+<td>Die Instanz hat nicht veröffentlicht, was die Prüfung liest</td>
+</tr>
+<tr>
+<td><code>timeout</code></td>
+<td>Nichts hat rechtzeitig geantwortet</td>
+</tr>
+<tr>
+<td><code>unreadable</code></td>
+<td>Etwas hat geantwortet und war nicht zu verstehen</td>
+</tr>
+<tr>
+<td><code>no_route</code></td>
+<td>Von dort, wo der Scan lief, gibt es keine Route zu dieser Adressfamilie</td>
+</tr>
+</tbody>
+</table>
+<p>Auf zwei Eigenschaften kannst du dich verlassen:</p>
+<ul>
+<li><strong>Die Gesamtzahl ist das, was dieser Scan vorgesehen hat</strong>, keine Konstante.
+  Die Prüfungen sind dynamisch - welche Pfade geprüft, welche Debug-Ports
+  gewählt und welche Adressen verglichen werden, hängt von der Instanz und den
+  Einstellungen ab -, also gibt es keinen festen Nenner.</li>
+<li><strong>Abdeckung ändert nie eine Note.</strong> Nichts in diesem Block erreicht die
+  Bewertung, die Schweregrade, die Alarmzeile, den Exit-Code oder die
+  Webhook-Nutzlast. Ein ausgenommener Fehlschlag bleibt hier <code>failed</code>; die
+  Annahme steht in <code>extraChecks[].ignored</code>, denn eine Ausnahme ist eine
+  Entscheidung über Alarme und nicht über Belege.</li>
+</ul>
+<p>Ein Dokument, das vor diesem Block entstanden ist, hat schlicht keinen
+Schlüssel <code>coverage</code> - ein Bericht, der nicht sagt, was er abgedeckt hat, und
+nicht ein Scan ohne Lücken. Lies ihn mit <code>coverage.coverage_of(result)</code>, das
+sowohl für einen fehlenden als auch für einen fehlerhaften Block <code>None</code>
+zurückgibt.</p>
+<h2 id="the-conditions-a-scan-ran-under">Unter welchen Bedingungen ein Scan lief</h2>
+<p>Zwei Scans derselben Instanz können sich unterscheiden, ohne dass sich die
+Instanz geändert hat: Die Advisory-Datenbank hat eine CVE dazugelernt, ein
+Supportzeitraum ist abgelaufen, der Scanner wurde aktualisiert, eine Ausnahme
+ist verfallen. <code>provenance</code> hält fest, was zum Zeitpunkt des Scans bekannt war,
+damit ein Vergleich das von einer echten Verschlechterung unterscheiden kann.
+Siehe <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0066-a-result-records-the-conditions-it-was-produced-under.md">ADR 0066</a>.</p>
+<pre><code class="language-json">{
+  &quot;provenance&quot;: {
+    &quot;schema&quot;: 1,
+    &quot;scannerVersion&quot;: &quot;1.25.0&quot;,
+    &quot;scannedAt&quot;: &quot;2026-09-17T19:56:35.852320+00:00&quot;,
+    &quot;releaseTrack&quot;: &quot;auto&quot;,
+    &quot;advisoryData&quot;: {&quot;digest&quot;: &quot;7ffa242f...&quot;, &quot;count&quot;: 1},
+    &quot;scheduleData&quot;: {&quot;digest&quot;: &quot;6e9468bf...&quot;, &quot;updated&quot;: &quot;2026-09-15&quot;},
+    &quot;waivers&quot;: {&quot;active&quot;: [], &quot;expired&quot;: []},
+    &quot;coverage&quot;: {&quot;measured&quot;: 59, &quot;total&quot;: 71}
+  }
+}
+</code></pre>
+<p><code>digest</code> ist ein SHA-256 über die kennzeichnenden Felder der Referenzdaten in
+kanonischer Form: Dieselben Advisories ergeben denselben Wert, egal wie sie
+serialisiert, zusammengeführt oder sortiert wurden. Es ist eine Prüfsumme und
+keine Kopie - die Datenbank einzubetten würde Megabyte fremder Advisories in
+jeden Bericht schreiben - und auch kein Dateipfad, der verraten würde, wo die
+Maschine ihre Dateien ablegt. <code>scheduleData.updated</code> ist der Zeitpunkt, zu dem
+der Zeitplan <em>erzeugt</em> wurde, nicht der, zu dem er gelesen wurde; <code>scannedAt</code>
+ist der Scan.</p>
+<p><code>waivers</code> hält Muster und Zustände fest, nie den Begründungstext: Eine
+Begründung ist Prosa für einen Menschen, und ein Vergleich, der sie
+gegenüberstellt, würde einen korrigierten Tippfehler als Richtlinienänderung
+melden.</p>
+<h3 id="comparing-two-results">Zwei Ergebnisse vergleichen</h3>
+<p><code>check-opencloud-scanner diff</code> gibt die beitragenden Änderungen unter der
+bisherigen Zusammenfassung aus, und <code>--format json</code> liefert sie als
+<code>explanation</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Kategorie</th>
+<th>Was sich geändert hat</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>instance</code></td>
+<td>Die Version, oder eine Prüfung, die zu scheitern begann oder aufhörte</td>
+</tr>
+<tr>
+<td><code>referenceData</code></td>
+<td>Die Advisories, der Zeitplan, der Track, oder ein schlicht abgelaufener Supportzeitraum</td>
+</tr>
+<tr>
+<td><code>scanner</code></td>
+<td>Die Version des Scanners, oder wie viele Prüfungen zu einem Ergebnis kamen</td>
+</tr>
+<tr>
+<td><code>policy</code></td>
+<td>Eine Ausnahme ist verfallen, kam hinzu oder fiel weg</td>
+</tr>
+<tr>
+<td><code>unknown</code></td>
+<td>Etwas hat sich bewegt und nichts Aufgezeichnetes erklärt es</td>
+</tr>
+</tbody>
+</table>
+<p>Die Formulierungen sind bewusst zurückhaltend. Eine geänderte Prüfsumme belegt,
+dass sich die Referenzdaten unterschieden; sie belegt nicht, dass dadurch eine
+bestimmte Note gefallen ist, und der Satz sagt genau das. Mehrere Änderungen
+können beitragen, ohne dass eine davon zur Ursache erklärt wird.</p>
+<p><code>limitations</code> listet auf, was der Vergleich nicht feststellen konnte - meist,
+dass einer der beiden Berichte älter als diese Blöcke ist und deshalb nicht
+sagen kann, wogegen er geprüft wurde oder wie viel davon lief. Das wird
+berichtet und nicht angenommen.</p>
 <h2 id="debug-ports">Debug-Ports</h2>
 <p>Debug-Listener liefern unter anderem <code>/healthz</code>, <code>/readyz</code>, <code>/metrics</code>,
 <code>/config</code> und <code>/debug/pprof</code>. Diese Endpunkte können Versionen und Konfigurationen

@@ -36,7 +36,7 @@ The schedule ships in `opencloud_local_scan/data/release_schedule.json` and is
 scraped from the release dates in the OpenCloud admin documentation, the only
 source that states the release *type*; the GitHub release list cannot tell a
 rolling release from a production one. It is refreshed on every release and
-weekly by a [scheduled workflow](../.github/workflows/release-schedule.yml), and
+weekly by a [scheduled workflow](../../.github/workflows/release-schedule.yml), and
 the same run rewrites the table above - so the versions quoted here are the
 ones the plugin actually judges against, not the ones that were current when
 this page was written. Everything else in this section, including the worked

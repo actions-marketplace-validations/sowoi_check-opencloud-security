@@ -19,6 +19,8 @@ from __future__ import annotations
 import asyncio
 import io
 import json
+import sys
+import time
 
 import pytest
 
@@ -40,6 +42,7 @@ from webapp.comparisons import (
     new_token,
 )
 from webapp.imports import (
+    MAX_ENTRIES,
     MAX_UPLOAD_BYTES,
     ReportRejected,
     parse_report,
@@ -280,6 +283,77 @@ def test_a_missing_file_or_a_missing_uuid_is_said_rather_than_guessed(improved_p
     assert without_file.status_code == 422
 
 
+@pytest.mark.parametrize(
+    "block",
+    [
+        {"extraChecks": [{"id": f"check{index}"} for index in range(MAX_ENTRIES + 1)]},
+        {"vulnerabilities": [{"id": f"CVE-2026-{i}"} for i in range(MAX_ENTRIES + 1)]},
+        {"hardenings": {f"hardening{index}": False for index in range(MAX_ENTRIES + 1)}},
+        {"setup": {"headers": {f"header{i}": False for i in range(MAX_ENTRIES + 1)}}},
+        {"ignored": [f"waived{index}" for index in range(MAX_ENTRIES + 1)]},
+    ],
+)
+def test_a_block_longer_than_a_report_is_refused_rather_than_read_in_part(block):
+    """
+    Reading the first five hundred of a longer list answers with half the file.
+
+    And the half left out is the half a reader would look in: every entry past
+    the cut reads as resolved on the earlier side and as introduced on the
+    later one, with nothing on the page able to say the file was only partly
+    read. A count could not describe that hole, so the file is refused - which
+    is what the CSV row cap already does for a file that is too long.
+    """
+    with pytest.raises(ReportRejected) as refusal:
+        parse_report(json.dumps({"rating": 3, **block}).encode())
+    assert refusal.value.key == "compare.upload.error.not_a_report"
+
+
+def test_an_entry_that_is_not_the_shape_of_its_block_is_counted_not_skipped():
+    """
+    The count is what the page says the comparison is missing, so it has to be
+    complete: an entry with no identifier at all is as unreadable as one whose
+    identifier this scanner never writes.
+    """
+    imported = parse_report(
+        json.dumps(
+            {
+                "rating": 3,
+                "extraChecks": ["not a mapping", 17, None, {"id": "basicAuthDisabled"}],
+                "ignored": ["basicAuthDisabled", {"not": "a name"}],
+            }
+        ).encode()
+    )
+
+    assert [entry["id"] for entry in imported.document["extraChecks"]] == [
+        "basicAuthDisabled"
+    ]
+    assert imported.document["ignored"] == ["basicAuthDisabled"]
+    assert imported.dropped == 4
+
+
+def test_a_grade_of_a_quarter_megabyte_of_digits_is_read_through_the_cap():
+    """
+    The grade is capped like every other string the file carries.
+
+    Without the cap this is an `int` conversion sized by whoever wrote the
+    file, refused only by an interpreter default an operator can turn off - so
+    the test turns it off, which is the configuration the guard is for.
+    """
+    limit = sys.get_int_max_str_digits()
+    sys.set_int_max_str_digits(0)
+    try:
+        started = time.perf_counter()
+        imported = parse_report(
+            json.dumps({"rating": "9" * 250_000, "extraChecks": []}).encode()
+        )
+        elapsed = time.perf_counter() - started
+    finally:
+        sys.set_int_max_str_digits(limit)
+
+    assert imported.document["rating"] is None
+    assert elapsed < 1
+
+
 # -------------------------------------------------- what an upload cannot do
 
 
@@ -485,6 +559,29 @@ def test_a_comparison_carries_that_ttl_into_redis(improved_pair):
 
     remaining = asyncio.run(backend().ttl(comparison_key(token)))
     assert 0 < remaining <= MAX_COMPARISON_TTL_SECONDS
+
+
+def test_the_sentences_about_a_refused_upload_name_their_own_numbers(
+    improved_pair,
+):
+    """
+    A limit a sentence does not name is a limit the reader has to guess at.
+
+    Both of these are catalogue strings with a number in them, and a page that
+    printed the placeholder instead would be telling somebody their file was
+    too large without saying what "too large" is.
+    """
+    test_client = client()
+
+    too_large = _upload(test_client, b"{" + b" " * MAX_UPLOAD_BYTES)
+    assert too_large.status_code == 413
+    assert f"{MAX_UPLOAD_BYTES // 1024} KB" in too_large.text
+    assert "{kilobytes}" not in too_large.text
+
+    expired = test_client.get(f"/compare/{new_token()}")
+    assert expired.status_code == 404
+    assert f"{MAX_COMPARISON_TTL_SECONDS // 60} minutes" in expired.text
+    assert "{minutes}" not in expired.text
 
 
 def test_an_expired_comparison_is_the_same_404_as_one_that_never_existed(

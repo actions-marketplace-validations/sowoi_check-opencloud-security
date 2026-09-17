@@ -116,6 +116,14 @@ scanner:
   #   - cspWithoutUnsafeInline   # default csp.yaml, tightening it breaks the web UI
   #   - hstsPreload              # the reverse proxy sets its own HSTS header
   #   - 'debugPort:*'
+  # The same acceptance, with a reason and a deadline. Written
+  # pattern|expires|reason: the expiry must carry a timezone, the reason may
+  # not be empty, and a record missing either is refused rather than treated
+  # as permanent. At the expiry the check alerts again on its own - nobody
+  # has to remember to come back and delete the line.
+  # temporary_waivers:
+  #   - 'debugPort:9205|2026-12-31T00:00:00Z|Firewall change scheduled, ticket OPS-412'
+  #   - 'exposed:/metrics|2026-10-01T00:00:00+02:00|Moving Prometheus behind the proxy'
   bundled_db: true
   # vulnerability_db:            # additional advisory files (JSON)
   #   - /etc/check-opencloud-security/advisories.json

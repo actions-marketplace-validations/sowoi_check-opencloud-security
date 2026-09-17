@@ -17,20 +17,20 @@
 
 <article class="docs-article card section-gap" data-reveal lang="fr">
 <p>Planifiez des analyses régulières avec un minuteur systemd ou cron lorsque vous n’utilisez
-pas Icinga2 ou Nagios. Les exemples de <a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/contrib"><code>contrib/</code></a> fournissent les fichiers
+pas Icinga2 ou Nagios. Les exemples de <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib"><code>contrib/</code></a> fournissent les fichiers
 de service, de minuterie et d’environnement que vous pouvez adapter à votre installation :</p>
 <ul>
-<li><a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/contrib/systemd/check-opencloud-security.service"><code>contrib/systemd/check-opencloud-security.service</code></a>
-  and <a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/contrib/systemd/check-opencloud-security.timer"><code>.timer</code></a></li>
-<li><a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/contrib/systemd/check-opencloud-security.env.example"><code>contrib/systemd/check-opencloud-security.env.example</code></a></li>
+<li><a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/systemd/check-opencloud-security.service"><code>contrib/systemd/check-opencloud-security.service</code></a>
+  and <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/systemd/check-opencloud-security.timer"><code>.timer</code></a></li>
+<li><a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/systemd/check-opencloud-security.env.example"><code>contrib/systemd/check-opencloud-security.env.example</code></a></li>
 </ul>
 <p>The separate
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/contrib/systemd/check-opencloud-security-refresh.timer"><code>check-opencloud-security-refresh.timer</code></a>
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/systemd/check-opencloud-security-refresh.timer"><code>check-opencloud-security-refresh.timer</code></a>
 keeps the scanner's release schedule and advisory database current. Configure
 the scanner to read the two files under <code>/var/lib/check-opencloud-security</code>
 before enabling it; the refresh command validates both documents and writes
 them atomically.
-- <a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/contrib/cron/check-opencloud-security.cron"><code>contrib/cron/check-opencloud-security.cron</code></a></p>
+- <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/cron/check-opencloud-security.cron"><code>contrib/cron/check-opencloud-security.cron</code></a></p>
 <!-- TOC -->
 <ul>
 <li><a href="#scheduling-without-icinga2--nagios">Scheduling without Icinga2 / Nagios</a></li>

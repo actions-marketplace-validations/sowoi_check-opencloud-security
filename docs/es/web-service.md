@@ -486,10 +486,11 @@ Una clave que nadie ha nombrado ahí no llega a nada posterior.
 | Formato | se decide examinando los bytes, nunca el nombre del archivo, que nada lee y nunca se refleja en una página |
 | Filas CSV | 2000 |
 | Anidamiento JSON | 20 niveles |
-| Entradas por lista, caracteres por cadena | 500 y 300 |
-| Identificadores de hallazgos | se descartan salvo que se escriban como los escribe este escáner, y se muestra el número de líneas descartadas |
+| Entradas por bloque, caracteres por cadena | 500 y 300; un bloque con más entradas que esas se rechaza en lugar de leerse en parte |
+| Identificadores de hallazgos | se descartan salvo que se escriban como los escribe este escáner, y se muestra el número de todo lo que no se ha podido leer |
 | Límite de frecuencia | un cupo propio, con los mismos números que el límite por cliente: procesar cuesta trabajo a este servicio y no le cuesta nada a la instancia de nadie |
 | POST entre sitios | se rechaza antes del limitador y antes del procesamiento |
+| Una red con un bloqueo por sondeo | se rechaza antes de ambos y antes de leer el archivo: el bloqueo juzga al cliente, no a un único endpoint |
 
 **Un dato que el formato nunca registró se elimina de ambos lados en lugar de
 adivinarse.** El CSV es una tabla plana de hallazgos; si había una
@@ -529,6 +530,7 @@ resultado.
 | El archivo está vacío, es demasiado grande, no es UTF-8 o no es JSON ni CSV | **422**, o **413** por tamaño, con las palabras de este servicio: una subida rechazada nunca se cita de vuelta |
 | El archivo se puede procesar, pero no es un informe de análisis | **422** |
 | Demasiadas subidas desde una misma red | **429** con `Retry-After` |
+| La red tiene un bloqueo por sondeo | **429** con `Retry-After`, mientras dure el bloqueo |
 | `GET /compare/{token}` pasados cinco minutos | **404**, exactamente igual que para un token que nunca existió |
 
 ## La protección contra SSRF {#the-ssrf-guard}
@@ -809,10 +811,13 @@ enrutarse y conservarse por separado:
 
 Tres eventos: `scan_requested` para un envío aceptado, `rate_limited` para un
 límite por cliente, un tiempo de espera por destino, un límite diario
-(`rate_limit_daily`) o un bloqueo por sondeo (`rate_limit_probe`) que
-realmente se ha activado, y `submission_rejected` para uno que nunca llegó a
-ser un análisis: `unsupported_fields`, `target_rejected`,
-`target_not_approved`.
+(`rate_limit_daily`), un bloqueo por sondeo (`rate_limit_probe`) o una subida
+de informes (`rate_limit_upload`) que realmente se ha activado, y
+`submission_rejected` para uno que nunca llegó a ser un análisis:
+`unsupported_fields`, `target_rejected`, `target_not_approved`, o para un
+informe subido que el analizador no ha podido leer (`report_rejected`, que
+lleva la clave del rechazo de este servicio en `fields` y ninguna parte del
+archivo).
 
 Lo importante del diseño es lo que sigue sin anotar:
 

@@ -182,7 +182,7 @@ pointed at an external one.
 ## 7. What the discovery document says about how sign-in is protected
 
 The request above is already paid for. The document it returns is public
-evidence in the sense [ADR 0022](../adr/0022-identity-provider-versions-require-public-evidence.md)
+evidence in the sense [ADR 0022](../../adr/0022-identity-provider-versions-require-public-evidence.md)
 means it - unauthenticated, read-only, published on purpose - and four of its
 fields say something an operator can act on. Reading them costs **no extra
 HTTP request**: the same response that yielded the issuer yields all four.
@@ -244,7 +244,7 @@ Verified against [libregraph/lico][lico]'s `oidc/provider/provider.go`
 | `request_object_signing_alg_values_supported` | lico lists `none` among them, but this governs signed *request objects*, not ID tokens. An unsigned request object is not an unsigned token, and OpenCloud's clients do not send request objects at all. |
 | `scopes_supported`, `claims_supported` | Say what the provider can be asked for, not what it grants. Which scopes a *client* is allowed is per-client configuration the document does not show. |
 | `subject_types_supported` | lico publishes `public` and nothing else. `pairwise` is a privacy feature for multi-tenant providers; requiring it of a single-tenant OpenCloud deployment would be noise. |
-| `registration_endpoint` | Its presence does not mean open dynamic registration - whether registration needs an initial access token is not published. Guessing would be a confident claim from weak evidence, which is the thing [ADR 0022](../adr/0022-identity-provider-versions-require-public-evidence.md) exists to forbid. |
+| `registration_endpoint` | Its presence does not mean open dynamic registration - whether registration needs an initial access token is not published. Guessing would be a confident claim from weak evidence, which is the thing [ADR 0022](../../adr/0022-identity-provider-versions-require-public-evidence.md) exists to forbid. |
 
 ## Severity and rating impact
 

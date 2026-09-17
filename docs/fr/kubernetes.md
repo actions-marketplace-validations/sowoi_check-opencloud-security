@@ -22,7 +22,7 @@ version ship *inside* the image, so which tag you run is part of the verdict.
 
 ## The Helm chart
 
-[`contrib/helm/check-opencloud-security`](../contrib/helm/check-opencloud-security)
+[`contrib/helm/check-opencloud-security`](../../contrib/helm/check-opencloud-security)
 packages both of the manifests below. Install it from a checkout - it is not
 published to a registry, and reading what it will create is part of the point:
 
@@ -47,7 +47,7 @@ omits one is refused rather than rendered:
 Every credential is read from a `Secret` you created and named; the chart
 writes none, because a values file is committed and copied while a token in
 one is not easily unremembered. The
-[chart's README](../contrib/helm/check-opencloud-security/README.md) has the
+[chart's README](../../contrib/helm/check-opencloud-security/README.md) has the
 full value table.
 
 The rest of this page is what the chart renders, for anyone who would rather
@@ -126,8 +126,8 @@ kubectl logs job/opencloud-security-now --namespace monitoring
 ## Sending the result somewhere
 
 A failed job is a blunt signal. Add the webhook and the result arrives with
-the reason attached - see [Webhook recipes](webhook-recipes.md) and
-[Uptime Kuma](webhook-recipes.md#uptime-kuma):
+the reason attached - see [Webhook recipes](../webhook-recipes.md) and
+[Uptime Kuma](../webhook-recipes.md#uptime-kuma):
 
 ```yaml
               args:

@@ -241,6 +241,30 @@ A sitemap that cannot be read condemns nothing, and only `/docs/` paths are
 held to it: a sitemap lists pages, so an image missing from one proves
 nothing.
 
+## Translations
+
+The frontend is written in English and translated into German, French and
+Spanish, and the operator guides have their own sources under `docs/de/`,
+`docs/fr/` and `docs/es/`. [`TRANSLATING.md`](TRANSLATING.md) is the style
+guide: the form of address each language uses, the terminology, what happens
+to example hostnames and placeholders, and the review workflow.
+
+```shell
+uv run python scripts/check_translations.py             # the full report
+uv run python scripts/check_translations.py --check     # only what fails CI
+uv run python scripts/check_translations.py --strict    # warnings fail too
+```
+
+The split is the point. A missing key, a lost `{placeholder}`, changed inline
+markup, a translated `href` or a relative link that resolves to nothing are
+facts about the string: they break a page or a format string, they are
+errors, and CI refuses them. Whether a sentence sounds like German is not
+something this script can know, so the prose heuristics - form of address,
+a string left in English, a dropped product name, a glossary term rendered
+two ways - name a key and leave the judgement to a reviewer. Record a
+warning you have decided about in the script's `ACCEPTED` table with its
+reason rather than removing the check.
+
 ## Linting
 We use Ruff for linting and code formatting checks.
 

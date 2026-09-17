@@ -59,6 +59,9 @@ is needed.
 | [`test_advisory_checks.py`](test_advisory_checks.py) | Non-header observations (e.g. `security.txt`) that are reported but never counted. |
 | [`test_hardening.py`](test_hardening.py) | Every check the scanner can report appears in the hardening catalogue. |
 | [`test_waivers.py`](test_waivers.py) | Waiving hardening findings, and declaring an instance's release track. |
+| [`test_waiver_expiry.py`](test_waiver_expiry.py) | A waiver with a reason and a deadline, and the alert coming back when it passes. |
+| [`test_change_explanation.py`](test_change_explanation.py) | Why two results differ, claimed only as far as the evidence supports. |
+| [`test_webapp_html_report.py`](test_webapp_html_report.py) | The standalone report: no request on opening, and nothing in it is markup. |
 | [`test_remediation.py`](test_remediation.py) | The remediation planner never promises a grade that its fixes would not reach. |
 | [`test_snippets.py`](test_snippets.py) | Configuration fragments for fixes, and that they match the prose describing them. |
 | [`test_explain.py`](test_explain.py) | Debug mode: why a rating is what it is, and what each hardening identifier means. |
@@ -160,6 +163,9 @@ is needed.
 | [`test_webapp_share.py`](test_webapp_share.py) | Sharing a report never contacts a third party or leaks the capability link. |
 | [`test_webapp_seo.py`](test_webapp_seo.py) | Docs pages are indexable, results never are, there is no third-party card metadata, and the mobile nav fits. |
 | [`test_webapp_i18n.py`](test_webapp_i18n.py) | The frontend is translated without changing API contracts. |
+| [`test_translation_quality.py`](test_translation_quality.py) | Structural differences between the catalogues fail; prose heuristics warn. |
+| [`test_coverage.py`](test_coverage.py) | Every check has one state, an unmeasured one says why, and none of it moves the grade. |
+| [`test_webapp_coverage.py`](test_webapp_coverage.py) | Scan gaps regrouped and translated, and an older report that records none. |
 | [`test_webapp_search.py`](test_webapp_search.py) | The browser search built at release, and what result data it may contain. |
 | [`test_frontend_documentation.py`](test_frontend_documentation.py) | Browser documentation generated from the Markdown guides. |
 

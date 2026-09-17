@@ -465,7 +465,7 @@ MESSAGES: dict[str, str] = {
         "Zurück zum Formular. Dauert ein paar Sekunden, keine Anmeldung nötig."
     ),
     # ---------------------------------------------------------------- 404
-    "notfound.title": "Hier ist nichts",
+    "notfound.title": "Seite nicht gefunden",
     "notfound.description": (
         "Die Adresse existiert nicht, oder der Scan, auf den sie zeigte, ist "
         "bereits abgelaufen."
@@ -620,7 +620,7 @@ MESSAGES: dict[str, str] = {
     ),
     "grades.caps.at_best": "bestenfalls",
     "grades.caps.shared": "Befunde desselben Schweregrads setzen dieselbe Obergrenze. Bei drei mittleren Befunden reicht es daher nicht, nur einen zu beheben. Der Maßnahmenplan zeigt alle drei Schritte und den Punkt, an dem sich die Note verbessert.",
-    "grades.caps.rules": "Zwei Regeln haben Vorrang. <strong>Das Supportende bestimmt immer die Note</strong>: Ein nicht mehr unterstütztes Release erhält auch mit Ausnahmen ein <strong>F</strong>. <strong>Ein Release vor dem Stand seines angegebenen Kanals gilt nicht als veraltet</strong>; der Bericht weist es als neuer aus.",
+    "grades.caps.rules": "Zwei Regeln haben Vorrang. <strong>Das Supportende bestimmt immer die Note</strong>: Ein nicht mehr unterstütztes Release erhält auch mit Ausnahmen ein <strong>F</strong>. <strong>Ein Release, das neuer ist als der Stand seines angegebenen Kanals, gilt nicht als veraltet</strong>; der Bericht weist darauf hin, dass es diesem Kanal voraus ist.",
     "grades.improve.kicker": "Der kürzeste Weg",
     "grades.improve.heading": "Befunde beheben",
     "grades.improve.intro": "Jeder Bericht enthält die Informationen, die du für die nächsten Schritte brauchst:",
@@ -690,7 +690,7 @@ MESSAGES: dict[str, str] = {
     "how.pipeline.step4": "<strong>Das Ergebnis läuft ab.</strong> Nach {minutes} Minuten ist es über seine Kennung nicht mehr abrufbar.",
     "how.faq.kicker": "Fragen",
     "how.faq.heading": "Häufig gestellte Fragen",
-    "how.faq.q1": "Ist das offizielle OpenCloud-Software?",
+    "how.faq.q1": "Ist das die offizielle OpenCloud-Software?",
     "how.faq.a1": (
         "Nein. Dies ist ein unabhängiges Community-Projekt, das in keiner "
         "Verbindung zur OpenCloud GmbH steht und von diesem Unternehmen weder "
@@ -1178,6 +1178,12 @@ MESSAGES: dict[str, str] = {
         "Das sind viele Berichte aus deinem Netz in kurzer Zeit. Warte eine "
         "Minute und versuche es erneut."
     ),
+    "compare.upload.error.blocked": (
+        "Mehrere zuletzt aus deinem Netz angefragte Ziele waren keine "
+        "erreichbaren OpenCloud-Instanzen. Dieser Dienst legt deshalb eine "
+        "Pause ein - auch für Uploads. Der Scanner und sein Vergleich laufen "
+        "ohne jede Begrenzung auch auf deinem eigenen Rechner."
+    ),
     "compare.upload.error.expired": (
         "Dieser Vergleich ist abgelaufen. Vergleiche aus einer "
         "hochgeladenen Datei werden nur {minutes} Minuten vorgehalten, und "
@@ -1326,7 +1332,7 @@ MESSAGES: dict[str, str] = {
     "result.compare.offer": "In diesem Tab wurde diese Instanz bereits um {time} gescannt.",
     "result.compare.offer.link": "Sehen, was sich seitdem geändert hat",
     "result.progress.kicker": "In Bearbeitung",
-    "result.progress.queued.title": "Wartet auf einen Scanner-Worker",
+    "result.progress.queued.title": "Wartet auf einen freien Scanner-Prozess",
     "result.progress.queued.detail": "Alle Worker sind beschäftigt. Dein Scan wartet an seiner Position, bis ein Worker frei wird.",
     "result.progress.running.title": "Die Instanz wird gescannt",
     "result.progress.running.detail": (
@@ -1345,7 +1351,7 @@ MESSAGES: dict[str, str] = {
     ),
     "result.progress.queue.next": "Dein Scan ist als Nächstes an der Reihe.",
     "result.progress.queue.waiting": (
-        "Wartet darauf, dass ein Scanner-Worker dies übernimmt."
+        "Wartet darauf, dass ein Scanner-Prozess den Auftrag übernimmt."
     ),
     "result.progress.done.title": "Bericht fertig",
     "result.progress.done.detail": "Die Note steht fest. Der Bericht wird geöffnet.",
@@ -1365,7 +1371,7 @@ MESSAGES: dict[str, str] = {
     "result.verdict.heading": "Gesamtbewertung",
     "result.verdict.dial": "Note {label}, {rating} von 5",
     "result.facts.instance": "Instanz",
-    "result.facts.resolved": "Aufgelöst zu",
+    "result.facts.resolved": "Aufgelöste Adressen",
     "result.facts.ipv6.heading": "IPv6-Erreichbarkeit",
     "result.facts.ipv6.note": (
         "Nicht geprüft - dieses Deployment hat keine ausgehende IPv6-"
@@ -1400,7 +1406,7 @@ MESSAGES: dict[str, str] = {
     "result.facts.proxy.detected": "Erkannt",
     "result.facts.office": "Office",
     "result.facts.calendar": "Kalender",
-    "result.facts.calendar.detected": "Antwort am CalDAV-Pfad erhalten",
+    "result.facts.calendar.detected": "Ein Dienst antwortet am CalDAV-Pfad",
     "result.facts.newest": "Neuestes Release",
     "result.facts.score": "Punktzahl",
     "result.facts.score.value": "{rating} von 5",
@@ -1468,7 +1474,7 @@ MESSAGES: dict[str, str] = {
     "result.header.tag": "Header",
     # ------------------------------------------------- configuration fragment
     "result.fragment.kicker": "Konfigurationsvorlage",
-    "result.fragment.heading": "Das hier in deine Konfiguration einfügen",
+    "result.fragment.heading": "In die Konfiguration einfügen",
     "result.fragment.lede": (
         "Die Befunde von oben, in der Syntax der Datei, die geändert werden "
         "muss. Wähle, wo deine Instanz konfiguriert wird."
@@ -1495,6 +1501,43 @@ MESSAGES: dict[str, str] = {
     "result.rescan.note": "Der nächste Scan verwendet dasselbe Ziel, dieselben Ausnahmen und denselben Release-Kanal, damit die Ergebnisse vergleichbar bleiben. Warte bitte die Pause ab oder nutze den quelloffenen Scanner ohne Begrenzung auf deinem Rechner:",
     "result.rescan.self_host": "selbst betreiben",
     "result.excluded.kicker": "Ausgeschlossen",
+    "result.coverage.kicker": "Abdeckung",
+    "result.coverage.heading": "Was dieser Scan nicht gemessen hat",
+    "result.coverage.note": (
+        "Eine Note beschreibt die Belege, die dieser Scan gesammelt hat. "
+        "Diese Prüfungen kamen zu keinem Ergebnis, die Note sagt über sie "
+        "also nichts aus."
+    ),
+    "result.coverage.summary": (
+        "{measured} von {total} Prüfungen kamen zu einem Ergebnis."
+    ),
+    "result.coverage.complete": (
+        "Jede Prüfung, die dieser Scan vorgesehen hat, kam zu einem Ergebnis."
+    ),
+    "result.coverage.unavailable": (
+        "Dieser Bericht entstand, bevor Scans ihre Abdeckung festgehalten "
+        "haben; er sagt also nicht, welche Prüfungen gelaufen sind. Das ist "
+        "nicht dasselbe wie ein Scan ohne Lücken."
+    ),
+    "coverage.reason.not_applicable": "Trifft auf diese Instanz nicht zu",
+    "coverage.reason.probe_disabled": "Die Prüfung war für diesen Scan abgeschaltet",
+    "coverage.reason.prerequisite_missing": (
+        "Die Instanz hat nicht veröffentlicht, was dafür nötig wäre"
+    ),
+    "coverage.reason.timeout": "Nichts hat rechtzeitig geantwortet",
+    "coverage.reason.unreadable": "Die Antwort war nicht lesbar",
+    "coverage.reason.no_route": "Dieser Scanner hat keine Route zu dieser Adresse",
+    "coverage.group.hardening": "Härtungseinstellungen",
+    "coverage.group.header": "Sicherheits-Header",
+    "coverage.group.advisoryHeader": "Empfohlene Header",
+    "coverage.group.advisoryCheck": "Empfohlene Beobachtungen",
+    "coverage.group.extraCheck": "Zusatzprüfungen",
+    "coverage.group.tls": "Transportsicherheit",
+    "coverage.group.dns": "DNS",
+    "coverage.group.addressParity": "Adressen",
+    "coverage.group.capabilities": "Funktionen",
+    "coverage.group.updates": "Updates",
+    "coverage.group.integrations": "Integrationen",
     "result.excluded.heading": "Gemeldet, aber nicht gezählt",
     "result.excluded.waived.heading": "Von dir ausgenommene Befunde",
     "result.excluded.waived.note": (
@@ -1574,6 +1617,12 @@ MESSAGES: dict[str, str] = {
     "result.export.lede": "Lade denselben Bericht in einem der vier Formate herunter. Die Downloads sind verfügbar, bis der Scan abläuft.",
     "result.export.pdf": "PDF-Bericht",
     "result.export.pdf.hint": "Für ein Ticket, eine Überprüfung oder einen Ausdruck.",
+    "result.export.html": "Bericht herunterladen",
+    "result.export.html.hint": (
+        "Eine Datei, die noch lesbar ist, wenn dieser Link abgelaufen ist. "
+        "Sie öffnet offline, stellt keine Netzwerkanfrage und aktualisiert "
+        "sich nicht."
+    ),
     "result.export.csv": "CSV",
     "result.export.csv.hint": "Eine Zeile pro Befund, für eine Tabellenkalkulation.",
     "result.export.sarif": "SARIF",

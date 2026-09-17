@@ -107,7 +107,7 @@ redacted from it), using the
 [wrong finding](https://github.com/sowoi/check-opencloud-security/issues/new?template=wrong_finding.yml)
 template if the check reported something you believe is incorrect. Never paste
 a production hostname or a credential into a public thread - see
-[CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md).
+[CODE_OF_CONDUCT.md](../../CODE_OF_CONDUCT.md).
 
 ---
 

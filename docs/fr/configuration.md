@@ -47,4 +47,4 @@ check-opencloud-security --host opencloud.example.com \
 ```
 
 The repository ships templates for both files in
-[`secrets/`](../secrets/README.md); copy them and replace the placeholder values.
+[`secrets/`](../../secrets/README.md); copy them and replace the placeholder values.

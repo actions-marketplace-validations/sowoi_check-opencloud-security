@@ -206,7 +206,7 @@ for a reason that has nothing to do with the instance. So:</p>
 OpenCloud: sign the zone at the DNS provider, then publish the resulting DS
 record at the <em>parent</em> zone - an unsigned delegation leaves a signed zone
 unprotected. See
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/adr/0038-a-dnssec-answer-nobody-could-have-given-is-not-a-finding.md">ADR 0038</a>.</p>
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0038-a-dnssec-answer-nobody-could-have-given-is-not-a-finding.md">ADR 0038</a>.</p>
 <h2 id="10-is-revocation-actually-checkable-tlsocspstapling">10. Is revocation actually checkable: <code>tlsOcspStapling</code></h2>
 <p>The certificate names an OCSP responder, but the server does not attach the
 revocation answer to the handshake - so every client has to ask the

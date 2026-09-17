@@ -77,7 +77,7 @@ several lines, which is several services - one per instance.
 
 ### Installing it
 
-[`contrib/checkmk/opencloud_security`](../contrib/checkmk/opencloud_security)
+[`contrib/checkmk/opencloud_security`](../../contrib/checkmk/opencloud_security)
 is that call wrapped in a script, configured by the same `COS_` environment
 variables as the [cron and systemd examples](scheduling.md) beside it, so it
 needs no editing to point at your instance:

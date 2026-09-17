@@ -195,7 +195,7 @@ all** - not as a pass. Most deployments serve the editor from a host of its
 own, and the scan deliberately does not follow the host named inside the
 discovery document, because that would let a scanned instance choose the next
 address the scanner connects to. Point a second scan at that host instead. See
-[ADR 0036](../adr/0036-a-companion-service-is-probed-only-where-the-scan-was-pointed.md).
+[ADR 0036](../../adr/0036-a-companion-service-is-probed-only-where-the-scan-was-pointed.md).
 
 **Fix:** block the console path at the reverse proxy that publishes the
 backend, so only the editor's own paths reach the internet. Setting a console

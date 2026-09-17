@@ -468,6 +468,131 @@ Entscheidung über die konkrete Installation, etwa eine erlaubte CORS-Origin
 oder einen CSP-Dateipfad, erscheint sie unter `Fragment.undecided` statt als
 scheinbar fertiger Konfigurationswert.
 
+## Was der Scan abgedeckt hat {#what-the-scan-covered}
+
+Eine bestandene Prüfung und eine Prüfung, die nie gelaufen ist, hinterlassen
+in diesem Dokument dieselbe Spur: nichts. In `coverage` steht der Unterschied.
+Siehe [ADR 0064](../../adr/0064-a-scan-records-what-it-did-not-measure.md).
+
+```json
+{
+  "coverage": {
+    "schema": 1,
+    "counts": {"passed": 49, "failed": 10, "not_checked": 12, "inconclusive": 0, "total": 71},
+    "checks": [
+      {"id": "Content-Security-Policy", "group": "header", "state": "passed"},
+      {"id": "directoryListing", "group": "extraCheck", "state": "failed"},
+      {"id": "tlsInspection", "group": "tls", "state": "not_checked",
+       "reason": "not_applicable", "detail": "The instance answered over plain HTTP."}
+    ]
+  }
+}
+```
+
+Jede Prüfung, die der Scan vorgesehen hat, steht genau einmal darin, in einem
+von vier Zuständen:
+
+| Zustand | Bedeutung |
+|:--|:--|
+| `passed` | Die Prüfung lief und die Instanz hat sie erfüllt |
+| `failed` | Die Prüfung lief und die Instanz hat sie nicht erfüllt |
+| `not_checked` | Der Scanner hat die Prüfung nicht ausgeführt |
+| `inconclusive` | Der Scanner hat geprüft und konnte nicht entscheiden |
+
+`passed` und `failed` tragen keinen Grund - eine Messung, die stattgefunden
+hat, braucht keine Entschuldigung. Die beiden anderen tragen immer einen, aus
+einer festen Menge:
+
+| Grund | Bedeutung |
+|:--|:--|
+| `not_applicable` | Die Prüfung kann auf diese Bereitstellung nicht zutreffen - kein Zertifikat bei einer Instanz über HTTP, keine zweite Adresse zum Vergleich |
+| `probe_disabled` | Eine Einstellung hat die Prüfung für diesen Scan abgeschaltet |
+| `prerequisite_missing` | Die Instanz hat nicht veröffentlicht, was die Prüfung liest |
+| `timeout` | Nichts hat rechtzeitig geantwortet |
+| `unreadable` | Etwas hat geantwortet und war nicht zu verstehen |
+| `no_route` | Von dort, wo der Scan lief, gibt es keine Route zu dieser Adressfamilie |
+
+Auf zwei Eigenschaften kannst du dich verlassen:
+
+- **Die Gesamtzahl ist das, was dieser Scan vorgesehen hat**, keine Konstante.
+  Die Prüfungen sind dynamisch - welche Pfade geprüft, welche Debug-Ports
+  gewählt und welche Adressen verglichen werden, hängt von der Instanz und den
+  Einstellungen ab -, also gibt es keinen festen Nenner.
+- **Abdeckung ändert nie eine Note.** Nichts in diesem Block erreicht die
+  Bewertung, die Schweregrade, die Alarmzeile, den Exit-Code oder die
+  Webhook-Nutzlast. Ein ausgenommener Fehlschlag bleibt hier `failed`; die
+  Annahme steht in `extraChecks[].ignored`, denn eine Ausnahme ist eine
+  Entscheidung über Alarme und nicht über Belege.
+
+Ein Dokument, das vor diesem Block entstanden ist, hat schlicht keinen
+Schlüssel `coverage` - ein Bericht, der nicht sagt, was er abgedeckt hat, und
+nicht ein Scan ohne Lücken. Lies ihn mit `coverage.coverage_of(result)`, das
+sowohl für einen fehlenden als auch für einen fehlerhaften Block `None`
+zurückgibt.
+
+## Unter welchen Bedingungen ein Scan lief {#the-conditions-a-scan-ran-under}
+
+Zwei Scans derselben Instanz können sich unterscheiden, ohne dass sich die
+Instanz geändert hat: Die Advisory-Datenbank hat eine CVE dazugelernt, ein
+Supportzeitraum ist abgelaufen, der Scanner wurde aktualisiert, eine Ausnahme
+ist verfallen. `provenance` hält fest, was zum Zeitpunkt des Scans bekannt war,
+damit ein Vergleich das von einer echten Verschlechterung unterscheiden kann.
+Siehe [ADR 0066](../../adr/0066-a-result-records-the-conditions-it-was-produced-under.md).
+
+```json
+{
+  "provenance": {
+    "schema": 1,
+    "scannerVersion": "1.25.0",
+    "scannedAt": "2026-09-17T19:56:35.852320+00:00",
+    "releaseTrack": "auto",
+    "advisoryData": {"digest": "7ffa242f...", "count": 1},
+    "scheduleData": {"digest": "6e9468bf...", "updated": "2026-09-15"},
+    "waivers": {"active": [], "expired": []},
+    "coverage": {"measured": 59, "total": 71}
+  }
+}
+```
+
+
+`digest` ist ein SHA-256 über die kennzeichnenden Felder der Referenzdaten in
+kanonischer Form: Dieselben Advisories ergeben denselben Wert, egal wie sie
+serialisiert, zusammengeführt oder sortiert wurden. Es ist eine Prüfsumme und
+keine Kopie - die Datenbank einzubetten würde Megabyte fremder Advisories in
+jeden Bericht schreiben - und auch kein Dateipfad, der verraten würde, wo die
+Maschine ihre Dateien ablegt. `scheduleData.updated` ist der Zeitpunkt, zu dem
+der Zeitplan *erzeugt* wurde, nicht der, zu dem er gelesen wurde; `scannedAt`
+ist der Scan.
+
+`waivers` hält Muster und Zustände fest, nie den Begründungstext: Eine
+Begründung ist Prosa für einen Menschen, und ein Vergleich, der sie
+gegenüberstellt, würde einen korrigierten Tippfehler als Richtlinienänderung
+melden.
+
+### Zwei Ergebnisse vergleichen {#comparing-two-results}
+
+`check-opencloud-scanner diff` gibt die beitragenden Änderungen unter der
+bisherigen Zusammenfassung aus, und `--format json` liefert sie als
+`explanation`:
+
+| Kategorie | Was sich geändert hat |
+|:--|:--|
+| `instance` | Die Version, oder eine Prüfung, die zu scheitern begann oder aufhörte |
+| `referenceData` | Die Advisories, der Zeitplan, der Track, oder ein schlicht abgelaufener Supportzeitraum |
+| `scanner` | Die Version des Scanners, oder wie viele Prüfungen zu einem Ergebnis kamen |
+| `policy` | Eine Ausnahme ist verfallen, kam hinzu oder fiel weg |
+| `unknown` | Etwas hat sich bewegt und nichts Aufgezeichnetes erklärt es |
+
+Die Formulierungen sind bewusst zurückhaltend. Eine geänderte Prüfsumme belegt,
+dass sich die Referenzdaten unterschieden; sie belegt nicht, dass dadurch eine
+bestimmte Note gefallen ist, und der Satz sagt genau das. Mehrere Änderungen
+können beitragen, ohne dass eine davon zur Ursache erklärt wird.
+
+`limitations` listet auf, was der Vergleich nicht feststellen konnte - meist,
+dass einer der beiden Berichte älter als diese Blöcke ist und deshalb nicht
+sagen kann, wogegen er geprüft wurde oder wie viel davon lief. Das wird
+berichtet und nicht angenommen.
+
 ## Debug-Ports {#debug-ports}
 
 Debug-Listener liefern unter anderem `/healthz`, `/readyz`, `/metrics`,

@@ -75,6 +75,7 @@ from opencloud_local_scan.releases import MODES as UPDATE_SOURCES
 from opencloud_local_scan.scanner import _NoRedirectSession, _PinnedHTTPAdapter
 from opencloud_local_scan.selfupdate import self_update_note
 from opencloud_local_scan.versions import RELEASE_TRACK_CHOICES, TRACK_AUTO
+from opencloud_local_scan.waivers import Waiver, WaiverError, parse_waivers
 
 LOGGER = logging.getLogger("check_opencloud")
 
@@ -267,6 +268,22 @@ def _waiver_patterns(values: list[str] | None) -> tuple[str, ...] | None:
         part.strip() for value in values for part in value.split(",") if part.strip()
     ]
     return tuple(dict.fromkeys(patterns))
+
+
+def _temporary_waivers(values: list[str] | None) -> tuple[Waiver, ...] | None:
+    """
+    Read every --waive-until record, refusing any that is incomplete.
+
+    A malformed record is an error rather than a permanent waiver: failing
+    open here is how a typo becomes a suppression that outlives everybody who
+    knew about it. Returning None leaves the configured value untouched.
+    """
+    if values is None:
+        return None
+    try:
+        return parse_waivers(values)
+    except WaiverError as error:
+        _fail(f"UNKNOWN - {error}")
 
 
 def _env_int(name: str, default: int) -> int:
@@ -2045,6 +2062,21 @@ def build_arg_parser() -> argparse.ArgumentParser:
             f"Default: none (env: {ENV_PREFIX}SCANNER_IGNORE_HARDENINGS)."
         ),
     )
+    scope.add_argument(
+        "--waive-until",
+        action="append",
+        default=None,
+        metavar="PATTERN|EXPIRES|REASON",
+        help=(
+            "Accept a failing check until a deadline, with a reason, e.g. "
+            "'debugPort:9205|2026-12-31T00:00:00Z|Firewall change scheduled'. "
+            "The pattern matches as --ignore-hardening does; the expiry must "
+            "carry a timezone; the reason may not be empty. After the expiry "
+            "the check alerts again, without anybody having to remember to "
+            "remove this. Repeatable. "
+            f"Default: none (env: {ENV_PREFIX}SCANNER_TEMPORARY_WAIVERS)."
+        ),
+    )
     rating.add_argument(
         "--release-track",
         choices=sorted(RELEASE_TRACK_CHOICES),
@@ -2541,6 +2573,7 @@ def _build_context(host: str, args: argparse.Namespace) -> ScanContext:
         check_all_addresses=True if args.all_addresses else None,
         release_track=args.release_track,
         ignore_hardenings=_waiver_patterns(args.ignore_hardening),
+        waivers=_temporary_waivers(args.waive_until),
     )
     mode = "off" if args.no_update_check else args.update_source
     if mode is None and args.latest_version:

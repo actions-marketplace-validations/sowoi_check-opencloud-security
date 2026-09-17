@@ -40,7 +40,7 @@ pip install check-opencloud-security
 ```
 
 Every release ships a CycloneDX SBOM and a Sigstore provenance attestation;
-see [Verifying what you downloaded](../SECURITY.md#verifying-what-you-downloaded)
+see [Verifying what you downloaded](../../SECURITY.md#verifying-what-you-downloaded)
 if you would rather not take the artifact on trust.
 
 To install the latest unreleased changes, point any of them at the repository
@@ -69,7 +69,7 @@ pip install --upgrade check-opencloud-security # pip
 ```
 
 Check what you are running with `check-opencloud-security --version`, and see
-[CHANGELOG.md](../CHANGELOG.md) for what changed. A git installation is updated by
+[CHANGELOG.md](../../CHANGELOG.md) for what changed. A git installation is updated by
 re-running the same `install` command with `--force` (pipx/uv) or
 `--upgrade --force-reinstall` (pip).
 
@@ -180,7 +180,7 @@ sudo dnf install "./check-opencloud-security-${VERSION}-1.noarch.rpm"
 
 Each package has a `.sha256` beside it, and both are covered by the same
 Sigstore provenance attestation as the wheel - see
-[Verifying what you downloaded](../SECURITY.md#verifying-what-you-downloaded).
+[Verifying what you downloaded](../../SECURITY.md#verifying-what-you-downloaded).
 
 ### What it installs
 
@@ -270,8 +270,8 @@ python scripts/build_distro_packages.py --packager deb
 ```
 
 The layout, the dependencies and everything else the packages declare live in
-[`packaging/nfpm.yaml`](../packaging/nfpm.yaml). Why they are built this way is
-[ADR 0039](../adr/0039-the-plugin-ships-as-a-distribution-package-built-from-the-wheel.md).
+[`packaging/nfpm.yaml`](../../packaging/nfpm.yaml). Why they are built this way is
+[ADR 0039](../../adr/0039-the-plugin-ships-as-a-distribution-package-built-from-the-wheel.md).
 
 ## macOS and Linux workstations (Homebrew)
 
@@ -293,8 +293,8 @@ says so, because pip would write into the Cellar and the next `brew`
 operation would quietly undo it.
 
 The formula itself is generated from what PyPI published, by
-[`scripts/build_homebrew_formula.py`](../scripts/build_homebrew_formula.py) -
-see [`packaging/README.md`](../packaging/README.md#homebrew) if you are
+[`scripts/build_homebrew_formula.py`](../../scripts/build_homebrew_formula.py) -
+see [`packaging/README.md`](../../packaging/README.md#homebrew) if you are
 maintaining the tap rather than installing from it.
 
 ## Docker
@@ -315,7 +315,7 @@ image's default command starts the web application, which is why the plugin is
 selected with `--entrypoint`.
 
 Build the image yourself instead when you want to run your own checkout.
-Everything Docker-related lives in [`docker/`](../docker/), and the build context
+Everything Docker-related lives in [`docker/`](../../docker/), and the build context
 is the repository root:
 ```shell
 git clone https://github.com/sowoi/check-opencloud-security.git

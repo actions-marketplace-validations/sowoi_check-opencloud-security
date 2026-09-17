@@ -848,12 +848,12 @@ Una clave que nadie ha nombrado ahí no llega a nada posterior.</p>
 <td>20 niveles</td>
 </tr>
 <tr>
-<td>Entradas por lista, caracteres por cadena</td>
-<td>500 y 300</td>
+<td>Entradas por bloque, caracteres por cadena</td>
+<td>500 y 300; un bloque con más entradas que esas se rechaza en lugar de leerse en parte</td>
 </tr>
 <tr>
 <td>Identificadores de hallazgos</td>
-<td>se descartan salvo que se escriban como los escribe este escáner, y se muestra el número de líneas descartadas</td>
+<td>se descartan salvo que se escriban como los escribe este escáner, y se muestra el número de todo lo que no se ha podido leer</td>
 </tr>
 <tr>
 <td>Límite de frecuencia</td>
@@ -862,6 +862,10 @@ Una clave que nadie ha nombrado ahí no llega a nada posterior.</p>
 <tr>
 <td>POST entre sitios</td>
 <td>se rechaza antes del limitador y antes del procesamiento</td>
+</tr>
+<tr>
+<td>Una red con un bloqueo por sondeo</td>
+<td>se rechaza antes de ambos y antes de leer el archivo: el bloqueo juzga al cliente, no a un único endpoint</td>
 </tr>
 </tbody>
 </table>
@@ -926,6 +930,10 @@ resultado.</p>
 <tr>
 <td>Demasiadas subidas desde una misma red</td>
 <td><strong>429</strong> con <code>Retry-After</code></td>
+</tr>
+<tr>
+<td>La red tiene un bloqueo por sondeo</td>
+<td><strong>429</strong> con <code>Retry-After</code>, mientras dure el bloqueo</td>
 </tr>
 <tr>
 <td><code>GET /compare/{token}</code> pasados cinco minutos</td>
@@ -1177,10 +1185,13 @@ enrutarse y conservarse por separado:</p>
 </code></pre>
 <p>Tres eventos: <code>scan_requested</code> para un envío aceptado, <code>rate_limited</code> para un
 límite por cliente, un tiempo de espera por destino, un límite diario
-(<code>rate_limit_daily</code>) o un bloqueo por sondeo (<code>rate_limit_probe</code>) que
-realmente se ha activado, y <code>submission_rejected</code> para uno que nunca llegó a
-ser un análisis: <code>unsupported_fields</code>, <code>target_rejected</code>,
-<code>target_not_approved</code>.</p>
+(<code>rate_limit_daily</code>), un bloqueo por sondeo (<code>rate_limit_probe</code>) o una subida
+de informes (<code>rate_limit_upload</code>) que realmente se ha activado, y
+<code>submission_rejected</code> para uno que nunca llegó a ser un análisis:
+<code>unsupported_fields</code>, <code>target_rejected</code>, <code>target_not_approved</code>, o para un
+informe subido que el analizador no ha podido leer (<code>report_rejected</code>, que
+lleva la clave del rechazo de este servicio en <code>fields</code> y ninguna parte del
+archivo).</p>
 <p>Lo importante del diseño es lo que sigue sin anotar:</p>
 <ul>
 <li><strong>Una dirección de cliente es siempre una huella</strong>, un HMAC truncado con la

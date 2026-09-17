@@ -234,6 +234,7 @@ The handful you will actually type most days:
 | `-w, --warning` / `-c, --critical` | The ratings (0-5) at or below which the check warns or goes critical |
 | `--format` | `nagios`, `prometheus`, `otlp`, `checkmk`, `json`, `sarif` or `junit` |
 | `--ignore-hardening` | Accept a finding you are not going to fix, by name |
+| `--waive-until` | Accept one until a deadline, with a reason, after which it alerts again |
 | `--baseline` / `--warn-on-new` | Alert only on findings that are new or worse than last run |
 
 Precedence is always **command-line flag > environment variable >
@@ -425,6 +426,7 @@ a warning annotation.
 | `critical` | plugin default | Rating at or below which the result is CRITICAL. |
 | `check-hardening` | `true` | Count hardening measures towards the result. |
 | `ignore-hardening` | none | Hardening identifiers to waive, comma-separated. |
+| `waive-until` | none | Waive one until a deadline: `PATTERN\|EXPIRES\|REASON`. Repeatable. |
 | `release-track` | `auto` | `auto`, `rolling`, `production` or `lts`. |
 | `releases-token` | none | A token for the release feed's rate limit; needs no scopes. |
 | `summary` | `true` | Write the result to the job summary. |
@@ -904,6 +906,21 @@ true`, because a waiver suppresses an alert and not the evidence:
 check-opencloud-security --host opencloud.example.com --check-hardening \
     --ignore-hardening 'cspWithoutUnsafeInline,hstsPreload'
 ```
+
+A waiver with no deadline lasts until somebody remembers to remove it, and
+nobody remembers. `--waive-until` accepts the same patterns and adds the two
+things that fix that - a reason and an expiry:
+
+```bash
+check-opencloud-security --host opencloud.example.com --check-hardening \
+    --waive-until 'debugPort:9205|2026-12-31T00:00:00Z|Firewall change, OPS-412'
+```
+
+The expiry must carry a timezone and the reason may not be empty; a record
+missing either is refused rather than quietly treated as permanent. At
+`2026-12-31T00:00:00Z` the check alerts again with no configuration change.
+Every configured waiver - active, expired, and the ones that matched nothing -
+is listed under `waivers` in the result document.
 
 See
 [Accepting a finding you are not going to fix](docs/hardening.md#accepting-a-finding-you-are-not-going-to-fix)
