@@ -8,8 +8,8 @@ class CheckOpencloudSecurity < Formula
 
   desc "Check the security level of your OpenCloud instance with a built-in scanner"
   homepage "https://github.com/sowoi/check-opencloud-security"
-  url "https://files.pythonhosted.org/packages/e8/d1/8e036652fe74d9eec047335e687860c5a3459a6dc3cbe9c175b60bfc5933/check_opencloud_security-1.23.3.tar.gz"
-  sha256 "04409973cc9657a08505589b77698ed20f348107d2d548cdf3926f9adef83fed"
+  url "https://files.pythonhosted.org/packages/93/4d/b6c80b6e2e22fd04f9128e9c761e48c5c5ba9ef2254fa7a85a3a5ce0ed7b/check_opencloud_security-1.24.2.tar.gz"
+  sha256 "d7aff5bd6fdf404a0dbf99ec0f1d058638ce46c812d3e3657a0bd5f5b9112663"
   license "GPL-3.0-or-later"
 
   depends_on "python@3.13"
@@ -52,7 +52,7 @@ class CheckOpencloudSecurity < Formula
     # Two assertions, because either alone passes for the wrong reason: the
     # first proves the entry point runs at all, the second that the version it
     # reports is the one this formula built rather than another copy on PATH.
-    assert_match "1.23.3", shell_output("#{bin}/check-opencloud-security --version")
+    assert_match "1.24.2", shell_output("#{bin}/check-opencloud-security --version")
 
     # A check that cannot reach its instance must still be a check: it exits 3
     # (UNKNOWN), the Nagios code for "measured nothing", rather than crashing
