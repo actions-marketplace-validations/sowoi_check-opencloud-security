@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.scanner-cli.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de', 'fr') %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -222,12 +222,11 @@ remembers its last run by itself, see <a href="/documentation/baseline">Reportin
 <p><strong>It exits <code>1</code> when the second result is worse</strong>, so a pipeline can gate on
 it. It exits <code>0</code> when nothing got worse, including when findings were only
 resolved. <code>--exit-zero</code> turns the gate off.</p>
-<p>It exits <code>2</code>, and compares nothing, when it cannot give an honest answer:</p>
+<p>It exits <code>2</code> without comparing results in either of these cases:</p>
 <ul>
-<li><strong>the two files describe different instances.</strong> "Did the fix work" is a
-  question about one instance, and two hosts compared by accident is a wrong
-  answer nobody notices. Pass <code>--allow-different-hosts</code> if that is what you
-  meant.</li>
+<li><strong>the two files describe different instances.</strong> To check whether a fix
+  worked, compare scans of the same instance. Pass <code>--allow-different-hosts</code>
+  if you intend to compare different hosts.</li>
 <li><strong>a file is not a result document</strong> from <code>scan</code>. For example, it has no
   rating, or it is the error entry of an instance that could not be scanned.</li>
 </ul>

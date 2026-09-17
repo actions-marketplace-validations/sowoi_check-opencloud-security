@@ -145,6 +145,7 @@ from .discovery import (
 from .documentation import (
     DOCUMENTATION_BY_SLUG,
     DOCUMENTATION_PAGES,
+    GUIDE_LANGUAGES,
     OPERATOR_DOCUMENTATION_BY_SLUG,
     OPERATOR_DOCUMENTATION_PAGES,
 )
@@ -1448,7 +1449,7 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
         if selected is None:
             return not_found(request)
         language = locale_for_request(request)
-        language_dir = f"{language}/" if language in {"de", "fr"} else ""
+        language_dir = f"{language}/" if language in GUIDE_LANGUAGES else ""
         return page(request, f"docs/{language_dir}{selected.slug}.html", {})
 
     @app.get("/search", response_class=HTMLResponse, include_in_schema=False)

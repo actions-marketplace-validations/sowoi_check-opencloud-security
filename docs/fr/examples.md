@@ -1,7 +1,7 @@
 # Exemples
 
 Ces exemples couvrent des façons communes d'exécuter le scanner. Remplacer `opencloud.example.com`
-avec votre adresse d'instance et scanner seulement les systèmes que vous avez la permission de tester.
+avec l’adresse de votre instance et analysez uniquement les systèmes que vous êtes autorisé à tester.
 
 Longer, platform-specific examples have pages of their own:
 [Kubernetes](kubernetes.md), [CI pipelines](ci.md),

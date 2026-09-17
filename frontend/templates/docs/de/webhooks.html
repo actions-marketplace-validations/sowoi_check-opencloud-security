@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.webhooks.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de', 'fr') %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -145,7 +145,7 @@ def verify(raw_body: bytes, header: str, secret: str) -&gt; bool:
     ).hexdigest()
     return hmac.compare_digest(expected, header or &quot;&quot;)
 </code></pre>
-<p>Verwende <code>hmac.compare_digest</code> für den Vergleich. In FastAPI liefert <code>await request.body()</code> die Rohdaten, in Flask <code>request.get_data()</code>. Lies den Body vor dem Parsen, wenn Ihr Framework sonst nur ein JSON-Objekt bereitstellt.</p>
+<p>Verwende <code>hmac.compare_digest</code> für den Vergleich. In FastAPI liefert <code>await request.body()</code> die Rohdaten, in Flask <code>request.get_data()</code>. Lies den Body vor dem Parsen, wenn dein Framework sonst nur ein JSON-Objekt bereitstellt.</p>
 <ul>
 <li>Die Signatur umfasst auch die von <code>slack</code>, <code>discord</code>, <code>ntfy</code> und <code>gotify</code> erzeugten Dokumente. Die Dienste selbst müssen den zusätzlichen Header nicht auswerten.</li>
 <li>Ohne konfiguriertes Geheimnis wird kein Signaturheader gesendet. Ein Empfänger mit Signaturpflicht muss eine solche Anfrage ablehnen.</li>
@@ -166,7 +166,7 @@ webhook:
   on: always
 </code></pre>
 <p><strong>3. Regelmäßig ausführen:</strong> Richte einen <a href="/documentation/scheduling#systemd-timer">systemd-Timer</a> oder <a href="/documentation/scheduling#cron">Cronjob</a> ein. Bleibt die Meldung länger als das Heartbeat-Intervall aus, erkennt Uptime Kuma einen Ausfall.</p>
-<p>Prüfe, welche Status- und Detailfelder Ihr Push-Empfänger tatsächlich auswertet. Der generische JSON-Payload enthält:</p>
+<p>Prüfe, welche Status- und Detailfelder dein Push-Empfänger tatsächlich auswertet. Der generische JSON-Payload enthält:</p>
 <table>
 <thead>
 <tr>
@@ -302,13 +302,13 @@ printf '%s' &quot;$output&quot; | curl -sS \
   &quot;startsAt&quot;: &quot;&lt;timestamp from the payload&gt;&quot;
 }]
 </code></pre>
-<p>Sende nur Statuswerte, die alarmieren sollen, und stimme Ablaufzeit und Wiederholungsintervall auf den Scanplan ab. Wenn du bereits Metriken bereitstellen, ist die Anbindung über <a href="/documentation/prometheus">Prometheus</a> meist einfacher.</p>
+<p>Sende nur Statuswerte, die einen Alarm auslösen sollen, und stimme Ablaufzeit und Wiederholungsintervall auf den Scanplan ab. Wenn du bereits Metriken bereitstellst, ist die Anbindung über <a href="/documentation/prometheus">Prometheus</a> meist einfacher.</p>
 <h2 id="testing-a-receiver-without-an-instance">Empfänger ohne erreichbare Instanz testen</h2>
 <p>Ein nicht existierender Host zusammen mit <code>--webhook-on always</code> erzeugt eine echte Benachrichtigung im Fehlerformat:</p>
 <pre><code class="language-shell">check-opencloud-security --host does-not-exist.example.com \
   --webhook-url http://127.0.0.1:8099/ --webhook-on always
 </code></pre>
-<p>Für das vollständige Erfolgsformat verwende eine Instanz, die Du prüfst dürfen. <code>--debug</code> protokolliert die Zustellung, aber nicht den Body. Um den Payload zu prüfen, verwende einen lokalen Testempfänger, der POST-Anfragen annimmt und deren Body anzeigt.</p>
+<p>Für ein vollständiges Ergebnis verwende eine Instanz, die du prüfen darfst. <code>--debug</code> protokolliert die Zustellung, aber nicht den Body. Um den Payload zu prüfen, verwende einen lokalen Testempfänger, der POST-Anfragen annimmt und deren Body anzeigt.</p>
 <hr>
 <p><a href="/documentation">Zur Dokumentationsübersicht</a> | <a href="/documentation/reference">Zum Haupt-README</a></p>
 </article>

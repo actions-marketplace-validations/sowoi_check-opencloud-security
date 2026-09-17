@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.scanner-checks.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de', 'fr') %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -354,7 +354,7 @@ Einbindung regelmäßiger Scans.</p>
 <code>versionstring</code> sind Kompatibilitätswerte. Der Scanner bevorzugt
 <code>productversion</code>, verwendet ersatzweise die Capabilities und setzt
 <code>legacyVersion: true</code>, wenn nur ein Platzhalter verfügbar ist. Prüfe auch
-in eigenen Monitoring-Skripten, welches Feld Du wertest aus.</p>
+in deinen Monitoring-Skripten, welches Feld du auswertest.</p>
 <h2 id="debug-ports">Debug-Ports</h2>
 <p>OpenCloud-Dienste haben Debug-Listener für <code>/healthz</code>, <code>/readyz</code>, <code>/metrics</code>,
 <code>/config</code> und <code>/debug/pprof</code>. Darüber können Versionsdaten und Konfigurationen

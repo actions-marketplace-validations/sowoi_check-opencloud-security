@@ -18,6 +18,11 @@ class DocumentationPage:
     demote_headings: bool = False
 
 
+#: The languages with a translated source for every public guide, under
+#: `docs/<language>/`. English is the source itself; any other interface
+#: language shows the English guide with a notice.
+GUIDE_LANGUAGES: tuple[str, ...] = ("de", "fr", "es")
+
 DOCUMENTATION_PAGES: tuple[DocumentationPage, ...] = (
     DocumentationPage(
         "what-is-opencloud",

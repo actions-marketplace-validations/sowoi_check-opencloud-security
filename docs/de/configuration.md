@@ -19,7 +19,7 @@ Alternativ kannst du `_file` an einen Schlüssel oder eine Variable anhängen: `
 
 ## Außerhalb eines Containers {#outside-a-container}
 
-`secret://name` sucht im Verzeichnis `secrets.dir` (`COS_SECRETS_DIR`). Der Standard `/run/secrets` entspricht dem üblichen Mountpfad von Docker und Kubernetes. Für eine native Installation gib Ihr eigenes Verzeichnis an:
+`secret://name` sucht im Verzeichnis `secrets.dir` (`COS_SECRETS_DIR`). Der Standard `/run/secrets` entspricht dem üblichen Mountpfad von Docker und Kubernetes. Für eine native Installation gib dein eigenes Verzeichnis an:
 
 ```shell
 mkdir -p /etc/check-opencloud-security/secrets

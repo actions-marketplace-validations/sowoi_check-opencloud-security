@@ -12,7 +12,7 @@ Checkmk kann die Nagios-Ausgabe des Plugins direkt lesen. Du kannst den Scan auf
 
 Verwende einen aktiven Check, wenn der Checkmk-Server die Instanz erreicht. Für interne Netze, die nur ein Agent-Host erreicht, eignet sich der lokale Check.
 
-Ersetze in den Beispielen `opencloud.example.com` durch eine Instanz, die Du prüfst dürfen.
+Ersetze in den Beispielen `opencloud.example.com` durch eine Instanz, die du prüfen darfst.
 
 ## 1. Aktiver Check auf dem Checkmk-Server {#1-an-active-check-on-the-checkmk-server}
 
@@ -60,7 +60,7 @@ sudo install -m 0755 contrib/checkmk/opencloud_security \
     /usr/lib/check_mk_agent/local/3600/opencloud_security
 ```
 
-Das Unterverzeichnis `3600` legt das Cache-Intervall des Agents in Sekunden fest. Der Scan läuft damit höchstens stündlich; dazwischen liefert der Agent die zwischengespeicherte Ausgabe. Direkt unter `local/` würde das Skript bei jedem Agent-Aufruf laufen. Passt du das Intervall an deinen Bedarf an.
+Das Unterverzeichnis `3600` legt das Cache-Intervall des Agents in Sekunden fest. Der Scan läuft damit höchstens stündlich; dazwischen liefert der Agent die zwischengespeicherte Ausgabe. Direkt unter `local/` würde das Skript bei jedem Agent-Aufruf laufen. Passe das Intervall an deinen Bedarf an.
 
 Bei Installation über `.deb` oder `.rpm` liegt die Vorlage unter `/usr/share/doc/check-opencloud-security/checkmk-local-check.sh`. Kopiere sie selbst in das Agent-Verzeichnis.
 

@@ -275,7 +275,7 @@ MESSAGES: dict[str, str] = {
         "fallida no cambia nada."
     ),
     "admin.actions.schedule": "Sincronizar el calendario",
-    "admin.actions.schedule.hint": "Vuelve a leer la página de ciclo de vida publicada.",
+    "admin.actions.schedule.hint": "Vuelve a leer la página publicada del ciclo de vida.",
     "admin.actions.advisories": "Buscar avisos",
     "admin.actions.advisories.hint": "Pregunta al feed de avisos por entradas nuevas.",
     "admin.outcome.updated": "Actualizado. El documento nuevo está en uso.",
@@ -286,7 +286,7 @@ MESSAGES: dict[str, str] = {
     ),
     "admin.outcome.failed": "No se ha podido descargar. Nada ha cambiado.",
     "admin.outcome.disabled": "Esa actualización está desactivada en la configuración de esta instalación.",
-    "admin.outcome.cooldown": "Acaba de ejecutarse. Inténtalo en {seconds}s.",
+    "admin.outcome.cooldown": "Acaba de ejecutarse. Inténtelo de nuevo en {seconds}s.",
     "admin.probe.action": "Probar las fuentes",
     "admin.probe.hint": (
         "Lee ambas fuentes e informa de qué haría con ellas una actualización. "
@@ -431,7 +431,7 @@ MESSAGES: dict[str, str] = {
         "vulnerabilidad conocida - independiente de un análisis concreto."
     ),
     "pagenav.docs.title": "Documentación de la CLI",
-    "pagenav.docs.blurb": "Instala, configura y automatiza el escáner desde una terminal.",
+    "pagenav.docs.blurb": "Instale, configure y automatice el escáner desde una terminal.",
     "pagenav.api.title": "Analizar desde un script o un agente",
     "pagenav.api.blurb": (
         "La API JSON, los límites de uso razonable, el esquema OpenAPI y el "
@@ -443,13 +443,13 @@ MESSAGES: dict[str, str] = {
     ),
     "pagenav.about.title": "Acerca de OpenCloud",
     "pagenav.about.blurb": (
-        "La plataforma que esto comprueba, y por qué este proyecto es "
+        "La plataforma que analiza este escáner y por qué este proyecto es "
         "independiente de ella."
     ),
     "pagenav.cta.title": "Analizar una instancia",
-    "pagenav.cta.blurb": "Vuelve al formulario. Tarda unos segundos, sin registro.",
+    "pagenav.cta.blurb": "Vuelva al formulario. Tarda unos segundos y no requiere registro.",
     # ---------------------------------------------------------------- 404
-    "notfound.title": "Aquí no hay nada",
+    "notfound.title": "Página no encontrada",
     "notfound.description": (
         "La dirección no existe, o el análisis al que apuntaba ya ha expirado."
     ),
@@ -461,7 +461,7 @@ MESSAGES: dict[str, str] = {
     "index.description": "Compruebe las vulnerabilidades conocidas, las medidas de protección que faltan, las cabeceras de seguridad y las actualizaciones disponibles de una instancia de OpenCloud. Gratis y sin registro.",
     "index.eyebrow": "Independiente &middot; recursos alojados en este servidor &middot; resultados temporales",
     "index.headline": "¿Qué seguridad ofrece su <em class=\"swash\">instancia de OpenCloud</em>?",
-    "index.lede": "Introduzca la dirección de una instancia de OpenCloud que tenga permiso para comprobar. El escáner revisa los ajustes públicos, las cabeceras HTTP y la versión del software, y asigna una nota de <strong>A+</strong> a <strong>F</strong>.",
+    "index.lede": "Introduzca la dirección de una instancia de OpenCloud que esté autorizado a analizar. El escáner revisa los ajustes públicos, las cabeceras HTTP y la versión del software, y asigna una nota de <strong>A+</strong> a <strong>F</strong>.",
     "index.form.kicker": "Solicitud de análisis",
     "index.form.hint": "Unos segundos &middot; sin registro",
     "index.error.self_host": "Disculpe la espera. Estos límites permiten que el servicio siga disponible para todos. También puede ejecutar el escáner de código abierto en su equipo tantas veces como necesite:",
@@ -1041,7 +1041,7 @@ MESSAGES: dict[str, str] = {
     ),
     # --------------------------------------------------- generated guide pages
     "docs.guide.kicker": "Documentación de la CLI",
-    "docs.guide.english_notice": "Esta guía está disponible en inglés, alemán y francés. Se muestra la versión inglesa para el idioma seleccionado.",
+    "docs.guide.english_notice": "Esta guía está disponible en inglés, alemán, francés y español. Se muestra la versión inglesa para el idioma seleccionado.",
     "docs.guide.toc.heading": "En esta página",
     "docs.guide.toc.aria": "En esta página",
     # ---------------------------------------------------------------- compare
@@ -1237,14 +1237,14 @@ MESSAGES: dict[str, str] = {
     "error.rate_limit.daily": "Se ha alcanzado el límite diario de su red. Vuelva mañana o utilice el analizador local, que no tiene este límite.",
     "error.target.wildcard_dns": (
         "Ese nombre pertenece a un servicio que apunta nombres a cualquier "
-        "dirección. Escribe el nombre de host propio de la instancia o su dirección."
+        "dirección. Escriba el nombre de host propio de la instancia o su dirección."
     ),
     "error.target.unstable": (
         "Ese nombre de host responde con direcciones distintas en cada consulta, "
         "así que este servicio no puede determinar con certeza qué analizaría."
     ),
     "error.target.not_approved": (
-        "Este servicio solo analiza instancias aprobadas para ello. Pide al "
+        "Este servicio solo analiza instancias aprobadas para ello. Pida al "
         "operador que la añada o publica el registro DNS que la aprueba."
     ),
     "error.rate_limit.target": "Esta instancia se ha analizado recientemente. Espere unos minutos.",
@@ -1276,7 +1276,7 @@ MESSAGES: dict[str, str] = {
     "error.store_unavailable": (
         "Este servicio no puede leer ahora mismo su propia configuración y "
         "no analizará mientras no sepa qué objetivos debe excluir. "
-        "Inténtalo de nuevo dentro de unos minutos."
+        "Inténtelo de nuevo dentro de unos minutos."
     ),
     # ----------------------------------------------------------- result page
     "result.title": "Resultados del análisis",
@@ -1297,7 +1297,7 @@ MESSAGES: dict[str, str] = {
     "result.tab.done": "Nota {label}: {target}",
     "result.tab.failed": "Análisis fallido: {target}",
     "result.compare.offer": (
-        "Ya analizaste esta instancia en esta pestaña a las {time}."
+        "Ya ha analizado esta instancia en esta pestaña a las {time}."
     ),
     "result.compare.offer.link": "Ver qué ha cambiado desde entonces",
     "result.progress.kicker": "En curso",
@@ -1320,7 +1320,7 @@ MESSAGES: dict[str, str] = {
     "result.progress.queue.position": (
         "Análisis en cola. Posición en la fila: n.º {position} de {length}."
     ),
-    "result.progress.queue.next": "Análisis en cola. Eres el siguiente.",
+    "result.progress.queue.next": "Análisis en cola. Es el siguiente.",
     "result.progress.queue.waiting": "Esperando a que un proceso de análisis lo recoja.",
     "result.progress.done.title": "Informe listo",
     "result.progress.done.detail": "La calificación ya está lista. Abriendo el informe.",
@@ -1423,7 +1423,7 @@ MESSAGES: dict[str, str] = {
     "result.findings.heading": "Comprobaciones que fallaron",
     "result.findings.lede": (
         "Cada uno limita la calificación al nivel que permite su gravedad. "
-        "Corrige primero los críticos: son los que más frenan la puntuación."
+        "Corrija primero los críticos: son los que más frenan la puntuación."
     ),
     "result.findings.filter.aria": "Filtrar hallazgos por gravedad",
     "result.findings.filter.active": "Mostrando solo hallazgos de gravedad {severity}.",
@@ -1468,7 +1468,7 @@ MESSAGES: dict[str, str] = {
     "result.rescan.self_host": "ejecútelo usted mismo",
     "result.excluded.kicker": "Excluido",
     "result.excluded.heading": "Reportado, pero no contabilizado",
-    "result.excluded.waived.heading": "Pediste ignorar estos",
+    "result.excluded.waived.heading": "Pidió ignorar estos",
     "result.excluded.waived.note": "Siguieron fallando. Simplemente no frenaron la calificación.",
     "result.excluded.unfixable.heading": "Valores fijos en OpenCloud",
     "result.excluded.unfixable.note": "Estos valores están fijados en el código de OpenCloud y no se pueden configurar. Se muestran como referencia y no afectan a la nota.",

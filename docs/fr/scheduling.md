@@ -1,7 +1,7 @@
 # Planification
-Planifiez des analyses régulières avec un minuteur ou un cron système lorsque vous n'utilisez pas Icinga2 ou
-Des Nagios. Les exemples dans [`contrib/`](../contrib/) fournissent service, minuterie et environnement
-fichiers que vous pouvez adapter à votre installation: {#scheduling-out-gicea2-nagios}
+Planifiez des analyses régulières avec un minuteur systemd ou cron lorsque vous n’utilisez
+pas Icinga2 ou Nagios. Les exemples de [`contrib/`](../contrib/) fournissent les fichiers
+de service, de minuterie et d’environnement que vous pouvez adapter à votre installation :
 
 - [`contrib/systemd/check-opencloud-security.service`](../contrib/systemd/check-opencloud-security.service)
   and [`.timer`](../contrib/systemd/check-opencloud-security.timer)

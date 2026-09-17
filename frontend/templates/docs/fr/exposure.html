@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.exposure.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de', 'fr') %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -29,9 +29,10 @@
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="fr">
-<p>OpenCloud ne publie normalement pas d'index de répertoire, de fichiers de déploiement, de clés privées ou
-sa base de données d'identité via HTTP. Ces vérifications cherchent un serveur Web ou un proxy inversé
-qui expose ces fichiers, et pour les interfaces de débogage qui devraient rester privées.</p>
+<p>OpenCloud ne publie normalement ni index de répertoire, ni fichiers de déploiement, ni clés
+privées, ni base de données d’identité via HTTP. Ces vérifications recherchent un serveur
+web ou un proxy inverse qui exposerait ces fichiers, ainsi que des interfaces de débogage
+qui devraient rester privées.</p>
 <p>Before any of these run, the scan first requests a path that cannot possibly
 exist and remembers what comes back. OpenCloud's web frontend is a
 single-page application, and unknown paths return the app shell with HTTP

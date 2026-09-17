@@ -1,11 +1,10 @@
 # Webhook recipes
 
 The [webhook](../README.md#webhook-notifications) posts the plugin's own JSON
-document by default. That is deliberate: it carries the whole verdict, not a
-rendered sentence. `--webhook-format` can render it as Slack or Discord's own
-shape directly (see [below](#slack-mattermost-discord)), or as a push
-notification for [ntfy or Gotify](#ntfy-and-gotify); anything else still wants
-the generic document, and needs a few lines of translation in between.
+document by default, including the status and findings. Use `--webhook-format`
+to send Slack or Discord messages (see [below](#slack-mattermost-discord)),
+or push notifications for [ntfy or Gotify](#ntfy-and-gotify). For other
+receivers, use the generic document and adapt it to the format they expect.
 
 Two rules apply to every recipe here:
 
@@ -157,10 +156,9 @@ def verify(raw_body: bytes, header: str, secret: str) -> bool:
 Use `hmac.compare_digest` rather than `==`; comparing hex digests with a
 short-circuiting comparison leaks how much of a guess was correct.
 
-In a Flask or FastAPI receiver, reach for the raw body rather than the parsed
-JSON - `await request.body()` in FastAPI, `request.get_data()` in Flask.
-Frameworks that only hand you a parsed object cannot verify this signature at
-all, and the honest fix is to read the body yourself before parsing.
+Read the raw body with `await request.body()` in FastAPI or
+`request.get_data()` in Flask. Signature verification requires the original
+bytes, so read the body before parsing it as JSON.
 
 Three things worth knowing:
 

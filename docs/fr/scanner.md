@@ -1,15 +1,15 @@
 # Bibliothèque et CLI JSON du scanner
 
-Le moteur de balayage derrière `check-opencloud-security` et le
-Service "check-opencloud-scanner".
+Le moteur d’analyse de `check-opencloud-security` et du service
+`check-opencloud-scanner`.
 
-The scanner connects directly to the instance over HTTP(S), checks publicly observable
-settings and returns one result document with a rating from `0` to `5`. It also tests
-the documented demo credentials against the instance’s own identity provider.
+Le scanner se connecte directement à l’instance en HTTP(S), vérifie les paramètres
+observables publiquement et renvoie un document de résultat noté de `0` à `5`. Il teste
+également les identifiants de démonstration documentés auprès du fournisseur d’identité
+de l’instance.
 
-The rating scale follows the ratings of the Nextcloud scan API, so that
-existing thresholds, performance data, webhooks and dashboards keep their
-meaning.
+L’échelle reprend celle de l’API de scan Nextcloud afin de préserver la signification
+des seuils, données de performance, webhooks et tableaux de bord existants.
 
 | Module | Purpose |
 |:-------|:--------|

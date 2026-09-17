@@ -14,7 +14,7 @@ Diese Pfade werden ohne Zugangsdaten abgefragt:
 
 `401`, `403`, `405`, `501`, eine Weiterleitung zur Anmeldung und `404` gelten für diese Prüfung als geschützter Zugriff. `405` und `501` können entstehen, wenn ein Proxy `GET` auf einer WebDAV-Sammlung nicht unterstützt; `404` deckt absichtlich verborgene Pfade ab. Andere Antworten, insbesondere `200` mit geschützten Inhalten, führen zum Befund. Ein nicht erreichbarer Endpunkt wird hier als bestanden behandelt, da ein Netzwerkfehler keinen offenen Zugriff belegt.
 
-**Bei einem Befund:** rufst du den genannten Pfad selbst auf und prüfe die Antwort. Auch eine eigene Fehlerseite eines Proxys oder Caches kann die Ursache sein. Sind tatsächlich geschützte Daten ohne Sitzung zugänglich, schließe den Zugriff und behandle die betreffenden Inhalte als offengelegt.
+**Bei einem Befund:** Rufe den genannten Pfad selbst auf und prüfe die Antwort. Auch eine eigene Fehlerseite eines Proxys oder Caches kann die Ursache sein. Sind tatsächlich geschützte Daten ohne Sitzung zugänglich, schließe den Zugriff und behandle die betreffenden Inhalte als offengelegt.
 
 ## 2. HTTP Basic Auth: `basicAuthDisabled` {#2-does-the-proxy-still-offer-http-basic-authentication-basicauthdisabled}
 

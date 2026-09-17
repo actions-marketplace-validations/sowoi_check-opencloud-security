@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.prometheus.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de', 'fr') %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -59,7 +59,7 @@
 <pre><code class="language-shell">cp contrib/prometheus/alerts.yml /etc/prometheus/rules/opencloud-security.yml
 promtool check rules /etc/prometheus/rules/opencloud-security.yml
 </code></pre>
-<p>Das Dashboard bietet eine Auswahl nach <code>Instance</code> und kann damit mehrere Hosts darstellen. Passt du Scanintervall, Scrape-Intervall und die Dauer <code>for:</code> der Alarmregeln gemeinsam an. <code>for:</code> misst, wie lange eine Bedingung bei der Regelauswertung ununterbrochen erfüllt ist; es zählt keine unabhängigen Scans.</p>
+<p>Das Dashboard bietet eine Auswahl nach <code>Instance</code> und kann damit mehrere Hosts darstellen. Stimme Scanintervall, Scrape-Intervall und die Dauer <code>for:</code> der Alarmregeln aufeinander ab. <code>for:</code> misst, wie lange eine Bedingung bei der Regelauswertung ununterbrochen erfüllt ist; es zählt keine unabhängigen Scans.</p>
 <p>Die späteren Beispiele mit <code>jq</code> verwenden eigene, kürzere Metriknamen. Die beiden mitgelieferten Dateien passen zu den Namen des nativen Exporters, nicht zu diesen Beispielen.</p>
 <h2 id="what-the-exporter-publishes">Metriken des Exporters</h2>
 <table>
@@ -215,7 +215,7 @@ chmod 644 &quot;$OUT&quot;
   | curl -sf -X POST http://collector.example.com:4318/v1/metrics \
       -H 'Content-Type: application/json' --data-binary @-
 </code></pre>
-<p>Metriknamen und das Attribut <code>host</code> entsprechen dem Exporter. Berücksichtige bei Abfragen die Label-Konventionen Ihres Backends. Collector-Adresse, Proxy und Zugangsdaten werden beim Versand konfiguriert.</p>
+<p>Metriknamen und das Attribut <code>host</code> entsprechen dem Exporter. Berücksichtige bei Abfragen die Label-Konventionen deines Backends. Collector-Adresse, Proxy und Zugangsdaten werden beim Versand konfiguriert.</p>
 <p>Auch ein fehlgeschlagener Scan liefert <code>opencloud_security_scrape_success</code> mit <code>0</code> und die Dauer, aber keine Befunde. So lässt sich ein nicht erreichbares Ziel von einem erfolgreichen Scan unterscheiden.</p>
 <h2 id="alerting-rules">Alarmregeln</h2>
 <p>Für den nativen Exporter verwende <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/prometheus/alerts.yml"><code>contrib/prometheus/alerts.yml</code></a>. Diese Datei wird mit den tatsächlich ausgegebenen Metriknamen gepflegt und getestet.</p>

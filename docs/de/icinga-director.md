@@ -34,7 +34,7 @@
 5. **Vorlage einem Host oder einer Hostgruppe zuweisen**
    - Öffne *Icinga Director → Services → Add*. Für eine Hostgruppe verwende eine *Service Apply Rule*.
    - Importiere die erstellte Service-Vorlage.
-   - Setze `opencloud_host` und die benötigten optionalen Felder. Wenn du `$address$` beibehalten haben, ist kein eigenes Hostfeld nötig.
+   - Setze `opencloud_host` und die benötigten optionalen Felder. Wenn du `$address$` beibehalten hast, ist kein eigenes Hostfeld nötig.
    - Übernimm die Konfiguration unter *Icinga Director → Deployments*.
 
 Icinga2 führt anschließend den nativen Befehl oder `docker run` wie unter [Icinga2 / Nagios](../installation.md#icinga2--nagios) beschrieben aus.

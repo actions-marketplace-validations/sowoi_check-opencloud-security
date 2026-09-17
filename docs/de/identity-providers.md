@@ -23,7 +23,7 @@ Du benötigst außerdem:
 
 ## Gemeinsame Anforderungen {#what-every-provider-has-to-produce}
 
-Client-IDs, Redirect-URIs und Scopes richten sich nach den OpenCloud-Anwendungen. Du musst beim Anbieter und in OpenCloud zusammenpassen.
+Client-IDs, Redirect-URIs und Scopes richten sich nach den OpenCloud-Anwendungen. Die Angaben beim Anbieter und in OpenCloud müssen übereinstimmen.
 
 ### Vier Clients registrieren {#the-four-clients}
 
@@ -118,7 +118,7 @@ services:
 
 `KC_PROXY_HEADERS: xforwarded` erlaubt Keycloak, die vom kontrollierten Proxy übergebene öffentliche Adresse zu berücksichtigen.
 
-**2. Realm anlegen:** Öffne *Realms → Create realm* und erstellst du `opencloud`. Der Realm `master` bleibt der Keycloak-Verwaltung vorbehalten.
+**2. Realm anlegen:** Öffne *Realms → Create realm* und erstelle `opencloud`. Der Realm `master` bleibt der Keycloak-Verwaltung vorbehalten.
 
 Der Issuer lautet dann:
 
@@ -216,7 +216,7 @@ docker run --rm -v "$PWD/authelia:/keys" ghcr.io/authelia/authelia:latest \
     authelia crypto pair rsa generate --bits 4096 --directory /keys
 ```
 
-**2. Clients registrieren:** Lege unter `identity_providers.oidc.clients` in `configuration.yml` alle vier Clients an. Das Beispiel zeigt den Webclient; passt du für die übrigen IDs, Redirects und Scopes an:
+**2. Clients registrieren:** Lege unter `identity_providers.oidc.clients` in `configuration.yml` alle vier Clients an. Das Beispiel zeigt den Webclient. Passe für die übrigen Clients die IDs, Redirects und Scopes an:
 
 ```yaml
 identity_providers:

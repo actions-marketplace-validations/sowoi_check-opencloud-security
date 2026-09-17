@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.reference.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de', 'fr') %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -56,7 +56,7 @@ check-opencloud-security --host opencloud.example.com
 <pre><code class="language-shell">sudo apt install ./check-opencloud-security_&lt;version&gt;_all.deb       # Debian, Ubuntu
 sudo dnf install ./check-opencloud-security-&lt;version&gt;-1.noarch.rpm  # RHEL, Fedora
 </code></pre>
-<p>Du installierst das Plugin unter <code>/usr/lib/nagios/plugins/</code>, ohne eine
+<p>Die Pakete installieren das Plugin unter <code>/usr/lib/nagios/plugins/</code>, ohne eine
 Monitoring-Konfiguration zu aktivieren. Alternativ enthält das Docker-Image
 beide Kommandozeilenprogramme:</p>
 <pre><code class="language-shell">docker run --rm --entrypoint check-opencloud-security \

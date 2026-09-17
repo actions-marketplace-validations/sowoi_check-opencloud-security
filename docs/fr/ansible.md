@@ -5,8 +5,8 @@ un ou plusieurs hôtes Icinga2, avec une installation native ou Docker. Ils
 créent les objets `CheckCommand` et `Service` décrits dans [Icinga Director](../icinga-director.md)
 et [Icinga2 / Nagios](installation.md#icinga2--nagios).
 
-This page is the short version. [`ansible/README.md`](../ansible/README.md) is
-the reference, and it is the file kept in step with the roles themselves.
+Cette page résume la procédure. La référence complète se trouve dans
+[`ansible/README.md`](../../ansible/README.md), maintenu avec les rôles.
 
 <!-- TOC -->
 * [Automated deployment with Ansible](#automated-deployment-with-ansible)

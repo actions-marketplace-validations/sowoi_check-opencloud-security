@@ -480,7 +480,7 @@ def test_the_grade_page_explains_how_a_result_can_improve():
     assert "From findings to fixes" in page
     assert "A prioritised remediation plan" in page
     assert "A specific release recommendation" in page
-    assert "Every failed check, explained" in page
+    assert "Explanations for failed checks" in page
 
 
 def test_the_docs_tab_is_a_local_cli_reference_and_a_guide_index():

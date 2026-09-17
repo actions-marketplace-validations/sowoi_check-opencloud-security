@@ -159,8 +159,8 @@ must remain verbatim.
 The server chooses the language from `cos_locale`, then the weighted `Accept-Language`
 header, then English. The switcher posts to `/language` and returns only to a validated
 local path. It works without JavaScript; `lang.js` submits it automatically when the
-selection changes. Generated guide bodies use English or German templates. French and
-Spanish currently receive the English body with a translated notice.
+selection changes. Generated guide bodies use English, German, French or Spanish
+templates, one per language in `GUIDE_LANGUAGES` (ADR 0063).
 
 ## The template contract
 

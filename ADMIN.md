@@ -231,8 +231,10 @@ python scripts/build_frontend_documentation.py --check   # fail if stale (CI run
   CI rejects stale output.
 - Never hand-edit the generated HTML. The next build discards it.
 
-Generated guide bodies stay English under `lang="en"` with localized chrome
-(ADR 0020) — that is intentional, not a missing translation.
+Public guide bodies are generated from English, German, French and Spanish
+sources (`docs/`, `docs/de/`, `docs/fr/`, `docs/es/`; ADR 0063). A locale
+without sources gets the English body under `lang="en"` with localized chrome
+(ADR 0020).
 
 ## Rebuilding the search index
 

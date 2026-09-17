@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.output-formats.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de', 'fr') %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -26,14 +26,13 @@
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="fr">
-<p>La sortie par défaut du plugin est une ligne d'état Nagios avec des données de performance. Utilisation
-<code>--format</code> (<code>COS FORMAT</code>) pour choisir un format de document ou de paramètres pour les scripts, tableaux de bord
+<p>La sortie par défaut du plugin est une ligne d’état Nagios accompagnée de données de performance. Utilisez
+<code>--format</code> (<code>COS_FORMAT</code>) pour choisir le format destiné aux scripts, tableaux de bord
 et les pipelines CI.</p>
-<p><code>--format json</code>, <code>--format sarif</code>, or <code>--format junit</code> all print <strong>one
-combined document for every scanned host</strong> - never one document per host,
-even when <code>--host</code> names only one. That means the output is always valid
-JSON, SARIF or XML regardless of how many addresses were passed, so nothing
-downstream has to special-case a single-host run.</p>
+<p><code>--format json</code>, <code>--format sarif</code> et <code>--format junit</code> produisent tous <strong>un seul
+document combiné pour tous les hôtes analysés</strong>, jamais un document par hôte, même si
+<code>--host</code> n’en indique qu’un. La sortie reste donc toujours un JSON, un SARIF ou un XML
+valide, quel que soit le nombre d’adresses fourni.</p>
 <p><strong>The exit code keeps its Nagios meaning under every format</strong> - <code>0</code>
 (OK), <code>1</code> (WARNING), <code>2</code> (CRITICAL), <code>3</code> (UNKNOWN). A CI step gates on the
 exit code exactly the way an Icinga check does; the document these flags

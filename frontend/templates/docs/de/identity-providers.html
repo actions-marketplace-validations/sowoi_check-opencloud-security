@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.identity-providers.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de', 'fr') %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -68,7 +68,7 @@
 <li>Einen getesteten Rückweg zur bisherigen Anmeldung. Halte während der Umstellung einen administrativen Zugang bereit und entferne <code>idp</code> erst nach erfolgreicher Prüfung aus dem Dienstsatz.</li>
 </ul>
 <h2 id="what-every-provider-has-to-produce">Gemeinsame Anforderungen</h2>
-<p>Client-IDs, Redirect-URIs und Scopes richten sich nach den OpenCloud-Anwendungen. Du musst beim Anbieter und in OpenCloud zusammenpassen.</p>
+<p>Client-IDs, Redirect-URIs und Scopes richten sich nach den OpenCloud-Anwendungen. Die Angaben beim Anbieter und in OpenCloud müssen übereinstimmen.</p>
 <h3 id="the-four-clients">Vier Clients registrieren</h3>
 <table>
 <thead>
@@ -174,7 +174,7 @@ WEBFINGER_IOS_OIDC_CLIENT_ID=&quot;OpenCloudIOS&quot;
     depends_on: [keycloak-db]
 </code></pre>
 <p><code>KC_PROXY_HEADERS: xforwarded</code> erlaubt Keycloak, die vom kontrollierten Proxy übergebene öffentliche Adresse zu berücksichtigen.</p>
-<p><strong>2. Realm anlegen:</strong> Öffne <em>Realms → Create realm</em> und erstellst du <code>opencloud</code>. Der Realm <code>master</code> bleibt der Keycloak-Verwaltung vorbehalten.</p>
+<p><strong>2. Realm anlegen:</strong> Öffne <em>Realms → Create realm</em> und erstelle <code>opencloud</code>. Der Realm <code>master</code> bleibt der Keycloak-Verwaltung vorbehalten.</p>
 <p>Der Issuer lautet dann:</p>
 <pre><code>https://id.example.com/realms/opencloud
 </code></pre>
@@ -243,7 +243,7 @@ WEBFINGER_IOS_OIDC_CLIENT_ID=&quot;OpenCloudIOS&quot;
 docker run --rm -v &quot;$PWD/authelia:/keys&quot; ghcr.io/authelia/authelia:latest \
     authelia crypto pair rsa generate --bits 4096 --directory /keys
 </code></pre>
-<p><strong>2. Clients registrieren:</strong> Lege unter <code>identity_providers.oidc.clients</code> in <code>configuration.yml</code> alle vier Clients an. Das Beispiel zeigt den Webclient; passt du für die übrigen IDs, Redirects und Scopes an:</p>
+<p><strong>2. Clients registrieren:</strong> Lege unter <code>identity_providers.oidc.clients</code> in <code>configuration.yml</code> alle vier Clients an. Das Beispiel zeigt den Webclient. Passe für die übrigen Clients die IDs, Redirects und Scopes an:</p>
 <pre><code class="language-yaml">identity_providers:
   oidc:
     clients:

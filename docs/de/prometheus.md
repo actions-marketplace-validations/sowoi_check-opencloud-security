@@ -28,7 +28,7 @@ cp contrib/prometheus/alerts.yml /etc/prometheus/rules/opencloud-security.yml
 promtool check rules /etc/prometheus/rules/opencloud-security.yml
 ```
 
-Das Dashboard bietet eine Auswahl nach `Instance` und kann damit mehrere Hosts darstellen. Passt du Scanintervall, Scrape-Intervall und die Dauer `for:` der Alarmregeln gemeinsam an. `for:` misst, wie lange eine Bedingung bei der Regelauswertung ununterbrochen erfüllt ist; es zählt keine unabhängigen Scans.
+Das Dashboard bietet eine Auswahl nach `Instance` und kann damit mehrere Hosts darstellen. Stimme Scanintervall, Scrape-Intervall und die Dauer `for:` der Alarmregeln aufeinander ab. `for:` misst, wie lange eine Bedingung bei der Regelauswertung ununterbrochen erfüllt ist; es zählt keine unabhängigen Scans.
 
 Die späteren Beispiele mit `jq` verwenden eigene, kürzere Metriknamen. Die beiden mitgelieferten Dateien passen zu den Namen des nativen Exporters, nicht zu diesen Beispielen.
 
@@ -139,7 +139,7 @@ check-opencloud-security --host opencloud.example.com,other.example.com \
       -H 'Content-Type: application/json' --data-binary @-
 ```
 
-Metriknamen und das Attribut `host` entsprechen dem Exporter. Berücksichtige bei Abfragen die Label-Konventionen Ihres Backends. Collector-Adresse, Proxy und Zugangsdaten werden beim Versand konfiguriert.
+Metriknamen und das Attribut `host` entsprechen dem Exporter. Berücksichtige bei Abfragen die Label-Konventionen deines Backends. Collector-Adresse, Proxy und Zugangsdaten werden beim Versand konfiguriert.
 
 Auch ein fehlgeschlagener Scan liefert `opencloud_security_scrape_success` mit `0` und die Dauer, aber keine Befunde. So lässt sich ein nicht erreichbares Ziel von einem erfolgreichen Scan unterscheiden.
 

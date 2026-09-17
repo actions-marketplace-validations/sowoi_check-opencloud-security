@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.authentik.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de', 'fr') %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -190,7 +190,7 @@ Testnachrichten, der Worker die übrigen Nachrichten.</p>
 </tbody>
 </table>
 <p>Aktiviere <code>USE_TLS</code> und <code>USE_SSL</code> nicht gleichzeitig. Wähle die
-Variante, die Ihr Mailserver unterstützt:</p>
+Variante, die dein Mailserver unterstützt:</p>
 <pre><code class="language-bash">cat &gt;&gt; docker/.env &lt;&lt;'EOF'
 AUTHENTIK_EMAIL_HOST=smtp.example.com
 AUTHENTIK_EMAIL_PORT=587
@@ -646,7 +646,7 @@ verifiziert noch keine Signatur:</p>
 </tr>
 </tbody>
 </table>
-<p>rufst du anschließend MCP auf:</p>
+<p>Rufe anschließend MCP auf:</p>
 <pre><code class="language-bash">curl -s https://scanner.example.com/mcp \
   -H &quot;Authorization: Bearer $TOKEN&quot; \
   -H &quot;Content-Type: application/json&quot; \
@@ -783,7 +783,7 @@ muss erhalten bleiben, die Signaturschlüssel lädt er erneut.</p>
 <thead>
 <tr>
 <th>Symptom</th>
-<th>Was Du prüfst sollten</th>
+<th>Was du prüfen solltest</th>
 </tr>
 </thead>
 <tbody>

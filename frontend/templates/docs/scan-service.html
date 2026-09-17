@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.scan-service.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de', 'fr') %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -20,9 +20,8 @@
 persistent HTTP service. Several consumers can then share a cached result for each
 instance. The <a href="/documentation/reference#running-the-scanner-as-a-service">main README</a> lists the
 endpoints and token requirements; this guide covers deployment.</p>
-<p>This is <strong>not</strong> the public web application - that is
-<a href="/documentation/web-service">the scan service</a>, which takes a URL from a stranger, queues it
-and renders the answer.</p>
+<p>For a browser interface with a scan queue, use the separate
+<a href="/documentation/web-service">public web application</a>.</p>
 <!-- TOC -->
 <ul>
 <li><a href="#running-the-scanner-as-a-service">Running the scanner as a service</a></li>
@@ -33,9 +32,8 @@ and renders the answer.</p>
 
 <h2 id="in-a-container">In a container</h2>
 <p>The service refuses to bind anything but loopback without a token. In a
-container that means two settings: bind the container's interfaces so the
-published port reaches the process, and set the token that makes doing so
-allowed.</p>
+container, bind to the container's interfaces so the published port reaches
+the process, and set a token to authenticate requests.</p>
 <pre><code class="language-shell">docker run -d --name opencloud-scanner -p 127.0.0.1:8811:8811 \
   -e COS_SERVICE_LISTEN=0.0.0.0 \
   -e COS_SERVICE_TOKEN=&quot;$(openssl rand -hex 32)&quot; \

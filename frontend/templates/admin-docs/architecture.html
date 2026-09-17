@@ -298,8 +298,9 @@ capability with one address.</p>
 documents and exports stay stable English contracts, while values and errors
 measured from a remote instance remain verbatim. Browser JavaScript receives
 its phrases through translated <code>data-*</code> attributes, never a second catalogue.
-Generated operator-guide bodies remain English under <code>lang="en"</code> and have
-localized chrome and a localized notice.</p>
+Generated guide bodies come from English, German, French and Spanish sources
+(<code>GUIDE_LANGUAGES</code>, ADR 0058, 0062 and 0063); a locale without sources would
+get the English body under <code>lang="en"</code> with a localized notice.</p>
 <p>Search follows the same boundary at release time:
 <code>scripts/build_search_index.py</code> writes one English index plus German, Spanish
 and French overlays from the catalogues. The public manifest remains its only

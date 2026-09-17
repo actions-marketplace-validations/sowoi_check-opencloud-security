@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.configuration.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de', 'fr') %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -48,7 +48,7 @@
 </table>
 <p>Alternativ kannst du <code>_file</code> an einen Schlüssel oder eine Variable anhängen: <code>COS_RELEASES_TOKEN_FILE=/run/secrets/token</code> oder <code>token_file: /run/secrets/token</code>. Abschließende Zeilenumbrüche werden entfernt; eine mit <code>echo secret &gt; file</code> erstellte Datei funktioniert daher ebenfalls.</p>
 <h2 id="outside-a-container">Außerhalb eines Containers</h2>
-<p><code>secret://name</code> sucht im Verzeichnis <code>secrets.dir</code> (<code>COS_SECRETS_DIR</code>). Der Standard <code>/run/secrets</code> entspricht dem üblichen Mountpfad von Docker und Kubernetes. Für eine native Installation gib Ihr eigenes Verzeichnis an:</p>
+<p><code>secret://name</code> sucht im Verzeichnis <code>secrets.dir</code> (<code>COS_SECRETS_DIR</code>). Der Standard <code>/run/secrets</code> entspricht dem üblichen Mountpfad von Docker und Kubernetes. Für eine native Installation gib dein eigenes Verzeichnis an:</p>
 <pre><code class="language-shell">mkdir -p /etc/check-opencloud-security/secrets
 printf '%s' '&lt;github-token&gt;' &gt; /etc/check-opencloud-security/secrets/releases_token
 chmod 600 /etc/check-opencloud-security/secrets/*

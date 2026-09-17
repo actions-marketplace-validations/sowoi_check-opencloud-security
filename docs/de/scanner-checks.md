@@ -223,7 +223,7 @@ Nur `productversion` nennt das tatsächliche Release. `version` und
 `versionstring` sind Kompatibilitätswerte. Der Scanner bevorzugt
 `productversion`, verwendet ersatzweise die Capabilities und setzt
 `legacyVersion: true`, wenn nur ein Platzhalter verfügbar ist. Prüfe auch
-in eigenen Monitoring-Skripten, welches Feld Du wertest aus.
+in deinen Monitoring-Skripten, welches Feld du auswertest.
 
 ## Debug-Ports {#debug-ports}
 

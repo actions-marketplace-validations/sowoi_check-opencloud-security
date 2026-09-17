@@ -1,14 +1,13 @@
 # Formats de sortie
 
-La sortie par défaut du plugin est une ligne d'état Nagios avec des données de performance. Utilisation
-`--format` (`COS FORMAT`) pour choisir un format de document ou de paramètres pour les scripts, tableaux de bord
+La sortie par défaut du plugin est une ligne d’état Nagios accompagnée de données de performance. Utilisez
+`--format` (`COS_FORMAT`) pour choisir le format destiné aux scripts, tableaux de bord
 et les pipelines CI.
 
-`--format json`, `--format sarif`, or `--format junit` all print **one
-combined document for every scanned host** - never one document per host,
-even when `--host` names only one. That means the output is always valid
-JSON, SARIF or XML regardless of how many addresses were passed, so nothing
-downstream has to special-case a single-host run.
+`--format json`, `--format sarif` et `--format junit` produisent tous **un seul
+document combiné pour tous les hôtes analysés**, jamais un document par hôte, même si
+`--host` n’en indique qu’un. La sortie reste donc toujours un JSON, un SARIF ou un XML
+valide, quel que soit le nombre d’adresses fourni.
 
 **The exit code keeps its Nagios meaning under every format** - `0`
 (OK), `1` (WARNING), `2` (CRITICAL), `3` (UNKNOWN). A CI step gates on the

@@ -126,7 +126,7 @@ Der Setup-Assistent bietet Persistenz für private Bereitstellungen an, etwa wen
 --maxmemory-policy allkeys-lru
 ```
 
-Das Speicherlimit begrenzt den Verbrauch bei wachsenden Warteschlangen und vielen Ergebnissen. Passt du es an Workerzahl, Ergebnisgröße und TTL an.
+Das Speicherlimit begrenzt den Verbrauch bei wachsenden Warteschlangen und vielen Ergebnissen. Passe es an Workerzahl, Ergebnisgröße und TTL an.
 
 `allkeys-lru` kann unter Speicherdruck beliebige wenig genutzte Schlüssel entfernen, auch bevor deren TTL abläuft. Dadurch können Ergebnisse früher verschwinden; auch andere Redis-Zustände können betroffen sein. Beobachte die Verdrängungszähler:
 

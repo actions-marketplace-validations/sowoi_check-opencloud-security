@@ -8,7 +8,7 @@ Der Scanner bewertet den Supportstatus anhand eines Release-Zeitplans und bekann
 
 - **Die installierte OpenCloud-Version fehlt im Zeitplan.** Im Ergebnis steht dann `"scheduleStale": true`; siehe [Release-Lebenszyklus](../release-lifecycle.md).
 - **Seit dem Paketbau wurden Sicherheitshinweise veröffentlicht.** Die gebündelte Datenbank kennt sie noch nicht.
-- **du aktualisierst das Scanner-Paket nach einem eigenen Zeitplan.** Die Referenzdaten sollen trotzdem aktuell bleiben.
+- **Du aktualisierst das Scanner-Paket nach einem eigenen Zeitplan.** Die Referenzdaten sollen trotzdem aktuell bleiben.
 
 Regelmäßige Paketupdates liefern ebenfalls neue Daten. Die [Webanwendung](../webapp.md) besitzt eigene Aktualisierungen zur Laufzeit und benötigt diesen Befehl nicht.
 
@@ -127,7 +127,7 @@ sudo systemctl start check-opencloud-security-refresh.service   # a first run no
 journalctl -u check-opencloud-security-refresh.service
 ```
 
-**Refresh und Check müssen mit passenden Dateirechten laufen.** Die erzeugten Dateien haben Modus `0600`. Der Service verwendet standardmäßig `User=check-opencloud-security`; ein Check als `nagios` oder `icinga` kann diese Dateien daher nicht lesen. Verwende denselben Benutzer oder passt du den Refresh-Service über ein Drop-in an:
+**Aktualisierung und Check brauchen passende Dateirechte.** Die erzeugten Dateien haben Modus `0600`. Der Service verwendet standardmäßig `User=check-opencloud-security`; ein Check als `nagios` oder `icinga` kann diese Dateien daher nicht lesen. Verwende denselben Benutzer oder passe den Aktualisierungsdienst über ein Drop-in an:
 
 ```bash
 sudo systemctl edit check-opencloud-security-refresh.service
@@ -152,7 +152,7 @@ check-opencloud-scanner refresh-data \
     --advisory-url https://mirror.example.com/osv/v1/query
 ```
 
-Bei diesen Optionen entfällt die Signaturprüfung mit einem ausdrücklichen Hinweis. Die Strukturprüfungen bleiben aktiv. Verwende nur Quellen, deren Bereitstellung Du kontrollierst.
+Bei diesen Optionen entfällt die Signaturprüfung mit einem ausdrücklichen Hinweis. Die Strukturprüfungen bleiben aktiv. Verwende nur Quellen, deren Bereitstellung du kontrollierst.
 
 ## Eigene Sicherheitshinweise {#your-own-advisories}
 

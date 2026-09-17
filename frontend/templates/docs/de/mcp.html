@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.mcp.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de', 'fr') %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -130,7 +130,7 @@
 </tr>
 </tbody>
 </table>
-<p><code>catalogue</code> und <code>advisories</code> benötigen kein Scanziel. Du kannst vor oder nach einem Scan gelesen werden.</p>
+<p><code>catalogue</code> und <code>advisories</code> benötigen kein Scanziel. Du kannst diese Ressourcen vor oder nach einem Scan lesen.</p>
 <p>Sieben Prompts formulieren typische Aufgaben:</p>
 <table>
 <thead>
@@ -332,7 +332,7 @@ COS_WEB_ENABLE_MCP=false docker compose up -d
 <p>Du kannst <code>COS_WEB_ENABLE_MCP=false</code> auch direkt in der Umgebung des ASGI-Prozesses setzen. <code>/mcp</code> liefert dann <code>404</code>, und Discovery sowie Frontend bieten die Agent-Tools nicht mehr an. REST-API, OpenAPI und Arazzo bleiben verfügbar.</p>
 <h2 id="erasure-needs-a-credential">Berechtigung zum Löschen</h2>
 <p><code>erase_instance_data</code> löscht gespeicherte Scans eines Hostnamens, einschließlich Ergebnissen anderer Benutzer. Die Funktion ist als löschend markiert und erfordert ein vom Betreiber gesetztes <code>COS_WEB_PURGE_TOKEN</code>.</p>
-<p>Die Berechtigung kommt über einen Request-Header, nicht als Tool-Argument. Verwende die Secret-Eingabe Ihres Clients:</p>
+<p>Die Berechtigung kommt über einen Request-Header, nicht als Tool-Argument. Verwende die Secret-Eingabe deines Clients:</p>
 <pre><code class="language-json">{
   &quot;servers&quot;: {
     &quot;opencloud-scan&quot;: {

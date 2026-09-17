@@ -1,12 +1,13 @@
 # Vérifications de durcissement
 
-Ce guide explique les identifiants de durcissement utilisés dans les alertes: ce que signifie chaque recherche,
-quel paramètre peut l'aborder et quand une renonciation est appropriée. Il identifie également les valeurs
-que les codes durs et les opérateurs OpenCloud ne peuvent pas changer.
+Ce guide explique les identifiants de durcissement utilisés dans les alertes : ce que
+vérifie chaque contrôle, quel paramètre permet de le corriger et quand une exclusion est
+justifiée. Il signale aussi les valeurs codées en dur qu’un opérateur OpenCloud ne peut pas
+modifier.
 
-`--debug` prints the same explanation next to each finding. The
-[main README](../README.md#hardening-checks) covers how the measures reach
-the output and the metrics.
+`--debug` affiche la même explication à côté de chaque constat. Le
+[README principal](../README.md#hardening-checks) décrit la façon dont ces mesures
+apparaissent dans la sortie et les métriques.
 
 <!-- TOC -->
 * [Hardening measures, one by one](#hardening-measures-one-by-one)

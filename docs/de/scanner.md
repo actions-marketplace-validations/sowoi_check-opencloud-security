@@ -227,7 +227,7 @@ steht zusätzlich unter `newestRelease`.
 
 Standard ist `auto`. Bei einem nicht erreichbaren Feed bleibt die Prüfung mit
 den Daten des installierten Pakets möglich. Wähle `feed`, wenn du einen
-fehlgeschlagenen Abruf ausdrücklich sehen möchten.
+fehlgeschlagenen Abruf ausdrücklich sehen möchtest.
 
 Standardquelle ist die GitHub-Releases-API. `parse_release_feed()` versteht
 auch ein einzelnes `{"tag_name": ...}`-Dokument und Release-Listen. Entwürfe
@@ -471,8 +471,8 @@ scheinbar fertiger Konfigurationswert.
 ## Debug-Ports {#debug-ports}
 
 Debug-Listener liefern unter anderem `/healthz`, `/readyz`, `/metrics`,
-`/config` und `/debug/pprof`. Du kannst Versionen und Konfigurationen offenlegen
-und Profiling erlauben. Standardmäßig binde an Loopback, sofern
+`/config` und `/debug/pprof`. Diese Endpunkte können Versionen und Konfigurationen
+offenlegen und Profiling erlauben. Standardmäßig sind die Listener an Loopback gebunden, sofern
 `<SERVICE>_DEBUG_ADDR` nichts anderes festlegt.
 
 | Port | Dienst |

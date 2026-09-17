@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.secure-deployment.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de', 'fr') %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -226,7 +226,7 @@ services:
       options:
         tag: opencloud
 </code></pre>
-<p>Der sendende Dienst sollte Einträge hinzufügen, aber vorhandene Daten nicht löschen oder umschreiben dürfen. Verwende getrennte Berechtigungen und eine festgelegte Aufbewahrungsdauer, unabhängig davon, ob du Loki, einen Syslog-Server oder einen anderen Sammler einsetzen.</p>
+<p>Der sendende Dienst sollte Einträge hinzufügen, aber vorhandene Daten nicht löschen oder umschreiben dürfen. Verwende getrennte Berechtigungen und eine festgelegte Aufbewahrungsdauer, unabhängig davon, ob du Loki, einen Syslog-Server oder einen anderen Logdienst einsetzt.</p>
 <h3 id="what-to-actually-alert-on">Geeignete Alarmregeln</h3>
 <p>Beginne mit Ereignissen, die in deiner Umgebung konkrete Maßnahmen auslösen:</p>
 <ul>
@@ -292,7 +292,7 @@ services:
       - &quot;127.0.0.1:9200:9200&quot;
 </code></pre>
 <p>Wenn der Reverse Proxy im selben Docker-Netz liegt, kannst du die Host-Portfreigabe ganz weglassen und OpenCloud über den Dienstnamen erreichen.</p>
-<p><strong>Ausgehende und weitergeleitete Pakete gezielt filtern:</strong> Prüfe die Docker-Daemon-Konfiguration und die Regelkette Ihres verwendeten Backends:</p>
+<p><strong>Ausgehende und weitergeleitete Pakete gezielt filtern:</strong> Prüfe die Docker-Daemon-Konfiguration und die Regelkette deines Backends:</p>
 <pre><code class="language-json">{
   &quot;iptables&quot;: true,
   &quot;ip-forward&quot;: true

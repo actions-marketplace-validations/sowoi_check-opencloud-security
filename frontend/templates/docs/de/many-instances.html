@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.many-instances.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de', 'fr') %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -114,7 +114,7 @@ done
 <li>Verwende konsistente Hostangaben. <code>opencloud.example.com</code> und <code>https://opencloud.example.com/</code> werden gleich normalisiert. Eine IP-Adresse wie <code>10.0.0.5</code> wird dagegen nicht mit dem zugehörigen DNS-Namen zusammengeführt.</li>
 </ul>
 <p>Versionen nach ihrem Supportende lösen weiterhin bei jedem Durchlauf einen Alarm aus. Details stehen unter <a href="/documentation/reference#reporting-only-what-changed">Nur Änderungen melden</a>.</p>
-<p>aktiviere <code>--self-update-check</code> für einen der Aufrufe, um von neuen Plugin-Versionen zu erfahren. Die Abfrage wird einen Tag zwischengespeichert und beeinflusst den Exitcode nicht.</p>
+<p>Aktiviere <code>--self-update-check</code> für einen der Aufrufe, um von neuen Plugin-Versionen zu erfahren. Die Abfrage wird einen Tag zwischengespeichert und beeinflusst den Exitcode nicht.</p>
 <h2 id="scheduling-the-whole-thing">Zeitplanung</h2>
 <ul>
 <li>Icinga2: ein <code>Service</code> pro Host, gegebenenfalls über eine Hostgruppe; siehe <a href="/documentation/icinga-director">Icinga Director</a> oder <a href="/documentation/ansible">Ansible</a>.</li>

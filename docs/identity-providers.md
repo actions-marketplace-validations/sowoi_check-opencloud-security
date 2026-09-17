@@ -245,16 +245,14 @@ sees.
 
 **5. Require a second factor.** *Authentication → Required actions* →
 enable *Configure OTP*, then *Authentication → Flows* → bind a browser flow
-that requires it. A provider without a second factor has moved your sign-in,
-not improved it.
+that requires it. Verify that users are prompted for the second factor at sign-in.
 
 **6. Point OpenCloud at it** with the variables above, and restart.
 
 ## Tutorial B: Authentik
 
-The middle weight, and the friendliest to configure from a file rather than by
-clicking. Pick it if you want one provider in front of several applications
-with per-application policies.
+Authentik supports configuration through files and policies for individual
+applications. It can provide sign-in for several applications from one installation.
 
 > This repository already ships an Authentik stack, but for a different
 > purpose: it protects [the scan service's own MCP endpoint](authentik.md) and
@@ -266,8 +264,8 @@ with per-application policies.
 **1. Run it.** Authentik publishes a compose file and a generator for it;
 follow [their installation
 guide](https://docs.goauthentik.io/install-config/install/docker-compose)
-rather than a copy of it that will be out of date here. What matters
-afterwards is that `https://id.example.com` reaches it and that TLS is real.
+for the current setup instructions. Afterwards, check that
+`https://id.example.com` reaches it over HTTPS with a valid certificate.
 
 **2. Create the scope mapping for groups.** *Customisation → Property
 mappings → Create → Scope mapping*:

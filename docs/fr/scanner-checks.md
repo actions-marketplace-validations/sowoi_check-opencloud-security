@@ -1,12 +1,12 @@
 # Vérifications du scanner
 
-L'inventaire complet de ce qu'une analyse prend d'une instance: les paramètres
-il lit, chaque vérification supplémentaire qu'il exécute et ce que chacun vaut, qui
-les observations sont enregistrées mais ne sont jamais notées, et les questions d'une analyse de
-l'extérieur ne peut pas répondre du tout.
+Cet inventaire décrit tout ce qu’une analyse lit sur une instance : les paramètres
+consultés, chaque contrôle supplémentaire et son niveau, les observations enregistrées
+mais jamais notées, ainsi que les questions auxquelles une analyse externe ne peut pas
+répondre.
 
-The [main README](../README.md#the-built-in-scanner) summarises this in a
-paragraph; the individual checks are explained one group at a time in
+Le [README principal](../README.md#the-built-in-scanner) résume le sujet ; les contrôles
+sont expliqués par groupe dans
 [TLS](tls.md), [CSP](csp.md), [cookies](cookies.md),
 [authentication](authentication.md), [sharing](sharing.md),
 [exposure](exposure.md), [embedding](embedding.md) and

@@ -16,8 +16,7 @@ legt der Betreiber fest. Besucher benötigen für öffentliche Scans kein Konto.
 Die Oberfläche ist auf Deutsch, Englisch, Französisch und Spanisch verfügbar.
 Die erste Auswahl folgt der Browsersprache; der Sprachschalter speichert eine
 bewusste Auswahl in einem `HttpOnly`-/`SameSite=Lax`-Cookie. Die Leitfäden stehen
-auf Deutsch und Französisch bereit. Bei spanischer Oberfläche werden sie
-vorerst auf Englisch angezeigt. API-Dokumente, Exportdaten und
+in allen vier Sprachen bereit. API-Dokumente, Exportdaten und
 Scan-Befunde behalten ihre technischen Originalwerte.
 
 ## Inhalt {#contents}
@@ -559,7 +558,7 @@ Der [Proxy-Leitfaden](../reverse-proxy.md) enthält Konfigurationen für nginx,
 Apache httpd, Caddy, Traefik und HAProxy. Der Assistent kann die ersten vier
 erzeugen, einschließlich TLS, MCP-Streaming und gegebenenfalls Forward Auth.
 
-aktiviere `COS_WEB_TRUST_FORWARDED_FOR` nur hinter einem eigenen Proxy.
+Aktiviere `COS_WEB_TRUST_FORWARDED_FOR` nur hinter einem eigenen Proxy.
 `COS_WEB_TRUSTED_PROXY_HOPS` zählt von rechts im `X-Forwarded-For`-Header.
 Zu wenige Hops fassen Besucher unter einer Proxy-Adresse zusammen; zu viele
 können einen vom Client vorgegebenen Wert als Adresse übernehmen.
@@ -810,7 +809,7 @@ aktueller Worker-Heartbeat vorliegt. Die Antwort enthält aggregierte Angaben;
 bei einer fehlenden Abhängigkeit folgt eine detailarme 503.
 
 Die Leitfäden unter `/documentation/{slug}` werden beim Build aus Markdown in
-englische und deutsche Templates umgewandelt. Der laufende Dienst benötigt
+Templates für alle vier Sprachen umgewandelt. Der laufende Dienst benötigt
 weder Markdown-Parser noch Quelldateien. Die Suche liest ein lokal ausgeliefertes
 JSON-Register öffentlicher Seiten. Es enthält keine Ergebnisse, UUIDs oder
 Zieladressen und wird durch die Build-Automation erneuert.

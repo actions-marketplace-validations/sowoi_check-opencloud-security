@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.kubernetes.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de', 'fr') %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -52,7 +52,7 @@
 </tr>
 </tbody>
 </table>
-<p>Das Chart erzeugt keine Zugangsdaten. Erstellst du die Secrets vorher und verweise darauf. Die vollständige Wertetabelle steht im <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/helm/check-opencloud-security/README.md">Chart-README</a>.</p>
+<p>Das Chart erzeugt keine Zugangsdaten. Erstelle die Secrets vorher und verweise darauf. Die vollständige Wertetabelle steht im <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/helm/check-opencloud-security/README.md">Chart-README</a>.</p>
 <p>Die folgenden Manifeste kannst du auch direkt anwenden oder als Grundlage für die Prüfung des gerenderten Charts verwenden.</p>
 <h2 id="a-scheduled-scan">Zeitgesteuerter Scan</h2>
 <p>Ein <code>CronJob</code> entspricht dem <a href="/documentation/scheduling">systemd-Timer</a>. Da Kubernetes den Exitcode auswertet, erscheinen WARNING und CRITICAL als fehlgeschlagene Jobs.</p>

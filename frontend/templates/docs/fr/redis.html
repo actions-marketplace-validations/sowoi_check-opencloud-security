@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.redis.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de', 'fr') %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -33,16 +33,17 @@
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="fr">
-<p>Redis tient la file d'attente du service web, les résultats de l'analyse temporaire, les données de référence et le partage
-État opérationnel. Ce guide couvre l'authentification, l'accès au réseau, la conservation, la mémoire
-les limites et la récupération des défaillances de connexion.</p>
-<p>It applies to the <strong>web application</strong> in <a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/webapp/README.md"><code>webapp/</code></a>.
-The command line plugin does not use Redis at all: <code>check-opencloud-security</code>
-talks to an OpenCloud instance, prints a line and exits.</p>
+<p>Redis contient la file d’attente du service web, les résultats temporaires des analyses,
+les données de référence et l’état opérationnel partagé. Ce guide couvre l’authentification,
+l’accès réseau, la conservation, les limites de mémoire et la récupération après une
+perte de connexion.</p>
+<p>Ce guide concerne l’<strong>application web</strong> dans <a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/webapp/README.md"><code>webapp/</code></a>. Le plugin
+en ligne de commande n’utilise pas Redis : <code>check-opencloud-security</code> contacte une
+instance OpenCloud, affiche une ligne puis se termine.</p>
 <blockquote>
-<p><strong>Just want the fix for the warning?</strong> Set <code>COS_REDIS_PASSWORD</code> in
-<code>docker/.env</code> and run <code>docker compose up -d</code>. The rest of this page explains
-what that changes and what else is worth doing.</p>
+<p><strong>Vous voulez simplement corriger l’avertissement ?</strong> Définissez
+<code>COS_REDIS_PASSWORD</code> dans <code>docker/.env</code>, puis lancez <code>docker compose up -d</code>.
+Le reste de cette page explique ce réglage et les autres mesures utiles.</p>
 </blockquote>
 <h2 id="table-of-contents">Table of contents</h2>
 <!-- TOC -->

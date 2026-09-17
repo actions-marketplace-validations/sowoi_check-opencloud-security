@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.identity-providers.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de', 'fr') %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -299,13 +299,11 @@ reads the token; a claim that exists only in the ID token is a claim it never
 sees.</p>
 <p><strong>5. Require a second factor.</strong> <em>Authentication → Required actions</em> →
 enable <em>Configure OTP</em>, then <em>Authentication → Flows</em> → bind a browser flow
-that requires it. A provider without a second factor has moved your sign-in,
-not improved it.</p>
+that requires it. Verify that users are prompted for the second factor at sign-in.</p>
 <p><strong>6. Point OpenCloud at it</strong> with the variables above, and restart.</p>
 <h2 id="tutorial-b-authentik">Tutorial B: Authentik</h2>
-<p>The middle weight, and the friendliest to configure from a file rather than by
-clicking. Pick it if you want one provider in front of several applications
-with per-application policies.</p>
+<p>Authentik supports configuration through files and policies for individual
+applications. It can provide sign-in for several applications from one installation.</p>
 <blockquote>
 <p>This repository already ships an Authentik stack, but for a different
 purpose: it protects <a href="/documentation/authentik">the scan service's own MCP endpoint</a> and
@@ -317,8 +315,8 @@ configuring.</p>
 <p><strong>1. Run it.</strong> Authentik publishes a compose file and a generator for it;
 follow <a href="https://docs.goauthentik.io/install-config/install/docker-compose">their installation
 guide</a>
-rather than a copy of it that will be out of date here. What matters
-afterwards is that <code>https://id.example.com</code> reaches it and that TLS is real.</p>
+for the current setup instructions. Afterwards, check that
+<code>https://id.example.com</code> reaches it over HTTPS with a valid certificate.</p>
 <p><strong>2. Create the scope mapping for groups.</strong> <em>Customisation → Property
 mappings → Create → Scope mapping</em>:</p>
 <ul>

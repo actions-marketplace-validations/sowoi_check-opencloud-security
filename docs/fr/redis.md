@@ -1,16 +1,17 @@
 # Redis
 
-Redis tient la file d'attente du service web, les résultats de l'analyse temporaire, les données de référence et le partage
-État opérationnel. Ce guide couvre l'authentification, l'accès au réseau, la conservation, la mémoire
-les limites et la récupération des défaillances de connexion.
+Redis contient la file d’attente du service web, les résultats temporaires des analyses,
+les données de référence et l’état opérationnel partagé. Ce guide couvre l’authentification,
+l’accès réseau, la conservation, les limites de mémoire et la récupération après une
+perte de connexion.
 
-It applies to the **web application** in [`webapp/`](../webapp/README.md).
-The command line plugin does not use Redis at all: `check-opencloud-security`
-talks to an OpenCloud instance, prints a line and exits.
+Ce guide concerne l’**application web** dans [`webapp/`](../webapp/README.md). Le plugin
+en ligne de commande n’utilise pas Redis : `check-opencloud-security` contacte une
+instance OpenCloud, affiche une ligne puis se termine.
 
-> **Just want the fix for the warning?** Set `COS_REDIS_PASSWORD` in
-> `docker/.env` and run `docker compose up -d`. The rest of this page explains
-> what that changes and what else is worth doing.
+> **Vous voulez simplement corriger l’avertissement ?** Définissez
+> `COS_REDIS_PASSWORD` dans `docker/.env`, puis lancez `docker compose up -d`.
+> Le reste de cette page explique ce réglage et les autres mesures utiles.
 
 ## Table of contents
 

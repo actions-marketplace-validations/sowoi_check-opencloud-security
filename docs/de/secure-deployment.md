@@ -159,7 +159,7 @@ services:
         tag: opencloud
 ```
 
-Der sendende Dienst sollte Einträge hinzufügen, aber vorhandene Daten nicht löschen oder umschreiben dürfen. Verwende getrennte Berechtigungen und eine festgelegte Aufbewahrungsdauer, unabhängig davon, ob du Loki, einen Syslog-Server oder einen anderen Sammler einsetzen.
+Der sendende Dienst sollte Einträge hinzufügen, aber vorhandene Daten nicht löschen oder umschreiben dürfen. Verwende getrennte Berechtigungen und eine festgelegte Aufbewahrungsdauer, unabhängig davon, ob du Loki, einen Syslog-Server oder einen anderen Logdienst einsetzt.
 
 ### Geeignete Alarmregeln {#what-to-actually-alert-on}
 
@@ -206,7 +206,7 @@ services:
 
 Wenn der Reverse Proxy im selben Docker-Netz liegt, kannst du die Host-Portfreigabe ganz weglassen und OpenCloud über den Dienstnamen erreichen.
 
-**Ausgehende und weitergeleitete Pakete gezielt filtern:** Prüfe die Docker-Daemon-Konfiguration und die Regelkette Ihres verwendeten Backends:
+**Ausgehende und weitergeleitete Pakete gezielt filtern:** Prüfe die Docker-Daemon-Konfiguration und die Regelkette deines Backends:
 
 ```json
 {

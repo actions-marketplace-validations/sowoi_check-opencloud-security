@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.lifecycle.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de', 'fr') %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -38,22 +38,19 @@ two are and why they exist, and <a href="/documentation/status-php">Why OpenClou
 <code>/status.php</code></a> for where the endpoint and its hardcoded
 fields come from. This check fails when <code>productversion</code> is missing and
 only the legacy compatibility <code>version</code>/<code>versionstring</code> fields came back.</p>
-<p>This matters beyond the finding itself: without a real version, no advisory
-can be matched and no end-of-life or update state can be worked out. A
-result missing this field is not merely incomplete - the checks that depend
-on the version did not run at all, and a report that read them as passing
-would be claiming to have verified something it never saw.</p>
+<p>Without the actual version, the scanner cannot match advisories or determine
+support status and available updates. These checks do not run when the version
+is missing, so their results remain unknown.</p>
 <p><strong>If this fails:</strong> check whether something in front of the instance rewrites
 or strips fields from the <code>/status.php</code> response, and whether the release is
-old enough that it genuinely predates <code>productversion</code> being reported at
+old enough that it predates <code>productversion</code> being reported at
 all. Until a real version comes back, treat every version-dependent part of
 the result as unknown rather than as clean.</p>
 <h2 id="2-does-a-response-header-publish-the-version-versiondisclosureheader">2. Does a response header publish the version: <code>versionDisclosure:&lt;header&gt;</code></h2>
 <p>The <code>Server</code> and <code>X-Powered-By</code> response headers are each checked for
 anything that looks like a version number (a digit, a dot, another digit).
-Neither is a vulnerability by itself - it tells whoever is looking which
-advisories to try first, nothing more - which is why both are rated <code>low</code>
-rather than anything higher.</p>
+Publishing a version number is not a vulnerability by itself, but it helps
+attackers identify known vulnerabilities to target. Both findings are rated <code>low</code>.</p>
 <p><strong>Fix:</strong> strip or flatten the header in the reverse proxy - <code>server_tokens
 off</code> in Nginx, <code>ServerTokens Prod</code> in Apache - or unset it outright. See
 <a href="/documentation/reverse-proxy">Reverse proxies</a> for the equivalent directive on Caddy,

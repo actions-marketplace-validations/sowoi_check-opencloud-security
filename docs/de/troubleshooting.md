@@ -59,7 +59,7 @@ Prüfe, ob das Verzeichnis existiert oder angelegt werden darf und der Monitorin
 
 **Kein Hinweis von `--self-update-check`**
 
-Das Ergebnis wird einen Tag zwischengespeichert. Für eine erneute Abfrage lösche `${XDG_CACHE_HOME:-~/.cache}/check-opencloud-security/pypi-version.json`. Der Check bleibt auch bei nicht erreichbarem PyPI, einer Blockierung durch den Proxy oder einer installierten Version oberhalb des veröffentlichten Releases still. Er verändert den Exitcode nicht.
+Das Ergebnis wird einen Tag zwischengespeichert. Für eine erneute Abfrage lösche `${XDG_CACHE_HOME:-~/.cache}/check-opencloud-security/pypi-version.json`. Es erscheint auch dann kein Hinweis, wenn PyPI nicht erreichbar ist, ein Proxy die Abfrage blockiert oder die installierte Version neuer als das veröffentlichte Release ist. Die Update-Prüfung verändert den Exitcode nicht.
 
 **Exitcodes**
 
@@ -72,7 +72,7 @@ Das Ergebnis wird einen Tag zwischengespeichert. Für eine erneute Abfrage lösc
 
 **Weitere Hilfe**
 
-erstellst du ein Issue mit der `--debug`-Ausgabe. Bei einem unzutreffenden Befund verwende die Vorlage [Wrong finding](https://github.com/sowoi/check-opencloud-security/issues/new?template=wrong_finding.yml). Tokens werden in der Diagnoseausgabe maskiert; prüfe die Ausgabe dennoch vor dem Veröffentlichen und entferne produktive Hostnamen und Zugangsdaten. Siehe [Verhaltenskodex](../../CODE_OF_CONDUCT.md).
+Erstelle ein Issue mit der `--debug`-Ausgabe. Bei einem unzutreffenden Befund verwende die Vorlage [Wrong finding](https://github.com/sowoi/check-opencloud-security/issues/new?template=wrong_finding.yml). Tokens werden in der Diagnoseausgabe maskiert; prüfe die Ausgabe dennoch vor dem Veröffentlichen und entferne produktive Hostnamen und Zugangsdaten. Siehe [Verhaltenskodex](../../CODE_OF_CONDUCT.md).
 
 ---
 

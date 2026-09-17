@@ -42,7 +42,7 @@ MESSAGES: dict[str, str] = {
     "admin.config.default": "Documented default:",
     "admin.config.unknown.kicker": "Check the spelling",
     "admin.config.unknown.heading": "Variables this service does not read",
-    "admin.config.unknown.lede": "These names carry the COS_WEB_ prefix but match no setting, so they change nothing. A typo here leaves the default in force. Values are not shown.",
+    "admin.config.unknown.lede": "These variables start with COS_WEB_ but do not match a known setting. Check their spelling: a typo leaves the default value in use. Their values are not shown.",
     "admin.config.group.storage": "Storage and workers",
     "admin.config.group.scanning": "How a scan runs",
     "admin.config.group.targets": "What may be scanned",
@@ -57,8 +57,8 @@ MESSAGES: dict[str, str] = {
     "admin.config.group.protection": "Erasure, signatures and encryption",
     "admin.config.group.frontend": "Frontend",
     "admin.rules.title": "Rules in force",
-    "admin.rules.lede": "How a grade is decided, and every rule this deployment enforces against a request - with the numbers it is running with.",
-    "admin.rules.scope": "Read from the settings this process started with and from the constants the enforcing code uses, so a rule listed here is one the service applies right now. Nothing on this page names a target or a visitor.",
+    "admin.rules.lede": "How grades are calculated and which request limits this deployment uses.",
+    "admin.rules.scope": "This overview shows the settings loaded when this process started and the rules defined in the code. Target addresses and visitor details are not shown.",
     "admin.rules.on": "Enforced",
     "admin.rules.off": "Off",
     "admin.rules.variables": "Set by",
@@ -68,11 +68,11 @@ MESSAGES: dict[str, str] = {
     "admin.rules.rating.scale": "The scale",
     "admin.rules.rating.caps": "What a failed check can do to the grade",
     "admin.rules.rating.version.title": "The version sets the starting grade",
-    "admin.rules.rating.version.body": "The release line's support status and every published advisory affecting the version decide where a grade starts. Failed checks can only hold it down.",
+    "admin.rules.rating.version.body": "The starting grade depends on the release line's support status and known vulnerabilities affecting the version. Failed checks can lower that grade.",
     "admin.rules.rating.overrides.title": "End of life and the release track",
     "admin.rules.rating.shared.title": "One ceiling per severity",
     "admin.rules.rating.extra.title": "Extra checks count towards the grade",
-    "admin.rules.rating.extra.body": "Transport security, headers and the other extra checks cap the grade like hardening checks do, not only appear in the report.",
+    "admin.rules.rating.extra.body": "Transport security, headers and other extra checks limit the grade in the same way as hardening checks.",
     "admin.rules.rating.waivers.title": "Waivers a visitor may choose",
     "admin.rules.rating.waivers.body": "{count} hardening checks may be waived in the form. A waived check stops capping the grade and stays in the report, marked; end of life cannot be waived.",
     "admin.rules.rating.track.title": "Release track",
@@ -89,7 +89,7 @@ MESSAGES: dict[str, str] = {
     "admin.rules.group.scanner": "How hard a host is probed",
     "admin.rules.group.scanner.lede": "The flags every scan from this deployment is built with. No request can change them.",
     "admin.rules.group.operator": "Credentials and operator actions",
-    "admin.rules.group.operator.lede": "Limits on the few calls that need a credential or press a button.",
+    "admin.rules.group.operator.lede": "Limits on requests that require credentials and actions in the operator area.",
     "admin.rules.rule.client_limit.title": "Per-client limit",
     "admin.rules.rule.client_limit.body": "At most {limit} submissions per client every {window}. An IPv4 address is one client; an IPv6 client is its /{ipv6}.",
     "admin.rules.rule.daily_cap.title": "Daily cap",
@@ -98,7 +98,7 @@ MESSAGES: dict[str, str] = {
     "admin.rules.rule.target_cooldown.body": "The same instance may be scanned once every {cooldown}, whoever asks.",
     "admin.rules.rule.batch.title": "Batch size",
     "admin.rules.rule.batch.body": "A batch carries at most {limit} targets, and each one counts against every limit.",
-    "admin.rules.rule.queue.title": "Overload queues",
+    "admin.rules.rule.queue.title": "Queueing under load",
     "admin.rules.rule.queue.body": "{workers} scans run at once; further submissions wait in order and are never refused for load.",
     "admin.rules.rule.agent_wait.title": "Automatic retry limit",
     "admin.rules.rule.agent_wait.body": "MCP and the workflows wait out a Retry-After of up to {wait} themselves, at most {attempts} attempts; a longer one is handed back to the caller.",
@@ -329,10 +329,9 @@ MESSAGES: dict[str, str] = {
     "admin.search.kicker": "Search index",
     "admin.search.heading": "Is the shipped index still current",
     "admin.search.lede": (
-        "The index is built at release time and shipped read-only, so this "
-        "reports rather than rebuilds. It compares the pages, the languages "
-        "and the release it was generated for - not the body text, which only "
-        "the generator can extract."
+        "The search index is generated during the build and cannot be changed "
+        "here. This view checks whether its pages, languages and release "
+        "version match the running service. It does not compare full page text."
     ),
     "admin.search.fresh": "Current",
     "admin.search.stale": "Out of date",
@@ -364,7 +363,7 @@ MESSAGES: dict[str, str] = {
     ),
     "admin.search.fix": (
         "Every pull request to main and the release workflow regenerate the "
-        "index and commit it. There is nothing to press here."
+        "index and commit it. You cannot rebuild the index from this page."
     ),
     "admin.audit.kicker": "Audit",
     "admin.audit.heading": "Audit log",
@@ -374,9 +373,9 @@ MESSAGES: dict[str, str] = {
         "ask for it."
     ),
     "admin.audit.privacy": (
-        "A client address is a truncated HMAC under a salt this process holds, "
-        "and nothing maps one back to an address. This view cannot show more "
-        "than the audit log already decided to write down."
+        "Client addresses appear only as truncated HMAC fingerprints, using "
+        "a salt held by this process. This view shows existing audit log "
+        "entries and cannot resolve fingerprints to client addresses."
     ),
     "admin.audit.replicas": (
         "This deployment keeps no audit file, so these records come from the "
@@ -586,22 +585,21 @@ MESSAGES: dict[str, str] = {
         "and every check the scan could run passed."
     ),
     "grade.5.improve": (
-        "Keep it here: watch for the next release on your track, and re-run the "
-        "scan after any change to the reverse proxy or the sign-in."
+        "Keep the instance up to date on your release track. Run another scan "
+        "after changes to the reverse proxy or sign-in configuration."
     ),
     "grade.4.headline": "An update is waiting",
     "grade.4.meaning": (
-        "A newer patch release exists on the same release line. Nothing is known "
-        "to be wrong with the installed one - it is simply not the latest."
+        "A newer patch release is available on the same release line. No known "
+        "advisories match the installed version."
     ),
     "grade.4.improve": (
-        "Install the pending update. It is the same release line, so it is the "
-        "smallest upgrade there is."
+        "Install the recommended update within your release line."
     ),
     "grade.3.headline": "A release line behind",
     "grade.3.meaning": (
-        "The instance runs an older line than the current one for its track. It "
-        "may still be supported, but it is no longer where the fixes land first."
+        "The instance uses an older release line than the latest on its track. "
+        "That older line may still be supported."
     ),
     "grade.3.improve": (
         "Move up to the current line for your track. The scan names which one "
@@ -609,9 +607,8 @@ MESSAGES: dict[str, str] = {
     ),
     "grade.2.headline": "Advisories match this version",
     "grade.2.meaning": (
-        "The installed version appears in the advisory database. None of the "
-        "matching advisories is rated critical or high, which is the only reason "
-        "this is not lower."
+        "Known vulnerabilities affect the installed version. None of the "
+        "matching advisories is rated high or critical."
     ),
     "grade.2.improve": (
         "Upgrade to the fixed version for your release line. The result page "
@@ -620,8 +617,8 @@ MESSAGES: dict[str, str] = {
     "grade.1.headline": "A critical or high advisory matches",
     "grade.1.meaning": "At least one known vulnerability affecting the installed version is rated high or critical.",
     "grade.1.improve": (
-        "Upgrade now, before anything else on the page. Nothing else that can be "
-        "changed will raise the grade above this."
+        "Install the fixed version listed in the report and review the "
+        "advisory's instructions."
     ),
     "grade.0.headline": "Out of support",
     "grade.0.meaning": "This release line no longer receives security fixes. It receives an F regardless of other findings or waivers.",
@@ -632,8 +629,8 @@ MESSAGES: dict[str, str] = {
     # ---------------------------------------------------------- grades page
     "grades.title": "What the grades mean",
     "grades.description": (
-        "A+, A, C, D, E and F: what each grade says about an OpenCloud instance, "
-        "what holds one down, and the shortest way to the next one up."
+        "What the grades A+, A, C, D, E and F mean for an OpenCloud instance "
+        "and which changes can improve its rating."
     ),
     "grades.kicker": "The scale",
     "grades.lede": "The grade combines the installed release’s support status and known vulnerabilities with the checks that failed. This page explains the starting grade, the limits imposed by findings and the changes that can improve it.",
@@ -650,11 +647,10 @@ MESSAGES: dict[str, str] = {
     "grades.row.score": "{rating} out of 5",
     "grades.row.improve": "To move up:",
     "grades.caps.kicker": "The ceiling",
-    "grades.caps.heading": "What a failed check can do to a grade",
+    "grades.caps.heading": "How failed checks limit the grade",
     "grades.caps.intro": (
-        "The version sets the starting grade. Failed checks cannot raise it - "
-        "they can only hold it down, and how far depends on the severity of the "
-        "worst one that failed:"
+        "The version determines the starting grade. Failed checks impose "
+        "limits based on their severity. The lowest of these limits applies:"
     ),
     "grades.caps.at_best": "at best",
     "grades.caps.shared": "Findings with the same severity impose the same grade limit. If three medium findings remain, fixing only one does not remove that limit. The remediation plan keeps all three steps and shows when the grade would improve.",
@@ -665,9 +661,9 @@ MESSAGES: dict[str, str] = {
     "grades.improve.plan": "<strong>A prioritised remediation plan.</strong> Each step explains what to change and shows the grade you could reach after completing that step and all preceding ones.",
     "grades.improve.release": "<strong>A specific release recommendation.</strong> The report identifies a version that fixes the advisory <em>on your release line</em>, while respecting your chosen track.",
     "grades.improve.explained": (
-        "<strong>Every failed check, explained.</strong> What was measured, why it "
-        "matters and the fix, with a link to the OpenCloud documentation for the "
-        "setting behind it."
+        "<strong>Explanations for failed checks.</strong> What was checked, why "
+        "it matters and how to fix it, with a link to the relevant setting "
+        "in the OpenCloud documentation."
     ),
     "grades.improve.waiver": "<strong>Exceptions for findings you accept.</strong> Waived findings remain visible but no longer limit the grade. A waiver applies only to a failed check and cannot change an end-of-life rating.",
     "grades.improve.rerun": "Run another scan after making changes to check which findings have been resolved.",
@@ -818,30 +814,27 @@ MESSAGES: dict[str, str] = {
     "about.project.kicker": "The project",
     "about.project.heading": "About this scanner",
     "about.project.body": (
-        "Everything you see here is produced by "
-        "<code>check-opencloud-security</code>, a Nagios and Icinga plugin with a "
-        "scanner library behind it. This page is one way to use it; a command on "
-        "your own machine, with no rate limit and no queue, is the other."
+        "Results come from <code>check-opencloud-security</code>, a Nagios and "
+        "Icinga plugin with a built-in scanner library. You can use it through "
+        "this website or run it on your own machine without a rate limit or queue."
     ),
     "about.project.origin": "<strong>Massoud Ahmed</strong> created this project to check OpenCloud’s release tracks, settings and deployment model with a scanner operators can run on their own machines. <a href=\"{project}\" rel=\"noopener noreferrer\">Source code and contributions are on GitHub</a>.",
     # ------------------------------------------------------------------- API
     "api.title": "Scanning from a script or an agent",
     "api.description": (
-        "The JSON API behind the form: how to submit a scan, poll it, what this "
-        "server refuses to let a caller decide, and everything software needs to "
-        "drive it - OpenAPI, Arazzo workflows and the MCP endpoint."
+        "How to submit scans and retrieve results through the JSON API, "
+        "including usage limits, OpenAPI, Arazzo workflows and the MCP endpoint."
     ),
     "api.kicker": "The API",
     "api.lede": "Use the JSON API to submit scans, check their progress and download results. Scripts and agents use the same scanning service and limits as the browser form.",
     "api.submit.kicker": "Submit & poll",
     "api.submit.heading": "Submit and poll",
     "api.submit.body": (
-        "A submission answers <code>202</code> with the scan's identifier; polling "
-        "it returns <code>queued</code>, <code>running</code> or the finished "
-        "result, and <code>404</code> once it has expired. Only four fields are "
-        "read - the address, the checks to waive, the release track and the output "
-        "format. Anything else in the body, concurrency and timeouts above all, is "
-        "rejected: how hard this server probes is not a caller's decision."
+        "Submitting a scan returns <code>202</code> and its identifier. Polling "
+        "returns <code>queued</code>, <code>running</code> or the completed "
+        "result. Expired scans return <code>404</code>. You can supply four "
+        "fields: the address, checks to waive, release track and output format. "
+        "Other fields are rejected. The operator sets concurrency and timeouts."
     ),
     "api.limits.kicker": "Fair use",
     "api.limits.heading": "Fair use",
@@ -852,9 +845,8 @@ MESSAGES: dict[str, str] = {
     "api.limits.probe": "A network whose scans keep finding no OpenCloud is paused for a while.",
     "api.limits.none": "This deployment sets no rate limit.",
     "api.limits.self_host": (
-        "If you meet one and would rather not wait, the whole thing runs on your "
-        'own machine: <a href="{project}" rel="noopener noreferrer">the project is '
-        "on GitHub</a>."
+        "You can also run the scanner on your own machine without these limits: "
+        '<a href="{project}" rel="noopener noreferrer">get the source on GitHub</a>.'
     ),
     "api.schema.kicker": "The schema",
     "api.schema.heading": "The schema",
@@ -863,7 +855,7 @@ MESSAGES: dict[str, str] = {
         'on every other: the <a href="/openapi.json">OpenAPI 3.1 description</a> '
         'of every operation, and the <a href="/arazzo.json">Arazzo 1.0.1 '
         "workflows</a> that say how those operations combine into submitting a "
-        "scan, waiting for it and taking the result away."
+        "scan, waiting for completion and retrieving the result."
     ),
     "api.schema.docs_on": (
         'Both are browsable here as <a href="/docs">Swagger UI</a> and '
@@ -1102,7 +1094,7 @@ MESSAGES: dict[str, str] = {
     ),
     # --------------------------------------------------- generated guide pages
     "docs.guide.kicker": "CLI documentation",
-    "docs.guide.english_notice": "This guide is available in English, German and French. The English version is shown for your selected language.",
+    "docs.guide.english_notice": "This guide is available in English, German, French and Spanish. The English version is shown for your selected language.",
     "docs.guide.toc.heading": "On this page",
     "docs.guide.toc.aria": "On this page",
     # ---------------------------------------------------------------- compare
@@ -1436,7 +1428,7 @@ MESSAGES: dict[str, str] = {
     "result.progress.done.detail": "The grade is in. Opening the report.",
     "result.progress.failed.title": "Scan finished",
     "result.progress.failed.detail": (
-        "The scan could not be completed. Opening what came back."
+        "The scan could not be completed. Opening the result page."
     ),
     "result.failed.fallback": "The scan could not be completed.",
     "result.failed.body": "The scanner could not obtain enough information to assign a grade. Check the address, confirm that it runs OpenCloud and make sure it is reachable from this service.",
@@ -1483,7 +1475,7 @@ MESSAGES: dict[str, str] = {
     "result.facts.proxy.detected": "Detected",
     "result.facts.office": "Office",
     "result.facts.calendar": "Calendar",
-    "result.facts.calendar.detected": "Something answers the CalDAV path",
+    "result.facts.calendar.detected": "Response received at the CalDAV path",
     "result.facts.newest": "Newest release",
     "result.facts.score": "Score",
     "result.facts.score.value": "{rating} out of 5",
@@ -1494,8 +1486,8 @@ MESSAGES: dict[str, str] = {
     "result.counter.passed": "Passed",
     "result.verdict.why": "Why this grade:",
     "result.verdict.caveat": (
-        "A grade says the checks below passed, not that the instance is secure. "
-        "This scan is not exhaustive: it sees only what the instance shows an "
+        "The grade reflects the checks below. It does not certify that the "
+        "instance is secure: the scan sees only what it exposes to an "
         'anonymous visitor. <a href="#scan-limits">What it cannot see</a>.'
     ),
     "result.fix": "Fix:",
@@ -1508,8 +1500,8 @@ MESSAGES: dict[str, str] = {
     "result.plan.note": "The plan prioritises changes that improve the grade. The grade beside each step assumes that you have completed it and all preceding steps. Findings of equal severity share a rating limit, so several fixes may be needed before the grade improves.",
     "result.plan.blocked.heading": "Holding the grade down, and not fixable",
     "result.plan.blocked.note": (
-        "OpenCloud hardcodes these, so no setting reaches them. They are the "
-        "reason the plan above stops where it does."
+        "These values are hardcoded in OpenCloud and cannot be changed through "
+        "configuration. They prevent the plan from reaching a higher grade."
     ),
     "result.eol.alert": (
         "This release no longer receives security fixes. Nothing else on this page "
@@ -1527,8 +1519,8 @@ MESSAGES: dict[str, str] = {
     "result.findings.kicker": "Findings",
     "result.findings.heading": "Checks that failed",
     "result.findings.lede": (
-        "Each one caps the grade at the level its severity allows. Fix the "
-        "critical ones first: they are the ones holding the score down hardest."
+        "Each finding limits the grade according to its severity. Fix critical "
+        "findings first, as they have the greatest effect on the rating."
     ),
     "result.findings.filter.aria": "Filter findings by severity",
     "result.findings.filter.active": "Showing {severity} findings only.",
@@ -1543,7 +1535,7 @@ MESSAGES: dict[str, str] = {
     "result.hardening.tag": "hardening",
     "result.header.tag": "header",
     # ------------------------------------------------- configuration fragment
-    "result.fragment.kicker": "The fix, written out",
+    "result.fragment.kicker": "Configuration snippet",
     "result.fragment.heading": "Paste this into your configuration",
     "result.fragment.lede": (
         "The findings above, in the syntax of the file that has to change. "
@@ -1573,25 +1565,21 @@ MESSAGES: dict[str, str] = {
     "result.excluded.heading": "Reported, but not counted",
     "result.excluded.waived.heading": "You asked to ignore these",
     "result.excluded.waived.note": (
-        "They still failed. They just did not hold the grade down."
+        "These checks failed, but your waivers exclude them from the grade."
     ),
-    "result.excluded.unfixable.heading": "Fixed by OpenCloud’s implementation",
+    "result.excluded.unfixable.heading": "Hardcoded in OpenCloud",
     "result.excluded.unfixable.note": "These flags are hardcoded in OpenCloud and cannot be configured by an operator. They are included for reference and do not affect the grade.",
     "result.scope.kicker": "Scope",
     "result.scope.heading": "What this scan cannot see",
     "result.scope.body": (
-        "Everything above was read without logging in, which is the point and also "
-        "the limit. <strong>The absence of a finding is not evidence of "
-        "safety</strong>, and the highest grade this page can give is not a "
-        "statement that the instance is secure - only that nothing checked here "
-        "went wrong. Whole categories are outside an unauthenticated scan "
-        "altogether: the operating system and its packages, the container runtime, "
-        "the reverse proxy's own configuration, backups and their restores, the "
-        "storage behind the instance, secrets and key handling, accounts, "
-        "passwords and multi-factor sign-in, the permissions on existing shares, "
-        "the software supply chain, and anything that only shows itself to a "
-        "logged-in user. So are these two, which look like they should be visible "
-        "and are not:"
+        "The scan checks publicly accessible information. <strong>No findings "
+        "does not mean the instance is secure</strong>, even with the highest "
+        "grade. It does not inspect the operating system and its packages, "
+        "container runtime, reverse proxy configuration, backups and recovery, "
+        "storage, secrets and key management, accounts, passwords, multi-factor "
+        "sign-in, existing share permissions or the software supply chain. "
+        "Data available only after sign-in is also outside its scope. "
+        "Two further limits are worth checking separately:"
     ),
     "result.scope.audit": (
         "<strong>Audit logging.</strong> OpenCloud's audit service only consumes "

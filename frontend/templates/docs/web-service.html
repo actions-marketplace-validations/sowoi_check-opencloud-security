@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.web-service.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de', 'fr') %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -41,10 +41,9 @@ layer presents the scanner’s result without defining a separate rating.</p>
 <p>Try the public service at <a href="https://scan.okxo.de">scan.okxo.de</a> for a one-off scan. The
 instructions below cover hosting your own service, including network access, retention
 and usage limits.</p>
-<p>It is <strong>not</strong> on PyPI. <code>pip install check-opencloud-security</code> gets the plugin
-and the scanner library, deliberately without FastAPI, Redis or a single
-template. The web application ships as a GitHub release asset,
-<code>check_opencloud_security_web.tar.gz</code>, or you build it from a checkout.</p>
+<p>The PyPI package contains only the plugin and scanner library. The web
+application is distributed separately as the GitHub release asset
+<code>check_opencloud_security_web.tar.gz</code>, or you can build it from a checkout.</p>
 <table>
 <thead>
 <tr>
@@ -73,9 +72,9 @@ template. The web application ships as a GitHub release asset,
 </table>
 <p>The interface supports English, German, French and Spanish. It initially follows the
 browser’s language preference; a choice made with the language switcher is remembered in
-an <code>HttpOnly</code>, <code>SameSite=Lax</code> cookie. Guide bodies are available in English and German.
-French and Spanish interfaces currently show the English guides with a notice. API
-contracts, exports and measured evidence retain their original technical values.</p>
+an <code>HttpOnly</code>, <code>SameSite=Lax</code> cookie. Guide bodies are available in all four
+languages. API contracts, exports and measured evidence retain their original technical
+values.</p>
 <h2 id="contents">Contents</h2>
 <ul>
 <li><a href="#starting-it">Starting it</a></li>
@@ -115,7 +114,7 @@ every credential that file refers to as <code>${NAME}</code> - the Redis passwor
 erasure token, the signing key, the audit salt and the encryption key.
 <a href="#a-deployment-of-your-own">A deployment of your own</a> has the flags.</p>
 <h3 id="or-the-compose-files-this-project-ships">Or the compose files this project ships</h3>
-<p>Two shapes, both ready to <code>up</code>. The published image:</p>
+<p>To use the published image:</p>
 <pre><code class="language-bash">git clone https://github.com/sowoi/check-opencloud-security.git
 cd check-opencloud-security/docker
 
@@ -127,8 +126,8 @@ docker compose -f docker-compose.dockerhub.yml up -d
 </code></pre>
 <p>Or the same stack built from the checkout, with <code>docker compose up --build -d</code>
 and no <code>-f</code>.</p>
-<p>Three settings decide whether that stack is fit to be reached by anybody else,
-and all three live in <code>.env</code> beside the compose file:</p>
+<p>Before making the stack publicly accessible, review these three settings in
+the <code>.env</code> file beside the compose file:</p>
 <table>
 <thead>
 <tr>

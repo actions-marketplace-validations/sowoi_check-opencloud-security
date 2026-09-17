@@ -696,19 +696,19 @@ carrying another catalogue. A validated `cos_locale` cookie wins over the
 weighted `Accept-Language` header, then English is the fallback. The language
 switch is a POST to `/language` and may return only to a validated local path.
 Keep OpenAPI, Arazzo, MCP, discovery documents and exports in English, and
-keep remote scan evidence verbatim. Generated guide bodies remain English
-under `lang="en"` with a localized notice and chrome. See
-[ADR 0020](adr/0020-frontend-language-is-request-scoped.md).
+keep remote scan evidence verbatim. Public guide bodies have English, German,
+French and Spanish sources (`docs/`, `docs/de/`, `docs/fr/`, `docs/es/`), and
+adding or removing a guide updates all four; a locale without sources gets the
+English body under `lang="en"` with a localized notice. See
+[ADR 0020](adr/0020-frontend-language-is-request-scoped.md) and
+[ADR 0063](adr/0063-public-guides-have-spanish-sources.md).
 
-**German text addresses the reader informally, with "du".** Every new or
-reworded German string - in `webapp/locales/de.py` and in the guides under
-`docs/de/` - uses `du`/`dein`/`dir` and informal imperatives (`Prüfe`,
-`Starte`), never `Sie`/`Ihr`/`Ihnen`. Most existing German text is still
-formal; that is not a register to copy. When you reword a formal string,
-convert all of it rather than mixing both forms in one sentence.
-`tests/test_webapp_i18n.py` fails on a formal catalogue string whose key is not
-in `FORMAL_GERMAN_KEYS`, the list of strings that predate the guideline; that
-list only shrinks. Spanish and French keep their existing register.
+**German text addresses the reader informally, with "du".** Every German
+string - in `webapp/locales/de.py` and in the guides under `docs/de/` - uses
+`du`/`dein`/`dir` and informal imperatives (`Prüfe`, `Starte`), never
+`Sie`/`Ihr`/`Ihnen`. `tests/test_webapp_i18n.py` fails on a formal string in
+the catalogue or in a German guide. Spanish (formal "usted", in the catalogue
+and under `docs/es/`) and French keep their existing register.
 
 Every page carries the trademark notice in the footer of `base.html`. See
 [Trademarks and affiliation](#trademarks-and-affiliation) - do not remove it

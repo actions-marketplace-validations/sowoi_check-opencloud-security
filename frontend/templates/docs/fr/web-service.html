@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.web-service.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de', 'fr') %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -35,11 +35,11 @@
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="fr">
-<p>L'application web exécute le scanner intégré et présente ses résultats avec une note
-de <strong>A+</strong> à <strong>F</strong>. Les résultats restent disponibles dans Redis pendant une heure par défaut. Le web
-La couche présente le résultat du scanner sans définir une notation séparée.</p>
-<p>Try the public service at <a href="https://scan.example.com">scan.example.com</a> for a one-off scan. The
-instructions below cover hosting your own service, including network access, retention
+<p>L’application web exécute le scanner intégré et présente ses résultats avec une note
+de <strong>A+</strong> à <strong>F</strong>. Les résultats restent disponibles dans Redis pendant une heure par défaut.
+La couche web affiche le résultat du scanner sans définir de notation distincte.</p>
+<p>Essayez le service public pour une analyse ponctuelle. Les instructions ci-dessous
+expliquent comment héberger votre propre service, notamment l’accès réseau, la conservation
 and usage limits.</p>
 <p>It is <strong>not</strong> on PyPI. <code>pip install check-opencloud-security</code> gets the plugin
 and the scanner library, deliberately without FastAPI, Redis or a single
@@ -73,9 +73,9 @@ template. The web application ships as a GitHub release asset,
 </table>
 <p>The interface supports English, German, French and Spanish. It initially follows the
 browser’s language preference; a choice made with the language switcher is remembered in
-an <code>HttpOnly</code>, <code>SameSite=Lax</code> cookie. Guide bodies are available in English and German.
-French and Spanish interfaces currently show the English guides with a notice. API
-contracts, exports and measured evidence retain their original technical values.</p>
+an <code>HttpOnly</code>, <code>SameSite=Lax</code> cookie. Guide bodies are available in all four
+languages. API contracts, exports and measured evidence retain their original technical
+values.</p>
 <h2 id="contents">Contents</h2>
 <ul>
 <li><a href="#starting-it">Starting it</a></li>

@@ -236,12 +236,10 @@ application is known to reject replayed non-idempotent requests.
 
 ## What is deliberately left unmeasured
 
-**Nothing here reports a pass it did not measure.** A build of OpenSSL that
-refuses to speak TLS 1.0 at all cannot tell the scanner whether the *server*
-would have accepted it, and a missing `openssl` binary means OCSP stapling
-cannot be probed. In both cases the check is left out of the result entirely
-rather than recorded as passed - a gap in the output is honest; a green tick
-for something nobody looked at is not.
+**Checks that cannot run are omitted from the result.** If the local OpenSSL
+build does not support TLS 1.0, the scanner cannot test whether the server
+accepts it. Without an `openssl` binary, it cannot probe OCSP stapling.
+Neither case is reported as a pass.
 
 **A certificate that fails verification is still read.** `getpeercert()`
 returns nothing for an unverified peer, so on the self-signed instances this
@@ -263,9 +261,8 @@ needing to be told which case it is looking at:
 
 `--insecure` (`COS_INSECURE`) skips step 1's verification requirement. The
 untrusted chain is still listed in the output; it simply stops counting
-against the rating. Use it for an instance you know is self-signed, so that a
-*genuinely* broken certificate elsewhere still stands out rather than being
-lost in an expected finding.
+against the rating. Use it only when you intentionally accept an untrusted
+certificate for that instance.
 
 ## Severity and rating impact
 

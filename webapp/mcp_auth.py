@@ -488,6 +488,12 @@ def auth_settings(config: AuthConfig) -> Any:
         issuer_url=issuer_url(config),  # type: ignore[arg-type]
         resource_server_url=resource_url(config),  # type: ignore[arg-type]
         required_scopes=list(config.mcp_auth_scopes) or None,
+        # The verifier checks the token's audience against
+        # COS_WEB_MCP_AUTH_AUDIENCE itself, and that audience need not be the
+        # resource URL - many providers put a client id there. Letting the
+        # SDK also demand resource == resource URL would refuse those tokens.
+        # SDKs before 2.2 ignore the field.
+        validate_token_resource=False,
     )
 
 

@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.webhooks.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de', 'fr') %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -29,13 +29,13 @@
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="fr">
-<p>Le <a href="/documentation#webhook-notifications">webhook</a> affiche le JSON propre du plugin
-document par défaut. C'est délibéré : il porte tout le verdict, pas un
-sentence prononcée. <code>--webhook-format</code> peut le rendre comme Slack ou Discord propre
-forme directement (voir <a href="#slack-matièremost-discord">ci-dessous</a>), ou comme une poussée
-notification pour <a href="#ntfy-and-gotify">ntfy ou Gotify</a>; toute autre chose veut encore
-le document générique, et a besoin de quelques lignes de traduction entre les deux.</p>
-<p>Two rules apply to every recipe here:</p>
+<p>Le <a href="/documentation#webhook-notifications">webhook</a> envoie par défaut le document JSON
+du plugin, avec le statut et tous les constats. C’est volontaire : le récepteur reçoit
+le verdict complet. <code>--webhook-format</code> permet d’envoyer directement le format Slack ou
+Discord (voir <a href="#slack-matièremost-discord">ci-dessous</a>), ou une notification push pour
+<a href="#ntfy-and-gotify">ntfy ou Gotify</a>. Pour les autres récepteurs, adaptez le document JSON
+générique au format attendu.</p>
+<p>Deux règles s’appliquent à tous les exemples ci-dessous :</p>
 <ul>
 <li><strong>A failing webhook never changes the check result.</strong> The plugin appends
   <code>Webhook delivery failed</code> and still exits with the state it measured, so a

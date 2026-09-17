@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.release-lifecycle.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de', 'fr') %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -73,7 +73,7 @@
 <p><code>newestRelease</code> nennt im JSON und Webhook weiterhin die insgesamt neueste Version. Sie wird dadurch aber nicht automatisch zum empfohlenen Update. Meldet der Feed einen neueren Patch derselben Linie als der gebündelte Zeitplan, wird diese neuere Information verwendet.</p>
 <h2 id="declaring-your-release-track">Den Release-Kanal festlegen</h2>
 <p>Ohne Vorgabe wählt der Scanner den längsten bekannten Support für die Versionslinie. Im Beispiel gilt <code>7.2.3</code> daher als unterstütztes Production-Release, obwohl diese Linie auch auf Rolling erschienen ist.</p>
-<p>Wenn du ausdrücklich Rolling folgen, muss dieselbe Version nach Erscheinen des Nachfolgers als abgelöst gelten. Lege den Kanal dafür mit <code>--release-track</code> fest:</p>
+<p>Wenn du dem Rolling-Kanal folgst, gilt dieselbe Version nach Erscheinen des Nachfolgers als abgelöst. Lege den Kanal dafür mit <code>--release-track</code> fest:</p>
 <pre><code class="language-bash">check-opencloud-security --host opencloud.example.com --release-track rolling
 </code></pre>
 <p><code>--release-track auto</code> entspricht dem Weglassen der Option. Der Scanner leitet den Kanal aus dem Zeitplan ab:</p>

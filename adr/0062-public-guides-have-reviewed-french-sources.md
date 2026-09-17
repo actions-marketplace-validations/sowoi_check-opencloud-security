@@ -1,6 +1,6 @@
 # Public guides have French source pages
 
-- **Status:** Accepted
+- **Status:** Accepted; its Spanish English-fallback statement superseded by ADR 0063
 - **Date:** 2026-09-16
 
 ## Context

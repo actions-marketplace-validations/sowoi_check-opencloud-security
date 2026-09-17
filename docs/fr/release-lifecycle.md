@@ -1,8 +1,8 @@
 # Cycle de vie des versions
 
-OpenCloud maintient les pistes de laminage, de production et de LTS en parallèle. Un support de version
-le statut dépend donc de sa voie ainsi que de son nombre. Ce guide explique comment
-scanner utilise les lignes de libération et le calendrier groupé, choisit une mise à jour et s'applique
+OpenCloud maintient les canaux Rolling, Production et LTS en parallèle. Le support d’une version
+dépend donc de son canal et de son numéro. Ce guide explique comment le
+scanner utilise les lignes de version et le calendrier fourni, choisit une mise à jour et applique
 "--release-track".
 
 The [main README](../README.md#end-of-life-detection) carries the current

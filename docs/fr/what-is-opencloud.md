@@ -1,9 +1,9 @@
 # Qu’est-ce qu’OpenCloud ?
 
-[OpenCloud](https://opencloud.eu/) est une plateforme open-source pour le stockage,
-synchronisation et partage des fichiers. Ce scanner est conçu pour ses pistes de sortie,
-la configuration et les paramètres publics. Cette page explique l'architecture derrière
-Ces chèques.
+[OpenCloud](https://opencloud.eu/) est une plateforme open source de stockage, de
+synchronisation et de partage de fichiers. Ce scanner vérifie ses canaux de publication,
+sa configuration et ses points d’accès publics. Cette page présente l’architecture qui se
+trouve derrière ces contrôles.
 
 <!-- TOC -->
 * [What OpenCloud is](#what-opencloud-is)

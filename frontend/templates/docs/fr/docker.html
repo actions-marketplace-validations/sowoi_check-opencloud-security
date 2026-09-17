@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.docker.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de', 'fr') %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -26,9 +26,9 @@
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="fr">
-<p>Lancez le scanner sur votre propre machine avec l'image Docker publiée. Il utilise la même
-scanner comme le <a href="/documentation/web-service">service web</a>, se connecte directement à votre instance et n'a pas
-limite de prix du site Web. Vous avez besoin de Docker, mais aucun compte avec le service de numérisation.</p>
+<p>Lancez le scanner sur votre machine avec l’image Docker publiée. Il utilise le même
+scanner que le <a href="/documentation/web-service">service web</a>, se connecte directement à votre instance et n’est
+pas soumis aux limites du site. Vous avez besoin de Docker, mais d’aucun compte sur ce service.</p>
 <pre><code class="language-shell">docker run --rm --entrypoint check-opencloud-security \
   okxo/opencloud-scanner:latest --host opencloud.example.com
 </code></pre>
