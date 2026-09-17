@@ -72,6 +72,7 @@ project. Read the accepted records that affect an area before changing it.
 | [0063](0063-public-guides-have-spanish-sources.md) | Public guides have Spanish sources | Accepted |
 | [0064](0064-a-scan-records-what-it-did-not-measure.md) | A scan records what it did not measure | Accepted |
 | [0065](0065-a-waiver-may-carry-a-reason-and-a-deadline.md) | A waiver may carry a reason and a deadline | Accepted |
+| [0066](0066-a-result-records-the-conditions-it-was-produced-under.md) | A result records the conditions it was produced under | Accepted |
 
 ## Writing a new record
 

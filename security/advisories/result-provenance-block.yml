@@ -1,0 +1,29 @@
+# A security advisory record. See AGENTS.md, "Security advisories".
+#
+# One file per bullet under a `### Security` heading in CHANGELOG.md.
+# `state` is the decision; `verified` is the evidence it rests on.
+
+slug: result-provenance-block
+state: declined
+changelog_version: "1.25.0"
+changelog_entry: "A comparison now explains why a result changed, not only that it did."
+shipped: false
+severity: low
+package: plugin
+declined_because: |
+  Never shipped, and not a fixed defect in any case. The `provenance` block,
+  the shared explanation model and the digests over the reference data are a
+  new capability: they tell an upgrade, a newly recorded advisory, an elapsed
+  support window and an expired waiver apart, where before every one of them
+  read as a regression. No released version carried a guard that failed to do
+  what it claimed, so an advisory would tell operators to upgrade away from
+  versions that were never vulnerable.
+summary: >-
+  A scan result did not record the reference data, scanner version or waivers
+  it was judged against, so a comparison could not say why a grade moved
+verified: |
+  opencloud_local_scan/provenance.py and opencloud_local_scan/changes.py are
+  untracked in this working tree and absent from every tag:
+  git log --oneline --all -- opencloud_local_scan/provenance.py is empty, and
+  git ls-tree -r --name-only v1.24.2 matches only the unrelated
+  tests/test_webapp_request_provenance.py. adr/0066 is likewise untracked.

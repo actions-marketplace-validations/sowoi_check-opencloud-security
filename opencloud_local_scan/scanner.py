@@ -61,6 +61,20 @@ from urllib3 import PoolManager
 from urllib3.exceptions import ConnectTimeoutError, NewConnectionError
 
 from .caa import check_caa_record
+from .provenance import build as build_provenance
+
+
+def _scanner_version() -> str:
+    """
+    This package's version, read when a scan needs it.
+
+    Imported inside the call because the package root imports this module,
+    and a top-level import of it would be a cycle.
+    """
+    from . import __version__
+
+    return str(__version__)
+
 from .coverage import (
     NO_ROUTE,
     NOT_APPLICABLE,
@@ -3949,6 +3963,18 @@ def scan(
             # say what it covered, not one that covered everything.
             "coverage": coverage.as_dict(),
         }
+        # Built from the objects this scan was handed, at the moment it ran.
+        # A worker that refreshes its advisory database between the scan and
+        # the report would otherwise describe the scan with data it never saw.
+        result["provenance"] = build_provenance(
+            scanner_version=_scanner_version(),
+            scanned_at=scanned_at.isoformat(),
+            release_track=str(settings.release_track or ""),
+            advisories=database.advisories,
+            schedule=schedule,
+            waivers=waiver_records,
+            coverage=result["coverage"],
+        )
         # Derived from the document above and stored nowhere else: the plan is
         # the rating's own arithmetic replayed with one finding removed at a time.
         result["remediationPlan"] = remediation_plan(result)

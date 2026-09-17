@@ -676,6 +676,65 @@ la clave `coverage`, que es un informe que no dice lo que cubrió y no un
 análisis sin lagunas. Léalo con `coverage.coverage_of(result)`, que devuelve
 `None` tanto para un bloque ausente como para uno mal formado.
 
+## En qué condiciones se ejecutó un análisis {#the-conditions-a-scan-ran-under}
+
+Dos análisis de la misma instancia pueden diferir sin que la instancia haya
+cambiado: la base de datos de avisos aprendió un CVE, se cerró una ventana de
+soporte, se actualizó el escáner, caducó una exención. `provenance` registra lo
+que se sabía en ese momento, para que una comparación pueda distinguir eso de
+un empeoramiento real. Véase
+[ADR 0066](../../adr/0066-a-result-records-the-conditions-it-was-produced-under.md).
+
+```json
+{
+  "provenance": {
+    "schema": 1,
+    "scannerVersion": "1.25.0",
+    "scannedAt": "2026-09-17T19:56:35.852320+00:00",
+    "releaseTrack": "auto",
+    "advisoryData": {"digest": "7ffa242f...", "count": 1},
+    "scheduleData": {"digest": "6e9468bf...", "updated": "2026-09-15"},
+    "waivers": {"active": [], "expired": []},
+    "coverage": {"measured": 59, "total": 71}
+  }
+}
+```
+
+
+`digest` es un SHA-256 sobre los campos identificativos de los datos de
+referencia en forma canónica, de modo que los mismos avisos producen el mismo
+valor sin importar cómo se serializaron, combinaron u ordenaron. Es un resumen
+y no una copia - incrustar la base de datos pondría megabytes de avisos ajenos
+en cada informe - y tampoco una ruta de fichero, que revelaría dónde guarda sus
+ficheros la máquina. `scheduleData.updated` es cuándo se *generó* el calendario,
+que no es cuándo se leyó; `scannedAt` es el análisis.
+
+`waivers` registra patrones y estados, nunca el texto del motivo: un motivo es
+prosa escrita para una persona, y una comparación que lo contrastara informaría
+de una errata corregida como si fuera un cambio de política.
+
+### Comparar dos resultados {#comparing-two-results}
+
+`check-opencloud-scanner diff` imprime los cambios que contribuyeron bajo el
+resumen existente, y `--format json` los entrega como `explanation`:
+
+| Categoría | Qué cambió |
+|:--|:--|
+| `instance` | La versión, o una comprobación que empezó o dejó de fallar |
+| `referenceData` | Los avisos, el calendario, el canal, o una ventana de soporte que simplemente venció |
+| `scanner` | La versión del escáner, o cuántas comprobaciones llegaron a una conclusión |
+| `policy` | Una exención caducó, se añadió o se retiró |
+| `unknown` | Algo se movió y nada de lo registrado lo explica |
+
+La redacción es deliberadamente prudente. Un resumen distinto establece que los
+datos de referencia difirieron; no establece que eso hiciera moverse ninguna
+nota concreta, y la frase lo dice así. Varios cambios pueden contribuir sin que
+se elija uno como la causa.
+
+`limitations` enumera lo que la comparación no pudo establecer, casi siempre que
+uno de los dos informes es anterior a estos bloques y por tanto no puede decir
+contra qué se juzgó ni cuánto se ejecutó. Eso se informa, no se supone.
+
 ## Puertos de depuración {#debug-ports}
 
 Cada servicio de OpenCloud ejecuta un servicio de depuración que sirve

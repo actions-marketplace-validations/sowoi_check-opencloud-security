@@ -530,6 +530,69 @@ nicht ein Scan ohne Lücken. Lies ihn mit `coverage.coverage_of(result)`, das
 sowohl für einen fehlenden als auch für einen fehlerhaften Block `None`
 zurückgibt.
 
+## Unter welchen Bedingungen ein Scan lief {#the-conditions-a-scan-ran-under}
+
+Zwei Scans derselben Instanz können sich unterscheiden, ohne dass sich die
+Instanz geändert hat: Die Advisory-Datenbank hat eine CVE dazugelernt, ein
+Supportzeitraum ist abgelaufen, der Scanner wurde aktualisiert, eine Ausnahme
+ist verfallen. `provenance` hält fest, was zum Zeitpunkt des Scans bekannt war,
+damit ein Vergleich das von einer echten Verschlechterung unterscheiden kann.
+Siehe [ADR 0066](../../adr/0066-a-result-records-the-conditions-it-was-produced-under.md).
+
+```json
+{
+  "provenance": {
+    "schema": 1,
+    "scannerVersion": "1.25.0",
+    "scannedAt": "2026-09-17T19:56:35.852320+00:00",
+    "releaseTrack": "auto",
+    "advisoryData": {"digest": "7ffa242f...", "count": 1},
+    "scheduleData": {"digest": "6e9468bf...", "updated": "2026-09-15"},
+    "waivers": {"active": [], "expired": []},
+    "coverage": {"measured": 59, "total": 71}
+  }
+}
+```
+
+
+`digest` ist ein SHA-256 über die kennzeichnenden Felder der Referenzdaten in
+kanonischer Form: Dieselben Advisories ergeben denselben Wert, egal wie sie
+serialisiert, zusammengeführt oder sortiert wurden. Es ist eine Prüfsumme und
+keine Kopie - die Datenbank einzubetten würde Megabyte fremder Advisories in
+jeden Bericht schreiben - und auch kein Dateipfad, der verraten würde, wo die
+Maschine ihre Dateien ablegt. `scheduleData.updated` ist der Zeitpunkt, zu dem
+der Zeitplan *erzeugt* wurde, nicht der, zu dem er gelesen wurde; `scannedAt`
+ist der Scan.
+
+`waivers` hält Muster und Zustände fest, nie den Begründungstext: Eine
+Begründung ist Prosa für einen Menschen, und ein Vergleich, der sie
+gegenüberstellt, würde einen korrigierten Tippfehler als Richtlinienänderung
+melden.
+
+### Zwei Ergebnisse vergleichen {#comparing-two-results}
+
+`check-opencloud-scanner diff` gibt die beitragenden Änderungen unter der
+bisherigen Zusammenfassung aus, und `--format json` liefert sie als
+`explanation`:
+
+| Kategorie | Was sich geändert hat |
+|:--|:--|
+| `instance` | Die Version, oder eine Prüfung, die zu scheitern begann oder aufhörte |
+| `referenceData` | Die Advisories, der Zeitplan, der Track, oder ein schlicht abgelaufener Supportzeitraum |
+| `scanner` | Die Version des Scanners, oder wie viele Prüfungen zu einem Ergebnis kamen |
+| `policy` | Eine Ausnahme ist verfallen, kam hinzu oder fiel weg |
+| `unknown` | Etwas hat sich bewegt und nichts Aufgezeichnetes erklärt es |
+
+Die Formulierungen sind bewusst zurückhaltend. Eine geänderte Prüfsumme belegt,
+dass sich die Referenzdaten unterschieden; sie belegt nicht, dass dadurch eine
+bestimmte Note gefallen ist, und der Satz sagt genau das. Mehrere Änderungen
+können beitragen, ohne dass eine davon zur Ursache erklärt wird.
+
+`limitations` listet auf, was der Vergleich nicht feststellen konnte - meist,
+dass einer der beiden Berichte älter als diese Blöcke ist und deshalb nicht
+sagen kann, wogegen er geprüft wurde oder wie viel davon lief. Das wird
+berichtet und nicht angenommen.
+
 ## Debug-Ports {#debug-ports}
 
 Debug-Listener liefern unter anderem `/healthz`, `/readyz`, `/metrics`,

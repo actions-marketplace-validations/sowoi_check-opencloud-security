@@ -26,6 +26,7 @@
   <a href="#vulnerabilities" lang="es">Vulnerabilidades</a>
   <a href="#hardenings" lang="es">Refuerzos</a>
   <a href="#what-the-scan-covered" lang="es">Lo que cubrió el análisis</a>
+  <a href="#the-conditions-a-scan-ran-under" lang="es">En qué condiciones se ejecutó un análisis</a>
   <a href="#debug-ports" lang="es">Puertos de depuración</a>
   <a href="#every-resolved-address" lang="es">Todas las direcciones resueltas</a>
   <a href="#concurrency" lang="es">Concurrencia</a>
@@ -817,6 +818,76 @@ excusa. Las otras dos llevan siempre uno, de un conjunto cerrado:</p>
 la clave <code>coverage</code>, que es un informe que no dice lo que cubrió y no un
 análisis sin lagunas. Léalo con <code>coverage.coverage_of(result)</code>, que devuelve
 <code>None</code> tanto para un bloque ausente como para uno mal formado.</p>
+<h2 id="the-conditions-a-scan-ran-under">En qué condiciones se ejecutó un análisis</h2>
+<p>Dos análisis de la misma instancia pueden diferir sin que la instancia haya
+cambiado: la base de datos de avisos aprendió un CVE, se cerró una ventana de
+soporte, se actualizó el escáner, caducó una exención. <code>provenance</code> registra lo
+que se sabía en ese momento, para que una comparación pueda distinguir eso de
+un empeoramiento real. Véase
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0066-a-result-records-the-conditions-it-was-produced-under.md">ADR 0066</a>.</p>
+<pre><code class="language-json">{
+  &quot;provenance&quot;: {
+    &quot;schema&quot;: 1,
+    &quot;scannerVersion&quot;: &quot;1.25.0&quot;,
+    &quot;scannedAt&quot;: &quot;2026-09-17T19:56:35.852320+00:00&quot;,
+    &quot;releaseTrack&quot;: &quot;auto&quot;,
+    &quot;advisoryData&quot;: {&quot;digest&quot;: &quot;7ffa242f...&quot;, &quot;count&quot;: 1},
+    &quot;scheduleData&quot;: {&quot;digest&quot;: &quot;6e9468bf...&quot;, &quot;updated&quot;: &quot;2026-09-15&quot;},
+    &quot;waivers&quot;: {&quot;active&quot;: [], &quot;expired&quot;: []},
+    &quot;coverage&quot;: {&quot;measured&quot;: 59, &quot;total&quot;: 71}
+  }
+}
+</code></pre>
+<p><code>digest</code> es un SHA-256 sobre los campos identificativos de los datos de
+referencia en forma canónica, de modo que los mismos avisos producen el mismo
+valor sin importar cómo se serializaron, combinaron u ordenaron. Es un resumen
+y no una copia - incrustar la base de datos pondría megabytes de avisos ajenos
+en cada informe - y tampoco una ruta de fichero, que revelaría dónde guarda sus
+ficheros la máquina. <code>scheduleData.updated</code> es cuándo se <em>generó</em> el calendario,
+que no es cuándo se leyó; <code>scannedAt</code> es el análisis.</p>
+<p><code>waivers</code> registra patrones y estados, nunca el texto del motivo: un motivo es
+prosa escrita para una persona, y una comparación que lo contrastara informaría
+de una errata corregida como si fuera un cambio de política.</p>
+<h3 id="comparing-two-results">Comparar dos resultados</h3>
+<p><code>check-opencloud-scanner diff</code> imprime los cambios que contribuyeron bajo el
+resumen existente, y <code>--format json</code> los entrega como <code>explanation</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Categoría</th>
+<th>Qué cambió</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>instance</code></td>
+<td>La versión, o una comprobación que empezó o dejó de fallar</td>
+</tr>
+<tr>
+<td><code>referenceData</code></td>
+<td>Los avisos, el calendario, el canal, o una ventana de soporte que simplemente venció</td>
+</tr>
+<tr>
+<td><code>scanner</code></td>
+<td>La versión del escáner, o cuántas comprobaciones llegaron a una conclusión</td>
+</tr>
+<tr>
+<td><code>policy</code></td>
+<td>Una exención caducó, se añadió o se retiró</td>
+</tr>
+<tr>
+<td><code>unknown</code></td>
+<td>Algo se movió y nada de lo registrado lo explica</td>
+</tr>
+</tbody>
+</table>
+<p>La redacción es deliberadamente prudente. Un resumen distinto establece que los
+datos de referencia difirieron; no establece que eso hiciera moverse ninguna
+nota concreta, y la frase lo dice así. Varios cambios pueden contribuir sin que
+se elija uno como la causa.</p>
+<p><code>limitations</code> enumera lo que la comparación no pudo establecer, casi siempre que
+uno de los dos informes es anterior a estos bloques y por tanto no puede decir
+contra qué se juzgó ni cuánto se ejecutó. Eso se informa, no se supone.</p>
 <h2 id="debug-ports">Puertos de depuración</h2>
 <p>Cada servicio de OpenCloud ejecuta un servicio de depuración que sirve
 <code>/healthz</code>, <code>/readyz</code>, <code>/metrics</code>, <code>/config</code> y <code>/debug/pprof</code>. <code>/metrics</code>

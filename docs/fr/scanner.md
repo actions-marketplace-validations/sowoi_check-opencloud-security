@@ -638,6 +638,63 @@ which is a report that does not say what it covered - not a scan without
 gaps. Read it with `coverage.coverage_of(result)`, which returns `None` for
 both a missing and a malformed block.
 
+## The conditions a scan ran under
+
+Two scans of the same instance can disagree without the instance having
+changed: the advisory database learned a CVE, a support window closed, the
+scanner was upgraded, a waiver expired. `provenance` records what was known
+at the time, so a comparison can tell those apart from a real regression. See
+[ADR 0066](../../adr/0066-a-result-records-the-conditions-it-was-produced-under.md).
+
+```json
+{
+  "provenance": {
+    "schema": 1,
+    "scannerVersion": "1.25.0",
+    "scannedAt": "2026-09-17T19:56:35.852320+00:00",
+    "releaseTrack": "auto",
+    "advisoryData": {"digest": "7ffa242f...", "count": 1},
+    "scheduleData": {"digest": "6e9468bf...", "updated": "2026-09-15"},
+    "waivers": {"active": [], "expired": []},
+    "coverage": {"measured": 59, "total": 71}
+  }
+}
+```
+
+`digest` is a SHA-256 over the reference data's own identifying fields in
+canonical form, so the same advisories hash the same however they were
+serialised, merged or ordered. It is a digest rather than a copy - embedding
+the database would put megabytes of other people's advisories in every report -
+and rather than a file path, which would publish where the machine keeps its
+files. `scheduleData.updated` is when the schedule was *generated*, which is
+not when it was read; `scannedAt` is the scan.
+
+`waivers` records patterns and states, never the reason text: a reason is
+prose written for a person, and a comparison that diffed it would report a
+corrected typo as a change of policy.
+
+### Comparing two results
+
+`check-opencloud-scanner diff` prints the contributing changes under the
+existing summary, and `--format json` carries them as `explanation`:
+
+| Category | What changed |
+|:--|:--|
+| `instance` | The version, or a check that started or stopped failing |
+| `referenceData` | The advisories, the release schedule, the release track, or a support window that simply elapsed |
+| `scanner` | The scanner's version, or how many checks reached a conclusion |
+| `policy` | A waiver expired, was added or was removed |
+| `unknown` | Something moved and nothing recorded accounts for it |
+
+The wording is deliberately conservative. A changed digest establishes that
+the reference data differed; it does not establish that it caused any
+particular grade to move, and the sentence says so. Several changes may
+contribute without one being chosen as *the* cause.
+
+`limitations` lists what the comparison could not establish - most often that
+one of the two reports predates these blocks, and so cannot say what it was
+judged against or how much of it ran. That is reported rather than assumed.
+
 ## Debug ports
 
 Every OpenCloud service runs a debug listener serving `/healthz`, `/readyz`,

@@ -26,6 +26,7 @@
   <a href="#vulnerabilities" lang="en">Vulnerabilities</a>
   <a href="#hardenings" lang="en">Hardenings</a>
   <a href="#what-the-scan-covered" lang="en">What the scan covered</a>
+  <a href="#the-conditions-a-scan-ran-under" lang="en">The conditions a scan ran under</a>
   <a href="#debug-ports" lang="en">Debug ports</a>
   <a href="#every-resolved-address" lang="en">Every resolved address</a>
   <a href="#concurrency" lang="en">Concurrency</a>
@@ -781,6 +782,75 @@ excuse. The other two always carry one, from a closed set:</p>
 which is a report that does not say what it covered - not a scan without
 gaps. Read it with <code>coverage.coverage_of(result)</code>, which returns <code>None</code> for
 both a missing and a malformed block.</p>
+<h2 id="the-conditions-a-scan-ran-under">The conditions a scan ran under</h2>
+<p>Two scans of the same instance can disagree without the instance having
+changed: the advisory database learned a CVE, a support window closed, the
+scanner was upgraded, a waiver expired. <code>provenance</code> records what was known
+at the time, so a comparison can tell those apart from a real regression. See
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0066-a-result-records-the-conditions-it-was-produced-under.md">ADR 0066</a>.</p>
+<pre><code class="language-json">{
+  &quot;provenance&quot;: {
+    &quot;schema&quot;: 1,
+    &quot;scannerVersion&quot;: &quot;1.25.0&quot;,
+    &quot;scannedAt&quot;: &quot;2026-09-17T19:56:35.852320+00:00&quot;,
+    &quot;releaseTrack&quot;: &quot;auto&quot;,
+    &quot;advisoryData&quot;: {&quot;digest&quot;: &quot;7ffa242f...&quot;, &quot;count&quot;: 1},
+    &quot;scheduleData&quot;: {&quot;digest&quot;: &quot;6e9468bf...&quot;, &quot;updated&quot;: &quot;2026-09-15&quot;},
+    &quot;waivers&quot;: {&quot;active&quot;: [], &quot;expired&quot;: []},
+    &quot;coverage&quot;: {&quot;measured&quot;: 59, &quot;total&quot;: 71}
+  }
+}
+</code></pre>
+<p><code>digest</code> is a SHA-256 over the reference data's own identifying fields in
+canonical form, so the same advisories hash the same however they were
+serialised, merged or ordered. It is a digest rather than a copy - embedding
+the database would put megabytes of other people's advisories in every report -
+and rather than a file path, which would publish where the machine keeps its
+files. <code>scheduleData.updated</code> is when the schedule was <em>generated</em>, which is
+not when it was read; <code>scannedAt</code> is the scan.</p>
+<p><code>waivers</code> records patterns and states, never the reason text: a reason is
+prose written for a person, and a comparison that diffed it would report a
+corrected typo as a change of policy.</p>
+<h3 id="comparing-two-results">Comparing two results</h3>
+<p><code>check-opencloud-scanner diff</code> prints the contributing changes under the
+existing summary, and <code>--format json</code> carries them as <code>explanation</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>What changed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>instance</code></td>
+<td>The version, or a check that started or stopped failing</td>
+</tr>
+<tr>
+<td><code>referenceData</code></td>
+<td>The advisories, the release schedule, the release track, or a support window that simply elapsed</td>
+</tr>
+<tr>
+<td><code>scanner</code></td>
+<td>The scanner's version, or how many checks reached a conclusion</td>
+</tr>
+<tr>
+<td><code>policy</code></td>
+<td>A waiver expired, was added or was removed</td>
+</tr>
+<tr>
+<td><code>unknown</code></td>
+<td>Something moved and nothing recorded accounts for it</td>
+</tr>
+</tbody>
+</table>
+<p>The wording is deliberately conservative. A changed digest establishes that
+the reference data differed; it does not establish that it caused any
+particular grade to move, and the sentence says so. Several changes may
+contribute without one being chosen as <em>the</em> cause.</p>
+<p><code>limitations</code> lists what the comparison could not establish - most often that
+one of the two reports predates these blocks, and so cannot say what it was
+judged against or how much of it ran. That is reported rather than assumed.</p>
 <h2 id="debug-ports">Debug ports</h2>
 <p>Every OpenCloud service runs a debug listener serving <code>/healthz</code>, <code>/readyz</code>,
 <code>/metrics</code>, <code>/config</code> and <code>/debug/pprof</code>. <code>/metrics</code> exposes the exact version

@@ -41,6 +41,7 @@ from pathlib import Path
 from typing import Any
 
 from .baseline import Baseline, Comparison, Snapshot, snapshot_of
+from .changes import explain
 from .completion import enable as enable_completion
 from .config import ConfigurationError, load_configuration
 from .factory import release_settings_from_config, scanner_settings_from_config
@@ -440,9 +441,17 @@ def _run_diff(args: argparse.Namespace) -> int:
         return 2
 
     comparison = _compare_documents(before, after)
+    # Why it differs, not only that it differs. The same model the web
+    # comparison uses, so an operator's own monitoring and the service cannot
+    # explain the same two documents differently.
+    reasons = explain(before, after)
 
     if args.diff_format == "json":
-        print(json.dumps(comparison.as_dict(), indent=2))
+        print(
+            json.dumps(
+                {**comparison.as_dict(), "explanation": reasons.as_dict()}, indent=2
+            )
+        )
     elif args.diff_format == "slack":
         print(json.dumps(comparison.slack_blocks(), indent=2))
     else:
@@ -456,6 +465,11 @@ def _run_diff(args: argparse.Namespace) -> int:
         changes = comparison.render(args.diff_format)
         if changes:
             print(changes)
+        for change in reasons.changes:
+            if change.code != "ratingChanged":
+                print(f"  [{change.category}] {change.summary}")
+        for limitation in reasons.limitations:
+            print(f"  [limitation] {limitation}")
 
     if args.exit_zero:
         return 0

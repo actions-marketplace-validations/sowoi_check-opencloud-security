@@ -30,6 +30,7 @@ from urllib.parse import quote
 # what counts as a new finding must be the same question here, in the
 # plugin's --baseline and in `check-opencloud-scanner diff`.
 from opencloud_local_scan.baseline import Baseline, snapshot_of
+from opencloud_local_scan.changes import Explanation, explain
 
 # ---------------------------------------------------------------------------
 # The semantics, as constants. Both the Arazzo document and the MCP tools read
@@ -902,7 +903,36 @@ def compare_documents(
             }
             for item in comparison.items()
         ],
+        # Why it changed, from the same model the CLI comparison uses. Two
+        # scans can differ without the instance having changed at all - the
+        # advisory database learned something, a support window closed, a
+        # waiver expired - and the diff above cannot tell those apart.
+        # `_safe_text` because a summary can quote a version string that came
+        # from a stranger's status.php.
+        "explanation": _sanitised_explanation(explain(before, after)),
         "untrusted": {"fields": list(REMOTE_FIELDS), "note": REMOTE_NOTE},
+    }
+
+
+def _sanitised_explanation(explanation: Explanation) -> dict[str, Any]:
+    """
+    The shared explanation, with every rendered string made safe.
+
+    The codes and the categories are this project's own tokens and pass
+    through untouched, which is what lets a client branch on the kind of
+    change without reading the sentence.
+    """
+    return {
+        "changes": [
+            {
+                "category": change.category,
+                "code": change.code,
+                "summary": _safe_text(change.summary),
+                "evidence": change.evidence,
+            }
+            for change in explanation.changes
+        ],
+        "limitations": [_safe_text(item) for item in explanation.limitations],
     }
 
 

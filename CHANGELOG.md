@@ -93,6 +93,27 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   and no part of the file, because an audit trail is as attractive a place for
   a hostile upload to be quoted as an error page is.
 
+- **A comparison now explains why a result changed, not only that it did.**
+  Every scan records a `provenance` block built from the data it was actually
+  given while it ran: the scanner version, the scan time, the release track,
+  the waivers in force, how much was measured, and a stable digest of the exact
+  advisory database and release schedule it judged against - a digest rather
+  than a copy or a file path, and one that is independent of serialisation
+  order. `check-opencloud-scanner diff` and the web comparison then share one
+  explanation model that groups contributing changes as `instance`,
+  `referenceData`, `scanner`, `policy` or `unknown`, so an upgrade, a newly
+  recorded advisory, a support window that simply elapsed, a scanner upgrade
+  and an expired waiver are told apart instead of all reading as a regression.
+  It claims only what the evidence supports: a changed digest establishes that
+  the reference data differed and explicitly not that it caused any particular
+  grade to move, several changes may contribute without one being elected the
+  cause, and a difference nothing accounts for is reported as unexplained
+  rather than dropped. An older report that records neither block still
+  compares; what cannot be established is reported as a limitation instead of
+  guessed. Uploaded reports pass both blocks through the same bounded
+  allow-list (ADR 0057). No new scan history is stored. See
+  [ADR 0066](adr/0066-a-result-records-the-conditions-it-was-produced-under.md).
+
 ### Fixed
 
 - **Two sentences about a refused upload printed their own placeholder.** The
