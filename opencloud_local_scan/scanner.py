@@ -86,6 +86,17 @@ from .versions import (
     select_version,
 )
 from .vulndb import VulnerabilityDatabase, load_database
+from .waivers import (
+    Waiver,
+    WaiverDecision,
+    scan_clock,
+)
+from .waivers import (
+    report as waiver_report,
+)
+from .waivers import (
+    resolve as resolve_waiver,
+)
 
 LOGGER = logging.getLogger("check_opencloud.scanner")
 
@@ -489,6 +500,10 @@ class ScannerSettings:
     behind, not current.
     """
     ignore_hardenings: tuple[str, ...] = ()
+    #: Waivers that carry a reason and a deadline. Additive: a pattern in
+    #: `ignore_hardenings` is still a permanent waiver and still means what
+    #: it always meant. See :mod:`opencloud_local_scan.waivers`.
+    waivers: tuple[Waiver, ...] = ()
     """Hardening measures and additional checks to disregard.
 
     Entries are matched against both namespaces, because they overlap
@@ -3166,7 +3181,8 @@ def _apply_waivers(
     hardenings: Mapping[str, bool],
     headers: Mapping[str, bool],
     https: Mapping[str, Any],
-) -> list[str]:
+    now: datetime,
+) -> tuple[list[str], list[dict[str, Any]]]:
     """
     Mark everything the operator has chosen to accept, and report what matched.
 
@@ -3174,29 +3190,68 @@ def _apply_waivers(
     would quietly turn into a blind spot the day it starts failing. Findings
     are flagged in place rather than deleted, so the result document still
     shows what was observed - a waiver hides an alert, not the evidence.
+
+    ``now`` is the scan's own clock, read once at the start, and every expiry
+    is decided against it. Returns the waived identifiers and the record of
+    every configured waiver - including the ones that matched nothing and the
+    ones that have run out, because those are the two a reader needs to see.
     """
-    patterns = settings.ignore_hardenings
-    if not patterns:
-        return []
+    records = _configured_waivers(settings)
+    if not records:
+        return [], []
 
     ignored: list[str] = []
+    decisions: list[WaiverDecision] = []
+
+    def decide(check: str) -> bool:
+        """Ask the records about one *failing* check, once."""
+        decision = resolve_waiver(records, check, now)
+        if not decision.applicable:
+            return False
+        decisions.append(decision)
+        if decision.only_covered_by_a_wildcard:
+            # The specific permission ran out and a broader one is still
+            # carrying it. Correct, and quiet, and worth a line in the log
+            # so that an expiry does not pass entirely unremarked.
+            LOGGER.debug(
+                "%s is waived by a broader record; %d specific waiver(s) expired",
+                check,
+                len(decision.expired),
+            )
+        return decision.waived
+
     for finding in findings:
-        if not finding.passed and _is_ignored(finding.id, patterns):
+        if not finding.passed and decide(finding.id):
             finding.ignored = True
             ignored.append(finding.id)
 
     ignored.extend(
-        name for name, enabled in hardenings.items() if not enabled and _is_ignored(name, patterns)
+        name for name, enabled in hardenings.items() if not enabled and decide(name)
     )
     ignored.extend(
-        name for name, present in headers.items() if not present and _is_ignored(name, patterns)
+        name for name, present in headers.items() if not present and decide(name)
     )
-    if not https.get("enforced", True) and _is_ignored("httpsEnforced", patterns):
+    if not https.get("enforced", True) and decide("httpsEnforced"):
         ignored.append("httpsEnforced")
 
     unique = sorted(set(ignored))
     LOGGER.debug("Waived %d finding(s) by configuration: %s", len(unique), unique)
-    return unique
+    return unique, waiver_report(records, decisions, now)
+
+
+def _configured_waivers(settings: ScannerSettings) -> tuple[Waiver, ...]:
+    """
+    Every waiver this scan was given, in one list.
+
+    The two forms are one mechanism: a bare pattern from `--ignore-hardening`
+    is a waiver with no deadline and no reason, which is exactly what it has
+    always been. Structured records are appended, so a permanent pattern
+    keeps working unchanged next to a temporary one.
+    """
+    permanent = tuple(
+        Waiver(pattern) for pattern in settings.ignore_hardenings if pattern
+    )
+    return permanent + tuple(settings.waivers)
 
 
 def _rating_caps(rating: int, findings: Iterable[Finding]) -> tuple[int, list[RatingCap]]:
@@ -3808,7 +3863,12 @@ def scan(
         # Waivers are applied last, so that every finding - including the ones
         # added above - can be waived, and so that the rating below is computed
         # from what the operator actually wants to be alerted about.
-        ignored_names = _apply_waivers(settings, findings, hardenings, headers, https)
+        # One clock for the whole scan. Re-reading it would let a check be
+        # waived at the top of a long scan and alert at the bottom.
+        waived_at = scan_clock()
+        ignored_names, waiver_records = _apply_waivers(
+            settings, findings, hardenings, headers, https, waived_at
+        )
 
         # After the waivers, and unchanged by them. A waived check is a check
         # that failed and that somebody accepted; recording it as anything
@@ -3860,6 +3920,10 @@ def scan(
             "releaseType": lifecycle.release_type,
             "lifecycle": lifecycle.as_dict(),
             "ignored": ignored_names,
+            # Every configured waiver, active or expired, with what it
+            # matched. `ignored` stays a flat list of identifiers, so an
+            # existing reader is unaffected.
+            "waivers": waiver_records,
             "latestVersionInBranch": latest_in_branch,
             "vulnerabilities": vulnerabilities,
             "hardenings": hardenings,

@@ -34,6 +34,7 @@ from .versions import (
     ReleaseSchedule,
     load_release_schedule,
 )
+from .waivers import Waiver, parse_waivers
 
 
 def _int_tuple(config: Configuration, name: str) -> tuple[int, ...]:
@@ -83,6 +84,19 @@ def _waivers(config: Configuration) -> tuple[str, ...]:
     return tuple(dict.fromkeys(entries))
 
 
+def _temporary_waivers(config: Configuration) -> tuple[Waiver, ...]:
+    """
+    Read the waivers that carry a reason and a deadline.
+
+    Entries are whole records - `pattern|expires|reason` - so unlike
+    `SCANNER_IGNORE_HARDENINGS` they are not split on commas: a reason is a
+    sentence and sentences have commas in them. A record that cannot be
+    parsed raises rather than being dropped, because a waiver that silently
+    does not exist is as bad as one that silently never expires.
+    """
+    return parse_waivers(config.get_list("SCANNER_TEMPORARY_WAIVERS"))
+
+
 def scanner_settings_from_config(
     config: Configuration, **overrides: Any
 ) -> ScannerSettings:
@@ -116,6 +130,7 @@ def scanner_settings_from_config(
         release_schedule=_release_schedule(config),
         release_track=_release_track(config),
         ignore_hardenings=_waivers(config),
+        waivers=_temporary_waivers(config),
         vulnerability_files=tuple(config.get_list("SCANNER_VULNERABILITY_DB")),
         vulnerability_feed=config.get("SCANNER_VULNERABILITY_FEED"),
         include_bundled_db=config.get_bool("SCANNER_BUNDLED_DB", True),

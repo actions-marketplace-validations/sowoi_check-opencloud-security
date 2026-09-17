@@ -59,6 +59,7 @@ is needed.
 | [`test_advisory_checks.py`](test_advisory_checks.py) | Non-header observations (e.g. `security.txt`) that are reported but never counted. |
 | [`test_hardening.py`](test_hardening.py) | Every check the scanner can report appears in the hardening catalogue. |
 | [`test_waivers.py`](test_waivers.py) | Waiving hardening findings, and declaring an instance's release track. |
+| [`test_waiver_expiry.py`](test_waiver_expiry.py) | A waiver with a reason and a deadline, and the alert coming back when it passes. |
 | [`test_remediation.py`](test_remediation.py) | The remediation planner never promises a grade that its fixes would not reach. |
 | [`test_snippets.py`](test_snippets.py) | Configuration fragments for fixes, and that they match the prose describing them. |
 | [`test_explain.py`](test_explain.py) | Debug mode: why a rating is what it is, and what each hardening identifier means. |

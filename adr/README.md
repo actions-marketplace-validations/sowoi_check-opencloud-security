@@ -71,6 +71,7 @@ project. Read the accepted records that affect an area before changing it.
 | [0062](0062-public-guides-have-reviewed-french-sources.md) | Public guides have French source pages | Accepted; its Spanish English-fallback statement superseded by ADR 0063 |
 | [0063](0063-public-guides-have-spanish-sources.md) | Public guides have Spanish sources | Accepted |
 | [0064](0064-a-scan-records-what-it-did-not-measure.md) | A scan records what it did not measure | Accepted |
+| [0065](0065-a-waiver-may-carry-a-reason-and-a-deadline.md) | A waiver may carry a reason and a deadline | Accepted |
 
 ## Writing a new record
 

@@ -54,9 +54,17 @@ MAX_CSV_ROWS = 2_000
 #: bounds the *walk* afterwards, which is ordinary Python.
 MAX_JSON_DEPTH = 20
 
-#: Entries kept per list, and characters kept per string. Both are generous
-#: for a real report and small enough that a crafted one cannot make the
-#: comparison, the page or the cached document large.
+#: Entries a block may carry, and characters kept per string. Both are
+#: generous for a real report and small enough that a crafted one cannot make
+#: the comparison, the page or the cached document large.
+#:
+#: A block past the entry cap is *refused*, not truncated. Reading the first
+#: five hundred findings of a longer list would answer the reader's question
+#: from part of their evidence, and the part left out is exactly where the
+#: finding that mattered would be: everything after it reads as resolved on
+#: the earlier side and as introduced on the later one, with nothing on the
+#: page able to say the file was only partly read. :data:`MAX_CSV_ROWS`
+#: refuses a long file for the same reason.
 MAX_ENTRIES = 500
 MAX_TEXT = 300
 
@@ -140,8 +148,11 @@ class ImportedReport:
 
     dropped: int = 0
     """Entries left out because their identifier was not one this service
-    writes. Reported rather than swallowed: a comparison drawn from a file
-    that was partly unreadable is a comparison the reader should know about."""
+    writes, or because they were not the shape their block is written in.
+    Reported rather than swallowed: a comparison drawn from a file that was
+    partly unreadable is a comparison the reader should know about. A file
+    whose blocks are too long to read at all is refused instead, because that
+    is a hole the count could not describe - see :data:`MAX_ENTRIES`."""
 
     @property
     def missing_records(self) -> tuple[str, ...]:
@@ -435,7 +446,9 @@ def _rebuild(source: Mapping[str, Any]) -> tuple[dict[str, Any], int]:
     }
 
     checks: list[dict[str, Any]] = []
-    for entry in _entries(source.get("extraChecks")):
+    entries, unreadable = _entries(source.get("extraChecks"))
+    dropped += unreadable
+    for entry in entries:
         identifier = _text(entry.get("id"))
         if not _IDENTIFIER.match(identifier):
             dropped += 1
@@ -451,7 +464,9 @@ def _rebuild(source: Mapping[str, Any]) -> tuple[dict[str, Any], int]:
     document["extraChecks"] = checks
 
     vulnerabilities: list[dict[str, Any]] = []
-    for entry in _entries(source.get("vulnerabilities")):
+    entries, unreadable = _entries(source.get("vulnerabilities"))
+    dropped += unreadable
+    for entry in entries:
         identifier = _text(entry.get("id") or entry.get("cve") or entry.get("title"))
         if not _IDENTIFIER.match(identifier):
             dropped += 1
@@ -493,32 +508,52 @@ def _rebuild(source: Mapping[str, Any]) -> tuple[dict[str, Any], int]:
         document["updates"] = {}
 
     waived: list[str] = []
-    for name in _entries(source.get("ignored"), mappings_only=False):
+    names, _ = _entries(source.get("ignored"), mappings_only=False)
+    for name in names:
         text = _text(name)
         if _IDENTIFIER.match(text):
             waived.append(text)
+        else:
+            dropped += 1
     document["ignored"] = waived
 
     return document, dropped
 
 
-def _entries(value: Any, *, mappings_only: bool = True) -> list[Any]:
-    """At most :data:`MAX_ENTRIES` items of a list, or nothing."""
+def _too_many(count: int) -> None:
+    """Refuse a block no report this service wrote could have."""
+    if count > MAX_ENTRIES:
+        raise ReportRejected(
+            f"A block of the report carries more than {MAX_ENTRIES} entries.",
+            key="compare.upload.error.not_a_report",
+        )
+
+
+def _entries(value: Any, *, mappings_only: bool = True) -> tuple[list[Any], int]:
+    """
+    The items of one list, and how many of them could not be read.
+
+    An entry that is not the shape its block is written in carries no
+    identifier at all, so it is counted rather than passed over in silence -
+    the same rule an identifier this scanner never writes meets below.
+    """
     if not isinstance(value, list):
-        return []
-    items = value[:MAX_ENTRIES]
-    if mappings_only:
-        return [item for item in items if isinstance(item, Mapping)]
-    return items
+        return [], 0
+    _too_many(len(value))
+    if not mappings_only:
+        return list(value), 0
+    kept = [item for item in value if isinstance(item, Mapping)]
+    return kept, len(value) - len(kept)
 
 
 def _flags(value: Any) -> tuple[dict[str, bool], int]:
     """A block of ``name: bool`` measurements, names checked and count capped."""
     if not isinstance(value, Mapping):
         return {}, 0
+    _too_many(len(value))
     flags: dict[str, bool] = {}
     dropped = 0
-    for name, enabled in list(value.items())[:MAX_ENTRIES]:
+    for name, enabled in value.items():
         text = _text(name)
         if not _IDENTIFIER.match(text):
             dropped += 1
@@ -550,9 +585,17 @@ def _severity(value: Any) -> str:
 
 
 def _rating(value: Any) -> int | None:
-    """The 0-5 grade, or ``None`` where the report did not carry one."""
+    """
+    The 0-5 grade, or ``None`` where the report did not carry one.
+
+    Read through :func:`_text` rather than from the raw value: ``int`` on a
+    quarter of a megabyte of digits is quadratic work chosen by whoever wrote
+    the file, and CPython's own digit limit is a default an operator can turn
+    off. A grade is one character, so there is nothing to lose by capping it
+    the way every other string from the file is capped.
+    """
     try:
-        rating = int(str(value).strip())
+        rating = int(_text(value))
     except (TypeError, ValueError):
         return None
     return rating if 0 <= rating <= 5 else None

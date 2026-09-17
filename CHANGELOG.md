@@ -48,6 +48,24 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   result page shows the gaps beside the grade in all four languages. See
   [ADR 0064](adr/0064-a-scan-records-what-it-did-not-measure.md).
 
+- **A waiver can now carry a reason and a deadline.** `--waive-until
+  'debugPort:9205|2026-12-31T00:00:00Z|Firewall change, OPS-412'` accepts a
+  failing check until a stated moment, after which it alerts again with no
+  configuration change - the fix for a waiver added "for two weeks" that is
+  still suppressing an alert a year later. The expiry must carry a timezone and
+  the reason may not be empty; a record missing either is refused rather than
+  quietly becoming permanent, because failing open is how a typo outlives
+  everybody who knew about it. The boundary is `now >= expires_at`, decided
+  once per scan against one UTC clock. A bare pattern in `--ignore-hardening`
+  is still a permanent waiver and is unchanged. Any active record suppresses,
+  and the result document's new `waivers` block lists every record that applies
+  to a check - active, expired, and the ones that matched nothing - so a
+  permanent wildcard cannot silently absorb an expiry underneath it. Waivers
+  still only apply to failing checks, still never remove evidence, and end of
+  life is still an F. Configurable as `COS_SCANNER_TEMPORARY_WAIVERS` and
+  `scanner.temporary_waivers`. See
+  [ADR 0065](adr/0065-a-waiver-may-carry-a-reason-and-a-deadline.md).
+
 ### Fixed
 
 - **101 dead links in the French guides.** A guide under `docs/<language>/`
