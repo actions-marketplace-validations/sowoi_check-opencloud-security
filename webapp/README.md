@@ -1,10 +1,9 @@
 # The web application and its frontend
 
-This directory is the public scan service: a small FastAPI application, an ARQ
-worker, and Redis holding nothing for longer than an hour. The pages it serves
-live one directory up in [`frontend/`](../frontend). Neither is on PyPI - the
-wheel is the plugin and the scanner, and a monitoring host has no use for
-FastAPI.
+This directory contains the public scan service: a FastAPI application, an ARQ
+worker and Redis. Scan results expire after one hour by default. Templates and
+assets live in [`frontend/`](../frontend). The service and frontend are
+distributed separately from the PyPI package, which contains the plugin and scanner.
 
 - **Operators** want [`docs/webapp.md`](../docs/webapp.md): deployment, the
   reverse proxy, every setting and the threat model behind it.
@@ -81,10 +80,10 @@ frontend/
     └── img/*.svg     drawn for this project
 ```
 
-Three layers, and the boundary between them is the point:
-`opencloud_local_scan` **measures**, the plugin **judges**, and `webapp`
-**serves**. If a change here starts deciding whether a finding is acceptable,
-it belongs in the scanner or the plugin instead.
+The three layers have separate responsibilities: `opencloud_local_scan`
+collects and rates findings, the plugin determines the monitoring status,
+and `webapp` serves the results. Keep rating and alert decisions in the
+scanner or plugin.
 
 The HTML interface uses English, German, French and Spanish string catalogues. A
 language cookie takes precedence over `Accept-Language`, with English as fallback;

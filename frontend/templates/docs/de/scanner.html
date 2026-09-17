@@ -321,7 +321,7 @@ steht zusätzlich unter <code>newestRelease</code>.</p>
 </table>
 <p>Standard ist <code>auto</code>. Bei einem nicht erreichbaren Feed bleibt die Prüfung mit
 den Daten des installierten Pakets möglich. Wähle <code>feed</code>, wenn du einen
-fehlgeschlagenen Abruf ausdrücklich sehen möchten.</p>
+fehlgeschlagenen Abruf ausdrücklich sehen möchtest.</p>
 <p>Standardquelle ist die GitHub-Releases-API. <code>parse_release_feed()</code> versteht
 auch ein einzelnes <code>{"tag_name": ...}</code>-Dokument und Release-Listen. Entwürfe
 und Vorabversionen werden ausgelassen; interne Spiegel können diese Formate
@@ -581,8 +581,8 @@ oder einen CSP-Dateipfad, erscheint sie unter <code>Fragment.undecided</code> st
 scheinbar fertiger Konfigurationswert.</p>
 <h2 id="debug-ports">Debug-Ports</h2>
 <p>Debug-Listener liefern unter anderem <code>/healthz</code>, <code>/readyz</code>, <code>/metrics</code>,
-<code>/config</code> und <code>/debug/pprof</code>. Du kannst Versionen und Konfigurationen offenlegen
-und Profiling erlauben. Standardmäßig binde an Loopback, sofern
+<code>/config</code> und <code>/debug/pprof</code>. Diese Endpunkte können Versionen und Konfigurationen
+offenlegen und Profiling erlauben. Standardmäßig sind die Listener an Loopback gebunden, sofern
 <code>&lt;SERVICE&gt;_DEBUG_ADDR</code> nichts anderes festlegt.</p>
 <table>
 <thead>

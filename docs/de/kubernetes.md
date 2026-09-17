@@ -24,7 +24,7 @@ Dieser Aufruf richtet den zeitgesteuerten Scan ein. Mit `scanService.enabled=tru
 | `scanService.existingSecret` | Der aktivierte Scan-Dienst benötigt ein vorhandenes Secret für sein Token |
 | `scanService.networkPolicy.allowedTargets` | Die aktivierte NetworkPolicy benötigt die erlaubten Ziele für ausgehende Verbindungen |
 
-Das Chart erzeugt keine Zugangsdaten. Erstellst du die Secrets vorher und verweise darauf. Die vollständige Wertetabelle steht im [Chart-README](../../contrib/helm/check-opencloud-security/README.md).
+Das Chart erzeugt keine Zugangsdaten. Erstelle die Secrets vorher und verweise darauf. Die vollständige Wertetabelle steht im [Chart-README](../../contrib/helm/check-opencloud-security/README.md).
 
 Die folgenden Manifeste kannst du auch direkt anwenden oder als Grundlage für die Prüfung des gerenderten Charts verwenden.
 

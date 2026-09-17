@@ -163,7 +163,7 @@ sudo cp /usr/share/doc/check-opencloud-security/env.example \
         /etc/check-opencloud-security/env      # for the systemd units
 ```
 
-Alternativ führt du `check-opencloud-security --configure` durch die Einstellungen.
+Alternativ führt dich `check-opencloud-security --configure` durch die Einstellungen.
 
 Die Units benötigen vor dem Aktivieren die konfigurierte `env`-Datei:
 
@@ -254,7 +254,7 @@ docker run --rm -e COS_HOST=opencloud.example.com check-opencloud-security
 
 Der Image-`HEALTHCHECK` prüft lokal, ob Paket, Zeitplan und Advisory-Datenbank lesbar sind. Er benötigt kein Netzwerk. Ein einmaliger Check-Container beendet sich meist vor dem ersten Healthcheck. Die Monitoring-Compose-Datei verwendet für den dauerhaften Dienst stattdessen `/healthz`.
 
-Der Check-Container muss keine Ports veröffentlichen, benötigt aber Zugriff auf die Instanz. Passt du bei Bedarf das Netzwerk mit `--network host` oder `--add-host` an. Er läuft als unprivilegierter Benutzer `nagios` und liefert dieselben Exitcodes wie die native Installation.
+Der Check-Container muss keine Ports veröffentlichen, benötigt aber Zugriff auf die Instanz. Passe bei Bedarf das Netzwerk mit `--network host` oder `--add-host` an. Er läuft als unprivilegierter Benutzer `nagios` und liefert dieselben Exitcodes wie die native Installation.
 
 Du kannst ein selbst gebautes Image in deine Registry übertragen, etwa mit `docker tag check-opencloud-security registry.example.com/check-opencloud-security` und anschließendem `docker push`, und auf den Monitoring-Hosts verwenden.
 

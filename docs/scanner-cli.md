@@ -137,12 +137,11 @@ remembers its last run by itself, see [Reporting only what changed](baseline.md)
 it. It exits `0` when nothing got worse, including when findings were only
 resolved. `--exit-zero` turns the gate off.
 
-It exits `2`, and compares nothing, when it cannot give an honest answer:
+It exits `2` without comparing results in either of these cases:
 
-- **the two files describe different instances.** "Did the fix work" is a
-  question about one instance, and two hosts compared by accident is a wrong
-  answer nobody notices. Pass `--allow-different-hosts` if that is what you
-  meant.
+- **the two files describe different instances.** To check whether a fix
+  worked, compare scans of the same instance. Pass `--allow-different-hosts`
+  if you intend to compare different hosts.
 - **a file is not a result document** from `scan`. For example, it has no
   rating, or it is the error entry of an instance that could not be scanned.
 

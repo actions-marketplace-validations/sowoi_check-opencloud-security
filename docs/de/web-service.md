@@ -559,7 +559,7 @@ Der [Proxy-Leitfaden](../reverse-proxy.md) enthält Konfigurationen für nginx,
 Apache httpd, Caddy, Traefik und HAProxy. Der Assistent kann die ersten vier
 erzeugen, einschließlich TLS, MCP-Streaming und gegebenenfalls Forward Auth.
 
-aktiviere `COS_WEB_TRUST_FORWARDED_FOR` nur hinter einem eigenen Proxy.
+Aktiviere `COS_WEB_TRUST_FORWARDED_FOR` nur hinter einem eigenen Proxy.
 `COS_WEB_TRUSTED_PROXY_HOPS` zählt von rechts im `X-Forwarded-For`-Header.
 Zu wenige Hops fassen Besucher unter einer Proxy-Adresse zusammen; zu viele
 können einen vom Client vorgegebenen Wert als Adresse übernehmen.

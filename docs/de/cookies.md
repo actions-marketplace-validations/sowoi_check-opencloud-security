@@ -14,7 +14,7 @@ Ohne `Secure` kann der Browser ein Cookie auch über unverschlüsseltes HTTP sen
 
 Ohne `HttpOnly` kann JavaScript auf der Seite das Cookie über `document.cookie` lesen. Bei einer XSS-Schwachstelle kann dadurch auch der Cookie-Wert gestohlen werden. Besonders relevant ist dies für Sitzungscookies.
 
-**Behebung:** Setze `HttpOnly`, wenn das Cookie nicht von einem Browserskript gelesen werden muss. Einige CSRF-Verfahren sowie Einstellungen oder Einwilligungen benötigen absichtlich lesbare Cookies. Prüfe daher die Funktion des jeweiligen Cookies, bevor du das Attribut ergänzen.
+**Behebung:** Setze `HttpOnly`, wenn das Cookie nicht von einem Browserskript gelesen werden muss. Einige CSRF-Verfahren sowie Funktionen für Einstellungen oder Einwilligungen benötigen Cookies, die JavaScript lesen kann. Prüfe daher die Funktion des jeweiligen Cookies, bevor du das Attribut ergänzt.
 
 ## 3. Websiteübergreifende Anfragen begrenzen: `cookieSameSite` {#3-is-the-cookie-sent-on-cross-site-requests-cookiesamesite}
 

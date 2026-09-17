@@ -159,7 +159,7 @@ services:
         tag: opencloud
 ```
 
-Der sendende Dienst sollte Einträge hinzufügen, aber vorhandene Daten nicht löschen oder umschreiben dürfen. Verwende getrennte Berechtigungen und eine festgelegte Aufbewahrungsdauer, unabhängig davon, ob du Loki, einen Syslog-Server oder einen anderen Sammler einsetzen.
+Der sendende Dienst sollte Einträge hinzufügen, aber vorhandene Daten nicht löschen oder umschreiben dürfen. Verwende getrennte Berechtigungen und eine festgelegte Aufbewahrungsdauer, unabhängig davon, ob du Loki, einen Syslog-Server oder einen anderen Logdienst einsetzt.
 
 ### Geeignete Alarmregeln {#what-to-actually-alert-on}
 

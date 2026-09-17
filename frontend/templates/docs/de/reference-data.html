@@ -34,7 +34,7 @@
 <ul>
 <li><strong>Die installierte OpenCloud-Version fehlt im Zeitplan.</strong> Im Ergebnis steht dann <code>"scheduleStale": true</code>; siehe <a href="/documentation/release-lifecycle">Release-Lebenszyklus</a>.</li>
 <li><strong>Seit dem Paketbau wurden Sicherheitshinweise veröffentlicht.</strong> Die gebündelte Datenbank kennt sie noch nicht.</li>
-<li><strong>du aktualisierst das Scanner-Paket nach einem eigenen Zeitplan.</strong> Die Referenzdaten sollen trotzdem aktuell bleiben.</li>
+<li><strong>Du aktualisierst das Scanner-Paket nach einem eigenen Zeitplan.</strong> Die Referenzdaten sollen trotzdem aktuell bleiben.</li>
 </ul>
 <p>Regelmäßige Paketupdates liefern ebenfalls neue Daten. Die <a href="/documentation/web-service">Webanwendung</a> besitzt eigene Aktualisierungen zur Laufzeit und benötigt diesen Befehl nicht.</p>
 <h2 id="running-a-refresh">Aktualisierung ausführen</h2>
@@ -154,7 +154,7 @@ sudo systemctl enable --now check-opencloud-security-refresh.timer
 sudo systemctl start check-opencloud-security-refresh.service   # a first run now
 journalctl -u check-opencloud-security-refresh.service
 </code></pre>
-<p><strong>Refresh und Check müssen mit passenden Dateirechten laufen.</strong> Die erzeugten Dateien haben Modus <code>0600</code>. Der Service verwendet standardmäßig <code>User=check-opencloud-security</code>; ein Check als <code>nagios</code> oder <code>icinga</code> kann diese Dateien daher nicht lesen. Verwende denselben Benutzer oder passt du den Refresh-Service über ein Drop-in an:</p>
+<p><strong>Aktualisierung und Check brauchen passende Dateirechte.</strong> Die erzeugten Dateien haben Modus <code>0600</code>. Der Service verwendet standardmäßig <code>User=check-opencloud-security</code>; ein Check als <code>nagios</code> oder <code>icinga</code> kann diese Dateien daher nicht lesen. Verwende denselben Benutzer oder passe den Aktualisierungsdienst über ein Drop-in an:</p>
 <pre><code class="language-bash">sudo systemctl edit check-opencloud-security-refresh.service
 # [Service]
 # User=nagios
@@ -169,7 +169,7 @@ journalctl -u check-opencloud-security-refresh.service
     --schedule-url https://mirror.example.com/opencloud/lifecycle/ \
     --advisory-url https://mirror.example.com/osv/v1/query
 </code></pre>
-<p>Bei diesen Optionen entfällt die Signaturprüfung mit einem ausdrücklichen Hinweis. Die Strukturprüfungen bleiben aktiv. Verwende nur Quellen, deren Bereitstellung Du kontrollierst.</p>
+<p>Bei diesen Optionen entfällt die Signaturprüfung mit einem ausdrücklichen Hinweis. Die Strukturprüfungen bleiben aktiv. Verwende nur Quellen, deren Bereitstellung du kontrollierst.</p>
 <h2 id="your-own-advisories">Eigene Sicherheitshinweise</h2>
 <p><code>scanner.vulnerability_db</code> akzeptiert eine Liste von Dateien. Du kannst eigene Hinweise neben den aktualisierten Daten einbinden. Unterstützt werden das native Format <code>{"advisories": [...]}</code>, das GitHub-Advisory-API-Format und OSV-Dokumente. Das <a href="/documentation/reference#advisory-database">Haupt-README</a> erklärt die Zuordnung zu Versionen. <code>scanner.vulnerability_feed</code> fragt stattdessen bei jedem Scan einen Feed ab.</p>
 <h2 id="points-worth-knowing">Weitere Hinweise</h2>

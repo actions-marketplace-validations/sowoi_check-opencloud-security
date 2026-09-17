@@ -45,7 +45,7 @@ Der Scanner verwendet daher den [Release-Zeitplan](../../README.md#end-of-life-d
 
 Ohne Vorgabe wählt der Scanner den längsten bekannten Support für die Versionslinie. Im Beispiel gilt `7.2.3` daher als unterstütztes Production-Release, obwohl diese Linie auch auf Rolling erschienen ist.
 
-Wenn du ausdrücklich Rolling folgen, muss dieselbe Version nach Erscheinen des Nachfolgers als abgelöst gelten. Lege den Kanal dafür mit `--release-track` fest:
+Wenn du dem Rolling-Kanal folgst, gilt dieselbe Version nach Erscheinen des Nachfolgers als abgelöst. Lege den Kanal dafür mit `--release-track` fest:
 
 ```bash
 check-opencloud-security --host opencloud.example.com --release-track rolling

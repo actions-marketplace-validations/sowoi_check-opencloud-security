@@ -22,7 +22,7 @@ MESSAGES: dict[str, str] = {
     "admin.config.default": "Dokumentierter Standard:",
     "admin.config.unknown.kicker": "Schreibweise prüfen",
     "admin.config.unknown.heading": "Variablen, die dieser Dienst nicht liest",
-    "admin.config.unknown.lede": "Diese Namen tragen das Präfix COS_WEB_, passen aber zu keiner Einstellung und ändern daher nichts. Ein Tippfehler lässt hier den Standard gelten. Werte werden nicht angezeigt.",
+    "admin.config.unknown.lede": "Diese Variablen beginnen mit COS_WEB_, gehören aber zu keiner bekannten Einstellung. Prüfe die Schreibweise: Bei einem Tippfehler gilt weiterhin der Standardwert. Die Werte dieser Variablen werden nicht angezeigt.",
     "admin.config.group.storage": "Speicher und Worker",
     "admin.config.group.scanning": "Ablauf eines Scans",
     "admin.config.group.targets": "Was gescannt werden darf",
@@ -38,7 +38,7 @@ MESSAGES: dict[str, str] = {
     "admin.config.group.frontend": "Frontend",
     "admin.rules.title": "Geltende Regeln",
     "admin.rules.lede": "Wie eine Note entsteht und welche Regeln diese Bereitstellung für Anfragen durchsetzt – einschließlich der aktuell wirksamen Werte.",
-    "admin.rules.scope": "Gelesen aus den Einstellungen, mit denen dieser Prozess gestartet ist, und aus den Konstanten des durchsetzenden Codes: Eine hier aufgeführte Regel wendet der Dienst jetzt an. Nichts auf dieser Seite nennt ein Ziel oder einen Besucher.",
+    "admin.rules.scope": "Die Übersicht zeigt die Einstellungen beim Start dieses Prozesses und die im Code festgelegten Regeln. Zieladressen und Angaben zu Besuchern werden hier nicht angezeigt.",
     "admin.rules.on": "Aktiv",
     "admin.rules.off": "Aus",
     "admin.rules.variables": "Gesetzt über",
@@ -48,7 +48,7 @@ MESSAGES: dict[str, str] = {
     "admin.rules.rating.scale": "Die Skala",
     "admin.rules.rating.caps": "Was eine fehlgeschlagene Prüfung mit der Note macht",
     "admin.rules.rating.version.title": "Die Version bestimmt die Ausgangsnote",
-    "admin.rules.rating.version.body": "Der Supportstatus der Release-Linie und jede veröffentlichte Sicherheitsmeldung zur Version legen fest, wo eine Note beginnt. Fehlgeschlagene Prüfungen können sie nur nach unten begrenzen.",
+    "admin.rules.rating.version.body": "Die Ausgangsnote richtet sich nach dem Supportstatus der Release-Linie und den bekannten Schwachstellen der Version. Fehlgeschlagene Prüfungen können die Note verschlechtern.",
     "admin.rules.rating.overrides.title": "Supportende und Release-Track",
     "admin.rules.rating.shared.title": "Eine Obergrenze pro Schweregrad",
     "admin.rules.rating.extra.title": "Zusatzprüfungen zählen zur Note",
@@ -69,7 +69,7 @@ MESSAGES: dict[str, str] = {
     "admin.rules.group.scanner": "Wie intensiv ein Host geprüft wird",
     "admin.rules.group.scanner.lede": "Die Einstellungen, mit denen jeder Scan dieser Bereitstellung ausgeführt wird. Anfragen können sie nicht ändern.",
     "admin.rules.group.operator": "Zugangsdaten und Betreiberaktionen",
-    "admin.rules.group.operator.lede": "Limits für die wenigen Aufrufe, die Zugangsdaten brauchen oder einen Knopf drücken.",
+    "admin.rules.group.operator.lede": "Limits für Anfragen mit Zugangsdaten und für Aktionen im Betreiberbereich.",
     "admin.rules.rule.client_limit.title": "Limit pro Client",
     "admin.rules.rule.client_limit.body": "Höchstens {limit} Einreichungen pro Client alle {window}. Eine IPv4-Adresse ist ein Client; ein IPv6-Client ist sein /{ipv6}.",
     "admin.rules.rule.daily_cap.title": "Tageslimit",
@@ -78,7 +78,7 @@ MESSAGES: dict[str, str] = {
     "admin.rules.rule.target_cooldown.body": "Dieselbe Instanz darf einmal alle {cooldown} gescannt werden, egal wer fragt.",
     "admin.rules.rule.batch.title": "Stapelgröße",
     "admin.rules.rule.batch.body": "Ein Stapel enthält höchstens {limit} Ziele, und jedes zählt gegen jedes Limit.",
-    "admin.rules.rule.queue.title": "Überlast wird eingereiht",
+    "admin.rules.rule.queue.title": "Warteschlange bei hoher Auslastung",
     "admin.rules.rule.queue.body": "{workers} Scans laufen gleichzeitig; weitere Einreichungen warten der Reihe nach und werden nie wegen Last abgelehnt.",
     "admin.rules.rule.agent_wait.title": "Grenze automatischer Wiederholungen",
     "admin.rules.rule.agent_wait.body": "MCP und die Workflows warten eine Retry-After-Zeit von bis zu {wait} selbst ab, höchstens {attempts} Mal. Bei längerer Wartezeit geht die Antwort an den Aufrufer zurück.",
@@ -303,11 +303,10 @@ MESSAGES: dict[str, str] = {
     "admin.search.kicker": "Suchindex",
     "admin.search.heading": "Ist der ausgelieferte Index noch aktuell",
     "admin.search.lede": (
-        "Der Index entsteht beim Release und wird schreibgeschützt "
-        "ausgeliefert, deshalb meldet diese Ansicht nur, statt neu zu bauen. "
-        "Verglichen werden die Seiten, die Sprachen und das Release, für das er "
-        "erzeugt wurde – nicht der Fließtext, den nur der Generator ermitteln "
-        "kann."
+        "Der Suchindex wird beim Build erzeugt und kann hier nicht geändert "
+        "werden. Diese Ansicht prüft, ob Seiten, Sprachen und Release-Version "
+        "zum laufenden Dienst passen. Die vollständigen Seitentexte werden "
+        "dabei nicht verglichen."
     ),
     "admin.search.fresh": "Aktuell",
     "admin.search.stale": "Veraltet",
@@ -337,7 +336,7 @@ MESSAGES: dict[str, str] = {
     ),
     "admin.search.fix": (
         "Jeder Pull Request auf main und der Release-Workflow erzeugen den "
-        "Index neu und checken ihn ein. Hier gibt es nichts zu drücken."
+        "Index neu und checken ihn ein. In dieser Ansicht kannst du den Index nicht neu erstellen."
     ),
     "admin.audit.kicker": "Audit",
     "admin.audit.heading": "Audit-Log",
@@ -347,10 +346,10 @@ MESSAGES: dict[str, str] = {
         "nichts übertragen."
     ),
     "admin.audit.privacy": (
-        "Eine Client-Adresse ist ein gekürzter HMAC unter einem Salt, das "
-        "dieser Prozess hält, und nichts führt von dort zurück zu einer "
-        "Adresse. Diese Ansicht kann nicht mehr zeigen, als das Audit-Log "
-        "ohnehin festgehalten hat."
+        "Client-Adressen erscheinen nur als gekürzte HMAC-Fingerabdrücke. "
+        "Das dafür verwendete Salt bleibt in diesem Prozess. Die Ansicht "
+        "zeigt ausschließlich die Einträge des Audit-Logs und kann keine "
+        "Client-Adressen auflösen."
     ),
     "admin.audit.replicas": (
         "Diese Installation führt keine Audit-Datei, deshalb stammen diese "
@@ -361,7 +360,7 @@ MESSAGES: dict[str, str] = {
     "admin.audit.follow": "Live verfolgen",
     "admin.audit.stop": "Anhalten",
     "admin.audit.clear": "Leeren",
-    "admin.audit.empty": "Noch nichts.",
+    "admin.audit.empty": "Noch keine Einträge.",
     "admin.audit.closed": (
         "Die Verbindung hat ihre Grenze von {minutes} Minuten erreicht und "
         "wurde vom Dienst geschlossen. Bis dahin ist nichts verloren gegangen; "
@@ -434,13 +433,13 @@ MESSAGES: dict[str, str] = {
     ),
     "pagenav.grades.title": "Was die Noten bedeuten",
     "pagenav.grades.blurb": (
-        "Jede Stufe von A+ bis F, was eine Note nach unten drückt und wie man sie "
-        "verbessert."
+        "Was die Noten von A+ bis F bedeuten und wie du die Bewertung "
+        "verbessern kannst."
     ),
     "pagenav.catalogue.title": "Was der Scanner prüft",
     "pagenav.catalogue.blurb": (
-        "Jedes Härtungsmerkmal, jeden Header- und TLS-Check und jede bekannte "
-        "Sicherheitslücke - unabhängig von einem einzelnen Scan."
+        "Härtungsmaßnahmen, Header- und TLS-Prüfungen sowie bekannte "
+        "Sicherheitslücken – unabhängig von einem einzelnen Scan."
     ),
     "pagenav.docs.title": "CLI-Dokumentation",
     "pagenav.docs.blurb": (
@@ -454,7 +453,7 @@ MESSAGES: dict[str, str] = {
     ),
     "pagenav.privacy.title": "Was dieser Server speichert",
     "pagenav.privacy.blurb": (
-        "Im Speicher, für {minutes} Minuten, und was das Log auslässt."
+        "Welche Daten für {minutes} Minuten gespeichert werden und was im Log steht."
     ),
     "pagenav.about.title": "Über OpenCloud",
     "pagenav.about.blurb": (
@@ -562,33 +561,30 @@ MESSAGES: dict[str, str] = {
     # --------------------------------------------------------- grade scale
     "grade.5.headline": "Nichts gefunden",
     "grade.5.meaning": (
-        "Das Release ist aktuell für seinen Track, keine Advisory trifft auf die "
-        "Version zu, und jede Prüfung, die der Scan durchführen konnte, ist "
+        "Das Release ist auf seinem Kanal aktuell. Die Datenbank enthält keine "
+        "passende Sicherheitsmeldung, und alle durchgeführten Prüfungen wurden "
         "bestanden."
     ),
     "grade.5.improve": "Halte die Instanz auf deinem Release-Kanal aktuell. Wiederhole den Scan nach Änderungen am Reverse Proxy oder an der Anmeldung.",
     "grade.4.headline": "Ein Update wartet",
     "grade.4.meaning": (
-        "Es existiert ein neueres Patch-Release in derselben Release-Linie. An "
-        "der installierten Version ist nichts bekanntermaßen falsch - sie ist "
-        "einfach nicht die neueste."
+        "Für diese Release-Linie gibt es ein neueres Patch-Release. Für die "
+        "installierte Version sind keine passenden Sicherheitsmeldungen bekannt."
     ),
     "grade.4.improve": "Installiere das empfohlene Update innerhalb deiner Release-Linie.",
     "grade.3.headline": "Eine Release-Linie zurück",
     "grade.3.meaning": (
-        "Die Instanz läuft auf einer älteren Linie als der aktuellen für ihren "
-        "Track. Sie wird möglicherweise noch unterstützt, ist aber nicht mehr "
-        "dort, wo Fixes zuerst ankommen."
+        "Die Instanz verwendet eine ältere Release-Linie als die aktuellste "
+        "ihres Kanals. Diese ältere Linie wird möglicherweise noch unterstützt."
     ),
     "grade.3.improve": "Aktualisiere auf die empfohlene Release-Linie deines Kanals. Der Bericht nennt das passende Ziel.",
-    "grade.2.headline": "Advisories treffen auf diese Version zu",
+    "grade.2.headline": "Bekannte Schwachstellen in dieser Version",
     "grade.2.meaning": (
-        "Die installierte Version erscheint in der Advisory-Datenbank. Keine der "
-        "zutreffenden Advisories ist als kritisch oder hoch eingestuft, was der "
-        "einzige Grund ist, warum es nicht niedriger ausfällt."
+        "Für die installierte Version sind Schwachstellen bekannt. Keine davon "
+        "hat den Schweregrad hoch oder kritisch."
     ),
     "grade.2.improve": "Installiere die Korrekturversion für deine Release-Linie. Der Bericht berücksichtigt, dass eine Sicherheitsmeldung mehrere getrennt korrigierte Linien betreffen kann.",
-    "grade.1.headline": "Eine kritische oder hohe Advisory trifft zu",
+    "grade.1.headline": "Schwachstelle mit hohem oder kritischem Schweregrad",
     "grade.1.meaning": "Mindestens eine bekannte Schwachstelle der installierten Version hat den Schweregrad hoch oder kritisch.",
     "grade.1.improve": "Installiere die im Bericht genannte Korrekturversion und prüfe die Hinweise der Sicherheitsmeldung.",
     "grade.0.headline": "Nicht mehr unterstützt",
@@ -614,13 +610,13 @@ MESSAGES: dict[str, str] = {
     ),
     "grades.row.prefix": "Note {label}: ",
     "grades.row.score": "{rating} von 5",
-    "grades.row.improve": "Um aufzusteigen:",
+    "grades.row.improve": "So verbesserst du die Note:",
     "grades.caps.kicker": "Die Obergrenze",
-    "grades.caps.heading": "Was eine fehlgeschlagene Prüfung einer Note antun kann",
+    "grades.caps.heading": "Wie fehlgeschlagene Prüfungen die Note begrenzen",
     "grades.caps.intro": (
-        "Die Version legt die Startnote fest. Fehlgeschlagene Prüfungen können "
-        "sie nicht anheben - sie können sie nur nach unten drücken, und wie weit, "
-        "hängt vom Schweregrad der schlimmsten fehlgeschlagenen Prüfung ab:"
+        "Die Version bestimmt die Ausgangsnote. Fehlgeschlagene Prüfungen "
+        "begrenzen sie abhängig vom Schweregrad. Es gilt die niedrigste "
+        "dieser Obergrenzen:"
     ),
     "grades.caps.at_best": "bestenfalls",
     "grades.caps.shared": "Befunde desselben Schweregrads setzen dieselbe Obergrenze. Bei drei mittleren Befunden reicht es daher nicht, nur einen zu beheben. Der Maßnahmenplan zeigt alle drei Schritte und den Punkt, an dem sich die Note verbessert.",
@@ -631,9 +627,9 @@ MESSAGES: dict[str, str] = {
     "grades.improve.plan": "<strong>Ein Maßnahmenplan nach Priorität.</strong> Jeder Schritt beschreibt die nötige Änderung und die erreichbare Note, wenn dieser und alle vorherigen Schritte erledigt sind.",
     "grades.improve.release": "<strong>Eine konkrete Update-Empfehlung.</strong> Der Bericht nennt die Version, die die Schwachstelle <em>in deiner Versionslinie</em> behebt, und berücksichtigt den gewählten Release-Kanal.",
     "grades.improve.explained": (
-        "<strong>Jede fehlgeschlagene Prüfung, erklärt.</strong> Was gemessen "
-        "wurde, warum es wichtig ist, und der Fix, mit einem Link zur "
-        "OpenCloud-Dokumentation für die dahinterstehende Einstellung."
+        "<strong>Erklärungen zu fehlgeschlagenen Prüfungen.</strong> Du erfährst, "
+        "was geprüft wurde, warum es relevant ist und wie du den Befund behebst. "
+        "Ein Link führt zur passenden Einstellung in der OpenCloud-Dokumentation."
     ),
     "grades.improve.waiver": "<strong>Ausnahmen für bewusst akzeptierte Befunde.</strong> Diese bleiben sichtbar, begrenzen aber die Note nicht mehr. Eine Ausnahme gilt nur für eine fehlgeschlagene Prüfung und ändert nichts an der Bewertung einer nicht mehr unterstützten Version.",
     "grades.improve.rerun": "Prüfe nach den Änderungen mit einem weiteren Scan, welche Befunde behoben sind.",
@@ -643,8 +639,8 @@ MESSAGES: dict[str, str] = {
     # -------------------------------------------------------------- catalogue
     "catalogue.title": "Was der Scanner prüft",
     "catalogue.description": (
-        "Jedes Härtungsmerkmal, jeden Sicherheits-Header, jeden TLS-Check und "
-        "jede bekannte Sicherheitslücke, unabhängig von einem einzelnen "
+        "Härtungsmaßnahmen, Sicherheits-Header, TLS-Prüfungen und "
+        "bekannte Sicherheitslücken, unabhängig von einem einzelnen "
         "Scan-Ergebnis."
     ),
     "catalogue.kicker": "Referenz",
@@ -708,9 +704,9 @@ MESSAGES: dict[str, str] = {
     "how.faq.a3": "Das Ergebnis ist {minutes} Minuten verfügbar und läuft danach ab. Weitere Angaben stehen unter <a href=\"/privacy\">Was dieser Server speichert</a>.",
     "how.faq.q4": "Wie oft kann ich scannen?",
     "how.faq.a4": (
-        "Ja, pro Besucher und pro gescanntem Ziel, damit weder ein einzelner "
-        "Besucher die Warteschlange blockiert noch dieselbe Instanz Schlag auf "
-        "Schlag gescannt wird. Die genauen Werte für diese Installation stehen "
+        "Es gelten Limits pro Besucher und Ziel, damit die Warteschlange für "
+        "alle verfügbar bleibt und dieselbe Instanz nicht zu oft gescannt wird. "
+        "Die genauen Werte für diese Installation stehen "
         '<a href="/api#api-limits">auf der API-Seite</a>.'
     ),
     "how.faq.q5": "Kann ich ohne Ratenlimit scannen?",
@@ -773,29 +769,26 @@ MESSAGES: dict[str, str] = {
     # ------------------------------------------------------------------- API
     "api.title": "Scannen per Skript oder Agent",
     "api.description": (
-        "Die JSON-API hinter dem Formular: wie man einen Scan einreicht, ihn "
-        "abfragt, was dieser Server einem Aufrufer nicht zu entscheiden erlaubt, "
-        "und alles, was Software zur Ansteuerung braucht - OpenAPI, "
-        "Arazzo-Workflows und der MCP-Endpunkt."
+        "So startest du Scans über die JSON-API und fragst Ergebnisse ab. "
+        "Mit Angaben zu Limits, OpenAPI, Arazzo-Workflows und dem MCP-Endpunkt."
     ),
     "api.kicker": "Die API",
     "api.lede": "Über die JSON-API kannst du Scans starten, ihren Fortschritt abfragen und Ergebnisse herunterladen. Für Skripte und Agenten gelten dieselben Prüfungen und Begrenzungen wie für das Formular im Browser.",
     "api.submit.kicker": "Einreichen & abfragen",
     "api.submit.heading": "Einreichen und abfragen",
     "api.submit.body": (
-        "Eine Einreichung antwortet mit <code>202</code> und der Kennung des "
-        "Scans; das Abfragen liefert <code>queued</code>, <code>running</code> "
-        "oder das fertige Ergebnis, und <code>404</code>, sobald er abgelaufen "
-        "ist. Nur vier Felder werden gelesen - die Adresse, die auszusetzenden "
-        "Prüfungen, der Release-Track und das Ausgabeformat. Alles andere im "
-        "Body, allen voran Nebenläufigkeit und Timeouts, wird abgelehnt: Wie "
-        "hart dieser Server prüft, ist keine Entscheidung des Aufrufers."
+        "Nach dem Start erhältst du <code>202</code> und die Scan-Kennung. "
+        "Bei der Statusabfrage bekommst du <code>queued</code>, <code>running</code> "
+        "oder das fertige Ergebnis. Abgelaufene Scans liefern <code>404</code>. "
+        "Du kannst vier Angaben übergeben: Adresse, ausgenommene Prüfungen, "
+        "Release-Kanal und Ausgabeformat. Andere Felder werden abgelehnt. "
+        "Parallelität und Zeitlimits legt der Betreiber fest."
     ),
     "api.limits.kicker": "Fair Use",
     "api.limits.heading": "Fair Use",
     "api.limits.enforced": "Diese Installation erlaubt {client} Anfragen je Adresse innerhalb von {window} Minute(n), mit {cooldown}. Bei Überschreitung antwortet sie mit <code>429</code> und einem <code>Retry-After</code>-Header.",
-    "api.limits.cooldown": "ein Scan pro Ziel alle {minutes} Minute(n)",
-    "api.limits.no_cooldown": "keine Abkühlzeit pro Ziel",
+    "api.limits.cooldown": "einer Wartezeit von {minutes} Minute(n) zwischen Scans desselben Ziels",
+    "api.limits.no_cooldown": "keiner Wartezeit zwischen Scans desselben Ziels",
     "api.limits.daily": "Höchstens {count} Scans pro Netz am Tag.",
     "api.limits.probe": "Ein Netz, dessen Scans immer wieder keine OpenCloud finden, wird eine Weile pausiert.",
     "api.limits.none": "Dieses Deployment setzt kein Ratenlimit.",
@@ -848,9 +841,9 @@ MESSAGES: dict[str, str] = {
         "Prompts benennen die Aufgaben selbst, etwa "
         "<code>audit_instance</code>, das eine Instanz prüft und den "
         "Sanierungsplan schreibt, und <code>review_transport_security</code>, "
-        "das nur das Zertifikat und den Handshake betrachtet. Er beantwortet das "
-        "Protokoll statt einen Browser, ist also eine Adresse zum Konfigurieren "
-        "statt eine Seite zum Öffnen."
+        "das nur das Zertifikat und den Handshake betrachtet. Trage die "
+        "MCP-Adresse in deinem Agenten ein. Sie ist keine Webseite, die du "
+        "im Browser öffnen kannst."
     ),
     "api.agents.summary": "OpenAPI beschreibt die verfügbaren Operationen, Arazzo deren Ablauf vom Auftrag bis zum Ergebnis. Beide Dokumente werden aus dem Dienstcode erzeugt.",
     "api.agents.summary_mcp": "OpenAPI beschreibt die Operationen, Arazzo die Abläufe und MCP stellt diese Abläufe als Werkzeuge für Agenten bereit. Alle verwenden dieselbe Implementierung des Dienstes.",
@@ -931,7 +924,7 @@ MESSAGES: dict[str, str] = {
     "docs.index.quickstart.container": "Alternativ verwendest du das veröffentlichte Container-Image. Es führt dasselbe Plugin aus und liefert denselben Nagios-/Icinga-Exitcode:",
     "docs.index.quickstart.note": (
         "Das Plugin spricht direkt mit der Instanz. Es sendet die Adresse weder "
-        "an diese Website noch an einen entfernten Urteilsdienst."
+        "an diese Website noch an einen externen Bewertungsdienst."
     ),
     "docs.index.commands.kicker": "Zwei Einstiegspunkte",
     "docs.index.commands.heading": "Das Urteil und das Ergebnisdokument",
@@ -944,7 +937,7 @@ MESSAGES: dict[str, str] = {
         "Die Scanner-Bibliothek als CLI: das vollständige JSON-Ergebnisdokument "
         "für ein Skript, eine Pipeline oder eine Ad-hoc-Untersuchung."
     ),
-    "docs.index.options.kicker": "Die alltäglichen Flags",
+    "docs.index.options.kicker": "Häufig verwendete Optionen",
     "docs.index.options.heading": "Nützliche Optionen",
     "docs.index.option.host": (
         "Hostname, IP oder URL; durch Komma getrennt für mehrere Instanzen."
@@ -961,13 +954,13 @@ MESSAGES: dict[str, str] = {
         "wiederholbar und mit Wildcard-Unterstützung."
     ),
     "docs.index.option.debug": (
-        "Erklären, wo die Bewertung begann und was sie nach unten drückte."
+        "Ausgangsnote und Auswirkungen der einzelnen Befunde erklären."
     ),
     "docs.index.option.insecure": "Zertifikatsverifikation überspringen; nur für bewusst nicht vertrauenswürdige Zertifikate verwenden.",
     "docs.index.option.thresholds": (
         "Die Bewertungsschwellen wählen, die auf Monitoring-Zustände abbilden."
     ),
-    "docs.index.option.format": "Nagios-Ausgabe oder Prometheus-Text drucken.",
+    "docs.index.option.format": "Ergebnisse im Nagios- oder Prometheus-Format ausgeben.",
     "docs.index.option.baseline": (
         "Nur bei Befunden alarmieren, die neu sind oder sich gegenüber dem "
         "letzten Lauf verschlechtert haben."
@@ -982,7 +975,7 @@ MESSAGES: dict[str, str] = {
         "vollständige Optionstabelle</a> enthält jeden Standardwert und seine "
         "<code>COS_</code>-Umgebungsvariable."
     ),
-    "docs.index.configuration.kicker": "Eine Richtung",
+    "docs.index.configuration.kicker": "Einstellungen",
     "docs.index.configuration.heading": "Konfiguration und Rangfolge",
     "docs.index.configuration.intro": (
         "Einstellungen können aus einer YAML- oder JSON-Datei, der Umgebung "
@@ -990,7 +983,7 @@ MESSAGES: dict[str, str] = {
     ),
     "docs.index.precedence.aria": "Konfigurationsrangfolge, höchste zuerst",
     "docs.index.precedence.cli": "CLI-Flag",
-    "docs.index.precedence.cli.note": "die explizite Antwort für diesen Lauf",
+    "docs.index.precedence.cli.note": "deine Angabe für diesen Aufruf",
     "docs.index.precedence.env": "Umgebung",
     "docs.index.precedence.env.note": (
         "<code>COS_*</code>, nützlich in Containern und Diensten"
@@ -999,7 +992,7 @@ MESSAGES: dict[str, str] = {
     "docs.index.precedence.file.note": "die dauerhaften Standardwerte des Betreibers",
     "docs.index.precedence.default": "Eingebauter Standardwert",
     "docs.index.precedence.default.note": (
-        "die sichere Antwort, wenn nichts angegeben wurde"
+        "gilt, wenn du keinen Wert angibst"
     ),
     "docs.index.configuration.wizard": (
         "Den Assistenten die erste Datei schreiben lassen:"
@@ -1029,9 +1022,9 @@ MESSAGES: dict[str, str] = {
         "<code>--prometheus-listen-port</code> freigeben."
     ),
     "docs.index.monitoring.ci": (
-        "<strong>CI:</strong> denselben Befehl in einer Pipeline ausführen; der "
-        "Statuscode lässt eine fehlgeschlagene Richtlinie den Job ohne "
-        "Wrapper scheitern lassen."
+        "<strong>CI:</strong> denselben Befehl in einer Pipeline ausführen. "
+        "Der Exitcode lässt den Job fehlschlagen, wenn die eingestellten "
+        "Schwellenwerte überschritten werden. Ein Wrapper ist nicht nötig."
     ),
     "docs.index.monitoring.scheduled": (
         "<strong>Geplante Prüfungen:</strong> systemd, cron, Kubernetes und die "
@@ -1293,7 +1286,7 @@ MESSAGES: dict[str, str] = {
     "error.target.hostname_shape": (
         "Das ist kein Hostname, den dieser Dienst scannen kann."
     ),
-    "error.target.unresolved": "Dieser Hostname löst sich nicht auf.",
+    "error.target.unresolved": "Für diesen Hostnamen konnte keine IP-Adresse ermittelt werden.",
     "error.target.hostname_long": "Dieser Hostname ist zu lang.",
     "error.target.internal": (
         "Lokale und interne Adressen können nicht gescannt werden."
@@ -1337,9 +1330,8 @@ MESSAGES: dict[str, str] = {
     "result.progress.queued.detail": "Alle Worker sind beschäftigt. Dein Scan wartet an seiner Position, bis ein Worker frei wird.",
     "result.progress.running.title": "Die Instanz wird gescannt",
     "result.progress.running.detail": (
-        "Liest, was die Instanz veröffentlicht: Version, Fähigkeiten, "
-        "Zertifikat, Header und die Endpunkte, die sie ohne Anmeldung "
-        "preisgibt."
+        "Der Scanner prüft Version, Funktionen, Zertifikat, Header und "
+        "Endpunkte, die ohne Anmeldung erreichbar sind."
     ),
     "result.progress.step.queued": "In Warteschlange",
     "result.progress.step.running": "Läuft",
@@ -1408,7 +1400,7 @@ MESSAGES: dict[str, str] = {
     "result.facts.proxy.detected": "Erkannt",
     "result.facts.office": "Office",
     "result.facts.calendar": "Kalender",
-    "result.facts.calendar.detected": "Etwas antwortet auf den CalDAV-Pfad",
+    "result.facts.calendar.detected": "Antwort am CalDAV-Pfad erhalten",
     "result.facts.newest": "Neuestes Release",
     "result.facts.score": "Punktzahl",
     "result.facts.score.value": "{rating} von 5",
@@ -1419,26 +1411,26 @@ MESSAGES: dict[str, str] = {
     "result.counter.passed": "Bestanden",
     "result.verdict.why": "Warum diese Note:",
     "result.verdict.caveat": (
-        "Eine Note sagt, dass die unten stehenden Prüfungen bestanden wurden, "
-        "nicht, dass die Instanz sicher ist. Dieser Scan ist nicht erschöpfend: "
-        "Er sieht nur, was die Instanz einem anonymen Besucher zeigt. "
+        "Die Note fasst die unten stehenden Prüfungen zusammen. Sie bestätigt "
+        "nicht, dass die Instanz sicher ist: Der Scan sieht nur, was sie "
+        "ohne Anmeldung zugänglich macht. "
         '<a href="#scan-limits">Was er nicht sehen kann</a>.'
     ),
-    "result.fix": "Fix:",
+    "result.fix": "Behebung:",
     "result.documentation": "Dokumentation",
     "result.explain.title": "Was diese Prüfung bedeutet",
-    "result.plan.kicker": "Sanierungsplan",
+    "result.plan.kicker": "Maßnahmenplan",
     "result.plan.heading": "Schritte zur Note {label}",
     "result.plan.then": "dann {label}",
     "result.plan.still": "immer noch {label}",
     "result.plan.note": "Der Plan priorisiert Änderungen, die die Bewertung verbessern. Die Note neben einem Schritt setzt voraus, dass dieser und alle vorherigen Schritte erledigt sind. Befunde gleicher Schwere begrenzen die Note gemeinsam. Deshalb können mehrere Korrekturen nötig sein, bevor sie steigt.",
     "result.plan.blocked.heading": (
-        "Drückt die Note nach unten, und ist nicht behebbar"
+        "Begrenzt die Note und lässt sich nicht konfigurieren"
     ),
     "result.plan.blocked.note": (
-        "OpenCloud hat diese fest codiert, sodass keine Einstellung sie "
-        "erreicht. Sie sind der Grund, warum der obige Plan dort endet, wo er "
-        "endet."
+        "Diese Werte sind im OpenCloud-Code festgelegt. Du kannst sie nicht "
+        "über die Konfiguration ändern. Deshalb kann der Maßnahmenplan "
+        "keine bessere Note erreichen."
     ),
     "result.eol.alert": (
         "Dieses Release erhält keine Sicherheitsfixes mehr. Nichts anderes auf "
@@ -1457,9 +1449,9 @@ MESSAGES: dict[str, str] = {
     "result.findings.kicker": "Befunde",
     "result.findings.heading": "Fehlgeschlagene Prüfungen",
     "result.findings.lede": (
-        "Jeder deckelt die Note auf dem Niveau, das sein Schweregrad zulässt. "
-        "Behebe zuerst die kritischen: Sie drücken die Punktzahl am "
-        "stärksten nach unten."
+        "Jeder Befund begrenzt die Note abhängig von seinem Schweregrad. "
+        "Behebe zuerst die kritischen Befunde, da sie die Bewertung am "
+        "stärksten verschlechtern."
     ),
     "result.findings.filter.aria": "Befunde nach Schweregrad filtern",
     "result.findings.filter.active": "Zeigt nur Befunde mit Schweregrad {severity}.",
@@ -1475,7 +1467,7 @@ MESSAGES: dict[str, str] = {
     "result.hardening.tag": "Härtung",
     "result.header.tag": "Header",
     # ------------------------------------------------- configuration fragment
-    "result.fragment.kicker": "Die Behebung, ausgeschrieben",
+    "result.fragment.kicker": "Konfigurationsvorlage",
     "result.fragment.heading": "Das hier in deine Konfiguration einfügen",
     "result.fragment.lede": (
         "Die Befunde von oben, in der Syntax der Datei, die geändert werden "
@@ -1506,27 +1498,23 @@ MESSAGES: dict[str, str] = {
     "result.excluded.heading": "Gemeldet, aber nicht gezählt",
     "result.excluded.waived.heading": "Von dir ausgenommene Befunde",
     "result.excluded.waived.note": (
-        "Sie sind trotzdem fehlgeschlagen. Sie haben die Note nur nicht mehr "
-        "nach unten gedrückt."
+        "Diese Prüfungen sind fehlgeschlagen, beeinflussen die Note wegen "
+        "deiner Ausnahmen aber nicht."
     ),
     "result.excluded.unfixable.heading": "Von OpenCloud fest vorgegeben",
     "result.excluded.unfixable.note": "Diese Werte sind im OpenCloud-Code festgelegt und können nicht konfiguriert werden. Sie dienen zur Information und beeinflussen die Bewertung nicht.",
     "result.scope.kicker": "Umfang",
     "result.scope.heading": "Was dieser Scan nicht sehen kann",
     "result.scope.body": (
-        "Alles oben wurde ohne Anmeldung gelesen, was der Sinn der Sache ist und "
-        "zugleich die Grenze. <strong>Das Fehlen eines Befunds ist kein Beweis "
-        "für Sicherheit</strong>, und die höchste Note, die diese Seite vergeben "
-        "kann, ist keine Aussage darüber, dass die Instanz sicher ist - nur, "
-        "dass keine der hier durchgeführten Prüfungen fehlgeschlagen ist. Ganze Kategorien liegen "
-        "vollständig außerhalb dessen, was ein nicht angemeldeter Scan erreicht: "
-        "das Betriebssystem und seine Pakete, die Container-Laufzeit, die "
-        "eigene Konfiguration des Reverse Proxy, Backups und ihre "
-        "Wiederherstellung, der Speicher hinter der Instanz, Geheimnisse und "
-        "Schlüsselverwaltung, Konten, Passwörter und Multi-Faktor-Anmeldung, "
-        "die Berechtigungen bestehender Freigaben, die Software-Lieferkette, "
-        "und alles, was sich nur einem angemeldeten Benutzer zeigt. Ebenso "
-        "diese zwei, die sichtbar sein sollten und es nicht sind:"
+        "Der Scan prüft öffentlich zugängliche Informationen. <strong>Keine "
+        "Befunde bedeuten nicht, dass die Instanz sicher ist</strong> – auch "
+        "bei der besten Note. Nicht geprüft werden Betriebssystem und Pakete, "
+        "Container-Laufzeit, Reverse-Proxy-Konfiguration, Backups und "
+        "Wiederherstellung, Speicher, Geheimnisse und Schlüsselverwaltung, "
+        "Konten, Passwörter, Multi-Faktor-Anmeldung, bestehende "
+        "Freigabeberechtigungen und die Software-Lieferkette. Auch Daten, die "
+        "erst nach der Anmeldung zugänglich sind, liegen außerhalb des "
+        "Prüfumfangs. Zwei weitere Bereiche solltest du gesondert prüfen:"
     ),
     "result.scope.audit": (
         "<strong>Audit-Logging.</strong> Der Audit-Dienst von OpenCloud "

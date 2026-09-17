@@ -1,6 +1,6 @@
 # Den Scanner mit Docker ausführen
 
-Mit dem veröffentlichten Container-Image führe denselben Scanner wie die [Webanwendung](../webapp.md) auf deinem eigenen Rechner aus. Du benötigst Docker, aber kein Konto bei diesem Dienst. Die Begrenzungen der öffentlichen Website gelten für den lokalen Scan nicht.
+Mit dem veröffentlichten Container-Image kannst du denselben Scanner wie die [Webanwendung](../webapp.md) auf deinem eigenen Rechner ausführen. Du benötigst Docker, aber kein Konto bei diesem Dienst. Die Begrenzungen der öffentlichen Website gelten für den lokalen Scan nicht.
 
 ```shell
 docker run --rm --entrypoint check-opencloud-security \

@@ -54,7 +54,7 @@
 </tbody>
 </table>
 <p>Verwende einen aktiven Check, wenn der Checkmk-Server die Instanz erreicht. Für interne Netze, die nur ein Agent-Host erreicht, eignet sich der lokale Check.</p>
-<p>Ersetze in den Beispielen <code>opencloud.example.com</code> durch eine Instanz, die Du prüfst dürfen.</p>
+<p>Ersetze in den Beispielen <code>opencloud.example.com</code> durch eine Instanz, die du prüfen darfst.</p>
 <h2 id="1-an-active-check-on-the-checkmk-server">1. Aktiver Check auf dem Checkmk-Server</h2>
 <p>Installiere das Plugin auf dem Checkmk-Server als Site-Benutzer:</p>
 <pre><code class="language-shell">pipx install check-opencloud-security
@@ -81,7 +81,7 @@
 <pre><code class="language-shell">sudo install -m 0755 contrib/checkmk/opencloud_security \
     /usr/lib/check_mk_agent/local/3600/opencloud_security
 </code></pre>
-<p>Das Unterverzeichnis <code>3600</code> legt das Cache-Intervall des Agents in Sekunden fest. Der Scan läuft damit höchstens stündlich; dazwischen liefert der Agent die zwischengespeicherte Ausgabe. Direkt unter <code>local/</code> würde das Skript bei jedem Agent-Aufruf laufen. Passt du das Intervall an deinen Bedarf an.</p>
+<p>Das Unterverzeichnis <code>3600</code> legt das Cache-Intervall des Agents in Sekunden fest. Der Scan läuft damit höchstens stündlich; dazwischen liefert der Agent die zwischengespeicherte Ausgabe. Direkt unter <code>local/</code> würde das Skript bei jedem Agent-Aufruf laufen. Passe das Intervall an deinen Bedarf an.</p>
 <p>Bei Installation über <code>.deb</code> oder <code>.rpm</code> liegt die Vorlage unter <code>/usr/share/doc/check-opencloud-security/checkmk-local-check.sh</code>. Kopiere sie selbst in das Agent-Verzeichnis.</p>
 <p>Setze das Ziel im Skript oder in einer vom Agent gelesenen Umgebungsdatei:</p>
 <pre><code class="language-shell">COS_HOST=opencloud.example.com

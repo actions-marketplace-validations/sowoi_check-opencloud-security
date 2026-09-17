@@ -59,7 +59,7 @@
 <pre><code class="language-shell">cp contrib/prometheus/alerts.yml /etc/prometheus/rules/opencloud-security.yml
 promtool check rules /etc/prometheus/rules/opencloud-security.yml
 </code></pre>
-<p>Das Dashboard bietet eine Auswahl nach <code>Instance</code> und kann damit mehrere Hosts darstellen. Passt du Scanintervall, Scrape-Intervall und die Dauer <code>for:</code> der Alarmregeln gemeinsam an. <code>for:</code> misst, wie lange eine Bedingung bei der Regelauswertung ununterbrochen erfüllt ist; es zählt keine unabhängigen Scans.</p>
+<p>Das Dashboard bietet eine Auswahl nach <code>Instance</code> und kann damit mehrere Hosts darstellen. Stimme Scanintervall, Scrape-Intervall und die Dauer <code>for:</code> der Alarmregeln aufeinander ab. <code>for:</code> misst, wie lange eine Bedingung bei der Regelauswertung ununterbrochen erfüllt ist; es zählt keine unabhängigen Scans.</p>
 <p>Die späteren Beispiele mit <code>jq</code> verwenden eigene, kürzere Metriknamen. Die beiden mitgelieferten Dateien passen zu den Namen des nativen Exporters, nicht zu diesen Beispielen.</p>
 <h2 id="what-the-exporter-publishes">Metriken des Exporters</h2>
 <table>

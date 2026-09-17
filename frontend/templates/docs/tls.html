@@ -256,12 +256,10 @@ unknown rather than as accepting it.</p>
 Leave it on only where a measured latency problem justifies it <em>and</em> the
 application is known to reject replayed non-idempotent requests.</p>
 <h2 id="what-is-deliberately-left-unmeasured">What is deliberately left unmeasured</h2>
-<p><strong>Nothing here reports a pass it did not measure.</strong> A build of OpenSSL that
-refuses to speak TLS 1.0 at all cannot tell the scanner whether the <em>server</em>
-would have accepted it, and a missing <code>openssl</code> binary means OCSP stapling
-cannot be probed. In both cases the check is left out of the result entirely
-rather than recorded as passed - a gap in the output is honest; a green tick
-for something nobody looked at is not.</p>
+<p><strong>Checks that cannot run are omitted from the result.</strong> If the local OpenSSL
+build does not support TLS 1.0, the scanner cannot test whether the server
+accepts it. Without an <code>openssl</code> binary, it cannot probe OCSP stapling.
+Neither case is reported as a pass.</p>
 <p><strong>A certificate that fails verification is still read.</strong> <code>getpeercert()</code>
 returns nothing for an unverified peer, so on the self-signed instances this
 matters most for, the scanner fetches the certificate in DER form and decodes
@@ -280,9 +278,8 @@ needing to be told which case it is looking at:</p>
 </ol>
 <p><code>--insecure</code> (<code>COS_INSECURE</code>) skips step 1's verification requirement. The
 untrusted chain is still listed in the output; it simply stops counting
-against the rating. Use it for an instance you know is self-signed, so that a
-<em>genuinely</em> broken certificate elsewhere still stands out rather than being
-lost in an expected finding.</p>
+against the rating. Use it only when you intentionally accept an untrusted
+certificate for that instance.</p>
 <h2 id="severity-and-rating-impact">Severity and rating impact</h2>
 <p>Every check on this page is an <code>extraChecks</code> entry, so a failure caps the
 rating the way any failed extra check does (critical -&gt; <code>D</code>, high -&gt; <code>C</code>,

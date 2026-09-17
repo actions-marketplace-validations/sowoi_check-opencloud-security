@@ -5,9 +5,8 @@ persistent HTTP service. Several consumers can then share a cached result for ea
 instance. The [main README](../README.md#running-the-scanner-as-a-service) lists the
 endpoints and token requirements; this guide covers deployment.
 
-This is **not** the public web application - that is
-[the scan service](webapp.md), which takes a URL from a stranger, queues it
-and renders the answer.
+For a browser interface with a scan queue, use the separate
+[public web application](webapp.md).
 
 <!-- TOC -->
 * [Running the scanner as a service](#running-the-scanner-as-a-service)
@@ -19,9 +18,8 @@ and renders the answer.
 ## In a container
 
 The service refuses to bind anything but loopback without a token. In a
-container that means two settings: bind the container's interfaces so the
-published port reaches the process, and set the token that makes doing so
-allowed.
+container, bind to the container's interfaces so the published port reaches
+the process, and set a token to authenticate requests.
 
 ```shell
 docker run -d --name opencloud-scanner -p 127.0.0.1:8811:8811 \

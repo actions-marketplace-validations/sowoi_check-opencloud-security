@@ -4,7 +4,7 @@ Standardmäßig gibt das Plugin eine Nagios-Statuszeile mit Performancedaten aus
 
 `json`, `sarif` und `junit` erzeugen jeweils **ein gemeinsames Dokument für alle gescannten Hosts**. Das Format bleibt auch bei nur einem Host gleich.
 
-Die Exitcodes behalten ihre Nagios-Bedeutung: `0` für OK, `1` für WARNING, `2` für CRITICAL und `3` für UNKNOWN. Eine CI-Pipeline kann damit den Status auswerten und das Dokument zusätzlich als Artefakt speichern. Die Metrikformate `prometheus` und `otlp` bilden eine Ausnahme: Du gibst Befunde als Messwerte aus und beenden den Prozess mit `0`.
+Die Exitcodes behalten ihre Nagios-Bedeutung: `0` für OK, `1` für WARNING, `2` für CRITICAL und `3` für UNKNOWN. Eine CI-Pipeline kann damit den Status auswerten und das Dokument zusätzlich als Artefakt speichern. Die Metrikformate `prometheus` und `otlp` bilden eine Ausnahme: Sie geben Befunde als Messwerte aus und beenden den Prozess mit `0`.
 
 ## `json` {#json}
 

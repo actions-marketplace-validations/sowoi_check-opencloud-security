@@ -1,6 +1,6 @@
 # Anwendungsbeispiele
 
-Die folgenden Aufrufe decken typische Einsatzfälle ab. Ersetze `opencloud.example.com` durch deine Instanz und prüfe nur Systeme, für die du eine Erlaubnis haben.
+Die folgenden Befehle zeigen typische Einsatzfälle. Ersetze `opencloud.example.com` durch deine Instanz und prüfe nur Systeme, für die du eine Erlaubnis hast.
 
 Ausführliche Integrationsbeispiele findest du unter [Kubernetes](../kubernetes.md), [CI-Pipelines](../ci.md), [Prometheus und Grafana](../prometheus.md), [Webhooks](../webhook-recipes.md) und [Mehrere Instanzen](../many-instances.md).
 

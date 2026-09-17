@@ -57,7 +57,7 @@ sudo apt install ./check-opencloud-security_<version>_all.deb       # Debian, Ub
 sudo dnf install ./check-opencloud-security-<version>-1.noarch.rpm  # RHEL, Fedora
 ```
 
-Du installierst das Plugin unter `/usr/lib/nagios/plugins/`, ohne eine
+Die Pakete installieren das Plugin unter `/usr/lib/nagios/plugins/`, ohne eine
 Monitoring-Konfiguration zu aktivieren. Alternativ enthält das Docker-Image
 beide Kommandozeilenprogramme:
 

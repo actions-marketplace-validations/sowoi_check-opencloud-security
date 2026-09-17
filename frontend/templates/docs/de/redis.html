@@ -207,7 +207,7 @@ docker compose exec redis redis-cli ping
 <pre><code>--maxmemory 256mb
 --maxmemory-policy allkeys-lru
 </code></pre>
-<p>Das Speicherlimit begrenzt den Verbrauch bei wachsenden Warteschlangen und vielen Ergebnissen. Passt du es an Workerzahl, Ergebnisgröße und TTL an.</p>
+<p>Das Speicherlimit begrenzt den Verbrauch bei wachsenden Warteschlangen und vielen Ergebnissen. Passe es an Workerzahl, Ergebnisgröße und TTL an.</p>
 <p><code>allkeys-lru</code> kann unter Speicherdruck beliebige wenig genutzte Schlüssel entfernen, auch bevor deren TTL abläuft. Dadurch können Ergebnisse früher verschwinden; auch andere Redis-Zustände können betroffen sein. Beobachte die Verdrängungszähler:</p>
 <pre><code class="language-bash">docker compose exec redis redis-cli info stats | grep evicted_keys
 </code></pre>

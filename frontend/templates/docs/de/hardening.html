@@ -110,7 +110,7 @@
 <p>Auch <code>cspWithoutUnsafeInline</code> schlägt mit OpenClouds Standard-CSP fehl. Diese Richtlinie ist jedoch konfigurierbar. Teste eine strengere CSP vor dem Einsatz, da die Weboberfläche sowie Office- und Anmeldeintegrationen Inline-Skripte oder -Styles benötigen können. Näheres erklärt der <a href="/documentation/csp">CSP-Leitfaden</a>.</p>
 <p>Aus Capabilities abgeleitete Prüfungen erscheinen nur, wenn die Instanz das jeweilige Feld tatsächlich liefert. Ältere Releases erhalten dadurch keine Befunde für unbekannte Einstellungen.</p>
 <h2 id="accepting-a-finding-you-are-not-going-to-fix">Befunde bewusst ausnehmen</h2>
-<p>Eine Einstellung kann in deiner Umgebung erforderlich sein, etwa Basic Auth für ein Migrationstool. Mit <code>--ignore-hardening</code> nimm einen solchen Befund anhand seiner Kennung aus der Alarmierung und Bewertung aus:</p>
+<p>Eine Einstellung kann in deiner Umgebung erforderlich sein, etwa Basic Auth für ein Migrationstool. Mit <code>--ignore-hardening</code> kannst du einen solchen Befund anhand seiner Kennung aus der Alarmierung und Bewertung ausnehmen:</p>
 <pre><code class="language-bash">check-opencloud-security --host opencloud.example.com --check-hardening \
     --ignore-hardening cspWithoutUnsafeInline \
     --ignore-hardening basicAuthDisabled
@@ -118,7 +118,7 @@
 <p>Die Option ist wiederholbar, akzeptiert kommagetrennte Listen und unterstützt Shell-Platzhalter für Kennungen mit Pfad oder Port:</p>
 <pre><code class="language-bash">--ignore-hardening 'debugPort:*,exposed:/status.php'
 </code></pre>
-<p>du gilt für Härtungsmaßnahmen, Headernamen, <code>httpsEnforced</code> und die Kennungen zusätzlicher Prüfungen. So wird beispielsweise <code>basicAuthDisabled</code> an allen Stellen einheitlich ausgenommen.</p>
+<p>Die Ausnahme gilt für Härtungsmaßnahmen, Headernamen, <code>httpsEnforced</code> und die Kennungen zusätzlicher Prüfungen. So wird beispielsweise <code>basicAuthDisabled</code> an allen Stellen einheitlich ausgenommen.</p>
 <p>Ein ausgenommener Befund:</p>
 <ul>
 <li>senkt die Bewertung nicht mehr,</li>

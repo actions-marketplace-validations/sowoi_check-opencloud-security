@@ -159,7 +159,7 @@ sudo dnf install &quot;./check-opencloud-security-${VERSION}-1.noarch.rpm&quot;
 sudo cp /usr/share/doc/check-opencloud-security/env.example \
         /etc/check-opencloud-security/env      # for the systemd units
 </code></pre>
-<p>Alternativ führt du <code>check-opencloud-security --configure</code> durch die Einstellungen.</p>
+<p>Alternativ führt dich <code>check-opencloud-security --configure</code> durch die Einstellungen.</p>
 <p>Die Units benötigen vor dem Aktivieren die konfigurierte <code>env</code>-Datei:</p>
 <pre><code class="language-shell">sudo systemctl enable --now check-opencloud-security.timer
 sudo systemctl enable --now check-opencloud-security-refresh.timer
@@ -209,7 +209,7 @@ docker build -f docker/Dockerfile -t check-opencloud-security .
 <pre><code class="language-shell">docker run --rm -e COS_HOST=opencloud.example.com check-opencloud-security
 </code></pre>
 <p>Der Image-<code>HEALTHCHECK</code> prüft lokal, ob Paket, Zeitplan und Advisory-Datenbank lesbar sind. Er benötigt kein Netzwerk. Ein einmaliger Check-Container beendet sich meist vor dem ersten Healthcheck. Die Monitoring-Compose-Datei verwendet für den dauerhaften Dienst stattdessen <code>/healthz</code>.</p>
-<p>Der Check-Container muss keine Ports veröffentlichen, benötigt aber Zugriff auf die Instanz. Passt du bei Bedarf das Netzwerk mit <code>--network host</code> oder <code>--add-host</code> an. Er läuft als unprivilegierter Benutzer <code>nagios</code> und liefert dieselben Exitcodes wie die native Installation.</p>
+<p>Der Check-Container muss keine Ports veröffentlichen, benötigt aber Zugriff auf die Instanz. Passe bei Bedarf das Netzwerk mit <code>--network host</code> oder <code>--add-host</code> an. Er läuft als unprivilegierter Benutzer <code>nagios</code> und liefert dieselben Exitcodes wie die native Installation.</p>
 <p>Du kannst ein selbst gebautes Image in deine Registry übertragen, etwa mit <code>docker tag check-opencloud-security registry.example.com/check-opencloud-security</code> und anschließendem <code>docker push</code>, und auf den Monitoring-Hosts verwenden.</p>
 <h2 id="icinga2-nagios">Icinga2 / Nagios</h2>
 <ul>

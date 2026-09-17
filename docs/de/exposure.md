@@ -32,7 +32,7 @@ Die Dateien können Einstellungen, Zugangsdaten, TLS-Schlüssel und Identitätsd
 
 ## 3. Öffentliche Debug-Pfade: `debugEndpoint:<path>` {#3-is-a-debug-endpoint-publicly-readable-debugendpointpath}
 
-`/metrics`, `/config` und `/debug/pprof/` werden an der öffentlichen Adresse geprüft. Du kannst Betriebsdaten, Konfiguration oder Profiling-Funktionen zugänglich machen und gehören auf interne Debug-Schnittstellen.
+Der Scanner prüft `/metrics`, `/config` und `/debug/pprof/` an der öffentlichen Adresse. Diese Endpunkte können Betriebsdaten, Konfiguration oder Profiling-Funktionen zugänglich machen und gehören auf interne Debug-Schnittstellen.
 
 **Behebung:** Veröffentliche diese Pfade nicht über den öffentlichen Reverse Proxy. Lass Debug-Listener standardmäßig auf `127.0.0.1` lauschen, gesteuert durch `OC_DEBUG_ADDR` und die dienstspezifischen `*_DEBUG_ADDR`-Variablen. Benötigte Metrikzugriffe sollten über das interne Netz erfolgen.
 

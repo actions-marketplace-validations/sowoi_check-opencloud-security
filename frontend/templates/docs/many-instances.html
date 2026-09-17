@@ -134,8 +134,8 @@ decides what it can see:</p>
 instances and let them share its cache. The plugin itself never talks to it -
 it always scans in process - so the service is for dashboards and scripts.</p>
 <h2 id="keeping-the-waivers-honest">Keeping the waivers honest</h2>
-<p>A fleet accumulates <code>ignore_hardenings</code> entries, and a waiver that is never
-revisited is how a regression becomes invisible. Two things keep them honest:</p>
+<p>Review <code>ignore_hardenings</code> entries regularly so accepted findings do not hide
+new problems. Waivers have two safeguards:</p>
 <ul>
 <li>A waiver only ever suppresses the alert. The finding stays in the result
   document with <code>"ignored": true</code>, and <code>--debug</code> still explains it - see
@@ -152,14 +152,13 @@ done
 </code></pre>
 <p>One identifier will never appear in that list, however many instances you
 run: <code>publicLinkExpirationEnforced</code> is hardcoded by OpenCloud and fails on
-every instance in existence, so it is recorded but deliberately kept out of
-the alert, the <code>hardenings_missing</code> metric and the webhook. Waiving it would
-be waiving nothing - see
+every instance, so it is recorded but excluded from
+the alert, the <code>hardenings_missing</code> metric and the webhook. It does not need
+a waiver; see
 <a href="/documentation/hardening#measures-that-are-not-settings">Measures that are not settings</a>.</p>
 <h2 id="only-alerting-on-what-changed">Only alerting on what changed</h2>
-<p>Twenty instances producing the same twenty findings every five minutes is how
-a fleet trains its operators to stop reading the output. Give each host a
-baseline and the check reports only regressions:</p>
+<p>Repeated alerts for unchanged findings can make new problems easy to miss.
+Give each host a baseline to report regressions:</p>
 <pre><code class="language-shell">for config in /etc/check-opencloud-security/*.yml; do
   check-opencloud-security --config &quot;$config&quot; \
       --baseline /var/lib/check_opencloud/baseline.json \

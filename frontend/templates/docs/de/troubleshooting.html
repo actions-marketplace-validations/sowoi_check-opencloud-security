@@ -48,7 +48,7 @@
 <p><strong><code>Baseline could not be written</code></strong></p>
 <p>Prüfe, ob das Verzeichnis existiert oder angelegt werden darf und der Monitoring-Benutzer Schreibrechte besitzt. Die Bewertung der Instanz bleibt unverändert. Solange keine Baseline gespeichert wird, behandelt <code>--warn-on-new</code> jeden Durchlauf als ersten Scan.</p>
 <p><strong>Kein Hinweis von <code>--self-update-check</code></strong></p>
-<p>Das Ergebnis wird einen Tag zwischengespeichert. Für eine erneute Abfrage lösche <code>${XDG_CACHE_HOME:-~/.cache}/check-opencloud-security/pypi-version.json</code>. Der Check bleibt auch bei nicht erreichbarem PyPI, einer Blockierung durch den Proxy oder einer installierten Version oberhalb des veröffentlichten Releases still. Er verändert den Exitcode nicht.</p>
+<p>Das Ergebnis wird einen Tag zwischengespeichert. Für eine erneute Abfrage lösche <code>${XDG_CACHE_HOME:-~/.cache}/check-opencloud-security/pypi-version.json</code>. Es erscheint auch dann kein Hinweis, wenn PyPI nicht erreichbar ist, ein Proxy die Abfrage blockiert oder die installierte Version neuer als das veröffentlichte Release ist. Die Update-Prüfung verändert den Exitcode nicht.</p>
 <p><strong>Exitcodes</strong></p>
 <table>
 <thead>
@@ -77,7 +77,7 @@
 </tbody>
 </table>
 <p><strong>Weitere Hilfe</strong></p>
-<p>erstellst du ein Issue mit der <code>--debug</code>-Ausgabe. Bei einem unzutreffenden Befund verwende die Vorlage <a href="https://github.com/sowoi/check-opencloud-security/issues/new?template=wrong_finding.yml">Wrong finding</a>. Tokens werden in der Diagnoseausgabe maskiert; prüfe die Ausgabe dennoch vor dem Veröffentlichen und entferne produktive Hostnamen und Zugangsdaten. Siehe <a href="https://github.com/sowoi/check-opencloud-security/blob/main/CODE_OF_CONDUCT.md">Verhaltenskodex</a>.</p>
+<p>Erstelle ein Issue mit der <code>--debug</code>-Ausgabe. Bei einem unzutreffenden Befund verwende die Vorlage <a href="https://github.com/sowoi/check-opencloud-security/issues/new?template=wrong_finding.yml">Wrong finding</a>. Tokens werden in der Diagnoseausgabe maskiert; prüfe die Ausgabe dennoch vor dem Veröffentlichen und entferne produktive Hostnamen und Zugangsdaten. Siehe <a href="https://github.com/sowoi/check-opencloud-security/blob/main/CODE_OF_CONDUCT.md">Verhaltenskodex</a>.</p>
 <hr>
 <p><a href="/documentation">Zur Dokumentationsübersicht</a> | <a href="/documentation/reference">Zum Haupt-README</a></p>
 </article>

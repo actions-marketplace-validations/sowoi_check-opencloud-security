@@ -30,11 +30,10 @@
 
 <article class="docs-article card section-gap" data-reveal lang="en">
 <p>The <a href="/documentation/reference#webhook-notifications">webhook</a> posts the plugin's own JSON
-document by default. That is deliberate: it carries the whole verdict, not a
-rendered sentence. <code>--webhook-format</code> can render it as Slack or Discord's own
-shape directly (see <a href="#slack-mattermost-discord">below</a>), or as a push
-notification for <a href="#ntfy-and-gotify">ntfy or Gotify</a>; anything else still wants
-the generic document, and needs a few lines of translation in between.</p>
+document by default, including the status and findings. Use <code>--webhook-format</code>
+to send Slack or Discord messages (see <a href="#slack-mattermost-discord">below</a>),
+or push notifications for <a href="#ntfy-and-gotify">ntfy or Gotify</a>. For other
+receivers, use the generic document and adapt it to the format they expect.</p>
 <p>Two rules apply to every recipe here:</p>
 <ul>
 <li><strong>A failing webhook never changes the check result.</strong> The plugin appends
@@ -189,10 +188,9 @@ def verify(raw_body: bytes, header: str, secret: str) -&gt; bool:
 </code></pre>
 <p>Use <code>hmac.compare_digest</code> rather than <code>==</code>; comparing hex digests with a
 short-circuiting comparison leaks how much of a guess was correct.</p>
-<p>In a Flask or FastAPI receiver, reach for the raw body rather than the parsed
-JSON - <code>await request.body()</code> in FastAPI, <code>request.get_data()</code> in Flask.
-Frameworks that only hand you a parsed object cannot verify this signature at
-all, and the honest fix is to read the body yourself before parsing.</p>
+<p>Read the raw body with <code>await request.body()</code> in FastAPI or
+<code>request.get_data()</code> in Flask. Signature verification requires the original
+bytes, so read the body before parsing it as JSON.</p>
 <p>Three things worth knowing:</p>
 <ul>
 <li><strong>The signature covers whatever was sent</strong>, including the chat-native and

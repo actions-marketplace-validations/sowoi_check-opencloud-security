@@ -285,7 +285,7 @@ check-opencloud-security --host opencloud.example.com --webhook-url \
 }]
 ```
 
-Sende nur Statuswerte, die alarmieren sollen, und stimme Ablaufzeit und Wiederholungsintervall auf den Scanplan ab. Wenn du bereits Metriken bereitstellen, ist die Anbindung über [Prometheus](../prometheus.md) meist einfacher.
+Sende nur Statuswerte, die einen Alarm auslösen sollen, und stimme Ablaufzeit und Wiederholungsintervall auf den Scanplan ab. Wenn du bereits Metriken bereitstellst, ist die Anbindung über [Prometheus](../prometheus.md) meist einfacher.
 
 ## Empfänger ohne erreichbare Instanz testen {#testing-a-receiver-without-an-instance}
 
@@ -296,7 +296,7 @@ check-opencloud-security --host does-not-exist.example.com \
   --webhook-url http://127.0.0.1:8099/ --webhook-on always
 ```
 
-Für das vollständige Erfolgsformat verwende eine Instanz, die Du prüfst dürfen. `--debug` protokolliert die Zustellung, aber nicht den Body. Um den Payload zu prüfen, verwende einen lokalen Testempfänger, der POST-Anfragen annimmt und deren Body anzeigt.
+Für ein vollständiges Ergebnis verwende eine Instanz, die du prüfen darfst. `--debug` protokolliert die Zustellung, aber nicht den Body. Um den Payload zu prüfen, verwende einen lokalen Testempfänger, der POST-Anfragen annimmt und deren Body anzeigt.
 
 ---
 

@@ -8,10 +8,9 @@ Try the public service at [scan.okxo.de](https://scan.okxo.de) for a one-off sca
 instructions below cover hosting your own service, including network access, retention
 and usage limits.
 
-It is **not** on PyPI. `pip install check-opencloud-security` gets the plugin
-and the scanner library, deliberately without FastAPI, Redis or a single
-template. The web application ships as a GitHub release asset,
-`check_opencloud_security_web.tar.gz`, or you build it from a checkout.
+The PyPI package contains only the plugin and scanner library. The web
+application is distributed separately as the GitHub release asset
+`check_opencloud_security_web.tar.gz`, or you can build it from a checkout.
 
 | | |
 |:--|:--|
@@ -71,7 +70,7 @@ erasure token, the signing key, the audit salt and the encryption key.
 
 ### Or the compose files this project ships
 
-Two shapes, both ready to `up`. The published image:
+To use the published image:
 
 ```bash
 git clone https://github.com/sowoi/check-opencloud-security.git
@@ -87,8 +86,8 @@ docker compose -f docker-compose.dockerhub.yml up -d
 Or the same stack built from the checkout, with `docker compose up --build -d`
 and no `-f`.
 
-Three settings decide whether that stack is fit to be reached by anybody else,
-and all three live in `.env` beside the compose file:
+Before making the stack publicly accessible, review these three settings in
+the `.env` file beside the compose file:
 
 | Setting | Why it matters |
 |:--------|:---------------|

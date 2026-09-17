@@ -43,7 +43,7 @@ Aus Capabilities abgeleitete Prüfungen erscheinen nur, wenn die Instanz das jew
 
 ## Befunde bewusst ausnehmen {#accepting-a-finding-you-are-not-going-to-fix}
 
-Eine Einstellung kann in deiner Umgebung erforderlich sein, etwa Basic Auth für ein Migrationstool. Mit `--ignore-hardening` nimm einen solchen Befund anhand seiner Kennung aus der Alarmierung und Bewertung aus:
+Eine Einstellung kann in deiner Umgebung erforderlich sein, etwa Basic Auth für ein Migrationstool. Mit `--ignore-hardening` kannst du einen solchen Befund anhand seiner Kennung aus der Alarmierung und Bewertung ausnehmen:
 
 ```bash
 check-opencloud-security --host opencloud.example.com --check-hardening \
@@ -57,7 +57,7 @@ Die Option ist wiederholbar, akzeptiert kommagetrennte Listen und unterstützt S
 --ignore-hardening 'debugPort:*,exposed:/status.php'
 ```
 
-du gilt für Härtungsmaßnahmen, Headernamen, `httpsEnforced` und die Kennungen zusätzlicher Prüfungen. So wird beispielsweise `basicAuthDisabled` an allen Stellen einheitlich ausgenommen.
+Die Ausnahme gilt für Härtungsmaßnahmen, Headernamen, `httpsEnforced` und die Kennungen zusätzlicher Prüfungen. So wird beispielsweise `basicAuthDisabled` an allen Stellen einheitlich ausgenommen.
 
 Ein ausgenommener Befund:
 

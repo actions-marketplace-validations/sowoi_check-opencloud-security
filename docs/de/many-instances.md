@@ -121,7 +121,7 @@ Beachte dabei:
 
 Versionen nach ihrem Supportende lösen weiterhin bei jedem Durchlauf einen Alarm aus. Details stehen unter [Nur Änderungen melden](../../README.md#reporting-only-what-changed).
 
-aktiviere `--self-update-check` für einen der Aufrufe, um von neuen Plugin-Versionen zu erfahren. Die Abfrage wird einen Tag zwischengespeichert und beeinflusst den Exitcode nicht.
+Aktiviere `--self-update-check` für einen der Aufrufe, um von neuen Plugin-Versionen zu erfahren. Die Abfrage wird einen Tag zwischengespeichert und beeinflusst den Exitcode nicht.
 
 ## Zeitplanung {#scheduling-the-whole-thing}
 

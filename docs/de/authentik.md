@@ -494,7 +494,7 @@ python -c 'import base64,json,sys;p=sys.argv[1].split(".")[1];print(json.dumps(j
 | `scope` | Enthält alle geforderten Scopes |
 | `sub` | Vom Provider vergeben; vom Scan-Webdienst nicht ausgewertet |
 
-rufst du anschließend MCP auf:
+Rufe anschließend MCP auf:
 
 ```bash
 curl -s https://scanner.example.com/mcp \
@@ -630,7 +630,7 @@ muss erhalten bleiben, die Signaturschlüssel lädt er erneut.
 
 ## Fehler eingrenzen {#when-it-does-not-work}
 
-| Symptom | Was Du prüfst sollten |
+| Symptom | Was du prüfen solltest |
 |:--|:--|
 | Startfehler zu Issuer, Resource-URL oder HTTPS | Vollständigkeit der MCP-Authentifizierungseinstellungen |
 | Ständig 401 | `iss`, `aud`, Ablaufdatum, Scopes und Provider-Schlüssel |
