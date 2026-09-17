@@ -74,7 +74,7 @@ Zwei Grenzen gelten immer:
 - **Nur tatsächlich fehlgeschlagene Prüfungen werden ausgenommen.** Eine bestandene Prüfung wird nicht nachträglich als ignoriert markiert.
 - **Das Supportende lässt sich nicht ausnehmen.** Eine Version ohne Sicherheitsupdates erhält auch mit `--ignore-hardening '*'` die End-of-Life-Bewertung.
 
-Halte Ausnahmen möglichst in der Konfigurationsdatei fest und begründen jede davon in einem Kommentar:
+Halte Ausnahmen möglichst in der Konfigurationsdatei fest und begründe jede davon in einem Kommentar:
 
 ```yaml
 scanner:
