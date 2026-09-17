@@ -27,6 +27,7 @@ import asyncio
 import os
 import threading
 from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -230,6 +231,24 @@ def launch(playwright: Any) -> Any:
         pytest.skip(f"{BROWSER} cannot be launched here ({message}); run `playwright install {BROWSER}`")
 
 
+@contextmanager
+def dark_system_browser(browser: Any) -> Iterator[tuple[Any, dict[str, Any]]]:
+    """A browser whose operating system prefers dark, and the context options that keep it so.
+
+    Playwright's Firefox drops an emulated colour scheme once a response sends
+    `Cross-Origin-Opener-Policy: same-origin`, as every page here does, so
+    Firefox gets its own instance with a dark system theme instead.
+    """
+    if browser.browser_type.name != "firefox":
+        yield browser, {"color_scheme": "dark"}
+        return
+    dark = browser.browser_type.launch(proxy=DEAD_PROXY, firefox_user_prefs={"ui.systemUsesDarkTheme": 1})
+    try:
+        yield dark, {"color_scheme": "no-override"}
+    finally:
+        dark.close()
+
+
 @pytest.fixture(scope="module", name="site")
 def site_fixture() -> Iterator[LiveSite]:
     """One live site per test module, with a hardened, a weak and an end-of-life target."""
@@ -254,9 +273,6 @@ def new_page(browser: Any, watch: PageWatch, **options: Any) -> Any:
     context = browser.new_context(**options)
     context.add_init_script(_CSP_RECORDER)
     page = context.new_page()
-    # Firefox (Playwright's build 1543 in CI) ignores the context's colour
-    # scheme and reduced motion, so apply them to the page as well.
-    page.emulate_media(color_scheme=options.get("color_scheme"), reduced_motion=options["reduced_motion"])
     page.set_default_timeout(15_000)
     watch.attach(page)
     return page

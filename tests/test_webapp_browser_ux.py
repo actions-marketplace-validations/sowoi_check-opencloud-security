@@ -19,6 +19,7 @@ from tests.browser_support import (  # noqa: F401 - the fixtures register under 
     PHONE,
     PageWatch,
     browser_fixture,
+    dark_system_browser,
     new_page,
     page_fixture,
     shown_but_hidden,
@@ -145,6 +146,7 @@ def test_the_wide_layout_needs_no_menu_toggle(browser, site):
 
 
 BODY_BACKGROUND = "() => getComputedStyle(document.body).backgroundColor"
+PREFERS_DARK = "() => matchMedia('(prefers-color-scheme: dark)').matches"
 
 
 def test_the_theme_toggle_switches_and_is_remembered(page, site):
@@ -164,24 +166,28 @@ def test_the_theme_toggle_switches_and_is_remembered(page, site):
 
 def test_a_dark_system_preference_starts_in_the_dark_theme(browser, site):
     """Without a stored choice, the page follows the operating system."""
-    watch = PageWatch()
-    dark = new_page(browser, watch, color_scheme="dark")
     light = new_page(browser, PageWatch(), color_scheme="light")
     try:
         light.goto(site.base + "/")
+        assert not light.evaluate(PREFERS_DARK)
         light_background = light.evaluate(BODY_BACKGROUND)
-        dark.goto(site.base + "/")
-        assert dark.evaluate("() => matchMedia('(prefers-color-scheme: dark)').matches")
-        # The repaint can trail the load, as it trails a toggle (Firefox in CI,
-        # WebKit locally): wait for it rather than sampling once.
-        dark.wait_for_function(
-            f"(light) => ({BODY_BACKGROUND})() !== light", arg=light_background, timeout=5_000
-        )
-        dark.click("[data-theme-toggle]")
-        assert dark.get_attribute("html", "data-theme") == "light"
     finally:
-        dark.context.close()
         light.context.close()
+
+    with dark_system_browser(browser) as (dark_browser, dark_options):
+        dark = new_page(dark_browser, PageWatch(), **dark_options)
+        try:
+            dark.goto(site.base + "/")
+            assert dark.evaluate(PREFERS_DARK)
+            # The repaint can trail the load, as it trails a toggle (Firefox in CI,
+            # WebKit locally): wait for it rather than sampling once.
+            dark.wait_for_function(
+                f"(light) => ({BODY_BACKGROUND})() !== light", arg=light_background, timeout=5_000
+            )
+            dark.click("[data-theme-toggle]")
+            assert dark.get_attribute("html", "data-theme") == "light"
+        finally:
+            dark.context.close()
 
 
 def test_choosing_a_language_translates_the_page_and_sticks(browser, site):
