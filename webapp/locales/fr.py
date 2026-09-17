@@ -472,7 +472,7 @@ MESSAGES: dict[str, str] = {
     # ------------------------------------------------------- landing page
     "index.title": "Analyser une instance OpenCloud",
     "index.description": "Vérifiez les vulnérabilités connues, les protections manquantes, les en-têtes de sécurité et les mises à jour disponibles d’une instance OpenCloud. Gratuit, sans inscription.",
-    "index.eyebrow": "Indépendant &middot; ressources hébergées sur place &middot; résultats temporaires",
+    "index.eyebrow": "Indépendant &middot; ressources servies depuis ce site &middot; résultats temporaires",
     "index.headline": (
         'Quel est le niveau de sécurité de votre <em class="swash">instance '
         "OpenCloud</em> ?"
@@ -480,7 +480,7 @@ MESSAGES: dict[str, str] = {
     "index.lede": "Saisissez l’adresse d’une instance OpenCloud que vous êtes autorisé à tester. Le scanner examine les paramètres accessibles au public, les en-têtes HTTP et la version du logiciel, puis attribue une note de <strong>A+</strong> à <strong>F</strong>.",
     "index.form.kicker": "Demande d'analyse",
     "index.form.hint": "Quelques secondes &middot; sans inscription",
-    "index.error.self_host": "Désolé pour l’attente. Ces limites permettent à chacun d’utiliser le service. Vous pouvez aussi exécuter le scanner open source sur votre machine, aussi souvent que nécessaire :",
+    "index.error.self_host": "Désolé pour l’attente. Ces limites garantissent à chacun l’accès au service. Vous pouvez aussi exécuter le scanner open source sur votre machine, aussi souvent que nécessaire :",
     "index.field.label": "Adresse de l'instance",
     "index.field.title": "Nom d’hôte, avec un port et un sous-dossier simples si nécessaire. Aucun paramètre d’URL, fragment ni changement de répertoire.",
     "index.field.hint": "Le nom d’hôte suffit ; sans protocole indiqué, <code>https://</code> est utilisé. Un sous-dossier simple comme <code>/opencloud</code> est accepté. Les paramètres d’URL, fragments et changements de répertoire sont refusés. Analysez uniquement des instances publiques que vous êtes autorisé à tester.",
@@ -498,12 +498,12 @@ MESSAGES: dict[str, str] = {
     "index.remember.summary": (
         "Réglages de votre dernière analyse dans ce navigateur : {track} · {format} · {waivers}."
     ),
-    "index.remember.waivers.none": "aucun contrôle dérogé",
-    "index.remember.waivers.one": "1 contrôle dérogé",
-    "index.remember.waivers.many": "{count} contrôles dérogés",
+    "index.remember.waivers.none": "aucun contrôle ignoré",
+    "index.remember.waivers.one": "1 contrôle ignoré",
+    "index.remember.waivers.many": "{count} contrôles ignorés",
     "index.remember.apply": "Les réutiliser",
     "index.remember.forget": "Les oublier",
-    "index.waivers.hint": "Un constat exclu reste visible dans le rapport, mais ne réduit pas la note. Les exclusions s’appliquent uniquement aux contrôles qui ont échoué.",
+    "index.waivers.hint": "Un contrôle ignoré reste visible dans le rapport, mais ne réduit pas la note. Les exclusions s’appliquent uniquement aux contrôles qui ont échoué.",
     "index.waivers.search.label": "Filtrer les contrôles",
     "index.waivers.search.placeholder": "Rechercher par nom...",
     "index.waivers.search.empty": "Aucun contrôle ne correspond à votre recherche.",
@@ -559,25 +559,21 @@ MESSAGES: dict[str, str] = {
         "exécuter ont réussi."
     ),
     "grade.5.improve": (
-        "Maintenez ce niveau : surveillez la prochaine version sur votre "
-        "canal, et relancez l'analyse après toute modification du proxy "
-        "inverse ou de la connexion."
+        "Conservez cette version à jour sur votre canal et relancez l’analyse "
+        "après toute modification du proxy inverse ou de la connexion."
     ),
     "grade.4.headline": "Une mise à jour est disponible",
     "grade.4.meaning": (
-        "Une version corrective plus récente existe sur la même ligne de "
-        "version. Rien n'indique un problème avec la version installée - elle "
-        "n'est simplement pas la plus récente."
+        "Une version corrective plus récente est disponible sur la même ligne. "
+        "Aucun avis de sécurité connu ne concerne la version installée."
     ),
     "grade.4.improve": (
-        "Installez la mise à jour en attente. Il s'agit de la même ligne de "
-        "version, c'est donc la mise à niveau la plus légère possible."
+        "Installez la mise à jour recommandée dans votre ligne de version."
     ),
     "grade.3.headline": "Une ligne de version de retard",
     "grade.3.meaning": (
-        "L'instance utilise une ligne plus ancienne que celle actuelle pour "
-        "son canal. Elle peut encore être prise en charge, mais ce n'est plus "
-        "là que les correctifs arrivent en premier."
+        "L’instance utilise une ligne de version plus ancienne que la dernière "
+        "de son canal. Cette ligne peut encore être prise en charge."
     ),
     "grade.3.improve": (
         "Passez à la ligne actuelle de votre canal. L'analyse indique "
@@ -586,22 +582,19 @@ MESSAGES: dict[str, str] = {
     ),
     "grade.2.headline": "Des avis de sécurité correspondent à cette version",
     "grade.2.meaning": (
-        "La version installée figure dans la base de données des avis de "
-        "sécurité. Aucun des avis correspondants n'est classé critique ou "
-        "élevé, ce qui est la seule raison pour laquelle la note n'est pas "
-        "plus basse."
+        "Des vulnérabilités connues concernent la version installée. Aucun des "
+        "avis correspondants n’est classé comme élevé ou critique."
     ),
     "grade.2.improve": (
         "Passez à la version corrigée pour votre ligne de version. La page de "
         "résultat l'indique - un même avis peut être corrigé séparément sur "
         "plusieurs lignes."
     ),
-    "grade.1.headline": "Un avis critique ou élevé correspond",
+    "grade.1.headline": "Une vulnérabilité grave concerne cette version",
     "grade.1.meaning": "Au moins une vulnérabilité connue de la version installée présente une gravité élevée ou critique.",
     "grade.1.improve": (
-        "Effectuez la mise à niveau maintenant, avant toute autre chose sur "
-        "cette page. Aucun autre changement possible ne fera remonter la note "
-        "au-delà de ce niveau."
+        "Installez la version corrigée indiquée dans le rapport et consultez "
+        "les recommandations de l’avis de sécurité."
     ),
     "grade.0.headline": "Hors support",
     "grade.0.meaning": "Cette branche ne reçoit plus de correctifs de sécurité. Elle obtient un F, quels que soient les autres constats ou exclusions.",
@@ -613,9 +606,8 @@ MESSAGES: dict[str, str] = {
     # ---------------------------------------------------------- grades page
     "grades.title": "Ce que signifient les notes",
     "grades.description": (
-        "A+, A, C, D, E et F : ce que dit chaque note d'une instance "
-        "OpenCloud, ce qui la plombe, et le chemin le plus court vers la note "
-        "supérieure."
+        "Ce que signifient les notes A+, A, C, D, E et F pour une instance "
+        "OpenCloud, et quelles modifications peuvent les améliorer."
     ),
     "grades.kicker": "L'échelle",
     "grades.lede": "La note tient compte du support de la version installée, des vulnérabilités connues et des contrôles qui ont échoué. Cette page explique la note de départ, les plafonds liés aux constats et les changements qui peuvent l’améliorer.",
@@ -633,11 +625,11 @@ MESSAGES: dict[str, str] = {
     "grades.row.score": "{rating} sur 5",
     "grades.row.improve": "Pour progresser :",
     "grades.caps.kicker": "Le plafond",
-    "grades.caps.heading": "Ce qu'un contrôle en échec peut faire à une note",
+    "grades.caps.heading": "Comment les contrôles en échec limitent la note",
     "grades.caps.intro": (
-        "La version définit la note de départ. Les contrôles en échec ne "
-        "peuvent pas la faire remonter - ils peuvent seulement la plomber, et "
-        "jusqu'où dépend de la gravité du pire contrôle en échec :"
+        "La version détermine la note de départ. Les contrôles en échec imposent "
+        "un plafond selon leur gravité ; c’est le plus bas de ces plafonds qui "
+        "s’applique :"
     ),
     "grades.caps.at_best": "au mieux",
     "grades.caps.shared": "Les constats de même gravité imposent le même plafond. S’il reste trois constats de gravité moyenne, en corriger un seul ne suffit pas à lever ce plafond. Le plan conserve les trois étapes et indique à quel moment la note s’améliorerait.",
@@ -648,9 +640,10 @@ MESSAGES: dict[str, str] = {
     "grades.improve.plan": "<strong>Un plan de correction par priorité.</strong> Chaque étape précise le changement à effectuer et la note atteignable après cette étape et toutes les précédentes.",
     "grades.improve.release": "<strong>Une version précise à installer.</strong> Le rapport indique la version qui corrige la vulnérabilité <em>dans votre branche</em>, en respectant le canal choisi.",
     "grades.improve.explained": (
-        "<strong>Chaque contrôle en échec, expliqué.</strong> Ce qui a été "
-        "mesuré, pourquoi cela compte et le correctif, avec un lien vers la "
-        "documentation OpenCloud du paramètre concerné."
+        "<strong>Les contrôles en échec sont expliqués.</strong> Vous voyez ce "
+        "qui a été mesuré, pourquoi c’est important et comment corriger le "
+        "problème, avec un lien vers le paramètre correspondant dans la "
+        "documentation OpenCloud."
     ),
     "grades.improve.waiver": "<strong>Des exclusions pour les constats que vous acceptez.</strong> Ils restent visibles, mais ne plafonnent plus la note. Une exclusion ne s’applique qu’à un contrôle échoué et ne peut pas modifier la note d’une version en fin de vie.",
     "grades.improve.rerun": "Relancez l’analyse après vos modifications pour vérifier quels problèmes ont été corrigés.",
@@ -698,7 +691,7 @@ MESSAGES: dict[str, str] = {
     "how.tests.hardening.title": "Durcissement et exposition",
     "how.tests.hardening.body": "L’authentification Basic, les mots de passe et dates d’expiration des liens publics, les règles de mot de passe, les listes de répertoires, les interfaces internes accessibles et les informations de version publiées.",
     "how.pipeline.kicker": "Le déroulement",
-    "how.pipeline.heading": "Ce qui se passe quand vous cliquez sur le bouton",
+    "how.pipeline.heading": "De la demande au résultat",
     "how.pipeline.lede": "Chaque analyse suit ces quatre étapes.",
     "how.pipeline.step1": (
         "<strong>Votre adresse est vérifiée.</strong> Les adresses privées, de "
@@ -1101,7 +1094,7 @@ MESSAGES: dict[str, str] = {
     ),
     # --------------------------------------------------- generated guide pages
     "docs.guide.kicker": "Documentation en ligne de commande",
-    "docs.guide.english_notice": "Ce guide est disponible en anglais, allemand et français. La version anglaise est affichée pour la langue sélectionnée.",
+    "docs.guide.english_notice": "Ce guide est disponible en anglais, allemand, français et espagnol. La version anglaise est affichée pour la langue sélectionnée.",
     "docs.guide.toc.heading": "Sur cette page",
     "docs.guide.toc.aria": "Sur cette page",
     # ---------------------------------------------------------------- compare
@@ -1387,9 +1380,8 @@ MESSAGES: dict[str, str] = {
     "result.progress.kicker": "En cours",
     "result.progress.queued.title": "En attente d'un travailleur de scan",
     "result.progress.queued.detail": (
-        "Tous les travailleurs sont occupés pour le moment. Votre analyse "
-        "garde sa place dans la file et démarre dès qu'un travailleur est "
-        "libre."
+        "Tous les workers sont occupés. Votre analyse garde sa place dans la "
+        "file et démarre dès que l’un d’eux se libère."
     ),
     "result.progress.running.title": "Analyse de l'instance en cours",
     "result.progress.running.detail": (
@@ -1417,8 +1409,7 @@ MESSAGES: dict[str, str] = {
     "result.progress.done.detail": "La note est disponible. Ouverture du rapport.",
     "result.progress.failed.title": "Analyse terminée",
     "result.progress.failed.detail": (
-        "L'analyse n'a pas pu être menée à son terme. Ouverture de ce qui a "
-        "été renvoyé."
+        "L’analyse n’a pas pu être terminée. Ouverture de la page de résultat."
     ),
     "result.failed.fallback": "L'analyse n'a pas pu être menée à son terme.",
     "result.failed.body": "Le scanner n’a pas pu recueillir assez d’informations pour attribuer une note. Vérifiez l’adresse, confirmez qu’elle héberge OpenCloud et assurez-vous que l’instance est accessible depuis ce service.",
@@ -1477,9 +1468,9 @@ MESSAGES: dict[str, str] = {
     "result.counter.passed": "Réussi",
     "result.verdict.why": "Pourquoi cette note :",
     "result.verdict.caveat": (
-        "Une note indique que les contrôles ci-dessous ont réussi, pas que "
-        "l'instance est sécurisée. Cette analyse n'est pas exhaustive : elle "
-        "ne voit que ce que l'instance montre à un visiteur anonyme. "
+        "La note résume les contrôles ci-dessous. Elle ne certifie pas que "
+        "l’instance est sécurisée : l’analyse ne voit que ce qu’elle expose "
+        "sans connexion. "
         '<a href="#scan-limits">Ce qu\'elle ne peut pas voir</a>.'
     ),
     "result.fix": "Correctif :",
@@ -1492,9 +1483,9 @@ MESSAGES: dict[str, str] = {
     "result.plan.note": "Le plan donne la priorité aux changements qui améliorent la note. La note indiquée à chaque étape suppose que cette étape et toutes les précédentes sont terminées. Les constats de même gravité partagent un plafond : plusieurs corrections peuvent donc être nécessaires avant que la note augmente.",
     "result.plan.blocked.heading": "Ce qui plombe la note, sans pouvoir être corrigé",
     "result.plan.blocked.note": (
-        "OpenCloud fige ces éléments en dur, si bien qu'aucun paramètre n'y a "
-        "d'effet. C'est la raison pour laquelle le plan ci-dessus s'arrête là "
-        "où il s'arrête."
+        "Ces valeurs sont codées en dur dans OpenCloud et ne peuvent pas être "
+        "modifiées dans la configuration. Le plan ne peut donc pas atteindre "
+        "une note supérieure."
     ),
     "result.eol.alert": (
         "Cette version ne reçoit plus de correctifs de sécurité. Rien "
@@ -1511,9 +1502,8 @@ MESSAGES: dict[str, str] = {
     "result.findings.kicker": "Constats",
     "result.findings.heading": "Contrôles en échec",
     "result.findings.lede": (
-        "Chacun plafonne la note au niveau que sa gravité autorise. Corrigez "
-        "d'abord les constats critiques : ce sont eux qui plombent le plus "
-        "le score."
+        "Chaque constat limite la note selon sa gravité. Corrigez d’abord les "
+        "constats critiques, car ils ont le plus d’effet sur l’évaluation."
     ),
     "result.findings.filter.aria": "Filtrer les constats par gravité",
     "result.findings.filter.active": "Affichage des constats de gravité {severity} uniquement.",
@@ -1529,7 +1519,7 @@ MESSAGES: dict[str, str] = {
     "result.hardening.tag": "durcissement",
     "result.header.tag": "en-tête",
     # ------------------------------------------------- configuration fragment
-    "result.fragment.kicker": "La correction, écrite",
+    "result.fragment.kicker": "Extrait de configuration",
     "result.fragment.heading": "À coller dans votre configuration",
     "result.fragment.lede": (
         "Les constats ci-dessus, dans la syntaxe du fichier qui doit changer. "
@@ -1560,8 +1550,8 @@ MESSAGES: dict[str, str] = {
     "result.excluded.heading": "Signalé, mais non comptabilisé",
     "result.excluded.waived.heading": "Vous avez demandé à ignorer ceci",
     "result.excluded.waived.note": (
-        "Ils ont tout de même échoué. Ils n'ont simplement pas plombé la "
-        "note."
+        "Ces contrôles ont échoué, mais vos exclusions les retirent du calcul "
+        "de la note."
     ),
     "result.excluded.unfixable.heading": "Valeurs imposées par OpenCloud",
     "result.excluded.unfixable.note": "Ces valeurs sont fixées dans le code d’OpenCloud et ne sont pas configurables. Elles sont fournies à titre informatif et n’affectent pas la note.",

@@ -333,9 +333,12 @@ carrying another catalogue. A validated `cos_locale` cookie wins over the
 weighted `Accept-Language` header, then English is the fallback. The language
 switch is a POST to `/language` and may return only to a validated local path.
 Keep OpenAPI, Arazzo, MCP, discovery documents and exports in English, and
-keep remote scan evidence verbatim. Generated guide bodies remain English
-under `lang="en"` with a localized notice and chrome. See
-[ADR 0020](../adr/0020-frontend-language-is-request-scoped.md).
+keep remote scan evidence verbatim. Public guide bodies have English, German,
+French and Spanish sources (`docs/`, `docs/de/`, `docs/fr/`, `docs/es/`), and
+adding or removing a guide updates all four; a locale without sources gets the
+English body under `lang="en"` with a localized notice. See
+[ADR 0020](../adr/0020-frontend-language-is-request-scoped.md) and
+[ADR 0063](../adr/0063-public-guides-have-spanish-sources.md).
 
 **German text addresses the reader informally, with "du".** Every German
 string - in `webapp/locales/de.py` and in the guides under `docs/de/` - uses

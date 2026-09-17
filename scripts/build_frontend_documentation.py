@@ -16,6 +16,7 @@ import markdown
 from webapp.documentation import (
     DOCUMENTATION_BY_SLUG,
     DOCUMENTATION_PAGES,
+    GUIDE_LANGUAGES,
     OPERATOR_DOCUMENTATION_BY_SLUG,
     OPERATOR_DOCUMENTATION_PAGES,
 )
@@ -73,7 +74,7 @@ def _rewrite_relative_links(body: str, source_path: str) -> str:
         str((REPO_ROOT / page.source).resolve()): page.slug
         for page in DOCUMENTATION_PAGES
     }
-    for language in ("de", "fr"):
+    for language in GUIDE_LANGUAGES:
         local.update(
             {
                 str((REPO_ROOT / "docs" / language / f"{page.slug}.md").resolve()): page.slug
@@ -193,7 +194,7 @@ def _table_of_contents(body: str, language: str = "en") -> str:
 
 def render_page(slug: str, language: str = "en") -> str:
     """Render one manifest entry as a complete Jinja template."""
-    if language not in ("en", "de", "fr"):
+    if language != "en" and language not in GUIDE_LANGUAGES:
         raise ValueError(f"unsupported guide language: {language}")
     page = DOCUMENTATION_BY_SLUG[slug]
     source_path = page.source if language == "en" else f"docs/{language}/{slug}.md"
@@ -218,6 +219,7 @@ def render_page(slug: str, language: str = "en") -> str:
     body = _rewrite_image_sources(body, source_path)
     body = _escape_jinja(body)
     toc = _table_of_contents(body, language)
+    guide_locales = repr(("en", *GUIDE_LANGUAGES))
     toc_block = f"{toc}\n" if toc else ""
     return f"""{GENERATED_MARKER}
 {{% extends "base.html" %}}
@@ -232,7 +234,7 @@ def render_page(slug: str, language: str = "en") -> str:
   <p class="lede">{{{{ t('docs.{page.slug}.description') }}}}</p>
 </section>
 
-{{% if locale not in ('en', 'de', 'fr') %}}
+{{% if locale not in {guide_locales} %}}
 <p class="hint section-gap" lang="{{{{ locale }}}}">{{{{ t('docs.guide.english_notice') }}}}</p>
 {{% endif %}}
 
@@ -373,11 +375,8 @@ def generated_pages() -> dict[Path, str]:
             for page in DOCUMENTATION_PAGES
         },
         **{
-            OUTPUT_DIR / "de" / f"{page.slug}.html": render_page(page.slug, "de")
-            for page in DOCUMENTATION_PAGES
-        },
-        **{
-            OUTPUT_DIR / "fr" / f"{page.slug}.html": render_page(page.slug, "fr")
+            OUTPUT_DIR / language / f"{page.slug}.html": render_page(page.slug, language)
+            for language in GUIDE_LANGUAGES
             for page in DOCUMENTATION_PAGES
         },
         **{
@@ -415,7 +414,7 @@ def write_pages() -> None:
     """Write the manifest and remove generated pages no longer in it."""
     write_images()
     expected = generated_pages()
-    for language in ("de", "fr"):
+    for language in GUIDE_LANGUAGES:
         (OUTPUT_DIR / language).mkdir(parents=True, exist_ok=True)
     OPERATOR_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     for path in (*OUTPUT_DIR.rglob("*.html"), *OPERATOR_OUTPUT_DIR.rglob("*.html")):

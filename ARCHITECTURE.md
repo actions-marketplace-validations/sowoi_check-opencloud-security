@@ -164,8 +164,9 @@ Only application-authored HTML is translated. OpenAPI, Arazzo, MCP, discovery
 documents and exports stay stable English contracts, while values and errors
 measured from a remote instance remain verbatim. Browser JavaScript receives
 its phrases through translated `data-*` attributes, never a second catalogue.
-Generated operator-guide bodies remain English under `lang="en"` and have
-localized chrome and a localized notice.
+Generated guide bodies come from English, German, French and Spanish sources
+(`GUIDE_LANGUAGES`, ADR 0058, 0062 and 0063); a locale without sources would
+get the English body under `lang="en"` with a localized notice.
 
 Search follows the same boundary at release time:
 `scripts/build_search_index.py` writes one English index plus German, Spanish

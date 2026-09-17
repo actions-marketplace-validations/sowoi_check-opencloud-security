@@ -19,6 +19,12 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   last formal sentences in `docs/de/` are rewritten, and the test that
   tolerated a list of older formal strings now fails on any formal German
   string, in the catalogue and in the German guides alike.
+- **Spanish guide sources are now available in the frontend.** Every public
+  guide has a matching `docs/es/` source, generated Spanish template and
+  search index entry, so a Spanish visitor no longer gets the English guide
+  under a notice. The languages with guide sources are listed once, in
+  `GUIDE_LANGUAGES`, for the generator, the route and the search index. See
+  [ADR 0063](adr/0063-public-guides-have-spanish-sources.md).
 
 ### Fixed
 

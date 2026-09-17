@@ -379,8 +379,10 @@ python scripts/build_frontend_documentation.py --check   # fail if stale (CI run
   CI rejects stale output.</li>
 <li>Never hand-edit the generated HTML. The next build discards it.</li>
 </ul>
-<p>Generated guide bodies stay English under <code>lang="en"</code> with localized chrome
-(ADR 0020) — that is intentional, not a missing translation.</p>
+<p>Public guide bodies are generated from English, German, French and Spanish
+sources (<code>docs/</code>, <code>docs/de/</code>, <code>docs/fr/</code>, <code>docs/es/</code>; ADR 0063). A locale
+without sources gets the English body under <code>lang="en"</code> with localized chrome
+(ADR 0020).</p>
 <h2 id="rebuilding-the-search-index">Rebuilding the search index</h2>
 <pre><code class="language-bash">python scripts/build_search_index.py            # regenerate
 python scripts/build_search_index.py --check    # fail if stale

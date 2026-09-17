@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.web-service.description') }}</p>
 </section>
 
-{% if locale not in ('en', 'de', 'fr') %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -73,9 +73,9 @@ template. The web application ships as a GitHub release asset,
 </table>
 <p>The interface supports English, German, French and Spanish. It initially follows the
 browser’s language preference; a choice made with the language switcher is remembered in
-an <code>HttpOnly</code>, <code>SameSite=Lax</code> cookie. Guide bodies are available in English and German.
-French and Spanish interfaces currently show the English guides with a notice. API
-contracts, exports and measured evidence retain their original technical values.</p>
+an <code>HttpOnly</code>, <code>SameSite=Lax</code> cookie. Guide bodies are available in all four
+languages. API contracts, exports and measured evidence retain their original technical
+values.</p>
 <h2 id="contents">Contents</h2>
 <ul>
 <li><a href="#starting-it">Starting it</a></li>

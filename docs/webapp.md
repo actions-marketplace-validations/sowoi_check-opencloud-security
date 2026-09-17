@@ -21,9 +21,9 @@ application is distributed separately as the GitHub release asset
 
 The interface supports English, German, French and Spanish. It initially follows the
 browser’s language preference; a choice made with the language switcher is remembered in
-an `HttpOnly`, `SameSite=Lax` cookie. Guide bodies are available in English and German.
-French and Spanish interfaces currently show the English guides with a notice. API
-contracts, exports and measured evidence retain their original technical values.
+an `HttpOnly`, `SameSite=Lax` cookie. Guide bodies are available in all four
+languages. API contracts, exports and measured evidence retain their original technical
+values.
 
 ## Contents
 
