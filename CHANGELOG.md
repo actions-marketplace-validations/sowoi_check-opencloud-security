@@ -12,6 +12,8 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+## [1.25.3] - 2026-09-18
+
 ### Added
 
 - The `/check-changelog-docs` skill checks that every new `Added` or
