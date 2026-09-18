@@ -8,8 +8,8 @@ class CheckOpencloudSecurity < Formula
 
   desc "Check the security level of your OpenCloud instance with a built-in scanner"
   homepage "https://github.com/sowoi/check-opencloud-security"
-  url "https://files.pythonhosted.org/packages/93/4d/b6c80b6e2e22fd04f9128e9c761e48c5c5ba9ef2254fa7a85a3a5ce0ed7b/check_opencloud_security-1.24.2.tar.gz"
-  sha256 "d7aff5bd6fdf404a0dbf99ec0f1d058638ce46c812d3e3657a0bd5f5b9112663"
+  url "https://files.pythonhosted.org/packages/7a/b7/d5d6aa3102b78967d690d3b44ea80e523484a0a93b3d698752da32c145fc/check_opencloud_security-1.25.0.tar.gz"
+  sha256 "67b57cacf36c88a82a71c6dad4766eb8cb479420a8718eecebf673f3de27d939"
   license "GPL-3.0-or-later"
 
   depends_on "python@3.13"
@@ -25,8 +25,8 @@ class CheckOpencloudSecurity < Formula
   end
 
   resource "idna" do
-    url "https://files.pythonhosted.org/packages/5f/f7/abb373e5757eaec4b922b92f97ec8d6d7e057cf06778247604fbc4e7c3f3/idna-3.19.tar.gz"
-    sha256 "5e0811a4383b21dc5838069f801c4fb62113b7447663d2530d2bd6e77b49bf15"
+    url "https://files.pythonhosted.org/packages/f5/08/8eea9d4b8302028f3abb2c0813953f7aec26d33b7a8960ed760e65ff29fa/idna-3.20.tar.gz"
+    sha256 "a7db850025b95ded1eae8a46181a1a6c56c92c96f0e2b005d9ff8dc0210cab44"
   end
 
   resource "PyYAML" do
@@ -52,7 +52,7 @@ class CheckOpencloudSecurity < Formula
     # Two assertions, because either alone passes for the wrong reason: the
     # first proves the entry point runs at all, the second that the version it
     # reports is the one this formula built rather than another copy on PATH.
-    assert_match "1.24.2", shell_output("#{bin}/check-opencloud-security --version")
+    assert_match "1.25.0", shell_output("#{bin}/check-opencloud-security --version")
 
     # A check that cannot reach its instance must still be a check: it exits 3
     # (UNKNOWN), the Nagios code for "measured nothing", rather than crashing
