@@ -1,0 +1,20 @@
+# A security advisory record. See AGENTS.md, "Security advisories".
+#
+# One file per bullet under a `### Security` heading in CHANGELOG.md.
+# `state` is the decision; `verified` is the evidence it rests on.
+
+slug: webhook-ipv6-site-local
+state: declined
+changelog_version: "1.25.3"
+changelog_entry: "Webhooks to deprecated IPv6 site-local addresses are refused."
+shipped: true
+declined_because: |
+  Hardening. The webhook URL is written by the operator who runs the plugin,
+  not by a stranger; pointing it at a site-local address needs the same
+  access that could point it anywhere else on their own network.
+summary: >-
+  Webhook guard accepts deprecated IPv6 site-local addresses (RFC 3879)
+verified: |
+  git show v1.25.2:check_opencloud_security.py:1318-1325 -
+  _webhook_address_is_public has no site-local check; a site-local address passes. Present
+  since 55a3a3d (first tag v1.2.3).

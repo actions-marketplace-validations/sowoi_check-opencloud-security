@@ -892,3 +892,10 @@ def test_ntfy_without_a_topic_is_refused_before_the_first_scan(capsys):
         plugin._validate_thresholds(parser, args)
 
     assert "needs --webhook-url to name a topic" in capsys.readouterr().err
+
+
+def test_deprecated_ipv6_site_local_addresses_are_blocked(monkeypatch):
+    """fec0::/10 is private space no `is_private` flag covers (RFC 3879)."""
+    for address in ("fec0::1", "feff:ffff::1"):
+        monkeypatch.setattr(plugin.socket, "getaddrinfo", _fake_getaddrinfo(address))
+        assert plugin._is_safe_webhook_url("https://hooks.example.com/x") is False

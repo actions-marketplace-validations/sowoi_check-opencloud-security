@@ -14,6 +14,14 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ### Added
 
+- The `/check-changelog-docs` skill checks that every new `Added` or
+  `Changed` entry under `[Unreleased]` is documented where AGENTS.md requires
+  it - the README option table, the example YAML, the `docs/` guides in all
+  four languages, `docs/webapp.md`, the guide index and the generated
+  `/documentation` pages - and reports each gap as a concrete action. A new
+  Claude Code hook stops the first `git commit` that adds such entries and
+  asks for the check; retrying the same commit goes through.
+
 - Manual mutation testing for contributors: the `/mutation-test` skill runs
   mutmut through the read-only `mutation-tester` agent on chosen plugin or
   scanner functions and sorts every surviving mutant into a real test gap,
@@ -55,6 +63,16 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   out; they now use reduced motion like every other browser test, which
   still exercises the same hiding and revealing, and the motion itself
   stays covered on the landing page.
+
+### Security
+
+- **Scan targets and redirect hops in deprecated IPv6 site-local space are refused.**
+  The web service's SSRF guard let the deprecated site-local range (RFC 3879) through because no
+  `ipaddress` private flag covers it, so a name resolving there - or a redirect
+  to it - could reach a network that still routes site-local addresses.
+
+- **Webhooks to deprecated IPv6 site-local addresses are refused.** The
+  plugin's webhook guard had the same site-local gap as the web service.
 
 ## [1.25.2] - 2026-09-18
 
