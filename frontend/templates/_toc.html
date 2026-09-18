@@ -8,12 +8,32 @@
 
   A page with fewer than two sections includes nothing: a contents list of
   one entry is a link to the top of the page the reader is already on.
+
+  An entry may carry a `group` label. When any does, the entries render as
+  labelled columns in the order their groups first appear, so a long list
+  (the scan report has up to twelve) reads as a few short ones instead of a
+  wall of pills.
 #}
 {% if toc | length > 1 %}
 <nav class="docs-toc card section-gap" aria-label="{{ t('toc.aria') }}" data-reveal>
   <p class="kicker">{{ t('toc.heading') }}</p>
+  {% set groups = [] %}
+  {% for entry in toc if entry.group and entry.group not in groups %}{% set _ = groups.append(entry.group) %}{% endfor %}
+  {% if groups %}
+  <div class="docs-toc-groups">
+    {% for group in groups %}
+    <div class="docs-toc-group">
+      <p class="docs-toc-label">{{ group }}</p>
+      {% for entry in toc if entry.group == group %}
+      <a href="{{ entry.href }}">{{ entry.label }}</a>
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
   {% for entry in toc %}
   <a href="{{ entry.href }}">{{ entry.label }}</a>
   {% endfor %}
+  {% endif %}
 </nav>
 {% endif %}

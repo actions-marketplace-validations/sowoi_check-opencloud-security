@@ -421,6 +421,9 @@ MESSAGES: dict[str, str] = {
     # --------------------------------------------------- the contents list
     "toc.heading": "Sur cette page",
     "toc.aria": "Sur cette page",
+    "toc.group.act": "Corriger",
+    "toc.group.details": "Détails",
+    "toc.group.keep": "Conserver",
     # --------------------------------------------------------- cross-links
     "pagenav.kicker": "À lire aussi",
     "pagenav.aria": "En savoir plus sur ce service",

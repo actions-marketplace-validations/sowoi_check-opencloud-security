@@ -464,31 +464,31 @@
 {% set toc = [] %}
 {% if summary.remediation.steps %}
   {% set _ = toc.append({"href": "#remediation",
-                         "label": t('result.plan.heading', label=summary.remediation.achievableLabel)}) %}
+                         "label": t('result.plan.heading', label=summary.remediation.achievableLabel), "group": t('toc.group.act')}) %}
 {% endif %}
 {% if summary.vulnerabilities %}
-  {% set _ = toc.append({"href": "#advisories", "label": t('result.advisories.heading')}) %}
+  {% set _ = toc.append({"href": "#advisories", "label": t('result.advisories.heading'), "group": t('toc.group.act')}) %}
 {% endif %}
-{% set _ = toc.append({"href": "#findings", "label": t('result.findings.heading')}) %}
+{% set _ = toc.append({"href": "#findings", "label": t('result.findings.heading'), "group": t('toc.group.act')}) %}
 {% if summary.missingHardenings or summary.missingHeaders %}
-  {% set _ = toc.append({"href": "#hardening", "label": t('result.hardening.heading')}) %}
+  {% set _ = toc.append({"href": "#hardening", "label": t('result.hardening.heading'), "group": t('toc.group.act')}) %}
 {% endif %}
 {% if fragments %}
-  {% set _ = toc.append({"href": "#configuration", "label": t('result.fragment.heading')}) %}
+  {% set _ = toc.append({"href": "#configuration", "label": t('result.fragment.heading'), "group": t('toc.group.act')}) %}
 {% endif %}
 {% if summary.waived or summary.unfixable %}
-  {% set _ = toc.append({"href": "#excluded", "label": t('result.excluded.heading')}) %}
+  {% set _ = toc.append({"href": "#excluded", "label": t('result.excluded.heading'), "group": t('toc.group.details')}) %}
 {% endif %}
 {% if summary.tls and summary.tls.reachable %}
-  {% set _ = toc.append({"href": "#tls", "label": t('result.tls.heading')}) %}
+  {% set _ = toc.append({"href": "#tls", "label": t('result.tls.heading'), "group": t('toc.group.details')}) %}
 {% endif %}
 {% if summary.coverage.gaps or not summary.coverage.available %}
-  {% set _ = toc.append({"href": "#coverage", "label": t('result.coverage.heading')}) %}
+  {% set _ = toc.append({"href": "#coverage", "label": t('result.coverage.heading'), "group": t('toc.group.details')}) %}
 {% endif %}
-{% set _ = toc.append({"href": "#scan-limits", "label": t('result.scope.heading')}) %}
-{% set _ = toc.append({"href": "#raw-document", "label": t('result.raw.heading')}) %}
-{% set _ = toc.append({"href": "#exports", "label": t('result.export.heading')}) %}
-{% set _ = toc.append({"href": "#share", "label": t('result.share.heading')}) %}
+{% set _ = toc.append({"href": "#scan-limits", "label": t('result.scope.heading'), "group": t('toc.group.details')}) %}
+{% set _ = toc.append({"href": "#raw-document", "label": t('result.raw.heading'), "group": t('toc.group.details')}) %}
+{% set _ = toc.append({"href": "#exports", "label": t('result.export.heading'), "group": t('toc.group.keep')}) %}
+{% set _ = toc.append({"href": "#share", "label": t('result.share.heading'), "group": t('toc.group.keep')}) %}
 {% include "_toc.html" %}
 
 {% if summary.remediation.steps %}
