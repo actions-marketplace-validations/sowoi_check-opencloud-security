@@ -1553,3 +1553,28 @@ def test_an_answer_that_is_not_opencloud_is_its_own_kind_of_scan_error():
 
     with pytest.raises(scanner_module.NotOpenCloud):
         run_scan(behaviour)
+
+
+def test_an_advertised_http3_listener_is_recorded_and_never_graded():
+    """Alt-Svc h3 names a UDP listener a TCP firewall may miss; it costs no rating."""
+    quic = run_scan(InstanceBehaviour(extra_headers={"Alt-Svc": 'h3=":443"; ma=86400'}))
+    services = quic["alternativeServices"]
+    assert services["advertised"] is True
+    assert services["http3"] is True
+    assert services["entries"] == [
+        {"protocol": "h3", "host": "", "port": 443, "udp": True}
+    ]
+
+    bare = run_scan(InstanceBehaviour())
+    assert bare["alternativeServices"]["advertised"] is False
+    assert bare["alternativeServices"]["http3"] is False
+    assert bare["rating"] == quic["rating"]
+    assert not any("altsvc" in str(item).lower() for item in quic.get("extraChecks") or [])
+
+
+def test_an_alt_svc_clear_advertises_nothing():
+    """'clear' withdraws every alternative, so nothing is recorded as advertised."""
+    result = run_scan(InstanceBehaviour(extra_headers={"Alt-Svc": "clear"}))
+
+    assert result["alternativeServices"]["advertised"] is False
+    assert result["alternativeServices"]["entries"] == []

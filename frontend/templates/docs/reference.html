@@ -844,6 +844,10 @@ as new as the installed package.</p>
 performance metric; with <code>--update-warning</code> a pending update turns an otherwise
 <code>OK</code> result into <code>WARNING</code>. A failing update check never aborts the security
 check.</p>
+<p>With <code>--eol-warning DAYS</code> (<code>COS_EOL_WARNING</code>, YAML <code>eol_warning</code>) an otherwise
+<code>OK</code> result becomes <code>WARNING</code> once the running release line has <code>DAYS</code> or fewer
+days of support left, naming the date and the upgrade target - so the upgrade
+is planned before the line turns <code>CRITICAL</code> at its end of life.</p>
 <p><strong>Update recommendations stay on your release track.</strong> Production and LTS installations
 are offered a release from their own track, while the newest overall release is reported
 separately. Set <code>--release-track</code> to override automatic detection. See <a href="/documentation/release-lifecycle">Release tracks,

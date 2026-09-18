@@ -33,7 +33,7 @@ from typing import Any
 
 import requests
 
-from .versions import is_in_range, normalise_version
+from .versions import compare_versions, is_in_range, normalise_version
 
 LOGGER = logging.getLogger("check_opencloud.vulndb")
 
@@ -412,6 +412,39 @@ class VulnerabilityDatabase:
             hits,
             key=lambda advisory: (-SEVERITY_ORDER.get(advisory.severity, 0), advisory.id),
         )
+
+    def upgrade_path(self, version: str | None, target: str | None) -> dict[str, Any] | None:
+        """
+        What moving from ``version`` to ``target`` does about its advisories.
+
+        ``fixes`` are the advisories the target no longer carries,
+        ``stillAffected`` the ones it does - checked against every range of
+        the original advisory, so a fix backported to another line counts.
+        ``safeVersion`` is the lowest release that clears all of them on the
+        target's line, or None when an advisory has no fix there yet.
+        Returns None without a target or without an advisory to clear.
+        """
+        if not target or compare_versions(target, version) <= 0:
+            return None
+        current = [advisory for advisory in self.advisories if advisory.affects(version)]
+        if not current:
+            return None
+        fixes = sorted(a.id for a in current if not a.affects(target))
+        remaining = [a for a in current if a.affects(target)]
+        safe: str | None = target
+        for advisory in remaining:
+            fixed = advisory.for_version(target).fixed
+            if not fixed:
+                safe = None
+                break
+            if compare_versions(fixed, safe) > 0:
+                safe = fixed
+        return {
+            "target": target,
+            "fixes": fixes,
+            "stillAffected": sorted(a.id for a in remaining),
+            "safeVersion": safe,
+        }
 
     def worst_severity(self, version: str | None) -> str | None:
         """Return the highest severity affecting the given version."""

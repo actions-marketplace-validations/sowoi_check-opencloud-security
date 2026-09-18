@@ -371,6 +371,15 @@ an explicit unknown.</p>
 understands a plain <code>{"tag_name": ...}</code> document and a list of releases, so an
 internal mirror needs no special format. Drafts and prereleases are skipped.</p>
 <h2 id="vulnerabilities">Vulnerabilities</h2>
+<p>Beside <code>vulnerabilities</code>, a result carries <code>upgradePath</code> when the installed
+release has known advisories and a newer release is recommended: the
+<code>target</code>, the advisories it <code>fixes</code>, the ones it is <code>stillAffected</code> by, and
+<code>safeVersion</code>, the lowest release past every missing fix (<code>null</code> when one has
+none yet). It is <code>null</code> otherwise. See
+<a href="/documentation/release-lifecycle#does-the-upgrade-clear-the-advisories">Does the upgrade clear the advisories?</a></p>
+<p><code>alternativeServices</code> records the instance's <code>Alt-Svc</code> header - whether it
+advertises HTTP/3 over UDP - as an observation that is never graded. See
+<a href="/documentation/scanner-checks#alternative-services-http3">Alternative services</a>.</p>
 <h3 id="refreshing-reference-data-on-a-monitoring-host">Refreshing reference data on a monitoring host</h3>
 <p>The package includes a separate <code>refresh-data</code> command for installations that
 cannot wait for a package upgrade:</p>

@@ -233,6 +233,27 @@ reading the body for it would report the correct behaviour as the finding.
 An instance that publishes no discovery document at all is not judged either
 way: two errors are the scan learning nothing, not a pass.
 
+### Alternative services (HTTP/3)
+
+`alternativeServices` records what the instance advertises in its `Alt-Svc`
+header. An `h3` entry tells every browser to try HTTP/3 over **UDP** on the
+named port - a listener a firewall written for TCP 443 may not cover, and one
+a reverse proxy can enable without anybody deciding to.
+
+```json
+{"alternativeServices": {"advertised": true, "http3": true,
+  "entries": [{"protocol": "h3", "host": "", "port": 443, "udp": true}],
+  "header": "h3=\":443\"; ma=86400"}}
+```
+
+It is an observation and is never graded: HTTP/3 is not a weakness, only
+something to firewall on purpose. The plugin prints a detail line when it sees
+one. The advertised address is never probed - it is the target's word, not an
+origin the scan was pointed at
+([ADR 0036](../adr/0036-a-companion-service-is-probed-only-where-the-scan-was-pointed.md)).
+`Alt-Svc: clear` records nothing as advertised, and without a response to read
+the header from the key is `null`.
+
 ### Office and calendar integrations
 
 Two integrations are visible without logging in, and both are reported as

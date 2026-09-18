@@ -245,6 +245,28 @@ correcto se notificara como hallazgo. Una instancia que no publica ningún
 documento de descubrimiento tampoco se evalúa en ningún sentido: dos errores
 significan que el análisis no ha averiguado nada, no que se haya superado.
 
+### Servicios alternativos (HTTP/3) {#alternative-services-http3}
+
+`alternativeServices` registra lo que la instancia anuncia en su cabecera
+`Alt-Svc`. Una entrada `h3` indica a cada navegador que intente HTTP/3 sobre
+**UDP** en el puerto indicado: un servicio que un cortafuegos escrito para TCP
+443 puede no cubrir, y que un proxy inverso puede activar sin que nadie lo
+decida.
+
+```json
+{"alternativeServices": {"advertised": true, "http3": true,
+  "entries": [{"protocol": "h3", "host": "", "port": 443, "udp": true}],
+  "header": "h3=\":443\"; ma=86400"}}
+```
+
+Es una observación y nunca se califica: HTTP/3 no es una debilidad, solo algo
+que conviene abrir en el cortafuegos a propósito. El plugin muestra una línea
+de detalle cuando lo ve. La dirección anunciada nunca se sondea: es la palabra
+del objetivo, no un origen al que se apuntó el escaneo
+([ADR 0036](../../adr/0036-a-companion-service-is-probed-only-where-the-scan-was-pointed.md)).
+`Alt-Svc: clear` no registra nada como anunciado y, sin respuesta, la clave es
+`null`.
+
 ### Integraciones de ofimática y calendario {#office-and-calendar-integrations}
 
 Hay dos integraciones visibles sin iniciar sesión, y ambas se notifican como

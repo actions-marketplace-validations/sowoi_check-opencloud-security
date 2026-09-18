@@ -15,6 +15,16 @@
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
+<nav class="docs-toc card section-gap" aria-label="{{ t('docs.guide.toc.aria') }}" data-reveal>
+  <p class="kicker">{{ t('docs.guide.toc.heading') }}</p>
+  <a href="#why-a-version-number-is-not-an-answer" lang="es">Por qué un número de versión no es una respuesta</a>
+  <a href="#what-the-bundled-schedule-can-and-cannot-tell-you" lang="es">Qué puede y qué no puede decir el calendario incluido</a>
+  <a href="#the-recommended-release-follows-your-track" lang="es">La versión recomendada sigue su canal</a>
+  <a href="#declaring-your-release-track" lang="es">Declarar su canal de publicación</a>
+  <a href="#warning-before-the-end-of-life" lang="es">Aviso antes del fin de vida</a>
+  <a href="#does-the-upgrade-clear-the-advisories" lang="es">¿La actualización corrige los avisos?</a>
+</nav>
+
 <article class="docs-article card section-gap" data-reveal lang="es">
 <p>OpenCloud mantiene en paralelo los canales Rolling, Production y LTS. Por eso,
 el estado de soporte de una versión depende tanto de su canal como de su
@@ -216,6 +226,26 @@ salida lo marca como declarado para distinguirlo de uno deducido:</p>
 <p>Un valor desconocido se ignora en lugar de tratarse como error, así que una
 errata en un archivo de configuración vuelve al comportamiento predeterminado
 en lugar de detener la comprobación.</p>
+<h2 id="warning-before-the-end-of-life">Aviso antes del fin de vida</h2>
+<p>El fin de vida es <code>CRITICAL</code> el día que llega, demasiado tarde para planificar
+una actualización. <code>--eol-warning DÍAS</code> (<code>COS_EOL_WARNING</code>, YAML
+<code>eol_warning</code>) convierte un resultado que sería <code>OK</code> en <code>WARNING</code> cuando a la
+línea en uso le quedan <code>DÍAS</code> o menos días de soporte:</p>
+<pre><code class="language-text">WARNING: The 7.2 release line reaches end of life on 2026-10-14 (20 days left). Upgrade to 7.4.0.
+</code></pre>
+<p>Solo eleva <code>OK</code>; un resultado que ya es <code>WARNING</code> o <code>CRITICAL</code> conserva su
+propia línea. Una línea sin fecha de fin de vida publicada nunca avisa. <code>0</code>,
+el valor predeterminado, lo desactiva.</p>
+<h2 id="does-the-upgrade-clear-the-advisories">¿La actualización corrige los avisos?</h2>
+<p>Cuando la versión instalada tiene avisos de seguridad conocidos, el escaneo
+registra <code>upgradePath</code>: lo que la versión recomendada hace con cada uno.</p>
+<pre><code class="language-json">{&quot;upgradePath&quot;: {&quot;target&quot;: &quot;7.2.4&quot;, &quot;fixes&quot;: [&quot;GHSA-aaaa&quot;],
+  &quot;stillAffected&quot;: [&quot;GHSA-bbbb&quot;], &quot;safeVersion&quot;: &quot;7.3.0&quot;&#125;&#125;
+</code></pre>
+<p>Cada rango de un aviso se compara con el destino, así que cuenta una
+corrección portada a otra línea. <code>safeVersion</code> es la versión más baja que
+incluye todas las correcciones que le faltan al destino, o <code>null</code> si alguna
+aún no existe. El plugin lo muestra como línea de detalle.</p>
 </article>
 
 {% include "_page-nav.html" %}

@@ -375,6 +375,22 @@ refuses an unrecognised name commonly prints that name in its error page, and
 reading the body for it would report the correct behaviour as the finding.
 An instance that publishes no discovery document at all is not judged either
 way: two errors are the scan learning nothing, not a pass.</p>
+<h3 id="alternative-services-http3">Alternative services (HTTP/3)</h3>
+<p><code>alternativeServices</code> records what the instance advertises in its <code>Alt-Svc</code>
+header. An <code>h3</code> entry tells every browser to try HTTP/3 over <strong>UDP</strong> on the
+named port - a listener a firewall written for TCP 443 may not cover, and one
+a reverse proxy can enable without anybody deciding to.</p>
+<pre><code class="language-json">{&quot;alternativeServices&quot;: {&quot;advertised&quot;: true, &quot;http3&quot;: true,
+  &quot;entries&quot;: [{&quot;protocol&quot;: &quot;h3&quot;, &quot;host&quot;: &quot;&quot;, &quot;port&quot;: 443, &quot;udp&quot;: true}],
+  &quot;header&quot;: &quot;h3=\&quot;:443\&quot;; ma=86400&quot;&#125;&#125;
+</code></pre>
+<p>It is an observation and is never graded: HTTP/3 is not a weakness, only
+something to firewall on purpose. The plugin prints a detail line when it sees
+one. The advertised address is never probed - it is the target's word, not an
+origin the scan was pointed at
+(<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0036-a-companion-service-is-probed-only-where-the-scan-was-pointed.md">ADR 0036</a>).
+<code>Alt-Svc: clear</code> records nothing as advertised, and without a response to read
+the header from the key is <code>null</code>.</p>
 <h3 id="office-and-calendar-integrations">Office and calendar integrations</h3>
 <p>Two integrations are visible without logging in, and both are reported as
 observations rather than verdicts:</p>

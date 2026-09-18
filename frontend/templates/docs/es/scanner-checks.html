@@ -387,6 +387,23 @@ su página de error, y buscarlo en el cuerpo haría que el comportamiento
 correcto se notificara como hallazgo. Una instancia que no publica ningún
 documento de descubrimiento tampoco se evalúa en ningún sentido: dos errores
 significan que el análisis no ha averiguado nada, no que se haya superado.</p>
+<h3 id="alternative-services-http3">Servicios alternativos (HTTP/3)</h3>
+<p><code>alternativeServices</code> registra lo que la instancia anuncia en su cabecera
+<code>Alt-Svc</code>. Una entrada <code>h3</code> indica a cada navegador que intente HTTP/3 sobre
+<strong>UDP</strong> en el puerto indicado: un servicio que un cortafuegos escrito para TCP
+443 puede no cubrir, y que un proxy inverso puede activar sin que nadie lo
+decida.</p>
+<pre><code class="language-json">{&quot;alternativeServices&quot;: {&quot;advertised&quot;: true, &quot;http3&quot;: true,
+  &quot;entries&quot;: [{&quot;protocol&quot;: &quot;h3&quot;, &quot;host&quot;: &quot;&quot;, &quot;port&quot;: 443, &quot;udp&quot;: true}],
+  &quot;header&quot;: &quot;h3=\&quot;:443\&quot;; ma=86400&quot;&#125;&#125;
+</code></pre>
+<p>Es una observación y nunca se califica: HTTP/3 no es una debilidad, solo algo
+que conviene abrir en el cortafuegos a propósito. El plugin muestra una línea
+de detalle cuando lo ve. La dirección anunciada nunca se sondea: es la palabra
+del objetivo, no un origen al que se apuntó el escaneo
+(<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0036-a-companion-service-is-probed-only-where-the-scan-was-pointed.md">ADR 0036</a>).
+<code>Alt-Svc: clear</code> no registra nada como anunciado y, sin respuesta, la clave es
+<code>null</code>.</p>
 <h3 id="office-and-calendar-integrations">Integraciones de ofimática y calendario</h3>
 <p>Hay dos integraciones visibles sin iniciar sesión, y ambas se notifican como
 observaciones y no como veredictos:</p>

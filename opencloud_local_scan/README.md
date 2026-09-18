@@ -283,6 +283,17 @@ internal mirror needs no special format. Drafts and prereleases are skipped.
 
 ## Vulnerabilities
 
+Beside `vulnerabilities`, a result carries `upgradePath` when the installed
+release has known advisories and a newer release is recommended: the
+`target`, the advisories it `fixes`, the ones it is `stillAffected` by, and
+`safeVersion`, the lowest release past every missing fix (`null` when one has
+none yet). It is `null` otherwise. See
+[Does the upgrade clear the advisories?](../docs/release-lifecycle.md#does-the-upgrade-clear-the-advisories)
+
+`alternativeServices` records the instance's `Alt-Svc` header - whether it
+advertises HTTP/3 over UDP - as an observation that is never graded. See
+[Alternative services](../docs/scanner-checks.md#alternative-services-http3).
+
 ### Refreshing reference data on a monitoring host
 
 The package includes a separate `refresh-data` command for installations that

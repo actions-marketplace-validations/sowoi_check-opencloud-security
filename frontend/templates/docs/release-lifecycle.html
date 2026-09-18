@@ -15,6 +15,16 @@
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
+<nav class="docs-toc card section-gap" aria-label="{{ t('docs.guide.toc.aria') }}" data-reveal>
+  <p class="kicker">{{ t('docs.guide.toc.heading') }}</p>
+  <a href="#why-a-version-number-is-not-an-answer" lang="en">Why a version number is not an answer</a>
+  <a href="#what-the-bundled-schedule-can-and-cannot-tell-you" lang="en">What the bundled schedule can and cannot tell you</a>
+  <a href="#the-recommended-release-follows-your-track" lang="en">The recommended release follows your track</a>
+  <a href="#declaring-your-release-track" lang="en">Declaring your release track</a>
+  <a href="#warning-before-the-end-of-life" lang="en">Warning before the end of life</a>
+  <a href="#does-the-upgrade-clear-the-advisories" lang="en">Does the upgrade clear the advisories?</a>
+</nav>
+
 <article class="docs-article card section-gap" data-reveal lang="en">
 <p>OpenCloud maintains rolling, production and LTS tracks in parallel. A version’s support
 status therefore depends on its track as well as its number. This guide explains how the
@@ -208,6 +218,28 @@ output marks it as declared so it can be told apart from an inferred one:</p>
 </code></pre>
 <p>An unknown value is ignored rather than treated as an error, so a typo in a
 config file degrades to the default behaviour instead of taking the check down.</p>
+<h2 id="warning-before-the-end-of-life">Warning before the end of life</h2>
+<p>End of life is <code>CRITICAL</code> on the day it arrives, which is too late to plan an
+upgrade. <code>--eol-warning DAYS</code> (<code>COS_EOL_WARNING</code>, YAML <code>eol_warning</code>) turns an
+otherwise <code>OK</code> result into <code>WARNING</code> once the running line has <code>DAYS</code> or fewer
+days of support left:</p>
+<pre><code class="language-text">WARNING: The 7.2 release line reaches end of life on 2026-10-14 (20 days left). Upgrade to 7.4.0.
+</code></pre>
+<p>It only ever raises <code>OK</code>; a result that is already <code>WARNING</code> or <code>CRITICAL</code>
+keeps its own line. A line without a published end-of-life date has nothing to
+count down and never warns. <code>0</code>, the default, turns it off.</p>
+<h2 id="does-the-upgrade-clear-the-advisories">Does the upgrade clear the advisories?</h2>
+<p>When the installed release carries known advisories, the scan records
+<code>upgradePath</code>: what moving to the recommended release does about each one.</p>
+<pre><code class="language-json">{&quot;upgradePath&quot;: {&quot;target&quot;: &quot;7.2.4&quot;, &quot;fixes&quot;: [&quot;GHSA-aaaa&quot;],
+  &quot;stillAffected&quot;: [&quot;GHSA-bbbb&quot;], &quot;safeVersion&quot;: &quot;7.3.0&quot;&#125;&#125;
+</code></pre>
+<p>Every range of an advisory is checked against the target, so a fix backported
+to another line counts. <code>safeVersion</code> is the lowest release past every fix the
+target still lacks, or <code>null</code> when one of them has no fix yet. The plugin
+prints it as a detail line:</p>
+<pre><code class="language-text">Upgrade path: 7.2.4 fixes GHSA-aaaa but is still affected by GHSA-bbbb; 7.3.0 is the first release that clears them all.
+</code></pre>
 </article>
 
 {% include "_page-nav.html" %}

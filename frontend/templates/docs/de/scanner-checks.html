@@ -313,6 +313,23 @@ sie an den zuerst geladenen Dienst weitergeben; siehe
 <a href="/documentation/reverse-proxy#mistakes-that-cost-a-grade">häufige Proxy-Fehler</a>.
 Ein Hostname im Text einer Fehlerseite zählt nicht als Befund. Fehlt ein
 Discovery-Dokument vollständig, bleibt die Prüfung ohne Ergebnis.</p>
+<h3 id="alternative-services-http3">Alternative Dienste (HTTP/3)</h3>
+<p><code>alternativeServices</code> hält fest, was die Instanz im <code>Alt-Svc</code>-Header
+ankündigt. Ein <code>h3</code>-Eintrag bringt jeden Browser dazu, HTTP/3 über <strong>UDP</strong> auf
+dem genannten Port zu versuchen - ein Listener, den eine Firewall für TCP 443
+womöglich nicht abdeckt und den ein Reverse Proxy einschalten kann, ohne dass
+du es bewusst entschieden hast.</p>
+<pre><code class="language-json">{&quot;alternativeServices&quot;: {&quot;advertised&quot;: true, &quot;http3&quot;: true,
+  &quot;entries&quot;: [{&quot;protocol&quot;: &quot;h3&quot;, &quot;host&quot;: &quot;&quot;, &quot;port&quot;: 443, &quot;udp&quot;: true}],
+  &quot;header&quot;: &quot;h3=\&quot;:443\&quot;; ma=86400&quot;&#125;&#125;
+</code></pre>
+<p>Das ist eine Beobachtung und wird nie bewertet: HTTP/3 ist keine Schwäche,
+nur etwas, das du bewusst in der Firewall freigeben solltest. Das Plugin gibt
+dazu eine Detailzeile aus. Die angekündigte Adresse wird nie geprüft - sie
+ist eine Angabe des Ziels, keine Origin, auf die der Scan gerichtet wurde
+(<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0036-a-companion-service-is-probed-only-where-the-scan-was-pointed.md">ADR 0036</a>).
+<code>Alt-Svc: clear</code> gilt als nichts angekündigt; ohne Antwort ist der Schlüssel
+<code>null</code>.</p>
 <h3 id="office-and-calendar-integrations">Office- und Kalenderanbindungen</h3>
 <p>Zwei Beobachtungen sind ohne Anmeldung möglich:</p>
 <ul>
