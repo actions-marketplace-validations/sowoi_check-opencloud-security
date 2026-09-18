@@ -309,3 +309,98 @@ def test_the_baseline_is_written_atomically_and_privately(tmp_path):
     assert json.loads(path.read_text())["hosts"]["opencloud.example.com"]["rating"] == 5
     assert not list(path.parent.glob("*.tmp")), "no temporary file may survive"
     assert path.stat().st_mode & 0o777 == 0o600
+
+
+def _apply(tmp_path, response, exit_code, *, warn_on_new=True, hardenings=()):
+    """Run the plugin's baseline step against a baseline file in tmp_path."""
+    context = check.ScanContext(
+        host="opencloud.example.com",
+        baseline_path=str(tmp_path / "baseline.json"),
+        warn_on_new=warn_on_new,
+    )
+    return check._apply_baseline(
+        context,
+        response,
+        hardenings=list(hardenings),
+        waived=[],
+        message=f"{exit_code.name}: original",
+        exit_code=exit_code,
+    )
+
+
+def test_plugin_records_the_first_run_and_keeps_its_state(tmp_path):
+    """The first run has nothing to compare with, so it alerts and becomes the baseline."""
+    message, code, lines, comparison = _apply(
+        tmp_path, {"rating": 3}, check.NagiosExitCode.WARNING, hardenings=["basicAuthDisabled"]
+    )
+
+    assert (message, code) == ("WARNING: original", check.NagiosExitCode.WARNING)
+    assert comparison.first_run
+    assert lines[0].startswith("Baseline: ")
+    stored = load_baseline(str(tmp_path / "baseline.json"))
+    assert stored.compare("opencloud.example.com", snapshot_of(
+        {"rating": 3}, missing_hardenings=["basicAuthDisabled"]
+    )).first_run is False
+
+
+def test_warn_on_new_suppresses_an_unchanged_problem(tmp_path):
+    """A problem someone already knows about must not page anyone a second time."""
+    _apply(tmp_path, {"rating": 3}, check.NagiosExitCode.WARNING, hardenings=["basicAuthDisabled"])
+    message, code, lines, comparison = _apply(
+        tmp_path, {"rating": 3}, check.NagiosExitCode.WARNING, hardenings=["basicAuthDisabled"]
+    )
+
+    assert not comparison.regressed
+    assert code is check.NagiosExitCode.OK
+    assert message == "OK: nothing new since the last run (WARNING state unchanged)."
+    assert "Suppressed by --warn-on-new: this run would otherwise be WARNING (WARNING: original)" in lines
+
+
+def test_warn_on_new_keeps_alerting_on_a_new_finding(tmp_path):
+    """Anything new since the last run keeps its original state."""
+    _apply(tmp_path, {"rating": 3}, check.NagiosExitCode.WARNING, hardenings=["basicAuthDisabled"])
+    message, code, _, comparison = _apply(
+        tmp_path, {"rating": 3}, check.NagiosExitCode.WARNING,
+        hardenings=["basicAuthDisabled", "cspWithoutUnsafeInline"],
+    )
+
+    assert comparison.regressed
+    assert (message, code) == ("WARNING: original", check.NagiosExitCode.WARNING)
+
+
+def test_warn_on_new_keeps_alerting_on_a_worse_rating(tmp_path):
+    """A falling grade is a regression even with the same findings."""
+    _apply(tmp_path, {"rating": 3}, check.NagiosExitCode.WARNING)
+    _, code, _, comparison = _apply(tmp_path, {"rating": 2}, check.NagiosExitCode.WARNING)
+
+    assert comparison.regressed
+    assert code is check.NagiosExitCode.WARNING
+
+
+def test_without_warn_on_new_an_unchanged_problem_still_alerts(tmp_path):
+    """The baseline alone only reports; suppressing is opt-in."""
+    _apply(tmp_path, {"rating": 3}, check.NagiosExitCode.WARNING, warn_on_new=False)
+    message, code, lines, _ = _apply(
+        tmp_path, {"rating": 3}, check.NagiosExitCode.WARNING, warn_on_new=False
+    )
+
+    assert (message, code) == ("WARNING: original", check.NagiosExitCode.WARNING)
+    assert not any(line.startswith("Suppressed") for line in lines)
+
+
+def test_an_ok_run_is_left_alone_by_warn_on_new(tmp_path):
+    """There is nothing to suppress in an OK run, so its message stays."""
+    _apply(tmp_path, {"rating": 5}, check.NagiosExitCode.OK)
+    message, code, lines, _ = _apply(tmp_path, {"rating": 5}, check.NagiosExitCode.OK)
+
+    assert (message, code) == ("OK: original", check.NagiosExitCode.OK)
+    assert not any(line.startswith("Suppressed") for line in lines)
+
+
+def test_a_baseline_that_cannot_be_written_does_not_change_the_verdict(tmp_path):
+    """Bookkeeping failing is reported, never turned into a different state."""
+    (tmp_path / "baseline.json").mkdir()
+    message, code, lines, _ = _apply(tmp_path, {"rating": 3}, check.NagiosExitCode.WARNING)
+
+    assert (message, code) == ("WARNING: original", check.NagiosExitCode.WARNING)
+    assert any(line.startswith("Baseline could not be written: ") for line in lines)

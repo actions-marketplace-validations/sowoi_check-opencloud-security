@@ -154,3 +154,38 @@ def test_aggregate_exit_code_prefers_real_problems():
         is NagiosExitCode.UNKNOWN
     )
     assert plugin._aggregate_exit_code([NagiosExitCode.OK]) is NagiosExitCode.OK
+
+
+def test_end_of_life_names_the_release_line_and_the_upgrade():
+    """The operator reads which line is dead and where to go, not just that it is."""
+    lifecycle = {"releaseType": "rolling", "line": "2.x", "upgradeTo": "3.0.0"}
+    message, _ = plugin._evaluate_rating(make_context(), {"EOL": True, "lifecycle": lifecycle}, 5, 0)
+
+    assert message == (
+        "CRITICAL: The 2.x rolling release line is end-of-life and has no security fixes. "
+        "Upgrade to 3.0.0."
+    )
+
+
+def test_end_of_life_without_lifecycle_details_stays_generic():
+    """No line and no target must not leave placeholders or a dangling hint."""
+    message, _ = evaluate(5, eol=True)
+
+    assert message == "CRITICAL: This server version is end-of-life and has no security fixes."
+
+
+def test_threshold_messages_name_the_threshold_grade():
+    """'at or below the threshold' is only useful with the threshold in it."""
+    critical, _ = evaluate(2, critical_rating=2)
+    warning, _ = evaluate(3, warning_rating=4)
+
+    assert critical == "CRITICAL: Rating D is at or below the critical threshold D."
+    assert warning == (
+        "WARNING: Rating C is at or below the warning threshold A, but no known vulnerabilities."
+    )
+
+
+def test_ok_and_unknown_messages_are_exact():
+    """The first word of the alert line is what monitoring systems parse."""
+    assert evaluate(4)[0] == "OK: Update available, but no known vulnerabilities."
+    assert evaluate(-1)[0] == "UNKNOWN: Scan result unclear. Please verify manually."

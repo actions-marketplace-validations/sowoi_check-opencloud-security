@@ -12,6 +12,15 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+### Fixed
+
+- The browser tests for the below-the-fold reveal no longer time out in
+  Firefox on CI. They ran the longest page with the blurred fade switched
+  on, which starved headless Firefox until even the next page load timed
+  out; they now use reduced motion like every other browser test, which
+  still exercises the same hiding and revealing, and the motion itself
+  stays covered on the landing page.
+
 ## [1.25.2] - 2026-09-18
 
 ### Added
