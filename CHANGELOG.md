@@ -47,6 +47,12 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   below which Safari zooms into a focused field. New phone tests
   (`tests/test_webapp_browser_mobile.py`) drive the menu, a scan, target
   sizes and field sizes by touch on a 390-pixel screen.
+- The operator's area and the API documentation pages now have browser
+  tests (`tests/test_webapp_browser_operator.py`): the admin pages run clean
+  under their CSP, `admin.js` fills every tile from `/admin/state`, a
+  request without the outpost's headers gets the ordinary 404, and Swagger
+  UI and ReDoc render from the vendored bundles with nothing fetched from
+  outside.
 
 ## [1.25.1] - 2026-09-18
 

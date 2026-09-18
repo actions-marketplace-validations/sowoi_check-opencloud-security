@@ -183,6 +183,7 @@ engine; Chromium is refused (ADR 0061).
 | [`test_webapp_browser_e2e.py`](test_webapp_browser_e2e.py) | A visitor's journeys: form to report for three instances, the waiting page's hand-over, severity filters, every export, waivers, no JavaScript, keyboard only, a German report, an unknown uuid. |
 | [`test_webapp_browser_enhancements.py`](test_webapp_browser_enhancements.py) | The script enhancements no other browser test drives: remembered form settings, the configuration-fragment picker, share buttons, the rescan countdown and the expiry warning. |
 | [`test_webapp_browser_mobile.py`](test_webapp_browser_mobile.py) | On a 390-pixel touch screen: a tapped menu link navigates, a scan runs by touch, an open menu closes when the screen turns wide, menu targets are big enough to tap, no field makes iOS zoom, and without JavaScript every menu link stays on screen. |
+| [`test_webapp_browser_operator.py`](test_webapp_browser_operator.py) | The pages a deployment turns on: every admin page runs clean under its CSP, the poll fills every tile, a stranger gets the ordinary 404, the actions stay plain forms without JavaScript, and Swagger UI and ReDoc render from the vendored bundles. |
 
 ### Self-refreshing data
 
