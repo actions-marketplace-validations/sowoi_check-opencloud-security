@@ -397,13 +397,16 @@ def test_an_ok_run_is_left_alone_by_warn_on_new(tmp_path):
     assert not any(line.startswith("Suppressed") for line in lines)
 
 
-def test_a_baseline_that_cannot_be_written_does_not_change_the_verdict(tmp_path):
+def test_a_baseline_that_cannot_be_written_does_not_change_the_verdict(tmp_path, caplog):
     """Bookkeeping failing is reported, never turned into a different state."""
     (tmp_path / "baseline.json").mkdir()
-    message, code, lines, _ = _apply(tmp_path, {"rating": 3}, check.NagiosExitCode.WARNING)
+    with caplog.at_level("DEBUG", logger=check.LOGGER.name):
+        message, code, lines, _ = _apply(tmp_path, {"rating": 3}, check.NagiosExitCode.WARNING)
 
     assert (message, code) == ("WARNING: original", check.NagiosExitCode.WARNING)
     assert any(line.startswith("Baseline could not be written: ") for line in lines)
+    written = [r for r in caplog.records if r.getMessage().startswith("Baseline not written: ")]
+    assert written and written[0].args and str(written[0].args[0]) in lines[-1]
 
 
 def test_a_waived_measure_is_not_recorded_in_the_baseline(tmp_path):

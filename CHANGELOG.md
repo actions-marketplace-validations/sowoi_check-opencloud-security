@@ -42,6 +42,13 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   are, leaving waived measures out of the baseline, and a baseline that
   cannot be written. The rating messages (end of life, thresholds, OK and
   UNKNOWN) are pinned exactly. A mutation-testing trial run found both gaps.
+- `check_vulnerabilities` is now tested as a whole, in-process: a scan with
+  known vulnerabilities and a good rating, the exact hardening and update
+  alert lines, what the baseline records with and without
+  `--check-hardening`, perfdata, the self-update note, extra-check
+  truncation and the payload behind `--format` and the webhook. A
+  `/mutation-test` run of the rating, baseline and check functions now
+  leaves only 3 equivalent mutants alive (was 108).
 - The browser tests for the below-the-fold reveal no longer time out in
   Firefox on CI. They ran the longest page with the blurred fade switched
   on, which starved headless Firefox until even the next page load timed

@@ -197,3 +197,16 @@ def test_end_of_life_without_a_release_type_names_only_the_line():
     message, _ = plugin._evaluate_rating(make_context(), {"EOL": True, "lifecycle": lifecycle}, 5, 0)
 
     assert message == "CRITICAL: The 2.x release line is end-of-life and has no security fixes."
+
+
+def test_a_threshold_outside_the_scale_is_named_as_unknown():
+    """A caller that bypasses the argument checks gets '?', never 'None'."""
+    critical, _ = plugin._evaluate_rating(make_context(critical_rating=6), {}, 5, 0)
+    warning, _ = plugin._evaluate_rating(
+        make_context(critical_rating=-1, warning_rating=6), {}, 5, 0
+    )
+
+    assert critical == "CRITICAL: Rating A+ is at or below the critical threshold ?."
+    assert warning == (
+        "WARNING: Rating A+ is at or below the warning threshold ?, but no known vulnerabilities."
+    )
