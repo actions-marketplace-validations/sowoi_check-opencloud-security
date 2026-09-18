@@ -1348,14 +1348,20 @@ def _worse_severity(current: str, candidate: str) -> str:
 def _host_and_port(host: str, settings: ScannerSettings) -> tuple[str, int, str]:
     """Split the host, optional port and installation base path."""
     candidate = host.strip().rstrip("/")
-    parsed = urlsplit(
-        candidate if "://" in candidate else f"//{candidate}",
-        scheme=settings.scheme,
-    )
+    # An unclosed IPv6 bracket or a port outside 0-65535 makes urlsplit and
+    # .port raise ValueError; a caller of scan() is promised ScanError for
+    # an address that cannot be scanned, whatever is wrong with it.
+    try:
+        parsed = urlsplit(
+            candidate if "://" in candidate else f"//{candidate}",
+            scheme=settings.scheme,
+        )
+        port = settings.port or parsed.port
+    except ValueError as exc:
+        raise ScanError(f"{host!r} is not a valid address: {exc}") from exc
     hostname = parsed.hostname or ""
     if ":" in hostname:
         hostname = f"[{hostname}]"
-    port = settings.port or parsed.port
     base_path = parsed.path.rstrip("/")
 
     if port is None:

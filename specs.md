@@ -318,8 +318,9 @@ line MAY belong to several tracks.
   reintroduced.
 - **C-8** Adding one setting MUST touch all of: `factory.py`, the plugin flag,
   the `cli.py` subcommand, the `wizard.py` question, the README option table,
-  `config/check-opencloud-security.example.yml`, and entries in `CHANGELOG.md`
-  and `RELEASE.md` under the version in `pyproject.toml`.
+  `config/check-opencloud-security.example.yml`, and an entry under
+  `## [Unreleased]` in `CHANGELOG.md`. `RELEASE.md` MUST NOT be edited by
+  hand; the release workflow writes it (ADR 0048).
 
 
 ## 12. Conduct of a scan (`P`)
@@ -397,6 +398,9 @@ What the scanner is allowed to do to somebody else's machine.
 - **X-18** `webapp/` and `frontend/` MUST NOT ship to PyPI. They ship as
   `check_opencloud_security_web.tar.gz`.
 - **X-19** Erasure on request MUST be honoured (ADR 0007).
+- **X-20** A page read without JavaScript MUST work with plain forms and
+  links alone, and MUST NOT show a control that only a script can make work.
+  Such a control MUST stay hidden until the script reveals it.
 
 
 ## 14. Prohibitions (`N`)

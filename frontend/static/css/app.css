@@ -1605,6 +1605,9 @@ input[type="text"]:focus, select:focus {
         background .18s var(--ease), border-color .18s var(--ease), color .18s var(--ease);
 }
 .btn svg { width: 18px; height: 18px; }
+/* `display: inline-flex` above outranks the user-agent `[hidden]` rule, which
+   showed the script-only copy buttons to readers who could never use them. */
+.btn[hidden] { display: none; }
 /*
  * The primary action is the only gradient on the page: iris through violet,
  * with the nebula's magenta arriving past the button's own right edge, so
@@ -1707,6 +1710,11 @@ details.waivers[open] > summary::after { transform: rotate(-135deg); }
     box-shadow: inset 0 1px 3px rgba(13, 15, 23, .05);
     transition: border-color .18s var(--ease), box-shadow .18s var(--ease),
         background .18s var(--ease);
+}
+/* iOS Safari zooms into a focused field set below 16px and leaves the page
+   zoomed, so on a phone the search takes the full size. */
+@media (max-width: 640px) {
+    .waiver-search input[type="search"] { font-size: 1rem; }
 }
 .waiver-search input[type="search"]:hover { border-color: var(--brand); }
 .waiver-search input[type="search"]:focus {
@@ -2546,6 +2554,9 @@ pre.json {
     display: flex; flex-wrap: wrap; gap: .4rem;
     margin: 1rem 0 .2rem;
 }
+/* Rendered `hidden` for readers without scripting; `display: flex` above
+   would otherwise show them four buttons that do nothing. */
+.flavour-picker[hidden] { display: none; }
 .flavour {
     font: inherit; font-size: .82rem; font-weight: 600;
     padding: .4rem .8rem; cursor: pointer;

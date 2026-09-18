@@ -45,6 +45,7 @@ is needed.
 | File | Purpose |
 |---|---|
 | [`test_local_scanner.py`](test_local_scanner.py) | The whole scan pipeline against the fake instance: status, capabilities, headers, exposed paths, protected endpoints, extra checks. |
+| [`test_scanner_robustness.py`](test_scanner_robustness.py) | The scanner against a target that answers badly: malformed, empty, binary or failing status answers, an oversized body, capabilities of the wrong shape, a server that never answers, a redirect loop and addresses that cannot be parsed all end in a `ScanError`, never another exception or a hang. |
 | [`test_concurrency.py`](test_concurrency.py) | Concurrency only affects speed. Any worker count gives the same result, and one worker stays single-threaded. |
 | [`test_ssrf_pinning.py`](test_ssrf_pinning.py) | Connections stay pinned to the address that passed validation. |
 | [`test_address_parity.py`](test_address_parity.py) | Every address a name resolves to is scanned, so a pool node that missed a rollout is not hidden behind a healthy one. |
@@ -114,6 +115,7 @@ is needed.
 | [`test_webapp_rescan.py`](test_webapp_rescan.py) | Rescans go through the normal submission path, and reading the cooldown does not use it up. |
 | [`test_webapp_probe_guard.py`](test_webapp_probe_guard.py) | A client whose scans keep finding no OpenCloud, the same host included, is blocked for an hour; one finding OpenCloud never is. |
 | [`test_webapp_abuse_guards.py`](test_webapp_abuse_guards.py) | Networks instead of addresses, escalating blocks, refused targets as strikes, the daily cap, misleading DNS names and approval mode. |
+| [`test_webapp_security_headers.py`](test_webapp_security_headers.py) | The security headers on every kind of response - errors, JSON, exports, the badge, static files, redirects, the operator's area; nothing tied to a uuid is cacheable; the docs' relaxed policy covers exactly `/docs` and `/redoc`. |
 | [`test_webapp_blocked_targets.py`](test_webapp_blocked_targets.py) | Operator-excluded addresses stay blocked at submission, in the worker and on redirect. |
 | [`test_webapp_client_identity.py`](test_webapp_client_identity.py) | Behind a proxy, the address a request is counted as cannot be chosen by the client. |
 | [`test_webapp_request_provenance.py`](test_webapp_request_provenance.py) | Where a request really comes from (`X-Forwarded-For`), and whether it was meant (cross-site checks). |
@@ -179,8 +181,11 @@ engine; Chromium is refused (ADR 0061).
 
 | File | Purpose |
 |---|---|
-| [`test_webapp_browser_ux.py`](test_webapp_browser_ux.py) | Every public page runs clean under its CSP, fits a phone, and hides what is marked hidden; navigation, theme, language, validation, waiver search, site search and back-to-top behave. |
+| [`test_webapp_browser_ux.py`](test_webapp_browser_ux.py) | Every public page runs clean under its CSP, fits a phone, and hides what is marked hidden; navigation, theme, language, validation, waiver search, site search and back-to-top behave; below-the-fold blocks reveal on scroll and after a jump, and hide nothing without JavaScript; an unknown address gets the 404 page. |
 | [`test_webapp_browser_e2e.py`](test_webapp_browser_e2e.py) | A visitor's journeys: form to report for three instances, the waiting page's hand-over, severity filters, every export, waivers, no JavaScript, keyboard only, a German report, an unknown uuid. |
+| [`test_webapp_browser_enhancements.py`](test_webapp_browser_enhancements.py) | The script enhancements no other browser test drives: remembered form settings, the configuration-fragment picker, share buttons, the rescan countdown and the expiry warning. |
+| [`test_webapp_browser_mobile.py`](test_webapp_browser_mobile.py) | On a 390-pixel touch screen: a tapped menu link navigates, a scan runs by touch, an open menu closes when the screen turns wide, menu targets are big enough to tap, no field makes iOS zoom, and without JavaScript every menu link stays on screen. |
+| [`test_webapp_browser_operator.py`](test_webapp_browser_operator.py) | The pages a deployment turns on: every admin page runs clean under its CSP, the poll fills every tile, a stranger gets the ordinary 404, the actions stay plain forms without JavaScript, and Swagger UI and ReDoc render from the vendored bundles. |
 
 ### Self-refreshing data
 
@@ -200,6 +205,7 @@ engine; Chromium is refused (ADR 0061).
 | [`test_contrib_assets.py`](test_contrib_assets.py) | The Grafana dashboard, Prometheus rules and Checkmk check match the exporter. |
 | [`test_helm_chart.py`](test_helm_chart.py) | The Helm chart renders, and its flags are the plugin's own. |
 | [`test_docker_wizard.py`](test_docker_wizard.py) | `docker/setup-wizard.py` writes a valid compose file, keeps credentials in `.env` only, and never overwrites an existing deployment. |
+| [`test_docker_wizard_hardening.py`](test_docker_wizard_hardening.py) | The setup wizard on unexpected ground: a symbolic link where the compose file or `.env` belongs, an edited answers file, an unreadable `.env`, input that ends or is interrupted, answers the prompt turns away, and credentials never shown at their prompt. |
 | [`test_wizard_release.py`](test_wizard_release.py) | The Docker wizard attached to a release reports its version and ships with a checksum. |
 
 ## Repository, CI and release process

@@ -12,6 +12,7 @@ leaks a token into something an operator commits.
 from __future__ import annotations
 
 import importlib.util
+import io
 import json
 import os
 import stat
@@ -2819,6 +2820,135 @@ def test_a_section_heading_shows_how_far_through_the_walk_it_is(
     assert wizard_module.progress_bar(6, 12, width=10).startswith("█" * 5 + "░" * 5)
 
 
+# --- motion -----------------------------------------------------------------
+class _Screen(io.StringIO):
+    """A stream that admits to being a terminal, so the effects run."""
+
+    def isatty(self) -> bool:
+        return True
+
+
+def test_an_unpainted_run_writes_no_frame_and_no_carriage_return(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The effects are decoration; the text a pipe reads is the text it always was."""
+    plain = wizard_module.Style(enabled=False)
+    screen = _Screen()
+
+    wizard_module.sweep_rule("Images", plain, stream=screen)
+    throbber = wizard_module.Throbber("Waiting ", plain, stream=screen)
+    for _ in range(5):
+        throbber.tick()
+    throbber.finish(True, "The service is up.")
+
+    written = screen.getvalue()
+    assert "\033" not in written
+    assert "\r" not in written
+    # The rule settles into exactly the line that would have been printed.
+    assert written.splitlines()[0] == wizard_module.rule("Images", plain)
+    # Five ticks drew nothing: the verdict is the only line the wait leaves.
+    assert written.splitlines()[1:] == ["  ✔ The service is up."]
+
+
+def test_a_section_rule_settles_into_the_rule_it_would_have_printed() -> None:
+    """A heading that moves is where the eye lands; it must still be the same heading."""
+    painted = wizard_module.Style(enabled=True)
+    screen = _Screen()
+
+    wizard_module.sweep_rule("Reachability", painted, stream=screen)
+
+    written = screen.getvalue()
+    assert written.count("\r") > 1, "the sweep is drawn over itself, not down the page"
+    assert written.endswith("\n") and written.count("\n") == 1
+    # Whatever the sweep did, the line left behind is the ordinary rule.
+    assert written.rsplit("\r", 1)[-1] == wizard_module.rule("Reachability", painted) + "\n"
+
+
+def test_the_spinner_turns_into_its_verdict_rather_than_vanishing() -> None:
+    """A spinner that stops leaves nothing to read; the line that spun says how it went."""
+    painted = wizard_module.Style(enabled=True)
+    screen = _Screen()
+
+    throbber = wizard_module.Throbber("Waiting for the stack ", painted, stream=screen)
+    for _ in range(3):
+        throbber.tick()
+    throbber.finish(True, "The service is up.")
+    frames = [frame for frame in screen.getvalue().split("\r") if frame.strip()]
+
+    assert any("⠋" in frame for frame in frames)
+    assert any("⠙" in frame for frame in frames)
+    assert "✔" in frames[-1] and "The service is up." in frames[-1]
+    # The tick replaces the last frame in place instead of printing under it.
+    assert "⠹" not in frames[-1]
+
+    failed = _Screen()
+    beaten = wizard_module.Throbber("Waiting ", painted, stream=failed)
+    beaten.tick()
+    beaten.finish(False, "No answer yet.")
+    assert "✘" in failed.getvalue().split("\r")[-1]
+
+
+def test_the_spinner_is_redrawn_between_polls_not_once_per_poll(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A three second gap between frames reads as a hung spinner, not a working one."""
+    ticks: list[int] = []
+    clock = iter([0.0] + [step * 0.05 for step in range(400)])
+    monkeypatch.setattr(wizard_module.time, "monotonic", lambda: next(clock))
+    monkeypatch.setattr(wizard_module.time, "sleep", lambda seconds: None)
+
+    def refuse(url: str, timeout: float = 0) -> Any:
+        raise OSError("not up yet")
+
+    monkeypatch.setattr(wizard_module.urllib.request, "urlopen", refuse)
+
+    assert not wizard_module._wait_until_healthy(
+        "http://127.0.0.1:8080/healthz", timeout=6, interval=3, on_wait=lambda: ticks.append(1)
+    )
+    assert len(ticks) > 6, "the wait is redrawn many times inside one poll interval"
+
+
+def test_the_summary_is_carded_on_a_terminal_and_listed_everywhere_else() -> None:
+    """The plain list is what a pipe and every test reads; the card is for the eye."""
+    setup = wizard_module.Setup()
+    wizard_module._generate_unattended(setup)
+    wizard_module._finalise(setup)
+    painted = wizard_module.Style(enabled=True)
+
+    cards = wizard_module.summary_cards(setup, painted, width=100)
+
+    assert cards is not None
+    # Every border and row is the same width, or the box has corners hanging off.
+    assert len({wizard_module._visible(line) for line in cards}) == 1
+    assert any("╭─ Images " in line for line in cards)
+    assert any("[image_source]" in line for line in cards)
+    # A pane too narrow for a row gets the list rather than a broken box.
+    assert wizard_module.summary_cards(setup, painted, width=30) is None
+
+
+def test_a_card_narrows_its_labels_before_it_gives_up_on_the_card() -> None:
+    """Eighty columns is the common terminal, not a reason to never show a card."""
+    setup = wizard_module.Setup()
+    wizard_module._generate_unattended(setup)
+    wizard_module._finalise(setup)
+    painted = wizard_module.Style(enabled=True)
+
+    cards = wizard_module.summary_cards(setup, painted, width=80)
+
+    assert cards is not None
+    assert max(wizard_module._visible(line) for line in cards) <= 80
+
+
+def test_the_line_gauge_reads_the_same_numbers_as_the_bar_it_replaces() -> None:
+    """It is the block bar on one row, not a different measurement."""
+    assert wizard_module.line_gauge(0, 12).endswith("  0%")
+    assert wizard_module.line_gauge(12, 12).endswith("100%")
+    assert wizard_module.line_gauge(6, 12, width=10).startswith("━" * 5 + "╌" * 5)
+    # Out of range on either side is clamped rather than drawn past the track.
+    assert wizard_module.line_gauge(-4, 12).endswith("  0%")
+    assert wizard_module.line_gauge(99, 12).endswith("100%")
+
+
 # --- credentials offered back ------------------------------------------------
 def _question(key: str):
     setup = wizard_module.Setup()
@@ -3222,7 +3352,7 @@ def _start_offer(monkeypatch: pytest.MonkeyPatch, answers: list[str], compose: _
     printed = _typed(monkeypatch, answers)
     monkeypatch.setattr(wizard_module.shutil, "which", lambda name: "/usr/bin/docker")
     monkeypatch.setattr(wizard_module.subprocess, "run", compose)
-    monkeypatch.setattr(wizard_module, "_wait_until_healthy", lambda url: True)
+    monkeypatch.setattr(wizard_module, "_wait_until_healthy", lambda url, **_: True)
     return printed
 
 

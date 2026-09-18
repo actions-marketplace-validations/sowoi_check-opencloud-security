@@ -351,3 +351,80 @@ def test_form_controls_are_labelled_and_images_described(page, site):
         "() => [...document.images].filter(img => !img.hasAttribute('alt')).map(img => img.src)"
     )
     assert undescribed == []
+
+
+def _unrevealed(page) -> list[str]:
+    """The marked blocks the reveal has not yet let through."""
+    return page.evaluate(
+        """() => [...document.querySelectorAll('[data-reveal]')]
+            .filter(el => el.getAttribute('data-revealed') !== 'true')
+            .map(el => el.tagName.toLowerCase() + (el.className ? '.' + el.className : ''))"""
+    )
+
+
+def test_blocks_below_the_fold_arrive_as_the_reader_scrolls(browser, site):
+    """The reveal hides only what is still ahead, and lets each block through once it is reached."""
+    watch = PageWatch()
+    moving = new_page(browser, watch, reduced_motion="no-preference")
+    try:
+        moving.goto(site.base + "/documentation")
+        moving.wait_for_function("() => document.documentElement.getAttribute('data-reveal-root') === 'on'")
+        assert _unrevealed(moving), "a long page should keep something below the fold for later"
+        height = moving.evaluate("() => document.body.scrollHeight")
+        for y in range(0, height, 400):
+            moving.evaluate(f"() => window.scrollTo(0, {y})")
+            moving.wait_for_timeout(30)
+        moving.evaluate("() => window.scrollTo(0, document.body.scrollHeight)")
+        moving.wait_for_function(
+            "() => [...document.querySelectorAll('[data-reveal]')]"
+            ".every(el => el.getAttribute('data-revealed') === 'true')"
+        )
+        watch.assert_clean()
+    finally:
+        moving.context.close()
+
+
+def test_a_jump_to_the_end_leaves_nothing_hidden_behind_it(browser, site):
+    """A block carried past the viewport in one jump is swept up instead of staying transparent."""
+    watch = PageWatch()
+    moving = new_page(browser, watch, reduced_motion="no-preference")
+    try:
+        moving.goto(site.base + "/documentation")
+        moving.wait_for_function("() => document.documentElement.getAttribute('data-reveal-root') === 'on'")
+        moving.evaluate("() => window.scrollTo({top: document.body.scrollHeight, behavior: 'instant'})")
+        passed = moving.evaluate(
+            "() => [...document.querySelectorAll('[data-reveal]')].filter(el => el.getBoundingClientRect().bottom < 0).length"
+        )
+        assert passed > 0, "the jump should carry some block past the viewport"
+        moving.wait_for_function(
+            """() => [...document.querySelectorAll('[data-reveal]')]
+                .filter(el => el.getBoundingClientRect().bottom < 0)
+                .every(el => el.getAttribute('data-revealed') === 'true')"""
+        )
+        watch.assert_clean()
+    finally:
+        moving.context.close()
+
+
+def test_without_scripting_no_block_waits_to_be_revealed(browser, site):
+    """The stylesheet hides nothing on its own: a page read without JavaScript shows every block."""
+    plain = new_page(browser, PageWatch(), java_script_enabled=False)
+    try:
+        plain.goto(site.base + "/documentation")
+        assert plain.evaluate("() => document.documentElement.hasAttribute('data-reveal-root')") is False
+        transparent = plain.evaluate(
+            """() => [...document.querySelectorAll('[data-reveal]')]
+                .filter(el => getComputedStyle(el).opacity !== '1').length"""
+        )
+        assert transparent == 0
+    finally:
+        plain.context.close()
+
+
+def test_an_unknown_address_is_a_404_page_with_a_way_home(page, site, watch):
+    """A mistyped path gets the site's own 404 page, clean under the CSP, with a link back to the start."""
+    response = page.goto(site.base + "/no-such-page-here")
+    assert response is not None and response.status == 404
+    assert page.locator("h1").count() == 1
+    assert page.locator("main a[href='/']").count() >= 1
+    watch.assert_clean()
