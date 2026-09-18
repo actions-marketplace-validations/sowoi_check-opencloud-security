@@ -14,6 +14,13 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ### Fixed
 
+- The end-of-life alert no longer shows a double space ("The 2.x  release
+  line") when the scan result names a release line but no release type.
+- `--baseline` and `--warn-on-new` are now tested in-process: suppressing an
+  unchanged problem, keeping new findings, worse ratings and OK runs as they
+  are, leaving waived measures out of the baseline, and a baseline that
+  cannot be written. The rating messages (end of life, thresholds, OK and
+  UNKNOWN) are pinned exactly. A mutation-testing trial run found both gaps.
 - The browser tests for the below-the-fold reveal no longer time out in
   Firefox on CI. They ran the longest page with the blurred fade switched
   on, which starved headless Firefox until even the next page load timed

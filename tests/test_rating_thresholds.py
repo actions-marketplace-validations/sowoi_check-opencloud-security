@@ -189,3 +189,11 @@ def test_ok_and_unknown_messages_are_exact():
     """The first word of the alert line is what monitoring systems parse."""
     assert evaluate(4)[0] == "OK: Update available, but no known vulnerabilities."
     assert evaluate(-1)[0] == "UNKNOWN: Scan result unclear. Please verify manually."
+
+
+def test_end_of_life_without_a_release_type_names_only_the_line():
+    """A missing track must not leave a placeholder in the sentence."""
+    lifecycle = {"line": "2.x"}
+    message, _ = plugin._evaluate_rating(make_context(), {"EOL": True, "lifecycle": lifecycle}, 5, 0)
+
+    assert message == "CRITICAL: The 2.x release line is end-of-life and has no security fixes."

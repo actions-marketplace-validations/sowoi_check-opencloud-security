@@ -1432,7 +1432,8 @@ def _evaluate_rating(
         track = str(lifecycle.get("releaseType") or "")
         target = str(lifecycle.get("upgradeTo") or "")
         line = str(lifecycle.get("line") or "")
-        described = f"The {line} {track} release line".strip() if line else "This server version"
+        named = " ".join(part for part in (line, track) if part)
+        described = f"The {named} release line" if line else "This server version"
         upgrade = f" Upgrade to {target}." if target else ""
         return (
             f"CRITICAL: {described} is end-of-life and has no security fixes.{upgrade}",

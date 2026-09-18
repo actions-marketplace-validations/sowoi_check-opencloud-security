@@ -311,7 +311,7 @@ def test_the_baseline_is_written_atomically_and_privately(tmp_path):
     assert path.stat().st_mode & 0o777 == 0o600
 
 
-def _apply(tmp_path, response, exit_code, *, warn_on_new=True, hardenings=()):
+def _apply(tmp_path, response, exit_code, *, warn_on_new=True, hardenings=(), waived=()):
     """Run the plugin's baseline step against a baseline file in tmp_path."""
     context = check.ScanContext(
         host="opencloud.example.com",
@@ -322,7 +322,7 @@ def _apply(tmp_path, response, exit_code, *, warn_on_new=True, hardenings=()):
         context,
         response,
         hardenings=list(hardenings),
-        waived=[],
+        waived=list(waived),
         message=f"{exit_code.name}: original",
         exit_code=exit_code,
     )
@@ -404,3 +404,15 @@ def test_a_baseline_that_cannot_be_written_does_not_change_the_verdict(tmp_path)
 
     assert (message, code) == ("WARNING: original", check.NagiosExitCode.WARNING)
     assert any(line.startswith("Baseline could not be written: ") for line in lines)
+
+
+def test_a_waived_measure_is_not_recorded_in_the_baseline(tmp_path):
+    """Accepting a measure must also keep it out of what can become 'new'."""
+    _, _, _, comparison = _apply(
+        tmp_path, {"rating": 3}, check.NagiosExitCode.WARNING,
+        hardenings=["basicAuthDisabled", "cspWithoutUnsafeInline"],
+        waived=["cspWithoutUnsafeInline"],
+    )
+
+    assert "hardening:basicAuthDisabled" in comparison.current.findings
+    assert "hardening:cspWithoutUnsafeInline" not in comparison.current.findings
