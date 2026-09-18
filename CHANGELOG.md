@@ -64,6 +64,14 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   still exercises the same hiding and revealing, and the motion itself
   stays covered on the landing page.
 
+### Documentation
+
+- `docker/docker-compose.yml` now shows every web setting it had left out:
+  the operator's area (`COS_WEB_ADMIN_*`), `COS_WEB_AUDIT_LOG_ROTATION` and
+  `COS_WEB_RATE_LIMIT_SALT` as commented examples, and why
+  `COS_WEB_FRONTEND_DIR` stays unset. The example configuration shows
+  `scanner.proxy` and `releases.proxy`, which override the top-level `proxy`.
+
 ### Security
 
 - **Scan targets and redirect hops in deprecated IPv6 site-local space are refused.**

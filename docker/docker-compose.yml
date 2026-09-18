@@ -45,12 +45,19 @@ services:
       - "127.0.0.1:8811:8811"
     environment:
       COS_WEB_REDIS_URL: "redis://:${COS_REDIS_PASSWORD:-}@redis:6379/0"
+      # COS_WEB_FRONTEND_DIR is not set: the image ships the templates and
+      # static assets next to webapp/, where the default looks.
       # How long a result stays readable. Also the lifetime of every key.
       COS_WEB_RESULT_TTL: "3600"
       # Rate limits: per client address, and per target instance.
       COS_WEB_IP_RATE_LIMIT: "10"
       COS_WEB_IP_RATE_WINDOW: "60"
       COS_WEB_TARGET_COOLDOWN: "300"
+      # Salt for the rate-limit and cooldown keys. Unset, each process draws
+      # its own at startup, which is fine for this single web container; run
+      # more than one and every one needs the same value, or a client gets
+      # one allowance per process.
+      # COS_WEB_RATE_LIMIT_SALT: "${COS_WEB_RATE_LIMIT_SALT:-}"
       # Scans from one client address that may find no OpenCloud - nothing
       # answering, something else answering - inside the window before that
       # address is blocked, and for how long. The same host again counts again.
@@ -182,6 +189,16 @@ services:
       # Scopes a token must carry, separated by ';'. Empty means any valid
       # token from the named issuer is enough.
       COS_WEB_MCP_AUTH_SCOPES: "${COS_WEB_MCP_AUTH_SCOPES:-}"
+      # The operator's area at /admin. Off, its routes are not registered and
+      # the path 404s. On, it trusts the identity headers only from an
+      # authentik outpost that adds the proxy secret (32+ characters), and
+      # only for the users listed (';'-separated) - an empty list refuses to
+      # start. `docker-compose.authentik.yml` is the stack that puts the
+      # outpost in front; see docs/authentik.md.
+      # COS_WEB_ADMIN_ENABLED: "true"
+      # COS_WEB_ADMIN_PROXY_SECRET: "${COS_WEB_ADMIN_PROXY_SECRET:-}"
+      # COS_WEB_ADMIN_USERS: "alice;bob"
+      # COS_WEB_ADMIN_SIGN_OUT_URL: "/outpost.goauthentik.io/sign_out"
       # An audit record for every scan request, rejection and triggered limit,
       # on the check_opencloud.web.audit logger as one JSON object per line.
       # Off by default: the ordinary log carries lifecycle markers and uuids
@@ -209,6 +226,9 @@ services:
       # COS_WEB_AUDIT_LOG_FILE: "/var/log/opencloud-scan/audit.log"
       # COS_WEB_AUDIT_LOG_MAX_BYTES: "10000000"
       # COS_WEB_AUDIT_LOG_BACKUPS: "5"
+      # "external" leaves rotation to logrotate on the host; this process then
+      # only reopens the file once it has been replaced.
+      # COS_WEB_AUDIT_LOG_ROTATION: "service"
       # Erasure on request: DELETE /api/purge answers 404 until a secret is
       # set here, because the call deletes results belonging to whoever is
       # currently reading them. The signing key makes the proof of deletion

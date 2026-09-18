@@ -59,6 +59,7 @@ update_warning: false            # pending OpenCloud update -> WARNING
 # very same scanner into a long-running HTTP service.
 scanner:
   timeout: 10
+  # proxy: http://proxy.example.com:3128   # overrides the top-level proxy for the scan
   # OpenCloud terminates TLS itself and 'opencloud init' creates a self-signed
   # certificate. Leave this at true for a properly certified instance - the
   # scanner then reports an untrusted certificate as a finding instead of
@@ -158,6 +159,7 @@ releases:
   # latest_version: "7.2.0"      # used when mode is 'pinned'
   timeout: 10
   verify_tls: true
+  # proxy: http://proxy.example.com:3128   # overrides the top-level proxy for the feed
 
 # --- notifications -----------------------------------------------------------
 webhook:
