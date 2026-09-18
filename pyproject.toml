@@ -113,6 +113,9 @@ test = [
     "jinja2>=3.1.6",
     "python-multipart>=0.0.32",
     "httpx2>=2.10.0",
+    # tests/browser_support.py serves the app with it directly; without this
+    # line it only arrived as a dependency of `mcp`.
+    "uvicorn>=0.52.4",
     "build>=1.5.0",
     "hatchling>=1.32.0",
     "cryptography>=50.0.0",

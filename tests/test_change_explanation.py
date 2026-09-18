@@ -306,3 +306,31 @@ def test_two_identical_documents_explain_nothing():
     explanation = explain(_document(), _document())
 
     assert explanation.changes == ()
+
+
+def test_a_hand_edited_report_is_explained_rather_than_crashing_the_diff():
+    """
+    `check-opencloud-scanner diff` reads any two files it is given.
+
+    A block of the wrong shape is read as missing, as a report that predates
+    the block already is, instead of ending the comparison in a traceback.
+    """
+    broken = _document(
+        provenance=_provenance(
+            advisoryData="aaa",
+            scheduleData=["bbb"],
+            waivers={"active": [{"pattern": "debugPort:*"}], "expired": "x"},
+        ),
+        coverage={"schema": 1, "counts": {"passed": "sixty", "failed": None}, "checks": []},
+    )
+
+    codes = _codes(_document(), broken)
+
+    assert {"advisoryDataChanged", "scheduleDataChanged", "coverageChanged"} <= codes
+    assert not codes & {"waiversAdded", "waiversExpired"}
+
+
+def test_a_waivers_block_that_is_a_list_names_no_waiver_change():
+    before = _document(provenance=_provenance(waivers=["debugPort:*"]))
+
+    assert not _codes(before, _document()) & {"waiversAdded", "waiversRemoved"}
