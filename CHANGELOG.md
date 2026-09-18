@@ -12,6 +12,16 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+### Added
+
+- Manual mutation testing for contributors: the `/mutation-test` skill runs
+  mutmut through the read-only `mutation-tester` agent on chosen plugin or
+  scanner functions and sorts every surviving mutant into a real test gap,
+  unreachable code or noise. mutmut 3.8.0 is a new dependency in its own
+  `mutation` group - never installed by CI or a plain `uv sync`, never run in
+  CI - reviewed in `security/dependencies/mutmut.yml` (proposed, awaiting
+  approval).
+
 ### Fixed
 
 - The end-of-life alert no longer shows a double space ("The 2.x  release

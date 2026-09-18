@@ -1,0 +1,70 @@
+# A dependency record. See security/dependencies/README.md.
+name: mutmut
+import_name: mutmut
+status: proposed
+approved_by: ""
+scopes:
+  - group:mutation
+reviewed_version: "3.8.0"
+justification: |
+  Manual mutation testing of the plugin's judging code, run through the
+  /mutation-test skill and the read-only mutation-tester agent. A trial run on
+  2026-09-18 showed what line coverage cannot: no in-process test reached
+  `_apply_baseline` (the `--warn-on-new` suppression could be inverted
+  without a fast test failing), the rating messages were only partly pinned,
+  and the end-of-life message had a double-space defect. Those gaps are now
+  tested. Tooling only: its own `mutation` dependency group, not installed by
+  CI, a plain `uv sync`, the wheel or any extra, and never run in CI.
+alternatives_considered: |
+  - The standard library and the existing test stack: nothing generates and
+    runs mutants.
+  - cosmic-ray: needs a session database and a separate worker setup; more
+    moving parts for a manual tool.
+  - mutatest: unmaintained (last release 2020).
+  - Writing our own: an AST mutator plus a per-function trampoline and test
+    selection is not a few dozen lines.
+  - `uvx mutmut` without a record: unpinned and unreviewed, and ADR 0060
+    applies to tools as much as to libraries.
+tests:
+  - tests/test_mutation_testing.py
+review:
+  reviewer: "Drafted by an agent (Claude Code), for maintainer review"
+  reviewed_on: "2026-09-18"
+  known_vulnerabilities: |
+    `uvx pip-audit --disable-pip --no-deps -r` over the full resolution of
+    mutmut==3.8.0 for Python 3.10 (22 packages, from `uv pip compile`): no
+    known vulnerabilities.
+  maintenance: |
+    github.com/boxed/mutmut, active: 3.3.1 (2025-07) .. 3.8.0 (2026-09-12),
+    six releases in fourteen months. Long-standing project (since 2016).
+    Not checked: number of maintainers and whether a SECURITY.md exists -
+    worth a look by the approver.
+  provenance: |
+    Wheel and sdist on PyPI. PyPI's integrity API returns no PEP 740
+    attestation for mutmut-3.8.0-py3-none-any.whl (404), so provenance rests
+    on the publisher account. uv.lock pins the version and hashes.
+  install_time: |
+    Pure-Python py3-none-any wheel; nothing runs at install. New transitive
+    packages bring wheels for 3.10-3.14: libcst (Rust extension) and
+    setproctitle (C extension) - see native_code.
+  runtime_network: |
+    Grepped the 3.8.0 wheel for requests, urllib, http, socket and urlopen:
+    none. No telemetry or update check. It runs pytest locally in a copy of
+    the tree under mutants/.
+  native_code: |
+    mutmut itself is pure Python. It calls `subprocess.run` for `git`
+    (__main__.py), an optional type-check command from its own config
+    (type_checking.py, unused here) and the browse UI's editor
+    (ui/browse.py), and forks worker processes to run mutants. No eval/exec
+    of untrusted input, no pickle. libcst ships a compiled Rust parser and
+    setproctitle a C extension, both as wheels.
+  transitive_dependencies: |
+    New to uv.lock: libcst, setproctitle, textual, mdit-py-plugins,
+    linkify-it-py, uc-micro-py, toml. Already locked: click, coverage, rich,
+    markdown-it-py, mdurl, platformdirs, pytest, pyyaml, typing-extensions,
+    packaging. textual is the terminal UI for `mutmut browse` (Textualize,
+    MIT); libcst is Meta's (Instagram) concrete syntax tree library, MIT -
+    a build-time tool here, not an integration, and never shipped.
+  license: |
+    BSD-3-Clause, compatible with this project's GPL-3.0. Transitive packages
+    are MIT, BSD or Apache-2.0.

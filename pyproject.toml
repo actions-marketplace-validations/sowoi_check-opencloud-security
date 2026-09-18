@@ -133,6 +133,30 @@ test = [
     # security/dependencies/playwright.yml; ADR 0061.
     "playwright>=1.63.0",
 ]
+# Manual mutation testing of the plugin's judging code (the /mutation-test
+# skill, the mutation-tester agent). Its own group so neither CI nor a plain
+# `uv sync` installs it; run with `uv run --group mutation`. Reviewed in
+# security/dependencies/mutmut.yml.
+mutation = [
+    "mutmut>=3.8.0",
+]
+
+[tool.mutmut]
+# Manual mutation testing only (/mutation-test, ADR 0060 record mutmut.yml).
+# mutmut mutates a copy in mutants/ (git-ignored) and runs the fast,
+# in-process tests listed here against it; the subprocess and browser tests
+# cannot see a mutant and would only make the run slow.
+paths_to_mutate = ["check_opencloud_security.py", "opencloud_local_scan/"]
+tests_dir = [
+    "tests/test_rating_thresholds.py",
+    "tests/test_baseline.py",
+    "tests/test_waivers.py",
+    "tests/test_waiver_expiry.py",
+    "tests/test_perfdata.py",
+    "tests/test_webhook.py",
+    "tests/test_explain.py",
+]
+also_copy = ["tests", "webapp", "frontend", "docker", "authentik", "docs", "security", "README.md", "CHANGELOG.md"]
 
 [tool.pytest.ini_options]
 pythonpath = "."

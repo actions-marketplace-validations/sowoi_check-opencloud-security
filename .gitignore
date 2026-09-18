@@ -263,3 +263,6 @@ __marimo__/
 
 # Screenshots and snapshots written by the Playwright MCP server (.mcp.json).
 .playwright-mcp/
+
+# mutmut working copy and results (/mutation-test)
+mutants/
