@@ -12,6 +12,23 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+### Added
+
+- The Docker setup wizard moves while it works, in the four places where
+  motion tells the operator something the static page could not. Section
+  headings sweep into view, the step counter is a single-line gauge redrawn
+  in place rather than a new bar per section, the wait for the started stack
+  to answer spins and then morphs into a tick or a cross, and the summary is
+  drawn as one bordered card per group. The look is borrowed from
+  [ratatui](https://ratatui.rs)'s throbber, LineGauge and Block widgets; the
+  wizard still depends on nothing but the standard library.
+
+  All of it is gated on the same check that gates colour - no terminal,
+  `NO_COLOR`, `FORCE_COLOR`, `TERM=dumb` or a captured run prints exactly the
+  plain text it printed before, with no escape and no carriage return. A card
+  narrows its label column to fit an eighty column terminal and falls back to
+  the plain list in a pane too narrow for one.
+
 ### Fixed
 
 - A report page read without JavaScript no longer shows controls that only
