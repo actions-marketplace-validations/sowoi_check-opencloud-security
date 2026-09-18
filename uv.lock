@@ -445,7 +445,7 @@ wheels = [
 
 [[package]]
 name = "check-opencloud-security"
-version = "1.25.0"
+version = "1.25.1"
 source = { editable = "." }
 dependencies = [
     { name = "certifi" },
@@ -497,6 +497,7 @@ test = [
     { name = "pytest-mock" },
     { name = "python-multipart" },
     { name = "redis" },
+    { name = "uvicorn" },
 ]
 
 [package.metadata]
@@ -541,6 +542,7 @@ test = [
     { name = "pytest-mock", specifier = ">=3.15.1" },
     { name = "python-multipart", specifier = ">=0.0.32" },
     { name = "redis", specifier = ">=5.3.1,<6" },
+    { name = "uvicorn", specifier = ">=0.52.4" },
 ]
 
 [[package]]

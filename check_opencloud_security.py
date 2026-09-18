@@ -281,7 +281,7 @@ def _temporary_waivers(values: list[str] | None) -> tuple[Waiver, ...] | None:
     if values is None:
         return None
     try:
-        return parse_waivers(values)
+        return parse_waivers(values, require_deadline=True)
     except WaiverError as error:
         _fail(f"UNKNOWN - {error}")
 
@@ -3421,6 +3421,16 @@ def main() -> None:
         format="%(asctime)s [%(levelname)s] %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
+    try:
+        _run_checks(hosts, args)
+    except ConfigurationError as exc:
+        # Settings are read lazily - a secret reference, a waiver record - so
+        # a mistake can surface on any output path, not only the first one.
+        _fail(f"UNKNOWN: {exc}")
+
+
+def _run_checks(hosts: list[str], args: argparse.Namespace) -> None:
+    """Scan every host in the requested output format."""
     if _CONFIG.source:
         LOGGER.debug("Using configuration file %s", _CONFIG.source)
 
@@ -3440,10 +3450,7 @@ def main() -> None:
         sys.exit(_run_machine_format_checks(hosts, args))
 
     if len(hosts) == 1:
-        try:
-            context = _build_context(hosts[0], args)
-        except ConfigurationError as exc:
-            _fail(f"UNKNOWN: {exc}")
+        context = _build_context(hosts[0], args)
         LOGGER.debug("Starting scan for host: %s", context.host)
 
         check_if_ip_or_host(context.host, context)

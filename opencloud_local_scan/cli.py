@@ -588,19 +588,23 @@ def main(argv: Sequence[str] | None = None) -> int:
         parser.error(str(exc))
         return 2
 
-    scanner_settings = scanner_settings_from_config(
-        config,
-        timeout=getattr(args, "timeout", None),
-        verify_tls=getattr(args, "verify_tls", None),
-        tls_ca_file=getattr(args, "ca_file", None),
-        extra_checks=getattr(args, "extra_checks", None),
-        check_debug_ports=getattr(args, "check_debug_ports", None),
-        check_all_addresses=getattr(args, "check_all_addresses", None),
-        port=getattr(args, "port", None) if args.command == "scan" else None,
-        scheme=getattr(args, "scheme", None),
-        concurrency=getattr(args, "concurrency", None),
-    )
-    release_settings = release_settings_from_config(config)
+    try:
+        scanner_settings = scanner_settings_from_config(
+            config,
+            timeout=getattr(args, "timeout", None),
+            verify_tls=getattr(args, "verify_tls", None),
+            tls_ca_file=getattr(args, "ca_file", None),
+            extra_checks=getattr(args, "extra_checks", None),
+            check_debug_ports=getattr(args, "check_debug_ports", None),
+            check_all_addresses=getattr(args, "check_all_addresses", None),
+            port=getattr(args, "port", None) if args.command == "scan" else None,
+            scheme=getattr(args, "scheme", None),
+            concurrency=getattr(args, "concurrency", None),
+        )
+        release_settings = release_settings_from_config(config)
+    except ConfigurationError as exc:
+        parser.error(str(exc))
+        return 2
     if getattr(args, "no_update_check", False):
         release_settings = release_settings.__class__(
             **{**release_settings.__dict__, "mode": "off"}

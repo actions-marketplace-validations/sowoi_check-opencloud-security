@@ -17,6 +17,8 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
+from opencloud_local_scan.config import ConfigurationError, load_configuration
+from opencloud_local_scan.factory import scanner_settings_from_config
 from opencloud_local_scan.scanner import (
     Finding,
     ScannerSettings,
@@ -30,6 +32,7 @@ from opencloud_local_scan.waivers import (
     parse_waivers,
     resolve,
 )
+from tests.test_e2e_cli import UNKNOWN, run_plugin
 
 DEADLINE = datetime(2026, 12, 31, 0, 0, tzinfo=timezone.utc)
 RECORD = f"debugPort:9205|{DEADLINE.isoformat()}|Firewall change scheduled"
@@ -285,3 +288,82 @@ def test_end_of_life_is_an_f_even_under_an_active_wildcard_waiver():
 
     assert findings[0].ignored is True
     assert explanation.rating == 0
+
+
+# ------------------------------------------------- where records come from
+
+
+def test_a_deadline_input_refuses_a_bare_pattern():
+    """`--waive-until debugPort:*` names no deadline, so it waives nothing."""
+    with pytest.raises(WaiverError, match="no expiry and no reason"):
+        parse_waiver("debugPort:*", require_deadline=True)
+
+    assert parse_waiver(RECORD, require_deadline=True).expires_at == DEADLINE
+
+
+def test_a_semicolon_in_a_reason_cannot_invent_a_permanent_waiver():
+    """
+    The list is split on `;`, so the tail of the reason arrives on its own.
+
+    Read as the bare form, `debugPort:9206 stays open` became a permanent
+    waiver nobody wrote; it has to be a configuration error instead.
+    """
+    config = load_configuration(
+        None,
+        environ={
+            "COS_SCANNER_TEMPORARY_WAIVERS": (
+                f"debugPort:9205|{DEADLINE.isoformat()}|Firewall change; debugPort:9206"
+            )
+        },
+    )
+
+    with pytest.raises(ConfigurationError, match="temporary_waivers"):
+        scanner_settings_from_config(config)
+
+
+def test_two_complete_records_are_still_two_waivers():
+    config = load_configuration(
+        None,
+        environ={
+            "COS_SCANNER_TEMPORARY_WAIVERS": (
+                f"{RECORD};exposed:/metrics|{DEADLINE.isoformat()}|Moving the exporter"
+            )
+        },
+    )
+
+    waivers = scanner_settings_from_config(config).waivers
+
+    assert [waiver.pattern for waiver in waivers] == ["debugPort:9205", "exposed:/metrics"]
+    assert all(waiver.temporary for waiver in waivers)
+
+
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        ("--host", "opencloud.example.com"),
+        ("--host", "opencloud.example.com,b.example.com"),
+        ("--host", "opencloud.example.com", "--format", "json"),
+    ],
+)
+def test_a_malformed_configured_waiver_is_unknown_on_every_output_path(arguments):
+    """
+    A traceback exits 1, which a monitoring system reads as WARNING.
+
+    The single-host path already answered UNKNOWN for a bad configuration;
+    the multi-host and machine-readable paths escaped as a traceback.
+    """
+    result = run_plugin(
+        *arguments,
+        env={"COS_SCANNER_TEMPORARY_WAIVERS": "debugPort:9205|2026-12-31|No timezone"},
+    )
+
+    assert result.returncode == UNKNOWN, result.stderr
+    assert "Traceback" not in result.stderr
+    assert "temporary_waivers" in result.stdout
+
+
+def test_waive_until_with_a_bare_pattern_is_unknown():
+    result = run_plugin("--host", "opencloud.example.com", "--waive-until", "debugPort:*")
+
+    assert result.returncode == UNKNOWN
+    assert "no expiry and no reason" in result.stdout

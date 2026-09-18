@@ -101,6 +101,26 @@ def _rating(document: Mapping[str, Any]) -> int | None:
         return None
 
 
+def _block(value: Any) -> Mapping[str, Any]:
+    """A nested block, or an empty one when a report carries something else."""
+    return value if isinstance(value, Mapping) else {}
+
+
+def _count(value: Any) -> int:
+    """A count from a report, or 0 when it is not one."""
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _patterns(value: Any) -> set[str]:
+    """Waiver patterns from a report, skipping anything that is not a string."""
+    if isinstance(value, str) or not isinstance(value, Sequence):
+        return set()
+    return {entry for entry in value if isinstance(entry, str)}
+
+
 def _findings(document: Mapping[str, Any]) -> set[str]:
     """The identifiers of every check that is currently failing and counted."""
     checks = document.get("extraChecks")
@@ -253,8 +273,8 @@ def _reference_changes(
         )
         return changes
 
-    before_advisory = (before.get("advisoryData") or {}).get("digest")
-    after_advisory = (after.get("advisoryData") or {}).get("digest")
+    before_advisory = _block(before.get("advisoryData")).get("digest")
+    after_advisory = _block(after.get("advisoryData")).get("digest")
     if before_advisory != after_advisory:
         changes.append(
             Change(
@@ -268,8 +288,8 @@ def _reference_changes(
             )
         )
 
-    before_schedule = (before.get("scheduleData") or {}).get("digest")
-    after_schedule = (after.get("scheduleData") or {}).get("digest")
+    before_schedule = _block(before.get("scheduleData")).get("digest")
+    after_schedule = _block(after.get("scheduleData")).get("digest")
     if before_schedule != after_schedule:
         changes.append(
             Change(
@@ -280,8 +300,8 @@ def _reference_changes(
                 {
                     "from": before_schedule,
                     "to": after_schedule,
-                    "publishedBefore": (before.get("scheduleData") or {}).get("updated"),
-                    "publishedAfter": (after.get("scheduleData") or {}).get("updated"),
+                    "publishedBefore": _block(before.get("scheduleData")).get("updated"),
+                    "publishedAfter": _block(after.get("scheduleData")).get("updated"),
                 },
             )
         )
@@ -353,10 +373,10 @@ def _scanner_changes(
         )
         return changes
 
-    before_counts = before_coverage.get("counts") or {}
-    after_counts = after_coverage.get("counts") or {}
-    before_measured = int(before_counts.get("passed", 0)) + int(before_counts.get("failed", 0))
-    after_measured = int(after_counts.get("passed", 0)) + int(after_counts.get("failed", 0))
+    before_counts = _block(before_coverage.get("counts"))
+    after_counts = _block(after_coverage.get("counts"))
+    before_measured = _count(before_counts.get("passed")) + _count(before_counts.get("failed"))
+    after_measured = _count(after_counts.get("passed")) + _count(after_counts.get("failed"))
     if before_measured != after_measured:
         changes.append(
             Change(
@@ -383,12 +403,12 @@ def _policy_changes(
     if before is None or after is None:
         return changes
 
-    before_waivers = before.get("waivers") or {}
-    after_waivers = after.get("waivers") or {}
-    before_active = set(before_waivers.get("active") or ())
-    after_active = set(after_waivers.get("active") or ())
-    newly_expired = set(after_waivers.get("expired") or ()) - set(
-        before_waivers.get("expired") or ()
+    before_waivers = _block(before.get("waivers"))
+    after_waivers = _block(after.get("waivers"))
+    before_active = _patterns(before_waivers.get("active"))
+    after_active = _patterns(after_waivers.get("active"))
+    newly_expired = _patterns(after_waivers.get("expired")) - _patterns(
+        before_waivers.get("expired")
     )
 
     if newly_expired:

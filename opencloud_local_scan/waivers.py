@@ -94,7 +94,7 @@ class Waiver:
         }
 
 
-def parse_waiver(text: str) -> Waiver:
+def parse_waiver(text: str, *, require_deadline: bool = False) -> Waiver:
     """
     Read one configured waiver.
 
@@ -102,6 +102,13 @@ def parse_waiver(text: str) -> Waiver:
     accepted. ``pattern|expires|reason`` is the temporary one, and every part
     of it is required: an expiry without a reason documents nothing, and a
     reason without an expiry is the permanent form wearing a note.
+
+    ``require_deadline`` refuses the permanent form. The inputs that exist to
+    carry a deadline - ``--waive-until`` and ``temporary_waivers`` - pass it:
+    there a bare pattern is never what was meant. It is usually the tail of a
+    reason that a ``;`` split off into an entry of its own, and reading that
+    as a permanent waiver would suppress whatever the fragment happens to
+    match, forever.
 
     Raises :class:`WaiverError` rather than degrading to a permanent waiver.
     A malformed record is a mistake, and the safe reading of a mistake is
@@ -113,6 +120,13 @@ def parse_waiver(text: str) -> Waiver:
         raise WaiverError("A waiver needs a check identifier or pattern.")
 
     parts = [part.strip() for part in raw.split(FIELD_SEPARATOR)]
+    if len(parts) == 1 and require_deadline:
+        raise WaiverError(
+            f"{raw!r} has no expiry and no reason. A temporary waiver is "
+            f"written pattern{FIELD_SEPARATOR}expires{FIELD_SEPARATOR}reason, "
+            "and a ';' separates two waivers, so it cannot appear in a "
+            "reason. A permanent waiver belongs in --ignore-hardening."
+        )
     if len(parts) == 1:
         return Waiver(parts[0])
     if len(parts) != 3:
@@ -161,9 +175,15 @@ def _parse_expiry(value: str, raw: str) -> datetime:
     return parsed.astimezone(timezone.utc)
 
 
-def parse_waivers(values: Iterable[str]) -> tuple[Waiver, ...]:
+def parse_waivers(
+    values: Iterable[str], *, require_deadline: bool = False
+) -> tuple[Waiver, ...]:
     """Read every configured waiver, keeping the order they were given in."""
-    return tuple(parse_waiver(value) for value in values if value.strip())
+    return tuple(
+        parse_waiver(value, require_deadline=require_deadline)
+        for value in values
+        if value.strip()
+    )
 
 
 @dataclass(frozen=True)

@@ -11,7 +11,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from .config import Configuration
+from .config import Configuration, ConfigurationError
 from .releases import (
     DEFAULT_FEED_URL,
     MODES,
@@ -34,7 +34,7 @@ from .versions import (
     ReleaseSchedule,
     load_release_schedule,
 )
-from .waivers import Waiver, parse_waivers
+from .waivers import Waiver, WaiverError, parse_waivers
 
 
 def _int_tuple(config: Configuration, name: str) -> tuple[int, ...]:
@@ -92,9 +92,20 @@ def _temporary_waivers(config: Configuration) -> tuple[Waiver, ...]:
     `SCANNER_IGNORE_HARDENINGS` they are not split on commas: a reason is a
     sentence and sentences have commas in them. A record that cannot be
     parsed raises rather than being dropped, because a waiver that silently
-    does not exist is as bad as one that silently never expires.
+    does not exist is as bad as one that silently never expires. They are
+    split on `;`, though, so a reason with a semicolon in it leaves a bare
+    fragment behind; `require_deadline` refuses that fragment instead of
+    reading it as a permanent waiver.
     """
-    return parse_waivers(config.get_list("SCANNER_TEMPORARY_WAIVERS"))
+    try:
+        return parse_waivers(
+            config.get_list("SCANNER_TEMPORARY_WAIVERS"), require_deadline=True
+        )
+    except WaiverError as error:
+        # A configuration mistake, and reported as one: every caller turns a
+        # ConfigurationError into UNKNOWN, where a bare ValueError escaped
+        # as a traceback and exit status 1 - WARNING, to a monitoring system.
+        raise ConfigurationError(f"temporary_waivers: {error}") from error
 
 
 def scanner_settings_from_config(
