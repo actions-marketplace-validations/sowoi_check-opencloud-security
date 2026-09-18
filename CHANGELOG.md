@@ -29,6 +29,14 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   narrows its label column to fit an eighty column terminal and falls back to
   the plain list in a pane too narrow for one.
 
+### Changed
+
+- `specs.md` states the no-JavaScript promise as clause X-20: a page read
+  without a script works with plain forms and links, and a control only a
+  script can make work stays hidden until the script reveals it. Clause C-8
+  no longer asks for a `RELEASE.md` entry when a setting is added - the
+  release workflow writes that file (ADR 0048).
+
 ### Fixed
 
 - A report page read without JavaScript no longer shows controls that only
