@@ -53,6 +53,12 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   request without the outpost's headers gets the ordinary 404, and Swagger
   UI and ReDoc render from the vendored bundles with nothing fetched from
   outside.
+- The security headers are now tested on every kind of response a stranger
+  can reach (`tests/test_webapp_security_headers.py`), not only the landing
+  page: errors, the JSON API, every export, the badge, static files,
+  redirects and the operator's area. Nothing tied to a scan's uuid may be
+  stored by a cache, and the documentation pages' relaxed policy applies to
+  exactly `/docs` and `/redoc`, never a neighbouring address.
 
 ## [1.25.1] - 2026-09-18
 
