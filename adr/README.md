@@ -73,6 +73,7 @@ project. Read the accepted records that affect an area before changing it.
 | [0064](0064-a-scan-records-what-it-did-not-measure.md) | A scan records what it did not measure | Accepted |
 | [0065](0065-a-waiver-may-carry-a-reason-and-a-deadline.md) | A waiver may carry a reason and a deadline | Accepted |
 | [0066](0066-a-result-records-the-conditions-it-was-produced-under.md) | A result records the conditions it was produced under | Accepted |
+| [0067](0067-a-release-ends-with-its-github-release-not-its-tag.md) | A release ends with its GitHub release, not its tag | Accepted |
 
 ## Writing a new record
 

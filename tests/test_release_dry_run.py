@@ -46,7 +46,7 @@ def test_pypi_is_published_only_after_every_other_artifact_is_built():
         "Attest the Docker setup wizard",
     ):
         assert _index(steps, build) < publish, f"{build!r} runs after the upload"
-    assert publish < _index(steps, "Create Git tag and GitHub release")
+    assert publish < _index(steps, "Create Git tag") < _index(steps, "Create GitHub release")
 
 
 def test_a_repeated_release_skips_files_pypi_already_holds():
@@ -96,6 +96,57 @@ def test_the_dry_run_can_publish_nothing():
 def test_the_release_attaches_the_wizard_it_built():
     """A wizard built and attested but never uploaded leaves the documented download a 404."""
     steps = _steps("publish-pypi.yml")
-    release = steps[_index(steps, "Create Git tag and GitHub release")]
+    release = steps[_index(steps, "Create GitHub release")]
 
     assert "wizard-release/*" in release["run"]
+
+
+def _condition(step: dict) -> str:
+    return step.get("if", "")
+
+
+def test_a_tag_without_a_published_release_is_resumed_not_skipped():
+    """v1.25.0 was tagged, then its release upload failed; every re-run saw the tag and did nothing."""
+    steps = _steps("publish-pypi.yml")
+    state = steps[_index(steps, "Check what this version still needs")]["run"]
+
+    assert "gh release view" in state
+    assert "mode=resume" in state
+    assert "mode=done" in state
+    for name in ("Build package", "Build the Docker setup wizard", "Publish to PyPI", "Create GitHub release"):
+        assert _condition(steps[_index(steps, name)]) == "steps.state.outputs.mode != 'done'", name
+
+
+def test_a_resumed_release_builds_the_tag_and_leaves_the_notes_alone():
+    """Main may have moved on since the tag, and its notes were already committed."""
+    steps = _steps("publish-pypi.yml")
+    checkout = _index(steps, "Check out the tagged release")
+
+    assert _condition(steps[checkout]) == "steps.state.outputs.mode == 'resume'"
+    assert checkout < _index(steps, "Build package")
+    for name in (
+        "Refresh the OpenCloud release schedule",
+        "Build the static frontend search index",
+        "Update CHANGELOG.md and RELEASE.md",
+        "Commit release notes",
+        "Create Git tag",
+    ):
+        assert _condition(steps[_index(steps, name)]) == "steps.state.outputs.mode == 'release'", name
+
+
+def test_the_release_is_published_only_once_every_asset_is_on_it():
+    """One failed upload must leave a draft to finish, not a latest release missing the wizard."""
+    steps = _steps("publish-pypi.yml")
+    run = steps[_index(steps, "Create GitHub release")]["run"]
+
+    assert "--draft" in run
+    assert "gh release upload" in run
+    assert run.index("gh release upload") < run.index("--draft=false")
+
+
+def test_the_release_can_be_resumed_by_hand_but_never_twice_at_once():
+    document = yaml.safe_load((WORKFLOWS / "publish-pypi.yml").read_text(encoding="utf-8"))
+
+    # YAML 1.1 reads the bare key `on` as the boolean true.
+    assert "workflow_dispatch" in document[True]
+    assert document["concurrency"] == {"group": "release", "cancel-in-progress": False}
