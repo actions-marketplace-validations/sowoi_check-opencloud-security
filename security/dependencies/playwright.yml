@@ -75,7 +75,7 @@ review:
     installed with the package: `playwright install <browser>` downloads them
     on request, from Microsoft's mirrors only (cdn.playwright.dev and
     playwright.download.prss.microsoft.com, per the driver's registry) -
-    including the Chromium ("Chrome for Testing") builds we do not use.
+    including the Chromium ("Chrome for Testing") builds ADR 0068 admits.
   runtime_network: |
     The Python package talks only to its bundled driver over a pipe. The
     driver bundle contains no telemetry: the only "telemetry" strings are
@@ -85,9 +85,10 @@ review:
     reach the network only when told to. On top of that the tests launch every
     browser behind a proxy that does not exist with only loopback bypassing it,
     and fail on any request that leaves 127.0.0.1 (tests/browser_support.py).
-    Chromium is refused by the fixture: its builds are Google's, and AGENTS.md
-    "Third parties" keeps the project away from Google (ADR 0061). The
-    browsers used are WebKit and Firefox.
+    Chromium's builds are Google's; ADR 0061 refused them and ADR 0068 admits
+    them as a third CI engine for Blink coverage, under the same dead proxy
+    and request watch. The browsers used are WebKit (default), Firefox and
+    Chromium; the MCP server stays WebKit-only.
   native_code: |
     The bundled Node.js binary runs as a subprocess (the driver). greenlet is
     a C extension (wheels for CPython 3.10 through 3.15). No eval/pickle of

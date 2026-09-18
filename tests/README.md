@@ -89,6 +89,7 @@ is needed.
 | File | Purpose |
 |---|---|
 | [`test_rating_thresholds.py`](test_rating_thresholds.py) | How ratings and thresholds map to Nagios exit codes. |
+| [`test_check_vulnerabilities.py`](test_check_vulnerabilities.py) | The whole check in-process: the alert line, detail lines, perfdata, the baseline and the result payload all receive and print what the scan found. |
 | [`test_perfdata.py`](test_perfdata.py) | Plugin output: perfdata, hardening reporting, formatting. |
 | [`test_output_formats.py`](test_output_formats.py) | `--format json/sarif/junit` for one host and for several. |
 | [`test_prometheus.py`](test_prometheus.py) | Prometheus rendering and the native `/metrics` exporter. |
@@ -174,10 +175,11 @@ is needed.
 ### In a real browser
 
 These need Playwright's browser build once: `uv run playwright install webkit`
-(and `firefox`, the second engine in CI). Without it they skip locally;
-`.github/workflows/browser-tests.yml` runs them with
-`PLAYWRIGHT_TESTS_REQUIRED=1`. `PLAYWRIGHT_BROWSER=firefox` picks the other
-engine; Chromium is refused (ADR 0061).
+(and `firefox` and `chromium`, the other engines in CI). Without it they skip
+locally; `.github/workflows/browser-tests.yml` runs every
+`test_webapp_browser_*.py` in all three with `PLAYWRIGHT_TESTS_REQUIRED=1`.
+`PLAYWRIGHT_BROWSER=firefox` or `chromium` picks another engine; Chromium is
+Google's build, allowed behind the dead proxy (ADR 0068).
 
 | File | Purpose |
 |---|---|
@@ -214,6 +216,7 @@ engine; Chromium is refused (ADR 0061).
 |---|---|
 | [`test_check_pull_request.py`](test_check_pull_request.py) | `scripts/check_pull_request.py`: a changelog entry is present, and version bumps only move forward. |
 | [`test_claude_hooks.py`](test_claude_hooks.py) | The Claude Code hooks in `.claude/hooks/` keep refusing merges, force-pushes, hand edits to generated files, and real hosts, scan output or personal data in commits, and refuse when they cannot run. |
+| [`test_mutation_testing.py`](test_mutation_testing.py) | The manual mutation-testing setup stays consistent: mutmut only in its own group and with a record, its test files in-process, `mutants/` ignored, and `/mutation-test` running in the read-only agent. |
 | [`test_dependency_policy.py`](test_dependency_policy.py) | `scripts/check_dependencies.py`: every Python dependency has an approved, tested and reviewed record, or predates the policy, and the grandfather list never grows. |
 | [`test_release_notes.py`](test_release_notes.py) | `scripts/release_notes.py` turns `## [Unreleased]` into the release section. |
 | [`test_release_dry_run.py`](test_release_dry_run.py) | The release rehearsal matches the release, and publishing to PyPI happens last. |

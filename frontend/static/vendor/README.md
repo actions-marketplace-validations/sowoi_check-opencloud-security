@@ -20,3 +20,9 @@ curl -sSLo swagger-ui-bundle.js https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.3
 ```
 
 Nothing here is edited by hand.
+
+ReDoc 2.5.3 draws Redocly's logo in its sidebar from
+`https://cdn.redoc.ly/redoc/logo-mini.svg`, with no option to leave it out.
+The `/redoc` page's `img-src 'self' data:` blocks it before it leaves the
+browser; `tests/test_webapp_browser_operator.py` checks that it stays the
+only such request and stays blocked. Check it again after a refresh.

@@ -1319,6 +1319,10 @@ def _webhook_address_is_public(address: ipaddress.IPv4Address | ipaddress.IPv6Ad
         address.is_private
         or address.is_loopback
         or address.is_link_local
+        # Deprecated IPv6 site-local (RFC 3879) is still routed as
+        # private space on networks that never renumbered, yet no is_private
+        # flag covers it.
+        or (isinstance(address, ipaddress.IPv6Address) and address.is_site_local)
         or address.is_multicast
         or address.is_reserved
         or address.is_unspecified
@@ -1432,7 +1436,8 @@ def _evaluate_rating(
         track = str(lifecycle.get("releaseType") or "")
         target = str(lifecycle.get("upgradeTo") or "")
         line = str(lifecycle.get("line") or "")
-        described = f"The {line} {track} release line".strip() if line else "This server version"
+        named = " ".join(part for part in (line, track) if part)
+        described = f"The {named} release line" if line else "This server version"
         upgrade = f" Upgrade to {target}." if target else ""
         return (
             f"CRITICAL: {described} is end-of-life and has no security fixes.{upgrade}",

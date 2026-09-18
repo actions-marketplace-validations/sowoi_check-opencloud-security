@@ -1006,6 +1006,7 @@ def test_a_redirect_to_a_private_address_is_refused_like_a_submission():
         "http://[::1]/",
         "file:///etc/passwd",
         "http://100.64.0.1/",
+        "http://[fec0::1]/",
     ):
         assert guard(hop) is False, hop
 

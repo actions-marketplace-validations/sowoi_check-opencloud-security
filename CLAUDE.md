@@ -53,8 +53,10 @@ cd docker && docker compose up --build              # web + worker + redis, loca
 
 Notes that will otherwise cost you time:
 - `pytest` exists **only** under `uv run`.
-- Browsers are **WebKit or Firefox, never Chromium** (Google's builds), and
-  always behind the dead proxy in `tests/browser_support.py`. The `playwright`
+- Browsers are **WebKit (default), Firefox or Playwright's Chromium** - the
+  last is Google's build, allowed for Blink coverage by
+  [ADR 0068](adr/0068-chromium-is-a-third-browser-test-engine-behind-the-dead-proxy.md) -
+  and always behind the dead proxy in `tests/browser_support.py`. The `playwright`
   MCP server in `.mcp.json` is the same reviewed package, loopback only.
 - Only `ruff check` is enforced, **never `ruff format`** — do not reformat the tree.
 - `ansible-lint` is clean only from inside `ansible/`; from the repo root it reports false positives.
