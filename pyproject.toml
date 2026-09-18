@@ -156,6 +156,8 @@ tests_dir = [
     "tests/test_webhook.py",
     "tests/test_explain.py",
     "tests/test_check_vulnerabilities.py",
+    "tests/test_eol_warning.py",
+    "tests/test_upgrade_path.py",
 ]
 also_copy = ["tests", "webapp", "frontend", "docker", "authentik", "docs", "security", "README.md", "CHANGELOG.md"]
 
