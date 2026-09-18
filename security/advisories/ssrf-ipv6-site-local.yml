@@ -5,6 +5,7 @@
 
 slug: ssrf-ipv6-site-local
 state: draft
+ghsa: GHSA-9j37-x4mm-4c4g
 changelog_version: "1.25.3"
 changelog_entry: "Scan targets and redirect hops in deprecated IPv6 site-local space are refused."
 shipped: true
