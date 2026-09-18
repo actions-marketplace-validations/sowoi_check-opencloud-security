@@ -1605,6 +1605,9 @@ input[type="text"]:focus, select:focus {
         background .18s var(--ease), border-color .18s var(--ease), color .18s var(--ease);
 }
 .btn svg { width: 18px; height: 18px; }
+/* `display: inline-flex` above outranks the user-agent `[hidden]` rule, which
+   showed the script-only copy buttons to readers who could never use them. */
+.btn[hidden] { display: none; }
 /*
  * The primary action is the only gradient on the page: iris through violet,
  * with the nebula's magenta arriving past the button's own right edge, so
@@ -2546,6 +2549,9 @@ pre.json {
     display: flex; flex-wrap: wrap; gap: .4rem;
     margin: 1rem 0 .2rem;
 }
+/* Rendered `hidden` for readers without scripting; `display: flex` above
+   would otherwise show them four buttons that do nothing. */
+.flavour-picker[hidden] { display: none; }
 .flavour {
     font: inherit; font-size: .82rem; font-weight: 600;
     padding: .4rem .8rem; cursor: pointer;
