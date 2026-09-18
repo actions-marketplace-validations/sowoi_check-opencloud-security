@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import importlib.util
 import io
+import itertools
 import json
 import os
 import stat
@@ -3576,3 +3577,84 @@ def test_a_heading_draws_the_card_only_on_a_terminal(monkeypatch: pytest.MonkeyP
 
     assert not any("┬" in line for line in printed)
     assert any("Step 1 of" in line for line in printed)
+
+
+@pytest.mark.parametrize("number", [0, -1, 14, 99])
+def test_the_section_card_refuses_a_step_outside_the_walk(number: int) -> None:
+    """A position the list cannot highlight falls back to the plain lines, not a wrong card."""
+    sections = wizard_module.build_sections(wizard_module.Setup())
+
+    assert wizard_module.step_card(sections[0], sections, number, (), wizard_module.Style(True), 66) is None
+
+
+def test_the_section_card_with_no_sections_does_not_raise() -> None:
+    """An empty walk is None rather than max() of an empty sequence."""
+    section = wizard_module.build_sections(wizard_module.Setup())[0]
+
+    assert wizard_module.step_card(section, [], 1, (), wizard_module.Style(True), 66) is None
+
+
+def test_the_last_step_marks_every_earlier_one_done() -> None:
+    """At the final section nothing is still ahead."""
+    sections = wizard_module.build_sections(wizard_module.Setup())
+    card = wizard_module.step_card(
+        sections[-1], sections, len(sections), (), wizard_module.Style(False), 66
+    )
+
+    assert card is not None
+    assert not any(" · " in line for line in card)
+    assert sum("✔" in line for line in card) == len(sections) - 1
+
+
+def test_the_current_step_is_highlighted_even_when_it_was_once_skipped() -> None:
+    """Going back into a section passed over earlier shows it as current, not skipped."""
+    sections = wizard_module.build_sections(wizard_module.Setup())
+    card = wizard_module.step_card(sections[1], sections, 2, {2}, wizard_module.Style(False), 66)
+
+    assert card is not None
+    assert any(f"› {sections[1].title}" in line for line in card)
+    assert not any(f"– {sections[1].title}" in line for line in card)
+
+
+def test_a_long_summary_wraps_inside_the_card_and_keeps_every_border() -> None:
+    """A summary longer than the column wraps; no row runs past the right border."""
+    sections = wizard_module.build_sections(wizard_module.Setup())
+    section = wizard_module.Section(title=sections[0].title, summary="word " * 80)
+    card = wizard_module.step_card(section, sections, 1, (), wizard_module.Style(False), 66)
+
+    assert card is not None
+    assert len(card) > len(sections) + 2, "the summary made the card taller than the list"
+    assert len({len(line) for line in card}) == 1
+
+
+def test_the_card_appears_at_the_narrowest_width_it_fits() -> None:
+    """The fallback is for terminals that truly cannot hold it, not a generous margin."""
+    sections = wizard_module.build_sections(wizard_module.Setup())
+    right = max(len(section.title) for section in sections) + 2
+    fits = right + 7 + wizard_module._STEP_CARD_LEFT_FLOOR
+    style = wizard_module.Style(False)
+
+    assert wizard_module.step_card(sections[0], sections, 1, (), style, fits) is not None
+    assert wizard_module.step_card(sections[0], sections, 1, (), style, fits - 1) is None
+    # Plus the two-space indent, as banner() draws it: frame_width() already
+    # leaves the terminal four columns of slack for that.
+    card = wizard_module.step_card(sections[0], sections, 1, (), style, fits)
+    assert {len(line) for line in card} == {fits + 2}
+
+
+def test_a_quick_walk_marks_its_skipped_sections(monkeypatch: pytest.MonkeyPatch) -> None:
+    """run_questions hands the heading the sections it passed over, so the card can mark them."""
+    seen: list[set[int]] = []
+    monkeypatch.setattr(
+        wizard_module.Wizard,
+        "heading",
+        lambda self, section, number=0, total=0, *, sections=(), skipped=(): seen.append(set(skipped)),
+    )
+    _typed(monkeypatch, [])
+    wizard = wizard_module.Wizard(wizard_module.Setup(), style=wizard_module.Style(False))
+
+    wizard_module.run_questions(wizard, "quick")
+
+    assert seen, "a quick walk still shows at least one heading"
+    assert seen[-1], "a quick walk passes over some sections"
+    assert all(earlier <= later for earlier, later in itertools.pairwise(seen)), "skips only accumulate"

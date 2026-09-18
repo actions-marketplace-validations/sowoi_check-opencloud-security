@@ -142,3 +142,107 @@ def test_the_wizard_accepts_days_and_refuses_anything_else():
     assert wizard._non_negative_int("30") is None
     assert wizard._non_negative_int("-1") is not None
     assert wizard._non_negative_int("soon") is not None
+
+
+# --- edge cases ------------------------------------------------------------------
+@pytest.mark.parametrize("days", [0, -3])
+def test_no_days_left_is_not_an_early_warning(days, capsys):
+    """Zero or fewer days is end of life, which the lifecycle state reports, not this window."""
+    code, first = run(result(daysRemaining=days), capsys, eol_warning_days=30)
+
+    assert code is NagiosExitCode.OK
+    assert "end of life on" not in first
+
+
+@pytest.mark.parametrize("state", ["eol", "unknown", None])
+def test_only_a_supported_line_counts_down(state, capsys):
+    """An unsupported or unknown line is not raised by the early warning."""
+    _, first = run(result(state=state, daysRemaining=5), capsys, eol_warning_days=30)
+
+    assert "end of life on" not in first
+    assert "days left" not in first
+
+
+@pytest.mark.parametrize("days", ["5", 5.0, None, [5]])
+def test_a_days_remaining_that_is_not_a_whole_number_is_ignored(days, capsys):
+    """A malformed lifecycle is not a reason to warn, nor to crash."""
+    code, _ = run(result(daysRemaining=days), capsys, eol_warning_days=30)
+
+    assert code is NagiosExitCode.OK
+
+
+@pytest.mark.parametrize("lifecycle", [None, "supported", [], {}])
+def test_a_missing_or_malformed_lifecycle_does_not_raise(lifecycle, capsys):
+    """An older scan result without a lifecycle section is simply OK."""
+    document = copy.deepcopy(RESULT)
+    document["lifecycle"] = lifecycle
+
+    code, _ = run(document, capsys, eol_warning_days=30)
+
+    assert code is NagiosExitCode.OK
+
+
+def test_the_warning_reads_sensibly_without_a_line_a_date_or_a_target(capsys):
+    """Every optional part of the sentence has a fallback, never 'None'."""
+    code, first = run(
+        result(line=None, endOfLife=None, upgradeTo=None, daysRemaining=5),
+        capsys,
+        eol_warning_days=30,
+    )
+
+    assert code is NagiosExitCode.WARNING
+    assert first == (
+        "WARNING: This server version reaches end of life on an unknown date (5 days left)."
+    )
+    assert "None" not in first
+
+
+def test_a_negative_option_is_a_usage_error(capsys):
+    """A negative window is a typo, not a quiet 'off'."""
+    parser = plugin.build_arg_parser()
+    args = parser.parse_args(["-H", HOST, "--eol-warning", "-1"])
+
+    with pytest.raises(SystemExit) as excinfo:
+        plugin._validate_thresholds(parser, args)
+
+    assert excinfo.value.code == 2
+    assert "--eol-warning must be 0" in capsys.readouterr().err
+
+
+def test_a_non_numeric_option_is_a_usage_error(capsys):
+    """argparse refuses the flag outright rather than turning it into 0."""
+    with pytest.raises(SystemExit) as excinfo:
+        plugin.build_arg_parser().parse_args(["-H", HOST, "--eol-warning", "soon"])
+
+    assert excinfo.value.code == 2
+    assert "--eol-warning" in capsys.readouterr().err
+
+
+def test_an_invalid_environment_value_falls_back_to_off(monkeypatch):
+    """COS_EOL_WARNING=soon is logged and ignored, as every other integer setting is."""
+    monkeypatch.setenv("COS_EOL_WARNING", "soon")
+    original = plugin._CONFIG
+    try:
+        plugin._set_configuration(plugin._preparse_config([]))
+        assert plugin.build_arg_parser().parse_args(["-H", HOST]).eol_warning == 0
+    finally:
+        plugin._set_configuration(original)
+
+
+@pytest.mark.parametrize("value", ["", " ", "1.5", "1e3", "-0.5", "²", "¹⁰"])
+def test_the_wizard_refuses_what_int_would_not_read_as_days(value):
+    """
+    Whatever the validator lets through, the int() cast after it must read.
+
+    '²' is a digit to str.isdigit() and a ValueError to int(), which crashed
+    the wizard mid-question before the validator was based on int() itself.
+    """
+    assert wizard._non_negative_int(value) is not None
+
+
+@pytest.mark.parametrize("value", ["0", "30", " 30 ", "+5", "３"])
+def test_every_value_the_wizard_accepts_is_one_int_can_read(value):
+    """The validator and the cast agree, including on a full-width digit."""
+    assert wizard._non_negative_int(value) is None
+    assert int(value) >= 0
+

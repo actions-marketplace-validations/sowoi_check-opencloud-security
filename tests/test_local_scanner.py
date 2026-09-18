@@ -1578,3 +1578,75 @@ def test_an_alt_svc_clear_advertises_nothing():
 
     assert result["alternativeServices"]["advertised"] is False
     assert result["alternativeServices"]["entries"] == []
+
+
+class _Headers:
+    """Just enough of a response for the Alt-Svc parser."""
+
+    def __init__(self, headers):
+        self.headers = headers
+
+
+def _alt_svc(value):
+    return scanner_module._alternative_services(_Headers({"Alt-Svc": value}))
+
+
+def test_no_response_records_no_alternative_services():
+    """A scan without a root response has no header to read: None, not an empty record."""
+    assert scanner_module._alternative_services(None) is None
+    assert scanner_module._alternative_services(_Headers({}))["advertised"] is False
+
+
+def test_every_alt_svc_entry_is_recorded_with_its_parameters_ignored():
+    """h3, a draft h3 and h2 each become an entry; ma= and persist= are not protocols."""
+    services = _alt_svc('h3=":443"; ma=86400, h3-29=":443"; persist=1, h2="alt.example.com:8443"')
+
+    assert [entry["protocol"] for entry in services["entries"]] == ["h3", "h3-29", "h2"]
+    assert [entry["udp"] for entry in services["entries"]] == [True, True, False]
+    assert services["entries"][2] == {
+        "protocol": "h2", "host": "alt.example.com", "port": 8443, "udp": False
+    }
+    assert services["http3"] is True
+
+
+def test_an_ipv6_alternative_keeps_its_brackets_and_port():
+    """The last colon separates the port; the address's own colons stay in the host."""
+    (entry,) = _alt_svc('h3="[2001:db8::1]:8443"')["entries"]
+
+    assert entry["host"] == "[2001:db8::1]"
+    assert entry["port"] == 8443
+
+
+@pytest.mark.parametrize("authority", ["alt.example.com:", ":abc", "", "alt.example.com"])
+def test_an_alternative_without_a_numeric_port_has_no_port(authority):
+    """A missing or unreadable port is None, never an exception."""
+    (entry,) = _alt_svc(f'h3="{authority}"')["entries"]
+
+    assert entry["port"] is None
+    assert entry["udp"] is True
+
+
+@pytest.mark.parametrize("value", ["h3=443", "garbage", ";;;", '="x:443"', ", ,", "CLEAR"])
+def test_a_malformed_or_cleared_header_advertises_nothing(value):
+    """Entries that do not parse are skipped; 'clear' is matched case-insensitively."""
+    services = _alt_svc(value)
+
+    assert services["advertised"] is False
+    assert services["http3"] is False
+    assert services["entries"] == []
+
+
+def test_a_malformed_entry_does_not_hide_a_valid_one_after_it():
+    """One bad alternative must not cost the record the h3 that follows it."""
+    services = _alt_svc('garbage, h3=":443"')
+
+    assert services["http3"] is True
+    assert [entry["port"] for entry in services["entries"]] == [443]
+
+
+def test_an_oversized_header_is_truncated_in_the_record():
+    """A hostile or broken server cannot bloat the result document through Alt-Svc."""
+    services = _alt_svc("x" * 5000)
+
+    assert len(services["header"]) == 512
+    assert services["advertised"] is False

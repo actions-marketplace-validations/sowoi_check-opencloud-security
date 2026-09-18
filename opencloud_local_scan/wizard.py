@@ -126,9 +126,13 @@ def _positive_int(value: str) -> str | None:
 
 
 def _non_negative_int(value: str) -> str | None:
-    if value.strip().isdigit():
-        return None
-    return "Enter 0 or a whole number of days."
+    # int() rather than str.isdigit(): '²' is a digit to isdigit() and a
+    # ValueError to the int() cast that runs after this validator.
+    try:
+        number = int(value)
+    except ValueError:
+        return "Enter 0 or a whole number of days."
+    return None if number >= 0 else "Enter 0 or a whole number of days."
 
 
 def _rating(value: str) -> str | None:

@@ -1129,8 +1129,11 @@ def step_card(
     The right column lists each section with a marker - done, skipped, the
     current one highlighted, or still ahead - so the operator sees the whole
     walk rather than a count. None when the terminal is too narrow for two
-    columns, and the caller prints the plain heading lines instead.
+    columns, or when there is no step to place in the list, and the caller
+    prints the plain heading lines instead.
     """
+    if not sections or not 1 <= number <= len(sections):
+        return None
     total = len(sections)
     right = max(len(item.title) for item in sections) + 2
     left = (width or frame_width()) - right - 7
