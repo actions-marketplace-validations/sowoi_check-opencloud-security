@@ -699,12 +699,62 @@ def test_a_push_of_something_unreadable_asks(repo):
     assert _decision(output) == "ask"
 
 
+# --- changelog_docs_gate.py -------------------------------------------------------
+
+_CHANGELOG = "# Changelog\n\n## [Unreleased]\n\n### Added\n\n### Fixed\n\n## [1.0.0]\n\n### Added\n\n- Old.\n"
+
+
+@pytest.fixture
+def changelog_repo(repo: Path) -> Path:
+    (repo / "CHANGELOG.md").write_text(_CHANGELOG)
+    _git(repo, "add", "CHANGELOG.md")
+    _git(repo, "commit", "-q", "-m", "changelog")
+    return repo
+
+
+def _add_entry(repo: Path, section: str, text: str) -> None:
+    content = (repo / "CHANGELOG.md").read_text().replace(f"### {section}\n\n", f"### {section}\n\n- {text}\n", 1)
+    (repo / "CHANGELOG.md").write_text(content)
+
+
+def test_a_new_added_entry_stops_the_commit_once(changelog_repo):
+    """The first commit is sent to /check-changelog-docs, the retry goes through."""
+    _add_entry(changelog_repo, "Added", "A new --foo flag.")
+    _git(changelog_repo, "add", "CHANGELOG.md")
+    _, output = _hook("changelog_docs_gate.py", _commit_payload("git commit -m foo"), project=changelog_repo)
+    assert _decision(output) == "deny"
+    assert "/check-changelog-docs" in output["hookSpecificOutput"]["permissionDecisionReason"]
+    assert _hook("changelog_docs_gate.py", _commit_payload("git commit -m foo"), project=changelog_repo) == (0, {})
+    _add_entry(changelog_repo, "Added", "Another flag.")
+    _git(changelog_repo, "add", "CHANGELOG.md")
+    _, output = _hook("changelog_docs_gate.py", _commit_payload("git commit -m bar"), project=changelog_repo)
+    assert _decision(output) == "deny"
+
+
+def test_a_commit_that_stages_the_changelog_itself_is_checked(changelog_repo):
+    """`git commit -am` judges the working tree, not the empty index."""
+    _add_entry(changelog_repo, "Added", "A new --foo flag.")
+    _, output = _hook("changelog_docs_gate.py", _commit_payload("git commit -am foo"), project=changelog_repo)
+    assert _decision(output) == "deny"
+
+
+@pytest.mark.parametrize("command", ["git commit -m fix", "git status", "ls"])
+def test_other_sections_and_commands_pass_the_changelog_gate(changelog_repo, command):
+    """Fixed entries, released sections and non-commits are left alone."""
+    _add_entry(changelog_repo, "Fixed", "A bug.")
+    (changelog_repo / "CHANGELOG.md").write_text(
+        (changelog_repo / "CHANGELOG.md").read_text() + "- Late note under 1.0.0.\n")
+    _git(changelog_repo, "add", "CHANGELOG.md")
+    assert _hook("changelog_docs_gate.py", _commit_payload(command), project=changelog_repo) == (0, {})
+
+
 # --- .claude/settings.json -------------------------------------------------------
 
 def test_every_blocking_guard_fails_closed_and_the_privacy_guard_is_filtered():
     """A guard that cannot run refuses the call; the privacy guard only runs for git and gh."""
     settings = json.loads((REPO_ROOT / ".claude" / "settings.json").read_text())
-    handlers = [h for group in settings["hooks"]["PreToolUse"] for h in group["hooks"]]
+    handlers = [h for group in settings["hooks"]["PreToolUse"] for h in group["hooks"]
+                if "changelog_docs_gate.py" not in h["command"]]  # a reminder, deliberately fail-open
     assert handlers and all("exit 2" in h["command"] for h in handlers)
     privacy = [h for h in handlers if "privacy_guard.py" in h["command"]]
     assert sorted(h["if"] for h in privacy) == ["Bash(gh *)", "Bash(git *)"]

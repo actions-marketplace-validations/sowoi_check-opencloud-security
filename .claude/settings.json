@@ -23,6 +23,12 @@
           },
           {
             "type": "command",
+            "if": "Bash(git *)",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/changelog_docs_gate.py\"",
+            "timeout": 30
+          },
+          {
+            "type": "command",
             "if": "Bash(gh *)",
             "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/privacy_guard.py\" pre-tool-use || { echo 'privacy_guard.py could not run - refusing the command until the hook is fixed' >&2; exit 2; }",
             "timeout": 60
