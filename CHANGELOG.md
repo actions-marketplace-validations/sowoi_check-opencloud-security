@@ -12,6 +12,8 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+## [1.25.2] - 2026-09-18
+
 ### Added
 
 - The Docker setup wizard moves while it works, in the four places where
