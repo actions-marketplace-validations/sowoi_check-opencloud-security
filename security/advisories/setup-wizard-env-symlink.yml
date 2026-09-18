@@ -5,6 +5,7 @@
 
 slug: setup-wizard-env-symlink
 state: draft
+ghsa: GHSA-ffph-3fm8-jpg3
 changelog_version: "1.25.2"
 changelog_entry: "The Docker setup wizard no longer writes credentials through a symbolic link."
 shipped: true
