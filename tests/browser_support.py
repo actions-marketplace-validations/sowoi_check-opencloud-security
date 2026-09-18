@@ -8,10 +8,10 @@ against the real application, served over HTTP from a background thread, with
 an in-process stand-in for the ARQ worker so a submitted scan really finishes,
 and fake OpenCloud instances as the targets.
 
-Browsers: WebKit by default, Firefox when ``PLAYWRIGHT_BROWSER=firefox``.
-Chromium is deliberately not offered - its builds are Google's, and AGENTS.md
-("Third parties") keeps the project away from Google even in tooling (ADR
-0061). Every browser is launched behind a proxy that does not exist, with
+Browsers: WebKit by default; ``PLAYWRIGHT_BROWSER=firefox`` or ``chromium``
+picks another engine. Chromium's builds are Google's, which ADR 0061 refused
+and ADR 0068 accepted for the Blink coverage - on the condition below, which
+applies to every engine alike. Every browser is launched behind a proxy that does not exist, with
 only loopback bypassing it, so nothing a page or the engine itself asks for
 can leave the machine; a test that needed the network would fail rather than
 quietly reach out.
@@ -53,7 +53,7 @@ from webapp.app import create_app
 from webapp.redis_backend import reset_memory_backends
 from webapp.settings import WebSettings
 
-BROWSERS = ("webkit", "firefox")
+BROWSERS = ("webkit", "firefox", "chromium")
 BROWSER = os.environ.get("PLAYWRIGHT_BROWSER", "webkit")
 MEMORY_URL = "memory://browser-tests"
 # Nothing listens on the discard port; only loopback bypasses the proxy.

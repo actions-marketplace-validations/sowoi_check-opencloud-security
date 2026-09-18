@@ -174,10 +174,11 @@ is needed.
 ### In a real browser
 
 These need Playwright's browser build once: `uv run playwright install webkit`
-(and `firefox`, the second engine in CI). Without it they skip locally;
-`.github/workflows/browser-tests.yml` runs them with
-`PLAYWRIGHT_TESTS_REQUIRED=1`. `PLAYWRIGHT_BROWSER=firefox` picks the other
-engine; Chromium is refused (ADR 0061).
+(and `firefox` and `chromium`, the other engines in CI). Without it they skip
+locally; `.github/workflows/browser-tests.yml` runs every
+`test_webapp_browser_*.py` in all three with `PLAYWRIGHT_TESTS_REQUIRED=1`.
+`PLAYWRIGHT_BROWSER=firefox` or `chromium` picks another engine; Chromium is
+Google's build, allowed behind the dead proxy (ADR 0068).
 
 | File | Purpose |
 |---|---|

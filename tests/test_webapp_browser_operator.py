@@ -38,6 +38,9 @@ FORWARDED = {
     "x-authentik-username": OPERATOR,
 }
 
+#: The one foreign address ReDoc's bundle asks for; see the ReDoc test.
+REDOC_LOGO = "https://cdn.redoc.ly/redoc/logo-mini.svg"
+
 ADMIN_PAGES = ["/admin", "/admin/configuration", "/admin/rules"]
 
 
@@ -140,7 +143,19 @@ def test_redoc_renders_the_api_under_the_csp(browser, site):
         response = page.goto(site.base + "/redoc")
         assert response is not None and response.status == 200
         page.locator("redoc h1, [role=main] h1, .api-content h1").first.wait_for(state="visible")
-        assert watch.foreign_requests == []
+        # ReDoc 2.5.3 always draws Redocly's logo from its CDN in the sidebar,
+        # with no option to leave it out, and the vendored bundle is not
+        # edited by hand. Chromium starts that request (WebKit and Firefox do
+        # not); the page's policy must block it, and it must be the only one.
+        assert set(watch.foreign_requests) <= {REDOC_LOGO}
+        if watch.foreign_requests:
+            page.wait_for_function("() => (window.__cspViolations || []).length > 0")
+            assert any("cdn.redoc.ly" in violation for violation in watch.csp_violations())
+            assert page.evaluate(
+                "(src) => [...document.images].filter(img => img.src === src)"
+                ".every(img => !img.complete || img.naturalWidth === 0)",
+                REDOC_LOGO,
+            )
         assert watch.page_errors == []
     finally:
         page.context.close()

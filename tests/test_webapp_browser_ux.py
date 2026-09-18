@@ -434,4 +434,7 @@ def test_an_unknown_address_is_a_404_page_with_a_way_home(page, site, watch):
     assert response is not None and response.status == 404
     assert page.locator("h1").count() == 1
     assert page.locator("main a[href='/']").count() >= 1
-    watch.assert_clean()
+    # Chromium logs the 404 status itself as a console error, so the rest is checked by hand.
+    assert watch.page_errors == []
+    assert watch.csp_violations() == []
+    assert watch.foreign_requests == []

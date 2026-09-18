@@ -21,6 +21,18 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   `mutation` group - never installed by CI or a plain `uv sync`, never run in
   CI - reviewed and approved in `security/dependencies/mutmut.yml`.
 
+- The browser tests now also run in Chromium, the engine behind Chrome,
+  Edge and most Android browsers, as a third job in the browser-tests
+  workflow ([ADR 0068](adr/0068-chromium-is-a-third-browser-test-engine-behind-the-dead-proxy.md),
+  superseding ADR 0061's WebKit-and-Firefox-only rule). Chromium is
+  Playwright's build, which is Google's, and runs behind the same dead proxy
+  and request watch as the other engines; WebKit stays the default. The
+  workflow now runs every `tests/test_webapp_browser_*.py` file, including
+  the enhancements, phone and operator tests it had been leaving out.
+  Chromium's first run showed ReDoc asking for Redocly's logo from its CDN;
+  the `/redoc` page's policy already blocks it, and a test now keeps it that
+  way.
+
 ### Fixed
 
 - The end-of-life alert no longer shows a double space ("The 2.x  release
