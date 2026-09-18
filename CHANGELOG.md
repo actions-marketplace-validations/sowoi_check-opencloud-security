@@ -12,6 +12,15 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+### Fixed
+
+- A report page read without JavaScript no longer shows controls that only
+  a script can make work: the configuration-fragment picker and the copy
+  buttons were rendered `hidden`, but their `display` rules outranked the
+  attribute. New browser tests (`tests/test_webapp_browser_enhancements.py`)
+  now drive the remembered form settings, the fragment picker, the share
+  buttons, the rescan countdown and the expiry warning.
+
 ## [1.25.1] - 2026-09-18
 
 ### Fixed

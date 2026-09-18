@@ -458,6 +458,168 @@ def rule(title: str, style: Style, width: int = 0) -> str:
     return f"  {style.accent(_HEAVY * 2)} {style.bold(title)} {style.accent(fill)}"
 
 
+# --- motion, and the widgets that move -------------------------------------
+# Borrowed in look, not in machinery, from ratatui's throbber, its LineGauge
+# and its bordered Block. Ratatui redraws a whole screen every frame; this is
+# a script that prints lines and must still be exactly the text it was when
+# somebody pipes it into a file. So every effect here is decoration over
+# output that is already complete without it, and every one of them is gated
+# on the same `Style.enabled` that gates colour: no terminal, NO_COLOR,
+# TERM=dumb or a test, and the static line is printed instead and not one
+# escape is written.
+#
+# Nothing here sleeps for longer than a frame, so a wizard interrupted mid
+# animation stops when it is asked to rather than after the effect finishes.
+_THROBBER_FRAMES = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+_THROBBER_SECONDS = 0.08
+_SETTLED, _FAILED = "✔", "✘"
+_GAUGE_FULL, _GAUGE_EMPTY = "━", "╌"
+# A sweep long enough to read as motion and short enough that nobody waits for
+# it: a third of a second, whatever the terminal's width.
+_SWEEP_WIDTH = 10
+_SWEEP_FRAMES = 18
+_SWEEP_SECONDS = 0.32
+# Narrower than this and a card's labels are stubs; the plain list wins.
+_CARD_LABEL_FLOOR = 18
+_ANSI_ESCAPE = re.compile(r"\033\[[0-9;]*m")
+
+
+def _visible(text: str) -> int:
+    """How many columns a painted string takes, ignoring its escapes."""
+    return len(_ANSI_ESCAPE.sub("", text))
+
+
+def _emit(text: str, stream: Any = None) -> None:
+    """Write a frame and flush it, with no newline of its own."""
+    stream = stream if stream is not None else sys.stdout
+    stream.write(text)
+    stream.flush()
+
+
+def line_gauge(done: int, total: int, width: int = 24) -> str:
+    """Ratatui's LineGauge: one row of track, filled in proportion.
+
+    The block bar `progress_bar` draws is two glyphs tall in effect - it
+    carries its own weight down the page when every section prints one. This
+    is the same number on a single hairline, for the counter that is redrawn
+    in place rather than reprinted.
+    """
+    total = max(total, 1)
+    done = min(max(done, 0), total)
+    filled = round(width * done / total)
+    percent = round(100 * done / total)
+    return f"{_GAUGE_FULL * filled}{_GAUGE_EMPTY * (width - filled)} {percent:>3}%"
+
+
+class Throbber:
+    """A spinner for the one wait the wizard cannot make shorter.
+
+    Ratatui's throbber-widgets-tui, with the ending it needs here: the frame
+    is replaced by a tick or a cross rather than simply stopping, so the line
+    that spun is the line that says how it went and the operator reads one
+    result instead of a spinner that vanished.
+
+    Prints nothing at all while it spins when the style is off; `finish` then
+    writes the single plain line that run would have written before.
+    """
+
+    def __init__(
+        self,
+        label: str,
+        style: Style,
+        say: Callable[[str], None] | None = None,
+        stream: Any = None,
+        indent: int = 2,
+    ) -> None:
+        self.label = label
+        self.style = style
+        # Where the settled line goes when nothing is spinning. Frames are
+        # written straight to the stream because they carry no newline and
+        # overwrite each other; the one line that survives the wait belongs
+        # on whatever the caller prints with.
+        self.say = say
+        self.stream = stream if stream is not None else sys.stdout
+        self.indent = " " * indent
+        self.frame = 0
+        self.started = time.monotonic()
+        self._drawn = 0
+
+    def _clear(self) -> str:
+        """Enough blanks to rub out the longest frame drawn so far."""
+        return f"\r{' ' * self._drawn}\r" if self._drawn else "\r"
+
+    def tick(self) -> None:
+        """Advance one frame, over the top of the last one."""
+        if not self.style.enabled:
+            return
+        glyph = _THROBBER_FRAMES[self.frame % len(_THROBBER_FRAMES)]
+        self.frame += 1
+        elapsed = f"{time.monotonic() - self.started:4.0f}s"
+        line = f"{self.indent}{self.style.accent(glyph)} {self.label}{self.style.dim(elapsed)}"
+        _emit(f"{self._clear()}{line}", self.stream)
+        self._drawn = _visible(line)
+
+    def finish(self, ok: bool, note: str = "") -> None:
+        """Morph the spinner into its verdict and end the line."""
+        mark = self.style.good(_SETTLED) if ok else self.style.warn(_FAILED)
+        text = note or self.label.rstrip()
+        line = f"{self.indent}{mark} {text}"
+        if self.style.enabled:
+            _emit(f"{self._clear()}{line}\n", self.stream)
+        elif self.say is not None:
+            self.say(line)
+        else:
+            _emit(f"{line}\n", self.stream)
+        self._drawn = 0
+
+
+def _sweep_run(text: str, bright: bool, style: Style) -> str:
+    return style.paint(text, "cyan", "bold") if bright else style.paint(text, "cyan", "dim")
+
+
+def _sweep_cells(text: str, offset: int, position: int, style: Style) -> str:
+    """Paint one stretch of rule, brightening the window passing over it."""
+    out: list[str] = []
+    run: list[str] = []
+    lit: bool | None = None
+    for index, char in enumerate(text):
+        bright = position <= offset + index < position + _SWEEP_WIDTH
+        if lit is not None and bright is not lit:
+            out.append(_sweep_run("".join(run), lit, style))
+            run = []
+        lit = bright
+        run.append(char)
+    if run and lit is not None:
+        out.append(_sweep_run("".join(run), lit, style))
+    return "".join(out)
+
+
+def sweep_rule(title: str, style: Style, width: int = 0, stream: Any = None) -> None:
+    """Draw `rule`, with one pass of light running along it first.
+
+    A section heading that simply appears is one more line in a scroll; a
+    heading that moves is where the eye lands, which is the whole job of a
+    heading in a walk this long. It settles into exactly the rule that would
+    have been printed anyway, so the effect costs the output nothing.
+    """
+    settled = rule(title, style, width)
+    if not style.enabled:
+        _emit(f"{settled}\n", stream)
+        return
+    lead = _HEAVY * 2
+    fill = _HEAVY * max(4, (width or frame_width()) - len(title) - 5)
+    cells = len(lead) + len(fill)
+    span = cells + _SWEEP_WIDTH
+    pause = _SWEEP_SECONDS / _SWEEP_FRAMES
+    for frame in range(_SWEEP_FRAMES):
+        position = round(-_SWEEP_WIDTH + span * frame / max(1, _SWEEP_FRAMES - 1))
+        left = _sweep_cells(lead, 0, position, style)
+        right = _sweep_cells(fill, len(lead), position, style)
+        _emit(f"\r  {left} {style.bold(title)} {right}", stream)
+        time.sleep(pause)
+    _emit(f"\r{settled}\n", stream)
+
+
 # --- what the wizard collects ----------------------------------------------
 @dataclass
 class Setup:
@@ -971,6 +1133,15 @@ class Wizard:
         if self.interactive:
             print(text)
 
+    def rule(self, title: str) -> None:
+        """A section rule, swept into place. Silent when nothing is being said."""
+        if not self.interactive:
+            return
+        if self.style.enabled:
+            sweep_rule(title, self.style)
+        else:
+            self.say(rule(title, self.style))
+
     def heading(self, section: Section, number: int = 0, total: int = 0) -> None:
         """The section's title, and where it falls in the run.
 
@@ -982,10 +1153,10 @@ class Wizard:
         """
         style = self.style
         self.say()
-        self.say(rule(section.title, style))
+        self.rule(section.title)
         if total:
             step = style.accent(f"Step {number} of {total}")
-            self.say(f"  {step}  {style.dim(progress_bar(number - 1, total))}")
+            self.say(f"  {step}  {style.dim(line_gauge(number - 1, total))}")
         self.say(f"  {style.dim(section.summary)}")
 
     def skipped(self, sections: Sequence[Section], mode: str = "full") -> None:
@@ -1028,7 +1199,7 @@ class Wizard:
             "full": "every question, section by section",
         }
         self.say()
-        self.say(rule("How much to ask", style))
+        self.rule("How much to ask")
         for number, name in enumerate(MODES, start=1):
             marker = style.good("*") if name == default else " "
             lines = _wrap(descriptions[name], text_width(18))
@@ -5892,7 +6063,9 @@ def summary_rows(setup: Setup) -> list[tuple[str, list[SummaryRow]]]:
     return groups
 
 
-def _render_row(row: SummaryRow, style: Style) -> str:
+def _row_body(row: SummaryRow, style: Style, label_width: int = 0) -> str:
+    """One summary row without its indent, so a card can put an edge on it."""
+    label_width = label_width or _LABEL_WIDTH
     marker = style.warn("*") if row.changed else " "
     if row.secret:
         value = style.good(row.value)
@@ -5901,8 +6074,15 @@ def _render_row(row: SummaryRow, style: Style) -> str:
     else:
         value = style.bold(row.value)
     handle = f"  {style.dim(f'[{row.key}]')}" if row.key else ""
-    padding = " " * max(1, _LABEL_WIDTH + 1 - len(row.label))
-    return f"  {marker} {row.label}{padding}{value}{handle}"
+    label = row.label
+    if len(label) > label_width:
+        label = label[: label_width - 3].rstrip() + "..."
+    padding = " " * max(1, label_width + 1 - len(label))
+    return f"{marker} {label}{padding}{value}{handle}"
+
+
+def _render_row(row: SummaryRow, style: Style) -> str:
+    return f"  {_row_body(row, style)}"
 
 
 def summarise(setup: Setup, style: Style | None = None) -> list[str]:
@@ -5918,6 +6098,47 @@ def summarise(setup: Setup, style: Style | None = None) -> list[str]:
     for title, rows in summary_rows(setup):
         lines.append(f"  {style.accent(style.bold(title))}")
         lines.extend(_render_row(row, style) for row in rows)
+    return lines
+
+
+def summary_cards(setup: Setup, style: Style, width: int = 0) -> list[str] | None:
+    """The summary as one bordered card per group, ratatui's Block.
+
+    The flat list `summarise` returns is what a pipe and every test reads, and
+    it stays exactly that. On a terminal the same rows get an edge around each
+    heading, because the thing an operator is hunting on this screen is one
+    setting inside one group and a border is what makes a group findable.
+
+    `None` where the rows will not fit between two borders - a narrow pane
+    gets the plain list rather than a card whose corners have wrapped.
+    """
+    grouped = summary_rows(setup)
+    available = (width or _columns()) - 8
+    headings = [len(title) for title, _ in grouped]
+    # The label column is what makes a row too wide, so narrow it until the
+    # rows fit between two borders rather than giving up on the card at the
+    # first terminal that is not generous. Below _CARD_LABEL_FLOOR the labels
+    # are stubs and the plain list reads better than a cramped box.
+    for label_width in range(_LABEL_WIDTH, _CARD_LABEL_FLOOR - 1, -1):
+        groups = [
+            (title, [_row_body(row, style, label_width) for row in rows])
+            for title, rows in grouped
+        ]
+        needed = max([_visible(body) for _, bodies in groups for body in bodies] + headings)
+        if needed <= available:
+            break
+    else:
+        return None
+    lines: list[str] = []
+    for title, bodies in groups:
+        head = f"{_LIGHT} {title} "
+        lines.append(
+            style.accent(f"  {_TOP_LEFT}{head}{_LIGHT * (needed + 2 - len(head))}{_TOP_RIGHT}")
+        )
+        for body in bodies:
+            padding = " " * max(0, needed - _visible(body))
+            lines.append(f"  {style.accent(_SIDE)} {body}{padding} {style.accent(_SIDE)}")
+        lines.append(style.accent(f"  {_BOTTOM_LEFT}{_LIGHT * (needed + 2)}{_BOTTOM_RIGHT}"))
     return lines
 
 
@@ -5957,12 +6178,13 @@ def review(wizard: Wizard, setup: Setup) -> bool:
     while True:
         style = wizard.style
         wizard.say()
-        wizard.say(rule("Summary", style))
+        wizard.rule("Summary")
         total = len(build_sections(setup))
         wizard.say(
-            f"  {style.accent('Ready to write')}  {style.dim(progress_bar(total, total))}"
+            f"  {style.accent('Ready to write')}  {style.dim(line_gauge(total, total))}"
         )
-        for line in summarise(setup, style):
+        cards = summary_cards(setup, style) if style.enabled else None
+        for line in cards if cards is not None else summarise(setup, style):
             wizard.say(line)
         wizard.say(
             f"  {style.warn('*')} {style.dim('differs from the default; type a [name] to change it')}"
@@ -6263,7 +6485,19 @@ def _health_url(setup: Setup) -> str:
     return f"http://{address}:{setup.host_port}/healthz"
 
 
-def _wait_until_healthy(url: str, timeout: float = 90, interval: float = 3) -> bool:
+def _wait_until_healthy(
+    url: str,
+    timeout: float = 90,
+    interval: float = 3,
+    on_wait: Callable[[], None] | None = None,
+) -> bool:
+    """Poll until the stack answers, or the deadline passes.
+
+    `on_wait` is called repeatedly between polls rather than once per poll:
+    the gap is three seconds and a spinner that moved every three seconds
+    would read as a hung one. The poll itself keeps its own pace - the
+    callback only decides how often the waiting is redrawn.
+    """
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         try:
@@ -6272,7 +6506,13 @@ def _wait_until_healthy(url: str, timeout: float = 90, interval: float = 3) -> b
                     return True
         except (OSError, urllib.error.URLError):
             pass
-        time.sleep(interval)
+        if on_wait is None:
+            time.sleep(interval)
+            continue
+        until = time.monotonic() + interval
+        while time.monotonic() < until:
+            on_wait()
+            time.sleep(max(0.0, min(_THROBBER_SECONDS, until - time.monotonic())))
     return False
 
 
@@ -6327,14 +6567,21 @@ def offer_to_start(wizard: Wizard, setup: Setup, compose_path: Path) -> None:
         wizard.say(f"  {style.bad('!')} `docker compose up -d` failed; its output is above.")
         return
     url = _health_url(setup)
-    wizard.say(f"  Waiting for {url} to answer ...")
-    if _wait_until_healthy(url):
-        wizard.say(f"  {style.good('+')} The service is up.")
+    # The one wait in the run with nothing to show for it: a first start
+    # pulls images and can sit here for a minute and a half. A spinner that
+    # turns into a tick is the difference between waiting and wondering.
+    throbber = Throbber(f"Waiting for {url} to answer ", style, say=wizard.say)
+    healthy = _wait_until_healthy(url, on_wait=throbber.tick)
+    if healthy:
+        throbber.finish(True, "The service is up.")
     else:
-        wizard.say(
-            f"  {style.warn('!')} No answer yet. `docker compose logs web_app` "
-            "says why - a first start that pulls images can take a while."
-        )
+        throbber.finish(False, "No answer yet.")
+        for line in _wrap(
+            "`docker compose logs web_app` says why - a first start that "
+            "pulls images can take a while.",
+            text_width(4),
+        ):
+            wizard.say(f"    {style.dim(line)}")
 
 
 # --- the command ------------------------------------------------------------
@@ -6886,7 +7133,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             # answerable question for somebody who can see what would change.
             diff = render_diffs(setup, compose_path, style)
             if diff:
-                wizard.say(rule("What writing changes", style))
+                wizard.rule("What writing changes")
                 for line in diff:
                     wizard.say(line)
                 wizard.say()
@@ -6904,14 +7151,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     written = write_files(setup, compose_path, env_path)
 
     wizard.say()
-    wizard.say(rule("Written", style))
+    wizard.rule("Written")
     for path in saved:
         wizard.say(f"  {style.dim('~')} Kept the previous file as {path}")
     for path in written:
         wizard.say(f"  {style.good('+')} Wrote {path}")
     offer_to_start(wizard, setup, compose_path)
     wizard.say()
-    wizard.say(rule("Next", style))
+    wizard.rule("Next")
     wizard.say(f"    cd {output_dir}")
     # Before `up`, not after: a bind mount Docker has to invent is created
     # owned by root, and the container that then cannot write to it is the
