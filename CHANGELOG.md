@@ -12,6 +12,18 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A release that stopped after its tag is finished by the next run.** The
+  release workflow skipped any version whose tag existed, so when v1.25.0 was
+  tagged and GitHub then answered an asset upload with HTTP 500, it reached
+  PyPI and Docker Hub but never got a GitHub release, and every re-run stayed
+  green without doing anything. The workflow now treats a published GitHub
+  release as the end of a version: a tagged version without one is rebuilt
+  from its tag and released, the release stays a draft until every asset has
+  been uploaded (each upload is retried), and the workflow can be started by
+  hand. See ADR 0067.
+
 ## [1.25.0] - 2026-09-17
 
 ### Added

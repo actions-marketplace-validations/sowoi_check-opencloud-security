@@ -4,6 +4,14 @@ on:
   push:
     branches:
       - main
+  # Completes a release that stopped after its tag was pushed - see the
+  # "Check what this version still needs" step and adr/0067.
+  workflow_dispatch:
+
+# A manual run and a push must never release the same version side by side.
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -36,15 +44,39 @@ jobs:
           echo "version=${version}" >> "$GITHUB_OUTPUT"
           echo "VERSION=${version}" >> "$GITHUB_ENV"
 
-      - name: Check if tag already exists
-        id: check_tag
+      # A tag alone does not mean the release is done: the tag is pushed
+      # before the GitHub release is created, and v1.25.0 stopped between the
+      # two on an HTTP 500 from the asset upload. Every later run then saw the
+      # tag and skipped. So the published release is what ends a version:
+      #   release   - no tag yet: write the notes, build, publish, tag, release
+      #   resume    - tagged, but no published release: rebuild from the tag
+      #               and finish the release, without touching the notes
+      #   done      - tagged and released: nothing to do
+      - name: Check what this version still needs
+        id: state
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          if git rev-parse "v${VERSION}" >/dev/null 2>&1; then
-            echo "Tag v${VERSION} already exists. Skipping publish."
-            echo "exists=true" >> "$GITHUB_OUTPUT"
+          tag="v${VERSION}"
+          draft="$(gh release view "$tag" --json isDraft --jq .isDraft 2>/dev/null || echo missing)"
+          if ! git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
+            mode="release"
+          elif [ "$draft" = "false" ]; then
+            mode="done"
+            echo "Release ${tag} is already published. Nothing to do."
           else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
+            mode="resume"
+            echo "::warning::Tag ${tag} exists without a published release; completing it from the tag."
           fi
+          echo "mode=${mode}" >> "$GITHUB_OUTPUT"
+          echo "draft=${draft}" >> "$GITHUB_OUTPUT"
+
+      # Main may have moved on since the tag; the release ships what was tagged.
+      # The wheel and the sdist build reproducibly, so the rebuilt files match
+      # the ones PyPI already holds and the upload below skips them.
+      - name: Check out the tagged release
+        if: steps.state.outputs.mode == 'resume'
+        run: git checkout --detach "v${VERSION}"
 
       # OpenCloud publishes no maintenance schedule, so the supported majors
       # are derived from the GitHub release history before the wheel is built.
@@ -55,22 +87,22 @@ jobs:
       # The same run rewrites the generated release table in README.md, so the
       # documentation cannot quote a version that has already been superseded.
       - name: Refresh the OpenCloud release schedule
-        if: steps.check_tag.outputs.exists != 'true'
+        if: steps.state.outputs.mode == 'release'
         run: python scripts/update_release_schedule.py --allow-failure
 
       - name: Build the static frontend search index
-        if: steps.check_tag.outputs.exists != 'true'
+        if: steps.state.outputs.mode == 'release'
         run: python scripts/build_search_index.py
 
       # The version in pyproject.toml changed - it is only ever bumped by hand.
       # The changes collected under '## [Unreleased]' in CHANGELOG.md become
       # the notes of that version, and the same entry is written to RELEASE.md.
       - name: Update CHANGELOG.md and RELEASE.md
-        if: steps.check_tag.outputs.exists != 'true'
+        if: steps.state.outputs.mode == 'release'
         run: python scripts/release_notes.py --version "$VERSION"
 
       - name: Commit release notes
-        if: steps.check_tag.outputs.exists != 'true'
+        if: steps.state.outputs.mode == 'release'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -88,7 +120,7 @@ jobs:
           fi
 
       - name: Build package
-        if: steps.check_tag.outputs.exists != 'true'
+        if: steps.state.outputs.mode != 'done'
         run: uv build
 
       # The SBOM is generated from a resolved runtime environment rather than
@@ -96,7 +128,7 @@ jobs:
       # installed, transitive ones included. It is kept out of dist/ because
       # `uv publish` uploads everything it finds there.
       - name: Generate SBOM
-        if: steps.check_tag.outputs.exists != 'true'
+        if: steps.state.outputs.mode != 'done'
         run: |
           mkdir -p sbom
           uv sync --locked --no-dev
@@ -108,7 +140,7 @@ jobs:
       # runner. Signed with a short-lived Sigstore certificate, so there is no
       # signing key for this project to leak.
       - name: Attest build provenance
-        if: steps.check_tag.outputs.exists != 'true'
+        if: steps.state.outputs.mode != 'done'
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
         with:
           subject-path: "dist/*"
@@ -116,7 +148,7 @@ jobs:
       # actions/attest-sbom is deprecated and only wraps actions/attest,
       # which takes the same inputs.
       - name: Attest SBOM
-        if: steps.check_tag.outputs.exists != 'true'
+        if: steps.state.outputs.mode != 'done'
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
           subject-path: "dist/*.whl"
@@ -132,7 +164,7 @@ jobs:
       # nfpm is pinned by version and checked against the digest published with
       # that release, rather than taken from wherever a tag points today.
       - name: Install nfpm
-        if: steps.check_tag.outputs.exists != 'true'
+        if: steps.state.outputs.mode != 'done'
         env:
           NFPM_VERSION: "2.47.0"
           NFPM_SHA256: "0660ca602b2d2d2ae4781a06c692b3eeb9d437ffea05b831d76e41f4a3188783"
@@ -144,11 +176,11 @@ jobs:
           nfpm --version
 
       - name: Build the .deb and the .rpm
-        if: steps.check_tag.outputs.exists != 'true'
+        if: steps.state.outputs.mode != 'done'
         run: python scripts/build_distro_packages.py --output-dir distro-packages
 
       - name: Attest the distribution packages
-        if: steps.check_tag.outputs.exists != 'true'
+        if: steps.state.outputs.mode != 'done'
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
         with:
           subject-path: |
@@ -164,11 +196,11 @@ jobs:
       # `uv publish` uploads everything it finds there and this must never
       # reach PyPI.
       - name: Build the web application bundle
-        if: steps.check_tag.outputs.exists != 'true'
+        if: steps.state.outputs.mode != 'done'
         run: python scripts/build_web_bundle.py --output-dir web-bundle
 
       - name: Attest the web application bundle
-        if: steps.check_tag.outputs.exists != 'true'
+        if: steps.state.outputs.mode != 'done'
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
         with:
           subject-path: "web-bundle/*.tar.gz"
@@ -178,11 +210,11 @@ jobs:
       # beside it, and attested like every other artifact. The documented
       # download points here rather than at main.
       - name: Build the Docker setup wizard
-        if: steps.check_tag.outputs.exists != 'true'
+        if: steps.state.outputs.mode != 'done'
         run: python scripts/build_wizard_release.py --output-dir wizard-release
 
       - name: Attest the Docker setup wizard
-        if: steps.check_tag.outputs.exists != 'true'
+        if: steps.state.outputs.mode != 'done'
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
         with:
           subject-path: "wizard-release/setup-wizard.py"
@@ -197,21 +229,47 @@ jobs:
       # again; uv then skips the files PyPI already holds with the same digest
       # instead of failing on "File already exists".
       - name: Publish to PyPI
-        if: steps.check_tag.outputs.exists != 'true'
+        if: steps.state.outputs.mode != 'done'
         run: uv publish --check-url https://pypi.org/simple/
 
-      - name: Create Git tag and GitHub release
-        if: steps.check_tag.outputs.exists != 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Create Git tag
+        if: steps.state.outputs.mode == 'release'
         run: |
           git tag "v${VERSION}"
           git push origin "v${VERSION}"
 
-          # --notes-file provides the body, --generate-notes appends GitHub's
-          # own "What's Changed" section below it.
-          gh release create "v${VERSION}" \
-            dist/* sbom/* web-bundle/* distro-packages/* wizard-release/* \
-            --title "v${VERSION}" \
-            --notes-file RELEASE.md \
-            --generate-notes
+      # The release is opened as a draft and published only once every asset
+      # is on it, so releases/latest never points at a release without the
+      # wizard. Each upload is retried, because one HTTP 500 from GitHub's
+      # upload endpoint is what left v1.25.0 tagged but unreleased. A draft
+      # left behind by a failed run is picked up again by the next one.
+      - name: Create GitHub release
+        if: steps.state.outputs.mode != 'done'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_DRAFT: ${{ steps.state.outputs.draft }}
+        run: |
+          tag="v${VERSION}"
+          if [ "$RELEASE_DRAFT" != "true" ]; then
+            # --notes-file provides the body, --generate-notes appends GitHub's
+            # own "What's Changed" section below it.
+            gh release create "$tag" --draft --verify-tag \
+              --title "$tag" \
+              --notes-file RELEASE.md \
+              --generate-notes
+          fi
+
+          for asset in dist/* sbom/* web-bundle/* distro-packages/* wizard-release/*; do
+            for attempt in 1 2 3 4 5; do
+              if gh release upload "$tag" "$asset" --clobber; then
+                break
+              fi
+              if [ "$attempt" = 5 ]; then
+                echo "::error::Could not upload ${asset}; run this workflow again to finish ${tag}."
+                exit 1
+              fi
+              sleep $((attempt * 15))
+            done
+          done
+
+          gh release edit "$tag" --draft=false
