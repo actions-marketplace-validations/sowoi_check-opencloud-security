@@ -45,6 +45,7 @@ is needed.
 | File | Purpose |
 |---|---|
 | [`test_local_scanner.py`](test_local_scanner.py) | The whole scan pipeline against the fake instance: status, capabilities, headers, exposed paths, protected endpoints, extra checks. |
+| [`test_scanner_robustness.py`](test_scanner_robustness.py) | The scanner against a target that answers badly: malformed, empty, binary or failing status answers, an oversized body, capabilities of the wrong shape, a server that never answers, a redirect loop and addresses that cannot be parsed all end in a `ScanError`, never another exception or a hang. |
 | [`test_concurrency.py`](test_concurrency.py) | Concurrency only affects speed. Any worker count gives the same result, and one worker stays single-threaded. |
 | [`test_ssrf_pinning.py`](test_ssrf_pinning.py) | Connections stay pinned to the address that passed validation. |
 | [`test_address_parity.py`](test_address_parity.py) | Every address a name resolves to is scanned, so a pool node that missed a rollout is not hidden behind a healthy one. |

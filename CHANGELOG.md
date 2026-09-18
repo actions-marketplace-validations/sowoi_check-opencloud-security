@@ -67,6 +67,14 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   redirects and the operator's area. Nothing tied to a scan's uuid may be
   stored by a cache, and the documentation pages' relaxed policy applies to
   exactly `/docs` and `/redoc`, never a neighbouring address.
+- `opencloud_local_scan.scan()` raises `ScanError` for an address it cannot
+  parse - an unclosed IPv6 bracket or a port outside 0-65535 - instead of
+  letting urllib's `ValueError` escape. The plugin already reported these as
+  UNKNOWN; a direct caller of the library now gets the exception it is
+  promised. New robustness tests (`tests/test_scanner_robustness.py`) cover
+  malformed, empty, binary and failing status answers, an oversized body,
+  capabilities of the wrong shape, a target that never answers and a
+  redirect loop.
 
 ## [1.25.1] - 2026-09-18
 
