@@ -60,12 +60,12 @@ jobs:
           tag="v${VERSION}"
           draft="$(gh release view "$tag" --json isDraft --jq .isDraft 2>/dev/null || echo missing)"
           if ! git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
-            mode=release
+            mode="release"
           elif [ "$draft" = "false" ]; then
-            mode=done
+            mode="done"
             echo "Release ${tag} is already published. Nothing to do."
           else
-            mode=resume
+            mode="resume"
             echo "::warning::Tag ${tag} exists without a published release; completing it from the tag."
           fi
           echo "mode=${mode}" >> "$GITHUB_OUTPUT"

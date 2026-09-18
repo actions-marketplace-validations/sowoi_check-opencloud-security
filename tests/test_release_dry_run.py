@@ -111,8 +111,8 @@ def test_a_tag_without_a_published_release_is_resumed_not_skipped():
     state = steps[_index(steps, "Check what this version still needs")]["run"]
 
     assert "gh release view" in state
-    assert "mode=resume" in state
-    assert "mode=done" in state
+    assert 'mode="resume"' in state
+    assert 'mode="done"' in state
     for name in ("Build package", "Build the Docker setup wizard", "Publish to PyPI", "Create GitHub release"):
         assert _condition(steps[_index(steps, name)]) == "steps.state.outputs.mode != 'done'", name
 
