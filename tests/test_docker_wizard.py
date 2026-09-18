@@ -3537,3 +3537,42 @@ def test_an_approval_mode_that_could_approve_nothing_is_warned_about() -> None:
 
     assert any("nothing could ever be scanned" in w for w in wizard_module.check_consistency(stuck))
     assert not any("nothing could ever be scanned" in w for w in wizard_module.check_consistency(fine))
+
+
+def test_the_section_card_lists_every_step_and_marks_the_current_one() -> None:
+    """The right column is the whole walk; the operator's place in it is the one that stands out."""
+    style = wizard_module.Style(True)
+    sections = wizard_module.build_sections(wizard_module.Setup())
+
+    card = wizard_module.step_card(sections[3], sections, 4, {2}, style, width=66)
+
+    assert card is not None
+    plain = [wizard_module._ANSI_ESCAPE.sub("", line) for line in card]
+    assert len({len(line) for line in plain}) == 1, "every row closes on the same border"
+    assert "Step 4 of 13" in plain[1]
+    for section in sections:
+        assert any(section.title in line for line in plain)
+    assert any(f"› {sections[3].title}" in line for line in plain)
+    assert any(f"✔ {sections[0].title}" in line for line in plain)
+    assert any(f"– {sections[1].title}" in line for line in plain)
+    assert any(f"· {sections[4].title}" in line for line in plain)
+    assert style.paint(f"› {sections[3].title}", "cyan", "bold") in "".join(card)
+
+
+def test_the_section_card_gives_way_to_plain_lines_in_a_narrow_terminal() -> None:
+    """Two columns in 50 characters would wrap their borders into a mess."""
+    sections = wizard_module.build_sections(wizard_module.Setup())
+
+    assert wizard_module.step_card(sections[0], sections, 1, (), wizard_module.Style(True), 50) is None
+
+
+def test_a_heading_draws_the_card_only_on_a_terminal(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Piped or under a test the heading stays the plain lines anybody greps a log for."""
+    printed = _typed(monkeypatch, [])
+    sections = wizard_module.build_sections(wizard_module.Setup())
+    plain = wizard_module.Wizard(wizard_module.Setup(), style=wizard_module.Style(False))
+
+    plain.heading(sections[0], 1, len(sections), sections=sections)
+
+    assert not any("┬" in line for line in printed)
+    assert any("Step 1 of" in line for line in printed)

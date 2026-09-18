@@ -87,7 +87,7 @@ import time
 import urllib.error
 import urllib.request
 import uuid
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Collection, Sequence
 from dataclasses import dataclass, field, fields
 from datetime import datetime, timezone
 from pathlib import Path
@@ -1108,6 +1108,62 @@ def _hex_key(value: str) -> str | None:
     return None
 
 
+# The steps column of the section card: a marker per section, so the whole
+# walk and where the operator stands in it read at a glance.
+_STEP_DONE, _STEP_SKIPPED, _STEP_PENDING = _SETTLED, "–", "·"
+# Narrower than this and the left column cannot hold its gauge; the plain
+# heading lines win.
+_STEP_CARD_LEFT_FLOOR = 24
+
+
+def step_card(
+    section: Section,
+    sections: Sequence[Section],
+    number: int,
+    skipped: Collection[int],
+    style: Style,
+    width: int = 0,
+) -> list[str] | None:
+    """A two-column card: this step on the left, every step on the right.
+
+    The right column lists each section with a marker - done, skipped, the
+    current one highlighted, or still ahead - so the operator sees the whole
+    walk rather than a count. None when the terminal is too narrow for two
+    columns, and the caller prints the plain heading lines instead.
+    """
+    total = len(sections)
+    right = max(len(item.title) for item in sections) + 2
+    left = (width or frame_width()) - right - 7
+    if left < _STEP_CARD_LEFT_FLOOR:
+        return None
+    gauge = line_gauge(number - 1, total, width=min(24, left - 5))
+    left_rows = [style.accent(f"Step {number} of {total}"), style.dim(gauge), ""]
+    left_rows += [style.dim(line) for line in _wrap(section.summary, left)]
+    right_rows = []
+    for position, item in enumerate(sections, start=1):
+        if position == number:
+            right_rows.append(style.paint(f"{_POINTER} {item.title}", "cyan", "bold"))
+        elif position in skipped:
+            right_rows.append(style.dim(f"{_STEP_SKIPPED} {item.title}"))
+        elif position < number:
+            right_rows.append(style.good(_STEP_DONE) + " " + style.dim(item.title))
+        else:
+            right_rows.append(style.dim(f"{_STEP_PENDING} {item.title}"))
+    height = max(len(left_rows), len(right_rows))
+    left_rows += [""] * (height - len(left_rows))
+    right_rows += [""] * (height - len(right_rows))
+    side = style.accent(_SIDE)
+    lines = [style.accent(f"  {_TOP_LEFT}{_LIGHT * (left + 2)}┬{_LIGHT * (right + 2)}{_TOP_RIGHT}")]
+    for text, step in zip(left_rows, right_rows):
+        pad_left = " " * max(0, left - _visible(text))
+        pad_right = " " * max(0, right - _visible(step))
+        lines.append(f"  {side} {text}{pad_left} {side} {step}{pad_right} {side}")
+    lines.append(
+        style.accent(f"  {_BOTTOM_LEFT}{_LIGHT * (left + 2)}┴{_LIGHT * (right + 2)}{_BOTTOM_RIGHT}")
+    )
+    return lines
+
+
 class Wizard:
     """Asks the questions and remembers the answers."""
 
@@ -1149,7 +1205,15 @@ class Wizard:
         else:
             self.say(rule(title, self.style))
 
-    def heading(self, section: Section, number: int = 0, total: int = 0) -> None:
+    def heading(
+        self,
+        section: Section,
+        number: int = 0,
+        total: int = 0,
+        *,
+        sections: Sequence[Section] = (),
+        skipped: Collection[int] = (),
+    ) -> None:
         """The section's title, and where it falls in the run.
 
         The position is worth the line it costs: this is a long walk, and a
@@ -1161,6 +1225,15 @@ class Wizard:
         style = self.style
         self.say()
         self.rule(section.title)
+        card = (
+            step_card(section, sections, number, skipped, style)
+            if style.enabled and sections and number
+            else None
+        )
+        if card is not None:
+            for line in card:
+                self.say(line)
+            return
         if total:
             step = style.accent(f"Step {number} of {total}")
             self.say(f"  {step}  {style.dim(line_gauge(number - 1, total))}")
@@ -2705,6 +2778,8 @@ def run_questions(wizard: Wizard, mode: str = "full") -> None:
     # in between were skipped for a reason that still holds.
     answered: list[int] = []
     heading_shown: Section | None = None
+    # The section numbers passed over, for the steps column of the heading.
+    passed_over: set[int] = set()
     last_number = 0
     position = 0
     while position < len(plan):
@@ -2715,7 +2790,10 @@ def run_questions(wizard: Wizard, mode: str = "full") -> None:
         if section is not heading_shown:
             if number > last_number + 1:
                 wizard.skipped(sections[last_number:number - 1], mode)
-            wizard.heading(section, number, len(sections))
+                passed_over.update(range(last_number + 1, number))
+            wizard.heading(
+                section, number, len(sections), sections=sections, skipped=passed_over
+            )
             heading_shown = section
             # Lower again after a 'b' into an earlier section, so walking
             # forward from there reports the same skips it reported before.

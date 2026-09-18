@@ -39,6 +39,12 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   of one long row of links, so the sections worth acting on stand apart from
   the reference material and the export and share cards.
 
+- The Docker setup wizard opens each section with a two-column card: the step
+  counter, progress and the section's purpose on the left, and every section
+  of the walk on the right, marked done, skipped or still ahead, with the
+  current one highlighted. A terminal narrower than the card, a pipe or
+  `NO_COLOR` keeps the plain heading lines.
+
 ## [1.25.3] - 2026-09-18
 
 ### Added
