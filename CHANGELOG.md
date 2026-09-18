@@ -19,8 +19,7 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   scanner functions and sorts every surviving mutant into a real test gap,
   unreachable code or noise. mutmut 3.8.0 is a new dependency in its own
   `mutation` group - never installed by CI or a plain `uv sync`, never run in
-  CI - reviewed in `security/dependencies/mutmut.yml` (proposed, awaiting
-  approval).
+  CI - reviewed and approved in `security/dependencies/mutmut.yml`.
 
 ### Fixed
 

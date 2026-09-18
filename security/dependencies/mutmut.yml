@@ -1,8 +1,8 @@
 # A dependency record. See security/dependencies/README.md.
 name: mutmut
 import_name: mutmut
-status: proposed
-approved_by: ""
+status: approved
+approved_by: "Okko"
 scopes:
   - group:mutation
 reviewed_version: "3.8.0"
