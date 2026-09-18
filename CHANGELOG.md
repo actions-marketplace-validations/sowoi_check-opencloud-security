@@ -37,6 +37,18 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   no longer asks for a `RELEASE.md` entry when a setting is added - the
   release workflow writes that file (ADR 0048).
 
+### Security
+
+- **The Docker setup wizard no longer writes credentials through a symbolic
+  link.** A link left where `.env` belongs - even a dangling one, which did
+  not count as an existing file and so raised no overwrite question - made
+  the wizard create the link's target and write every generated secret into
+  it. The wizard now refuses to write when the compose file or `.env` is a
+  link, whatever `--force` says, and opens every owner-only file (`.env`,
+  the nginx admin secret header, credential backups) with `O_NOFOLLOW`.
+  Affected anyone who ran `setup-wizard.py` from 1.9.0 to 1.25.1 in a
+  directory somebody else could write to.
+
 ### Fixed
 
 - A report page read without JavaScript no longer shows controls that only
@@ -75,6 +87,16 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   malformed, empty, binary and failing status answers, an oversized body,
   capabilities of the wrong shape, a target that never answers and a
   redirect loop.
+- The Docker setup wizard checks the answers it reads back from its
+  answers file the way it checks a typed answer: a value outside a
+  question's choices, one its validation refuses, or one carrying a control
+  character is dropped. A newline in an edited file could otherwise rewrite
+  `docker-compose.yml` around it. A `.env` that is not UTF-8 now stops the
+  run with a sentence instead of a traceback, and without regenerating the
+  credentials a running deployment depends on. New tests
+  (`tests/test_docker_wizard_hardening.py`) cover links, edited and
+  unreadable files, input that ends mid-walk, refused answers and masked
+  credentials.
 
 ## [1.25.1] - 2026-09-18
 

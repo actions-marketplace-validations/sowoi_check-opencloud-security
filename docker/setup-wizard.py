@@ -281,6 +281,13 @@ BACK = "back"
 REST = "rest"
 
 
+# How every owner-readable file is opened. O_NOFOLLOW refuses a symlink in
+# the file's place: without it a link left where `.env` belongs - dangling,
+# so it did not even count as an existing file - carried every generated
+# secret to wherever it pointed. Windows has no such flag and no such link.
+PRIVATE_FILE_FLAGS = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_NOFOLLOW", 0)
+
+
 class SetupAborted(RuntimeError):
     """Raised when the operator interrupts the wizard."""
 
@@ -4929,7 +4936,7 @@ def _write_proxy_files(setup: Setup, output_dir: Path) -> list[str]:
         # ends up in the list of written files the wizard prints.
         header_file = output_dir / admin_secret_filename(setup)
         descriptor = os.open(
-            header_file, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, stat.S_IRUSR | stat.S_IWUSR
+            header_file, PRIVATE_FILE_FLAGS, stat.S_IRUSR | stat.S_IWUSR
         )
         with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
             os.fchmod(handle.fileno(), stat.S_IRUSR | stat.S_IWUSR)
@@ -5690,7 +5697,7 @@ def write_files(
     # Create with the right mode rather than fixing it afterwards: a secret
     # that was world-readable for a millisecond was world-readable.
     descriptor = os.open(
-        env_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, stat.S_IRUSR | stat.S_IWUSR
+        env_path, PRIVATE_FILE_FLAGS, stat.S_IRUSR | stat.S_IWUSR
     )
     with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
         os.fchmod(handle.fileno(), stat.S_IRUSR | stat.S_IWUSR)
@@ -6458,7 +6465,7 @@ def backup_existing(
         backup = path.with_name(f"{path.name}.{stamp}.bak")
         if secret:
             descriptor = os.open(
-                backup, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, stat.S_IRUSR | stat.S_IWUSR
+                backup, PRIVATE_FILE_FLAGS, stat.S_IRUSR | stat.S_IWUSR
             )
             with os.fdopen(descriptor, "wb") as handle:
                 os.fchmod(handle.fileno(), stat.S_IRUSR | stat.S_IWUSR)
@@ -6961,15 +6968,36 @@ def _read_previous_answers(setup: Setup, path: Path) -> int:
         return 0
 
     known = {item.name for item in fields(setup)}
+    # The same checks an answer typed at the prompt meets. The values go into
+    # the compose file verbatim, so a newline in one - typed by nobody, since
+    # a prompt cannot take it - rewrote the YAML around it.
+    questions = {
+        question.key: question
+        for section in build_sections(Setup())
+        for question in section.questions
+    }
     loaded = 0
     for name, value in stored.items():
         if name not in known or name in SECRET_VARIABLES:
             continue
         if type(value) is not type(getattr(setup, name)):
             continue
+        if isinstance(value, str) and not _acceptable_answer(questions.get(name), value):
+            continue
         setattr(setup, name, value)
         loaded += 1
     return loaded
+
+
+def _acceptable_answer(question: Question | None, value: str) -> bool:
+    """Whether a remembered string could have been typed as this answer."""
+    if any(ord(character) < 0x20 or ord(character) == 0x7F for character in value):
+        return False
+    if question is None:
+        return True
+    if question.choices:
+        return value in question.choices
+    return question.validate(value) is None
 
 
 def _read_existing_env(setup: Setup, env_path: Path) -> int:
@@ -7040,7 +7068,17 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 2
     _apply_preset(setup, args.preset)
     upgraded = follow_authentik_patch(setup) if remembered else None
-    reused = _read_existing_env(setup, env_path)
+    try:
+        reused = _read_existing_env(setup, env_path)
+    except (OSError, UnicodeDecodeError) as error:
+        # Not a reason to start over: generating fresh credentials would
+        # replace the ones a running deployment depends on.
+        print(
+            f"{env_path} cannot be read ({error}). Nothing written: fix or move"
+            " it, then run the wizard again.",
+            file=sys.stderr,
+        )
+        return 2
     _apply_flags(setup, args)
     setup.build_context = _default_build_context(output_dir)
     setup.watchtower_socket = setup.watchtower_socket or detect_docker_socket()
@@ -7138,6 +7176,16 @@ def main(argv: Sequence[str] | None = None) -> int:
                     wizard.say(line)
                 wizard.say()
         for path in (compose_path, env_path):
+            # Before the overwrite question and whatever --force says: a link
+            # is not "the file", and writing through it puts the compose file
+            # or the credentials somewhere nobody named.
+            if path.is_symlink():
+                print(
+                    f"{path} is a symbolic link. Nothing written: remove it, or"
+                    " point --output-dir at the directory it leads to.",
+                    file=sys.stderr,
+                )
+                return 1
             if path.exists() and not args.force and not wizard.confirm(
                 f"{path} exists. Overwrite it?", default=False
             ):

@@ -1,0 +1,63 @@
+# A security advisory record. See AGENTS.md, "Security advisories".
+#
+# One file per bullet under a `### Security` heading in CHANGELOG.md.
+# `state` is the decision; `verified` is the evidence it rests on.
+
+slug: setup-wizard-env-symlink
+state: draft
+changelog_version: "1.25.2"
+changelog_entry: "The Docker setup wizard no longer writes credentials through a symbolic link."
+shipped: true
+severity: low
+cwe_ids:
+  - CWE-59
+package: web
+introduced: "1.9.0"
+fixed: "1.25.2"
+summary: >-
+  Docker setup wizard writes generated credentials through a symbolic link
+  placed where .env belongs
+verified: |
+  git log -S 'env_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC' -- docker/setup-wizard.py
+  names 881d6f0 (first tag v1.9.0). git show v1.25.1:docker/setup-wizard.py
+  still opens .env at line 5522 with os.O_WRONLY | os.O_CREAT | os.O_TRUNC and
+  no O_NOFOLLOW, and guards the overwrite with path.exists() at line 6894,
+  which is False for a dangling link. Reproduced before the fix: a dangling
+  out/.env -> ../stolen.env and `setup-wizard.py --output-dir out
+  --non-interactive` exited 0 and created stolen.env holding every secret.
+description: |
+  ### Impact
+
+  `docker/setup-wizard.py` writes the stack's generated credentials - the
+  purge token, the encryption key, the admin proxy secret and others - to
+  `.env`. It opened that file with `O_CREAT` and no `O_NOFOLLOW`, and asked
+  before overwriting only when `Path.exists()` was true, which it is not for
+  a dangling symbolic link. Somebody able to write to the output directory
+  before the operator ran the wizard could leave `.env` as a link to a path
+  of their choosing, and the wizard would create that file and write every
+  secret into it without a question. A link to an existing file was
+  followed as well once the operator confirmed or passed `--force`. The
+  nginx admin secret header file and the credential backups were opened the
+  same way.
+
+  Exploiting it needs write access to the directory the operator writes the
+  deployment into; a directory only the operator can write to is not
+  affected.
+
+  ### Patches
+
+  Fixed in **1.25.2**. The wizard refuses to write when the compose file or
+  `.env` is a symbolic link, whatever `--force` says, and opens every
+  owner-only file with `O_NOFOLLOW`.
+
+  ### Workarounds
+
+  Run the wizard with `--output-dir` pointing at a directory only you can
+  write to, and check that no `.env` or compose file link is already there.
+
+  ### Note on distribution
+
+  The setup wizard is **not** part of the PyPI package - the wheel and the
+  sdist carry the plugin and the scanner only. It ships as the
+  `setup-wizard.py` release asset and in the web bundle. Installations of
+  the `check-opencloud-security` PyPI package are unaffected.

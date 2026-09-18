@@ -205,6 +205,7 @@ engine; Chromium is refused (ADR 0061).
 | [`test_contrib_assets.py`](test_contrib_assets.py) | The Grafana dashboard, Prometheus rules and Checkmk check match the exporter. |
 | [`test_helm_chart.py`](test_helm_chart.py) | The Helm chart renders, and its flags are the plugin's own. |
 | [`test_docker_wizard.py`](test_docker_wizard.py) | `docker/setup-wizard.py` writes a valid compose file, keeps credentials in `.env` only, and never overwrites an existing deployment. |
+| [`test_docker_wizard_hardening.py`](test_docker_wizard_hardening.py) | The setup wizard on unexpected ground: a symbolic link where the compose file or `.env` belongs, an edited answers file, an unreadable `.env`, input that ends or is interrupted, answers the prompt turns away, and credentials never shown at their prompt. |
 | [`test_wizard_release.py`](test_wizard_release.py) | The Docker wizard attached to a release reports its version and ships with a checksum. |
 
 ## Repository, CI and release process
