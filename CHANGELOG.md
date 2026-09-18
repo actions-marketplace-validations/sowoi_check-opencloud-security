@@ -12,6 +12,8 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+## [1.25.1] - 2026-09-18
+
 ### Fixed
 
 - **A release that stopped after its tag is finished by the next run.** The
