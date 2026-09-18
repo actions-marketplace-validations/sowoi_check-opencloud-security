@@ -42,6 +42,11 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   scrolls, a jump to the end sweeps up every block it carried past, a page
   read without JavaScript hides nothing, and a mistyped address gets a 404
   page that runs clean under the CSP with a way home.
+- The waiver search on the landing page no longer makes iOS Safari zoom the
+  page when it is tapped: on a phone it is now set at 16 pixels, the size
+  below which Safari zooms into a focused field. New phone tests
+  (`tests/test_webapp_browser_mobile.py`) drive the menu, a scan, target
+  sizes and field sizes by touch on a 390-pixel screen.
 
 ## [1.25.1] - 2026-09-18
 

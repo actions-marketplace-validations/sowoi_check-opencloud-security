@@ -1711,6 +1711,11 @@ details.waivers[open] > summary::after { transform: rotate(-135deg); }
     transition: border-color .18s var(--ease), box-shadow .18s var(--ease),
         background .18s var(--ease);
 }
+/* iOS Safari zooms into a focused field set below 16px and leaves the page
+   zoomed, so on a phone the search takes the full size. */
+@media (max-width: 640px) {
+    .waiver-search input[type="search"] { font-size: 1rem; }
+}
 .waiver-search input[type="search"]:hover { border-color: var(--brand); }
 .waiver-search input[type="search"]:focus {
     border-color: var(--brand);
