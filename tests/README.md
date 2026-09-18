@@ -179,7 +179,7 @@ engine; Chromium is refused (ADR 0061).
 
 | File | Purpose |
 |---|---|
-| [`test_webapp_browser_ux.py`](test_webapp_browser_ux.py) | Every public page runs clean under its CSP, fits a phone, and hides what is marked hidden; navigation, theme, language, validation, waiver search, site search and back-to-top behave. |
+| [`test_webapp_browser_ux.py`](test_webapp_browser_ux.py) | Every public page runs clean under its CSP, fits a phone, and hides what is marked hidden; navigation, theme, language, validation, waiver search, site search and back-to-top behave; below-the-fold blocks reveal on scroll and after a jump, and hide nothing without JavaScript; an unknown address gets the 404 page. |
 | [`test_webapp_browser_e2e.py`](test_webapp_browser_e2e.py) | A visitor's journeys: form to report for three instances, the waiting page's hand-over, severity filters, every export, waivers, no JavaScript, keyboard only, a German report, an unknown uuid. |
 | [`test_webapp_browser_enhancements.py`](test_webapp_browser_enhancements.py) | The script enhancements no other browser test drives: remembered form settings, the configuration-fragment picker, share buttons, the rescan countdown and the expiry warning. |
 

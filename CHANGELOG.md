@@ -37,6 +37,11 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   attribute. New browser tests (`tests/test_webapp_browser_enhancements.py`)
   now drive the remembered form settings, the fragment picker, the share
   buttons, the rescan countdown and the expiry warning.
+- The below-the-fold reveal and the site's own 404 page now have browser
+  tests too (`tests/test_webapp_browser_ux.py`): blocks arrive as a reader
+  scrolls, a jump to the end sweeps up every block it carried past, a page
+  read without JavaScript hides nothing, and a mistyped address gets a 404
+  page that runs clean under the CSP with a way home.
 
 ## [1.25.1] - 2026-09-18
 
