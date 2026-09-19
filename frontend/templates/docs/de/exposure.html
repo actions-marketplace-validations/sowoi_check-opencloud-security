@@ -143,7 +143,7 @@
 <p>Ist unter diesem Ursprung kein Backend nachweisbar, erscheinen beide Befunde nicht. Der Scanner folgt keinem aus dem Dokument übernommenen Hostnamen, da sonst die gescannte Instanz das nächste Verbindungsziel bestimmen könnte. Einen separat betriebenen Editor musst du mit dafür geeigneten Prüfungen untersuchen. Siehe <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0036-a-companion-service-is-probed-only-where-the-scan-was-pointed.md">ADR 0036</a>.</p>
 <p><strong>Behebung:</strong> Sperre den Administrationspfad am Reverse Proxy und veröffentliche nur die für den Editor benötigten Pfade. Verwende HTTPS für die Editor-Adressen.</p>
 <h2 id="severity-and-rating-impact">Schweregrad und Bewertung</h2>
-<p>Diese Befunde gehören zu <code>extraChecks</code> und benötigen kein <code>--check-hardening</code>. SIE werden bewertet, wenn die jeweilige Prüfung ausgeführt werden kann. Kritische Befunde begrenzen die Note auf <code>D</code>, hohe auf <code>C</code>; die vollständige Zuordnung steht in der <a href="/documentation/scanner-checks#what-the-scanner-checks">Prüfübersicht</a>.</p>
+<p>Diese Befunde gehören zu <code>extraChecks</code> und benötigen kein <code>--check-hardening</code>. Sie werden bewertet, wenn die jeweilige Prüfung ausgeführt werden kann. Kritische Befunde begrenzen die Note auf <code>D</code>, hohe auf <code>C</code>; die vollständige Zuordnung steht in der <a href="/documentation/scanner-checks#what-the-scanner-checks">Prüfübersicht</a>.</p>
 </article>
 
 {% include "_page-nav.html" %}

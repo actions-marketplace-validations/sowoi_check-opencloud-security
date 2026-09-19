@@ -371,7 +371,7 @@ Ungültige Einträge oder mehr als 253 Zeichen verhindern den Start.
 Besucher erfahren nur, dass das Ziel ausgeschlossen wurde, nicht den passenden
 Konfigurationseintrag. Siehe [ADR 0043](../../adr/0043-an-operators-exclusion-outranks-every-allowance.md).
 
-Der Operator-Bereich kann weitere Einträge in Redis verwalten. SIE gelten ab der
+Der Operator-Bereich kann weitere Einträge in Redis verwalten. Sie gelten ab der
 nächsten Anfrage in allen Prozessen, auch für wartende Aufträge. Einträge aus
 der Umgebung lassen sich dort nicht entfernen; äquivalente Schreibweisen werden
 als derselbe Ausschluss behandelt. Dauerhafte Vorgaben gehören in die Umgebung,

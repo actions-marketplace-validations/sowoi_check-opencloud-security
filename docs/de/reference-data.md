@@ -113,7 +113,7 @@ check-opencloud-scanner -c /etc/check-opencloud-security/config.yml \
 **Prüfe die Lesbarkeit nach jeder Änderung von Pfad oder Benutzer:**
 
 - Eine fehlende oder unlesbare Zeitplandatei deaktiviert die End-of-Life-Prüfung. Es gibt keinen Rückfall auf die gebündelte Datei. Die Ausgabe meldet `Release lifecycle: unknown (no release schedule available)`, `scheduleUpdated` ist `null`. Eine eigentlich nicht mehr unterstützte Version kann dadurch allein anhand der übrigen Prüfungen bewertet werden.
-- Eine fehlende oder unlesbare Advisory-Datei wird mit einer Warnung auf stderr übersprungen. SIE kann trotzdem in `advisorySources` stehen; kontrolliere daher auch die Warnmeldungen.
+- Eine fehlende oder unlesbare Advisory-Datei wird mit einer Warnung auf stderr übersprungen. Sie kann trotzdem in `advisorySources` stehen; kontrolliere daher auch die Warnmeldungen.
 
 ## Täglicher Lauf mit systemd {#running-it-daily-with-systemd}
 

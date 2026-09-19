@@ -152,6 +152,8 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ### Documentation
 
+- Polished awkward German guide wording and corrected inconsistent address forms.
+
 - `docker/docker-compose.yml` now shows every web setting it had left out:
   the operator's area (`COS_WEB_ADMIN_*`), `COS_WEB_AUDIT_LOG_ROTATION` and
   `COS_WEB_RATE_LIMIT_SALT` as commented examples, and why

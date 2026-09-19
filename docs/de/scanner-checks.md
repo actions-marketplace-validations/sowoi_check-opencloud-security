@@ -126,7 +126,7 @@ zusätzlich die veröffentlichten Demo-Zugangsdaten.
 an; `dennis` besitzt Administratorrechte. Funktioniert eine Anmeldung, ist
 `demoUsersDisabled` kritisch und begrenzt die Note auf `D`.
 
-Dies ist die einzige Prüfung, die Zugangsdaten sendet. SIE verwendet nur die
+Dies ist die einzige Prüfung, die Zugangsdaten sendet. Sie verwendet nur die
 veröffentlichten Paare und ausschließlich den Provider auf der Origin der
 Instanz. Externe Identity Provider werden damit nicht angesprochen. Das
 Ausschalten der Einstellung löscht vorhandene Konten nicht: Entferne diese
@@ -346,7 +346,7 @@ Bei ausgeschaltetem `scanner.ipv6_enabled` entfallen IPv6-Adressen.
 Ausgenommene Prüfungen werden nicht verglichen. Bei nur einer Adresse entfällt
 der Befund samt Zusatzanfragen. `addressObservations` enthält die Messungen.
 
-Die Funktion ist standardmäßig aus. SIE verursacht etwa ein Dutzend Anfragen
+Die Funktion ist standardmäßig aus. Sie verursacht etwa ein Dutzend Anfragen
 je Adresse einschließlich Demo-Anmeldung. Server hinter einer einzigen
 Loadbalancer-Adresse, rotierende DNS-Antworten und GeoDNS schränken die
 Aussagekraft ein. Der öffentliche Webdienst verwendet sie nicht; siehe
