@@ -1,5 +1,5 @@
 <!-- TOC -->
-* [check-opencloud-security](#check-opencloud-security)
+* [Check OpenCloud Security](#check-opencloud-security)
 * [Try it online](#try-it-online)
     * [👉 **scan.okxo.de** - scan an instance in your browser, nothing to install](#-scanokxode---scan-an-instance-in-your-browser-nothing-to-install)
 * [Quick start](#quick-start)
@@ -44,7 +44,7 @@
   * [Trademarks and affiliation](#trademarks-and-affiliation)
 <!-- TOC -->
 
-# check-opencloud-security
+# Check OpenCloud Security
 Check the security level of your [OpenCloud](https://opencloud.eu/) instance
 from your own monitoring system - misconfigurations, weak hardening, known
 vulnerabilities, **and whether a security update is pending**.

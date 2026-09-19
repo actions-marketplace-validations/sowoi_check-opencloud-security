@@ -212,6 +212,8 @@ def test_missing_advisory_severity_does_not_become_a_high_finding():
         version="7.1.1", database=database, schedule=SCHEDULE,
         recommended="7.3.0", today=TODAY,
     )
+    assert entries[0]["version"] == "7.2.4"
+    assert entries[0]["versionRating"] == 3
     assert entries[-1]["version"] == "7.3.0"
     assert entries[-1]["versionRating"] == 5
 
