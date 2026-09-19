@@ -30,6 +30,10 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ### Fixed
 
+- The Codex scan driver no longer prints the raw scanner document, which could
+  expose TLS inspection data in its JSON output; `scan --json` now emits only
+  the version, verdict and failed checks.
+
 - The operator area's **Releases** tab never listed the release it was running
   on: the image is built from the version-bump commit, before the release
   workflow renames `[Unreleased]`. The page is now generated with that section

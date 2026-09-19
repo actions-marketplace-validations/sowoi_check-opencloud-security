@@ -76,14 +76,29 @@ def cmd_plugin(args: argparse.Namespace) -> int:
 
 
 def cmd_scan(args: argparse.Namespace) -> int:
-    """Call the library directly - no plugin, no thresholds - and print the document."""
+    """Call the library directly - no plugin, no thresholds - and print a summary."""
     from opencloud_local_scan import ReleaseSettings, ScannerSettings, scan
 
     settings = ScannerSettings(scheme="http", timeout=3, check_debug_ports=False, include_bundled_db=True)
     with instance(args.profile) as fake:
         result = scan(fake.host, settings=settings, release_settings=ReleaseSettings(mode="off"))
     if args.json:
-        print(json.dumps(result, indent=2, default=str))
+        summary = {
+            "version": result.get("version"),
+            "rating": result.get("rating"),
+            "EOL": result.get("EOL"),
+            "failedExtraChecks": [
+                check.get("name") or check.get("id")
+                for check in result.get("extraChecks", [])
+                if check.get("passed") is False
+            ],
+            "missingHardenings": [
+                hardening_id
+                for hardening_id, passed in result.get("hardenings", {}).items()
+                if passed is False
+            ],
+        }
+        print(json.dumps(summary, indent=2, default=str))
         return 0
     failed = [c.get("name") or c.get("id") for c in result.get("extraChecks", []) if c.get("passed") is False]
     print(f"version={result.get('version')} rating={result.get('rating')} EOL={result.get('EOL')}")

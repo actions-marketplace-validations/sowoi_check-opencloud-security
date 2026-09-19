@@ -66,7 +66,7 @@ D=.claude/skills/run-check-opencloud-security/driver.py
 uv run python $D scan --profile weak
 # version=7.2.3 rating=2 EOL=False
 # failed extraChecks (8): demoUsersDisabled, reverseProxyDetected, directoryListing, ...
-uv run python $D scan --json      # the whole camelCase result document
+uv run python $D scan --json      # a safe JSON summary of the verdict and failures
 ```
 
 ## Run: Nagios plugin
