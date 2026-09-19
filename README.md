@@ -577,6 +577,11 @@ some of your visitors and none of your scans. `tlsAddressParity` does not see
 it either, because it only compares the TLS identity of the IPv4 and IPv6
 endpoints.
 
+`--login-throttling` (`COS_LOGIN_THROTTLING`, `scanner.check_login_throttling`)
+sends six failed sign-ins for an account that cannot exist and reports whether
+they were throttled - never rated, off by default; see
+[Failed sign-ins](docs/scanner-checks.md#failed-sign-ins-opt-in).
+
 `--all-addresses` (`COS_ALL_ADDRESSES`, `scanner.check_all_addresses`) repeats
 the version, header, hardening and demo-account checks against every address
 the name resolves to, and reports `addressParity` when they disagree:
@@ -649,7 +654,8 @@ Release lifecycle: 4.0 (lts), supported until 2027-12-01 (476 days left)
 
 The remaining window is also published as the `support_days_left` performance
 value, so a graph shows it shrinking - and going negative once the line is
-overdue.
+overdue. With `--eol-warning DAYS` it carries that window as its warning range
+and the end of life itself as its critical range.
 
 ```yaml
 scanner:
@@ -1170,6 +1176,7 @@ the graph without extra configuration.
 | `update_available`    | `1` when a newer OpenCloud release exists                         |
 | `support_days_left`   | Days until the release line loses support (negative when overdue) |
 | `cert_days_left`      | Days until the TLS certificate expires (negative once expired)    |
+| `upgrade_path_complete` | `1` when the recommended upgrade clears every known advisory, `0` when it leaves one open; absent without advisories |
 
 `cert_days_left` is absent rather than zero when nothing was measured - a scan
 over plain HTTP, a host that refused the handshake, or a certificate whose

@@ -129,6 +129,11 @@ class InstanceBehaviour:
     # Accept the documented demo credentials on the protected endpoints, the
     # way an instance left with IDM_CREATE_DEMO_USERS=true does.
     demo_users: bool = False
+    # Answer 429 with Retry-After once this many Basic sign-ins have been
+    # tried, before the credentials are even looked at - the way a proxy rate
+    # limit on the login path does. None never throttles.
+    throttle_after: int | None = None
+    basic_logins: list[int] = field(default_factory=lambda: [0])
     # Publish the version through webfinger.
     webfinger_version: bool = False
     # Serve a debug endpoint (/metrics, /config) on the main port.
@@ -495,6 +500,14 @@ def _make_handler(behaviour: InstanceBehaviour):
                 if behaviour.unprotected:
                     self._json({"value": [{"id": "1", "onPremisesSamAccountName": "admin"}]})
                     return
+                if self.headers.get("Authorization", "").startswith("Basic "):
+                    behaviour.basic_logins[0] += 1
+                    if (
+                        behaviour.throttle_after is not None
+                        and behaviour.basic_logins[0] > behaviour.throttle_after
+                    ):
+                        self._respond(429, b"", {"Retry-After": "30"})
+                        return
                 if behaviour.demo_users and self._demo_user():
                     self._json({"ocs": {"data": {"id": self._demo_user()}}})
                     return

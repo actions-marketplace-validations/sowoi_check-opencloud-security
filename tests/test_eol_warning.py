@@ -246,3 +246,63 @@ def test_every_value_the_wizard_accepts_is_one_int_can_read(value):
     assert wizard._non_negative_int(value) is None
     assert int(value) >= 0
 
+
+
+# --- perfdata and webhook ---------------------------------------------------------
+def test_the_support_window_becomes_the_perfdata_warning_range():
+    """With --eol-warning the graph warns at the same day count the alert does."""
+    context = ScanContext(host=HOST, eol_warning_days=30)
+    windowed = plugin._build_perfdata(5, plugin.RATE_MAP, 0, None, context=context,
+                                      support_days_left=20)
+    plain = plugin._build_perfdata(5, plugin.RATE_MAP, 0, None,
+                                   context=ScanContext(host=HOST), support_days_left=20)
+
+    assert "support_days_left=20;@~:30;@~:0;;" in windowed.split()
+    assert "support_days_left=20;;;;" in plain.split()
+
+
+def test_the_webhook_says_whether_the_result_is_inside_the_window():
+    """A receiver reads the window and the verdict without recomputing either."""
+    inside = ScanContext(host=HOST, eol_warning_days=30)
+    outside = ScanContext(host=HOST, eol_warning_days=10)
+
+    assert plugin._within_eol_window(inside, result()) is True
+    assert plugin._within_eol_window(outside, result()) is False
+    assert plugin._within_eol_window(ScanContext(host=HOST), result()) is False
+    assert plugin._within_eol_window(inside, result(daysRemaining=True)) is False
+
+
+def test_the_webhook_payload_carries_the_window_and_the_upgrade_path():
+    """eol_warning, eol_warning_days and upgrade_path are in the payload."""
+    document = result()
+    document["upgradePath"] = {"target": "7.3.1", "fixes": ["A"], "stillAffected": [],
+                               "safeVersion": "7.3.1"}
+    payload = plugin._build_webhook_payload(
+        ScanContext(host=HOST, eol_warning_days=30),
+        scan_result=ScanResult(response=document, uuid="local-x"),
+        response_scan=document,
+        message="WARNING",
+        exit_code=NagiosExitCode.WARNING,
+        rating=5,
+        rate="A+",
+        vulnerabilities=[],
+        missing_hardenings=[],
+        duration_seconds=1.0,
+    )
+
+    assert payload["eol_warning"] is True
+    assert payload["eol_warning_days"] == 30
+    assert payload["upgrade_path"]["target"] == "7.3.1"
+
+
+def test_upgrade_path_complete_is_perfdata_only_when_there_is_a_path():
+    """1 when the target clears everything, 0 when it does not, absent without a path."""
+    complete = {"upgradePath": {"target": "7.3.0", "stillAffected": []}}
+    partial = {"upgradePath": {"target": "7.2.4", "stillAffected": ["B"]}}
+
+    assert plugin._upgrade_path_complete(complete) is True
+    assert plugin._upgrade_path_complete(partial) is False
+    assert plugin._upgrade_path_complete({}) is None
+    line = plugin._build_perfdata(5, plugin.RATE_MAP, 1, None, upgrade_path_complete=False)
+    assert "upgrade_path_complete=0;;;0;1" in line.split()
+    assert "upgrade_path_complete" not in plugin._build_perfdata(5, plugin.RATE_MAP, 0, None)

@@ -391,6 +391,21 @@ origin the scan was pointed at
 (<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0036-a-companion-service-is-probed-only-where-the-scan-was-pointed.md">ADR 0036</a>).
 <code>Alt-Svc: clear</code> records nothing as advertised, and without a response to read
 the header from the key is <code>null</code>.</p>
+<h3 id="failed-sign-ins-opt-in">Failed sign-ins (opt-in)</h3>
+<p>With <code>--login-throttling</code> (<code>COS_LOGIN_THROTTLING</code>, or
+<code>scanner.check_login_throttling</code>) the scan sends six failed sign-ins, one
+after another, for a random account that cannot exist, and records whether
+the instance slowed them down - an HTTP <code>429</code> or a <code>Retry-After</code> header:</p>
+<pre><code class="language-json">{&quot;loginThrottling&quot;: {&quot;tested&quot;: true, &quot;attempts&quot;: 4, &quot;throttled&quot;: true,
+  &quot;evidence&quot;: &quot;HTTP 429, Retry-After: 30&quot;, &quot;statuses&quot;: [401, 401, 401, 429]&#125;&#125;
+</code></pre>
+<p>It is off by default, asks only the built-in identity provider, runs after
+every other probe so it cannot hide the demo accounts behind a <code>429</code>, and is
+never graded: many deployments throttle over a longer window or at a layer a
+short burst does not reach, so "not throttled" is a prompt to look, not a
+verdict. The public web service never sends it
+(<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0069-login-throttling-is-observed-only-when-the-operator-asks.md">ADR 0069</a>).
+Without the option the key is <code>null</code>.</p>
 <h3 id="office-and-calendar-integrations">Office and calendar integrations</h3>
 <p>Two integrations are visible without logging in, and both are reported as
 observations rather than verdicts:</p>

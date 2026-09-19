@@ -90,6 +90,10 @@ scanner:
   # reports addressParity when they disagree. About a dozen requests per
   # address, and nothing to compare when the name has only one.
   # check_all_addresses: false
+  # Send six failed sign-ins for an account that cannot exist and record
+  # whether the instance throttles them (HTTP 429 / Retry-After). Never rated;
+  # the built-in identity provider only. See ADR 0069.
+  # check_login_throttling: false
   # debug_ports: [9205, 9141, 9124, 9134, 9239]
   # debug_port_timeout: 3
   # A scan is almost entirely spent waiting for the instance to answer, so

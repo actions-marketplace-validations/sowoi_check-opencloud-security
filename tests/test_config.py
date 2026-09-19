@@ -542,3 +542,23 @@ def test_an_explicit_file_still_wins_over_the_discovered_one(tmp_path, monkeypat
     config = load_configuration(str(explicit), environ={})
 
     assert config.get("HOST") == "explicit.example.com"
+
+
+def test_login_throttling_is_off_by_default_and_follows_file_environment_and_flag(tmp_path):
+    """File sets it, the environment overrides the file, an explicit override wins."""
+    config_file = tmp_path / "config.yml"
+    config_file.write_text("scanner:\n  check_login_throttling: true\n", encoding="utf-8")
+
+    assert scanner_settings_from_config(
+        load_configuration(None, environ={})
+    ).check_login_throttling is False
+    assert scanner_settings_from_config(
+        load_configuration(str(config_file), environ={})
+    ).check_login_throttling is True
+    from_env = load_configuration(
+        str(config_file), environ={"COS_SCANNER_CHECK_LOGIN_THROTTLING": "false"}
+    )
+    assert scanner_settings_from_config(from_env).check_login_throttling is False
+    assert scanner_settings_from_config(
+        from_env, check_login_throttling=True
+    ).check_login_throttling is True

@@ -98,6 +98,7 @@ is needed.
 | [`test_baseline.py`](test_baseline.py) | `--baseline` and `--warn-on-new`: report only what changed. |
 | [`test_eol_warning.py`](test_eol_warning.py) | `--eol-warning`: an otherwise OK result warns while support is running out, from flag, environment or file. |
 | [`test_upgrade_path.py`](test_upgrade_path.py) | `upgradePath`: what the recommended release fixes and leaves open, and the plugin lines for it and for an advertised HTTP/3 listener. |
+| [`test_webapp_report_facts.py`](test_webapp_report_facts.py) | The report's facts list: an advertised HTTP/3 listener and the upgrade path, rendered from a real scan. |
 | [`test_multi_host.py`](test_multi_host.py) | Host parsing, target validation, retries and runs across several hosts. |
 | [`test_env_config.py`](test_env_config.py) | `COS_` environment variables and the config file as argparse defaults. |
 | [`test_e2e_cli.py`](test_e2e_cli.py) | End to end: both CLIs run as subprocesses over real HTTP against the fake instance. |

@@ -591,6 +591,10 @@ rollout - no HSTS, demo accounts still signing in, an older release - serves
 some of your visitors and none of your scans. <code>tlsAddressParity</code> does not see
 it either, because it only compares the TLS identity of the IPv4 and IPv6
 endpoints.</p>
+<p><code>--login-throttling</code> (<code>COS_LOGIN_THROTTLING</code>, <code>scanner.check_login_throttling</code>)
+sends six failed sign-ins for an account that cannot exist and reports whether
+they were throttled - never rated, off by default; see
+<a href="/documentation/scanner-checks#failed-sign-ins-opt-in">Failed sign-ins</a>.</p>
 <p><code>--all-addresses</code> (<code>COS_ALL_ADDRESSES</code>, <code>scanner.check_all_addresses</code>) repeats
 the version, header, hardening and demo-account checks against every address
 the name resolves to, and reports <code>addressParity</code> when they disagree:</p>
@@ -698,7 +702,8 @@ instance worth monitoring at all:</p>
 </code></pre>
 <p>The remaining window is also published as the <code>support_days_left</code> performance
 value, so a graph shows it shrinking - and going negative once the line is
-overdue.</p>
+overdue. With <code>--eol-warning DAYS</code> it carries that window as its warning range
+and the end of life itself as its critical range.</p>
 <pre><code class="language-yaml">scanner:
   use_release_schedule: true      # false disables the EOL check entirely
   # release_schedule: /etc/check-opencloud-security/schedule.json
@@ -1222,6 +1227,10 @@ the graph without extra configuration.</p>
 <tr>
 <td><code>cert_days_left</code></td>
 <td>Days until the TLS certificate expires (negative once expired)</td>
+</tr>
+<tr>
+<td><code>upgrade_path_complete</code></td>
+<td><code>1</code> when the recommended upgrade clears every known advisory, <code>0</code> when it leaves one open; absent without advisories</td>
 </tr>
 </tbody>
 </table>

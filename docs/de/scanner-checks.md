@@ -191,6 +191,28 @@ ist eine Angabe des Ziels, keine Origin, auf die der Scan gerichtet wurde
 `Alt-Svc: clear` gilt als nichts angekündigt; ohne Antwort ist der Schlüssel
 `null`.
 
+### Fehlgeschlagene Anmeldungen (optional) {#failed-sign-ins-opt-in}
+
+Mit `--login-throttling` (`COS_LOGIN_THROTTLING` oder
+`scanner.check_login_throttling`) sendet der Scan nacheinander sechs
+fehlgeschlagene Anmeldungen für ein zufälliges Konto, das es nicht geben kann,
+und hält fest, ob die Instanz sie gebremst hat - ein HTTP `429` oder ein
+`Retry-After`-Header:
+
+```json
+{"loginThrottling": {"tested": true, "attempts": 4, "throttled": true,
+  "evidence": "HTTP 429, Retry-After: 30", "statuses": [401, 401, 401, 429]}}
+```
+
+Standardmäßig ist das aus. Gefragt wird nur der eingebaute Identitätsanbieter,
+und zwar nach allen anderen Prüfungen, damit ein `429` die Demo-Konten nicht
+verdeckt. Bewertet wird es nie: Viele Installationen bremsen über ein längeres
+Zeitfenster oder auf einer Ebene, die ein kurzer Versuch nicht erreicht - "nicht
+gebremst" ist also ein Anlass, nachzusehen, kein Urteil. Der öffentliche
+Webdienst sendet diese Anmeldungen nie
+([ADR 0069](../../adr/0069-login-throttling-is-observed-only-when-the-operator-asks.md)).
+Ohne die Option ist der Schlüssel `null`.
+
 ### Office- und Kalenderanbindungen {#office-and-calendar-integrations}
 
 Zwei Beobachtungen sind ohne Anmeldung möglich:

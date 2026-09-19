@@ -238,6 +238,7 @@ def test_a_list_answer_becomes_a_list_the_scanner_understands(tmp_path):
             "y",
             "",  # concurrency
             "",  # probe the debug ports
+            "",  # check whether failed sign-ins are throttled
             "",  # dial every resolved address
             "hsts:missing, basic-auth",
         ]

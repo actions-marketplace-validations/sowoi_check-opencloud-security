@@ -303,3 +303,55 @@ def test_six_failed_extra_checks_show_one_more(capsys):
     _, _, details, _ = run(result(extraChecks=_extra(6)), capsys)
 
     assert "Additional checks failed (6): check0, check1, check2, check3, check4 (+1 more)" in details
+
+
+# --- login throttling and the upgrade path metric ---
+def test_throttled_sign_ins_are_reported_with_their_evidence(capsys):
+    """A 429 on the failed sign-ins is named, and marked as not rated."""
+    throttling = {"tested": True, "throttled": True, "evidence": "HTTP 429", "attempts": 3}
+    code, _, details, _ = run(result(loginThrottling=throttling), capsys)
+
+    assert code is NagiosExitCode.OK
+    assert "Failed sign-ins throttled (HTTP 429) (not rated)." in details
+    assert not any("were not throttled" in line for line in details)
+
+
+def test_unthrottled_sign_ins_say_how_many_and_what_to_do(capsys):
+    """An open login path is reported with the attempt count and the proxy advice."""
+    throttling = {"tested": True, "throttled": False, "evidence": "", "attempts": 10}
+    code, _, details, _ = run(result(loginThrottling=throttling), capsys)
+
+    assert code is NagiosExitCode.OK
+    assert (
+        "10 failed sign-ins in a row were not throttled - consider rate limiting "
+        "at the proxy (not rated)."
+    ) in details
+    assert not any("Failed sign-ins throttled" in line for line in details)
+
+
+@pytest.mark.parametrize("throttling", [{"tested": False}, None, "yes"])
+def test_an_untested_or_absent_throttling_record_adds_no_line(throttling, capsys):
+    """Nothing was measured, so nothing is said - and no 'None' line appears."""
+    _, _, details, _ = run(result(loginThrottling=throttling), capsys)
+
+    assert not any("sign-ins" in line for line in details)
+    assert "None" not in details
+
+
+@pytest.mark.parametrize(
+    ("still_affected", "expected"), [([], "1"), (["GHSA-bbbb"], "0")]
+)
+def test_the_upgrade_path_metric_reaches_the_perfdata(still_affected, expected, capsys):
+    """upgrade_path_complete is 1 when the target clears everything, 0 when it does not."""
+    path = {"target": "7.3.0", "fixes": ["GHSA-aaaa"], "stillAffected": still_affected,
+            "safeVersion": "7.3.0"}
+    _, _, _, perfdata = run(result(upgradePath=path), capsys)
+
+    assert metrics(perfdata)["upgrade_path_complete"] == f"{expected};;;0;1"
+
+
+def test_there_is_no_upgrade_path_metric_without_a_path(capsys):
+    """Without advisories there is nothing to complete, so no metric at all."""
+    _, _, _, perfdata = run(result(), capsys)
+
+    assert "upgrade_path_complete" not in metrics(perfdata)

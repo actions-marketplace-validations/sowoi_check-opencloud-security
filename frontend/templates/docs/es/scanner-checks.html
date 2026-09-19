@@ -404,6 +404,22 @@ del objetivo, no un origen al que se apuntó el escaneo
 (<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0036-a-companion-service-is-probed-only-where-the-scan-was-pointed.md">ADR 0036</a>).
 <code>Alt-Svc: clear</code> no registra nada como anunciado y, sin respuesta, la clave es
 <code>null</code>.</p>
+<h3 id="failed-sign-ins-opt-in">Inicios de sesión fallidos (opcional)</h3>
+<p>Con <code>--login-throttling</code> (<code>COS_LOGIN_THROTTLING</code> o
+<code>scanner.check_login_throttling</code>) el escaneo envía seis inicios de sesión
+fallidos seguidos para una cuenta aleatoria que no puede existir y registra si
+la instancia los frenó: un HTTP <code>429</code> o una cabecera <code>Retry-After</code>:</p>
+<pre><code class="language-json">{&quot;loginThrottling&quot;: {&quot;tested&quot;: true, &quot;attempts&quot;: 4, &quot;throttled&quot;: true,
+  &quot;evidence&quot;: &quot;HTTP 429, Retry-After: 30&quot;, &quot;statuses&quot;: [401, 401, 401, 429]&#125;&#125;
+</code></pre>
+<p>Está desactivado por defecto, solo pregunta al proveedor de identidad
+integrado, se ejecuta después de todas las demás pruebas para que un <code>429</code> no
+oculte las cuentas de demostración y nunca se califica: muchas instalaciones
+limitan en una ventana más larga o en una capa que una ráfaga corta no
+alcanza, así que "sin límite" es un motivo para revisar, no un veredicto. El
+servicio web público nunca lo envía
+(<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0069-login-throttling-is-observed-only-when-the-operator-asks.md">ADR 0069</a>).
+Sin la opción, la clave es <code>null</code>.</p>
 <h3 id="office-and-calendar-integrations">Integraciones de ofimática y calendario</h3>
 <p>Hay dos integraciones visibles sin iniciar sesión, y ambas se notifican como
 observaciones y no como veredictos:</p>

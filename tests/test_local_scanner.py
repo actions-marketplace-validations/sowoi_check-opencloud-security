@@ -1650,3 +1650,51 @@ def test_an_oversized_header_is_truncated_in_the_record():
 
     assert len(services["header"]) == 512
     assert services["advertised"] is False
+
+
+LOGIN_THROTTLING = ScannerSettings(
+    scheme="http", timeout=3, check_debug_ports=False, include_bundled_db=True,
+    check_login_throttling=True,
+)
+
+
+def test_failed_sign_ins_that_are_throttled_are_recorded_and_never_graded():
+    """A 429 with Retry-After after a few failures is recorded; the rating does not move."""
+    throttled = run_scan(InstanceBehaviour(throttle_after=3), LOGIN_THROTTLING)
+    record = throttled["loginThrottling"]
+    assert record["tested"] is True
+    assert record["throttled"] is True
+    assert record["evidence"] == "HTTP 429, Retry-After: 30"
+    assert 1 <= record["attempts"] <= 4
+
+    open_door = run_scan(InstanceBehaviour(), LOGIN_THROTTLING)
+    assert open_door["loginThrottling"]["throttled"] is False
+    assert open_door["loginThrottling"]["attempts"] == 6
+    assert open_door["rating"] == throttled["rating"]
+
+
+def test_login_throttling_is_off_unless_asked_for():
+    """The default scan sends no sign-in beyond the demo-account check."""
+    behaviour = InstanceBehaviour()
+    result = run_scan(behaviour)
+
+    assert result["loginThrottling"] is None
+    assert not any("cos-throttle-probe" in str(entry) for entry in behaviour.seen)
+
+
+def test_login_throttling_never_asks_an_external_identity_provider():
+    """An upstream provider is somebody else's; no sign-in is pushed at it."""
+    from opencloud_local_scan.scanner import _login_throttling
+
+    assert _login_throttling(None, {"detected": True, "external": True}) is None
+    assert _login_throttling(None, {"detected": False}) is None
+
+
+def test_throttling_runs_after_the_demo_accounts_are_checked():
+    """A throttled instance must still fail on its demo accounts, not hide them behind 429."""
+    result = run_scan(
+        InstanceBehaviour(demo_users=True, throttle_after=5), LOGIN_THROTTLING
+    )
+
+    assert _check(result, "demoUsersDisabled")["passed"] is False
+    assert result["loginThrottling"]["throttled"] is True

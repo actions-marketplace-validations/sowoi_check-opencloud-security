@@ -148,6 +148,7 @@ names, with two differences the format requires:
 | `update_available` | `1` when a newer release exists. Absent when the update check is off |
 | `support_days_left` | Days until the release line stops receiving fixes; negative once it has |
 | `cert_days_left` | Days until the certificate expires; negative once it has |
+| `upgrade_path_complete` | `1` when the recommended upgrade clears every known advisory, `0` when it does not; absent without advisories |
 | `execution_time` | How long the scan took, in seconds |
 
 A metric that was not measured is left out rather than sent as a zero, so a
