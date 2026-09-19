@@ -12,6 +12,8 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+## [1.26.0] - 2026-09-19
+
 ### Added
 
 - `--eol-warning DAYS` (`COS_EOL_WARNING`, YAML `eol_warning`, and a setup
