@@ -14,6 +14,10 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ### Added
 
+- Codex can use the repository's Claude Code skills, hooks, subagent roles and
+  Playwright MCP configuration through portable `.agents/` and `.codex/`
+  compatibility files. The original `.claude/` setup remains unchanged.
+
 - The operator's area shows the running release and whether a newer one is
   published on GitHub (cached six hours, `COS_WEB_UPDATE_CHECK`), and a button
   installs it: the release's web bundle is verified against its Sigstore build

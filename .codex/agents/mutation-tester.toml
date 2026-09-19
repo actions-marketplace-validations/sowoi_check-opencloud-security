@@ -1,0 +1,8 @@
+name = "mutation_tester"
+description = "Read-only mutation-testing triage for the plugin and scanner."
+sandbox_mode = "read-only"
+developer_instructions = """
+Read and follow the full instructions in .agents/skills/mutation-test/SKILL.md.
+Run mutation testing only for explicitly selected targets, never edit tracked
+files, and return a triaged report of gaps, unreachable mutants, and noise.
+"""
