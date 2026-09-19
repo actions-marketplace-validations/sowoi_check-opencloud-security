@@ -90,16 +90,26 @@ jobs:
         if: steps.state.outputs.mode == 'release'
         run: python scripts/update_release_schedule.py --allow-failure
 
-      - name: Build the static frontend search index
-        if: steps.state.outputs.mode == 'release'
-        run: python scripts/build_search_index.py
-
       # The version in pyproject.toml changed - it is only ever bumped by hand.
       # The changes collected under '## [Unreleased]' in CHANGELOG.md become
       # the notes of that version, and the same entry is written to RELEASE.md.
       - name: Update CHANGELOG.md and RELEASE.md
         if: steps.state.outputs.mode == 'release'
         run: python scripts/release_notes.py --version "$VERSION"
+
+      # The operator area's Releases tab is generated from the released
+      # sections of CHANGELOG.md, which the step above just gained one of.
+      # Regenerated here, in the same commit, or every check on main would
+      # find the page stale from the moment a release is published.
+      - name: Regenerate the operator area's release notes
+        if: steps.state.outputs.mode == 'release'
+        run: uv run --locked --group test python scripts/build_frontend_documentation.py
+
+      # After the release notes and the page above, because both indexes
+      # embed the version and the admin one embeds the Releases page text.
+      - name: Build the static frontend search index
+        if: steps.state.outputs.mode == 'release'
+        run: python scripts/build_search_index.py
 
       - name: Commit release notes
         if: steps.state.outputs.mode == 'release'
@@ -111,7 +121,12 @@ jobs:
             frontend/static/search-index.json \
             frontend/static/search-index.de.json \
             frontend/static/search-index.es.json \
-            frontend/static/search-index.fr.json
+            frontend/static/search-index.fr.json \
+            frontend/templates/admin-docs/releases.html \
+            webapp/data/admin-search-index.json \
+            webapp/data/admin-search-index.de.json \
+            webapp/data/admin-search-index.es.json \
+            webapp/data/admin-search-index.fr.json
           if git diff --cached --quiet; then
             echo "Release notes are already up to date."
           else

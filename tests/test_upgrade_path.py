@@ -241,3 +241,25 @@ def test_no_http3_or_a_malformed_record_adds_no_line(services, capsys):
 
     assert code is NagiosExitCode.OK
     assert "Alt-Svc" not in out
+
+
+def test_the_upgrade_path_reaches_the_plugin_output(capsys):
+    """With a known vulnerability, the operator reads which release fixes it."""
+    document = dict(
+        _BASE,
+        vulnerabilities=[{"id": "GHSA-aaaa"}, {"id": "GHSA-bbbb"}],
+        upgradePath={"target": "7.2.4", "fixes": ["GHSA-aaaa"],
+                     "stillAffected": ["GHSA-bbbb"], "safeVersion": "7.3.0"},
+    )
+
+    _, out = _details(document, capsys)
+    lines = out.split(" | ")[0].split("\n")
+
+    assert (
+        "Upgrade path: 7.2.4 fixes GHSA-aaaa but is still affected by GHSA-bbbb; "
+        "7.3.0 is the first release that clears them all."
+    ) in lines
+    assert "None" not in lines
+
+    _, clean = _details(dict(_BASE), capsys)
+    assert "Upgrade path:" not in clean

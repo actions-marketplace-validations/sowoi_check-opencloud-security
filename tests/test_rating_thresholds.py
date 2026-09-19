@@ -210,3 +210,13 @@ def test_a_threshold_outside_the_scale_is_named_as_unknown():
     assert warning == (
         "WARNING: Rating A+ is at or below the warning threshold ?, but no known vulnerabilities."
     )
+
+
+@pytest.mark.parametrize("value", [None, "5", True, 4.0, [5]])
+def test_a_missing_or_non_numeric_rating_is_unknown(value):
+    """Only a real integer is a rating; anything else must not borrow a grade."""
+    document = {} if value is None else {"rating": value}
+
+    assert plugin._rating_of(document) == plugin.UNKNOWN_RATING
+    assert plugin.UNKNOWN_RATING not in plugin.RATE_MAP
+    assert plugin._rating_of({"rating": 4}) == 4

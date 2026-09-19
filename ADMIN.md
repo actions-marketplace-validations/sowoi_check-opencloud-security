@@ -543,7 +543,7 @@ What the area does:
 | Search index | **Reports** whether the shipped index still matches this build. It never rebuilds - every pull request to main and the release workflow do that. When it is out of date, the card lists every reason and shows how to fix it. Three verdicts, not two: an index that does not name the release it was built for is **Cannot tell**, because its pages and languages could be compared and its copy could not |
 | Audit | Streams the audit records as they are written, from the log file when one is configured and otherwise from a bounded in-memory ring |
 
-Beside the overview there are four more places, reached from the tab strip at
+Beside the overview there are five more places, reached from the tab strip at
 the top of every page in the area:
 
 | Tab | What it shows |
@@ -552,8 +552,9 @@ the top of every page in the area:
 | Rules | How a grade is decided and every rule enforced against a request, with the numbers this deployment runs with: the grade scale and the scanner's severity ceilings, the end-of-life and track overrides, whether extra checks count, how many waivers a visitor may choose and the reference data rated against; then the per-client, daily and per-target limits, the probe block with its strikes and escalation (1 h → 6 h → 24 h by default), the SSRF guard's refused ranges, names and wildcard DNS services, approval mode, the flags every scan is built with, and the credential and refresh-button limits. Each rule says **Enforced** or **Off** and names the `COS_WEB_*` variables behind it. Every number and list is read from the running settings and from the constants the enforcing code uses (`webapp/rules.py`), so the tab cannot describe a limit the service no longer has; `tests/test_webapp_admin_rules.py` changes settings and looks for the change on the page |
 | Architecture | `ARCHITECTURE.md` — how the repository is put together and why the seams are where they are |
 | Operations | This file — the data to keep current, what to rebuild, and where to look when something breaks |
+| Releases | The ten newest released sections of `CHANGELOG.md`, newest first — what this release and the ones before it changed. `[Unreleased]` is left out: it is what a deployment does not run yet |
 
-The two documents are generated into `frontend/templates/admin-docs/` at build time by
+The three documents are generated into `frontend/templates/admin-docs/` at build time by
 `scripts/build_frontend_documentation.py`, from
 `OPERATOR_DOCUMENTATION_PAGES` rather than the public manifest, so no
 Markdown is parsed at runtime and neither document reaches `/documentation`,
@@ -564,6 +565,12 @@ descriptions come from the same script, which extracts the `docs/webapp.md`
 table into `webapp/environment_reference.py`; its `--check` in CI fails when
 the two disagree, and `tests/test_webapp_admin_configuration.py` fails when
 a variable is read, listed or documented in one place and not the others.
+
+The Releases tab changes only when a release is published: the publish
+workflow renames `[Unreleased]` to the new version and, in the same commit,
+regenerates that page and the area's search index. An ordinary pull
+request's changelog entry does not touch it, so it never needs rebuilding by
+hand.
 
 What it deliberately cannot do: name a target, a uuid, a result or a client
 address. The statistics are counts and settings, and the audit view shows the

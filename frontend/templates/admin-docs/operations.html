@@ -702,7 +702,7 @@ anything else refuses to start.</p>
 </tr>
 </tbody>
 </table>
-<p>Beside the overview there are four more places, reached from the tab strip at
+<p>Beside the overview there are five more places, reached from the tab strip at
 the top of every page in the area:</p>
 <table>
 <thead>
@@ -728,9 +728,13 @@ the top of every page in the area:</p>
 <td>Operations</td>
 <td>This file — the data to keep current, what to rebuild, and where to look when something breaks</td>
 </tr>
+<tr>
+<td>Releases</td>
+<td>The ten newest released sections of <code>CHANGELOG.md</code>, newest first — what this release and the ones before it changed. <code>[Unreleased]</code> is left out: it is what a deployment does not run yet</td>
+</tr>
 </tbody>
 </table>
-<p>The two documents are generated into <code>frontend/templates/admin-docs/</code> at build time by
+<p>The three documents are generated into <code>frontend/templates/admin-docs/</code> at build time by
 <code>scripts/build_frontend_documentation.py</code>, from
 <code>OPERATOR_DOCUMENTATION_PAGES</code> rather than the public manifest, so no
 Markdown is parsed at runtime and neither document reaches <code>/documentation</code>,
@@ -741,6 +745,11 @@ descriptions come from the same script, which extracts the <code>docs/webapp.md<
 table into <code>webapp/environment_reference.py</code>; its <code>--check</code> in CI fails when
 the two disagree, and <code>tests/test_webapp_admin_configuration.py</code> fails when
 a variable is read, listed or documented in one place and not the others.</p>
+<p>The Releases tab changes only when a release is published: the publish
+workflow renames <code>[Unreleased]</code> to the new version and, in the same commit,
+regenerates that page and the area's search index. An ordinary pull
+request's changelog entry does not touch it, so it never needs rebuilding by
+hand.</p>
 <p>What it deliberately cannot do: name a target, a uuid, a result or a client
 address. The statistics are counts and settings, and the audit view shows the
 pseudonymised records the log already wrote - a fingerprint is a truncated

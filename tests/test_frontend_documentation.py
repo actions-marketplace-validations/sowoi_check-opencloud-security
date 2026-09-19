@@ -133,3 +133,93 @@ def test_a_saved_language_choice_selects_the_german_guide_body():
     )
     assert 'data-reveal lang="de"' in response.text
     assert 'data-reveal lang="en"' not in response.text
+
+
+# --- the operator area's release notes ----------------------------------------------
+CHANGELOG = """# Changelog
+
+Preamble with a [link](https://example.com).
+
+## [Unreleased]
+
+### Added
+
+- Not shipped yet.
+
+## [2.1.0] - 2026-02-01
+
+### Added
+
+- Newest.
+
+## [2.0.1] - 2026-01-15
+
+### Fixed
+
+- Middle.
+
+## [2.0.0] - 2026-01-01
+
+- Oldest.
+"""
+
+
+def test_the_release_notes_keep_the_newest_sections_only():
+    """The count is of released sections; the preamble and [Unreleased] never appear."""
+    selected = generator._latest_releases(CHANGELOG, 2)
+
+    assert selected.startswith("## [2.1.0] - 2026-02-01\n")
+    assert "## [2.0.1]" in selected
+    assert "## [2.0.0]" not in selected and "Oldest" not in selected
+    assert "Unreleased" not in selected and "Not shipped yet" not in selected
+    assert "Preamble" not in selected
+
+
+def test_a_changelog_shorter_than_the_count_is_shown_whole():
+    """Fewer releases than asked for is every release, not an error."""
+    selected = generator._latest_releases(CHANGELOG, 10)
+
+    assert selected.rstrip().endswith("- Oldest.")
+    assert selected.count("\n## [") == 2
+
+
+def test_an_unreleased_entry_does_not_change_the_release_notes():
+    """
+    Why the page does not go stale on every pull request.
+
+    Only a release - which the publish workflow follows by regenerating the
+    page - may change what the operator area's Releases tab renders.
+    """
+    more = CHANGELOG.replace("- Not shipped yet.", "- Not shipped yet.\n- Another pull request.")
+
+    assert generator._latest_releases(more, 2) == generator._latest_releases(CHANGELOG, 2)
+
+
+@pytest.mark.parametrize(
+    "source",
+    ["", "# Changelog\n\n## [Unreleased]\n\n- Only this.\n", "## [v2] - 2026-01-01\n"],
+)
+def test_a_changelog_without_a_released_version_is_refused(source):
+    """A build that would render an empty page fails loudly instead."""
+    with pytest.raises(ValueError, match="no released version heading"):
+        generator._latest_releases(source, 10)
+
+
+def test_the_publish_workflow_regenerates_the_release_notes_after_writing_them():
+    """
+    The release rewrites CHANGELOG.md; the generated page and the admin index
+    have to follow in the same commit, in that order, or main is stale.
+    """
+    workflow = (REPO_ROOT / ".github" / "workflows" / "publish-pypi.yml").read_text(
+        encoding="utf-8"
+    )
+    notes = workflow.index("scripts/release_notes.py")
+    pages = workflow.index("scripts/build_frontend_documentation.py")
+    index = workflow.index("scripts/build_search_index.py")
+    commit = workflow.index("git add CHANGELOG.md")
+
+    assert notes < pages < index < commit
+    committed = workflow[commit:workflow.index("git diff --cached", commit)]
+    assert "frontend/templates/admin-docs/releases.html" in committed
+    for name in ("", ".de", ".es", ".fr"):
+        assert f"webapp/data/admin-search-index{name}.json" in committed

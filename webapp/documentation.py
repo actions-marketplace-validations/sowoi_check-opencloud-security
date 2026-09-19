@@ -16,6 +16,9 @@ class DocumentationPage:
     start_heading: str | None = None
     end_heading: str | None = None
     demote_headings: bool = False
+    #: Render only the newest this many released sections of a Keep a
+    #: Changelog file - never ``[Unreleased]`` - instead of a heading range.
+    latest_releases: int = 0
 
 
 #: The languages with a translated source for every public guide, under
@@ -311,6 +314,18 @@ OPERATOR_DOCUMENTATION_PAGES: tuple[DocumentationPage, ...] = (
         "ADMIN.md",
         "Operations",
         "Keeping the data current, rebuilding what is generated, and where to look when the service misbehaves.",
+    ),
+    # What the releases leading up to the running one changed. Released
+    # sections only: [Unreleased] is what a deployment does *not* run yet,
+    # and leaving it out means an ordinary pull request's changelog entry
+    # does not make this page stale - only a release does, and the publish
+    # workflow regenerates it in the same commit as the release notes.
+    DocumentationPage(
+        "releases",
+        "CHANGELOG.md",
+        "Releases",
+        "What the latest releases of this service changed, newest first.",
+        latest_releases=10,
     ),
 )
 
