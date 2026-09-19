@@ -3658,3 +3658,28 @@ def test_a_quick_walk_marks_its_skipped_sections(monkeypatch: pytest.MonkeyPatch
     assert seen, "a quick walk still shows at least one heading"
     assert seen[-1], "a quick walk passes over some sections"
     assert all(earlier <= later for earlier, later in itertools.pairwise(seen)), "skips only accumulate"
+
+
+def test_an_operator_area_gets_the_in_place_update_and_nothing_else_does() -> None:
+    """
+    The area's update button needs a tmpfs and the same directory on the web
+    service and every worker (ADR 0070); a stack without the area has no
+    button, so it gets neither.
+    """
+    directory = wizard_module.UPDATE_DIRECTORY
+    with_area = yaml.safe_load(
+        wizard_module.render_compose_file(_admin_setup("nginx"), "compose.yml")
+    )
+    for service in ("web_app", "arq_worker"):
+        definition = with_area["services"][service]
+        assert definition["environment"]["COS_WEB_ADMIN_UPDATE_DIR"] == directory
+        assert any(mount.startswith(f"{directory}:") for mount in definition["tmpfs"])
+    assert with_area["services"]["web_app"]["environment"]["COS_WEB_UPDATE_CHECK"] == "true"
+
+    without = yaml.safe_load(
+        wizard_module.render_compose_file(wizard_module.Setup(), "compose.yml")
+    )
+    for service in ("web_app", "arq_worker"):
+        definition = without["services"][service]
+        assert "COS_WEB_ADMIN_UPDATE_DIR" not in definition["environment"]
+        assert definition["tmpfs"] == ["/tmp:size=16m"]

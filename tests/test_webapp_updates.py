@@ -123,7 +123,8 @@ def test_a_bundle_with_a_link_or_a_stray_path_is_refused(tmp_path, monkeypatch):
         if extra.name.endswith("link"):
             extra.type = tarfile.SYMTYPE
             extra.linkname = "/etc/passwd"
-        monkeypatch.setattr(updates, "_download", lambda url, b=_bundle(version, extra): b)
+        bundle = _bundle(version, extra)
+        monkeypatch.setattr(updates, "_download", lambda url, bundle=bundle: bundle)
         with pytest.raises(updates.UpdateError):
             updates.install(version, str(tmp_path))
     assert not (tmp_path.parent / "escape.py").exists()

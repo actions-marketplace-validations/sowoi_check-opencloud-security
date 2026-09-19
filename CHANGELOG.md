@@ -20,7 +20,8 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   attestation from this repository's release workflow, unpacked on a tmpfs
   (`COS_WEB_ADMIN_UPDATE_DIR`, mounted by every compose file) and the web and
   worker processes restart on it - a short downtime, lasting until the
-  containers restart. The web image now installs the `signing` extra
+  containers restart. The Docker setup wizard sets it up whenever it enables
+  the operator's area. The web image now installs the `signing` extra
   ([ADR 0070](adr/0070-the-operator-area-installs-attested-releases-in-place.md)).
 
 ### Fixed

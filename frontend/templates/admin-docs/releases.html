@@ -53,7 +53,8 @@
   attestation from this repository's release workflow, unpacked on a tmpfs
   (<code>COS_WEB_ADMIN_UPDATE_DIR</code>, mounted by every compose file) and the web and
   worker processes restart on it - a short downtime, lasting until the
-  containers restart. The web image now installs the <code>signing</code> extra
+  containers restart. The Docker setup wizard sets it up whenever it enables
+  the operator's area. The web image now installs the <code>signing</code> extra
   (<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0070-the-operator-area-installs-attested-releases-in-place.md">ADR 0070</a>).</li>
 </ul>
 <h3 id="fixed">Fixed</h3>
@@ -196,11 +197,16 @@
 </ul>
 <h3 id="documentation">Documentation</h3>
 <ul>
-<li><code>docker/docker-compose.yml</code> now shows every web setting it had left out:
+<li>
+<p>Polished awkward German guide wording and corrected inconsistent address forms.</p>
+</li>
+<li>
+<p><code>docker/docker-compose.yml</code> now shows every web setting it had left out:
   the operator's area (<code>COS_WEB_ADMIN_*</code>), <code>COS_WEB_AUDIT_LOG_ROTATION</code> and
   <code>COS_WEB_RATE_LIMIT_SALT</code> as commented examples, and why
   <code>COS_WEB_FRONTEND_DIR</code> stays unset. The example configuration shows
-  <code>scanner.proxy</code> and <code>releases.proxy</code>, which override the top-level <code>proxy</code>.</li>
+  <code>scanner.proxy</code> and <code>releases.proxy</code>, which override the top-level <code>proxy</code>.</p>
+</li>
 </ul>
 <h3 id="security">Security</h3>
 <ul>
