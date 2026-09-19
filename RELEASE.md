@@ -1,21 +1,34 @@
-## check-opencloud-security 1.27.0
+## check-opencloud-security 1.27.1
 
 ### Added
 
-- The web report lists an advertised HTTP/3 listener (with its UDP ports) and
-  the upgrade path - what the recommended release fixes, what it leaves open
-  and which release clears everything - in all four languages.
+- Codex can use the repository's Claude Code skills, hooks, subagent roles and
+  Playwright MCP configuration through portable `.agents/` and `.codex/`
+  compatibility files. The original `.claude/` setup remains unchanged.
 
-- `upgrade_path_complete` performance data (`1` when the recommended upgrade
-  clears every known advisory, `0` when it does not), and with
-  `--eol-warning` the `support_days_left` metric carries that window as its
-  warning range and the end of life as critical. The webhook payload gains
-  `eol_warning_days`, `eol_warning` and `upgrade_path`.
+- The operator's area shows the running release and whether a newer one is
+  published on GitHub (cached six hours, `COS_WEB_UPDATE_CHECK`), and a button
+  installs it: the release's web bundle is verified against its Sigstore build
+  attestation from this repository's release workflow, unpacked on a tmpfs
+  (`COS_WEB_ADMIN_UPDATE_DIR`, mounted by every compose file) and the web and
+  worker processes restart on it - a short downtime, lasting until the
+  containers restart. The Docker setup wizard sets it up whenever it enables
+  the operator's area. The web image now installs the `signing` extra
+  ([ADR 0070](adr/0070-the-operator-area-installs-attested-releases-in-place.md)).
 
-- `--login-throttling` (`COS_LOGIN_THROTTLING`, YAML
-  `scanner.check_login_throttling`, also on `scan` and in the setup wizard)
-  sends six failed sign-ins for a random, non-existent account to the
-  built-in identity provider and records `loginThrottling` - whether an HTTP
-  429 or `Retry-After` slowed them down. Off by default, never graded, run
-  after every other probe, and never sent by the web service
-  ([ADR 0069](adr/0069-login-throttling-is-observed-only-when-the-operator-asks.md)).
+### Changed
+
+- mypy now also checks the bodies of functions without annotations
+  (`check_untyped_defs` in `mypy.ini`), so CI type-checks the test suite
+  too. The 98 errors that surfaced - all in `tests/` - are fixed.
+
+### Fixed
+
+- The Codex scan driver no longer prints the raw scanner document, which could
+  expose TLS inspection data in its JSON output; `scan --json` now emits only
+  the version, verdict and failed checks.
+
+- The operator area's **Releases** tab never listed the release it was running
+  on: the image is built from the version-bump commit, before the release
+  workflow renames `[Unreleased]`. The page is now generated with that section
+  under the `pyproject.toml` version when the changelog has no heading for it.

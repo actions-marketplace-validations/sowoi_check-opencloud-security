@@ -12,6 +12,8 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+## [1.27.1] - 2026-09-19
+
 ### Added
 
 - Codex can use the repository's Claude Code skills, hooks, subagent roles and
