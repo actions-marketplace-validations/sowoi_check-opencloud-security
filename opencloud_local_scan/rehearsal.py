@@ -69,14 +69,14 @@ def candidates(
 def _base_rating(
     *,
     end_of_life: bool,
-    severities: Iterable[str],
+    severities: Iterable[str | None],
     candidate: str,
     recommended: str | None,
 ) -> int:
     """The scanner's version rules, for a version that is not installed yet."""
     if end_of_life:
         return MIN_RATING
-    matched = [severity.lower() for severity in severities]
+    matched = [str(severity).lower() for severity in severities]
     if matched:
         return 1 if _SEVERE.intersection(matched) else 2
     if recommended and compare_versions(candidate, recommended) < 0:
@@ -118,7 +118,7 @@ def rehearse(
         )
         base = _base_rating(
             end_of_life=end_of_life,
-            severities=(str(advisory.severity or "") for advisory in matched),
+            severities=(advisory.severity for advisory in matched),
             candidate=candidate,
             recommended=recommended,
         )
