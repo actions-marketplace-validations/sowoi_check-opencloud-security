@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+from typing import Any
 
 import pytest
 
@@ -12,7 +13,7 @@ from opencloud_local_scan import wizard
 
 HOST = "opencloud.example.com"
 
-RESULT = {
+RESULT: dict[str, Any] = {
     "domain": HOST,
     "product": "OpenCloud",
     "version": "7.2.0",
@@ -47,7 +48,9 @@ def run(document, capsys, **kwargs):
             context, ScanResult(response=document, uuid="local-x"), duration_seconds=1.0
         )
     first = capsys.readouterr().out.split("\n", 1)[0].split(" | ", 1)[0]
-    return NagiosExitCode(excinfo.value.code), first
+    code = excinfo.value.code
+    assert isinstance(code, int), code
+    return NagiosExitCode(code), first
 
 
 def test_support_ending_within_the_window_warns_and_names_the_target(capsys):

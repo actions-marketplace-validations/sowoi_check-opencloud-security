@@ -153,6 +153,7 @@ def test_no_public_resolver_is_hardcoded_in_any_dns_module():
     """
     public_resolvers = {"1.1.1.1", "1.0.0.1", "8.8.8.8", "8.8.4.4", "9.9.9.9"}
     for module in (dns, caa, dnssec):
+        assert module.__file__ is not None
         tree = ast.parse(Path(module.__file__).read_text(encoding="utf-8"))
         literals = {
             node.value

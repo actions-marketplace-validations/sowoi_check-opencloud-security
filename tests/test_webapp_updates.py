@@ -6,6 +6,7 @@ import asyncio
 import io
 import tarfile
 from pathlib import Path
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -49,7 +50,7 @@ def _bundle(version: str, extra: tarfile.TarInfo | None = None) -> bytes:
 def github(monkeypatch):
     """GitHub, offline: a newer release, its bundle, and a record of restarts."""
     newer = _bumped(__version__)
-    state = {"latest": newer, "bundle": _bundle(newer), "verify": None, "restarts": []}
+    state: dict[str, Any] = {"latest": newer, "bundle": _bundle(newer), "verify": None, "restarts": []}
     monkeypatch.setattr(updates, "_fetch_latest", lambda: state["latest"])
     monkeypatch.setattr(updates, "_download", lambda url: state["bundle"])
 

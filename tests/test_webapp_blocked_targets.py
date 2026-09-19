@@ -17,6 +17,7 @@ import pytest
 from tests.webapp_support import (  # noqa: F401 - the fixtures are autouse
     _isolated_backend,
     _offline_resolver,
+    app_state,
     client,
     settings,
 )
@@ -254,7 +255,7 @@ def test_a_store_that_cannot_be_read_refuses_the_scan_rather_than_running_it(
     async def unavailable(*_args, **_kwargs):
         raise RedisUnavailable()
 
-    monkeypatch.setattr(test_client.app.state.backend, "get", unavailable)
+    monkeypatch.setattr(app_state(test_client).backend, "get", unavailable)
 
     refused = _submit(test_client)
 
@@ -280,7 +281,7 @@ def test_the_store_being_unreadable_is_said_in_the_visitor_s_language(monkeypatc
     async def unavailable(*_args, **_kwargs):
         raise RedisUnavailable()
 
-    monkeypatch.setattr(test_client.app.state.backend, "get", unavailable)
+    monkeypatch.setattr(app_state(test_client).backend, "get", unavailable)
 
     refused = test_client.post(
         "/",

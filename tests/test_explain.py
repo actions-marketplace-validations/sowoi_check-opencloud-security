@@ -3,6 +3,8 @@ Tests for the debug mode: why a rating is what it is, and what the
 hardening identifiers actually mean.
 """
 
+from typing import Any
+
 import pytest
 
 import check_opencloud_security as plugin
@@ -147,7 +149,7 @@ def test_the_explanation_does_not_depend_on_the_order_of_the_checks():
         Finding("exposed:/config", "critical", False, ""),
         Finding("directoryListing", "medium", False, ""),
     ]
-    kwargs = {
+    kwargs: dict[str, Any] = {
         "eol": False,
         "vulnerabilities": [],
         "update_available": False,

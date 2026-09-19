@@ -19,6 +19,7 @@ from opencloud_local_scan.vulndb import load_database
 from tests.webapp_support import (  # noqa: F401 - the fixtures are autouse
     _isolated_backend,
     _offline_resolver,
+    app_state,
     backend,
     client,
     settings,
@@ -659,7 +660,7 @@ def test_the_health_endpoint_rejects_an_unavailable_redis_backend(monkeypatch):
     async def unavailable(*_keys):
         raise RedisUnavailable()
 
-    monkeypatch.setattr(test_client.app.state.backend, "health", unavailable)
+    monkeypatch.setattr(app_state(test_client).backend, "health", unavailable)
 
     response = test_client.get("/healthz")
 

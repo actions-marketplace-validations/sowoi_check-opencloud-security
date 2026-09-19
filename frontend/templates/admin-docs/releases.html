@@ -64,6 +64,12 @@
   (<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0070-the-operator-area-installs-attested-releases-in-place.md">ADR 0070</a>).</p>
 </li>
 </ul>
+<h3 id="changed">Changed</h3>
+<ul>
+<li>mypy now also checks the bodies of functions without annotations
+  (<code>check_untyped_defs</code> in <code>mypy.ini</code>), so CI type-checks the test suite
+  too. The 98 errors that surfaced - all in <code>tests/</code> - are fixed.</li>
+</ul>
 <h3 id="fixed">Fixed</h3>
 <ul>
 <li>
@@ -136,7 +142,7 @@
   never probed.</p>
 </li>
 </ul>
-<h3 id="changed">Changed</h3>
+<h3 id="changed_1">Changed</h3>
 <ul>
 <li>
 <p>The "On this page" contents list of a scan report groups its up to twelve
@@ -252,7 +258,7 @@
   plain text it printed before, with no escape and no carriage return. A card
   narrows its label column to fit an eighty column terminal and falls back to
   the plain list in a pane too narrow for one.</p>
-<h3 id="changed_1">Changed</h3>
+<h3 id="changed_2">Changed</h3>
 <ul>
 <li><code>specs.md</code> states the no-JavaScript promise as clause X-20: a page read
   without a script works with plain forms and links, and a control only a
@@ -517,7 +523,7 @@
 </li>
 </ul>
 <h2 id="1242-2026-09-17">[1.24.2] - 2026-09-17</h2>
-<h3 id="changed_2">Changed</h3>
+<h3 id="changed_3">Changed</h3>
 <ul>
 <li><strong>The German interface and guides now address the reader as "du"
   throughout.</strong> The remaining formal strings in the German catalogue and the
@@ -583,7 +589,7 @@
   <code>display: flex</code> rule outranked the <code>hidden</code> attribute, so every report showed
   an empty "showing only" line with a "show all" link.</li>
 </ul>
-<h3 id="changed_3">Changed</h3>
+<h3 id="changed_4">Changed</h3>
 <ul>
 <li><strong>A new Python dependency needs an approved review first.</strong> Every package in
   <code>pyproject.toml</code> and every <code>uvx</code> tool in a workflow needs a record in

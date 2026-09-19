@@ -22,7 +22,7 @@ from webapp.settings import IndexMetaTag, WebSettings
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def _tool_config(markup: str) -> list[dict[str, object]]:
+def _tool_config(markup: str) -> list[dict[str, Any]]:
     match = re.search(r'data-tools="([^"]+)"', markup)
     assert match is not None
     return json.loads(html.unescape(match.group(1)))

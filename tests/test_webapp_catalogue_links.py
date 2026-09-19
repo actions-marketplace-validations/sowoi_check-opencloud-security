@@ -139,7 +139,9 @@ def test_a_section_the_scan_did_not_produce_gets_no_contents_entry(pages):
 def test_the_report_contents_are_grouped_in_reading_order(pages):
     """Twelve pills in a row were a wall; each group holds its sections in page order."""
     report, _ = pages
-    contents = re.search(r'<nav class="docs-toc.*?</nav>', report, re.DOTALL).group(0)
+    toc = re.search(r'<nav class="docs-toc.*?</nav>', report, re.DOTALL)
+    assert toc is not None
+    contents = toc.group(0)
     groups = re.findall(
         r'<p class="docs-toc-label">([^<]+)</p>(.*?)</div>', contents, re.DOTALL
     )

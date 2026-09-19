@@ -257,11 +257,11 @@ def test_private_webhooks_require_an_explicit_opt_out(monkeypatch):
         def raise_for_status(self):
             pass
 
-    monkeypatch.setattr(
-        plugin.requests.Session,
-        "post",
-        lambda self, url, **kwargs: posted.append((url, kwargs)) or _Response(),
-    )
+    def post(self, url, **kwargs):
+        posted.append((url, kwargs))
+        return _Response()
+
+    monkeypatch.setattr(plugin.requests.Session, "post", post)
 
     sent = plugin._send_webhook(
         ScanContext(

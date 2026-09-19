@@ -220,11 +220,11 @@ def test_a_waived_measure_is_marked_in_the_debug_explanation(capsys):
 def test_a_waived_measure_is_left_out_of_the_webhook(monkeypatch, capsys):
     """An accepted finding should not page anyone."""
     sent: list[dict] = []
-    monkeypatch.setattr(
-        plugin,
-        "_send_webhook",
-        lambda context, payload: sent.append(payload) or True,
-    )
+    def send(context, payload):
+        sent.append(payload)
+        return True
+
+    monkeypatch.setattr(plugin, "_send_webhook", send)
 
     hooked = {
         "check_hardening": True,

@@ -28,6 +28,12 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   the operator's area. The web image now installs the `signing` extra
   ([ADR 0070](adr/0070-the-operator-area-installs-attested-releases-in-place.md)).
 
+### Changed
+
+- mypy now also checks the bodies of functions without annotations
+  (`check_untyped_defs` in `mypy.ini`), so CI type-checks the test suite
+  too. The 98 errors that surfaced - all in `tests/` - are fixed.
+
 ### Fixed
 
 - The Codex scan driver no longer prints the raw scanner document, which could

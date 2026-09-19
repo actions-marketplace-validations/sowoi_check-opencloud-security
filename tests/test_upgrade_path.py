@@ -117,7 +117,9 @@ def test_the_plugin_mentions_an_advertised_http3_listener(capsys):
                 ScanResult(response=document, uuid="local-x"),
                 duration_seconds=1.0,
             )
-        return NagiosExitCode(excinfo.value.code), capsys.readouterr().out
+        code = excinfo.value.code
+        assert isinstance(code, int), code
+        return NagiosExitCode(code), capsys.readouterr().out
 
     base = {"version": "7.2.0", "rating": 5, "EOL": False, "vulnerabilities": [],
             "hardenings": {}, "setup": {"https": {"used": True, "enforced": True}}}
@@ -198,7 +200,9 @@ def _details(document, capsys):
             ScanResult(response=document, uuid="local-x"),
             duration_seconds=1.0,
         )
-    return NagiosExitCode(excinfo.value.code), capsys.readouterr().out
+    code = excinfo.value.code
+    assert isinstance(code, int), code
+    return NagiosExitCode(code), capsys.readouterr().out
 
 
 _BASE = {"version": "7.2.0", "rating": 5, "EOL": False, "vulnerabilities": [],

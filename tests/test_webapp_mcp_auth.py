@@ -83,10 +83,12 @@ def _local_keys(monkeypatch, signing_key):
     def _named(key_id):
         """The provider's key, published under one name."""
 
+        published_as = key_id
+
         class _Key:
             key = signing_key.public_key()
+            key_id = published_as
 
-        _Key.key_id = key_id
         return _Key()
 
     class _Keys:
