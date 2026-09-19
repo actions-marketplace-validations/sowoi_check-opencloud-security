@@ -47,7 +47,13 @@
 <h2 id="1271-this-release">[1.27.1] - this release</h2>
 <h3 id="added">Added</h3>
 <ul>
-<li>The operator's area shows the running release and whether a newer one is
+<li>
+<p>Codex can use the repository's Claude Code skills, hooks, subagent roles and
+  Playwright MCP configuration through portable <code>.agents/</code> and <code>.codex/</code>
+  compatibility files. The original <code>.claude/</code> setup remains unchanged.</p>
+</li>
+<li>
+<p>The operator's area shows the running release and whether a newer one is
   published on GitHub (cached six hours, <code>COS_WEB_UPDATE_CHECK</code>), and a button
   installs it: the release's web bundle is verified against its Sigstore build
   attestation from this repository's release workflow, unpacked on a tmpfs
@@ -55,7 +61,8 @@
   worker processes restart on it - a short downtime, lasting until the
   containers restart. The Docker setup wizard sets it up whenever it enables
   the operator's area. The web image now installs the <code>signing</code> extra
-  (<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0070-the-operator-area-installs-attested-releases-in-place.md">ADR 0070</a>).</li>
+  (<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0070-the-operator-area-installs-attested-releases-in-place.md">ADR 0070</a>).</p>
+</li>
 </ul>
 <h3 id="fixed">Fixed</h3>
 <ul>

@@ -3,6 +3,11 @@
 Guidance for AI coding agents working on **check-opencloud-security**
 (version **1.0.0**).
 
+Codex: the repository's Claude Code skills, hooks, subagent roles and
+Playwright MCP server are available through `.agents/` and `.codex/` - see
+[`.codex/README.md`](.codex/README.md). The hooks there enforce the same
+rules as `.claude/hooks/`.
+
 ## What this project is
 
 A Nagios/Icinga plugin that checks an OpenCloud instance for known
