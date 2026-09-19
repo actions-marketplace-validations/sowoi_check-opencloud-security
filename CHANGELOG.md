@@ -47,6 +47,10 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ### Changed
 
+- **Polished recent German, Spanish and French web translations.** Fixed mixed
+  forms of address and several literal or awkward phrases in the operator
+  update messages, scan facts and coverage explanations.
+
 - mypy now also checks the bodies of functions without annotations
   (`check_untyped_defs` in `mypy.ini`), so CI type-checks the test suite
   too. The 98 errors that surfaced - all in `tests/` - are fixed.

@@ -227,9 +227,9 @@ MESSAGES: dict[str, str] = {
     "admin.update.unknown": "Impossible de savoir si une version plus récente existe.",
     "admin.update.off": "La vérification des mises à jour est désactivée (COS_WEB_UPDATE_CHECK).",
     "admin.update.install": "Installer {version} maintenant",
-    "admin.update.downtime": "Le bundle est vérifié par son attestation de build GitHub, puis le service web et les workers redémarrent dessus - une courte interruption, et un scan en cours est interrompu. La mise à jour dure jusqu'au redémarrage des conteneurs.",
-    "admin.update.manual": "L'installation depuis cette page est désactivée (COS_WEB_ADMIN_UPDATE_DIR). Récupère la nouvelle image et recrée les conteneurs.",
-    "admin.update.outcome.requested": "Vérifiée et installée. Le service redémarre dans un instant - recharge la page.",
+    "admin.update.downtime": "Le bundle est vérifié par son attestation de build GitHub, puis le service web et les workers redémarrent avec celui-ci - une courte interruption, pendant laquelle toute analyse en cours est interrompue. La mise à jour reste en place jusqu'au redémarrage des conteneurs.",
+    "admin.update.manual": "L'installation depuis cette page est désactivée (COS_WEB_ADMIN_UPDATE_DIR). Récupérez la nouvelle image et recréez les conteneurs.",
+    "admin.update.outcome.requested": "Vérifiée et installée. Le service redémarre dans un instant - rechargez la page.",
     "admin.update.outcome.current": "Rien de plus récent à installer.",
     "admin.update.outcome.disabled": "Les mises à jour automatiques ne sont pas configurées dans ce déploiement.",
     "admin.update.outcome.failed": "La version n'a pas pu être téléchargée ou vérifiée. Rien n'a changé ; le journal indique pourquoi.",
@@ -1224,8 +1224,9 @@ MESSAGES: dict[str, str] = {
     ),
     "compare.upload.error.blocked": (
         "Plusieurs adresses analysées récemment depuis votre réseau ne se sont "
-        "pas révélées être OpenCloud ; ce service fait donc une pause avec "
-        "votre réseau, envois de rapports compris. Le scanner et sa "
+        "pas révélées être OpenCloud ; ce service suspend donc temporairement "
+        "les requêtes provenant de votre réseau, y compris les envois de "
+        "rapports. Le scanner et sa "
         "comparaison s'exécutent aussi sans aucune limite sur votre machine."
     ),
     "compare.upload.error.expired": "Ce lien a expiré. Une comparaison reste disponible pendant {minutes} minutes ; envoyez à nouveau le fichier pour la refaire.",
@@ -1479,8 +1480,8 @@ MESSAGES: dict[str, str] = {
     "result.facts.proxy": "Proxy inverse",
     "result.facts.proxy.detected": "Détecté",
     "result.facts.http3": "HTTP/3",
-    "result.facts.http3.value": "Annoncé sur UDP {ports} - vérifiez que votre pare-feu le couvre délibérément (non noté)",
-    "result.facts.http3.noport": "Annoncé sur UDP - vérifiez que votre pare-feu le couvre délibérément (non noté)",
+    "result.facts.http3.value": "Annoncé via UDP {ports} - vérifiez que votre pare-feu autorise délibérément ce trafic (non noté)",
+    "result.facts.http3.noport": "Annoncé via UDP - vérifiez que votre pare-feu autorise délibérément ce trafic (non noté)",
     "result.facts.upgrade_path": "Chemin de mise à jour",
     "result.facts.upgrade_path.complete": "{target} corrige tous les avis connus",
     "result.facts.upgrade_path.partial": "{target} laisse encore {open} ouvert ; {safe} est la première version qui les corrige tous",
@@ -1580,9 +1581,9 @@ MESSAGES: dict[str, str] = {
     "result.coverage.kicker": "Couverture",
     "result.coverage.heading": "Ce que cette analyse n'a pas mesuré",
     "result.coverage.note": (
-        "Une note décrit les éléments recueillis par cette analyse. Ces "
-        "vérifications n'ont abouti à aucune conclusion : la note ne dit donc "
-        "rien à leur sujet."
+        "Une note décrit ce que cette analyse a établi. Ces vérifications "
+        "n'ont abouti à aucune conclusion : la note ne dit donc rien à leur "
+        "sujet."
     ),
     "result.coverage.summary": (
         "{measured} vérifications sur {total} ont abouti à une conclusion."
@@ -1600,7 +1601,7 @@ MESSAGES: dict[str, str] = {
         "La vérification était désactivée pour cette analyse"
     ),
     "coverage.reason.prerequisite_missing": (
-        "L'instance n'a pas publié ce que cette vérification lit"
+        "L'instance n'a pas publié les données nécessaires à cette vérification"
     ),
     "coverage.reason.timeout": "Rien n'a répondu à temps",
     "coverage.reason.unreadable": "La réponse n'a pas pu être lue",
@@ -1708,7 +1709,7 @@ MESSAGES: dict[str, str] = {
     "result.export.pdf.hint": "Pour un ticket, une revue ou une impression.",
     "result.export.html": "Télécharger le rapport",
     "result.export.html.hint": (
-        "Un fichier encore lisible après l'expiration de ce lien. Il s'ouvre "
+        "Un fichier qui reste lisible après l'expiration de ce lien. Il s'ouvre "
         "hors ligne, n'effectue aucune requête réseau et ne se met pas à "
         "jour."
     ),
