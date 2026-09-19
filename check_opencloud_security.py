@@ -470,6 +470,10 @@ def check_vulnerabilities(
         if path_line:
             detail_lines.append(path_line)
 
+    rehearsal_line = _upgrade_rehearsal_line(response_scan)
+    if rehearsal_line:
+        detail_lines.append(rehearsal_line)
+
     throttling = response_scan.get("loginThrottling")
     if isinstance(throttling, dict) and throttling.get("tested"):
         detail_lines.append(
@@ -654,6 +658,67 @@ def _upgrade_path_line(response_scan: dict[str, Any]) -> str:
         else "; no published release fixes all of them yet"
     )
     return f"Upgrade path: {target} {fixed_part}is still affected by {', '.join(remaining)}{after}."
+
+
+def _rehearsed_count(entry: dict[str, Any], key: str) -> int:
+    items = entry.get(key)
+    return len(items) if isinstance(items, list) else 0
+
+
+def _upgrade_rehearsal_line(response_scan: dict[str, Any]) -> str:
+    """
+    What each candidate release would do, graded with RATE_MAP.
+
+    The scanner rehearses the upgrade in its own 0-5 numbers; the letter is
+    this layer's judgement, like every other grade the plugin prints.
+    """
+    rehearsal = response_scan.get("upgradeRehearsal")
+    if not isinstance(rehearsal, list):
+        return ""
+    parts: list[str] = []
+    for entry in rehearsal:
+        if not isinstance(entry, dict) or not entry.get("version"):
+            continue
+        rating = entry.get("rating")
+        grade = RATE_MAP.get(rating, "?") if isinstance(rating, int) else "?"
+        fixes = _rehearsed_count(entry, "fixes")
+        left = _rehearsed_count(entry, "stillAffected")
+        new = _rehearsed_count(entry, "introduces")
+        noun = "finding" if fixes == 1 else "findings"
+        part = f"{entry['version']} fixes {fixes} {noun}, leaves {left}"
+        if new:
+            part += f", adds {new}"
+        if entry.get("endOfLife"):
+            part += ", is end of life"
+        parts.append(f"{part}, reaches rating {grade}")
+    if not parts:
+        return ""
+    return "Upgrade rehearsal: " + "; ".join(parts) + "."
+
+
+def _upgrade_rehearsal_payload(response_scan: dict[str, Any]) -> list[dict[str, Any]]:
+    """The scanner's rehearsal in this layer's snake_case, with the grade added."""
+    rehearsal = response_scan.get("upgradeRehearsal")
+    entries: list[dict[str, Any]] = []
+    for entry in rehearsal if isinstance(rehearsal, list) else ():
+        if not isinstance(entry, dict):
+            continue
+        rating = entry.get("rating")
+        entries.append(
+            {
+                "version": entry.get("version"),
+                "line": entry.get("line"),
+                "recommended": bool(entry.get("recommended")),
+                "fixes": list(entry.get("fixes") or ()),
+                "still_affected": list(entry.get("stillAffected") or ()),
+                "introduces": list(entry.get("introduces") or ()),
+                "end_of_life": bool(entry.get("endOfLife")),
+                "version_rating": entry.get("versionRating"),
+                "rating": rating,
+                "rating_label": RATE_MAP.get(rating) if isinstance(rating, int) else None,
+            }
+        )
+    return entries
 
 
 def _within_eol_window(context: ScanContext, response_scan: dict[str, Any]) -> bool:
@@ -877,6 +942,8 @@ def _build_webhook_payload(
         "eol_warning_days": context.eol_warning_days,
         "eol_warning": _within_eol_window(context, response_scan),
         "upgrade_path": response_scan.get("upgradePath") or None,
+        # Every candidate release, simulated; ``rating_label`` is RATE_MAP's.
+        "upgrade_rehearsal": _upgrade_rehearsal_payload(response_scan),
         "vulnerability_count": len(vulnerabilities),
         "vulnerabilities": [
             entry.get("id") for entry in vulnerabilities if isinstance(entry, dict)

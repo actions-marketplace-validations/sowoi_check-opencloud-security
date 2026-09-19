@@ -48,6 +48,19 @@
 <h3 id="added">Added</h3>
 <ul>
 <li>
+<p><strong>Upgrade rehearsal: what each candidate release would fix, leave and
+  rate.</strong> The scan result gains <code>upgradeRehearsal</code>, which simulates every
+  release worth moving to (the newest patch of the installed line and the
+  newest release of each later line, only on the declared track) against the
+  advisory database and the release schedule. The plugin prints it as one
+  detail line, for example "Upgrade rehearsal: 7.2.4 fixes 3 findings,
+  leaves 1, reaches rating C", and the webhook payload carries it as
+  <code>upgrade_rehearsal</code>. The rating replays the scanner's own version rules and
+  keeps the instance's failed checks as caps, because an upgrade does not
+  change the proxy. See
+  <a href="/documentation/release-lifecycle#rehearse-every-upgrade">Rehearse every upgrade</a>.</p>
+</li>
+<li>
 <p><strong>A scan the target cooldown refuses now opens your earlier result.</strong> When
   an instance was scanned too recently and this browser tab has already shown
   a finished scan of it, the web application opens that result instead of

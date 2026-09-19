@@ -290,6 +290,14 @@ release has known advisories and a newer release is recommended: the
 none yet). It is `null` otherwise. See
 [Does the upgrade clear the advisories?](../docs/release-lifecycle.md#does-the-upgrade-clear-the-advisories)
 
+`upgradeRehearsal` goes one step further: for every candidate release (the
+newest patch of the installed line and the newest release of each later line,
+restricted to the declared track) it lists what the release `fixes`, leaves
+`stillAffected` and `introduces`, whether it is `endOfLife`, and the 0-5
+`rating` the scan would give it - the version rules replayed, still capped by
+the instance's failed checks. An empty list when nothing newer is known. See
+[Rehearse every upgrade](../docs/release-lifecycle.md#rehearse-every-upgrade).
+
 `alternativeServices` records the instance's `Alt-Svc` header - whether it
 advertises HTTP/3 over UDP - as an observation that is never graded. See
 [Alternative services](../docs/scanner-checks.md#alternative-services-http3).

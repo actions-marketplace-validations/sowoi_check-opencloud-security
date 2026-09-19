@@ -190,3 +190,32 @@ prints it as a detail line:
 ```text
 Upgrade path: 7.2.4 fixes GHSA-aaaa but is still affected by GHSA-bbbb; 7.3.0 is the first release that clears them all.
 ```
+
+## Rehearse every upgrade
+
+`upgradePath` covers the one release the scan recommends. `upgradeRehearsal`
+covers every release worth moving to: the newest patch of the installed line
+and the newest release of each later line (only lines on the declared release
+track, when the instance declares one). For each one it lists the advisories
+the release `fixes`, those it is `stillAffected` by, any it `introduces`,
+whether it is `endOfLife`, and the `rating` the scan would give it.
+
+```json
+{"upgradeRehearsal": [
+  {"version": "7.2.4", "line": "7.2", "recommended": false,
+   "fixes": ["GHSA-aaaa"], "stillAffected": ["GHSA-bbbb"], "introduces": [],
+   "endOfLife": false, "versionRating": 2, "rating": 2}
+]}
+```
+
+The rating uses the same version rules as the scan. The instance's failed
+checks still cap it (`versionRating` is what the version alone would allow),
+because an upgrade changes the release, not the proxy in front of it. The
+plugin prints one detail line, graded with its own rating letters:
+
+```text
+Upgrade rehearsal: 7.2.4 fixes 1 finding, leaves 1, reaches rating D; 7.3.0 fixes 2 findings, leaves 0, reaches rating A+.
+```
+
+The rehearsal knows only the bundled or refreshed schedule and advisory
+database. A release or advisory published later can change the answer.

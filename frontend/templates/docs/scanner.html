@@ -378,6 +378,13 @@ release has known advisories and a newer release is recommended: the
 <code>safeVersion</code>, the lowest release past every missing fix (<code>null</code> when one has
 none yet). It is <code>null</code> otherwise. See
 <a href="/documentation/release-lifecycle#does-the-upgrade-clear-the-advisories">Does the upgrade clear the advisories?</a></p>
+<p><code>upgradeRehearsal</code> goes one step further: for every candidate release (the
+newest patch of the installed line and the newest release of each later line,
+restricted to the declared track) it lists what the release <code>fixes</code>, leaves
+<code>stillAffected</code> and <code>introduces</code>, whether it is <code>endOfLife</code>, and the 0-5
+<code>rating</code> the scan would give it - the version rules replayed, still capped by
+the instance's failed checks. An empty list when nothing newer is known. See
+<a href="/documentation/release-lifecycle#rehearse-every-upgrade">Rehearse every upgrade</a>.</p>
 <p><code>alternativeServices</code> records the instance's <code>Alt-Svc</code> header - whether it
 advertises HTTP/3 over UDP - as an observation that is never graded. See
 <a href="/documentation/scanner-checks#alternative-services-http3">Alternative services</a>.</p>

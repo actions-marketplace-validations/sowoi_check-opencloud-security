@@ -14,6 +14,18 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ### Added
 
+- **Upgrade rehearsal: what each candidate release would fix, leave and
+  rate.** The scan result gains `upgradeRehearsal`, which simulates every
+  release worth moving to (the newest patch of the installed line and the
+  newest release of each later line, only on the declared track) against the
+  advisory database and the release schedule. The plugin prints it as one
+  detail line, for example "Upgrade rehearsal: 7.2.4 fixes 3 findings,
+  leaves 1, reaches rating C", and the webhook payload carries it as
+  `upgrade_rehearsal`. The rating replays the scanner's own version rules and
+  keeps the instance's failed checks as caps, because an upgrade does not
+  change the proxy. See
+  [Rehearse every upgrade](docs/release-lifecycle.md#rehearse-every-upgrade).
+
 - **A scan the target cooldown refuses now opens your earlier result.** When
   an instance was scanned too recently and this browser tab has already shown
   a finished scan of it, the web application opens that result instead of
