@@ -35,6 +35,13 @@ MAX_RATING = 5
 _SEVERE = frozenset({"critical", "high"})
 
 
+def _candidate_line(version: str) -> tuple[int, int]:
+    """Return a valid schedule version's numeric line for sorting."""
+    line = release_line(version)
+    assert line is not None
+    return line
+
+
 def candidates(
     schedule: ReleaseSchedule, version: str | None, track: str | None = None
 ) -> list[str]:
@@ -56,7 +63,7 @@ def candidates(
         and (not track or track in entry.tracks)
         and compare_versions(entry.latest, version) > 0
     ]
-    return sorted(set(found), key=lambda item: release_line(item) or (0, 0))
+    return sorted(set(found), key=_candidate_line)
 
 
 def _base_rating(
@@ -116,10 +123,11 @@ def rehearse(
             recommended=recommended,
         )
         line = release_line(candidate)
+        assert line is not None
         rehearsed.append(
             {
                 "version": candidate,
-                "line": f"{line[0]}.{line[1]}" if line else None,
+                "line": f"{line[0]}.{line[1]}",
                 "recommended": bool(recommended) and compare_versions(candidate, recommended) == 0,
                 "fixes": sorted(current - ids),
                 "stillAffected": sorted(current & ids),

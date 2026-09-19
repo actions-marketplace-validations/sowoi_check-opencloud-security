@@ -111,6 +111,39 @@ andere Linie zurückportierter Fix zählt also mit. `safeVersion` ist die
 niedrigste Version, die jeden noch fehlenden Fix enthält, oder `null`, wenn es
 für einen davon noch keinen gibt. Das Plugin gibt das als Detailzeile aus.
 
+## Jedes Upgrade vorab durchspielen {#rehearse-every-upgrade}
+
+`upgradePath` beschreibt die eine Version, die der Scan empfiehlt.
+`upgradeRehearsal` beschreibt jede Version, auf die sich ein Wechsel lohnt:
+den neuesten Patch der installierten Linie und die neueste Version jeder
+späteren Linie (nur Linien des festgelegten Release-Kanals, wenn die
+Instanz einen Kanal vorgibt). Für jede Version werden die Hinweise genannt,
+die sie `fixes`, von denen sie noch `stillAffected` ist, sowie neu eingeführte
+Hinweise (`introduces`), ob sie `endOfLife` ist und welches `rating` der Scan
+für sie vergeben würde.
+
+```json
+{"upgradeRehearsal": [
+  {"version": "7.2.4", "line": "7.2", "recommended": false,
+   "fixes": ["GHSA-aaaa"], "stillAffected": ["GHSA-bbbb"], "introduces": [],
+   "endOfLife": false, "versionRating": 2, "rating": 2}
+]}
+```
+
+Die Bewertung verwendet dieselben Versionsregeln wie der Scan. Fehlende
+Prüfungen der Instanz begrenzen sie weiterhin (`versionRating` zeigt, was
+allein aufgrund der Version möglich wäre), denn ein Upgrade ändert die
+Version, nicht den Proxy davor. Das Plugin gibt eine Detailzeile mit seinen
+eigenen Bewertungsbuchstaben aus:
+
+```text
+Upgrade rehearsal: 7.2.4 fixes 1 finding, leaves 1, reaches rating D; 7.3.0 fixes 2 findings, leaves 0, reaches rating A+.
+```
+
+Die Vorabprüfung kennt nur den gebündelten oder aktualisierten Zeitplan und
+die Beratungsdatenbank. Eine später veröffentlichte Version oder ein später
+veröffentlichter Hinweis kann das Ergebnis ändern.
+
 ## Marken und Unabhängigkeit
 
 Dies ist ein unabhängiges Community-Projekt. Es ist nicht mit OpenCloud GmbH

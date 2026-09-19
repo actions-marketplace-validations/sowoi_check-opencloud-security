@@ -63,9 +63,55 @@ def test_every_newer_line_is_a_candidate_and_nothing_older_is():
     assert candidates(SCHEDULE, None) == []
 
 
+def test_candidates_sort_release_lines_numerically():
+    """10.0 follows 9.0 even though lexical sorting would put it first."""
+    schedule = schedule_from_document(
+        {
+            "lines": [
+                {"line": "7.9", "tracks": ["rolling"], "released": "2026-01-01", "latest": "7.9.4"},
+                {"line": "7.10", "tracks": ["rolling"], "released": "2026-02-01", "latest": "7.10.1"},
+            ],
+        }
+    )
+    assert candidates(schedule, "7.8.1") == ["7.9.4", "7.10.1"]
+
+
 def test_a_declared_track_only_rehearses_releases_on_that_track():
     """A production instance is not rehearsed onto a rolling-only line."""
     assert candidates(SCHEDULE, "7.1.1", "production") == ["7.2.4"]
+
+
+def test_rehearse_passes_the_declared_track_to_candidate_selection():
+    """A rehearsal never offers a release from another track."""
+    clean = VulnerabilityDatabase([], [])
+    entries = rehearse(
+        version="7.1.1", database=clean, schedule=SCHEDULE,
+        recommended="7.2.4", track="production", today=TODAY,
+    )
+    assert [entry["version"] for entry in entries] == ["7.2.4"]
+
+
+def test_rehearse_passes_the_declared_track_to_lifecycle_status():
+    """A production line is not expired by a rolling successor."""
+    schedule = schedule_from_document(
+        {
+            "lines": [
+                {"line": "7.2", "tracks": ["production", "rolling"], "released": "2026-01-01", "latest": "7.2.4"},
+                {"line": "7.3", "tracks": ["rolling"], "released": "2026-06-01", "latest": "7.3.0"},
+            ],
+        }
+    )
+    clean = VulnerabilityDatabase([], [])
+    production = rehearse(
+        version="7.1.1", database=clean, schedule=schedule,
+        recommended="7.2.4", track="production", today=date(2027, 1, 1),
+    )
+    rolling = rehearse(
+        version="7.1.1", database=clean, schedule=schedule,
+        recommended="7.2.4", track="rolling", today=date(2027, 1, 1),
+    )
+    assert production[0]["endOfLife"] is False
+    assert rolling[0]["endOfLife"] is True
 
 
 def test_each_candidate_says_what_it_fixes_leaves_and_introduces():
@@ -73,6 +119,7 @@ def test_each_candidate_says_what_it_fixes_leaves_and_introduces():
     rehearsed = _rehearse()
 
     assert rehearsed["7.2.4"]["fixes"] == ["A"]
+    assert rehearsed["7.2.4"]["line"] == "7.2"
     assert rehearsed["7.2.4"]["stillAffected"] == ["B"]
     assert rehearsed["7.2.4"]["introduces"] == []
     assert rehearsed["7.3.0"]["fixes"] == ["A", "B"]
@@ -129,6 +176,44 @@ def test_the_schedule_can_be_left_out_of_the_verdict():
     rehearsed = _rehearse(use_release_schedule=False)
     assert rehearsed["7.1.2"]["endOfLife"] is False
     assert rehearsed["7.1.2"]["rating"] == 1
+
+
+def test_rehearse_uses_the_supplied_date_for_clock_based_eol():
+    """A date-sensitive LTS line is evaluated at the scan's date, not today."""
+    schedule = schedule_from_document(
+        {
+            "lines": [
+                {"line": "7.2", "tracks": ["lts"], "released": "2026-01-01", "latest": "7.2.4"},
+            ],
+        }
+    )
+    clean = VulnerabilityDatabase([], [])
+    current = rehearse(
+        version="7.1.1", database=clean, schedule=schedule,
+        recommended="7.2.4", today=date(2026, 9, 19),
+    )
+    expired = rehearse(
+        version="7.1.1", database=clean, schedule=schedule,
+        recommended="7.2.4", today=date(2029, 1, 2),
+    )
+    assert current[0]["endOfLife"] is False
+    assert expired[0]["endOfLife"] is True
+
+
+def test_missing_advisory_severity_does_not_become_a_high_finding():
+    """An advisory without severity must not be upgraded by a fallback string."""
+    database = VulnerabilityDatabase(
+        parse_document(
+            {"advisories": [{"id": "unknown-severity", "introduced": "7.0.0", "fixed": "7.3.0"}]}
+        ),
+        ["test"],
+    )
+    entries = rehearse(
+        version="7.1.1", database=database, schedule=SCHEDULE,
+        recommended="7.3.0", today=TODAY,
+    )
+    assert entries[-1]["version"] == "7.3.0"
+    assert entries[-1]["versionRating"] == 5
 
 
 # ------------------------------------------------------------- the plugin

@@ -47,6 +47,11 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   the scanner's own probes so its answer matches the next full scan. See
   ADR 0072.
 
+### Documentation
+
+- **Translated release-lifecycle guides now include the upgrade-rehearsal
+  section.** Their section anchors stay aligned with the English guide.
+
 ### Fixed
 
 - **Pytest no longer collects mutmut's generated working copy.** This avoids

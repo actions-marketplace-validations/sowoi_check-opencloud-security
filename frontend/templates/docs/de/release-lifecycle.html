@@ -23,6 +23,7 @@
   <a href="#declaring-your-release-track" lang="de">Den Release-Kanal festlegen</a>
   <a href="#warning-before-the-end-of-life" lang="de">Warnung vor dem Supportende</a>
   <a href="#does-the-upgrade-clear-the-advisories" lang="de">Behebt das Update die Sicherheitshinweise?</a>
+  <a href="#rehearse-every-upgrade" lang="de">Jedes Upgrade vorab durchspielen</a>
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="de">
@@ -159,6 +160,31 @@ nie. <code>0</code>, der Standard, schaltet es ab.</p>
 andere Linie zurückportierter Fix zählt also mit. <code>safeVersion</code> ist die
 niedrigste Version, die jeden noch fehlenden Fix enthält, oder <code>null</code>, wenn es
 für einen davon noch keinen gibt. Das Plugin gibt das als Detailzeile aus.</p>
+<h2 id="rehearse-every-upgrade">Jedes Upgrade vorab durchspielen</h2>
+<p><code>upgradePath</code> beschreibt die eine Version, die der Scan empfiehlt.
+<code>upgradeRehearsal</code> beschreibt jede Version, auf die sich ein Wechsel lohnt:
+den neuesten Patch der installierten Linie und die neueste Version jeder
+späteren Linie (nur Linien des festgelegten Release-Kanals, wenn die
+Instanz einen Kanal vorgibt). Für jede Version werden die Hinweise genannt,
+die sie <code>fixes</code>, von denen sie noch <code>stillAffected</code> ist, sowie neu eingeführte
+Hinweise (<code>introduces</code>), ob sie <code>endOfLife</code> ist und welches <code>rating</code> der Scan
+für sie vergeben würde.</p>
+<pre><code class="language-json">{&quot;upgradeRehearsal&quot;: [
+  {&quot;version&quot;: &quot;7.2.4&quot;, &quot;line&quot;: &quot;7.2&quot;, &quot;recommended&quot;: false,
+   &quot;fixes&quot;: [&quot;GHSA-aaaa&quot;], &quot;stillAffected&quot;: [&quot;GHSA-bbbb&quot;], &quot;introduces&quot;: [],
+   &quot;endOfLife&quot;: false, &quot;versionRating&quot;: 2, &quot;rating&quot;: 2}
+]}
+</code></pre>
+<p>Die Bewertung verwendet dieselben Versionsregeln wie der Scan. Fehlende
+Prüfungen der Instanz begrenzen sie weiterhin (<code>versionRating</code> zeigt, was
+allein aufgrund der Version möglich wäre), denn ein Upgrade ändert die
+Version, nicht den Proxy davor. Das Plugin gibt eine Detailzeile mit seinen
+eigenen Bewertungsbuchstaben aus:</p>
+<pre><code class="language-text">Upgrade rehearsal: 7.2.4 fixes 1 finding, leaves 1, reaches rating D; 7.3.0 fixes 2 findings, leaves 0, reaches rating A+.
+</code></pre>
+<p>Die Vorabprüfung kennt nur den gebündelten oder aktualisierten Zeitplan und
+die Beratungsdatenbank. Eine später veröffentlichte Version oder ein später
+veröffentlichter Hinweis kann das Ergebnis ändern.</p>
 </article>
 
 {% include "_page-nav.html" %}
