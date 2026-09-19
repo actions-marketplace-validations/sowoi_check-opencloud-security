@@ -1,34 +1,41 @@
-## check-opencloud-security 1.27.1
+## check-opencloud-security 1.27.2
 
 ### Added
 
-- Codex can use the repository's Claude Code skills, hooks, subagent roles and
-  Playwright MCP configuration through portable `.agents/` and `.codex/`
-  compatibility files. The original `.claude/` setup remains unchanged.
-
-- The operator's area shows the running release and whether a newer one is
-  published on GitHub (cached six hours, `COS_WEB_UPDATE_CHECK`), and a button
-  installs it: the release's web bundle is verified against its Sigstore build
-  attestation from this repository's release workflow, unpacked on a tmpfs
-  (`COS_WEB_ADMIN_UPDATE_DIR`, mounted by every compose file) and the web and
-  worker processes restart on it - a short downtime, lasting until the
-  containers restart. The Docker setup wizard sets it up whenever it enables
-  the operator's area. The web image now installs the `signing` extra
-  ([ADR 0070](adr/0070-the-operator-area-installs-attested-releases-in-place.md)).
+- **Property-based tests for the parsers that read outside text.**
+  `tests/test_properties.py` uses Hypothesis, a new test-only dependency
+  (reviewed in `security/dependencies/hypothesis.yml`), to generate inputs
+  for version parsing and comparison, advisory ranges, the
+  Strict-Transport-Security and Content-Security-Policy readers, the web
+  application's SSRF guard (private literals, IPv4-mapped and 6to4
+  addresses, arbitrary input) and the `;`-joined configuration lists.
+- **The output documents' key names are pinned.**
+  `tests/test_output_shape.py` fails when a top-level key of the scan result
+  or of the plugin's `--format json` / webhook payload is renamed, added or
+  dropped, or when a key breaks the camelCase (result) / snake_case (plugin)
+  convention, so a breaking rename cannot land unnoticed.
+- **The advisory database also reads OpenCloud's repository advisories.**
+  OpenCloud publishes some advisories only on its GitHub repository, where
+  OSV never sees them. The daily refresh (`scripts/update_vulnerability_db.py`,
+  new `--repository-url`) and the web application's refresh (new
+  `COS_WEB_ADVISORY_REPOSITORY_URL`, `off` to skip) now add those
+  advisories. Their version ranges are read strictly: an advisory fixed on two
+  release lines becomes one range per line, and prose ranges are never
+  guessed at. OSV stays the primary source, and if the repository feed can't
+  be read, OSV's answer is kept.
+  [ADR 0071](adr/0071-repository-advisories-are-a-second-advisory-source.md).
 
 ### Changed
 
-- mypy now also checks the bodies of functions without annotations
-  (`check_untyped_defs` in `mypy.ini`), so CI type-checks the test suite
-  too. The 98 errors that surfaced - all in `tests/` - are fixed.
+- **Polished recent German, Spanish and French web translations.** Fixed mixed
+  forms of address and several literal or awkward phrases in the operator
+  update messages, scan facts and coverage explanations.
 
-### Fixed
+### Security
 
-- The Codex scan driver no longer prints the raw scanner document, which could
-  expose TLS inspection data in its JSON output; `scan --json` now emits only
-  the version, verdict and failed checks.
-
-- The operator area's **Releases** tab never listed the release it was running
-  on: the image is built from the version-bump commit, before the release
-  workflow renames `[Unreleased]`. The page is now generated with that section
-  under the `pyproject.toml` version when the changelog has no heading for it.
+- **GHSA-gf4p-7p27-26w7 (CVE-2026-57500, "Access to internal metadata") is
+  now reported.** OpenCloud published it only as a repository advisory, which
+  never reaches OSV, the one feed the advisory database was refreshed from - so
+  every release before 4.0.8, and 5.0.0 up to 7.2.0, was rated as free of
+  known advisories. The bundled database now carries it, affecting releases
+  from 1.0.0 up to 4.0.8 and from 4.1.0 up to (but not including) 7.2.0.

@@ -12,6 +12,8 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+## [1.27.2] - 2026-09-19
+
 ### Added
 
 - **Property-based tests for the parsers that read outside text.**
