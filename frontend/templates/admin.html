@@ -235,10 +235,10 @@
 
 {# --------------------------------------------------------------- updates #}
 {#
-  Which release is running, whether a newer one is published, and - where the
-  deployment runs the updater service - a button that asks for it. The button
-  only writes a request; the updater, never this process, replaces the
-  containers (ADR 0070). An ordinary form, so it works with no scripting.
+  Which release is running, whether a newer one is on GitHub, and a button
+  that installs it: the release's web bundle, verified against its build
+  attestation and run in place of the image's code until the container
+  restarts (ADR 0070). An ordinary form, so it works with no scripting.
 #}
 <section class="card section-gap" aria-labelledby="admin-update" data-reveal>
   <p class="kicker">{{ t('admin.update.kicker') }}</p>
@@ -257,17 +257,10 @@
   </p>
   {% endif %}
 
-  {% if update.pending %}
-  <p class="hint">{{ t('admin.update.pending') }}</p>
-  {% endif %}
-  {% if update.status and update.status.state %}
-  <p class="hint">{{ t('admin.update.last', state=update.status.state, version=update.status.version or '?') }}</p>
-  {% endif %}
-
   {% if update.available %}
     {% if update.automatic %}
     <form method="post" action="/admin/update">
-      <button class="btn btn-primary" type="submit" {% if update.pending %}disabled{% endif %}>
+      <button class="btn btn-primary" type="submit">
         {{ t('admin.update.install', version=update.latest) }}
       </button>
     </form>

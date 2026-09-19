@@ -68,6 +68,9 @@ opencloud_check_interval=24h
 </code></pre>
 <p>Setze <code>opencloud_check_host</code> ausdrücklich. Der Standard <code>inventory_hostname</code> passt nur, wenn auf dem angesprochenen Host tatsächlich die zu prüfende OpenCloud-Instanz läuft.</p>
 <p>Verwende für <code>opencloud_check_interval</code> zunächst <code>24h</code> oder mehr. Jeder Durchlauf führt einen vollständigen Scan gegen die Instanz aus. Für die meisten Versions- und Konfigurationsprüfungen sind Abfragen im Minutentakt nicht nötig.</p>
+<p>Jede weitere Option des <code>CheckCommand</code> - <code>--eol-warning</code>, <code>--release-track</code>, <code>--ignore-hardening</code> und die übrigen - setzt du über <code>opencloud_check_extra_vars</code>, eine Zuordnung vom Variablennamen ohne das Präfix <code>opencloud_</code> zum Wert; eine Liste wiederholt das Flag für jedes Element.</p>
+<pre><code class="language-ini">opencloud_check_extra_vars={&quot;eol_warning&quot;: 30, &quot;ignore_hardening&quot;: [&quot;hstsPreload&quot;]}
+</code></pre>
 <p>Die <a href="https://github.com/sowoi/check-opencloud-security/blob/main/ansible/README.md#variable-reference">Variablenreferenz</a> enthält auch die rollenspezifischen Einstellungen.</p>
 <h2 id="before-you-commit-a-change-to-the-role">Änderungen an einer Rolle prüfen</h2>
 <p>Führe <code>ansible-lint</code> aus dem Verzeichnis <code>ansible/</code> aus. Vom Repository-Stamm aus wird die vorgesehene Konfiguration nicht korrekt angewendet und es können unzutreffende Meldungen entstehen.</p>

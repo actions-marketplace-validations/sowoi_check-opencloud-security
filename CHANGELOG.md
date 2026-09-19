@@ -15,25 +15,13 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 ### Added
 
 - The operator's area shows the running release and whether a newer one is
-  published (one cached PyPI lookup every six hours, `COS_WEB_UPDATE_CHECK`).
-  With the new opt-in `updater` service of `docker-compose.dockerhub.yml`
-  (`--profile autoupdate`) and `COS_WEB_ADMIN_UPDATE_DIR`, a button installs
-  it: the updater pulls the image and recreates the web and worker containers,
-  a short downtime. The web process itself stays unprivileged
-  ([ADR 0070](adr/0070-the-operator-area-requests-updates-a-sidecar-performs-them.md)).
-
-- The Prometheus exporter and OTLP publish
-  `opencloud_security_certificate_days_remaining` and
-  `opencloud_security_upgrade_path_complete`, the counterparts of the
-  `cert_days_left` and `upgrade_path_complete` perfdata Nagios, Icinga and
-  Checkmk already had; `contrib/prometheus/alerts.yml` alerts on both.
-- `contrib/icinga2/check_opencloud_security.conf`, a complete Icinga 2
-  `CheckCommand` (also in the `.deb`/`.rpm` documentation). The Ansible roles
-  deploy the same arguments - they lacked `--eol-warning`, `--release-track`,
-  `--ignore-hardening`, `--login-throttling`, `--baseline` and fifteen more -
-  settable through the new `opencloud_check_extra_vars`.
-  `tests/test_monitoring_parity.py` keeps the monitoring tools level: a metric
-  or option that reaches only some of them fails the suite.
+  published on GitHub (cached six hours, `COS_WEB_UPDATE_CHECK`), and a button
+  installs it: the release's web bundle is verified against its Sigstore build
+  attestation from this repository's release workflow, unpacked on a tmpfs
+  (`COS_WEB_ADMIN_UPDATE_DIR`, mounted by every compose file) and the web and
+  worker processes restart on it - a short downtime, lasting until the
+  containers restart. The web image now installs the `signing` extra
+  ([ADR 0070](adr/0070-the-operator-area-installs-attested-releases-in-place.md)).
 
 ### Fixed
 

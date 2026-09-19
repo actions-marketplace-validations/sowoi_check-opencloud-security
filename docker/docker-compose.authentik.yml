@@ -50,6 +50,14 @@ services:
     ports:
       - "127.0.0.1:8811:8811"
     environment:
+      # The operator's area says when a newer release is on GitHub and can
+      # install it: the release's web bundle, verified against its build
+      # attestation, unpacked on the tmpfs below and run in place of the
+      # image's code until the container restarts (ADR 0070). Unset
+      # COS_WEB_ADMIN_UPDATE_DIR to only be told; COS_WEB_UPDATE_CHECK=false
+      # with no outbound access.
+      COS_WEB_UPDATE_CHECK: "${COS_WEB_UPDATE_CHECK:-true}"
+      COS_WEB_ADMIN_UPDATE_DIR: "${COS_WEB_ADMIN_UPDATE_DIR-/var/lib/opencloud-scan/update}"
       COS_WEB_REDIS_URL: "redis://:${COS_REDIS_PASSWORD:-}@redis:6379/0"
       COS_WEB_RESULT_TTL: "3600"
       COS_WEB_IP_RATE_LIMIT: "10"
@@ -129,6 +137,7 @@ services:
     read_only: true
     tmpfs:
       - /tmp:size=16m
+      - /var/lib/opencloud-scan/update:size=64m,uid=10001,gid=10001,mode=0700
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -146,6 +155,8 @@ services:
       redis:
         condition: service_healthy
     environment:
+      # Follows an update the operator's area installed (ADR 0070).
+      COS_WEB_ADMIN_UPDATE_DIR: "${COS_WEB_ADMIN_UPDATE_DIR-/var/lib/opencloud-scan/update}"
       COS_WEB_REDIS_URL: "redis://:${COS_REDIS_PASSWORD:-}@redis:6379/0"
       COS_WEB_RESULT_TTL: "3600"
       # The whole of this service's load on other people's servers, and set
@@ -186,6 +197,7 @@ services:
     read_only: true
     tmpfs:
       - /tmp:size=16m
+      - /var/lib/opencloud-scan/update:size=64m,uid=10001,gid=10001,mode=0700
     security_opt:
       - no-new-privileges:true
     cap_drop:

@@ -341,11 +341,10 @@ registro (p. ej. <code>docker tag check-opencloud-security registry.example.com/
 seguido de <code>docker push ...</code>) y use esa imagen en sus hosts de
 monitorización.</p>
 <h2 id="icinga2-nagios">Icinga2 / Nagios</h2>
-<ul>
-<li>Si instaló el paquete con pipx/uv/pip, localice el ejecutable <code>check-opencloud-security</code> instalado (p. ej. <code>which check-opencloud-security</code>) y use esa ruta en <code>PluginDir</code>, o cópielo o enlácelo en su carpeta de complementos (normalmente <code>/usr/lib/nagios/plugins/</code>).</li>
-<li>Si ejecuta el script a mano, coloque <code>check_opencloud_security.py</code> en su carpeta de complementos.</li>
-<li>Cree un nuevo comando personalizado:</li>
-</ul>
+<p>El <code>CheckCommand</code> completo, con un argumento para cada opción útil en un servicio, se incluye como <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/icinga2/check_opencloud_security.conf"><code>contrib/icinga2/check_opencloud_security.conf</code></a>; el ejemplo de abajo muestra las más habituales.
+- Si instaló el paquete con pipx/uv/pip, localice el ejecutable <code>check-opencloud-security</code> instalado (p. ej. <code>which check-opencloud-security</code>) y use esa ruta en <code>PluginDir</code>, o cópielo o enlácelo en su carpeta de complementos (normalmente <code>/usr/lib/nagios/plugins/</code>).
+- Si ejecuta el script a mano, coloque <code>check_opencloud_security.py</code> en su carpeta de complementos.
+- Cree un nuevo comando personalizado:</p>
 <pre><code>object CheckCommand &quot;check_opencloud_security&quot; {
     import &quot;plugin-check-command&quot;
     command = [ PluginDir + &quot;/check-opencloud-security&quot; ]

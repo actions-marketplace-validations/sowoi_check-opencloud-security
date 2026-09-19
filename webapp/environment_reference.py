@@ -245,11 +245,11 @@ REFERENCE: dict[str, dict[str, str]] = {
     },
     "UPDATE_CHECK": {
         "default": "true",
-        "description": "Ask PyPI whether a newer release of this service exists, for the operator's area only and at most every six hours. Set false with no outbound access",
+        "description": "Ask GitHub whether a newer release of this service exists, for the operator's area only and at most every six hours. Set false with no outbound access",
     },
     "ADMIN_UPDATE_DIR": {
         "default": "(unset)",
-        "description": "A directory shared with the updater service of docker-compose.dockerhub.yml. Set, the operator's area can install a newer release: it writes a request there and the updater pulls the image and recreates the web and worker containers, a short downtime. Unset, the area only says an update exists",
+        "description": "A writable tmpfs (the compose files mount one at /var/lib/opencloud-scan/update). Set, the operator's area can install a newer release: the web bundle is downloaded from GitHub, verified against its build attestation, unpacked here, and the web and worker processes restart on it - a short downtime, lasting until the containers restart. Unset, the area only says an update exists",
     },
     "AUDIT_LOG": {
         "default": "false",

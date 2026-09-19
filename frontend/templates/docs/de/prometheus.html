@@ -107,6 +107,16 @@ promtool check rules /etc/prometheus/rules/opencloud-security.yml
 <td><code>1</code>, wenn eine neuere Version verfügbar ist</td>
 </tr>
 <tr>
+<td><code>opencloud_security_certificate_days_remaining</code></td>
+<td><code>host</code></td>
+<td>Tage bis zum Ablauf des vorgelegten Zertifikats; negativ danach, kein Wert über reines HTTP</td>
+</tr>
+<tr>
+<td><code>opencloud_security_upgrade_path_complete</code></td>
+<td><code>host</code>, <code>target_version</code></td>
+<td><code>1</code>, wenn das empfohlene Upgrade alle bekannten Schwachstellen behebt; kein Wert ohne Upgrade-Pfad</td>
+</tr>
+<tr>
 <td><code>opencloud_security_scan_duration_seconds</code></td>
 <td><code>host</code></td>
 <td>Scandauer</td>

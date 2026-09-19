@@ -36,6 +36,7 @@ from .schedule import refresh_schedule, stored_schedule
 from .settings import WebSettings
 from .ssrf import TargetRejected, ensure_blocklist_ready, validate_target
 from .store import WORKER_HEARTBEAT_KEY, ScanStore
+from .updates import follow_update, restart_into
 
 LOGGER = logging.getLogger("check_opencloud.web.worker")
 HEARTBEAT_INTERVAL_SECONDS = 10
@@ -159,6 +160,23 @@ async def _count_non_opencloud(
         LOGGER.info("probe_block_started %s", uuid)
 
 
+async def follow_operator_update(ctx: dict[str, Any]) -> str:
+    """
+    Switch to the release the operator's area installed (ADR 0070).
+
+    Every minute, and on every worker - unlike the refreshes, each container
+    has its own tmpfs and has to verify and unpack the bundle for itself.
+    A scan running at that moment is cut short; the area warns of that.
+    """
+    settings: WebSettings = ctx["web_settings"]
+    tree = await follow_update(ctx["backend"], settings)
+    if tree is None:
+        return "unchanged"
+    LOGGER.info("worker_update_restarting tree=%s", tree.name)
+    restart_into(tree)
+    return "restarting"  # pragma: no cover - restart_into does not return
+
+
 async def refresh_release_schedule(ctx: dict[str, Any]) -> str:
     """
     Re-read the OpenCloud lifecycle page. Scheduled daily, and at startup.
@@ -266,6 +284,16 @@ def reference_data_jobs(settings: WebSettings) -> list:
                 minute=41,
                 run_at_startup=True,
                 unique=True,
+                timeout=REFRESH_JOB_TIMEOUT_SECONDS,
+                max_tries=1,
+            )
+        )
+    if settings.admin_update_dir:
+        jobs.append(
+            cron(
+                follow_operator_update,
+                name="follow_operator_update",
+                second=5,
                 timeout=REFRESH_JOB_TIMEOUT_SECONDS,
                 max_tries=1,
             )

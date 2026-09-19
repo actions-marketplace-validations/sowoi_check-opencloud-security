@@ -138,6 +138,16 @@ match them.</p>
 <td><code>1</code> when a newer release exists</td>
 </tr>
 <tr>
+<td><code>opencloud_security_certificate_days_remaining</code></td>
+<td><code>host</code></td>
+<td>Days until the presented certificate expires; negative once it has, no sample over plain HTTP</td>
+</tr>
+<tr>
+<td><code>opencloud_security_upgrade_path_complete</code></td>
+<td><code>host</code>, <code>target_version</code></td>
+<td><code>1</code> when the recommended upgrade fixes every known advisory; no sample without one</td>
+</tr>
+<tr>
 <td><code>opencloud_security_scan_duration_seconds</code></td>
 <td><code>host</code></td>
 <td>How long the scan took</td>

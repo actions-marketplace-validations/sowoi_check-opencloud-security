@@ -53,6 +53,7 @@ from fastapi.responses import (
 )
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.background import BackgroundTask
 from starlette.datastructures import UploadFile as StarletteUploadFile
 from starlette.responses import StreamingResponse
 
@@ -244,7 +245,7 @@ from .store import (
     ScanStore,
     target_hostname,
 )
-from .updates import request_update, update_state
+from .updates import request_update, restart_into, update_state
 from .workflows import (
     ASYNC_NOTE,
     CONFLICT_NOTE,
@@ -265,6 +266,12 @@ from .workflows import (
 )
 
 LOGGER = logging.getLogger("check_opencloud.web")
+
+
+async def _restart_soon(tree: Path) -> None:  # pragma: no cover - replaces the process
+    """Restart into a verified, unpacked release once the answer has been sent."""
+    await asyncio.sleep(1)
+    restart_into(tree)
 
 
 def mcp_available() -> bool:
@@ -2691,13 +2698,14 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
         @app.post(f"{ADMIN_PATH}/update", include_in_schema=False)
         async def admin_update(request: Request) -> Response:
             """
-            Ask the updater service for the newest release.
+            Switch this deployment to the newest release on GitHub.
 
-            Writes a request file and nothing else: this process cannot
-            replace its own container and is not given the means to (ADR
-            0070). The version is the one PyPI named, never one the form
-            sent, so the button can only ever move forward to a published
-            release.
+            Volatile by design (ADR 0070): the release's web bundle is
+            fetched, its build attestation verified against the release
+            workflow, unpacked on
+            a tmpfs, and this process restarts from it once the answer has
+            been sent; the workers follow through a Redis key. The version
+            is the one GitHub named, never one the form sent.
             """
             operator = admin_operator(request)
             if operator is None:
@@ -2705,13 +2713,20 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
             if cross_origin_post(request, settings):
                 LOGGER.info("admin_cross_site")
                 return _cross_site_response(request, wants_html(request))
-            state = await request_update(
+            state, tree = await request_update(
                 app.state.backend, settings, operator.username
             )
             answer = {"state": state, "action": "update"}
+            response: Response
             if wants_html(request):
-                return page(request, "admin.html", await admin_context(operator, answer))
-            return JSONResponse(answer)
+                response = page(
+                    request, "admin.html", await admin_context(operator, answer)
+                )
+            else:
+                response = JSONResponse(answer)
+            if tree is not None:
+                response.background = BackgroundTask(_restart_soon, tree)
+            return response
 
         @app.post(f"{ADMIN_PATH}/exclusions", include_in_schema=False)
         async def admin_exclusions(

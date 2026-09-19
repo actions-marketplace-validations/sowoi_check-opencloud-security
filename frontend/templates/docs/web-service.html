@@ -570,12 +570,12 @@ somebody could.</p>
 <tr>
 <td><code>COS_WEB_UPDATE_CHECK</code></td>
 <td><code>true</code></td>
-<td>Ask PyPI whether a newer release of this service exists, for the operator's area only and at most every six hours. Set <code>false</code> with no outbound access</td>
+<td>Ask GitHub whether a newer release of this service exists, for the operator's area only and at most every six hours. Set <code>false</code> with no outbound access</td>
 </tr>
 <tr>
 <td><code>COS_WEB_ADMIN_UPDATE_DIR</code></td>
 <td><em>(unset)</em></td>
-<td>A directory shared with the <code>updater</code> service of <code>docker-compose.dockerhub.yml</code>. Set, the operator's area can install a newer release: it writes a request there and the updater pulls the image and recreates the web and worker containers, a short downtime. Unset, the area only says an update exists</td>
+<td>A writable tmpfs (the compose files mount one at <code>/var/lib/opencloud-scan/update</code>). Set, the operator's area can install a newer release: the web bundle is downloaded from GitHub, verified against its build attestation, unpacked here, and the web and worker processes restart on it - a short downtime, lasting until the containers restart. Unset, the area only says an update exists</td>
 </tr>
 <tr>
 <td><code>COS_WEB_AUDIT_LOG</code></td>

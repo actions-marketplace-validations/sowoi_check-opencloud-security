@@ -19,6 +19,14 @@ services:
     ports:
       - "127.0.0.1:8811:8811"
     environment:
+      # The operator's area says when a newer release is on GitHub and can
+      # install it: the release's web bundle, verified against its build
+      # attestation, unpacked on the tmpfs below and run in place of the
+      # image's code until the container restarts (ADR 0070). Unset
+      # COS_WEB_ADMIN_UPDATE_DIR to only be told; COS_WEB_UPDATE_CHECK=false
+      # with no outbound access.
+      COS_WEB_UPDATE_CHECK: "${COS_WEB_UPDATE_CHECK:-true}"
+      COS_WEB_ADMIN_UPDATE_DIR: "${COS_WEB_ADMIN_UPDATE_DIR-/var/lib/opencloud-scan/update}"
       COS_WEB_REDIS_URL: "redis://:${COS_REDIS_PASSWORD:-}@redis:6379/0"
       # How long a result stays readable. Also the lifetime of every key.
       COS_WEB_RESULT_TTL: "3600"
@@ -79,23 +87,13 @@ services:
       COS_WEB_MCP_AUTH_JWKS_URL: "${COS_WEB_MCP_AUTH_JWKS_URL:-}"
       COS_WEB_MCP_AUTH_RESOURCE_URL: "${COS_WEB_MCP_AUTH_RESOURCE_URL:-}"
       COS_WEB_MCP_AUTH_SCOPES: "${COS_WEB_MCP_AUTH_SCOPES:-}"
-      # The operator's area says when a newer release is published (one
-      # cached PyPI lookup every few hours; "false" with no outbound access).
-      # With the updater below running, set COS_WEB_ADMIN_UPDATE_DIR to
-      # /var/lib/opencloud-scan/update and the area can install it:
-      #
-      #   COS_WEB_ADMIN_UPDATE_DIR=/var/lib/opencloud-scan/update \
-      #     docker compose -f docker-compose.dockerhub.yml --profile autoupdate up -d
-      COS_WEB_UPDATE_CHECK: "${COS_WEB_UPDATE_CHECK:-true}"
-      COS_WEB_ADMIN_UPDATE_DIR: "${COS_WEB_ADMIN_UPDATE_DIR:-}"
     networks:
       - default
       - scanner_internal
     read_only: true
     tmpfs:
       - /tmp:size=16m
-    volumes:
-      - update_requests:/var/lib/opencloud-scan/update
+      - /var/lib/opencloud-scan/update:size=64m,uid=10001,gid=10001,mode=0700
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -111,6 +109,8 @@ services:
       redis:
         condition: service_healthy
     environment:
+      # Follows an update the operator's area installed (ADR 0070).
+      COS_WEB_ADMIN_UPDATE_DIR: "${COS_WEB_ADMIN_UPDATE_DIR-/var/lib/opencloud-scan/update}"
       COS_WEB_REDIS_URL: "redis://:${COS_REDIS_PASSWORD:-}@redis:6379/0"
       COS_WEB_RESULT_TTL: "3600"
       # These values are the service's complete scanning load on other hosts.
@@ -162,6 +162,7 @@ services:
     read_only: true
     tmpfs:
       - /tmp:size=16m
+      - /var/lib/opencloud-scan/update:size=64m,uid=10001,gid=10001,mode=0700
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -203,31 +204,6 @@ services:
       retries: 5
     security_opt:
       - no-new-privileges:true
-
-  # Opt-in (ADR 0070): installs a newer release when the operator's area asks
-  # for one, by pulling the image and recreating web_app and arq_worker - a
-  # short downtime. It holds the Docker socket, which is root on the host, so
-  # it is on no network, reads nothing but the shared request directory and
-  # runs a fixed command. Start it with `--profile autoupdate` from this
-  # directory; the directory is mounted at the same path so compose finds this
-  # file and its .env.
-  updater:
-    image: docker:28-cli
-    container_name: opencloud-scan-hub-updater
-    restart: unless-stopped
-    profiles: ["autoupdate"]
-    network_mode: none
-    working_dir: "${PWD}"
-    entrypoint: ["/bin/sh", "${PWD}/updater/updater.sh"]
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - "${PWD}:${PWD}:ro"
-      - update_requests:/var/lib/opencloud-scan/update
-    security_opt:
-      - no-new-privileges:true
-
-volumes:
-  update_requests:
 
 networks:
   # The application containers keep the default network: a scan is an outbound

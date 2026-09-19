@@ -489,13 +489,14 @@ class WebSettings:
     server."""
 
     update_check: bool = True
-    """Ask PyPI, at most every few hours and only for the operator's area,
+    """Ask GitHub, at most every few hours and only for the operator's area,
     whether a newer release of this service exists."""
 
     admin_update_dir: str | None = None
-    """A directory shared with the ``updater`` service. Set, the operator's
-    area offers to install a newer release by writing a request there; this
-    process never updates itself. Unset, the area only says one exists."""
+    """A writable tmpfs the operator's area unpacks a newer release onto.
+    Set, the area installs it: the bundle is verified against its GitHub
+    build attestation and the web and worker processes restart on it until
+    the container restarts (ADR 0070). Unset, the area only says one exists."""
 
     admin_sign_out_url: str | None = None
     """Where the operator's area sends somebody who wants to stop being signed
