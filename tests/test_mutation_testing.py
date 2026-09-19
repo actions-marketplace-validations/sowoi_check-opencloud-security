@@ -46,7 +46,7 @@ def test_mutmut_has_a_dependency_record():
 
 def test_every_mutmut_test_file_exists_and_runs_in_process():
     """A missing file fails the run; a subprocess test cannot see a mutant."""
-    files = _array(_table("tool.mutmut"), "tests_dir")
+    files = _array(_table("tool.mutmut"), "pytest_add_cli_args_test_selection")
 
     assert files
     for name in files:
@@ -56,7 +56,7 @@ def test_every_mutmut_test_file_exists_and_runs_in_process():
 
 def test_mutmut_only_mutates_the_plugin_and_the_scanner():
     """The web application's verdicts come from these two; nothing else is in scope."""
-    assert set(_array(_table("tool.mutmut"), "paths_to_mutate")) == {
+    assert set(_array(_table("tool.mutmut"), "source_paths")) == {
         "check_opencloud_security.py",
         "opencloud_local_scan/",
     }
