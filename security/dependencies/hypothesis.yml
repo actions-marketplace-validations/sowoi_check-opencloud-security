@@ -1,0 +1,71 @@
+# A dependency record. See security/dependencies/README.md.
+name: hypothesis
+import_name: hypothesis
+status: proposed
+approved_by: ""
+scopes:
+  - group:test
+reviewed_version: "6.168.0"
+justification: |
+  Property-based tests of the parsers that read text from outside: version
+  strings from a scanned status.php, Strict-Transport-Security and
+  Content-Security-Policy headers from a scanned proxy, the SSRF guard's
+  handling of whatever a visitor types, and the ';'-joined configuration
+  lists (tests/test_properties.py). Example-based tests pin the forms we have
+  seen; Hypothesis generates and shrinks the ones we have not. Its first run
+  found that 2002::/16 in webapp/ssrf.py BLOCKED_NETWORKS is never reached,
+  because the 6to4 branch returns first. Test-only: the `test` dependency
+  group, not the wheel, the runtime or any extra.
+alternatives_considered: |
+  - The standard library: `random` can generate inputs, but without
+    strategies for IP addresses, regex-shaped text and nested structures,
+    and without shrinking, a failure is a 2 KB string nobody can read.
+  - Writing our own generator and shrinker: shrinking is the hard part and
+    is not a few dozen lines.
+  - Existing dependencies: none generates test data.
+  - Atheris / other fuzzers: coverage-guided fuzzing needs a separate harness
+    and long runs; it does not fit a pytest suite that runs on every pull
+    request.
+tests:
+  - tests/test_properties.py
+review:
+  reviewer: "Drafted by an agent (Claude Code) for the maintainer to check"
+  reviewed_on: "2026-09-19"
+  known_vulnerabilities: |
+    uvx pip-audit --no-deps -r <(echo hypothesis==6.168.0): no known
+    vulnerabilities. OSV query for PyPI/hypothesis: no entries. No GitHub
+    security advisories were found for the project; this was not checked
+    directly on the GitHub advisory page and should be confirmed there.
+  maintenance: |
+    Very active: 1,568 releases on PyPI, published continuously from CI by
+    the HypothesisWorks maintainers, with several core maintainers. Mature
+    project, widely used (pytest plugin). Whether a SECURITY.md exists was
+    not checked.
+  provenance: |
+    PyPI serves no attestation (provenance) for the reviewed wheel
+    ("No provenance available"). Releases come from the project's own CI
+    (HypothesisWorks/hypothesis); trusted publishing was not confirmed.
+    A gap compared with playwright/mutmut, and worth the maintainer's look.
+  install_time: |
+    Wheels for CPython 3.10-3.14 (and abi3 for 3.15) on Linux (glibc and
+    musl), macOS and Windows, x86_64 and arm64. Nothing is built or run at
+    install time on the platforms CI and developers use.
+  runtime_network: |
+    None by default. database.py imports urllib only for the opt-in
+    GitHubArtifactDatabase, which this project does not configure. The
+    default example database writes to .hypothesis/ in the working
+    directory, which .gitignore already ignores. No telemetry or update
+    check.
+  native_code: |
+    New in the 6.16x series: the wheel ships a compiled extension
+    (hypothesis/_native.*.so). The package also calls exec()/eval() on
+    source it generates itself (reflection, lambda descriptions), never on
+    test input, and runs `git rev-parse --show-toplevel` via subprocess only
+    to shorten paths in failure explanations. No pickle on untrusted data.
+  transitive_dependencies: |
+    sortedcontainers 2.4.0 (Apache-2.0, pure Python, no dependencies, stable
+    and long unchanged). exceptiongroup on Python 3.10 only, already in
+    uv.lock.
+  license: |
+    MPL-2.0 (sortedcontainers: Apache-2.0). File-level copyleft, compatible
+    with this project's GPL-3.0; used only in tests and never distributed.

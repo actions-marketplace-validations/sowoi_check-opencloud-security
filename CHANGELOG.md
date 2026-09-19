@@ -12,6 +12,21 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+### Added
+
+- **Property-based tests for the parsers that read outside text.**
+  `tests/test_properties.py` uses Hypothesis, a new test-only dependency
+  (reviewed in `security/dependencies/hypothesis.yml`), to generate inputs
+  for version parsing and comparison, advisory ranges, the
+  Strict-Transport-Security and Content-Security-Policy readers, the web
+  application's SSRF guard (private literals, IPv4-mapped and 6to4
+  addresses, arbitrary input) and the `;`-joined configuration lists.
+- **The output documents' key names are pinned.**
+  `tests/test_output_shape.py` fails when a top-level key of the scan result
+  or of the plugin's `--format json` / webhook payload is renamed, added or
+  dropped, or when a key breaks the camelCase (result) / snake_case (plugin)
+  convention, so a breaking rename cannot land unnoticed.
+
 ## [1.27.1] - 2026-09-19
 
 ### Added

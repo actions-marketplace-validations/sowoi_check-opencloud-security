@@ -45,8 +45,23 @@
 
 <article class="docs-article card section-gap" data-reveal lang="en">
 <h2 id="1272-this-release">[1.27.2] - this release</h2>
-<h2 id="1271-2026-09-19">[1.27.1] - 2026-09-19</h2>
 <h3 id="added">Added</h3>
+<ul>
+<li><strong>Property-based tests for the parsers that read outside text.</strong>
+  <code>tests/test_properties.py</code> uses Hypothesis, a new test-only dependency
+  (reviewed in <code>security/dependencies/hypothesis.yml</code>), to generate inputs
+  for version parsing and comparison, advisory ranges, the
+  Strict-Transport-Security and Content-Security-Policy readers, the web
+  application's SSRF guard (private literals, IPv4-mapped and 6to4
+  addresses, arbitrary input) and the <code>;</code>-joined configuration lists.</li>
+<li><strong>The output documents' key names are pinned.</strong>
+  <code>tests/test_output_shape.py</code> fails when a top-level key of the scan result
+  or of the plugin's <code>--format json</code> / webhook payload is renamed, added or
+  dropped, or when a key breaks the camelCase (result) / snake_case (plugin)
+  convention, so a breaking rename cannot land unnoticed.</li>
+</ul>
+<h2 id="1271-2026-09-19">[1.27.1] - 2026-09-19</h2>
+<h3 id="added_1">Added</h3>
 <ul>
 <li>
 <p>Codex can use the repository's Claude Code skills, hooks, subagent roles and
@@ -86,7 +101,7 @@
 </li>
 </ul>
 <h2 id="1270-2026-09-19">[1.27.0] - 2026-09-19</h2>
-<h3 id="added_1">Added</h3>
+<h3 id="added_2">Added</h3>
 <ul>
 <li>
 <p>The web report lists an advertised HTTP/3 listener (with its UDP ports) and
@@ -111,7 +126,7 @@
 </li>
 </ul>
 <h2 id="1261-2026-09-19">[1.26.1] - 2026-09-19</h2>
-<h3 id="added_2">Added</h3>
+<h3 id="added_3">Added</h3>
 <ul>
 <li>The operator's area has a <strong>Releases</strong> tab at <code>/admin/docs/releases</code>: the
   ten newest released sections of <code>CHANGELOG.md</code>, newest first, so an
@@ -119,7 +134,7 @@
   area. The publish workflow regenerates it together with the release notes.</li>
 </ul>
 <h2 id="1260-2026-09-19">[1.26.0] - 2026-09-19</h2>
-<h3 id="added_3">Added</h3>
+<h3 id="added_4">Added</h3>
 <ul>
 <li>
 <p><code>--eol-warning DAYS</code> (<code>COS_EOL_WARNING</code>, YAML <code>eol_warning</code>, and a setup
@@ -160,7 +175,7 @@
 </li>
 </ul>
 <h2 id="1253-2026-09-18">[1.25.3] - 2026-09-18</h2>
-<h3 id="added_4">Added</h3>
+<h3 id="added_5">Added</h3>
 <ul>
 <li>
 <p>The <code>/check-changelog-docs</code> skill checks that every new <code>Added</code> or
@@ -243,7 +258,7 @@
 </li>
 </ul>
 <h2 id="1252-2026-09-18">[1.25.2] - 2026-09-18</h2>
-<h3 id="added_5">Added</h3>
+<h3 id="added_6">Added</h3>
 <ul>
 <li>The Docker setup wizard moves while it works, in the four places where
   motion tells the operator something the static page could not. Section
@@ -365,7 +380,7 @@
   group only as a dependency of <code>mcp</code>; it is now listed there itself.</li>
 </ul>
 <h2 id="1250-2026-09-17">[1.25.0] - 2026-09-17</h2>
-<h3 id="added_6">Added</h3>
+<h3 id="added_7">Added</h3>
 <ul>
 <li><strong>The comparison journeys are covered in a real browser.</strong> The Playwright
   suite now downloads a scan report and uploads it as the baseline for a later
