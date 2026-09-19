@@ -7,6 +7,8 @@ retypes a dashboard.
 - `cron/` - a `cron.d` drop-in file.
 - `prometheus/alerts.yml` - alerting rules for the plugin's own exporter.
 - `grafana/dashboard.json` - a dashboard for the same metrics.
+- `icinga2/check_opencloud_security.conf` - the complete Icinga 2
+  `CheckCommand`, one argument per option that makes sense on a service.
 - `checkmk/opencloud_security` - a Checkmk local check, for an agent host that
   can reach an instance the Checkmk server cannot.
 - `helm/check-opencloud-security/` - a Helm chart: the scheduled scan as a

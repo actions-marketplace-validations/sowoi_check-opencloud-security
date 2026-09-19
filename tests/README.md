@@ -92,6 +92,7 @@ is needed.
 | [`test_check_vulnerabilities.py`](test_check_vulnerabilities.py) | The whole check in-process: the alert line, detail lines, perfdata, the baseline and the result payload all receive and print what the scan found. |
 | [`test_perfdata.py`](test_perfdata.py) | Plugin output: perfdata, hardening reporting, formatting. |
 | [`test_output_formats.py`](test_output_formats.py) | `--format json/sarif/junit` for one host and for several. |
+| [`test_monitoring_parity.py`](test_monitoring_parity.py) | Nagios, Checkmk and Prometheus carry the same metrics; every Icinga `CheckCommand` offers every option. |
 | [`test_prometheus.py`](test_prometheus.py) | Prometheus rendering and the native `/metrics` exporter. |
 | [`test_otlp.py`](test_otlp.py) | `--format otlp`: the same metrics as the exposition, as a collector's body. |
 | [`test_webhook.py`](test_webhook.py) | The optional webhook notification. |

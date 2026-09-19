@@ -240,6 +240,42 @@ def collect(
                 )
             )
 
+        # The plugin's cert_days_left perfdata, for the same reason: expiry is
+        # graphed and alerted on ahead of the day the finding fires. No sample
+        # when nothing was measured - plain HTTP, a refused handshake, dates
+        # that would not parse - since an unmeasured certificate must not
+        # arrive as a number.
+        tls = outcome.get("tls")
+        certificate = tls.get("certificate") if isinstance(tls, dict) else None
+        if isinstance(certificate, dict) and isinstance(certificate.get("daysRemaining"), int):
+            families.append(
+                _family(
+                    "opencloud_security_certificate_days_remaining",
+                    "Days remaining before the presented TLS certificate expires.",
+                    UNIT_DAYS,
+                    [(base_labels, certificate["daysRemaining"])],
+                )
+            )
+
+        # The plugin's upgrade_path_complete perfdata: whether the recommended
+        # upgrade clears every known advisory. Absent without a path, which is
+        # what an instance without advisories has.
+        upgrade_path = outcome.get("upgradePath")
+        if isinstance(upgrade_path, dict) and upgrade_path.get("target"):
+            families.append(
+                _family(
+                    "opencloud_security_upgrade_path_complete",
+                    "Whether the recommended OpenCloud upgrade fixes every known vulnerability.",
+                    UNIT_COUNT,
+                    [
+                        (
+                            {"host": host, "target_version": upgrade_path["target"]},
+                            int(not upgrade_path.get("stillAffected")),
+                        )
+                    ],
+                )
+            )
+
     families.append(
         _family(
             "opencloud_security_scan_duration_seconds",

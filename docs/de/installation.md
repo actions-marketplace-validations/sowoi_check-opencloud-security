@@ -260,6 +260,8 @@ Du kannst ein selbst gebautes Image in deine Registry übertragen, etwa mit `doc
 
 ## Icinga2 / Nagios {#icinga2-nagios}
 
+Das vollständige `CheckCommand` mit einem Argument für jede Option, die auf einem Service sinnvoll ist, liegt in [`contrib/icinga2/check_opencloud_security.conf`](../../contrib/icinga2/check_opencloud_security.conf); das Beispiel unten zeigt die gängigen.
+
 - Suche bei pipx, uv oder pip den installierten Programmpfad, etwa mit `which check-opencloud-security`, und verwende ihn direkt oder über einen Symlink im Plugin-Verzeichnis.
 - Bei direkter Verwendung des Skripts lege `check_opencloud_security.py` im Plugin-Verzeichnis ab.
 - Erstelle den CheckCommand:

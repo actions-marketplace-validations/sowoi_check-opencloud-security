@@ -34,4 +34,7 @@ object Service "{{ opencloud_check_service_name }}" {
     vars.opencloud_webhook_on = "{{ opencloud_check_webhook_on }}"
     vars.opencloud_webhook_timeout = {{ opencloud_check_webhook_timeout }}
 {% endif %}
+{% for name, value in opencloud_check_extra_vars | dictsort %}
+    vars.opencloud_{{ name }} = {{ value | to_json }}
+{% endfor %}
 }

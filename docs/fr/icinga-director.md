@@ -22,6 +22,10 @@ native install ou l'image [Docker](installation.md#docker). Le directeur du prog
    | `--proxy`    | Data Field `$opencloud_proxy$`, optional | HTTP/HTTPS proxy |
    | `--debug`    | Set-if Data Field `$opencloud_debug$` (boolean), optional | Verbose debug output |
 
+   These are the common ones. Every other option, with its variable name,
+   is in [`contrib/icinga2/check_opencloud_security.conf`](../../contrib/icinga2/check_opencloud_security.conf);
+   add those the same way.
+
    For each optional argument, tick *Skip this argument on empty value* so
    Director omits the flag entirely when the field isn't set.
 

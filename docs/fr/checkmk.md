@@ -46,7 +46,7 @@ line, the rest of the output as the service's details, and everything after
 the `|` as metrics. Nothing needs converting: the
 [performance data](../README.md#performance-data) this plugin already writes -
 `rating`, `vulnerabilities`, `hardenings_missing`, `extra_checks_failed`,
-`update_available`, `support_days_left`, `cert_days_left`, `time` - is the
+`update_available`, `support_days_left`, `cert_days_left`, `upgrade_path_complete`, `time` - is the
 Nagios format Checkmk was built to read, thresholds and all.
 
 One warning about scheduling: the default check interval is one minute, and a

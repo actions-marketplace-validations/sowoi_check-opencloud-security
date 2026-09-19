@@ -85,6 +85,7 @@ your inventory (see `inventory.example.ini`) or in `group_vars`/`host_vars`.
 | `opencloud_check_webhook_url`          | Optional endpoint notified when a check turns critical     | `""` (disabled)                 |
 | `opencloud_check_webhook_on`           | Lowest state that triggers the webhook                     | `critical`                      |
 | `opencloud_check_webhook_timeout`      | HTTP timeout in seconds for the webhook call               | `10`                            |
+| `opencloud_check_extra_vars`           | Every other CheckCommand option as `{name: value}`, name without `opencloud_` (see `contrib/icinga2/`) | `{}`                            |
 | `opencloud_check_interval`             | Icinga2 `check_interval` (please keep >= `24h`)            | `24h`                           |
 | `opencloud_check_service_name`         | Icinga2 `Service` object display name                      | `OpenCloud Security Scan`       |
 | `opencloud_check_command_name`         | Icinga2 `CheckCommand` object name                         | `check_opencloud_security`      |

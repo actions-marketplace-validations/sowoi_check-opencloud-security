@@ -43,6 +43,8 @@ Die späteren Beispiele mit `jq` verwenden eigene, kürzere Metriknamen. Die bei
 | `opencloud_security_hardenings_missing_total` | `host` | Fehlende Härtungsmaßnahmen |
 | `opencloud_security_failed_extra_checks_total` | `host` | Fehlgeschlagene Zusatzprüfungen |
 | `opencloud_security_update_available` | `host`, `target_version` | `1`, wenn eine neuere Version verfügbar ist |
+| `opencloud_security_certificate_days_remaining` | `host` | Tage bis zum Ablauf des vorgelegten Zertifikats; negativ danach, kein Wert über reines HTTP |
+| `opencloud_security_upgrade_path_complete` | `host`, `target_version` | `1`, wenn das empfohlene Upgrade alle bekannten Schwachstellen behebt; kein Wert ohne Upgrade-Pfad |
 | `opencloud_security_scan_duration_seconds` | `host` | Scandauer |
 | `opencloud_security_scrape_success` | `host` | `0`, wenn der zugrunde liegende Scan fehlgeschlagen ist |
 

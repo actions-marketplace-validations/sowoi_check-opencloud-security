@@ -79,6 +79,8 @@ incluidos no coinciden con ellos.
 | `opencloud_security_hardenings_missing_total` | `host` | Medidas de refuerzo ausentes |
 | `opencloud_security_failed_extra_checks_total` | `host` | Comprobaciones adicionales fallidas |
 | `opencloud_security_update_available` | `host`, `target_version` | `1` cuando existe una versión más reciente |
+| `opencloud_security_certificate_days_remaining` | `host` | Días hasta que caduca el certificado presentado; negativo después, sin muestra por HTTP sin cifrar |
+| `opencloud_security_upgrade_path_complete` | `host`, `target_version` | `1` cuando la actualización recomendada corrige todas las vulnerabilidades conocidas; sin muestra si no hay ruta |
 | `opencloud_security_scan_duration_seconds` | `host` | Duración del análisis |
 | `opencloud_security_scrape_success` | `host` | `0` cuando ha fallado el análisis del que proceden los números |
 

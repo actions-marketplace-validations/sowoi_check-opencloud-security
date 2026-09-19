@@ -50,6 +50,12 @@ Setze `opencloud_check_host` ausdrücklich. Der Standard `inventory_hostname` pa
 
 Verwende für `opencloud_check_interval` zunächst `24h` oder mehr. Jeder Durchlauf führt einen vollständigen Scan gegen die Instanz aus. Für die meisten Versions- und Konfigurationsprüfungen sind Abfragen im Minutentakt nicht nötig.
 
+Jede weitere Option des `CheckCommand` - `--eol-warning`, `--release-track`, `--ignore-hardening` und die übrigen - setzt du über `opencloud_check_extra_vars`, eine Zuordnung vom Variablennamen ohne das Präfix `opencloud_` zum Wert; eine Liste wiederholt das Flag für jedes Element.
+
+```ini
+opencloud_check_extra_vars={"eol_warning": 30, "ignore_hardening": ["hstsPreload"]}
+```
+
 Die [Variablenreferenz](../../ansible/README.md#variable-reference) enthält auch die rollenspezifischen Einstellungen.
 
 ## Änderungen an einer Rolle prüfen {#before-you-commit-a-change-to-the-role}

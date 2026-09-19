@@ -48,7 +48,7 @@ sigue a `|` como métricas. No hay que convertir nada: los
 [datos de rendimiento](../../README.md#performance-data) que ya escribe este
 complemento (`rating`, `vulnerabilities`, `hardenings_missing`,
 `extra_checks_failed`, `update_available`, `support_days_left`,
-`cert_days_left`, `time`) están en el formato de Nagios que Checkmk sabe leer,
+`cert_days_left`, `upgrade_path_complete`, `time`) están en el formato de Nagios que Checkmk sabe leer,
 umbrales incluidos.
 
 Una advertencia sobre la programación: el intervalo de comprobación
