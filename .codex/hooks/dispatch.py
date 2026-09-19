@@ -16,7 +16,6 @@ import subprocess  # nosec B603 - the script paths are fixed below
 import sys
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[2]
 CLAUDE_HOOKS = ROOT / ".claude" / "hooks"
 
