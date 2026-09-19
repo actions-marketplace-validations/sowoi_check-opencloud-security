@@ -62,6 +62,24 @@ def _section(source: str, start: str | None, end: str | None) -> str:
     return source.rstrip() + "\n"
 
 
+_RELEASE_HEADING = re.compile(r"^## \[(\d+\.\d+\.\d+)\][^\n]*$", re.MULTILINE)
+
+
+def _latest_releases(source: str, count: int) -> str:
+    """The newest ``count`` released sections of a Keep a Changelog file.
+
+    Everything before the first version heading - the preamble and
+    ``[Unreleased]`` - is dropped, and so is everything after the last one
+    kept, so the page lists what shipped and nothing that has not.
+    """
+    headings = list(_RELEASE_HEADING.finditer(source))
+    if not headings:
+        raise ValueError("no released version heading found")
+    start = headings[0].start()
+    end = headings[count].start() if len(headings) > count else len(source)
+    return source[start:end].rstrip() + "\n"
+
+
 def _demote_headings(source: str) -> str:
     """Move README's top-level sections below the frontend's h1."""
     return re.sub(r"^(#{1,5})(?= )", r"#\1", source, flags=re.MULTILINE)
@@ -251,7 +269,7 @@ def render_operator_page(slug: str) -> str:
     """Render one operator document as a template the admin area includes.
 
     The same Markdown pipeline as :func:`render_page`, and a different wrapper:
-    no catalogue keys for the title, because these two documents are the
+    no catalogue keys for the title, because these documents are the
     repository's own English and are not translated; no `_page-nav.html`,
     because that navigates the public guides; and the operator tab strip at
     the top, so the area reads as one place rather than three.
@@ -264,7 +282,11 @@ def render_operator_page(slug: str) -> str:
     """
     page = OPERATOR_DOCUMENTATION_BY_SLUG[slug]
     source = (REPO_ROOT / page.source).read_text(encoding="utf-8")
-    selected = _section(source, page.start_heading, page.end_heading)
+    selected = (
+        _latest_releases(source, page.latest_releases)
+        if page.latest_releases
+        else _section(source, page.start_heading, page.end_heading)
+    )
     body = markdown.markdown(
         selected,
         extensions=list(MARKDOWN_EXTENSIONS),

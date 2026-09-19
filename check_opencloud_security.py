@@ -109,6 +109,8 @@ ARGPARSE_ERROR = 2
 # thresholds, graphs and alert rules keep their meaning.
 RATE_MAP: dict[int, str] = {5: "A+", 4: "A", 3: "C", 2: "D", 1: "E", 0: "F"}
 MIN_RATING = 0
+# Stands in for a missing or non-numeric rating; never a key of RATE_MAP.
+UNKNOWN_RATING = -1
 MAX_RATING = 5
 
 # Default rating thresholds: a rating at or below these values triggers the
@@ -427,7 +429,7 @@ def check_vulnerabilities(
 
     response_scan = scan_result.response
 
-    rating: int = response_scan.get("rating", -1)
+    rating = _rating_of(response_scan)
     product: str = response_scan.get("product", "Unknown")
     version: str = response_scan.get("version") or "Unknown"
     domain: str = response_scan.get("domain", "Unknown")
@@ -598,6 +600,19 @@ def check_vulnerabilities(
         f"{safe_message}\n" + "\n".join(safe_details) + f" | {perfdata}",
         exit_code,
     )
+
+
+def _rating_of(response_scan: dict[str, Any]) -> int:
+    """
+    The scan's rating, or UNKNOWN_RATING when it is missing or not a number.
+
+    Only a real integer counts: a string or a boolean would otherwise slip
+    past RATE_MAP with a misleading label.
+    """
+    rating = response_scan.get("rating")
+    if isinstance(rating, int) and not isinstance(rating, bool):
+        return rating
+    return UNKNOWN_RATING
 
 
 def _upgrade_path_line(response_scan: dict[str, Any]) -> str:

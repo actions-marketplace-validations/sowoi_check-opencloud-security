@@ -1,6 +1,6 @@
 [project]
 name = "check-opencloud-security"
-version = "1.26.0"
+version = "1.26.1"
 description = "Check the security level of your OpenCloud instance with a built-in scanner - no API access required"
 authors = [{ name = "Massoud Ahmed" }]
 requires-python = ">=3.10"
@@ -146,8 +146,8 @@ mutation = [
 # mutmut mutates a copy in mutants/ (git-ignored) and runs the fast,
 # in-process tests listed here against it; the subprocess and browser tests
 # cannot see a mutant and would only make the run slow.
-paths_to_mutate = ["check_opencloud_security.py", "opencloud_local_scan/"]
-tests_dir = [
+source_paths = ["check_opencloud_security.py", "opencloud_local_scan/"]
+pytest_add_cli_args_test_selection = [
     "tests/test_rating_thresholds.py",
     "tests/test_baseline.py",
     "tests/test_waivers.py",

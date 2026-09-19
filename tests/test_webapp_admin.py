@@ -20,6 +20,7 @@ import asyncio
 import json
 import re
 from datetime import datetime, timezone
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -35,6 +36,7 @@ from webapp.i18n import LANGUAGE_COOKIE, SUPPORTED_LOCALES
 from webapp.search import ADMIN_INDEX_FILES, admin_search_document
 from webapp.settings import ADMIN_PROXY_SECRET_MINIMUM
 
+REPO_ROOT = Path(__file__).resolve().parent.parent
 SECRET = "b" * 48
 OPERATOR = "okko"
 
@@ -1453,6 +1455,27 @@ def test_both_repository_documents_are_readable_from_the_area():
     assert "ADMIN.md" in operations.text
 
 
+def test_the_release_notes_are_readable_from_the_area():
+    """
+    What the running release changed, without leaving the area for GitHub.
+
+    The newest released section leads, and nothing unreleased appears: that
+    is what a deployment does not run yet.
+    """
+    changelog = (REPO_ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    newest = re.search(r"^## \[(\d+\.\d+\.\d+)\]", changelog, re.MULTILINE).group(1)
+
+    with TestClient(create_app(_admin_settings())) as client:
+        response = client.get("/admin/docs/releases", headers=FORWARDED)
+
+    assert response.status_code == 200
+    assert "CHANGELOG.md" in response.text
+    headings = re.findall(r"<h2 id=\"[^\"]+\">\[([^\]]+)\]", response.text)
+    assert headings[0] == newest
+    assert "Unreleased" not in headings
+    assert len(headings) == 10
+
+
 def test_the_documents_are_gated_exactly_like_the_rest_of_the_area():
     """
     The negative case, and the one that matters: a document reachable without
@@ -1460,7 +1483,7 @@ def test_the_documents_are_gated_exactly_like_the_rest_of_the_area():
     that forgot to ask.
     """
     with TestClient(create_app(_admin_settings())) as client:
-        for slug in ("architecture", "operations"):
+        for slug in ("architecture", "operations", "releases"):
             assert client.get(f"/admin/docs/{slug}").status_code == 404
             assert client.get(
                 f"/admin/docs/{slug}",
@@ -1473,6 +1496,7 @@ def test_the_documents_do_not_exist_when_the_area_is_off():
     with TestClient(create_app(settings())) as client:
         assert client.get("/admin/docs/architecture").status_code == 404
         assert client.get("/admin/docs/operations").status_code == 404
+        assert client.get("/admin/docs/releases").status_code == 404
 
 
 def test_an_unknown_document_is_a_404_rather_than_a_guess():
@@ -1489,6 +1513,7 @@ def test_every_page_in_the_area_carries_the_same_tab_strip():
             client.get("/admin", headers=FORWARDED),
             client.get("/admin/docs/architecture", headers=FORWARDED),
             client.get("/admin/docs/operations", headers=FORWARDED),
+            client.get("/admin/docs/releases", headers=FORWARDED),
         ]
 
     for response in pages:
@@ -1496,6 +1521,7 @@ def test_every_page_in_the_area_carries_the_same_tab_strip():
         assert 'class="admin-tabs"' in response.text
         assert '/admin/docs/architecture' in response.text
         assert '/admin/docs/operations' in response.text
+        assert '/admin/docs/releases' in response.text
         # Exactly one tab is the current one, on every page.
         assert response.text.count('aria-current="page"') == 1
 
@@ -1507,7 +1533,7 @@ def test_the_operator_documents_are_never_indexed():
     indexing on by accident.
     """
     with TestClient(create_app(_admin_settings())) as client:
-        for slug in ("architecture", "operations"):
+        for slug in ("architecture", "operations", "releases"):
             response = client.get(f"/admin/docs/{slug}", headers=FORWARDED)
             assert "noindex" in response.headers.get("x-robots-tag", "")
             assert 'content="noindex, nofollow, noarchive"' in response.text
@@ -1528,7 +1554,7 @@ def test_the_operator_documents_stay_out_of_every_public_surface():
     from webapp.seo import PUBLIC_PAGES
 
     operator_slugs = {page.slug for page in OPERATOR_DOCUMENTATION_PAGES}
-    assert operator_slugs == {"architecture", "operations"}
+    assert operator_slugs == {"architecture", "operations", "releases"}
 
     # Not in the manifest that feeds /documentation, the sitemap and the nav.
     assert operator_slugs.isdisjoint({page.slug for page in DOCUMENTATION_PAGES})

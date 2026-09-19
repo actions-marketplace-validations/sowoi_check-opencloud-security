@@ -30,7 +30,7 @@ a function `_evaluate_rating` in `check_opencloud_security.py` is
 the judging core: `_evaluate_rating`, `_apply_baseline` and
 `check_vulnerabilities` in `check_opencloud_security.py`.
 
-Never run without globs: the whole of `paths_to_mutate` is thousands of
+Never run without globs: the whole of `source_paths` is thousands of
 mutants and hours.
 
 ## 2. Run
