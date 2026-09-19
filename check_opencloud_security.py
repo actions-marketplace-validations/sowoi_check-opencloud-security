@@ -199,6 +199,9 @@ class ScanContext:
     release_settings: ReleaseSettings | None = None
     update_check: bool = True
     update_warning: bool = False
+    # Days before the running line's end of life at which OK becomes WARNING;
+    # 0 disables. Past end of life is CRITICAL regardless.
+    eol_warning_days: int = 0
     # Remember the findings of the last run and report only what changed.
     baseline_path: str | None = None
     warn_on_new: bool = False
@@ -460,6 +463,24 @@ def check_vulnerabilities(
         detail_lines.append(
             f"Known vulnerabilities: {_format_vulnerabilities(vulnerabilities)}"
         )
+        path_line = _upgrade_path_line(response_scan)
+        if path_line:
+            detail_lines.append(path_line)
+
+    services = response_scan.get("alternativeServices")
+    if isinstance(services, dict) and services.get("http3"):
+        ports = sorted(
+            {
+                str(entry.get("port"))
+                for entry in services.get("entries") or ()
+                if isinstance(entry, dict) and entry.get("udp") and entry.get("port")
+            }
+        )
+        detail_lines.append(
+            "Advertises HTTP/3 via Alt-Svc"
+            + (f" on UDP {', '.join(ports)}" if ports else "")
+            + " - make sure the firewall covers it (not rated)."
+        )
 
     if context.check_hardening:
         if actionable_hardenings:
@@ -502,6 +523,8 @@ def check_vulnerabilities(
                 "but no known vulnerabilities."
             )
             exit_code = NagiosExitCode.WARNING
+
+    msg, exit_code = _apply_eol_warning(context, response_scan, msg, exit_code)
 
     msg, exit_code, baseline_lines, baseline_diff = _apply_baseline(
         context,
@@ -574,6 +597,60 @@ def check_vulnerabilities(
     _fail(
         f"{safe_message}\n" + "\n".join(safe_details) + f" | {perfdata}",
         exit_code,
+    )
+
+
+def _upgrade_path_line(response_scan: dict[str, Any]) -> str:
+    """Say what the recommended upgrade fixes, and what it would leave open."""
+    path = response_scan.get("upgradePath")
+    if not isinstance(path, dict) or not path.get("target"):
+        return ""
+    target = str(path["target"])
+    fixes = [str(item) for item in path.get("fixes") or ()]
+    remaining = [str(item) for item in path.get("stillAffected") or ()]
+    if not remaining:
+        return f"Upgrade path: {target} fixes all {len(fixes)} known vulnerabilities."
+    safe = path.get("safeVersion")
+    fixed_part = f"fixes {', '.join(fixes)} but " if fixes else ""
+    after = (
+        f"; {safe} is the first release that clears them all"
+        if safe
+        else "; no published release fixes all of them yet"
+    )
+    return f"Upgrade path: {target} {fixed_part}is still affected by {', '.join(remaining)}{after}."
+
+
+def _apply_eol_warning(
+    context: ScanContext,
+    response_scan: dict[str, Any],
+    message: str,
+    exit_code: NagiosExitCode,
+) -> tuple[str, NagiosExitCode]:
+    """
+    Raise an otherwise OK result to WARNING when support ends soon.
+
+    Only OK is raised: a result that is already WARNING or CRITICAL says
+    something more urgent, and one past its end of life is CRITICAL anyway.
+    """
+    if context.eol_warning_days <= 0 or exit_code is not NagiosExitCode.OK:
+        return message, exit_code
+    lifecycle = _lifecycle(response_scan)
+    remaining = lifecycle.get("daysRemaining")
+    if lifecycle.get("state") != "supported" or not isinstance(remaining, int):
+        return message, exit_code
+    if remaining <= 0 or remaining > context.eol_warning_days:
+        return message, exit_code
+    line = str(lifecycle.get("line") or "")
+    described = f"The {line} release line" if line else "This server version"
+    target = str(lifecycle.get("upgradeTo") or "")
+    upgrade = f" Upgrade to {target}." if target else ""
+    end_of_life = lifecycle.get("endOfLife") or "an unknown date"
+    return (
+        (
+            f"WARNING: {described} reaches end of life on {end_of_life} "
+            f"({remaining} days left).{upgrade}"
+        ),
+        NagiosExitCode.WARNING,
     )
 
 
@@ -2190,6 +2267,17 @@ def build_arg_parser() -> argparse.ArgumentParser:
             f"Default: False (env: {ENV_PREFIX}UPDATE_WARNING)."
         ),
     )
+    updates.add_argument(
+        "--eol-warning",
+        type=int,
+        default=_env_int("EOL_WARNING", 0),
+        metavar="DAYS",
+        help=(
+            "Report WARNING when the running release line reaches its end of life "
+            "within DAYS days; 0 disables. "
+            f"Default: 0 (env: {ENV_PREFIX}EOL_WARNING)."
+        ),
+    )
     baseline.add_argument(
         "--baseline",
         default=_env("BASELINE"),
@@ -2515,6 +2603,8 @@ def _validate_thresholds(parser: argparse.ArgumentParser, args: argparse.Namespa
         )
     # A --warn-on-new with nowhere to remember the last run would report
     # "nothing new" forever without ever having compared anything.
+    if args.eol_warning < 0:
+        parser.error("--eol-warning must be 0 (off) or a number of days.")
     if args.warn_on_new and not args.baseline:
         parser.error("--warn-on-new needs --baseline PATH to compare this run against.")
     if args.check_only:
@@ -2616,6 +2706,7 @@ def _build_context(host: str, args: argparse.Namespace) -> ScanContext:
         release_settings=release_settings,
         update_check=not args.no_update_check,
         update_warning=args.update_warning,
+        eol_warning_days=args.eol_warning,
         baseline_path=args.baseline,
         warn_on_new=args.warn_on_new,
         diff_format=args.diff_format,

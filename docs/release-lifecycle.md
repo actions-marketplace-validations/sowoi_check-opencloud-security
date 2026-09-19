@@ -156,3 +156,37 @@ Release lifecycle: 7.2 (rolling track declared), out of support since 2026-07-14
 
 An unknown value is ignored rather than treated as an error, so a typo in a
 config file degrades to the default behaviour instead of taking the check down.
+
+## Warning before the end of life
+
+End of life is `CRITICAL` on the day it arrives, which is too late to plan an
+upgrade. `--eol-warning DAYS` (`COS_EOL_WARNING`, YAML `eol_warning`) turns an
+otherwise `OK` result into `WARNING` once the running line has `DAYS` or fewer
+days of support left:
+
+```text
+WARNING: The 7.2 release line reaches end of life on 2026-10-14 (20 days left). Upgrade to 7.4.0.
+```
+
+It only ever raises `OK`; a result that is already `WARNING` or `CRITICAL`
+keeps its own line. A line without a published end-of-life date has nothing to
+count down and never warns. `0`, the default, turns it off.
+
+## Does the upgrade clear the advisories?
+
+When the installed release carries known advisories, the scan records
+`upgradePath`: what moving to the recommended release does about each one.
+
+```json
+{"upgradePath": {"target": "7.2.4", "fixes": ["GHSA-aaaa"],
+  "stillAffected": ["GHSA-bbbb"], "safeVersion": "7.3.0"}}
+```
+
+Every range of an advisory is checked against the target, so a fix backported
+to another line counts. `safeVersion` is the lowest release past every fix the
+target still lacks, or `null` when one of them has no fix yet. The plugin
+prints it as a detail line:
+
+```text
+Upgrade path: 7.2.4 fixes GHSA-aaaa but is still affected by GHSA-bbbb; 7.3.0 is the first release that clears them all.
+```

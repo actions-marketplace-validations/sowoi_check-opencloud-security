@@ -81,6 +81,36 @@ Ein unbekannter Wert wird ignoriert. Der Scanner fällt auf die automatische Zuo
 
 [lifecycle]: https://docs.opencloud.eu/docs/admin/resources/lifecycle/
 
+## Warnung vor dem Supportende {#warning-before-the-end-of-life}
+
+Das Supportende ist an dem Tag `CRITICAL`, an dem es eintritt - zu spät, um
+ein Update zu planen. `--eol-warning TAGE` (`COS_EOL_WARNING`, YAML
+`eol_warning`) macht aus einem sonst `OK`-Ergebnis ein `WARNING`, sobald die
+laufende Linie höchstens noch `TAGE` Tage unterstützt wird:
+
+```text
+WARNING: The 7.2 release line reaches end of life on 2026-10-14 (20 days left). Upgrade to 7.4.0.
+```
+
+Es hebt nur `OK` an; ein Ergebnis, das schon `WARNING` oder `CRITICAL` ist,
+behält seine eigene Zeile. Eine Linie ohne veröffentlichtes Supportende warnt
+nie. `0`, der Standard, schaltet es ab.
+
+## Behebt das Update die Sicherheitshinweise? {#does-the-upgrade-clear-the-advisories}
+
+Hat die installierte Version bekannte Sicherheitshinweise, hält der Scan
+`upgradePath` fest: was das empfohlene Update an jedem davon ändert.
+
+```json
+{"upgradePath": {"target": "7.2.4", "fixes": ["GHSA-aaaa"],
+  "stillAffected": ["GHSA-bbbb"], "safeVersion": "7.3.0"}}
+```
+
+Jeder Bereich eines Hinweises wird gegen das Ziel geprüft, ein auf eine
+andere Linie zurückportierter Fix zählt also mit. `safeVersion` ist die
+niedrigste Version, die jeden noch fehlenden Fix enthält, oder `null`, wenn es
+für einen davon noch keinen gibt. Das Plugin gibt das als Detailzeile aus.
+
 ## Marken und Unabhängigkeit
 
 Dies ist ein unabhängiges Community-Projekt. Es ist nicht mit OpenCloud GmbH

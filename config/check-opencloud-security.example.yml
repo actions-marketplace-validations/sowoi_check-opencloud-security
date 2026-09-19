@@ -40,6 +40,10 @@ warning: 3                       # rating <= 3 (C) -> WARNING
 critical: 1                      # rating <= 1 (E) -> CRITICAL
 check_hardening: true
 update_warning: false            # pending OpenCloud update -> WARNING
+# Warn while there is still time to plan the upgrade: an otherwise OK result
+# becomes WARNING once the running release line has this many days of support
+# left. 0 turns it off; past end of life is CRITICAL either way.
+# eol_warning: 30
 
 # Report only what changed since the last run. 'baseline' remembers the
 # findings per host; 'warn_on_new' then alerts only on something new or worse.

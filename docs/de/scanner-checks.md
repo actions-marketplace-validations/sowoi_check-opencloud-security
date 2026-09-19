@@ -169,6 +169,28 @@ sie an den zuerst geladenen Dienst weitergeben; siehe
 Ein Hostname im Text einer Fehlerseite zählt nicht als Befund. Fehlt ein
 Discovery-Dokument vollständig, bleibt die Prüfung ohne Ergebnis.
 
+### Alternative Dienste (HTTP/3) {#alternative-services-http3}
+
+`alternativeServices` hält fest, was die Instanz im `Alt-Svc`-Header
+ankündigt. Ein `h3`-Eintrag bringt jeden Browser dazu, HTTP/3 über **UDP** auf
+dem genannten Port zu versuchen - ein Listener, den eine Firewall für TCP 443
+womöglich nicht abdeckt und den ein Reverse Proxy einschalten kann, ohne dass
+du es bewusst entschieden hast.
+
+```json
+{"alternativeServices": {"advertised": true, "http3": true,
+  "entries": [{"protocol": "h3", "host": "", "port": 443, "udp": true}],
+  "header": "h3=\":443\"; ma=86400"}}
+```
+
+Das ist eine Beobachtung und wird nie bewertet: HTTP/3 ist keine Schwäche,
+nur etwas, das du bewusst in der Firewall freigeben solltest. Das Plugin gibt
+dazu eine Detailzeile aus. Die angekündigte Adresse wird nie geprüft - sie
+ist eine Angabe des Ziels, keine Origin, auf die der Scan gerichtet wurde
+([ADR 0036](../../adr/0036-a-companion-service-is-probed-only-where-the-scan-was-pointed.md)).
+`Alt-Svc: clear` gilt als nichts angekündigt; ohne Antwort ist der Schlüssel
+`null`.
+
 ### Office- und Kalenderanbindungen {#office-and-calendar-integrations}
 
 Zwei Beobachtungen sind ohne Anmeldung möglich:

@@ -58,6 +58,7 @@ check-opencloud-security --host <Hostname> --check-hardening
 | `--latest-version`            | Versión más reciente, indicada explícitamente; implica `--update-source pinned` | *Ninguno* | `COS_RELEASES_LATEST_VERSION` |
 | `--no-update-check`           | Desactiva la comprobación de actualizaciones (igual que `--update-source off`) | *False* | `COS_NO_UPDATE_CHECK` |
 | `--update-warning`            | Notifica WARNING cuando hay una versión más reciente disponible | *False* | `COS_UPDATE_WARNING` |
+| `--eol-warning DÍAS`          | Notifica WARNING cuando la línea llega al fin de vida en DÍAS días o menos (`0` lo desactiva) | `0` | `COS_EOL_WARNING` |
 | `--baseline`                  | Archivo que recuerda los hallazgos de la última ejecución, con una entrada por host | *Ninguno* | `COS_BASELINE` |
 | `--warn-on-new`               | Solo alerta sobre hallazgos nuevos o peores que en la línea base; requiere `--baseline` | *False* | `COS_WARN_ON_NEW` |
 | `--diff-format`               | Muestra los cambios respecto a la línea base como `text`, `markdown` o Slack Block Kit `slack`/`json` | `text` | `COS_DIFF_FORMAT` |

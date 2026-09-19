@@ -2378,6 +2378,28 @@ details.waivers[open] > summary::after { transform: rotate(-135deg); }
     font-size: .86rem;
 }
 .docs-toc a:hover { color: var(--ink); background: var(--tint); }
+.docs-toc-groups {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    gap: .75rem 1.25rem;
+    flex-basis: 100%;
+    margin-top: .35rem;
+}
+.docs-toc-group {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: .1rem;
+    min-width: 0;
+}
+.docs-toc-label {
+    margin: 0 0 .2rem .65rem;
+    color: var(--ink-soft);
+    font-size: .72rem;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
 .docs-command-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));

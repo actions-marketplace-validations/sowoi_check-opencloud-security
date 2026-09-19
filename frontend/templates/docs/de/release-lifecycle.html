@@ -15,6 +15,16 @@
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
+<nav class="docs-toc card section-gap" aria-label="{{ t('docs.guide.toc.aria') }}" data-reveal>
+  <p class="kicker">{{ t('docs.guide.toc.heading') }}</p>
+  <a href="#why-a-version-number-is-not-an-answer" lang="de">Warum die Versionsnummer allein nicht genügt</a>
+  <a href="#what-the-bundled-schedule-can-and-cannot-tell-you" lang="de">Aussagekraft des mitgelieferten Zeitplans</a>
+  <a href="#the-recommended-release-follows-your-track" lang="de">Updates folgen dem gewählten Kanal</a>
+  <a href="#declaring-your-release-track" lang="de">Den Release-Kanal festlegen</a>
+  <a href="#warning-before-the-end-of-life" lang="de">Warnung vor dem Supportende</a>
+  <a href="#does-the-upgrade-clear-the-advisories" lang="de">Behebt das Update die Sicherheitshinweise?</a>
+</nav>
+
 <article class="docs-article card section-gap" data-reveal lang="de">
 <p>OpenCloud pflegt Rolling-, Production- und LTS-Releases parallel. Ob eine Version noch unterstützt wird, hängt deshalb auch von ihrem Kanal ab. Der Scanner bewertet Versionslinien, berücksichtigt den Release-Zeitplan und empfiehlt ein Update passend zum gewählten Kanal.</p>
 <p>Den aktuellen Stand der Kanäle und die Einstellungen zur End-of-Life-Prüfung findest du im <a href="/documentation/reference#end-of-life-detection">Haupt-README</a>. Die folgenden älteren Versionsnummern dienen als Beispiele.</p>
@@ -129,6 +139,26 @@
 <pre><code>Release lifecycle: 7.2 (rolling track declared), out of support since 2026-07-14, upgrade to 7.4.0
 </code></pre>
 <p>Ein unbekannter Wert wird ignoriert. Der Scanner fällt auf die automatische Zuordnung zurück, statt die Prüfung wegen eines Tippfehlers abzubrechen.</p>
+<h2 id="warning-before-the-end-of-life">Warnung vor dem Supportende</h2>
+<p>Das Supportende ist an dem Tag <code>CRITICAL</code>, an dem es eintritt - zu spät, um
+ein Update zu planen. <code>--eol-warning TAGE</code> (<code>COS_EOL_WARNING</code>, YAML
+<code>eol_warning</code>) macht aus einem sonst <code>OK</code>-Ergebnis ein <code>WARNING</code>, sobald die
+laufende Linie höchstens noch <code>TAGE</code> Tage unterstützt wird:</p>
+<pre><code class="language-text">WARNING: The 7.2 release line reaches end of life on 2026-10-14 (20 days left). Upgrade to 7.4.0.
+</code></pre>
+<p>Es hebt nur <code>OK</code> an; ein Ergebnis, das schon <code>WARNING</code> oder <code>CRITICAL</code> ist,
+behält seine eigene Zeile. Eine Linie ohne veröffentlichtes Supportende warnt
+nie. <code>0</code>, der Standard, schaltet es ab.</p>
+<h2 id="does-the-upgrade-clear-the-advisories">Behebt das Update die Sicherheitshinweise?</h2>
+<p>Hat die installierte Version bekannte Sicherheitshinweise, hält der Scan
+<code>upgradePath</code> fest: was das empfohlene Update an jedem davon ändert.</p>
+<pre><code class="language-json">{&quot;upgradePath&quot;: {&quot;target&quot;: &quot;7.2.4&quot;, &quot;fixes&quot;: [&quot;GHSA-aaaa&quot;],
+  &quot;stillAffected&quot;: [&quot;GHSA-bbbb&quot;], &quot;safeVersion&quot;: &quot;7.3.0&quot;&#125;&#125;
+</code></pre>
+<p>Jeder Bereich eines Hinweises wird gegen das Ziel geprüft, ein auf eine
+andere Linie zurückportierter Fix zählt also mit. <code>safeVersion</code> ist die
+niedrigste Version, die jeden noch fehlenden Fix enthält, oder <code>null</code>, wenn es
+für einen davon noch keinen gibt. Das Plugin gibt das als Detailzeile aus.</p>
 </article>
 
 {% include "_page-nav.html" %}

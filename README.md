@@ -769,6 +769,11 @@ performance metric; with `--update-warning` a pending update turns an otherwise
 `OK` result into `WARNING`. A failing update check never aborts the security
 check.
 
+With `--eol-warning DAYS` (`COS_EOL_WARNING`, YAML `eol_warning`) an otherwise
+`OK` result becomes `WARNING` once the running release line has `DAYS` or fewer
+days of support left, naming the date and the upgrade target - so the upgrade
+is planned before the line turns `CRITICAL` at its end of life.
+
 **Update recommendations stay on your release track.** Production and LTS installations
 are offered a release from their own track, while the newest overall release is reported
 separately. Set `--release-track` to override automatic detection. See [Release tracks,

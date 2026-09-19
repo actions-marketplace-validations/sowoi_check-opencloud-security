@@ -125,6 +125,16 @@ def _positive_int(value: str) -> str | None:
     return None if number > 0 else "Enter a number greater than zero."
 
 
+def _non_negative_int(value: str) -> str | None:
+    # int() rather than str.isdigit(): '²' is a digit to isdigit() and a
+    # ValueError to the int() cast that runs after this validator.
+    try:
+        number = int(value)
+    except ValueError:
+        return "Enter 0 or a whole number of days."
+    return None if number >= 0 else "Enter 0 or a whole number of days."
+
+
 def _rating(value: str) -> str | None:
     try:
         number = int(value)
@@ -431,6 +441,19 @@ def optional_groups() -> list[Group]:
                     default="no",
                     validate=_choice(tuple(YES | NO)),
                     cast=lambda value: value.strip().lower() in YES,
+                ),
+                Question(
+                    key="eol_warning",
+                    prompt="Days before end of life to raise WARNING",
+                    explain=(
+                        "Raise an otherwise OK result to WARNING when the running "
+                        "release line loses support within this many days, so "
+                        "the upgrade can be planned. 0 turns it off."
+                    ),
+                    example="30",
+                    default="0",
+                    validate=_non_negative_int,
+                    cast=int,
                 ),
             ],
         ),

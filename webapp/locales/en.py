@@ -447,6 +447,9 @@ MESSAGES: dict[str, str] = {
     # --------------------------------------------------- the contents list
     "toc.heading": "On this page",
     "toc.aria": "On this page",
+    "toc.group.act": "Fix",
+    "toc.group.details": "Details",
+    "toc.group.keep": "Keep",
     # --------------------------------------------------------- cross-links
     "pagenav.kicker": "Read on",
     "pagenav.aria": "More about this service",

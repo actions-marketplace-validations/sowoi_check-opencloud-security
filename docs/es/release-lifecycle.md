@@ -164,3 +164,33 @@ Release lifecycle: 7.2 (rolling track declared), out of support since 2026-07-14
 Un valor desconocido se ignora en lugar de tratarse como error, así que una
 errata en un archivo de configuración vuelve al comportamiento predeterminado
 en lugar de detener la comprobación.
+
+## Aviso antes del fin de vida {#warning-before-the-end-of-life}
+
+El fin de vida es `CRITICAL` el día que llega, demasiado tarde para planificar
+una actualización. `--eol-warning DÍAS` (`COS_EOL_WARNING`, YAML
+`eol_warning`) convierte un resultado que sería `OK` en `WARNING` cuando a la
+línea en uso le quedan `DÍAS` o menos días de soporte:
+
+```text
+WARNING: The 7.2 release line reaches end of life on 2026-10-14 (20 days left). Upgrade to 7.4.0.
+```
+
+Solo eleva `OK`; un resultado que ya es `WARNING` o `CRITICAL` conserva su
+propia línea. Una línea sin fecha de fin de vida publicada nunca avisa. `0`,
+el valor predeterminado, lo desactiva.
+
+## ¿La actualización corrige los avisos? {#does-the-upgrade-clear-the-advisories}
+
+Cuando la versión instalada tiene avisos de seguridad conocidos, el escaneo
+registra `upgradePath`: lo que la versión recomendada hace con cada uno.
+
+```json
+{"upgradePath": {"target": "7.2.4", "fixes": ["GHSA-aaaa"],
+  "stillAffected": ["GHSA-bbbb"], "safeVersion": "7.3.0"}}
+```
+
+Cada rango de un aviso se compara con el destino, así que cuenta una
+corrección portada a otra línea. `safeVersion` es la versión más baja que
+incluye todas las correcciones que le faltan al destino, o `null` si alguna
+aún no existe. El plugin lo muestra como línea de detalle.

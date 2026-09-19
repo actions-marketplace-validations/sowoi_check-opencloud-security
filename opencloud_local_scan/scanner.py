@@ -2087,6 +2087,49 @@ def _reverse_proxy(root_response: requests.Response | None) -> dict[str, Any]:
     return proxy
 
 
+# One alternative in an Alt-Svc value: protocol-id="[host]:port", parameters.
+_ALT_SVC_ENTRY = re.compile(r'^\s*([!#$%&\'*+.^_`|~0-9A-Za-z-]+)\s*=\s*"([^"]*)"')
+# Protocol identifiers that run over UDP rather than the scanned TCP port.
+_ALT_SVC_UDP = ("h3", "hq")
+
+
+def _alternative_services(root_response: requests.Response | None) -> dict[str, Any] | None:
+    """
+    Record the alternative services the instance advertises in ``Alt-Svc``.
+
+    An ``h3`` entry tells every browser to try HTTP/3 over UDP on that port,
+    a listener a firewall written for TCP 443 may not cover. Observed, never
+    graded, and never probed: the advertised address is the target's word,
+    not an origin the scan was pointed at (ADR 0036). None when there was no
+    response to read the header from.
+    """
+    if root_response is None:
+        return None
+    raw = str(root_response.headers.get("Alt-Svc") or "").strip()
+    entries: list[dict[str, Any]] = []
+    if raw and raw.lower() != "clear":
+        for part in raw.split(","):
+            match = _ALT_SVC_ENTRY.match(part)
+            if not match:
+                continue
+            protocol, authority = match.group(1), match.group(2)
+            host, _, port = authority.rpartition(":")
+            entries.append(
+                {
+                    "protocol": protocol,
+                    "host": host,
+                    "port": int(port) if port.isdigit() else None,
+                    "udp": protocol.lower().startswith(_ALT_SVC_UDP),
+                }
+            )
+    return {
+        "advertised": bool(entries),
+        "http3": any(entry["udp"] for entry in entries),
+        "entries": entries,
+        "header": raw[:512],
+    }
+
+
 def _reverse_proxy_finding(proxy: Mapping[str, Any]) -> Finding:
     """Record whether anything sits in front of the instance."""
     if proxy.get("detected"):
@@ -3578,6 +3621,7 @@ def scan(
             root_response, capabilities, challenge, identity_provider
         )
         reverse_proxy = _reverse_proxy(root_response)
+        alternative_services = _alternative_services(root_response)
         integrations = (
             _integrations(probe, capabilities)
             if settings.extra_checks
@@ -3664,6 +3708,9 @@ def scan(
             proxies=settings.proxies,
         )
         vulnerabilities = [advisory.as_dict() for advisory in database.matches(version)]
+        upgrade_path = database.upgrade_path(
+            version, update_info.available_version or lifecycle.upgrade_to
+        )
 
         # The TLS layer is inspected once, before the findings are assembled, so
         # that the full detail can be published beside them: the findings say what
@@ -3946,6 +3993,10 @@ def scan(
             "waivers": waiver_records,
             "latestVersionInBranch": latest_in_branch,
             "vulnerabilities": vulnerabilities,
+            # What the recommended upgrade does about those advisories, and
+            # the lowest release that clears them all. None when there is
+            # nothing to clear or no release to move to.
+            "upgradePath": upgrade_path,
             "hardenings": hardenings,
             "setup": {
                 "https": https,
@@ -3958,6 +4009,7 @@ def scan(
             "addressObservations": [entry.as_dict() for entry in address_observations],
             "identityProvider": identity_provider,
             "reverseProxy": reverse_proxy,
+            "alternativeServices": alternative_services,
             "integrations": integrations,
             "scanner": "check-opencloud-security built-in scanner",
             "updates": update_info.as_dict(),
