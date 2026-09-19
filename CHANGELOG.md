@@ -37,6 +37,12 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   be read, OSV's answer is kept.
   [ADR 0071](adr/0071-repository-advisories-are-a-second-advisory-source.md).
 
+### Changed
+
+- **Polished recent German, Spanish and French web translations.** Fixed mixed
+  forms of address and several literal or awkward phrases in the operator
+  update messages, scan facts and coverage explanations.
+
 ### Security
 
 - **GHSA-gf4p-7p27-26w7 (CVE-2026-57500, "Access to internal metadata") is
@@ -65,10 +71,6 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   ([ADR 0070](adr/0070-the-operator-area-installs-attested-releases-in-place.md)).
 
 ### Changed
-
-- **Polished recent German, Spanish and French web translations.** Fixed mixed
-  forms of address and several literal or awkward phrases in the operator
-  update messages, scan facts and coverage explanations.
 
 - mypy now also checks the bodies of functions without annotations
   (`check_untyped_defs` in `mypy.ini`), so CI type-checks the test suite
