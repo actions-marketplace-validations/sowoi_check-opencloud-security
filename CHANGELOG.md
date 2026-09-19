@@ -12,6 +12,8 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+## [1.26.1] - 2026-09-19
+
 ### Added
 
 - The operator's area has a **Releases** tab at `/admin/docs/releases`: the

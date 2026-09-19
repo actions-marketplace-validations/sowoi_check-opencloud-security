@@ -31,6 +31,7 @@
 
 <nav class="docs-toc card section-gap" aria-label="{{ t('docs.guide.toc.aria') }}" data-reveal>
   <p class="kicker">{{ t('docs.guide.toc.heading') }}</p>
+  <a href="#1261-2026-09-19" lang="en">[1.26.1] - 2026-09-19</a>
   <a href="#1260-2026-09-19" lang="en">[1.26.0] - 2026-09-19</a>
   <a href="#1253-2026-09-18" lang="en">[1.25.3] - 2026-09-18</a>
   <a href="#1252-2026-09-18" lang="en">[1.25.2] - 2026-09-18</a>
@@ -40,12 +41,19 @@
   <a href="#1241-2026-09-16" lang="en">[1.24.1] - 2026-09-16</a>
   <a href="#1240-2026-09-16" lang="en">[1.24.0] - 2026-09-16</a>
   <a href="#1233-2026-09-16" lang="en">[1.23.3] - 2026-09-16</a>
-  <a href="#1232-2026-09-15" lang="en">[1.23.2] - 2026-09-15</a>
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="en">
-<h2 id="1260-2026-09-19">[1.26.0] - 2026-09-19</h2>
+<h2 id="1261-2026-09-19">[1.26.1] - 2026-09-19</h2>
 <h3 id="added">Added</h3>
+<ul>
+<li>The operator's area has a <strong>Releases</strong> tab at <code>/admin/docs/releases</code>: the
+  ten newest released sections of <code>CHANGELOG.md</code>, newest first, so an
+  operator can read what the running release changed without leaving the
+  area. The publish workflow regenerates it together with the release notes.</li>
+</ul>
+<h2 id="1260-2026-09-19">[1.26.0] - 2026-09-19</h2>
+<h3 id="added_1">Added</h3>
 <ul>
 <li>
 <p><code>--eol-warning DAYS</code> (<code>COS_EOL_WARNING</code>, YAML <code>eol_warning</code>, and a setup
@@ -86,7 +94,7 @@
 </li>
 </ul>
 <h2 id="1253-2026-09-18">[1.25.3] - 2026-09-18</h2>
-<h3 id="added_1">Added</h3>
+<h3 id="added_2">Added</h3>
 <ul>
 <li>
 <p>The <code>/check-changelog-docs</code> skill checks that every new <code>Added</code> or
@@ -164,7 +172,7 @@
 </li>
 </ul>
 <h2 id="1252-2026-09-18">[1.25.2] - 2026-09-18</h2>
-<h3 id="added_2">Added</h3>
+<h3 id="added_3">Added</h3>
 <ul>
 <li>The Docker setup wizard moves while it works, in the four places where
   motion tells the operator something the static page could not. Section
@@ -286,7 +294,7 @@
   group only as a dependency of <code>mcp</code>; it is now listed there itself.</li>
 </ul>
 <h2 id="1250-2026-09-17">[1.25.0] - 2026-09-17</h2>
-<h3 id="added_3">Added</h3>
+<h3 id="added_4">Added</h3>
 <ul>
 <li><strong>The comparison journeys are covered in a real browser.</strong> The Playwright
   suite now downloads a scan report and uploads it as the baseline for a later
@@ -477,7 +485,7 @@
   gave that item.</li>
 </ul>
 <h2 id="1241-2026-09-16">[1.24.1] - 2026-09-16</h2>
-<h3 id="added_4">Added</h3>
+<h3 id="added_5">Added</h3>
 <ul>
 <li><strong>The frontend is tested in a real browser.</strong> <code>tests/test_webapp_browser_ux.py</code>
   and <code>tests/test_webapp_browser_e2e.py</code> drive the web application in WebKit
@@ -632,7 +640,7 @@
   frontend pages and German guide search content. Preserve section links across
   languages; French and Spanish continue to use English guide bodies.</li>
 </ul>
-<h3 id="added_5">Added</h3>
+<h3 id="added_6">Added</h3>
 <ul>
 <li>
 <p><strong>The comparison page takes the earlier scan as an uploaded report.</strong>
@@ -742,7 +750,7 @@
 </li>
 </ul>
 <h2 id="1233-2026-09-16">[1.23.3] - 2026-09-16</h2>
-<h3 id="added_6">Added</h3>
+<h3 id="added_7">Added</h3>
 <ul>
 <li><strong>An operator can search the operator area.</strong> While the sign-in lasts,
   <code>/search</code> also answers from the area's own pages - the overview, the
@@ -796,91 +804,5 @@
   four search indexes are regenerated against the new version.</p>
 </li>
 </ul>
-<h2 id="1232-2026-09-15">[1.23.2] - 2026-09-15</h2>
-<h3 id="fixed_7">Fixed</h3>
-<ul>
-<li><strong>Parallel scanner tests no longer overflow the fake server's backlog.</strong>
-  The fixture accepts a full burst of probes, so dropped local connections
-  do not turn a reachable test finding into an intermittent pass.</li>
-</ul>
-<h3 id="security_3">Security</h3>
-<ul>
-<li><strong>Anonymous scans no longer inherit local credentials.</strong> Scanner sessions, including
-  parallel sessions, disable ambient Requests configuration. Explicit demo
-  authentication remains intact. Webhook sessions also disable ambient credentials.</li>
-<li><strong>Pinned scans cannot be redirected through ambient proxies.</strong> Scans ignore
-  environment proxies. A pinned scan with an explicit resolving proxy is rejected.
-  Unpinned CLI scans still support the explicitly configured proxy.</li>
-<li><strong>Workers cannot resurrect erased or expired scan results.</strong> Worker transitions
-  require the original metadata and status keys to exist, and check and write atomically
-  in Redis. MemoryRedis follows the same contract. Deletion between reading metadata and
-  committing completion cannot revive the UUID.</li>
-<li><strong>Browser-origin fallback checks validate the complete origin.</strong> Opaque and
-  malformed origins are rejected; comparison includes scheme, normalized hostname and
-  effective port. The configured public origin is authoritative, not the request's
-  internal Host header.</li>
-<li><strong>Webhook delivery dials only the addresses that passed validation.</strong> Delivery pins
-  the validated address set while preserving Host, TLS SNI and certificate hostname
-  verification. Restricted delivery refuses an explicit resolving proxy and ignores
-  ambient proxies. Redirects remain disabled and response bodies are not downloaded.</li>
-<li><strong>Redirect responses obey the scanner response-size limit.</strong> Scanner sessions leave
-  all redirect handling to the capped manual redirect loop, including the normally
-  implicit Response.next preparation. Explicit request Authorization headers are not
-  propagated to redirect targets.</li>
-<li><strong>A web scan timeout now stops its probes.</strong> Each web scan runs in a spawned child
-  process. Timeout and cancellation kill and reap it, including its probe threads,
-  before the slot is released. Unexpected child failures return a generic
-  classification; worker logs no longer include exception traces that may contain scan
-  data.</li>
-<li><strong>Authentication-key fetches stay bounded during outages.</strong> Only one key lookup may
-  be in progress per verifier; concurrent attempts fail closed without queuing another
-  blocking fetch. Failed fetches impose a 60-second retry floor, including initial
-  fetches. Valid cached-key verification and key rotation retain their existing
-  behavior.</li>
-<li><strong>Web request bodies are bounded before parsing.</strong> An ASGI guard bounds mutation
-  request bodies to 1 MiB and a 30-second total receive deadline before downstream
-  parsing. Chunked bodies are counted as well. Oversized bodies return 413 and
-  incomplete bodies return 408.</li>
-<li><strong>Unrelated browser pages cannot trigger loopback-service scans.</strong> Scan-triggering
-  GET and POST routes reject cross-site/same-site Fetch Metadata and foreign or opaque
-  fallback Origins. Ordinary non-browser monitoring clients remain supported. Malformed
-  Host values are refused instead of raising.</li>
-<li><strong>Existing wizard secret files are private before new secrets are written.</strong> The
-  wizard applies fchmod(0600) to the open descriptor before writing any secret data,
-  including existing .env files, nginx admin-header files and secret backups.</li>
-</ul>
-<h3 id="documentation_3">Documentation</h3>
-<ul>
-<li><strong>Repository-wide security audit.</strong> <code>security/audit-2026-09-16.md</code> records
-  the review scope, eleven fixes, validation results and remaining deployment
-  checks. Advisory records are drafts; nothing was published by the audit.</li>
-<li><strong>German, French and Spanish frontend wording and terminology have been
-  polished.</strong> The translated catalogues now use more natural phrasing and
-  established technical terms across the public and operator-facing pages,
-  without changing any scan behaviour or API contract.</li>
-<li><strong>Keeping the release schedule and advisories current.</strong>
-  <code>docs/reference-data.md</code> documents <code>check-opencloud-scanner refresh-data</code>:</li>
-<li>the reviewed, Sigstore-attested files it fetches, and the three
-    verification outcomes;</li>
-<li>the structural checks that apply either way;</li>
-<li>pointing <code>scanner.release_schedule</code> and <code>scanner.vulnerability_db</code> at the
-    result;</li>
-<li>the daily systemd timer;</li>
-<li>mirrors for hosts without internet access.</li>
-</ul>
-<p>It also warns that a schedule file the check cannot read turns the
-  end-of-life check off rather than falling back to the bundled schedule.
-- <strong>A reference for <code>check-opencloud-scanner</code>.</strong> <code>docs/scanner-cli.md</code> covers
-  the global options and configuration search, <code>scan</code>, <code>diff</code>, <code>explain</code>,
-  <code>refresh-data</code>, <code>serve</code> and <code>configure</code>, with options and exit codes for
-  each. It explains how they differ from the plugin's Nagios codes.
-- <strong>Signed exports are documented in <code>docs/webapp.md</code>.</strong> A new section
-  explains what <code>X-COS-Signature</code> covers and that it is a shared-secret HMAC
-  rather than a public signature. It shows how to keep the header with the
-  file, and how to verify it with <code>scripts/verify_export.py</code> or <code>openssl</code>.
-- <strong>The README no longer says the bundled advisory database is empty.</strong> It
-  names the advisory it carries and points to the refresh guide.
-- Both new pages are listed in <code>docs/README.md</code> and published under
-  <code>/documentation</code>. The frontend documentation and search indexes are rebuilt.</p>
 </article>
 {% endblock %}
