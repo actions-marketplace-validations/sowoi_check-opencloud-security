@@ -39,6 +39,8 @@ def settings(**overrides: Any) -> WebSettings:
         "daily_scan_limit": 0,
         "result_ttl": 3600,
         "public_base_url": "http://testserver",
+        # The operator area's release check asks PyPI; tests stay offline.
+        "update_check": False,
     }
     defaults.update(overrides)
     return WebSettings(**defaults)

@@ -31,6 +31,7 @@
 
 <nav class="docs-toc card section-gap" aria-label="{{ t('docs.guide.toc.aria') }}" data-reveal>
   <p class="kicker">{{ t('docs.guide.toc.heading') }}</p>
+  <a href="#1271-this-release" lang="en">[1.27.1] - this release</a>
   <a href="#1270-2026-09-19" lang="en">[1.27.0] - 2026-09-19</a>
   <a href="#1261-2026-09-19" lang="en">[1.26.1] - 2026-09-19</a>
   <a href="#1260-2026-09-19" lang="en">[1.26.0] - 2026-09-19</a>
@@ -40,12 +41,29 @@
   <a href="#1250-2026-09-17" lang="en">[1.25.0] - 2026-09-17</a>
   <a href="#1242-2026-09-17" lang="en">[1.24.2] - 2026-09-17</a>
   <a href="#1241-2026-09-16" lang="en">[1.24.1] - 2026-09-16</a>
-  <a href="#1240-2026-09-16" lang="en">[1.24.0] - 2026-09-16</a>
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="en">
-<h2 id="1270-2026-09-19">[1.27.0] - 2026-09-19</h2>
+<h2 id="1271-this-release">[1.27.1] - this release</h2>
 <h3 id="added">Added</h3>
+<ul>
+<li>The operator's area shows the running release and whether a newer one is
+  published (one cached PyPI lookup every six hours, <code>COS_WEB_UPDATE_CHECK</code>).
+  With the new opt-in <code>updater</code> service of <code>docker-compose.dockerhub.yml</code>
+  (<code>--profile autoupdate</code>) and <code>COS_WEB_ADMIN_UPDATE_DIR</code>, a button installs
+  it: the updater pulls the image and recreates the web and worker containers,
+  a short downtime. The web process itself stays unprivileged
+  (<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0070-the-operator-area-requests-updates-a-sidecar-performs-them.md">ADR 0070</a>).</li>
+</ul>
+<h3 id="fixed">Fixed</h3>
+<ul>
+<li>The operator area's <strong>Releases</strong> tab never listed the release it was running
+  on: the image is built from the version-bump commit, before the release
+  workflow renames <code>[Unreleased]</code>. The page is now generated with that section
+  under the <code>pyproject.toml</code> version when the changelog has no heading for it.</li>
+</ul>
+<h2 id="1270-2026-09-19">[1.27.0] - 2026-09-19</h2>
+<h3 id="added_1">Added</h3>
 <ul>
 <li>
 <p>The web report lists an advertised HTTP/3 listener (with its UDP ports) and
@@ -70,7 +88,7 @@
 </li>
 </ul>
 <h2 id="1261-2026-09-19">[1.26.1] - 2026-09-19</h2>
-<h3 id="added_1">Added</h3>
+<h3 id="added_2">Added</h3>
 <ul>
 <li>The operator's area has a <strong>Releases</strong> tab at <code>/admin/docs/releases</code>: the
   ten newest released sections of <code>CHANGELOG.md</code>, newest first, so an
@@ -78,7 +96,7 @@
   area. The publish workflow regenerates it together with the release notes.</li>
 </ul>
 <h2 id="1260-2026-09-19">[1.26.0] - 2026-09-19</h2>
-<h3 id="added_2">Added</h3>
+<h3 id="added_3">Added</h3>
 <ul>
 <li>
 <p><code>--eol-warning DAYS</code> (<code>COS_EOL_WARNING</code>, YAML <code>eol_warning</code>, and a setup
@@ -119,7 +137,7 @@
 </li>
 </ul>
 <h2 id="1253-2026-09-18">[1.25.3] - 2026-09-18</h2>
-<h3 id="added_3">Added</h3>
+<h3 id="added_4">Added</h3>
 <ul>
 <li>
 <p>The <code>/check-changelog-docs</code> skill checks that every new <code>Added</code> or
@@ -152,7 +170,7 @@
   way.</p>
 </li>
 </ul>
-<h3 id="fixed">Fixed</h3>
+<h3 id="fixed_1">Fixed</h3>
 <ul>
 <li>The end-of-life alert no longer shows a double space ("The 2.x  release
   line") when the scan result names a release line but no release type.</li>
@@ -197,7 +215,7 @@
 </li>
 </ul>
 <h2 id="1252-2026-09-18">[1.25.2] - 2026-09-18</h2>
-<h3 id="added_4">Added</h3>
+<h3 id="added_5">Added</h3>
 <ul>
 <li>The Docker setup wizard moves while it works, in the four places where
   motion tells the operator something the static page could not. Section
@@ -233,7 +251,7 @@
   Affected anyone who ran <code>setup-wizard.py</code> from 1.9.0 to 1.25.1 in a
   directory somebody else could write to.</li>
 </ul>
-<h3 id="fixed_1">Fixed</h3>
+<h3 id="fixed_2">Fixed</h3>
 <ul>
 <li>A report page read without JavaScript no longer shows controls that only
   a script can make work: the configuration-fragment picker and the copy
@@ -283,7 +301,7 @@
   credentials.</li>
 </ul>
 <h2 id="1251-2026-09-18">[1.25.1] - 2026-09-18</h2>
-<h3 id="fixed_2">Fixed</h3>
+<h3 id="fixed_3">Fixed</h3>
 <ul>
 <li><strong>A release that stopped after its tag is finished by the next run.</strong> The
   release workflow skipped any version whose tag existed, so when v1.25.0 was
@@ -319,7 +337,7 @@
   group only as a dependency of <code>mcp</code>; it is now listed there itself.</li>
 </ul>
 <h2 id="1250-2026-09-17">[1.25.0] - 2026-09-17</h2>
-<h3 id="added_5">Added</h3>
+<h3 id="added_6">Added</h3>
 <ul>
 <li><strong>The comparison journeys are covered in a real browser.</strong> The Playwright
   suite now downloads a scan report and uploads it as the baseline for a later
@@ -457,7 +475,7 @@
   and no part of the file, because an audit trail is as attractive a place for
   a hostile upload to be quoted as an error page is.</li>
 </ul>
-<h3 id="fixed_3">Fixed</h3>
+<h3 id="fixed_4">Fixed</h3>
 <ul>
 <li>
 <p><strong>Two sentences about a refused upload printed their own placeholder.</strong> The
@@ -492,7 +510,7 @@
   <code>GUIDE_LANGUAGES</code>, for the generator, the route and the search index. See
   <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0063-public-guides-have-spanish-sources.md">ADR 0063</a>.</li>
 </ul>
-<h3 id="fixed_4">Fixed</h3>
+<h3 id="fixed_5">Fixed</h3>
 <ul>
 <li><strong>The browser tests pass in Firefox again.</strong> Playwright's Firefox drops an
   emulated colour scheme once a page sends
@@ -510,7 +528,7 @@
   gave that item.</li>
 </ul>
 <h2 id="1241-2026-09-16">[1.24.1] - 2026-09-16</h2>
-<h3 id="added_6">Added</h3>
+<h3 id="added_7">Added</h3>
 <ul>
 <li><strong>The frontend is tested in a real browser.</strong> <code>tests/test_webapp_browser_ux.py</code>
   and <code>tests/test_webapp_browser_e2e.py</code> drive the web application in WebKit
@@ -530,7 +548,7 @@
   configured in <code>.claude/playwright-mcp.json</code> for WebKit, an isolated
   headless profile and loopback only - no Node.js installation needed.</li>
 </ul>
-<h3 id="fixed_5">Fixed</h3>
+<h3 id="fixed_6">Fixed</h3>
 <ul>
 <li><strong>The scan form validates the address in the browser again.</strong> Browsers
   compile the field's <code>pattern</code> with the <code>v</code> flag, under which the unescaped
@@ -654,125 +672,6 @@
   index entry. Spanish guide pages continue to use the explicit English
   fallback until their own source set is reviewed. See
   <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0062-public-guides-have-french-sources.md">ADR 0062</a>.</li>
-</ul>
-<h2 id="1240-2026-09-16">[1.24.0] - 2026-09-16</h2>
-<h3 id="documentation_2">Documentation</h3>
-<ul>
-<li>Rewrite frontend explanations and operator documentation for clearer,
-  consistent wording in English, German, French and Spanish. Clarify scan
-  coverage, temporary storage, alert timing and configuration instructions.</li>
-<li>Add German versions of all public guides under <code>docs/de/</code>, generated German
-  frontend pages and German guide search content. Preserve section links across
-  languages; French and Spanish continue to use English guide bodies.</li>
-</ul>
-<h3 id="added_7">Added</h3>
-<ul>
-<li>
-<p><strong>The comparison page takes the earlier scan as an uploaded report.</strong>
-  <code>/compare</code> needed both scans to still exist, and the baseline worth
-  comparing against is usually older than the hour a result lives. It now also
-  accepts the JSON or CSV file from a result page's downloads: upload the
-  report you kept, name a scan that has not expired, and the page answers the
-  same question with the same arithmetic - <code>workflows.compare_documents</code>, which
-  is the plugin's own <code>--baseline</code> comparison, so a reader, an agent and an
-  operator's alerting still cannot disagree about one pair. The file is the
-  only structure this service parses that it did not write, so it crosses one
-  boundary: <code>webapp/imports.py</code> does not hand back what it was given but a
-  result document rebuilt key by key from an allow-list, capped at 256 KB,
-  strict UTF-8, with identifiers dropped and counted unless they are spelled
-  the way this scanner spells its own. The file is read once in memory and
-  written nowhere - not its contents, not its name, which nothing reads. What
-  survives is the comparison, under a fresh uuid4 for at most five minutes so
-  a reload and a shared link keep working; <code>COS_WEB_COMPARISON_TTL</code> can
-  shorten that window and cannot widen it. Unknown, malformed and expired
-  tokens are one 404, and nothing lists them, and <code>DELETE /api/purge</code> erases a
-  cached comparison along with the scans of the instance it names rather than
-  leaving it to its own clock. A browser feature only: no MCP
-  tool and not in the OpenAPI schema, because an agent already has
-  <code>compare_scans</code> and two uuids. See
-  <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0057-an-uploaded-report-is-evidence-not-a-scan.md">ADR 0057</a>.</p>
-</li>
-<li>
-<p><strong><code>--format otlp</code> hands the scan's metrics to an OpenTelemetry collector.</strong>
-  The eight metrics the Prometheus exporter publishes, rendered as one
-  OTLP/JSON <code>ExportMetricsServiceRequest</code> covering every scanned host - the
-  body a collector accepts at <code>/v1/metrics</code>. Pipe it at <code>curl</code> from the timer
-  that already runs the check: the plugin prints the document and never dials
-  the collector itself, so where the metrics go and which credential reaches
-  them stay out of a scan. Like <code>--format prometheus</code> it exits <code>0</code> whatever
-  the instance scored and reports an unreachable one as
-  <code>opencloud_security_scrape_success 0</code>, because a metrics pipeline has no
-  other way to tell that apart from a scan that stopped running. The names,
-  labels and values are the exporter's: both formats now render one reading of
-  the scan rather than each deciding for itself what a waived measure counts
-  as - see
-  <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0054-metrics-are-collected-once-and-rendered-twice.md">ADR 0054</a>.</p>
-</li>
-<li>
-<p><strong>A Helm chart installs the Kubernetes deployment this project documents.</strong>
-  <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/helm/check-opencloud-security"><code>contrib/helm/check-opencloud-security</code></a>
-  renders the scheduled scan as a <code>CronJob</code> and, when asked for, the shared
-  scan service with a <code>NetworkPolicy</code> naming the instances it may reach.
-  Four values have no default and an install that omits one is refused rather
-  than rendered: the image tag, because the release schedule ships inside the
-  image and <code>latest</code> would move the verdict under a running alert; the hosts,
-  because a Job with no host scans nothing daily while looking like
-  monitoring; the scan service's token, because an untokened one scans any
-  host its callers name; and that policy's allowlist, because a policy with no
-  egress rule is a different policy rather than an unfinished one. The chart
-  writes no <code>Secret</code> and carries no version of its own - every credential is
-  read from one you created and named. <code>tests/test_helm_chart.py</code> holds every
-  flag it can emit against the plugin's own argument parser.</p>
-</li>
-<li>
-<p><strong>A finished scan can be shown as a grade badge.</strong>
-  <code>GET /api/scans/{uuid}/badge.svg</code> renders the letter as a small SVG this
-  service draws itself - no badge service, no external font, no script,
-  because an image fetched from somebody else's server would hand them the
-  result URL in a referrer on every view, and that URL's uuid is the whole of
-  the authorisation. It carries nothing the scanned instance chose: no
-  hostname, no product, no version. It answers 404 for an unknown or expired
-  uuid and 409 while the scan is running, like every other reading of one, and
-  keeps the service-wide <code>no-store</code>. A badge therefore lives exactly as long
-  as its scan - an hour by default - which makes it right for a ticket or a
-  chat message and wrong for a README; there is deliberately no badge for a
-  hostname, because that would be a permanent handle on somebody's instance.
-  See <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0055-a-badge-is-a-rendering-of-one-scan-not-a-handle-on-an-instance.md">ADR 0055</a>.</p>
-</li>
-<li>
-<p><strong>The reference data can be subscribed to.</strong> <code>/advisories.atom</code> and
-  <code>/release-schedule.atom</code> publish the advisory database and the release
-  lifecycle as Atom feeds, built from the same functions <code>/catalogue</code> and the
-  scan pipeline use. Both documents refresh themselves daily and may only gain
-  knowledge, and until now noticing a new advisory meant reopening a page and
-  remembering what had been there. The feeds name no instance, carry no uuid
-  and take no parameter, which is what lets them be publicly cacheable under
-  <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0031-a-response-is-uncacheable-until-a-route-opts-in.md">ADR 0031</a>;
-  advisory titles and descriptions come from a feed this project does not
-  control and are carried as escaped text rather than markup. See
-  <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0056-the-reference-data-is-subscribable.md">ADR 0056</a>.</p>
-</li>
-</ul>
-<h3 id="changed_4">Changed</h3>
-<ul>
-<li>
-<p><strong>The CSV export records two facts the findings table cannot carry.</strong> A
-  <code>Update available</code> row and an <code>HTTPS enforced</code> row now sit with the header
-  block, because both are single measurements that live outside the per-finding
-  table and a report read back without them cannot tell "no" from "never
-  recorded". A file downloaded before this is still readable: the comparison
-  leaves those two measurements out of <em>both</em> sides rather than guessing at
-  them, and says on the page that it did. Anything parsing that CSV by row
-  position rather than by label will need adjusting.</p>
-</li>
-<li>
-<p><strong>The bundled release schedule and advisory database were re-checked against
-  their published sources.</strong> Neither moved: the schedule still names OpenCloud
-  7.2.4 as production and 8.0.0 as rolling, and the advisory database still
-  holds the same two records. The generated frontend documentation and the
-  public and operator search indexes were rebuilt so that the version they
-  carry is this release's.</p>
-</li>
 </ul>
 </article>
 {% endblock %}

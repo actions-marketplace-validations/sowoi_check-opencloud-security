@@ -211,6 +211,8 @@ Die Einstellungen werden beim Start aus Umgebungsvariablen gelesen.
 | `COS_WEB_ADMIN_SIGN_OUT_URL` | *nicht gesetzt* | Abmeldepfad des vorgeschalteten Providers; lokaler Pfad oder HTTP(S)-URL |
 | `COS_WEB_ADMIN_AUDIT_BUFFER` | `200` | Anzahl Audit-Einträge für die Liveansicht bei stdout-Protokollierung; 0 speichert keine |
 | `COS_WEB_ADMIN_REFRESH_COOLDOWN` | `60` | Mindestabstand zwischen manuellen Aktualisierungen derselben Quelle; Testabruf hat einen eigenen Zähler |
+| `COS_WEB_UPDATE_CHECK` | `true` | Fragt PyPI, ob es ein neueres Release dieses Dienstes gibt - nur für den Betreiberbereich und höchstens alle sechs Stunden. Ohne ausgehenden Zugang setzt du `false` |
+| `COS_WEB_ADMIN_UPDATE_DIR` | *nicht gesetzt* | Verzeichnis, das mit dem `updater`-Dienst aus `docker-compose.dockerhub.yml` geteilt wird. Gesetzt, kannst du im Betreiberbereich ein neueres Release installieren: Der Updater zieht das Image und erstellt Web- und Worker-Container neu (kurze Ausfallzeit). Nicht gesetzt, zeigt der Bereich nur an, dass es ein Update gibt |
 | `COS_WEB_AUDIT_LOG` | `false` | Separates Audit-Log für angenommene und abgewiesene Anfragen sowie Limits |
 | `COS_WEB_AUDIT_LOG_TARGETS` | `false` | Zielhostnamen im Audit-Log im Klartext erfassen; für interne Installationen |
 | `COS_WEB_AUDIT_SALT` | *zufällig je Prozess* | Geheimnis für Audit-Fingerabdrücke; fester Wert ermöglicht Zuordnung über Neustarts hinweg |

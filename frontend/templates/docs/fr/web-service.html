@@ -569,6 +569,16 @@ somebody could.</p>
 <td>Shortest gap between two operator-triggered refreshes of the same reference data. The area's dry run - which reads both sources and applies nothing - is held back for the same interval under a key of its own, so it stays available in the moment after a refresh reported a failure</td>
 </tr>
 <tr>
+<td><code>COS_WEB_UPDATE_CHECK</code></td>
+<td><code>true</code></td>
+<td>Ask PyPI whether a newer release of this service exists, for the operator's area only and at most every six hours. Set <code>false</code> with no outbound access</td>
+</tr>
+<tr>
+<td><code>COS_WEB_ADMIN_UPDATE_DIR</code></td>
+<td><em>(unset)</em></td>
+<td>A directory shared with the <code>updater</code> service of <code>docker-compose.dockerhub.yml</code>. Set, the operator's area can install a newer release: it writes a request there and the updater pulls the image and recreates the web and worker containers, a short downtime. Unset, the area only says an update exists</td>
+</tr>
+<tr>
 <td><code>COS_WEB_AUDIT_LOG</code></td>
 <td><code>false</code></td>
 <td>Write an audit record for every scan request, rejection and triggered limit</td>

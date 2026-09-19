@@ -471,6 +471,16 @@ Ausnahmen sind auf erlaubte Kennungen begrenzt; Wildcards wie <code>*</code> und
 <td>Mindestabstand zwischen manuellen Aktualisierungen derselben Quelle; Testabruf hat einen eigenen Zähler</td>
 </tr>
 <tr>
+<td><code>COS_WEB_UPDATE_CHECK</code></td>
+<td><code>true</code></td>
+<td>Fragt PyPI, ob es ein neueres Release dieses Dienstes gibt - nur für den Betreiberbereich und höchstens alle sechs Stunden. Ohne ausgehenden Zugang setzt du <code>false</code></td>
+</tr>
+<tr>
+<td><code>COS_WEB_ADMIN_UPDATE_DIR</code></td>
+<td><em>nicht gesetzt</em></td>
+<td>Verzeichnis, das mit dem <code>updater</code>-Dienst aus <code>docker-compose.dockerhub.yml</code> geteilt wird. Gesetzt, kannst du im Betreiberbereich ein neueres Release installieren: Der Updater zieht das Image und erstellt Web- und Worker-Container neu (kurze Ausfallzeit). Nicht gesetzt, zeigt der Bereich nur an, dass es ein Update gibt</td>
+</tr>
+<tr>
 <td><code>COS_WEB_AUDIT_LOG</code></td>
 <td><code>false</code></td>
 <td>Separates Audit-Log für angenommene und abgewiesene Anfragen sowie Limits</td>

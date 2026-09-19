@@ -1462,8 +1462,14 @@ def test_the_release_notes_are_readable_from_the_area():
     The newest released section leads, and nothing unreleased appears: that
     is what a deployment does not run yet.
     """
+    from webapp import __version__
+
     changelog = (REPO_ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
     newest = re.search(r"^## \[(\d+\.\d+\.\d+)\]", changelog, re.MULTILINE).group(1)
+    # A version bump is built before the workflow names its section: the
+    # running release then leads, from what [Unreleased] collected.
+    if f"## [{__version__}]" not in changelog:
+        newest = __version__
 
     with TestClient(create_app(_admin_settings())) as client:
         response = client.get("/admin/docs/releases", headers=FORWARDED)

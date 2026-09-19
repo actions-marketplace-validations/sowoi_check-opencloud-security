@@ -243,6 +243,14 @@ REFERENCE: dict[str, dict[str, str]] = {
         "default": "60",
         "description": "Shortest gap between two operator-triggered refreshes of the same reference data. The area's dry run - which reads both sources and applies nothing - is held back for the same interval under a key of its own, so it stays available in the moment after a refresh reported a failure",
     },
+    "UPDATE_CHECK": {
+        "default": "true",
+        "description": "Ask PyPI whether a newer release of this service exists, for the operator's area only and at most every six hours. Set false with no outbound access",
+    },
+    "ADMIN_UPDATE_DIR": {
+        "default": "(unset)",
+        "description": "A directory shared with the updater service of docker-compose.dockerhub.yml. Set, the operator's area can install a newer release: it writes a request there and the updater pulls the image and recreates the web and worker containers, a short downtime. Unset, the area only says an update exists",
+    },
     "AUDIT_LOG": {
         "default": "false",
         "description": "Write an audit record for every scan request, rejection and triggered limit",

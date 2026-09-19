@@ -12,6 +12,23 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+### Added
+
+- The operator's area shows the running release and whether a newer one is
+  published (one cached PyPI lookup every six hours, `COS_WEB_UPDATE_CHECK`).
+  With the new opt-in `updater` service of `docker-compose.dockerhub.yml`
+  (`--profile autoupdate`) and `COS_WEB_ADMIN_UPDATE_DIR`, a button installs
+  it: the updater pulls the image and recreates the web and worker containers,
+  a short downtime. The web process itself stays unprivileged
+  ([ADR 0070](adr/0070-the-operator-area-requests-updates-a-sidecar-performs-them.md)).
+
+### Fixed
+
+- The operator area's **Releases** tab never listed the release it was running
+  on: the image is built from the version-bump commit, before the release
+  workflow renames `[Unreleased]`. The page is now generated with that section
+  under the `pyproject.toml` version when the changelog has no heading for it.
+
 ## [1.27.0] - 2026-09-19
 
 ### Added

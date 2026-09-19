@@ -55,6 +55,10 @@ RUN set -eu \
 # root and be unwritable by the process that needs it.
 RUN install -d -o 10001 -g 10001 -m 0700 /var/log/opencloud-scan
 
+# Where COS_WEB_ADMIN_UPDATE_DIR points when the updater service runs: the
+# operator's area writes its update request here, for the same ownership reason.
+RUN install -d -o 10001 -g 10001 -m 0700 /var/lib/opencloud-scan/update
+
 WORKDIR /app
 
 # The two directories that are *not* in the wheel, copied in as application

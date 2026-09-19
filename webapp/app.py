@@ -244,6 +244,7 @@ from .store import (
     ScanStore,
     target_hostname,
 )
+from .updates import request_update, update_state
 from .workflows import (
     ASYNC_NOTE,
     CONFLICT_NOTE,
@@ -2495,6 +2496,9 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
                 # The same two functions answer /admin/state, so the card and
                 # the document an operator copies cannot disagree.
                 "surfaces": surface_rows(surfaces(settings), audit_surface(settings)),
+                # Which release runs, and whether a newer one is out. One
+                # cached PyPI lookup at most every few hours (webapp.updates).
+                "update": await update_state(app.state.backend, settings),
                 "outcome": outcome,
                 # Stated rather than inherited. `is_indexable` already
                 # answers no for any path outside PUBLIC_PAGES, and the
@@ -2680,6 +2684,31 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
                 "action": action,
                 "seconds": remaining,
             }
+            if wants_html(request):
+                return page(request, "admin.html", await admin_context(operator, answer))
+            return JSONResponse(answer)
+
+        @app.post(f"{ADMIN_PATH}/update", include_in_schema=False)
+        async def admin_update(request: Request) -> Response:
+            """
+            Ask the updater service for the newest release.
+
+            Writes a request file and nothing else: this process cannot
+            replace its own container and is not given the means to (ADR
+            0070). The version is the one PyPI named, never one the form
+            sent, so the button can only ever move forward to a published
+            release.
+            """
+            operator = admin_operator(request)
+            if operator is None:
+                return not_found(request)
+            if cross_origin_post(request, settings):
+                LOGGER.info("admin_cross_site")
+                return _cross_site_response(request, wants_html(request))
+            state = await request_update(
+                app.state.backend, settings, operator.username
+            )
+            answer = {"state": state, "action": "update"}
             if wants_html(request):
                 return page(request, "admin.html", await admin_context(operator, answer))
             return JSONResponse(answer)
