@@ -71,6 +71,12 @@ Leave `opencloud_check_interval` at `24h` or higher. Each run is a real scan
 against a real instance rather than a cached lookup, and nothing about an
 instance's rating changes from minute to minute.
 
+Toute autre option du `CheckCommand` - `--eol-warning`, `--release-track`, `--ignore-hardening` et les autres - se définit via `opencloud_check_extra_vars`, une table du nom de variable sans le préfixe `opencloud_` vers sa valeur ; une liste répète l'option une fois par élément.
+
+```ini
+opencloud_check_extra_vars={"eol_warning": 30, "ignore_hardening": ["hstsPreload"]}
+```
+
 The full variable table, including the ones specific to each role, is in
 [`ansible/README.md`](../../ansible/README.md#variable-reference).
 

@@ -29,6 +29,7 @@ from tests.webapp_support import (  # noqa: F401 - the fixtures are autouse
     MEMORY_URL,
     _isolated_backend,
     _offline_resolver,
+    app_state,
     backend,
     client,
     settings,
@@ -546,8 +547,8 @@ def test_the_configured_window_may_be_shortened_but_never_lengthened():
     """An operator setting is honoured downwards and ignored upwards."""
     long_lived = client(comparison_ttl=86_400)
     short = client(comparison_ttl=60)
-    assert long_lived.app.state.comparisons.ttl == MAX_COMPARISON_TTL_SECONDS
-    assert short.app.state.comparisons.ttl == 60
+    assert app_state(long_lived).comparisons.ttl == MAX_COMPARISON_TTL_SECONDS
+    assert app_state(short).comparisons.ttl == 60
 
 
 def test_a_comparison_carries_that_ttl_into_redis(improved_pair):

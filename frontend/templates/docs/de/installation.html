@@ -212,6 +212,7 @@ docker build -f docker/Dockerfile -t check-opencloud-security .
 <p>Der Check-Container muss keine Ports veröffentlichen, benötigt aber Zugriff auf die Instanz. Passe bei Bedarf das Netzwerk mit <code>--network host</code> oder <code>--add-host</code> an. Er läuft als unprivilegierter Benutzer <code>nagios</code> und liefert dieselben Exitcodes wie die native Installation.</p>
 <p>Du kannst ein selbst gebautes Image in deine Registry übertragen, etwa mit <code>docker tag check-opencloud-security registry.example.com/check-opencloud-security</code> und anschließendem <code>docker push</code>, und auf den Monitoring-Hosts verwenden.</p>
 <h2 id="icinga2-nagios">Icinga2 / Nagios</h2>
+<p>Das vollständige <code>CheckCommand</code> mit einem Argument für jede Option, die auf einem Service sinnvoll ist, liegt in <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/icinga2/check_opencloud_security.conf"><code>contrib/icinga2/check_opencloud_security.conf</code></a>; das Beispiel unten zeigt die gängigen.</p>
 <ul>
 <li>Suche bei pipx, uv oder pip den installierten Programmpfad, etwa mit <code>which check-opencloud-security</code>, und verwende ihn direkt oder über einen Symlink im Plugin-Verzeichnis.</li>
 <li>Bei direkter Verwendung des Skripts lege <code>check_opencloud_security.py</code> im Plugin-Verzeichnis ab.</li>

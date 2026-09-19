@@ -98,5 +98,96 @@ object CheckCommand "{{ opencloud_check_command_name }}" {
             description = "HTTP timeout in seconds for the webhook call"
             value = "$opencloud_webhook_timeout$"
         }
+        "--scheme" = {
+            description = "Protocol the instance is reached over: https or http"
+            value = "$opencloud_scheme$"
+        }
+        "--ca-file" = {
+            description = "CA bundle the instance's certificate is verified against"
+            value = "$opencloud_ca_file$"
+        }
+        "--config" = {
+            description = "Configuration file for everything not set here"
+            value = "$opencloud_config$"
+        }
+        "--no-extra-checks" = {
+            description = "Skip the additional checks"
+            set_if = "$opencloud_no_extra_checks$"
+        }
+        "--ignore-hardening" = {
+            description = "Measures or checks to accept (array of names, wildcards allowed)"
+            value = "$opencloud_ignore_hardening$"
+            repeat_key = true
+        }
+        "--waive-until" = {
+            description = "Time-limited waivers, PATTERN|EXPIRES|REASON (array)"
+            value = "$opencloud_waive_until$"
+            repeat_key = true
+        }
+        "--login-throttling" = {
+            description = "Report whether failed sign-ins are throttled"
+            set_if = "$opencloud_login_throttling$"
+        }
+        "--all-addresses" = {
+            description = "Repeat the checks against every address the name resolves to"
+            set_if = "$opencloud_all_addresses$"
+        }
+        "--release-track" = {
+            description = "Release track the instance follows"
+            value = "$opencloud_release_track$"
+        }
+        "--release-feed" = {
+            description = "Release feed URL for the update check"
+            value = "$opencloud_release_feed$"
+        }
+        "--release-token" = {
+            description = "Bearer token for the release feed (secret:// references work)"
+            value = "$opencloud_release_token$"
+        }
+        "--latest-version" = {
+            description = "Pinned newest release, for --update-source pinned"
+            value = "$opencloud_latest_version$"
+        }
+        "--no-update-check" = {
+            description = "Skip the update check"
+            set_if = "$opencloud_no_update_check$"
+        }
+        "--eol-warning" = {
+            description = "WARNING this many days before the release line's end of life"
+            value = "$opencloud_eol_warning$"
+        }
+        "--baseline" = {
+            description = "File remembering the last run's findings"
+            value = "$opencloud_baseline$"
+        }
+        "--warn-on-new" = {
+            description = "WARNING when the baseline shows a new finding"
+            set_if = "$opencloud_warn_on_new$"
+        }
+        "--diff-format" = {
+            description = "How baseline changes are rendered: text, markdown, slack, json"
+            value = "$opencloud_diff_format$"
+        }
+        "--webhook-format" = {
+            description = "Webhook payload: generic, slack, discord, ntfy, gotify"
+            value = "$opencloud_webhook_format$"
+        }
+        "--webhook-header" = {
+            description = "Extra webhook headers, NAME:VALUE (array)"
+            value = "$opencloud_webhook_header$"
+            repeat_key = true
+        }
+        "--webhook-secret" = {
+            description = "HMAC-SHA256 secret signing the webhook (secret:// references work)"
+            value = "$opencloud_webhook_secret$"
+        }
+        "--allow-private-webhooks" = {
+            description = "Allow a webhook URL on a private address"
+            set_if = "$opencloud_allow_private_webhooks$"
+        }
+        "--webhook-digest" = {
+            description = "Batch webhook notifications into a digest"
+            set_if = "$opencloud_webhook_digest$"
+        }
     }
 }

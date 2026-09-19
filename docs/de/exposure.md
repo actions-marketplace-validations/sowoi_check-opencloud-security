@@ -89,7 +89,7 @@ Ist unter diesem Ursprung kein Backend nachweisbar, erscheinen beide Befunde nic
 
 ## Schweregrad und Bewertung {#severity-and-rating-impact}
 
-Diese Befunde gehören zu `extraChecks` und benötigen kein `--check-hardening`. SIE werden bewertet, wenn die jeweilige Prüfung ausgeführt werden kann. Kritische Befunde begrenzen die Note auf `D`, hohe auf `C`; die vollständige Zuordnung steht in der [Prüfübersicht](../scanner-checks.md#what-the-scanner-checks).
+Diese Befunde gehören zu `extraChecks` und benötigen kein `--check-hardening`. Sie werden bewertet, wenn die jeweilige Prüfung ausgeführt werden kann. Kritische Befunde begrenzen die Note auf `D`, hohe auf `C`; die vollständige Zuordnung steht in der [Prüfübersicht](../scanner-checks.md#what-the-scanner-checks).
 
 ## Marken und Unabhängigkeit
 

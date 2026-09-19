@@ -159,6 +159,8 @@ VARIABLES: tuple[Variable, ...] = (
     Variable("ADMIN_SIGN_OUT_URL", "admin", "admin_sign_out_url"),
     Variable("ADMIN_AUDIT_BUFFER", "admin", "admin_audit_buffer"),
     Variable("ADMIN_REFRESH_COOLDOWN", "admin", "admin_refresh_cooldown"),
+    Variable("UPDATE_CHECK", "admin", "update_check"),
+    Variable("ADMIN_UPDATE_DIR", "admin", "admin_update_dir"),
     # The trail.
     Variable("AUDIT_LOG", "audit", "audit_log"),
     Variable("AUDIT_LOG_TARGETS", "audit", "audit_log_targets"),

@@ -105,7 +105,9 @@ def test_a_counter_is_pressable_exactly_when_it_has_findings_behind_it():
     counters = _counters(page)
 
     for severity, markup in counters.items():
-        count = int(re.search(r"<strong>(\d+)</strong>", markup).group(1))
+        shown = re.search(r"<strong>(\d+)</strong>", markup)
+        assert shown is not None, severity
+        count = int(shown.group(1))
         disabled = "disabled" in markup
         assert disabled == (count == 0), (
             f"the {severity} counter counts {count} and "

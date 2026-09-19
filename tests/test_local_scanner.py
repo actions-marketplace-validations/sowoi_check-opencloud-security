@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import http.server
 import threading
+from typing import Any, cast
 
 import pytest
 import requests
@@ -32,6 +33,12 @@ SETTINGS = ScannerSettings(
     scheme="http", timeout=3, check_debug_ports=False, include_bundled_db=True
 )
 NO_UPDATES = ReleaseSettings(mode="off")
+
+
+def _capabilities(behaviour: InstanceBehaviour) -> dict[str, Any]:
+    """The capabilities a fake instance publishes, for a test to edit in place."""
+    assert behaviour.capabilities is not None
+    return behaviour.capabilities["ocs"]["data"]["capabilities"]
 
 
 def run_scan(behaviour: InstanceBehaviour, settings: ScannerSettings = SETTINGS) -> dict:
@@ -133,7 +140,7 @@ def test_capabilities_absent_does_not_invent_hardenings():
 def test_a_disabled_password_policy_is_reported_instead_of_disappearing():
     """Turning the policy off must fail more loudly than lowering its minimum."""
     behaviour = InstanceBehaviour()
-    policy = behaviour.capabilities["ocs"]["data"]["capabilities"]["password_policy"]
+    policy = _capabilities(behaviour)["password_policy"]
     policy.clear()
     policy["max_characters"] = 72
 
@@ -142,7 +149,7 @@ def test_a_disabled_password_policy_is_reported_instead_of_disappearing():
     assert result["hardenings"]["passwordPolicyEnforced"] is False
 
     unknown = InstanceBehaviour()
-    unknown.capabilities["ocs"]["data"]["capabilities"]["password_policy"].clear()
+    _capabilities(unknown)["password_policy"].clear()
     unknown_result = run_scan(unknown)
     assert "passwordPolicyEnforced" not in unknown_result["hardenings"]
 
@@ -1283,7 +1290,7 @@ def test_office_and_calendar_integrations_are_reported_as_observations():
     neither is a finding, and the result document says what was observed.
     """
     behaviour = InstanceBehaviour(app_providers=("Collabora",), caldav=True)
-    behaviour.capabilities["ocs"]["data"]["capabilities"]["groupware"] = {
+    _capabilities(behaviour)["groupware"] = {
         "enabled": True
     }
 
@@ -1461,7 +1468,7 @@ def test_a_weakened_password_policy_is_caught_even_when_it_is_long_enough(
     assert default_result["hardenings"]["passwordPolicyComplexity"] is True
 
     weakened = InstanceBehaviour()
-    policy = weakened.capabilities["ocs"]["data"]["capabilities"]["password_policy"]
+    policy = _capabilities(weakened)["password_policy"]
     policy["min_special_characters"] = 0
 
     result = run_scan(weakened)
@@ -1482,7 +1489,7 @@ def test_a_policy_that_publishes_no_character_classes_reports_no_complexity_find
     no setting could clear.
     """
     disabled = InstanceBehaviour()
-    policy = disabled.capabilities["ocs"]["data"]["capabilities"]["password_policy"]
+    policy = _capabilities(disabled)["password_policy"]
     policy.clear()
     policy["max_characters"] = 72
 
@@ -1588,13 +1595,14 @@ class _Headers:
 
 
 def _alt_svc(value):
-    return scanner_module._alternative_services(_Headers({"Alt-Svc": value}))
+    return scanner_module._alternative_services(cast(Any, _Headers({"Alt-Svc": value})))
 
 
 def test_no_response_records_no_alternative_services():
     """A scan without a root response has no header to read: None, not an empty record."""
     assert scanner_module._alternative_services(None) is None
-    assert scanner_module._alternative_services(_Headers({}))["advertised"] is False
+    recorded = scanner_module._alternative_services(cast(Any, _Headers({})))
+    assert recorded is not None and recorded["advertised"] is False
 
 
 def test_every_alt_svc_entry_is_recorded_with_its_parameters_ignored():
@@ -1686,8 +1694,9 @@ def test_login_throttling_never_asks_an_external_identity_provider():
     """An upstream provider is somebody else's; no sign-in is pushed at it."""
     from opencloud_local_scan.scanner import _login_throttling
 
-    assert _login_throttling(None, {"detected": True, "external": True}) is None
-    assert _login_throttling(None, {"detected": False}) is None
+    never_used = cast(Any, None)  # both answers are decided before any probe
+    assert _login_throttling(never_used, {"detected": True, "external": True}) is None
+    assert _login_throttling(never_used, {"detected": False}) is None
 
 
 def test_throttling_runs_after_the_demo_accounts_are_checked():

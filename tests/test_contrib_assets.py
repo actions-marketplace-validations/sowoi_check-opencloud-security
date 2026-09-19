@@ -46,6 +46,8 @@ COMPLETE_RESULT = {
     "extraChecks": [{"id": "tlsTrusted", "passed": False}],
     "lifecycle": {"daysRemaining": 42, "releaseType": "production"},
     "updates": {"available": True, "availableVersion": "7.4.0"},
+    "tls": {"certificate": {"daysRemaining": 67}},
+    "upgradePath": {"target": "7.4.0", "stillAffected": ["CVE-2026-0001"]},
 }
 
 # Deliberately requires the underscore: `opencloud` on its own is the tag, the

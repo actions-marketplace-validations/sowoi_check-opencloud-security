@@ -320,7 +320,9 @@ def _make_handler(behaviour: InstanceBehaviour):
                 claimed = self.headers.get("X-Forwarded-Host") or self.headers.get("Host")
                 if claimed:
                     return claimed
-            address, port = self.server.server_address[:2]
+            bound = self.server.server_address
+            assert isinstance(bound, tuple)  # a TCP server, never a Unix socket
+            address, port = bound[:2]
             return f"{address}:{port}"
 
         def _route_path(self):
@@ -363,15 +365,15 @@ def _make_handler(behaviour: InstanceBehaviour):
             # can answer it with the SPA shell - which is exactly the response
             # the scanner must not read as a published policy.
             if path == "/.well-known/security.txt" and behaviour.security_txt is not None:
-                body, content_type = behaviour.security_txt
-                self._respond(200, body.encode("utf-8"), {"Content-Type": content_type})
+                text, content_type = behaviour.security_txt
+                self._respond(200, text.encode("utf-8"), {"Content-Type": content_type})
                 return
 
             # The WOPI discovery document, in the shape the protocol
             # specifies. Falls through to `catch_all` when no backend is
             # configured, which is what the scanner must not read as one.
             if path == "/hosting/discovery" and behaviour.wopi_urlsrc is not None:
-                document = (
+                discovery = (
                     '<?xml version="1.0" encoding="utf-8"?>\n'
                     "<wopi-discovery><net-zone name=\"external-https\">"
                     '<app name="writer">'
@@ -379,7 +381,7 @@ def _make_handler(behaviour: InstanceBehaviour):
                     "</app></net-zone></wopi-discovery>"
                 )
                 self._respond(
-                    200, document.encode("utf-8"), {"Content-Type": "text/xml"}
+                    200, discovery.encode("utf-8"), {"Content-Type": "text/xml"}
                 )
                 return
 
@@ -416,7 +418,7 @@ def _make_handler(behaviour: InstanceBehaviour):
                 endpoint_base = issuer
                 if behaviour.openid_insecure_endpoints:
                     endpoint_base = "http://" + issuer.split("://", 1)[-1]
-                document = {
+                document: dict[str, Any] = {
                     "issuer": endpoint_base,
                     "authorization_endpoint": f"{endpoint_base}/authorize",
                     "token_endpoint": f"{endpoint_base}/token",
@@ -465,7 +467,7 @@ def _make_handler(behaviour: InstanceBehaviour):
                 return
 
             if path == "/.well-known/webfinger":
-                payload = {
+                payload: dict[str, Any] = {
                     "subject": "acct:me@example.com",
                     "links": [
                         {

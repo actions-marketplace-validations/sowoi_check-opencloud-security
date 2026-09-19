@@ -172,6 +172,8 @@ def test_the_version_is_read_from_pyproject_and_never_invented():
         .split("[project]", 1)[1]
         .split("\n[", 1)[0]
     )
-    expected = re.search(r'^version\s*=\s*"([^"]+)"', body, re.MULTILINE).group(1)
+    declared = re.search(r'^version\s*=\s*"([^"]+)"', body, re.MULTILINE)
+    assert declared is not None
+    expected = declared.group(1)
 
     assert script.project_version() == expected

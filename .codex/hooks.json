@@ -1,0 +1,65 @@
+{
+  "description": "Codex compatibility hooks for the repository's existing Claude guard scripts.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^Bash$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.codex/hooks/dispatch.py\" guard-bash",
+            "timeout": 10,
+            "statusMessage": "Checking Bash command"
+          },
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.codex/hooks/dispatch.py\" guard-branch",
+            "timeout": 10,
+            "statusMessage": "Checking branch policy"
+          },
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.codex/hooks/dispatch.py\" privacy-pre-tool-use",
+            "timeout": 60,
+            "statusMessage": "Checking privacy policy"
+          },
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.codex/hooks/dispatch.py\" changelog-docs-gate",
+            "timeout": 30,
+            "statusMessage": "Checking changelog documentation"
+          }
+        ]
+      },
+      {
+        "matcher": "^(?:apply_patch|Edit|Write)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.codex/hooks/dispatch.py\" guard-edit",
+            "timeout": 10,
+            "statusMessage": "Checking file edit"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.codex/hooks/dispatch.py\" stop-checks",
+            "timeout": 120,
+            "statusMessage": "Checking generated files"
+          },
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.codex/hooks/dispatch.py\" privacy-stop",
+            "timeout": 60,
+            "statusMessage": "Checking commits for real hosts and personal data"
+          }
+        ]
+      }
+    ]
+  }
+}

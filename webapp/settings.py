@@ -488,6 +488,16 @@ class WebSettings:
     reference data, so a button cannot be held down against somebody else's
     server."""
 
+    update_check: bool = True
+    """Ask GitHub, at most every few hours and only for the operator's area,
+    whether a newer release of this service exists."""
+
+    admin_update_dir: str | None = None
+    """A writable tmpfs the operator's area unpacks a newer release onto.
+    Set, the area installs it: the bundle is verified against its GitHub
+    build attestation and the web and worker processes restart on it until
+    the container restarts (ADR 0070). Unset, the area only says one exists."""
+
     admin_sign_out_url: str | None = None
     """Where the operator's area sends somebody who wants to stop being signed
     in - for the bundled stack, the authentik outpost's
@@ -670,6 +680,8 @@ class WebSettings:
                 "ADMIN_AUDIT_BUFFER", DEFAULT_ADMIN_AUDIT_BUFFER, minimum=0
             ),
             admin_sign_out_url=_env("ADMIN_SIGN_OUT_URL"),
+            update_check=_env_bool("UPDATE_CHECK", True),
+            admin_update_dir=_env("ADMIN_UPDATE_DIR"),
             admin_refresh_cooldown=_env_int(
                 "ADMIN_REFRESH_COOLDOWN",
                 DEFAULT_ADMIN_REFRESH_COOLDOWN_SECONDS,

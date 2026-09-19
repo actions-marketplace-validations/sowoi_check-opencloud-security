@@ -195,6 +195,25 @@ def test_an_unreleased_entry_does_not_change_the_release_notes():
     assert generator._latest_releases(more, 2) == generator._latest_releases(CHANGELOG, 2)
 
 
+def test_the_running_release_is_listed_before_the_workflow_names_it():
+    """
+    The image is built from the version bump, before the release workflow
+    renames [Unreleased]: that section is what the running release changed.
+    """
+    selected = generator._latest_releases(CHANGELOG, 2, "2.2.0")
+
+    assert selected.startswith("## [2.2.0] - this release\n")
+    assert "- Not shipped yet." in selected
+    assert "## [2.1.0]" in selected and "## [2.0.1]" not in selected
+
+
+def test_a_released_running_version_ignores_unreleased():
+    """Once the heading exists, [Unreleased] is the next release again."""
+    assert generator._latest_releases(CHANGELOG, 2, "2.1.0") == generator._latest_releases(
+        CHANGELOG, 2
+    )
+
+
 @pytest.mark.parametrize(
     "source",
     ["", "# Changelog\n\n## [Unreleased]\n\n- Only this.\n", "## [v2] - 2026-01-01\n"],

@@ -61,10 +61,10 @@ def test_the_sitemap_lists_every_public_page_and_only_those():
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("application/xml")
     document = minidom.parseString(response.text)  # nosec B318 - our own output
-    locations = [
-        node.firstChild.nodeValue
-        for node in document.getElementsByTagName("loc")
-    ]
+    locations = []
+    for node in document.getElementsByTagName("loc"):
+        assert node.firstChild is not None
+        locations.append(node.firstChild.nodeValue)
 
     assert locations == [
         "http://testserver/" if page.path == "/" else f"http://testserver{page.path}"
@@ -393,13 +393,17 @@ def test_a_title_that_already_names_the_site_does_not_name_it_twice():
     test_client = client()
 
     guide = test_client.get("/documentation/checkmk").text
-    title = re.search(r"<title>(.*?)</title>", guide, re.DOTALL).group(1)
+    found = re.search(r"<title>(.*?)</title>", guide, re.DOTALL)
+    assert found is not None
+    title = found.group(1)
     assert title.count("OpenCloud Security Scan") == 1
     assert "&middot;" not in title
 
     # The negative half: a title that does not name the site still gets it.
     grades = test_client.get("/grades").text
-    title = re.search(r"<title>(.*?)</title>", grades, re.DOTALL).group(1)
+    found = re.search(r"<title>(.*?)</title>", grades, re.DOTALL)
+    assert found is not None
+    title = found.group(1)
     assert title.endswith(" &middot; OpenCloud Security Scan")
 
 

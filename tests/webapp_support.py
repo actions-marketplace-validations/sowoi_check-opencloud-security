@@ -14,12 +14,13 @@ hour for Redis to do it.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
 pytest.importorskip("fastapi", reason="the web application extra is not installed")
 
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from webapp.app import create_app
@@ -39,9 +40,16 @@ def settings(**overrides: Any) -> WebSettings:
         "daily_scan_limit": 0,
         "result_ttl": 3600,
         "public_base_url": "http://testserver",
+        # The operator area's release check asks PyPI; tests stay offline.
+        "update_check": False,
     }
     defaults.update(overrides)
     return WebSettings(**defaults)
+
+
+def app_state(test_client: TestClient) -> Any:
+    """The application's ``state``; ``TestClient.app`` is typed as a bare ASGI app."""
+    return cast(FastAPI, test_client.app).state
 
 
 def client(**overrides: Any) -> TestClient:

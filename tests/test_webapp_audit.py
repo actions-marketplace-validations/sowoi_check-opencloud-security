@@ -21,6 +21,7 @@ import pytest
 from tests.webapp_support import (  # noqa: F401 - the fixtures are autouse
     _isolated_backend,
     _offline_resolver,
+    app_state,
     client,
     settings,
 )
@@ -236,7 +237,7 @@ def test_a_report_that_cannot_be_read_is_audited_without_quoting_it(audit_record
     service chose for the refusal and nothing that came out of the file.
     """
     test_client = client(audit_log=True)
-    store = test_client.app.state.store
+    store = app_state(test_client).store
     asyncio.run(
         store.create(
             SCANNED, target=TARGET, ignore_hardenings=(), output_format="dashboard"

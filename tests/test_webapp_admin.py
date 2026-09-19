@@ -21,6 +21,7 @@ import json
 import re
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -146,7 +147,10 @@ def test_a_secret_that_is_not_ascii_is_a_wrong_secret_rather_than_an_error():
     An area that is off answers 404 to the same request, so the difference
     told a prober from outside that the area was switched on.
     """
-    presented = {"x-cos-admin-proxy": "é".encode("latin-1"), "x-authentik-username": OPERATOR}
+    presented: dict[str, Any] = {
+        "x-cos-admin-proxy": "é".encode("latin-1"),
+        "x-authentik-username": OPERATOR,
+    }
     with TestClient(create_app(_admin_settings()), raise_server_exceptions=False) as client:
         refused = client.get("/admin", headers=presented)
         admitted = client.get("/admin", headers=FORWARDED)
@@ -1462,8 +1466,16 @@ def test_the_release_notes_are_readable_from_the_area():
     The newest released section leads, and nothing unreleased appears: that
     is what a deployment does not run yet.
     """
+    from webapp import __version__
+
     changelog = (REPO_ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    newest = re.search(r"^## \[(\d+\.\d+\.\d+)\]", changelog, re.MULTILINE).group(1)
+    released = re.search(r"^## \[(\d+\.\d+\.\d+)\]", changelog, re.MULTILINE)
+    assert released is not None
+    newest = released.group(1)
+    # A version bump is built before the workflow names its section: the
+    # running release then leads, from what [Unreleased] collected.
+    if f"## [{__version__}]" not in changelog:
+        newest = __version__
 
     with TestClient(create_app(_admin_settings())) as client:
         response = client.get("/admin/docs/releases", headers=FORWARDED)

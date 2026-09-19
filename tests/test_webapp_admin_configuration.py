@@ -197,7 +197,8 @@ def test_the_redis_password_is_hidden_and_the_rest_of_the_address_is_not():
 
     by_name = {row.name: row for row in rows(configured, {})}
 
-    assert "hunter2-redis" not in by_name["REDIS_URL"].value
+    redis_url = by_name["REDIS_URL"].value
+    assert redis_url is not None and "hunter2-redis" not in redis_url
     assert by_name["REDIS_URL"].value == "redis://:******@redis:6379/0"
 
 

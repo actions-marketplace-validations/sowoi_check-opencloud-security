@@ -233,6 +233,44 @@
   </ul>
 </section>
 
+{# --------------------------------------------------------------- updates #}
+{#
+  Which release is running, whether a newer one is on GitHub, and a button
+  that installs it: the release's web bundle, verified against its build
+  attestation and run in place of the image's code until the container
+  restarts (ADR 0070). An ordinary form, so it works with no scripting.
+#}
+<section class="card section-gap" aria-labelledby="admin-update" data-reveal>
+  <p class="kicker">{{ t('admin.update.kicker') }}</p>
+  <h2 id="admin-update">{{ t('admin.update.heading') }}</h2>
+  <p class="lede">
+    {{ t('admin.update.running', version=update.running) }}
+    {% if not update.checked %}{{ t('admin.update.off') }}
+    {% elif update.available %}<strong>{{ t('admin.update.available', version=update.latest) }}</strong>
+    {% elif update.latest %}{{ t('admin.update.current') }}
+    {% else %}{{ t('admin.update.unknown') }}{% endif %}
+  </p>
+
+  {% if outcome and outcome.action == 'update' %}
+  <p class="admin-outcome" data-outcome="{{ outcome.state }}" aria-live="polite">
+    {{ t('admin.update.outcome.' ~ outcome.state) }}
+  </p>
+  {% endif %}
+
+  {% if update.available %}
+    {% if update.automatic %}
+    <form method="post" action="/admin/update">
+      <button class="btn btn-primary" type="submit">
+        {{ t('admin.update.install', version=update.latest) }}
+      </button>
+    </form>
+    <p class="hint">{{ t('admin.update.downtime') }}</p>
+    {% else %}
+    <p class="hint">{{ t('admin.update.manual') }}</p>
+    {% endif %}
+  {% endif %}
+</section>
+
 {# ------------------------------------------------------------ exclusions #}
 {#
   The one card that writes. Everything else here reads a setting or presses a

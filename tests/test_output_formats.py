@@ -121,7 +121,7 @@ def test_junit_format_is_valid_xml_with_one_testsuite_per_host():
     suites = root.findall("testsuite")
     assert len(suites) == 1
     assert suites[0].get("name") == instance.host
-    assert int(suites[0].get("failures")) >= 1
+    assert int(suites[0].get("failures", "0")) >= 1
     case_names = {case.get("name") for case in suites[0].findall("testcase")}
     assert "exposed:/opencloud.yaml" in case_names
     assert "rating" in case_names
@@ -133,6 +133,7 @@ def test_junit_format_a_healthy_host_still_reports_a_rating_testcase():
 
     root = ET.fromstring(result.stdout)
     suite = root.find("testsuite")
+    assert suite is not None
     assert suite.get("name") == instance.host
     rating_case = next(c for c in suite.findall("testcase") if c.get("name") == "rating")
     assert rating_case.find("failure") is None

@@ -47,7 +47,7 @@ def test_redirect_bodies_are_capped_before_requests_can_buffer_them(monkeypatch,
         else:
             response.status_code = 200
             response._content = b"ok"
-            response._content_consumed = True
+            response._content_consumed = True  # type: ignore[attr-defined]  # private to requests
         return response
 
     monkeypatch.setattr(requests.adapters.HTTPAdapter, "send", send)
@@ -56,6 +56,7 @@ def test_redirect_bodies_are_capped_before_requests_can_buffer_them(monkeypatch,
     ))
     try:
         response = probe.get("/redirect", allow_redirects=follow)
+        assert response is not None
         assert response.status_code == (200 if follow else 302)
         assert sum(chunks) == 65536
         assert response.content == (b"ok" if follow else b"x" * 64)
@@ -217,7 +218,7 @@ def test_probes_do_not_send_netrc_credentials(tmp_path, monkeypatch, parallel):
         response = requests.Response()
         response.status_code = 200
         response._content = b"{}"
-        response._content_consumed = True
+        response._content_consumed = True  # type: ignore[attr-defined]  # private to requests
         return response
 
     monkeypatch.setattr(requests.Session, "send", send)
@@ -279,7 +280,8 @@ def test_workers_cannot_recreate_erased_or_expired_scans(transition, erased):
             ignore_hardenings=(), output_format="json",
         )
         await store.mark_running(identifier)
-        assert (await store.get(identifier)).state == "running"
+        record = await store.get(identifier)
+        assert record is not None and record.state == "running"
         if erased:
             assert (await store.purge_target("opencloud.example.com")).remaining == 0
         else:

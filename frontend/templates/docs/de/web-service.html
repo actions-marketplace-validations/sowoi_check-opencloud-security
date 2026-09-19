@@ -471,6 +471,16 @@ Ausnahmen sind auf erlaubte Kennungen begrenzt; Wildcards wie <code>*</code> und
 <td>Mindestabstand zwischen manuellen Aktualisierungen derselben Quelle; Testabruf hat einen eigenen Zähler</td>
 </tr>
 <tr>
+<td><code>COS_WEB_UPDATE_CHECK</code></td>
+<td><code>true</code></td>
+<td>Fragt GitHub, ob es ein neueres Release dieses Dienstes gibt - nur für den Betreiberbereich und höchstens alle sechs Stunden. Ohne ausgehenden Zugang setzt du <code>false</code></td>
+</tr>
+<tr>
+<td><code>COS_WEB_ADMIN_UPDATE_DIR</code></td>
+<td><em>nicht gesetzt</em></td>
+<td>Ein beschreibbares tmpfs (die Compose-Dateien hängen eins unter <code>/var/lib/opencloud-scan/update</code> ein). Gesetzt, kannst du im Betreiberbereich ein neueres Release installieren: Das Web-Bundle wird von GitHub geladen, gegen seine Build-Attestierung geprüft, hier entpackt, und Web- und Worker-Prozesse starten damit neu - kurze Ausfallzeit, gültig bis zum Neustart der Container. Nicht gesetzt, zeigt der Bereich nur an, dass es ein Update gibt</td>
+</tr>
+<tr>
 <td><code>COS_WEB_AUDIT_LOG</code></td>
 <td><code>false</code></td>
 <td>Separates Audit-Log für angenommene und abgewiesene Anfragen sowie Limits</td>
@@ -669,7 +679,7 @@ wenn auch andere Namen für dieselbe Adresse gesperrt sein sollen.</p>
 Ungültige Einträge oder mehr als 253 Zeichen verhindern den Start.
 Besucher erfahren nur, dass das Ziel ausgeschlossen wurde, nicht den passenden
 Konfigurationseintrag. Siehe <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0043-an-operators-exclusion-outranks-every-allowance.md">ADR 0043</a>.</p>
-<p>Der Operator-Bereich kann weitere Einträge in Redis verwalten. SIE gelten ab der
+<p>Der Operator-Bereich kann weitere Einträge in Redis verwalten. Sie gelten ab der
 nächsten Anfrage in allen Prozessen, auch für wartende Aufträge. Einträge aus
 der Umgebung lassen sich dort nicht entfernen; äquivalente Schreibweisen werden
 als derselbe Ausschluss behandelt. Dauerhafte Vorgaben gehören in die Umgebung,

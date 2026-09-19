@@ -576,10 +576,9 @@ def test_a_contents_entry_reads_as_the_heading_it_leads_to():
     markup = client().get("/grades").text
     headings = dict(re.findall(r'<h2 id="([^"]+)"[^>]*>([^<]+)</h2>', markup))
 
-    entries = re.findall(
-        r'href="#([^"]+)">\s*([^<]+?)\s*</a>',
-        re.search(r'<nav class="docs-toc.*?</nav>', markup, re.DOTALL).group(0),
-    )
+    contents = re.search(r'<nav class="docs-toc.*?</nav>', markup, re.DOTALL)
+    assert contents is not None
+    entries = re.findall(r'href="#([^"]+)">\s*([^<]+?)\s*</a>', contents.group(0))
     assert entries
     for target, label in entries:
         assert label == headings[target].strip()

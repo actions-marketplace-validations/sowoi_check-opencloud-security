@@ -69,12 +69,14 @@ def is_available() -> bool:
     return True
 
 
-def _expected_identity(owner: str, repo: str) -> str:
-    """The certificate SAN this project's signing workflow always carries."""
-    return (
-        f"https://github.com/{owner}/{repo}/{SIGNING_WORKFLOW_PATH}"
-        f"@{SIGNING_WORKFLOW_REF}"
-    )
+def _expected_identity(
+    owner: str,
+    repo: str,
+    workflow: str = SIGNING_WORKFLOW_PATH,
+    ref: str = SIGNING_WORKFLOW_REF,
+) -> str:
+    """The certificate SAN the pinned workflow always carries."""
+    return f"https://github.com/{owner}/{repo}/{workflow}@{ref}"
 
 
 def _fetch_attestation_bundles(
@@ -107,6 +109,8 @@ def verify(
     owner: str,
     repo: str,
     timeout: int = DEFAULT_TIMEOUT_SECONDS,
+    workflow: str = SIGNING_WORKFLOW_PATH,
+    ref: str = SIGNING_WORKFLOW_REF,
 ) -> VerificationSkipped | None:
     """
     Verify that ``content`` (the exact bytes fetched from
@@ -119,6 +123,10 @@ def verify(
     yet). Raises :class:`SignatureInvalid` only when an attestation was
     actually found and did not verify against the pinned identity - the one
     case that means something is actively wrong, not merely unverified.
+
+    ``workflow`` and ``ref`` name the one workflow allowed to have signed it:
+    the data-signing workflow by default, the release workflow for the web
+    bundle the operator area installs (``webapp.updates``).
     """
     if not is_available():
         return VerificationSkipped("the 'signing' extra (sigstore) is not installed")
@@ -144,7 +152,7 @@ def verify(
         return VerificationSkipped(f"the 'signing' extra is not usable: {exc}")
 
     policy = Identity(
-        identity=_expected_identity(owner, repo),
+        identity=_expected_identity(owner, repo, workflow, ref),
         issuer=GITHUB_ISSUER,
     )
     try:

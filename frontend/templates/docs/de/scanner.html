@@ -363,7 +363,7 @@ Attestierungsprüfung abgerufen. Der Befehl weist im Log darauf hin; siehe
 einen Pull Request für <code>data/vulnerabilities.json</code>. Dabei kommen nur Einträge
 hinzu. Entfernen einer Meldung erfordert eine bewusste Bearbeitung.</p>
 <p>Eine leere Liste <code>vulnerabilities</code> bedeutet, dass keine geladene Meldung zur
-Version passt. SIE bestätigt nicht die Vollständigkeit der Quellen. Eigene
+Version passt. Sie bestätigt nicht die Vollständigkeit der Quellen. Eigene
 Datenbanken lassen sich ergänzen:</p>
 <pre><code class="language-yaml">scanner:
   vulnerability_db: /etc/check-opencloud-security/advisories.json
@@ -934,7 +934,7 @@ Gültigkeit, Restlaufzeit, Namen, Kettenlänge und weitere Messwerte:</p>
 </code></pre>
 <p><code>null</code> bedeutet „nicht ermittelt“. Fehlende Laufzeitunterstützung, ein nicht
 vorhandenes <code>openssl</code> oder ein fehlender OCSP-Responder können einzelne
-Prüfungen verhindern. SIE werden dann nicht als bestanden ausgewiesen; siehe
+Prüfungen verhindern. Sie werden dann nicht als bestanden ausgewiesen; siehe
 <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0013-transport-security-is-measured-not-assumed.md">ADR 0013</a>.</p>
 <p>Auch ein nicht vertrauenswürdiges Zertifikat wird auf Ablauf, Namen und
 Laufzeit untersucht. <code>probe_deprecated</code> öffnet zusätzliche Handshakes für alte

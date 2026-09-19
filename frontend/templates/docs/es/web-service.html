@@ -582,6 +582,16 @@ entender que alguien podría.</p>
 <td>Intervalo mínimo entre dos actualizaciones de los mismos datos de referencia lanzadas por el operador. La prueba en seco del área, que lee ambas fuentes y no aplica nada, se retiene durante el mismo intervalo con una clave propia, para que siga disponible justo después de que una actualización haya notificado un fallo</td>
 </tr>
 <tr>
+<td><code>COS_WEB_UPDATE_CHECK</code></td>
+<td><code>true</code></td>
+<td>Ask GitHub whether a newer release of this service exists, for the operator's area only and at most every six hours. Set <code>false</code> with no outbound access</td>
+</tr>
+<tr>
+<td><code>COS_WEB_ADMIN_UPDATE_DIR</code></td>
+<td><em>(unset)</em></td>
+<td>A writable tmpfs (the compose files mount one at <code>/var/lib/opencloud-scan/update</code>). Set, the operator's area can install a newer release: the web bundle is downloaded from GitHub, verified against its build attestation, unpacked here, and the web and worker processes restart on it - a short downtime, lasting until the containers restart. Unset, the area only says an update exists</td>
+</tr>
+<tr>
 <td><code>COS_WEB_AUDIT_LOG</code></td>
 <td><code>false</code></td>
 <td>Escribe un registro de auditoría por cada solicitud de análisis, rechazo y límite alcanzado</td>

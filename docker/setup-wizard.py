@@ -5276,6 +5276,26 @@ def _web_environment(setup: Setup) -> list[EnvEntry]:
                     "band offers no way out.",
                 )
             )
+    if _installs_updates(setup):
+        entries.append(
+            _entry(
+                "COS_WEB_UPDATE_CHECK",
+                '"true"',
+                "The operator's area says when a newer release is on GitHub: one",
+                "cached lookup every six hours, for the area only.",
+            )
+        )
+        entries.append(
+            _entry(
+                "COS_WEB_ADMIN_UPDATE_DIR",
+                f'"{UPDATE_DIRECTORY}"',
+                "And installs it from a button: the release's web bundle, verified",
+                "against its GitHub build attestation, unpacked on the tmpfs below",
+                "and run in place of the image's code - a short downtime, lasting",
+                "until the containers restart (ADR 0070). Remove this line to only",
+                "be told.",
+            )
+        )
     entries.append(
         _entry(
             "COS_WEB_AUDIT_LOG",
@@ -5436,6 +5456,15 @@ def _worker_environment(setup: Setup) -> list[EnvEntry]:
             )
         )
     entries.extend(_encryption_environment(setup))
+    if _installs_updates(setup):
+        entries.append(
+            _entry(
+                "COS_WEB_ADMIN_UPDATE_DIR",
+                f'"{UPDATE_DIRECTORY}"',
+                "Follows a release the operator's area installed, verifying it",
+                "for itself, within a minute.",
+            )
+        )
     return entries
 
 
@@ -5525,6 +5554,22 @@ def _image_block(setup: Setup, container: str) -> str:
         "    image: check-opencloud-security-web:latest\n"
         f"    container_name: {setup.project_name}-{container}\n"
     )
+
+
+#: The tmpfs a release installed from the operator's area is unpacked onto.
+UPDATE_DIRECTORY = "/var/lib/opencloud-scan/update"
+
+
+def _installs_updates(setup: Setup) -> bool:
+    """Whether the operator's area can install a newer release (ADR 0070)."""
+    return setup.admin_enabled
+
+
+def _update_tmpfs(setup: Setup) -> str:
+    """The writable place an installed release lives until the next restart."""
+    if not _installs_updates(setup):
+        return ""
+    return f"      - {UPDATE_DIRECTORY}:size=64m,uid=10001,gid=10001,mode=0700\n"
 
 
 def _update_label(setup: Setup) -> str:
@@ -5687,7 +5732,7 @@ services:
 {_audit_mount(setup)}    read_only: true
     tmpfs:
       - /tmp:size=16m
-    security_opt:
+{_update_tmpfs(setup)}    security_opt:
       - no-new-privileges:true
     cap_drop:
       - ALL
@@ -5720,7 +5765,7 @@ services:
     read_only: true
     tmpfs:
       - /tmp:size=16m
-    security_opt:
+{_update_tmpfs(setup)}    security_opt:
       - no-new-privileges:true
     cap_drop:
       - ALL

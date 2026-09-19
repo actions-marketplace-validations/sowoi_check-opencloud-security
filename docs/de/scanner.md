@@ -280,7 +280,7 @@ einen Pull Request für `data/vulnerabilities.json`. Dabei kommen nur Einträge
 hinzu. Entfernen einer Meldung erfordert eine bewusste Bearbeitung.
 
 Eine leere Liste `vulnerabilities` bedeutet, dass keine geladene Meldung zur
-Version passt. SIE bestätigt nicht die Vollständigkeit der Quellen. Eigene
+Version passt. Sie bestätigt nicht die Vollständigkeit der Quellen. Eigene
 Datenbanken lassen sich ergänzen:
 
 ```yaml
@@ -726,7 +726,7 @@ Gültigkeit, Restlaufzeit, Namen, Kettenlänge und weitere Messwerte:
 
 `null` bedeutet „nicht ermittelt“. Fehlende Laufzeitunterstützung, ein nicht
 vorhandenes `openssl` oder ein fehlender OCSP-Responder können einzelne
-Prüfungen verhindern. SIE werden dann nicht als bestanden ausgewiesen; siehe
+Prüfungen verhindern. Sie werden dann nicht als bestanden ausgewiesen; siehe
 [ADR 0013](../../adr/0013-transport-security-is-measured-not-assumed.md).
 
 Auch ein nicht vertrauenswürdiges Zertifikat wird auf Ablauf, Namen und

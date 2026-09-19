@@ -53,6 +53,7 @@ from fastapi.responses import (
 )
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.background import BackgroundTask
 from starlette.datastructures import UploadFile as StarletteUploadFile
 from starlette.responses import StreamingResponse
 
@@ -244,6 +245,7 @@ from .store import (
     ScanStore,
     target_hostname,
 )
+from .updates import request_update, restart_into, update_state
 from .workflows import (
     ASYNC_NOTE,
     CONFLICT_NOTE,
@@ -264,6 +266,12 @@ from .workflows import (
 )
 
 LOGGER = logging.getLogger("check_opencloud.web")
+
+
+async def _restart_soon(tree: Path) -> None:  # pragma: no cover - replaces the process
+    """Restart into a verified, unpacked release once the answer has been sent."""
+    await asyncio.sleep(1)
+    restart_into(tree)
 
 
 def mcp_available() -> bool:
@@ -2495,6 +2503,9 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
                 # The same two functions answer /admin/state, so the card and
                 # the document an operator copies cannot disagree.
                 "surfaces": surface_rows(surfaces(settings), audit_surface(settings)),
+                # Which release runs, and whether a newer one is out. One
+                # cached PyPI lookup at most every few hours (webapp.updates).
+                "update": await update_state(app.state.backend, settings),
                 "outcome": outcome,
                 # Stated rather than inherited. `is_indexable` already
                 # answers no for any path outside PUBLIC_PAGES, and the
@@ -2683,6 +2694,39 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
             if wants_html(request):
                 return page(request, "admin.html", await admin_context(operator, answer))
             return JSONResponse(answer)
+
+        @app.post(f"{ADMIN_PATH}/update", include_in_schema=False)
+        async def admin_update(request: Request) -> Response:
+            """
+            Switch this deployment to the newest release on GitHub.
+
+            Volatile by design (ADR 0070): the release's web bundle is
+            fetched, its build attestation verified against the release
+            workflow, unpacked on
+            a tmpfs, and this process restarts from it once the answer has
+            been sent; the workers follow through a Redis key. The version
+            is the one GitHub named, never one the form sent.
+            """
+            operator = admin_operator(request)
+            if operator is None:
+                return not_found(request)
+            if cross_origin_post(request, settings):
+                LOGGER.info("admin_cross_site")
+                return _cross_site_response(request, wants_html(request))
+            state, tree = await request_update(
+                app.state.backend, settings, operator.username
+            )
+            answer = {"state": state, "action": "update"}
+            response: Response
+            if wants_html(request):
+                response = page(
+                    request, "admin.html", await admin_context(operator, answer)
+                )
+            else:
+                response = JSONResponse(answer)
+            if tree is not None:
+                response.background = BackgroundTask(_restart_soon, tree)
+            return response
 
         @app.post(f"{ADMIN_PATH}/exclusions", include_in_schema=False)
         async def admin_exclusions(

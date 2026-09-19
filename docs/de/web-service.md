@@ -211,6 +211,8 @@ Die Einstellungen werden beim Start aus Umgebungsvariablen gelesen.
 | `COS_WEB_ADMIN_SIGN_OUT_URL` | *nicht gesetzt* | Abmeldepfad des vorgeschalteten Providers; lokaler Pfad oder HTTP(S)-URL |
 | `COS_WEB_ADMIN_AUDIT_BUFFER` | `200` | Anzahl Audit-Einträge für die Liveansicht bei stdout-Protokollierung; 0 speichert keine |
 | `COS_WEB_ADMIN_REFRESH_COOLDOWN` | `60` | Mindestabstand zwischen manuellen Aktualisierungen derselben Quelle; Testabruf hat einen eigenen Zähler |
+| `COS_WEB_UPDATE_CHECK` | `true` | Fragt GitHub, ob es ein neueres Release dieses Dienstes gibt - nur für den Betreiberbereich und höchstens alle sechs Stunden. Ohne ausgehenden Zugang setzt du `false` |
+| `COS_WEB_ADMIN_UPDATE_DIR` | *nicht gesetzt* | Ein beschreibbares tmpfs (die Compose-Dateien hängen eins unter `/var/lib/opencloud-scan/update` ein). Gesetzt, kannst du im Betreiberbereich ein neueres Release installieren: Das Web-Bundle wird von GitHub geladen, gegen seine Build-Attestierung geprüft, hier entpackt, und Web- und Worker-Prozesse starten damit neu - kurze Ausfallzeit, gültig bis zum Neustart der Container. Nicht gesetzt, zeigt der Bereich nur an, dass es ein Update gibt |
 | `COS_WEB_AUDIT_LOG` | `false` | Separates Audit-Log für angenommene und abgewiesene Anfragen sowie Limits |
 | `COS_WEB_AUDIT_LOG_TARGETS` | `false` | Zielhostnamen im Audit-Log im Klartext erfassen; für interne Installationen |
 | `COS_WEB_AUDIT_SALT` | *zufällig je Prozess* | Geheimnis für Audit-Fingerabdrücke; fester Wert ermöglicht Zuordnung über Neustarts hinweg |
@@ -369,7 +371,7 @@ Ungültige Einträge oder mehr als 253 Zeichen verhindern den Start.
 Besucher erfahren nur, dass das Ziel ausgeschlossen wurde, nicht den passenden
 Konfigurationseintrag. Siehe [ADR 0043](../../adr/0043-an-operators-exclusion-outranks-every-allowance.md).
 
-Der Operator-Bereich kann weitere Einträge in Redis verwalten. SIE gelten ab der
+Der Operator-Bereich kann weitere Einträge in Redis verwalten. Sie gelten ab der
 nächsten Anfrage in allen Prozessen, auch für wartende Aufträge. Einträge aus
 der Umgebung lassen sich dort nicht entfernen; äquivalente Schreibweisen werden
 als derselbe Ausschluss behandelt. Dauerhafte Vorgaben gehören in die Umgebung,

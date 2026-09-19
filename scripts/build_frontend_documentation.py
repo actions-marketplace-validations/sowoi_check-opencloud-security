@@ -65,19 +65,47 @@ def _section(source: str, start: str | None, end: str | None) -> str:
 _RELEASE_HEADING = re.compile(r"^## \[(\d+\.\d+\.\d+)\][^\n]*$", re.MULTILINE)
 
 
-def _latest_releases(source: str, count: int) -> str:
+_UNRELEASED_HEADING = re.compile(r"^## \[Unreleased\][^\n]*$", re.MULTILINE)
+
+
+def _project_version() -> str:
+    """The version in ``pyproject.toml`` - the release this build will run as."""
+    text = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    match = re.search(r'^version\s*=\s*"([^"]+)"', text, re.MULTILINE)
+    if match is None:
+        raise ValueError("no version in pyproject.toml")
+    return match.group(1)
+
+
+def _latest_releases(source: str, count: int, version: str | None = None) -> str:
     """The newest ``count`` released sections of a Keep a Changelog file.
 
-    Everything before the first version heading - the preamble and
-    ``[Unreleased]`` - is dropped, and so is everything after the last one
-    kept, so the page lists what shipped and nothing that has not.
+    Everything before the first version heading - the preamble - is dropped,
+    and so is everything after the last one kept.
+
+    ``version`` is the release this build runs as. When the changelog has no
+    heading for it yet, the build is the version bump itself: the release
+    workflow renames ``[Unreleased]`` only after the image and the bundle of
+    that commit were built, so the ``[Unreleased]`` section *is* what the
+    running release changed and is shown under its version. Without this the
+    tab always named the release before the one serving it.
     """
     headings = list(_RELEASE_HEADING.finditer(source))
     if not headings:
         raise ValueError("no released version heading found")
+    pending = ""
+    if version and all(heading.group(1) != version for heading in headings):
+        unreleased = _UNRELEASED_HEADING.search(source)
+        body = (
+            source[unreleased.end():headings[0].start()].strip()
+            if unreleased and unreleased.start() < headings[0].start()
+            else ""
+        )
+        pending = f"## [{version}] - this release\n\n{body}\n\n"
+        count -= 1
     start = headings[0].start()
     end = headings[count].start() if len(headings) > count else len(source)
-    return source[start:end].rstrip() + "\n"
+    return pending + source[start:end].rstrip() + "\n"
 
 
 def _demote_headings(source: str) -> str:
@@ -283,7 +311,7 @@ def render_operator_page(slug: str) -> str:
     page = OPERATOR_DOCUMENTATION_BY_SLUG[slug]
     source = (REPO_ROOT / page.source).read_text(encoding="utf-8")
     selected = (
-        _latest_releases(source, page.latest_releases)
+        _latest_releases(source, page.latest_releases, _project_version())
         if page.latest_releases
         else _section(source, page.start_heading, page.end_heading)
     )

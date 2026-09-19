@@ -278,7 +278,8 @@ def test_successor_is_looked_up_per_track():
     """7.2 succeeds 7.1 on rolling, but nothing succeeds it on production."""
     line = SCHEDULE.lines[(7, 1)]
 
-    assert SCHEDULE.successor(line, "rolling").name == "7.2"
+    successor = SCHEDULE.successor(line, "rolling")
+    assert successor is not None and successor.name == "7.2"
     assert SCHEDULE.successor(SCHEDULE.lines[(7, 2)], "production") is None
 
 

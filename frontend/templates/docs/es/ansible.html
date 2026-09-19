@@ -93,6 +93,9 @@ explícitamente.</p>
 <p>Mantenga <code>opencloud_check_interval</code> en <code>24h</code> o más. Cada ejecución es un
 análisis real contra una instancia real, no una consulta a una caché, y la
 nota de una instancia no cambia de un minuto a otro.</p>
+<p>Cualquier otra opción del <code>CheckCommand</code> - <code>--eol-warning</code>, <code>--release-track</code>, <code>--ignore-hardening</code> y las demás - se define con <code>opencloud_check_extra_vars</code>, un mapa del nombre de la variable sin el prefijo <code>opencloud_</code> a su valor; una lista repite la opción una vez por elemento.</p>
+<pre><code class="language-ini">opencloud_check_extra_vars={&quot;eol_warning&quot;: 30, &quot;ignore_hardening&quot;: [&quot;hstsPreload&quot;]}
+</code></pre>
 <p>La tabla completa de variables, incluidas las específicas de cada rol, está en
 <a href="https://github.com/sowoi/check-opencloud-security/blob/main/ansible/README.md#variable-reference"><code>ansible/README.md</code></a>.</p>
 <h2 id="before-you-commit-a-change-to-the-role">Antes de confirmar un cambio en el rol</h2>

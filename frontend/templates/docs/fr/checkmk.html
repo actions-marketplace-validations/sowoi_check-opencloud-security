@@ -81,7 +81,7 @@ line, the rest of the output as the service's details, and everything after
 the <code>|</code> as metrics. Nothing needs converting: the
 <a href="/documentation#performance-data">performance data</a> this plugin already writes -
 <code>rating</code>, <code>vulnerabilities</code>, <code>hardenings_missing</code>, <code>extra_checks_failed</code>,
-<code>update_available</code>, <code>support_days_left</code>, <code>cert_days_left</code>, <code>time</code> - is the
+<code>update_available</code>, <code>support_days_left</code>, <code>cert_days_left</code>, <code>upgrade_path_complete</code>, <code>time</code> - is the
 Nagios format Checkmk was built to read, thresholds and all.</p>
 <p>One warning about scheduling: the default check interval is one minute, and a
 scan makes around twenty HTTP requests and five TCP connects to the instance.

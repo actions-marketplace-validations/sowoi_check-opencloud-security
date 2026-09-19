@@ -273,8 +273,9 @@ def test_each_host_is_remembered_separately(tmp_path):
 
     reloaded = load_baseline(path)
 
-    assert reloaded.snapshot("one.example.com").findings == ("a:one",)
-    assert reloaded.snapshot("two.example.com").rating == 2
+    one, two = reloaded.snapshot("one.example.com"), reloaded.snapshot("two.example.com")
+    assert one is not None and one.findings == ("a:one",)
+    assert two is not None and two.rating == 2
     assert reloaded.compare(
         "two.example.com", Snapshot(rating=2, eol=False, findings=("a:one",))
     ).regressed

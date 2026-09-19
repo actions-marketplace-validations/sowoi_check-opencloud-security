@@ -48,7 +48,9 @@ def run(document, capsys, **kwargs):
         )
     text, _, perfdata = capsys.readouterr().out.rstrip("\n").rpartition(" | ")
     first, *details = text.split("\n")
-    return NagiosExitCode(excinfo.value.code), first, details, perfdata
+    code = excinfo.value.code
+    assert isinstance(code, int), code
+    return NagiosExitCode(code), first, details, perfdata
 
 
 def metrics(perfdata):

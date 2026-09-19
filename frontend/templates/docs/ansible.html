@@ -90,6 +90,9 @@ cases - set it explicitly.</p>
 <p>Leave <code>opencloud_check_interval</code> at <code>24h</code> or higher. Each run is a real scan
 against a real instance rather than a cached lookup, and nothing about an
 instance's rating changes from minute to minute.</p>
+<p>Every other option of the <code>CheckCommand</code> - <code>--eol-warning</code>, <code>--release-track</code>, <code>--ignore-hardening</code> and the rest - is set through <code>opencloud_check_extra_vars</code>, a map from the custom variable name without its <code>opencloud_</code> prefix to its value; a list repeats the flag once per element.</p>
+<pre><code class="language-ini">opencloud_check_extra_vars={&quot;eol_warning&quot;: 30, &quot;ignore_hardening&quot;: [&quot;hstsPreload&quot;]}
+</code></pre>
 <p>The full variable table, including the ones specific to each role, is in
 <a href="https://github.com/sowoi/check-opencloud-security/blob/main/ansible/README.md#variable-reference"><code>ansible/README.md</code></a>.</p>
 <h2 id="before-you-commit-a-change-to-the-role">Before you commit a change to the role</h2>

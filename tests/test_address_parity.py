@@ -91,6 +91,13 @@ def _finding(result: dict, check: str) -> dict | None:
     return next((entry for entry in result["extraChecks"] if entry["id"] == check), None)
 
 
+def _present(result: dict, check: str) -> dict:
+    """The finding, which the test expects to be in the result."""
+    found = _finding(result, check)
+    assert found is not None, f"{check} is missing from the result"
+    return found
+
+
 @needs_ipv6
 def test_a_node_that_missed_the_rollout_is_reported_when_every_address_is_dialled():
     """The lagging node's release, headers and demo accounts must all surface."""
@@ -164,9 +171,9 @@ def test_a_waived_header_is_not_a_difference_between_nodes():
             release_settings=NO_UPDATES,
         )
 
-    assert _finding(waived, "addressParity")["passed"] is True
-    assert _finding(unwaived, "addressParity")["passed"] is False
-    assert _finding(unwaived, "addressParity")["severity"] == "medium"
+    assert _present(waived, "addressParity")["passed"] is True
+    assert _present(unwaived, "addressParity")["passed"] is False
+    assert _present(unwaived, "addressParity")["severity"] == "medium"
 
 
 def test_a_resolved_address_that_does_not_answer_fails_parity():
@@ -228,12 +235,11 @@ def test_a_pinned_scan_dials_only_the_pinned_addresses_and_never_resolves(monkey
 
     dialled: list[str] = []
     monkeypatch.setattr(scanner_module.socket, "getaddrinfo", refuse)
-    monkeypatch.setattr(
-        scanner_module,
-        "_observe_address",
-        lambda base_url, hostname, address, settings: dialled.append(address)
-        or AddressObservation(address=address, reachable=True),
-    )
+    def observe(base_url, hostname, address, settings):
+        dialled.append(address)
+        return AddressObservation(address=address, reachable=True)
+
+    monkeypatch.setattr(scanner_module, "_observe_address", observe)
     with FakeOpenCloud() as instance:
         scan(
             f"{NAME}:{instance.port}",

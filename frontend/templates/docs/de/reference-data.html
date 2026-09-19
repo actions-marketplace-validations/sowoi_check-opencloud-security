@@ -144,7 +144,7 @@ COS_SCANNER_VULNERABILITY_DB=/var/lib/check-opencloud-security/vulnerabilities.j
 <p><strong>Prüfe die Lesbarkeit nach jeder Änderung von Pfad oder Benutzer:</strong></p>
 <ul>
 <li>Eine fehlende oder unlesbare Zeitplandatei deaktiviert die End-of-Life-Prüfung. Es gibt keinen Rückfall auf die gebündelte Datei. Die Ausgabe meldet <code>Release lifecycle: unknown (no release schedule available)</code>, <code>scheduleUpdated</code> ist <code>null</code>. Eine eigentlich nicht mehr unterstützte Version kann dadurch allein anhand der übrigen Prüfungen bewertet werden.</li>
-<li>Eine fehlende oder unlesbare Advisory-Datei wird mit einer Warnung auf stderr übersprungen. SIE kann trotzdem in <code>advisorySources</code> stehen; kontrolliere daher auch die Warnmeldungen.</li>
+<li>Eine fehlende oder unlesbare Advisory-Datei wird mit einer Warnung auf stderr übersprungen. Sie kann trotzdem in <code>advisorySources</code> stehen; kontrolliere daher auch die Warnmeldungen.</li>
 </ul>
 <h2 id="running-it-daily-with-systemd">Täglicher Lauf mit systemd</h2>
 <p>Unter <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/systemd"><code>contrib/systemd/</code></a> liegen der <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/systemd/check-opencloud-security-refresh.service">Refresh-Service</a> und der <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/systemd/check-opencloud-security-refresh.timer">Timer</a>. <code>StateDirectory=</code> erlaubt dem Service das Schreiben unter <code>/var/lib/check-opencloud-security</code>. Der Timer läuft täglich mit einer zufälligen Verzögerung von bis zu einer Stunde und holt ausgefallene Läufe nach.</p>

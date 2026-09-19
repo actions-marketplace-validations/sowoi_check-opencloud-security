@@ -120,6 +120,30 @@ groups:
             imperfect. Compare the current scan with an archived one using
             `check-opencloud-scanner diff before.json after.json`.
 
+      # The plugin's cert_days_left perfdata carries the same thresholds:
+      # warning inside the scan's margin, critical once expired.
+      - alert: OpenCloudCertificateExpiring
+        expr: opencloud_security_certificate_days_remaining < 14
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.host }} presents a certificate that expires in {{ $value }} days"
+          description: >-
+            Renew the certificate before it expires; clients refuse the
+            instance once it has. A negative value means it already expired.
+
+      - alert: OpenCloudUpgradePathIncomplete
+        expr: opencloud_security_upgrade_path_complete == 0
+        for: 1h
+        labels:
+          severity: info
+        annotations:
+          summary: "Upgrading {{ $labels.host }} to {{ $labels.target_version }} leaves known vulnerabilities open"
+          description: >-
+            No published release fixes every advisory affecting this
+            instance yet. Upgrade anyway, and watch for the next release.
+
       - alert: OpenCloudUpdateAvailable
         expr: opencloud_security_update_available == 1
         for: 7d

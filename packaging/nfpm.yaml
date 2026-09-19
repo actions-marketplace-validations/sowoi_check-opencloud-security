@@ -118,6 +118,8 @@ contents:
   # somebody's instance once a minute.
   - src: contrib/checkmk/opencloud_security
     dst: /usr/share/doc/check-opencloud-security/checkmk-local-check.sh
+  - src: contrib/icinga2/check_opencloud_security.conf
+    dst: /usr/share/doc/check-opencloud-security/icinga2-checkcommand.conf
   - src: build/distro-stage/doc/README.md
     dst: /usr/share/doc/check-opencloud-security/README.md
   - src: CHANGELOG.md

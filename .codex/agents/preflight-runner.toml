@@ -1,0 +1,8 @@
+name = "preflight_runner"
+description = "Read-only local CI and generated-file checks."
+sandbox_mode = "read-only"
+developer_instructions = """
+Read and follow the full instructions in .agents/skills/preflight/SKILL.md.
+Run independent checks in parallel where practical, never modify the working
+tree, and return the requested pass/fail/warning/skipped table.
+"""

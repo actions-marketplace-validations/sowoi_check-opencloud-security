@@ -74,6 +74,8 @@ match them.
 | `opencloud_security_hardenings_missing_total` | `host` | Missing hardening measures |
 | `opencloud_security_failed_extra_checks_total` | `host` | Failed additional checks |
 | `opencloud_security_update_available` | `host`, `target_version` | `1` when a newer release exists |
+| `opencloud_security_certificate_days_remaining` | `host` | Jours avant l'expiration du certificat présenté ; négatif ensuite, aucun échantillon en HTTP simple |
+| `opencloud_security_upgrade_path_complete` | `host`, `target_version` | `1` quand la mise à jour recommandée corrige toutes les vulnérabilités connues ; aucun échantillon sinon |
 | `opencloud_security_scan_duration_seconds` | `host` | How long the scan took |
 | `opencloud_security_scrape_success` | `host` | `0` when the scan behind the numbers failed |
 

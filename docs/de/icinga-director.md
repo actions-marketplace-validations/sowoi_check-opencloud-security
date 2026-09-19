@@ -19,6 +19,8 @@
    | `--proxy` | Optionales Datenfeld `$opencloud_proxy$` | HTTP-/HTTPS-Proxy |
    | `--debug` | Optionales boolesches Set-if-Datenfeld `$opencloud_debug$` | Ausführliche Diagnoseausgabe |
 
+   Das sind die gängigen. Jede weitere Option steht mit ihrem Variablennamen in [`contrib/icinga2/check_opencloud_security.conf`](../../contrib/icinga2/check_opencloud_security.conf); lege sie genauso an.
+
    Aktiviere bei optionalen Argumenten *Skip this argument on empty value*. Director lässt das Argument dann weg, wenn kein Wert gesetzt ist.
 
 3. **Datenfelder für Services bereitstellen**

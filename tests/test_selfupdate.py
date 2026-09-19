@@ -196,7 +196,12 @@ def test_a_real_run_executes_the_planned_command(monkeypatch):
         monkeypatch, "/home/u/.local/pipx/venvs/check-opencloud-security/x.py"
     )
     ran = []
-    monkeypatch.setattr(selfupdate, "run_upgrade", lambda plan: ran.append(plan) or 0)
+
+    def run_upgrade(plan):
+        ran.append(plan)
+        return 0
+
+    monkeypatch.setattr(selfupdate, "run_upgrade", run_upgrade)
 
     code = selfupdate.upgrade_self(output=lambda _: None)
 

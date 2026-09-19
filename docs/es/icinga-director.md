@@ -24,6 +24,8 @@ sirven tanto para la instalación nativa como para la imagen de
    | `--proxy`    | Data Field `$opencloud_proxy$`, opcional | Proxy HTTP/HTTPS |
    | `--debug`    | Data Field de tipo set-if `$opencloud_debug$` (booleano), opcional | Salida de depuración detallada |
 
+   Estos son los habituales. Todas las demás opciones, con el nombre de su variable, están en [`contrib/icinga2/check_opencloud_security.conf`](../../contrib/icinga2/check_opencloud_security.conf); añádelas de la misma forma.
+
    En cada argumento opcional, marque *Skip this argument on empty value* para
    que Director omita la opción por completo cuando el campo no tenga valor.
 

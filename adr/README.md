@@ -76,6 +76,7 @@ project. Read the accepted records that affect an area before changing it.
 | [0067](0067-a-release-ends-with-its-github-release-not-its-tag.md) | A release ends with its GitHub release, not its tag | Accepted |
 | [0068](0068-chromium-is-a-third-browser-test-engine-behind-the-dead-proxy.md) | Chromium is a third browser test engine, behind the dead proxy | Proposed |
 | [0069](0069-login-throttling-is-observed-only-when-the-operator-asks.md) | Login throttling is observed only when the operator asks | Proposed |
+| [0070](0070-the-operator-area-installs-attested-releases-in-place.md) | The operator area installs attested releases in place | Proposed |
 
 ## Writing a new record
 
