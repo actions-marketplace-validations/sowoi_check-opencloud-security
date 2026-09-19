@@ -31,6 +31,7 @@
 
 <nav class="docs-toc card section-gap" aria-label="{{ t('docs.guide.toc.aria') }}" data-reveal>
   <p class="kicker">{{ t('docs.guide.toc.heading') }}</p>
+  <a href="#1280-this-release" lang="en">[1.28.0] - this release</a>
   <a href="#1272-2026-09-19" lang="en">[1.27.2] - 2026-09-19</a>
   <a href="#1271-2026-09-19" lang="en">[1.27.1] - 2026-09-19</a>
   <a href="#1270-2026-09-19" lang="en">[1.27.0] - 2026-09-19</a>
@@ -40,10 +41,10 @@
   <a href="#1252-2026-09-18" lang="en">[1.25.2] - 2026-09-18</a>
   <a href="#1251-2026-09-18" lang="en">[1.25.1] - 2026-09-18</a>
   <a href="#1250-2026-09-17" lang="en">[1.25.0] - 2026-09-17</a>
-  <a href="#1242-2026-09-17" lang="en">[1.24.2] - 2026-09-17</a>
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="en">
+<h2 id="1280-this-release">[1.28.0] - this release</h2>
 <h2 id="1272-2026-09-19">[1.27.2] - 2026-09-19</h2>
 <h3 id="added">Added</h3>
 <ul>
@@ -562,38 +563,6 @@
   English guide index also linked to a German index that was never written;
   it now points at the three translated guide directories.</p>
 </li>
-</ul>
-<h2 id="1242-2026-09-17">[1.24.2] - 2026-09-17</h2>
-<h3 id="changed_4">Changed</h3>
-<ul>
-<li><strong>The German interface and guides now address the reader as "du"
-  throughout.</strong> The remaining formal strings in the German catalogue and the
-  last formal sentences in <code>docs/de/</code> are rewritten, and the test that
-  tolerated a list of older formal strings now fails on any formal German
-  string, in the catalogue and in the German guides alike.</li>
-<li><strong>Spanish guide sources are now available in the frontend.</strong> Every public
-  guide has a matching <code>docs/es/</code> source, generated Spanish template and
-  search index entry, so a Spanish visitor no longer gets the English guide
-  under a notice. The languages with guide sources are listed once, in
-  <code>GUIDE_LANGUAGES</code>, for the generator, the route and the search index. See
-  <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0063-public-guides-have-spanish-sources.md">ADR 0063</a>.</li>
-</ul>
-<h3 id="fixed_5">Fixed</h3>
-<ul>
-<li><strong>The browser tests pass in Firefox again.</strong> Playwright's Firefox drops an
-  emulated colour scheme once a page sends
-  <code>Cross-Origin-Opener-Policy: same-origin</code>, so the dark-theme test now gives
-  Firefox a browser whose system theme is dark instead; and waiting for a
-  finished scan tolerates the moment during the result page's reload when the
-  new document has no body yet.</li>
-<li><strong>The MCP sign-in no longer warns about <code>validate_token_resource</code> at
-  startup.</strong> The token verifier already checks a token's audience against
-  <code>COS_WEB_MCP_AUTH_AUDIENCE</code>, so the MCP SDK is now told explicitly not to
-  also require the token's resource to equal the resource URL, which would
-  have refused valid tokens once SDK 3.0 turns that check on by default.</li>
-<li><strong>The grade page test matches the reworded English copy again.</strong> It now
-  looks for "Explanations for failed checks", the heading the copy polish
-  gave that item.</li>
 </ul>
 </article>
 {% endblock %}
