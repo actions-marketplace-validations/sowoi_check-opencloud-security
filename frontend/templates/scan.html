@@ -141,6 +141,17 @@
     the wrong answer at everybody, and would be the only answer a reader
     without scripting ever got.
   #}
+  {% if earlier_result %}
+  {#
+    Reached after a submission the target cooldown refused: the reader asked
+    for a new scan and is shown their own last one instead. Said plainly, so
+    an older report is never mistaken for the answer to the new request;
+    the countdown right below is when the new one can be run.
+  #}
+  <p class="alert section-gap flush" role="status" data-earlier-result>
+    <span>{{ t('result.earlier.note') }}</span>
+  </p>
+  {% endif %}
   <p class="hint section-gap flush" id="rescan-note" aria-live="polite">
     {%- if rescan_after -%}
       {{ t('result.rescan.wait',

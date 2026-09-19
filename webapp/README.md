@@ -75,6 +75,7 @@ frontend/
     ├── js/rescan.js  counts down the wait before the same instance may be scanned again
     ├── js/fragment.js the picker over the rendered configuration fragments
     ├── js/compare-offer.js offers the comparison with this tab's earlier scan of the same target
+    ├── js/cooldown-offer.js opens this tab's earlier result when the target cooldown refuses a scan
     ├── js/expiry.js  keeps the expiry line current and warns before a report disappears
     ├── js/remember.js offers back the last settings the form was submitted with
     └── img/*.svg     drawn for this project

@@ -12,6 +12,18 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+### Added
+
+- **A scan the target cooldown refuses now opens your earlier result.** When
+  an instance was scanned too recently and this browser tab has already shown
+  a finished scan of it, the web application opens that result instead of
+  only refusing, says it is the earlier result, and counts down to when a new
+  scan is possible. The earlier result comes from the tab's own scan history
+  (the one the comparison offer keeps in `sessionStorage`); the server never
+  hands one visitor a scan somebody else started, as
+  [ADR 0002](adr/0002-no-scan-result-caching.md) requires. Without such a
+  scan the refusal is unchanged.
+
 ## [1.27.2] - 2026-09-19
 
 ### Added

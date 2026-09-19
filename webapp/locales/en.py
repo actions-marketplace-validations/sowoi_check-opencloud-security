@@ -1420,6 +1420,10 @@ MESSAGES: dict[str, str] = {
     "result.tab.ready": "Report ready: {target}",
     "result.tab.done": "Grade {label}: {target}",
     "result.tab.failed": "Scan failed: {target}",
+    "index.cooldown.opening": 'Opening your earlier result for this instance…',
+    "result.earlier.note": (
+        'This is your earlier result for this instance. It was scanned too recently to scan it again yet; the countdown below shows when a new scan is possible.'
+    ),
     "result.compare.offer": "You scanned this instance earlier in this tab, at {time}.",
     "result.compare.offer.link": "See what changed since then",
     "result.progress.kicker": "In progress",

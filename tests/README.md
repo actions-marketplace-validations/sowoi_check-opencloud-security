@@ -120,6 +120,7 @@ is needed.
 | [`test_webapp_workflows.py`](test_webapp_workflows.py) | The workflow layer: async scans, polling, 404 vs 409, not resubmitting refused targets. |
 | [`test_webapp_worker.py`](test_webapp_worker.py) | The worker turns a queued uuid into a scan and a rendered dashboard. |
 | [`test_webapp_batch.py`](test_webapp_batch.py) | Batch submissions, with each target still checked against every limit. |
+| [`test_webapp_earlier_result.py`](test_webapp_earlier_result.py) | A cooldown refusal opens the tab's own earlier result, marked as earlier, with the countdown. |
 | [`test_webapp_rescan.py`](test_webapp_rescan.py) | Rescans go through the normal submission path, and reading the cooldown does not use it up. |
 | [`test_webapp_probe_guard.py`](test_webapp_probe_guard.py) | A client whose scans keep finding no OpenCloud, the same host included, is blocked for an hour; one finding OpenCloud never is. |
 | [`test_webapp_abuse_guards.py`](test_webapp_abuse_guards.py) | Networks instead of addresses, escalating blocks, refused targets as strikes, the daily cap, misleading DNS names and approval mode. |

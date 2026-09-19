@@ -1397,6 +1397,10 @@ MESSAGES: dict[str, str] = {
     "result.tab.ready": "Rapport prêt : {target}",
     "result.tab.done": "Note {label} : {target}",
     "result.tab.failed": "Échec de l'analyse : {target}",
+    "index.cooldown.opening": 'Ouverture de votre résultat précédent pour cette instance…',
+    "result.earlier.note": (
+        'Voici votre résultat précédent pour cette instance. Elle a été analysée trop récemment pour être analysée à nouveau ; le compte à rebours ci-dessous indique quand une nouvelle analyse sera possible.'
+    ),
     "result.compare.offer": (
         "Vous avez déjà analysé cette instance dans cet onglet, à {time}."
     ),
