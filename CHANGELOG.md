@@ -47,6 +47,11 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   the scanner's own probes so its answer matches the next full scan. See
   ADR 0072.
 
+### Fixed
+
+- **Pytest no longer collects mutmut's generated working copy.** This avoids
+  an `ImportPathMismatchError` between the real and mutated test suites.
+
 ## [1.27.2] - 2026-09-19
 
 ### Added
