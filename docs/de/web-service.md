@@ -194,6 +194,7 @@ Die Einstellungen werden beim Start aus Umgebungsvariablen gelesen.
 | `COS_WEB_SCHEDULE_REFRESH_HOUR` | `4` | UTC-Stunde der täglichen Aktualisierung |
 | `COS_WEB_ADVISORY_REFRESH` | `true` | Sicherheitsmeldungen beim Start und täglich ergänzen |
 | `COS_WEB_ADVISORY_REFRESH_URL` | `https://api.osv.dev/v1/query` | Quelle der Sicherheitsmeldungen |
+| `COS_WEB_ADVISORY_REPOSITORY_URL` | `https://api.github.com/repos/opencloud-eu/opencloud/security-advisories` | OpenClouds Repository-Sicherheitsmeldungen, die OSV nie erreicht haben; `off` schaltet sie ab |
 | `COS_WEB_FRONTEND_DIR` | *neben `webapp/`* | Verzeichnis der Templates und statischen Dateien |
 | `COS_WEB_ENABLE_DOCS` | `false` | Interaktive API-Ansichten /docs und /redoc bereitstellen; maschinenlesbare Verträge bleiben öffentlich |
 | `COS_WEB_ENABLE_MCP` | `true` | MCP und Browser-WebMCP aktivieren; erfordert das optionale MCP-Paket |

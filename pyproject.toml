@@ -1,6 +1,6 @@
 [project]
 name = "check-opencloud-security"
-version = "1.27.1"
+version = "1.27.2"
 description = "Check the security level of your OpenCloud instance with a built-in scanner - no API access required"
 authors = [{ name = "Massoud Ahmed" }]
 requires-python = ">=3.10"
@@ -132,6 +132,11 @@ test = [
     # package or its Firefox build is missing. Reviewed in
     # security/dependencies/playwright.yml; ADR 0061.
     "playwright>=1.63.0",
+    # Property-based tests of the parsers that take text from outside:
+    # version strings, security headers, the SSRF guard and the ';'-joined
+    # configuration lists (tests/test_properties.py). Test-only; reviewed in
+    # security/dependencies/hypothesis.yml.
+    "hypothesis>=6.168.0",
 ]
 # Manual mutation testing of the plugin's judging code (the /mutation-test
 # skill, the mutation-tester agent). Its own group so neither CI nor a plain

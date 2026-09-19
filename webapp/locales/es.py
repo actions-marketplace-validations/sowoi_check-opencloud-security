@@ -1185,7 +1185,7 @@ MESSAGES: dict[str, str] = {
         "espera son las descargas de una página de resultado."
     ),
     "compare.upload.error.rate_limit": "Se han subido varios informes desde su red en poco tiempo. Espere un minuto y vuelva a intentarlo.",
-    "compare.upload.error.blocked": "Varios destinos recientes de su red no eran instancias de OpenCloud accesibles, así que este servicio se toma una pausa con su red, subidas incluidas. El analizador y su comparación también se ejecutan sin límites en su propia máquina.",
+    "compare.upload.error.blocked": "Varios destinos recientes de su red no eran instancias de OpenCloud accesibles, así que este servicio ha pausado temporalmente las solicitudes desde su red, incluidas las subidas de informes. El analizador y su comparación también se ejecutan sin límites en su propia máquina.",
     "compare.upload.error.expired": "Este enlace ha caducado. Los resultados de una comparación se conservan durante {minutes} minutos; vuelva a subir el archivo para repetirla.",
     "search.title": "Buscar",
     "search.description": (
@@ -1393,8 +1393,8 @@ MESSAGES: dict[str, str] = {
     "result.facts.proxy": "Proxy inverso",
     "result.facts.proxy.detected": "Detectado",
     "result.facts.http3": "HTTP/3",
-    "result.facts.http3.value": "Anunciado en UDP {ports}: comprueba que el cortafuegos lo cubre a propósito (sin calificar)",
-    "result.facts.http3.noport": "Anunciado sobre UDP: comprueba que el cortafuegos lo cubre a propósito (sin calificar)",
+    "result.facts.http3.value": "Anunciado en UDP {ports}: compruebe que el cortafuegos permite deliberadamente este tráfico (sin calificar)",
+    "result.facts.http3.noport": "Anunciado en UDP: compruebe que el cortafuegos permite deliberadamente este tráfico (sin calificar)",
     "result.facts.upgrade_path": "Ruta de actualización",
     "result.facts.upgrade_path.complete": "{target} corrige todos los avisos conocidos",
     "result.facts.upgrade_path.partial": "{target} aún deja {open} abierto; {safe} es la primera versión que los corrige todos",

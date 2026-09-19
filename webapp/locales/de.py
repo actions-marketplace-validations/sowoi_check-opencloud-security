@@ -1422,12 +1422,12 @@ MESSAGES: dict[str, str] = {
     "result.facts.proxy": "Reverse Proxy",
     "result.facts.proxy.detected": "Erkannt",
     "result.facts.http3": "HTTP/3",
-    "result.facts.http3.value": "Angekündigt auf UDP {ports} - prüfe, ob deine Firewall das bewusst abdeckt (nicht bewertet)",
-    "result.facts.http3.noport": "Über UDP angekündigt - prüfe, ob deine Firewall das bewusst abdeckt (nicht bewertet)",
+    "result.facts.http3.value": "Über UDP {ports} angekündigt - prüfe, ob deine Firewall diesen Verkehr bewusst zulässt (nicht bewertet)",
+    "result.facts.http3.noport": "Über UDP angekündigt - prüfe, ob deine Firewall diesen Verkehr bewusst zulässt (nicht bewertet)",
     "result.facts.upgrade_path": "Update-Pfad",
-    "result.facts.upgrade_path.complete": "{target} behebt alle bekannten Sicherheitshinweise",
+    "result.facts.upgrade_path.complete": "{target} behebt alle bekannten Sicherheitsmeldungen",
     "result.facts.upgrade_path.partial": "{target} lässt {open} noch offen; {safe} ist die erste Version, die alle behebt",
-    "result.facts.upgrade_path.unfixed": "{target} lässt {open} noch offen; noch keine veröffentlichte Version behebt alle",
+    "result.facts.upgrade_path.unfixed": "{target} lässt {open} noch offen; noch keine veröffentlichte Version behebt alle offenen Meldungen",
     "result.facts.office": "Office",
     "result.facts.calendar": "Kalender",
     "result.facts.calendar.detected": "Ein Dienst antwortet am CalDAV-Pfad",
@@ -1528,9 +1528,9 @@ MESSAGES: dict[str, str] = {
     "result.coverage.kicker": "Abdeckung",
     "result.coverage.heading": "Was dieser Scan nicht gemessen hat",
     "result.coverage.note": (
-        "Eine Note beschreibt die Belege, die dieser Scan gesammelt hat. "
-        "Diese Prüfungen kamen zu keinem Ergebnis, die Note sagt über sie "
-        "also nichts aus."
+        "Eine Note beschreibt, was dieser Scan festgestellt hat. Diese "
+        "Prüfungen kamen zu keinem Ergebnis; über sie sagt die Note also "
+        "nichts aus."
     ),
     "result.coverage.summary": (
         "{measured} von {total} Prüfungen kamen zu einem Ergebnis."
@@ -1546,7 +1546,7 @@ MESSAGES: dict[str, str] = {
     "coverage.reason.not_applicable": "Trifft auf diese Instanz nicht zu",
     "coverage.reason.probe_disabled": "Die Prüfung war für diesen Scan abgeschaltet",
     "coverage.reason.prerequisite_missing": (
-        "Die Instanz hat nicht veröffentlicht, was dafür nötig wäre"
+        "Die Instanz hat die für diese Prüfung nötigen Daten nicht veröffentlicht"
     ),
     "coverage.reason.timeout": "Nichts hat rechtzeitig geantwortet",
     "coverage.reason.unreadable": "Die Antwort war nicht lesbar",

@@ -31,6 +31,7 @@
 
 <nav class="docs-toc card section-gap" aria-label="{{ t('docs.guide.toc.aria') }}" data-reveal>
   <p class="kicker">{{ t('docs.guide.toc.heading') }}</p>
+  <a href="#1272-this-release" lang="en">[1.27.2] - this release</a>
   <a href="#1271-2026-09-19" lang="en">[1.27.1] - 2026-09-19</a>
   <a href="#1270-2026-09-19" lang="en">[1.27.0] - 2026-09-19</a>
   <a href="#1261-2026-09-19" lang="en">[1.26.1] - 2026-09-19</a>
@@ -40,12 +41,52 @@
   <a href="#1251-2026-09-18" lang="en">[1.25.1] - 2026-09-18</a>
   <a href="#1250-2026-09-17" lang="en">[1.25.0] - 2026-09-17</a>
   <a href="#1242-2026-09-17" lang="en">[1.24.2] - 2026-09-17</a>
-  <a href="#1241-2026-09-16" lang="en">[1.24.1] - 2026-09-16</a>
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="en">
-<h2 id="1271-2026-09-19">[1.27.1] - 2026-09-19</h2>
+<h2 id="1272-this-release">[1.27.2] - this release</h2>
 <h3 id="added">Added</h3>
+<ul>
+<li><strong>Property-based tests for the parsers that read outside text.</strong>
+  <code>tests/test_properties.py</code> uses Hypothesis, a new test-only dependency
+  (reviewed in <code>security/dependencies/hypothesis.yml</code>), to generate inputs
+  for version parsing and comparison, advisory ranges, the
+  Strict-Transport-Security and Content-Security-Policy readers, the web
+  application's SSRF guard (private literals, IPv4-mapped and 6to4
+  addresses, arbitrary input) and the <code>;</code>-joined configuration lists.</li>
+<li><strong>The output documents' key names are pinned.</strong>
+  <code>tests/test_output_shape.py</code> fails when a top-level key of the scan result
+  or of the plugin's <code>--format json</code> / webhook payload is renamed, added or
+  dropped, or when a key breaks the camelCase (result) / snake_case (plugin)
+  convention, so a breaking rename cannot land unnoticed.</li>
+<li><strong>The advisory database also reads OpenCloud's repository advisories.</strong>
+  OpenCloud publishes some advisories only on its GitHub repository, where
+  OSV never sees them. The daily refresh (<code>scripts/update_vulnerability_db.py</code>,
+  new <code>--repository-url</code>) and the web application's refresh (new
+  <code>COS_WEB_ADVISORY_REPOSITORY_URL</code>, <code>off</code> to skip) now add those
+  advisories. Their version ranges are read strictly: an advisory fixed on two
+  release lines becomes one range per line, and prose ranges are never
+  guessed at. OSV stays the primary source, and if the repository feed can't
+  be read, OSV's answer is kept.
+  <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0071-repository-advisories-are-a-second-advisory-source.md">ADR 0071</a>.</li>
+</ul>
+<h3 id="changed">Changed</h3>
+<ul>
+<li><strong>Polished recent German, Spanish and French web translations.</strong> Fixed mixed
+  forms of address and several literal or awkward phrases in the operator
+  update messages, scan facts and coverage explanations.</li>
+</ul>
+<h3 id="security">Security</h3>
+<ul>
+<li><strong>GHSA-gf4p-7p27-26w7 (CVE-2026-57500, "Access to internal metadata") is
+  now reported.</strong> OpenCloud published it only as a repository advisory, which
+  never reaches OSV, the one feed the advisory database was refreshed from - so
+  every release before 4.0.8, and 5.0.0 up to 7.2.0, was rated as free of
+  known advisories. The bundled database now carries it, affecting releases
+  from 1.0.0 up to 4.0.8 and from 4.1.0 up to (but not including) 7.2.0.</li>
+</ul>
+<h2 id="1271-2026-09-19">[1.27.1] - 2026-09-19</h2>
+<h3 id="added_1">Added</h3>
 <ul>
 <li>
 <p>Codex can use the repository's Claude Code skills, hooks, subagent roles and
@@ -64,7 +105,7 @@
   (<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0070-the-operator-area-installs-attested-releases-in-place.md">ADR 0070</a>).</p>
 </li>
 </ul>
-<h3 id="changed">Changed</h3>
+<h3 id="changed_1">Changed</h3>
 <ul>
 <li>mypy now also checks the bodies of functions without annotations
   (<code>check_untyped_defs</code> in <code>mypy.ini</code>), so CI type-checks the test suite
@@ -85,7 +126,7 @@
 </li>
 </ul>
 <h2 id="1270-2026-09-19">[1.27.0] - 2026-09-19</h2>
-<h3 id="added_1">Added</h3>
+<h3 id="added_2">Added</h3>
 <ul>
 <li>
 <p>The web report lists an advertised HTTP/3 listener (with its UDP ports) and
@@ -110,7 +151,7 @@
 </li>
 </ul>
 <h2 id="1261-2026-09-19">[1.26.1] - 2026-09-19</h2>
-<h3 id="added_2">Added</h3>
+<h3 id="added_3">Added</h3>
 <ul>
 <li>The operator's area has a <strong>Releases</strong> tab at <code>/admin/docs/releases</code>: the
   ten newest released sections of <code>CHANGELOG.md</code>, newest first, so an
@@ -118,7 +159,7 @@
   area. The publish workflow regenerates it together with the release notes.</li>
 </ul>
 <h2 id="1260-2026-09-19">[1.26.0] - 2026-09-19</h2>
-<h3 id="added_3">Added</h3>
+<h3 id="added_4">Added</h3>
 <ul>
 <li>
 <p><code>--eol-warning DAYS</code> (<code>COS_EOL_WARNING</code>, YAML <code>eol_warning</code>, and a setup
@@ -142,7 +183,7 @@
   never probed.</p>
 </li>
 </ul>
-<h3 id="changed_1">Changed</h3>
+<h3 id="changed_2">Changed</h3>
 <ul>
 <li>
 <p>The "On this page" contents list of a scan report groups its up to twelve
@@ -159,7 +200,7 @@
 </li>
 </ul>
 <h2 id="1253-2026-09-18">[1.25.3] - 2026-09-18</h2>
-<h3 id="added_4">Added</h3>
+<h3 id="added_5">Added</h3>
 <ul>
 <li>
 <p>The <code>/check-changelog-docs</code> skill checks that every new <code>Added</code> or
@@ -228,7 +269,7 @@
   <code>scanner.proxy</code> and <code>releases.proxy</code>, which override the top-level <code>proxy</code>.</p>
 </li>
 </ul>
-<h3 id="security">Security</h3>
+<h3 id="security_1">Security</h3>
 <ul>
 <li>
 <p><strong>Scan targets and redirect hops in deprecated IPv6 site-local space are refused.</strong>
@@ -242,7 +283,7 @@
 </li>
 </ul>
 <h2 id="1252-2026-09-18">[1.25.2] - 2026-09-18</h2>
-<h3 id="added_5">Added</h3>
+<h3 id="added_6">Added</h3>
 <ul>
 <li>The Docker setup wizard moves while it works, in the four places where
   motion tells the operator something the static page could not. Section
@@ -258,7 +299,7 @@
   plain text it printed before, with no escape and no carriage return. A card
   narrows its label column to fit an eighty column terminal and falls back to
   the plain list in a pane too narrow for one.</p>
-<h3 id="changed_2">Changed</h3>
+<h3 id="changed_3">Changed</h3>
 <ul>
 <li><code>specs.md</code> states the no-JavaScript promise as clause X-20: a page read
   without a script works with plain forms and links, and a control only a
@@ -266,7 +307,7 @@
   no longer asks for a <code>RELEASE.md</code> entry when a setting is added - the
   release workflow writes that file (ADR 0048).</li>
 </ul>
-<h3 id="security_1">Security</h3>
+<h3 id="security_2">Security</h3>
 <ul>
 <li><strong>The Docker setup wizard no longer writes credentials through a symbolic
   link.</strong> A link left where <code>.env</code> belongs - even a dangling one, which did
@@ -364,7 +405,7 @@
   group only as a dependency of <code>mcp</code>; it is now listed there itself.</li>
 </ul>
 <h2 id="1250-2026-09-17">[1.25.0] - 2026-09-17</h2>
-<h3 id="added_6">Added</h3>
+<h3 id="added_7">Added</h3>
 <ul>
 <li><strong>The comparison journeys are covered in a real browser.</strong> The Playwright
   suite now downloads a scan report and uploads it as the baseline for a later
@@ -465,7 +506,7 @@
   download sits beside the existing exports on the result page in all four
   languages; the report itself is English, as every export is.</li>
 </ul>
-<h3 id="security_2">Security</h3>
+<h3 id="security_3">Security</h3>
 <ul>
 <li><strong>An uploaded report that carries more findings than a report can is now
   refused rather than read in part.</strong> <code>webapp/imports.py</code> capped every block
@@ -523,7 +564,7 @@
 </li>
 </ul>
 <h2 id="1242-2026-09-17">[1.24.2] - 2026-09-17</h2>
-<h3 id="changed_3">Changed</h3>
+<h3 id="changed_4">Changed</h3>
 <ul>
 <li><strong>The German interface and guides now address the reader as "du"
   throughout.</strong> The remaining formal strings in the German catalogue and the
@@ -553,152 +594,6 @@
 <li><strong>The grade page test matches the reworded English copy again.</strong> It now
   looks for "Explanations for failed checks", the heading the copy polish
   gave that item.</li>
-</ul>
-<h2 id="1241-2026-09-16">[1.24.1] - 2026-09-16</h2>
-<h3 id="added_7">Added</h3>
-<ul>
-<li><strong>The frontend is tested in a real browser.</strong> <code>tests/test_webapp_browser_ux.py</code>
-  and <code>tests/test_webapp_browser_e2e.py</code> drive the web application in WebKit
-  (and Firefox in CI, <code>.github/workflows/browser-tests.yml</code>) through
-  Playwright: every public page runs clean under its Content-Security-Policy,
-  fits a phone screen and hides what is marked hidden; navigation, theme,
-  language, form validation, waiver search, site search and back-to-top
-  behave; and a visitor's journeys work from the form to the report - the
-  waiting page's hand-over, severity filters, all four exports, waivers,
-  keyboard only, without JavaScript and in German. No browser can reach
-  anything but loopback, and Chromium is never used because its builds are
-  Google's. New test dependency <code>playwright</code> has an approved review in
-  <code>security/dependencies/playwright.yml</code>; see
-  <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0061-the-frontend-is-tested-in-real-browsers-that-cannot-leave-loopback.md">ADR 0061</a>.</li>
-<li><strong>Agents can drive the running app through the Playwright MCP server.</strong>
-  <code>.mcp.json</code> starts the server bundled with the same <code>playwright</code> package,
-  configured in <code>.claude/playwright-mcp.json</code> for WebKit, an isolated
-  headless profile and loopback only - no Node.js installation needed.</li>
-</ul>
-<h3 id="fixed_6">Fixed</h3>
-<ul>
-<li><strong>The scan form validates the address in the browser again.</strong> Browsers
-  compile the field's <code>pattern</code> with the <code>v</code> flag, under which the unescaped
-  <code>-</code> in <code>[A-Za-z0-9._~-]</code> is an error, so WebKit and Chromium silently
-  skipped client-side validation and sent malformed addresses to the server.</li>
-<li><strong>The catalogue and reports no longer scroll sideways on phones.</strong> A
-  remediation naming a long environment variable had no break opportunity,
-  and the findings list grew to fit it - 319 pixels past a 390-pixel screen on
-  <code>/catalogue</code>.</li>
-<li><strong>The findings filter note is hidden until a filter is chosen.</strong> A
-  <code>display: flex</code> rule outranked the <code>hidden</code> attribute, so every report showed
-  an empty "showing only" line with a "show all" link.</li>
-</ul>
-<h3 id="changed_4">Changed</h3>
-<ul>
-<li><strong>A new Python dependency needs an approved review first.</strong> Every package in
-  <code>pyproject.toml</code> and every <code>uvx</code> tool in a workflow needs a record in
-  <code>security/dependencies/</code> that says why it is needed, which tests exercise
-  it, what a security review found, and which maintainer approved it.
-  <code>scripts/check_dependencies.py</code>, run by a new <code>dependency-policy</code> job in the
-  supply-chain workflow, fails without one. The 33 dependencies already in use
-  are listed in <code>security/dependencies/grandfathered.txt</code>, which may only
-  shrink. The dependency-review action now fails a pull request that
-  introduces a known-vulnerable package instead of only commenting, and the
-  supply-chain workflow grants its attestation permissions to the one job that
-  attests. See
-  <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0060-a-new-dependency-is-justified-tested-and-reviewed-first.md">ADR 0060</a>.</li>
-<li>
-<p><strong>Routine dependency updates get a seven-day stabilization window.</strong>
-  Dependabot still raises security updates immediately, while monthly version
-  updates wait long enough for a compromised or broken release to be noticed.
-  The composite action also invokes its private scanner environment directly
-  instead of adding that directory to the rest of the job's executable path.</p>
-</li>
-<li>
-<p><strong>Comparing two scans of different instances is refused.</strong> The <code>/compare</code>
-  page, the report upload and the MCP tool <code>compare_scans</code> used to compare a
-  scan of one host with a scan of another and only show a warning. They now
-  answer 422 and compare nothing, matching the default of
-  <code>check-opencloud-scanner diff</code>. A report that names no instance is refused
-  the same way. <code>sameTarget</code> stays in the answer and is always <code>true</code>. See
-  <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0059-a-comparison-refuses-two-different-instances.md">ADR 0059</a>, which
-  supersedes this part of ADR 0029.</p>
-</li>
-</ul>
-<h3 id="documentation_1">Documentation</h3>
-<ul>
-<li><strong>New German text addresses the reader as "du".</strong> New and reworded strings
-  in the German web interface and guides use the informal form instead of
-  "Sie". Existing formal strings are listed in <code>tests/test_webapp_i18n.py</code>,
-  which fails on any other formal string; the list only shrinks as strings
-  are converted. The "Die beiden Scans betreffen unterschiedliche Instanzen"
-  message already uses the new form.</li>
-<li><strong>The release skills build a release skeleton and never write a changelog
-  entry.</strong> <code>/patch-release</code>, <code>/minor-release</code> and <code>/major-release</code> now make
-  exactly the version bump in <code>pyproject.toml</code>, a new <code>uv.lock</code> and the
-  refreshed generated files (release schedule, advisory database, frontend
-  documentation, search indexes), and leave <code>CHANGELOG.md</code> and <code>RELEASE.md</code>
-  alone: the release notes are the <code>[Unreleased]</code> entries the merged pull
-  requests wrote. A new OpenCloud release or advisory found by the refresh is
-  reported to the user instead of written down. The version guard now runs
-  after the commit, because it reads the committed version, with
-  <code>--labels skip-changelog</code> so that only its version check applies.</li>
-<li><strong><code>/open-release-pr</code> checks the changelog before it opens anything.</strong> It
-  stops when the <code>[Unreleased]</code> section is empty, when the release branch
-  changes <code>RELEASE.md</code>, or when it changes a released section of
-  <code>CHANGELOG.md</code>. Entries the release branch adds under <code>[Unreleased]</code> are
-  allowed and become part of the pull request body, which uses the
-  <code>[Unreleased]</code> entries verbatim; the skill never edits either file.</li>
-<li><strong>Claude Code hooks enforce the project's hard rules.</strong> <code>.claude/settings.json</code>
-  refuses publishing or syncing advisories, merging pull requests, creating
-  tags and releases, force-pushing, pushing to <code>main</code>, <code>git reset --hard</code>,
-  aborting a merge and <code>ruff format</code>; refuses hand edits to <code>RELEASE.md</code>, the
-  generated documentation, search indexes, bundled data, the README
-  release-schedule block and the embedded wizard blueprints; asks before a
-  version change or a literal <code>__version__</code>; and refuses inline styles and
-  scripts in templates. When the session ends, it runs the fast generator
-  <code>--check</code> guards for changed sources.</li>
-<li><strong>A privacy guard keeps real instances, scan output and personal data out
-  of commits.</strong> <code>.claude/hooks/privacy_guard.py</code> checks staged changes and
-  commit messages before <code>git commit</code>, the commits a <code>git push</code> would send,
-  pull request bodies, and, when the session ends, everything staged or not
-  yet pushed. It refuses hostnames that look like an instance or scan target,
-  public IP addresses, personal e-mail addresses, credentials and scanner or
-  plugin output in any format, and asks about any other new hostname. Values
-  already on <code>main</code> and public references in
-  <code>.claude/hooks/privacy_allowlist.txt</code> pass.</li>
-<li><strong>The hooks refuse when they cannot run, and have tests.</strong> A guard that is
-  missing, crashes or cannot read its input now refuses the command or edit
-  instead of letting it through; the generator checks at the end of a
-  session run in the project's environment and report a missing dependency
-  as skipped rather than as a stale file; the privacy guard only starts for
-  <code>git</code> and <code>gh</code> commands. <code>tests/test_claude_hooks.py</code> covers all of it.</li>
-<li><strong>The hooks close the gaps a review found.</strong> The Bash guard now applies the
-  Edit guard's rules to shell writes (redirects, <code>tee</code>, <code>sed -i</code>, <code>cp</code>, <code>mv</code>,
-  <code>rm</code>), sees commands inside <code>$(...)</code>, backticks, <code>bash -c</code>, <code>eval</code>, braces,
-  background jobs and <code>xargs</code>, ignores quoted text, heredoc bodies and
-  comments, lets <code>ruff format --check</code>/<code>--diff</code> and redirected <code>git tag</code>
-  listings through, and reads <code>git push -o</code> values correctly. Pushes using
-  <code>--repo</code> are checked against both the main-branch guard and the privacy
-  guard. The privacy
-  guard matches values already on <code>main</code> as whole tokens only, reads diffs
-  without mistaking an added <code>++</code> line for a file header, checks merge
-  commits, checks the branch a push actually sends, reads <code>git commit -F</code>
-  message files and <code>gh</code> <code>-F</code>/<code>--body-file=</code> bodies (issues too), only widens
-  a commit check to the working tree for a real <code>git add</code>, <code>-a</code>/<code>-i</code>/<code>-o</code> or
-  pathspec, and asks when it cannot read the commits of a push. The session-end
-  generator checks treat only a traceback ending in an import error as a
-  missing dependency.</li>
-<li><strong><code>/preflight</code> runs in a read-only <code>preflight-runner</code> agent</strong>, so its output
-  stays out of the conversation and nothing is changed while it checks.</li>
-<li><strong><code>/patch-release</code>, <code>/minor-release</code> and <code>/major-release</code> are now one
-  <code>/release &lt;patch|minor|major&gt;</code> skill.</strong></li>
-<li><strong>German guide pages no longer repeat their title inside the article.</strong> The
-  frontend generator removes the source and translated Markdown title before
-  rendering the page header; German sources keep their headings and key
-  external references in German, and the Spanish agent-client guidance uses
-  the formal form of address consistently.</li>
-<li><strong>French guide sources are now available in the frontend.</strong> Every public
-  guide has a matching <code>docs/fr/</code> source, generated French template and search
-  index entry. Spanish guide pages continue to use the explicit English
-  fallback until their own source set is reviewed. See
-  <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0062-public-guides-have-french-sources.md">ADR 0062</a>.</li>
 </ul>
 </article>
 {% endblock %}

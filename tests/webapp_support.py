@@ -40,6 +40,8 @@ def settings(**overrides: Any) -> WebSettings:
         "daily_scan_limit": 0,
         "result_ttl": 3600,
         "public_base_url": "http://testserver",
+        # The advisory refresh's second source is api.github.com; tests stay offline.
+        "advisory_repository_url": None,
         # The operator area's release check asks PyPI; tests stay offline.
         "update_check": False,
     }
