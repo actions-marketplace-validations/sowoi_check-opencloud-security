@@ -1,8 +1,8 @@
 # A dependency record. See security/dependencies/README.md.
 name: hypothesis
 import_name: hypothesis
-status: proposed
-approved_by: ""
+status: approved
+approved_by: "Okko"
 scopes:
   - group:test
 reviewed_version: "6.168.0"

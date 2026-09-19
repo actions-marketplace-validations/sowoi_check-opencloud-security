@@ -483,6 +483,11 @@ somebody could.</p>
 <td>Where the advisories are read from. Operator configuration, so it may point at a mirror; never a request field</td>
 </tr>
 <tr>
+<td><code>COS_WEB_ADVISORY_REPOSITORY_URL</code></td>
+<td><code>https://api.github.com/repos/opencloud-eu/opencloud/security-advisories</code></td>
+<td>OpenCloud's repository advisories, read with every refresh to add the ones OSV never received (<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0071-repository-advisories-are-a-second-advisory-source.md">ADR 0071</a>). <code>off</code> skips them; a failure to read them keeps OSV's answer</td>
+</tr>
+<tr>
 <td><code>COS_WEB_FRONTEND_DIR</code></td>
 <td><em>next to <code>webapp/</code></em></td>
 <td>Where templates and static assets live</td>

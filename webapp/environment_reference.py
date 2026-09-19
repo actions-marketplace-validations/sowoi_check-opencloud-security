@@ -175,6 +175,10 @@ REFERENCE: dict[str, dict[str, str]] = {
         "default": "https://api.osv.dev/v1/query",
         "description": "Where the advisories are read from. Operator configuration, so it may point at a mirror; never a request field",
     },
+    "ADVISORY_REPOSITORY_URL": {
+        "default": "https://api.github.com/repos/opencloud-eu/opencloud/security-advisories",
+        "description": "OpenCloud's repository advisories, read with every refresh to add the ones OSV never received (ADR 0071). off skips them; a failure to read them keeps OSV's answer",
+    },
     "FRONTEND_DIR": {
         "default": "next to webapp/",
         "description": "Where templates and static assets live",

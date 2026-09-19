@@ -704,6 +704,7 @@ before the first deployment:
 | `COS_WEB_SCHEDULE_REFRESH` | `true` | Re-read the OpenCloud release lifecycle page once a day, so a long-running deployment does not rate against the schedule its image shipped with |
 | `COS_WEB_ADVISORY_REFRESH` | `true` | Ask the advisory feed once a day, so an advisory published after this image was built still reaches the people scanning with it. Only ever adds; never believes an advisory with no version bounds |
 | `COS_WEB_ADVISORY_REFRESH_URL` | `https://api.osv.dev/v1/query` | Where the advisories are read from. May point at a mirror; never a request field |
+| `COS_WEB_ADVISORY_REPOSITORY_URL` | `https://api.github.com/repos/opencloud-eu/opencloud/security-advisories` | OpenCloud's repository advisories, added to OSV's answer (ADR 0071). `off` skips them |
 | `COS_WEB_MCP_ALLOWED_HOSTS` | *(empty)* | `Host` values `/mcp` accepts. Empty turns the DNS-rebinding check off |
 | `COS_WEB_MCP_MAX_CONCURRENT_WAITS` | `8` | How many tool calls may wait on a scan at once; past that the uuid comes back to be polled |
 | `COS_WEB_MCP_AUTH_ENABLED` | `false` | Require a bearer token on `/mcp`. Needs an issuer, and a public base URL to check an audience against |

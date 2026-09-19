@@ -93,6 +93,7 @@ is needed.
 | [`test_perfdata.py`](test_perfdata.py) | Plugin output: perfdata, hardening reporting, formatting. |
 | [`test_output_formats.py`](test_output_formats.py) | `--format json/sarif/junit` for one host and for several. |
 | [`test_output_shape.py`](test_output_shape.py) | The top-level key names of the scan result and the plugin's JSON/webhook output, and their camelCase/snake_case spelling. |
+| [`test_advisory_repository_source.py`](test_advisory_repository_source.py) | OpenCloud's repository advisories as a second advisory source (ADR 0071): strict per-line ranges, OSV stays primary, a failing feed keeps OSV's answer. |
 | [`test_properties.py`](test_properties.py) | Hypothesis property tests: version parsing, the HSTS/CSP readers, the SSRF guard, `;`-joined configuration lists. |
 | [`test_monitoring_parity.py`](test_monitoring_parity.py) | Nagios, Checkmk and Prometheus carry the same metrics; every Icinga `CheckCommand` offers every option. |
 | [`test_prometheus.py`](test_prometheus.py) | Prometheus rendering and the native `/metrics` exporter. |

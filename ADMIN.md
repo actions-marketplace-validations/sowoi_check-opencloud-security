@@ -426,6 +426,7 @@ picks them up. Nothing is written to disk.
 | `COS_WEB_SCHEDULE_REFRESH_URL` | lifecycle page | Override the source |
 | `COS_WEB_ADVISORY_REFRESH` | on | Daily advisory re-read |
 | `COS_WEB_ADVISORY_REFRESH_URL` | OSV | Override the source |
+| `COS_WEB_ADVISORY_REPOSITORY_URL` | OpenCloud's GitHub advisories | Second source for advisories OSV never received; `off` skips it |
 
 Redis keys, if you need to look:
 

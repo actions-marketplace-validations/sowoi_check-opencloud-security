@@ -13,7 +13,10 @@ import os
 import re
 from dataclasses import dataclass, field
 
-from opencloud_local_scan.advisory_source import OSV_QUERY_URL
+from opencloud_local_scan.advisory_source import (
+    OSV_QUERY_URL,
+    REPOSITORY_ADVISORIES_URL,
+)
 from opencloud_local_scan.schedule_source import LIFECYCLE_URL
 
 ENV_PREFIX = "COS_WEB_"
@@ -110,6 +113,13 @@ def _env(name: str) -> str | None:
         return None
     value = value.strip()
     return value or None
+
+
+def _repository_url(value: str | None) -> str | None:
+    """COS_WEB_ADVISORY_REPOSITORY_URL: unset is the default, ``off`` is none."""
+    if value is None:
+        return REPOSITORY_ADVISORIES_URL
+    return None if value.lower() in {"off", "false", "0", "none"} else value
 
 
 def _env_int(name: str, default: int, *, minimum: int = 0) -> int:
@@ -388,6 +398,11 @@ class WebSettings:
     """Where the advisories are read from. Operator configuration, so it may
     point at a mirror of the feed; it is never a request field."""
 
+    advisory_repository_url: str | None = REPOSITORY_ADVISORIES_URL
+    """OpenCloud's repository advisories on GitHub, read with every refresh
+    to add the ones OSV never received (ADR 0071). ``off`` skips them; a
+    failure to read them keeps OSV's answer rather than failing the refresh."""
+
     enable_docs: bool = False
     """Serve the browsable API pages at ``/docs`` and ``/redoc``. Off by
     default because they are a convenience for an operator rather than part
@@ -659,6 +674,7 @@ class WebSettings:
             ),
             advisory_refresh=_env_bool("ADVISORY_REFRESH", True),
             advisory_refresh_url=_env("ADVISORY_REFRESH_URL") or OSV_QUERY_URL,
+            advisory_repository_url=_repository_url(_env("ADVISORY_REPOSITORY_URL")),
             enable_docs=_env_bool("ENABLE_DOCS", False),
             enable_mcp=_env_bool("ENABLE_MCP", True),
             mcp_allowed_hosts=_env_list("MCP_ALLOWED_HOSTS"),

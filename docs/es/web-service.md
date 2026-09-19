@@ -273,6 +273,7 @@ Cada ajuste es una variable de entorno que se lee una vez al arrancar.
 | `COS_WEB_SCHEDULE_REFRESH_HOUR` | `4` | La hora (UTC) de la lectura diaria. Conviene variarla entre despliegues para que no lleguen todos a la vez |
 | `COS_WEB_ADVISORY_REFRESH` | `true` | Pregunta una vez al día al canal de avisos qué vulnerabilidades afectan a OpenCloud y evalúa los análisis según la respuesta. Una actualización solo añade avisos, y nunca se cree uno sin límites de versión |
 | `COS_WEB_ADVISORY_REFRESH_URL` | `https://api.osv.dev/v1/query` | De dónde se leen los avisos. Es configuración del operador, así que puede apuntar a una réplica; nunca es un campo de la solicitud |
+| `COS_WEB_ADVISORY_REPOSITORY_URL` | `https://api.github.com/repos/opencloud-eu/opencloud/security-advisories` | Los avisos publicados solo en el repositorio de OpenCloud, que OSV nunca recibió; `off` los omite |
 | `COS_WEB_FRONTEND_DIR` | *junto a `webapp/`* | Dónde están las plantillas y los recursos estáticos |
 | `COS_WEB_ENABLE_DOCS` | `false` | Sirve las páginas navegables `/docs` y `/redoc`. Los documentos legibles por máquina son públicos diga lo que diga este ajuste |
 | `COS_WEB_ENABLE_MCP` | `true` | Sirve el punto de acceso MCP en `/mcp` y registra las herramientas WebMCP del navegador. Se ignora si no está instalado el extra opcional `mcp` |

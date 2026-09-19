@@ -139,6 +139,7 @@ VARIABLES: tuple[Variable, ...] = (
     Variable("SCHEDULE_REFRESH_HOUR", "reference", "schedule_refresh_hour"),
     Variable("ADVISORY_REFRESH", "reference", "advisory_refresh"),
     Variable("ADVISORY_REFRESH_URL", "reference", "advisory_refresh_url"),
+    Variable("ADVISORY_REPOSITORY_URL", "reference", "advisory_repository_url"),
     # The optional ways in besides the form.
     Variable("ENABLE_DOCS", "interfaces", "enable_docs"),
     Variable("ENABLE_MCP", "interfaces", "enable_mcp"),

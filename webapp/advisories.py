@@ -33,6 +33,7 @@ import logging
 from typing import Any
 
 from opencloud_local_scan.advisory_source import (
+    OSV_PACKAGE,
     AdvisoryFetchError,
     fetch_advisory_document,
     merge_document,
@@ -242,6 +243,8 @@ async def _refresh_advisories(backend: RedisBackend, settings: WebSettings) -> s
             settings.advisory_refresh_url,
             previous,
             REFRESH_TIMEOUT_SECONDS,
+            OSV_PACKAGE,
+            settings.advisory_repository_url,
         )
     except AdvisoryFetchError as exc:
         # The URL is operator configuration, not a visitor's target, so the
@@ -296,6 +299,8 @@ async def probe_advisories(backend: RedisBackend, settings: WebSettings) -> str:
             settings.advisory_refresh_url,
             previous,
             REFRESH_TIMEOUT_SECONDS,
+            OSV_PACKAGE,
+            settings.advisory_repository_url,
         )
     except AdvisoryFetchError as exc:
         LOGGER.info("advisory_probe_unreadable %s", exc)

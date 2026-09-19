@@ -260,6 +260,7 @@ Every setting is an environment variable, read once at startup.
 | `COS_WEB_SCHEDULE_REFRESH_HOUR` | `4` | The hour (UTC) of the daily read. Worth varying between deployments so they do not all arrive at once |
 | `COS_WEB_ADVISORY_REFRESH` | `true` | Ask the advisory feed once a day which vulnerabilities affect OpenCloud and rate scans against the answer. A refresh only ever adds an advisory, and never believes one with no version bounds |
 | `COS_WEB_ADVISORY_REFRESH_URL` | `https://api.osv.dev/v1/query` | Where the advisories are read from. Operator configuration, so it may point at a mirror; never a request field |
+| `COS_WEB_ADVISORY_REPOSITORY_URL` | `https://api.github.com/repos/opencloud-eu/opencloud/security-advisories` | Les avis publiés uniquement dans le dépôt OpenCloud, qu'OSV n'a jamais reçus ; `off` les ignore |
 | `COS_WEB_FRONTEND_DIR` | *next to `webapp/`* | Where templates and static assets live |
 | `COS_WEB_ENABLE_DOCS` | `false` | Serve the browsable `/docs` and `/redoc` pages. The machine-readable documents are public whatever this says |
 | `COS_WEB_ENABLE_MCP` | `true` | Serve the MCP endpoint at `/mcp` and register browser WebMCP tools. Ignored when the optional `mcp` extra is not installed |
