@@ -491,6 +491,21 @@ def optional_groups() -> list[Group]:
                     cast=lambda value: value.strip().lower() in YES,
                 ),
                 Question(
+                    key="scanner.check_login_throttling",
+                    prompt="Check whether failed sign-ins are throttled",
+                    explain=(
+                        "Sends six failed sign-ins for a random account that "
+                        "cannot exist to the built-in identity provider and "
+                        "records whether the instance slowed them down (HTTP "
+                        "429 or Retry-After). No real account can be locked "
+                        "out. Reported, never rated."
+                    ),
+                    example="no",
+                    default="no",
+                    validate=_choice(tuple(YES | NO)),
+                    cast=lambda value: value.strip().lower() in YES,
+                ),
+                Question(
                     key="scanner.check_all_addresses",
                     prompt="Dial every address the name resolves to",
                     explain=(

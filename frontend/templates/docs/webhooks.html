@@ -136,6 +136,9 @@ end-of-life release:</p>
     &quot;scheduleSource&quot;: &quot;https://docs.opencloud.eu/docs/admin/resources/lifecycle/&quot;,
     &quot;scheduleNote&quot;: null
   },
+  &quot;eol_warning_days&quot;: 30,
+  &quot;eol_warning&quot;: false,
+  &quot;upgrade_path&quot;: null,
   &quot;vulnerability_count&quot;: 0,
   &quot;vulnerabilities&quot;: [],
   &quot;missing_hardenings&quot;: [],
@@ -146,6 +149,10 @@ end-of-life release:</p>
   &quot;duration_seconds&quot;: 1.234
 }
 </code></pre>
+<p><code>eol_warning_days</code> is the <code>--eol-warning</code> window the check ran with (<code>0</code> when
+off) and <code>eol_warning</code> whether this result is inside it. <code>upgrade_path</code> is the
+scan's <code>upgradePath</code> - which advisories the recommended release fixes and which
+it leaves open - or <code>null</code> when there is nothing to clear.</p>
 <p><code>scan_backend</code> is always <code>"local"</code> - it records how the result was obtained,
 so a receiver that also handles payloads from scanners with a remote backend
 can tell them apart without special-casing the plugin name.</p>

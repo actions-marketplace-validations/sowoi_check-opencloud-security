@@ -115,6 +115,17 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help="Skip probing the OpenCloud debug ports.",
     )
     scan_parser.add_argument(
+        "--login-throttling",
+        dest="check_login_throttling",
+        action="store_true",
+        default=None,
+        help=(
+            "Send a few failed sign-ins for an account that cannot exist to the "
+            "built-in identity provider and record whether they were throttled. "
+            "Never graded."
+        ),
+    )
+    scan_parser.add_argument(
         "--all-addresses",
         dest="check_all_addresses",
         action="store_true",
@@ -597,6 +608,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             extra_checks=getattr(args, "extra_checks", None),
             check_debug_ports=getattr(args, "check_debug_ports", None),
             check_all_addresses=getattr(args, "check_all_addresses", None),
+            check_login_throttling=getattr(args, "check_login_throttling", None),
             port=getattr(args, "port", None) if args.command == "scan" else None,
             scheme=getattr(args, "scheme", None),
             concurrency=getattr(args, "concurrency", None),

@@ -155,6 +155,7 @@ nombres y dos diferencias que exige el formato:
 | `update_available` | `1` cuando existe una versión más reciente. Ausente cuando la comprobación de actualizaciones está desactivada |
 | `support_days_left` | Días hasta que la línea de versiones deja de recibir correcciones; negativo si ya ha ocurrido |
 | `cert_days_left` | Días hasta que caduca el certificado; negativo si ya ha caducado |
+| `upgrade_path_complete` | `1` si la actualización recomendada corrige todos los avisos conocidos, `0` si no; ausente sin avisos |
 | `execution_time` | Duración del análisis, en segundos |
 
 Una métrica que no se ha medido se omite en lugar de enviarse como cero, para

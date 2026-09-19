@@ -267,6 +267,27 @@ del objetivo, no un origen al que se apuntó el escaneo
 `Alt-Svc: clear` no registra nada como anunciado y, sin respuesta, la clave es
 `null`.
 
+### Inicios de sesión fallidos (opcional) {#failed-sign-ins-opt-in}
+
+Con `--login-throttling` (`COS_LOGIN_THROTTLING` o
+`scanner.check_login_throttling`) el escaneo envía seis inicios de sesión
+fallidos seguidos para una cuenta aleatoria que no puede existir y registra si
+la instancia los frenó: un HTTP `429` o una cabecera `Retry-After`:
+
+```json
+{"loginThrottling": {"tested": true, "attempts": 4, "throttled": true,
+  "evidence": "HTTP 429, Retry-After: 30", "statuses": [401, 401, 401, 429]}}
+```
+
+Está desactivado por defecto, solo pregunta al proveedor de identidad
+integrado, se ejecuta después de todas las demás pruebas para que un `429` no
+oculte las cuentas de demostración y nunca se califica: muchas instalaciones
+limitan en una ventana más larga o en una capa que una ráfaga corta no
+alcanza, así que "sin límite" es un motivo para revisar, no un veredicto. El
+servicio web público nunca lo envía
+([ADR 0069](../../adr/0069-login-throttling-is-observed-only-when-the-operator-asks.md)).
+Sin la opción, la clave es `null`.
+
 ### Integraciones de ofimática y calendario {#office-and-calendar-integrations}
 
 Hay dos integraciones visibles sin iniciar sesión, y ambas se notifican como

@@ -330,6 +330,23 @@ ist eine Angabe des Ziels, keine Origin, auf die der Scan gerichtet wurde
 (<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0036-a-companion-service-is-probed-only-where-the-scan-was-pointed.md">ADR 0036</a>).
 <code>Alt-Svc: clear</code> gilt als nichts angekündigt; ohne Antwort ist der Schlüssel
 <code>null</code>.</p>
+<h3 id="failed-sign-ins-opt-in">Fehlgeschlagene Anmeldungen (optional)</h3>
+<p>Mit <code>--login-throttling</code> (<code>COS_LOGIN_THROTTLING</code> oder
+<code>scanner.check_login_throttling</code>) sendet der Scan nacheinander sechs
+fehlgeschlagene Anmeldungen für ein zufälliges Konto, das es nicht geben kann,
+und hält fest, ob die Instanz sie gebremst hat - ein HTTP <code>429</code> oder ein
+<code>Retry-After</code>-Header:</p>
+<pre><code class="language-json">{&quot;loginThrottling&quot;: {&quot;tested&quot;: true, &quot;attempts&quot;: 4, &quot;throttled&quot;: true,
+  &quot;evidence&quot;: &quot;HTTP 429, Retry-After: 30&quot;, &quot;statuses&quot;: [401, 401, 401, 429]&#125;&#125;
+</code></pre>
+<p>Standardmäßig ist das aus. Gefragt wird nur der eingebaute Identitätsanbieter,
+und zwar nach allen anderen Prüfungen, damit ein <code>429</code> die Demo-Konten nicht
+verdeckt. Bewertet wird es nie: Viele Installationen bremsen über ein längeres
+Zeitfenster oder auf einer Ebene, die ein kurzer Versuch nicht erreicht - "nicht
+gebremst" ist also ein Anlass, nachzusehen, kein Urteil. Der öffentliche
+Webdienst sendet diese Anmeldungen nie
+(<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0069-login-throttling-is-observed-only-when-the-operator-asks.md">ADR 0069</a>).
+Ohne die Option ist der Schlüssel <code>null</code>.</p>
 <h3 id="office-and-calendar-integrations">Office- und Kalenderanbindungen</h3>
 <p>Zwei Beobachtungen sind ohne Anmeldung möglich:</p>
 <ul>

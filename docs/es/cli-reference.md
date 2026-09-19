@@ -45,6 +45,7 @@ check-opencloud-security --host <Hostname> --check-hardening
 | `--no-extra-checks`           | Comprueba solo el producto, la versión y las cabeceras de seguridad | *False* | `COS_NO_EXTRA_CHECKS` |
 | `--no-debug-ports`            | No sondea los puertos de depuración de OpenCloud | *False* | `COS_NO_DEBUG_PORTS` |
 | `--all-addresses`             | Comprueba también la versión, las cabeceras, el refuerzo y las cuentas de demostración en cada dirección resuelta | *False* | `COS_ALL_ADDRESSES` |
+| `--login-throttling`          | Envía seis inicios de sesión fallidos para una cuenta inexistente e informa si se limitaron (nunca se califica) | *False* | `COS_LOGIN_THROTTLING` |
 | `--concurrency`               | Máximo de trabajadores de host en paralelo; se usa uno por host hasta este límite | `5` | `COS_CONCURRENCY` |
 | `--format`                    | Formato de salida de una sola ejecución: `nagios`, `prometheus`, `otlp`, `checkmk`, `json`, `sarif` o `junit` | `nagios` | `COS_FORMAT` |
 | `--prometheus-listen-port`    | Sirve `/metrics` de forma nativa en este puerto hasta que se detenga | desactivado | `COS_PROMETHEUS_LISTEN_PORT` |

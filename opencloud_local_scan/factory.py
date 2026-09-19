@@ -132,6 +132,7 @@ def scanner_settings_from_config(
         tls_min_days=config.get_int("SCANNER_TLS_MIN_DAYS", DEFAULT_TLS_MIN_DAYS),
         check_debug_ports=config.get_bool("SCANNER_CHECK_DEBUG_PORTS", True),
         check_all_addresses=config.get_bool("SCANNER_CHECK_ALL_ADDRESSES", False),
+        check_login_throttling=config.get_bool("SCANNER_CHECK_LOGIN_THROTTLING", False),
         debug_ports=_int_tuple(config, "SCANNER_DEBUG_PORTS"),
         debug_port_timeout=config.get_int(
             "SCANNER_DEBUG_PORT_TIMEOUT", DEFAULT_DEBUG_PORT_TIMEOUT_SECONDS

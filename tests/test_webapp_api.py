@@ -1153,3 +1153,15 @@ def test_the_api_page_states_the_limits_and_links_the_schema_when_it_is_on():
     loud = client(enable_docs=True).get("/api").text
     assert 'href="/docs"' in loud
     assert 'href="/openapi.json"' in loud
+
+
+def test_a_web_scan_never_sends_failed_sign_ins_even_when_the_environment_asks(monkeypatch):
+    """Throttling is measured with logins; a stranger's URL must not send them (ADR 0069)."""
+    monkeypatch.setenv("COS_SCANNER_CHECK_LOGIN_THROTTLING", "true")
+    target = validate_target("opencloud.example.com")
+
+    assert scanner_settings_for(target, (), settings()).check_login_throttling is False
+    assert client().post(
+        "/api/scans",
+        json={"target_url": "opencloud.example.com", "check_login_throttling": True},
+    ).status_code == 422

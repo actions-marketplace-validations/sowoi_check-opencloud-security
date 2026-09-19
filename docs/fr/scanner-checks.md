@@ -254,6 +254,26 @@ origin the scan was pointed at
 `Alt-Svc: clear` records nothing as advertised, and without a response to read
 the header from the key is `null`.
 
+### Failed sign-ins (opt-in)
+
+With `--login-throttling` (`COS_LOGIN_THROTTLING`, or
+`scanner.check_login_throttling`) the scan sends six failed sign-ins, one
+after another, for a random account that cannot exist, and records whether
+the instance slowed them down - an HTTP `429` or a `Retry-After` header:
+
+```json
+{"loginThrottling": {"tested": true, "attempts": 4, "throttled": true,
+  "evidence": "HTTP 429, Retry-After: 30", "statuses": [401, 401, 401, 429]}}
+```
+
+It is off by default, asks only the built-in identity provider, runs after
+every other probe so it cannot hide the demo accounts behind a `429`, and is
+never graded: many deployments throttle over a longer window or at a layer a
+short burst does not reach, so "not throttled" is a prompt to look, not a
+verdict. The public web service never sends it
+([ADR 0069](../../adr/0069-login-throttling-is-observed-only-when-the-operator-asks.md)).
+Without the option the key is `null`.
+
 ### Office and calendar integrations
 
 Two integrations are visible without logging in, and both are reported as

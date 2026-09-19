@@ -385,6 +385,24 @@
         <dt>{{ t('result.facts.proxy') }}</dt>
         <dd>{{ summary.reverseProxy.vendor or t('result.facts.proxy.detected') }}</dd>
         {% endif %}
+        {% if summary.alternativeServices.http3 %}
+        <dt>{{ t('result.facts.http3') }}</dt>
+        <dd>{% if summary.alternativeServices.ports %}{{ t('result.facts.http3.value', ports=summary.alternativeServices.ports) }}{% else %}{{ t('result.facts.http3.noport') }}{% endif %}</dd>
+        {% endif %}
+        {% if summary.upgradePath.target %}
+        <dt>{{ t('result.facts.upgrade_path') }}</dt>
+        <dd>
+          {% if not summary.upgradePath.open %}
+          {{ t('result.facts.upgrade_path.complete', target=summary.upgradePath.target) }}
+          {% elif summary.upgradePath.safe %}
+          {{ t('result.facts.upgrade_path.partial', target=summary.upgradePath.target,
+                open=summary.upgradePath.open, safe=summary.upgradePath.safe) }}
+          {% else %}
+          {{ t('result.facts.upgrade_path.unfixed', target=summary.upgradePath.target,
+                open=summary.upgradePath.open) }}
+          {% endif %}
+        </dd>
+        {% endif %}
         {% if summary.integrations.office and summary.integrations.office.detected %}
         <dt>{{ t('result.facts.office') }}</dt>
         <dd>{{ summary.integrations.office.apps | join(", ") }}</dd>

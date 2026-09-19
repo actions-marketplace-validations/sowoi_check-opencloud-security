@@ -294,6 +294,11 @@ none yet). It is `null` otherwise. See
 advertises HTTP/3 over UDP - as an observation that is never graded. See
 [Alternative services](../docs/scanner-checks.md#alternative-services-http3).
 
+`loginThrottling` is `null` unless `check_login_throttling` is set; then it
+records whether six failed sign-ins for a non-existent account were slowed
+down. Never graded. See
+[Failed sign-ins](../docs/scanner-checks.md#failed-sign-ins-opt-in).
+
 ### Refreshing reference data on a monitoring host
 
 The package includes a separate `refresh-data` command for installations that

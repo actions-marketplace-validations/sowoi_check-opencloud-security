@@ -550,6 +550,8 @@ def summarise(
         "tlsOverview": _tls_overview(result, translate),
         "identityProvider": result.get("identityProvider") or {},
         "reverseProxy": result.get("reverseProxy") or {},
+        "alternativeServices": _alternative_services(result),
+        "upgradePath": _upgrade_path(result),
         "integrations": result.get("integrations") or {},
         "coverage": _coverage(result, translate),
         "counts": {
@@ -558,6 +560,36 @@ def summarise(
             "info": sum(1 for item in issues if item["tag"] == "info"),
             "vulnerabilities": len(result.get("vulnerabilities") or []),
         },
+    }
+
+
+def _alternative_services(result: Mapping[str, Any]) -> dict[str, Any]:
+    """The Alt-Svc observation, with the UDP ports it names listed once, in order."""
+    services = result.get("alternativeServices")
+    if not isinstance(services, Mapping) or not services.get("http3"):
+        return {}
+    ports = sorted(
+        {
+            entry["port"]
+            for entry in services.get("entries") or ()
+            if isinstance(entry, Mapping)
+            and entry.get("udp")
+            and isinstance(entry.get("port"), int)
+        }
+    )
+    return {"http3": True, "ports": ", ".join(str(port) for port in ports)}
+
+
+def _upgrade_path(result: Mapping[str, Any]) -> dict[str, Any]:
+    """The scanner's upgrade path as the report states it; empty without one."""
+    path = result.get("upgradePath")
+    if not isinstance(path, Mapping) or not path.get("target"):
+        return {}
+    still = [str(item) for item in path.get("stillAffected") or ()]
+    return {
+        "target": str(path["target"]),
+        "open": ", ".join(still),
+        "safe": str(path.get("safeVersion") or ""),
     }
 
 

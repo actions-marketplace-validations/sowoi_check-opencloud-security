@@ -469,6 +469,17 @@ def check_vulnerabilities(
         if path_line:
             detail_lines.append(path_line)
 
+    throttling = response_scan.get("loginThrottling")
+    if isinstance(throttling, dict) and throttling.get("tested"):
+        detail_lines.append(
+            f"Failed sign-ins throttled ({throttling.get('evidence')}) (not rated)."
+            if throttling.get("throttled")
+            else (
+                f"{throttling.get('attempts')} failed sign-ins in a row were not "
+                "throttled - consider rate limiting at the proxy (not rated)."
+            )
+        )
+
     services = response_scan.get("alternativeServices")
     if isinstance(services, dict) and services.get("http3"):
         ports = sorted(
@@ -558,6 +569,7 @@ def check_vulnerabilities(
         update_available=update_info.available if update_info is not None else None,
         support_days_left=_support_days_left(response_scan),
         certificate_days_left=_certificate_days_left(response_scan),
+        upgrade_path_complete=_upgrade_path_complete(response_scan),
     )
 
     # Built unconditionally: it is the same document whether it goes out over
@@ -615,6 +627,14 @@ def _rating_of(response_scan: dict[str, Any]) -> int:
     return UNKNOWN_RATING
 
 
+def _upgrade_path_complete(response_scan: dict[str, Any]) -> bool | None:
+    """Whether the recommended upgrade clears every known advisory; None without a path."""
+    path = response_scan.get("upgradePath")
+    if not isinstance(path, dict) or not path.get("target"):
+        return None
+    return not path.get("stillAffected")
+
+
 def _upgrade_path_line(response_scan: dict[str, Any]) -> str:
     """Say what the recommended upgrade fixes, and what it would leave open."""
     path = response_scan.get("upgradePath")
@@ -635,6 +655,19 @@ def _upgrade_path_line(response_scan: dict[str, Any]) -> str:
     return f"Upgrade path: {target} {fixed_part}is still affected by {', '.join(remaining)}{after}."
 
 
+def _within_eol_window(context: ScanContext, response_scan: dict[str, Any]) -> bool:
+    """Whether a supported line has --eol-warning days of support or fewer left."""
+    if context.eol_warning_days <= 0:
+        return False
+    lifecycle = _lifecycle(response_scan)
+    remaining = lifecycle.get("daysRemaining")
+    if lifecycle.get("state") != "supported" or not isinstance(remaining, int):
+        return False
+    if isinstance(remaining, bool):
+        return False
+    return 0 < remaining <= context.eol_warning_days
+
+
 def _apply_eol_warning(
     context: ScanContext,
     response_scan: dict[str, Any],
@@ -647,14 +680,10 @@ def _apply_eol_warning(
     Only OK is raised: a result that is already WARNING or CRITICAL says
     something more urgent, and one past its end of life is CRITICAL anyway.
     """
-    if context.eol_warning_days <= 0 or exit_code is not NagiosExitCode.OK:
+    if exit_code is not NagiosExitCode.OK or not _within_eol_window(context, response_scan):
         return message, exit_code
     lifecycle = _lifecycle(response_scan)
-    remaining = lifecycle.get("daysRemaining")
-    if lifecycle.get("state") != "supported" or not isinstance(remaining, int):
-        return message, exit_code
-    if remaining <= 0 or remaining > context.eol_warning_days:
-        return message, exit_code
+    remaining = lifecycle["daysRemaining"]
     line = str(lifecycle.get("line") or "")
     described = f"The {line} release line" if line else "This server version"
     target = str(lifecycle.get("upgradeTo") or "")
@@ -842,6 +871,11 @@ def _build_webhook_payload(
         "eol": bool(response_scan.get("EOL")) or rating == MIN_RATING,
         "release_type": response_scan.get("releaseType"),
         "lifecycle": _lifecycle(response_scan) or None,
+        # The early end-of-life window the check ran with (0 = off), and
+        # whether this result is inside it, so a receiver need not redo it.
+        "eol_warning_days": context.eol_warning_days,
+        "eol_warning": _within_eol_window(context, response_scan),
+        "upgrade_path": response_scan.get("upgradePath") or None,
         "vulnerability_count": len(vulnerabilities),
         "vulnerabilities": [
             entry.get("id") for entry in vulnerabilities if isinstance(entry, dict)
@@ -1934,6 +1968,7 @@ def _build_perfdata(
     update_available: bool | None = None,
     support_days_left: int | None = None,
     certificate_days_left: int | None = None,
+    upgrade_path_complete: bool | None = None,
 ) -> str:
     """
     Build a Nagios/Icinga performance data string.
@@ -1964,7 +1999,11 @@ def _build_perfdata(
     if support_days_left is not None:
         # No min: the value goes negative once the release line is out of
         # support, which is exactly what an operator wants to see on a graph.
-        parts.append(f"support_days_left={support_days_left};;;;")
+        # With --eol-warning the graph carries the same window the alert
+        # uses; critical is the end of life itself.
+        eol_window = context.eol_warning_days if context is not None else 0
+        thresholds = f"@~:{eol_window};@~:0" if eol_window > 0 else ";"
+        parts.append(f"support_days_left={support_days_left};{thresholds};;")
     if certificate_days_left is not None:
         # The thresholds are the scan's own opinion restated in Nagios range
         # syntax rather than a second one invented here: warning at or below
@@ -1975,6 +2014,8 @@ def _build_perfdata(
         margin = _certificate_margin_days(context)
         warn_range = f"@~:{margin}" if margin is not None else ""
         parts.append(f"cert_days_left={certificate_days_left};{warn_range};@~:0;;")
+    if upgrade_path_complete is not None:
+        parts.append(f"upgrade_path_complete={int(upgrade_path_complete)};;;0;1")
     return " ".join(parts)
 
 
@@ -2212,6 +2253,17 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help=(
             "Skip probing the OpenCloud debug ports (9205, 9141, 9124, 9134, 9239). "
             f"Default: False (env: {ENV_PREFIX}NO_DEBUG_PORTS)."
+        ),
+    )
+    scope.add_argument(
+        "--login-throttling",
+        action="store_true",
+        default=_env_bool("LOGIN_THROTTLING"),
+        help=(
+            "Send a few failed sign-ins for an account that cannot exist to the "
+            "built-in identity provider and report whether they were throttled. "
+            "Never rated. "
+            f"Default: False (env: {ENV_PREFIX}LOGIN_THROTTLING)."
         ),
     )
     scope.add_argument(
@@ -2681,6 +2733,7 @@ def _build_context(host: str, args: argparse.Namespace) -> ScanContext:
         tls_ca_file=args.ca_file,
         check_debug_ports=False if args.no_debug_ports else None,
         check_all_addresses=True if args.all_addresses else None,
+        check_login_throttling=True if args.login_throttling else None,
         release_track=args.release_track,
         ignore_hardenings=_waiver_patterns(args.ignore_hardening),
         waivers=_temporary_waivers(args.waive_until),
@@ -3235,6 +3288,9 @@ def _checkmk_metrics(document: dict[str, Any]) -> str:
     certificate_days = _certificate_days_left(scan)
     if certificate_days is not None:
         metrics.append(f"cert_days_left={certificate_days}")
+    complete = _upgrade_path_complete(scan)
+    if complete is not None:
+        metrics.append(f"upgrade_path_complete={int(complete)}")
 
     duration = payload.get("duration_seconds")
     if isinstance(duration, (int, float)):

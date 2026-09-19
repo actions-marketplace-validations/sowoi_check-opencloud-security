@@ -45,6 +45,7 @@ import fnmatch
 import ipaddress
 import logging
 import re
+import secrets
 import socket
 import threading
 from collections.abc import Callable, Iterable, Mapping, Sequence
@@ -469,6 +470,13 @@ class ScannerSettings:
     is still listed under ``addresses``, just not dialled a second time, and
     :attr:`check_all_addresses` leaves the IPv6 addresses out for the same
     reason.
+    """
+    check_login_throttling: bool = False
+    """Whether to send a handful of failed sign-ins and record any throttling.
+
+    Opt-in and never graded (ADR 0069): a few logins for an account that does
+    not exist, sent only to the built-in identity provider, the same one the
+    demo-account check already asks. Off, ``loginThrottling`` is ``None``.
     """
     check_all_addresses: bool = False
     """Whether to dial every address the name resolves to, not just the first.
@@ -2205,6 +2213,50 @@ def _demo_login_succeeded(response: requests.Response | None) -> bool:
     return content_type in DEMO_USER_CONTENT_TYPES and bool(response.content.strip())
 
 
+# How many failed sign-ins the throttling observation sends. Few enough that
+# no sane lockout policy trips on an account that does not exist anyway.
+LOGIN_THROTTLING_ATTEMPTS = 6
+
+
+def _login_throttling(
+    probe: _Probe, identity_provider: Mapping[str, Any] | None
+) -> dict[str, Any] | None:
+    """
+    Send a few failed sign-ins and record whether the instance slows them down.
+
+    The account name is random and cannot exist, so no real account can be
+    locked out. Attempts are sequential - a burst sent in parallel would
+    measure the scanner, not the policy. Only the built-in provider is asked,
+    for the reason the demo-account check gives. Returns None when it is not
+    asked at all, and records ``tested: False`` when no attempt got an answer.
+    """
+    provider = identity_provider or {}
+    if not provider.get("detected") or provider.get("external"):
+        return None
+    username = f"cos-throttle-probe-{secrets.token_hex(6)}"
+    password = secrets.token_urlsafe(18)
+    statuses: list[int] = []
+    evidence = ""
+    for _ in range(LOGIN_THROTTLING_ATTEMPTS):
+        response = _demo_user_probe(probe, username, password)
+        if response is None:
+            continue
+        statuses.append(response.status_code)
+        retry_after = response.headers.get("Retry-After")
+        if response.status_code == 429 or retry_after:
+            evidence = f"HTTP {response.status_code}" + (
+                f", Retry-After: {retry_after}" if retry_after else ""
+            )
+            break
+    return {
+        "tested": bool(statuses),
+        "attempts": len(statuses),
+        "throttled": bool(evidence),
+        "evidence": evidence,
+        "statuses": statuses,
+    }
+
+
 def _demo_user_finding(
     probe: _Probe, identity_provider: Mapping[str, Any] | None
 ) -> Finding | None:
@@ -3927,6 +3979,15 @@ def scan(
         if tls_untrusted:
             LOGGER.debug("Scanned with certificate verification disabled: %s", tls_untrusted)
 
+        # Last of all the probes: once throttled, an instance answers 429 to
+        # everything after, and the demo-account check above must have been
+        # asked before that - a throttled demo login is not a rejected one.
+        login_throttling = (
+            _login_throttling(probe, identity_provider)
+            if settings.check_login_throttling and settings.extra_checks
+            else None
+        )
+
         # Waivers are applied last, so that every finding - including the ones
         # added above - can be waived, and so that the rating below is computed
         # from what the operator actually wants to be alerted about.
@@ -4010,6 +4071,8 @@ def scan(
             "identityProvider": identity_provider,
             "reverseProxy": reverse_proxy,
             "alternativeServices": alternative_services,
+            # Opt-in, never graded: whether failed sign-ins were slowed down.
+            "loginThrottling": login_throttling,
             "integrations": integrations,
             "scanner": "check-opencloud-security built-in scanner",
             "updates": update_info.as_dict(),

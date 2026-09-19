@@ -380,6 +380,10 @@ none yet). It is <code>null</code> otherwise. See
 <p><code>alternativeServices</code> records the instance's <code>Alt-Svc</code> header - whether it
 advertises HTTP/3 over UDP - as an observation that is never graded. See
 <a href="/documentation/scanner-checks#alternative-services-http3">Alternative services</a>.</p>
+<p><code>loginThrottling</code> is <code>null</code> unless <code>check_login_throttling</code> is set; then it
+records whether six failed sign-ins for a non-existent account were slowed
+down. Never graded. See
+<a href="/documentation/scanner-checks#failed-sign-ins-opt-in">Failed sign-ins</a>.</p>
 <h3 id="refreshing-reference-data-on-a-monitoring-host">Refreshing reference data on a monitoring host</h3>
 <p>The package includes a separate <code>refresh-data</code> command for installations that
 cannot wait for a package upgrade:</p>

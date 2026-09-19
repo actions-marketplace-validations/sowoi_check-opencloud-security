@@ -64,6 +64,9 @@ def scanner_settings_for(
         # dozen requests and a demo sign-in per node of somebody else's pool
         # (ADR 0042). Spelled out so no default can change it.
         check_all_addresses=False,
+        # Never failed sign-ins on a stranger's behalf: a submission chooses
+        # what to scan, not whether logins are sent at it (ADR 0069).
+        check_login_throttling=False,
         # A host that answered with something other than OpenCloud is not
         # asked again without verification or over port 80: one request is
         # all a stranger's submission buys against a host that is not ours
