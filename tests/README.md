@@ -82,6 +82,7 @@ is needed.
 | [`test_refresh_data.py`](test_refresh_data.py) | The command that refreshes reference data on a monitoring host. |
 | [`test_data_signing.py`](test_data_signing.py) | Sigstore attestation of refreshed reference data, and still working without `sigstore` installed. |
 | [`test_reference_data_limits.py`](test_reference_data_limits.py) | Size limits on the daily reference-data fetches, so an oversized response cannot crash the worker. |
+| [`test_verify_remediation.py`](test_verify_remediation.py) | `--verify-remediation` runs only the probes behind the named findings and agrees with a full scan. |
 | [`test_version.py`](test_version.py) | `pyproject.toml` is the only source of the version. |
 
 ## Plugin (`check_opencloud_security.py`)
