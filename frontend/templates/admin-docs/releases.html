@@ -47,7 +47,8 @@
 <h2 id="1280-this-release">[1.28.0] - this release</h2>
 <h3 id="added">Added</h3>
 <ul>
-<li><strong>A scan the target cooldown refuses now opens your earlier result.</strong> When
+<li>
+<p><strong>A scan the target cooldown refuses now opens your earlier result.</strong> When
   an instance was scanned too recently and this browser tab has already shown
   a finished scan of it, the web application opens that result instead of
   only refusing, says it is the earlier result, and counts down to when a new
@@ -55,7 +56,20 @@
   (the one the comparison offer keeps in <code>sessionStorage</code>); the server never
   hands one visitor a scan somebody else started, as
   <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0002-no-scan-result-caching.md">ADR 0002</a> requires. Without such a
-  scan the refusal is unchanged.</li>
+  scan the refusal is unchanged.</p>
+</li>
+<li>
+<p><strong><code>--verify-remediation</code> re-checks one finding without a full scan.</strong>
+  After changing a single reverse-proxy setting, pass the finding ids the
+  full output reported (repeatable or comma-separated, a family root such as
+  <code>exposed</code> covers every member) and only the probes that measure them run.
+  The plugin answers <code>OK</code> when every one now passes, <code>WARNING</code>/<code>CRITICAL</code>
+  while one still fails, and <code>UNKNOWN</code> for an id only a full scan can settle
+  (<code>eol</code>, a vulnerability, address parity). No rating, baseline or webhook.
+  The measurement is <code>opencloud_local_scan.verification.verify</code>, which reuses
+  the scanner's own probes so its answer matches the next full scan. See
+  ADR 0072.</p>
+</li>
 </ul>
 <h2 id="1272-2026-09-19">[1.27.2] - 2026-09-19</h2>
 <h3 id="added_1">Added</h3>

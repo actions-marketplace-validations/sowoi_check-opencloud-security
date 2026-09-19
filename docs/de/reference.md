@@ -108,8 +108,30 @@ zugehörigen Umgebungsvariablen. Häufig verwendet werden:
 | `--format` | `nagios`, `prometheus`, `otlp`, `checkmk`, `json`, `sarif`, `junit` |
 | `--ignore-hardening` | Befund anhand seiner Kennung ausnehmen |
 | `--baseline` / `--warn-on-new` | Mit vorherigem Lauf vergleichen und nur bei Verschlechterung alarmieren |
+| `--verify-remediation` | Nach einer Korrektur nur die genannten Befunde neu messen statt eines vollen Scans |
 
 Es gilt: **Kommandozeile > Umgebungsvariable > Konfigurationsdatei > Standard**.
+
+## Eine Korrektur prüfen {#verifying-a-fix}
+
+Wenn du eine einzelne Einstellung geändert hast - einen Header im Reverse
+Proxy, einen Pfad, den er nicht mehr ausliefern soll -, musst du nicht auf
+einen vollen Scan warten. `--verify-remediation` nimmt die Befund-IDs aus der
+normalen Ausgabe und führt nur die Proben aus, die sie messen:
+
+```shell
+check-opencloud-security --host opencloud.example.com \
+  --verify-remediation Strict-Transport-Security,corsOriginRestricted
+```
+
+Die Option ist wiederholbar und nimmt kommaseparierte IDs. Eine Familie wie
+`exposed`, `authentication`, `debugEndpoint` oder `versionDisclosure` prüft
+alle ihre Mitglieder. `OK` heißt, jede ID besteht jetzt; `WARNING` bzw.
+`CRITICAL` (bei hoher oder kritischer Schwere), dass eine noch scheitert;
+`UNKNOWN`, dass nur ein voller Scan sie klären kann (`eol`,
+`vulnerability:...`, `httpsAvailable`, Adressparität). Es gibt keine
+Bewertung, keine Baseline, keinen Webhook und keine Ausnahmen (Waivers).
+`--format json` gibt das Messdokument aus.
 
 ## Mehrere Hosts prüfen {#checking-multiple-hosts}
 

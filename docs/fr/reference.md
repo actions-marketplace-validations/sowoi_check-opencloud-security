@@ -137,9 +137,30 @@ The handful you will actually type most days:
 | `--format` | `nagios`, `prometheus`, `otlp`, `checkmk`, `json`, `sarif` or `junit` |
 | `--ignore-hardening` | Accept a finding you are not going to fix, by name |
 | `--baseline` / `--warn-on-new` | Alert only on findings that are new or worse than last run |
+| `--verify-remediation` | Re-measure only the named findings after a fix, instead of a full scan |
 
 Precedence is always **command-line flag > environment variable >
 [configuration file](#configuration-file-and-secrets) > default**.
+
+# Vérifier une correction {#verifying-a-fix}
+Après avoir modifié un seul réglage - un en-tête dans le reverse proxy, un
+chemin qu'il ne doit plus servir - inutile d'attendre un scan complet.
+`--verify-remediation` prend les identifiants de constat de la sortie normale
+et n'exécute que les sondes qui les mesurent :
+
+```shell
+check-opencloud-security --host opencloud.example.com \
+  --verify-remediation Strict-Transport-Security,corsOriginRestricted
+```
+
+L'option est répétable et accepte des identifiants séparés par des virgules.
+Une famille comme `exposed`, `authentication`, `debugEndpoint` ou
+`versionDisclosure` vérifie tous ses membres. `OK` signifie que tout passe
+désormais ; `WARNING` ou `CRITICAL` (gravité élevée ou critique), qu'un
+constat échoue encore ; `UNKNOWN`, que seul un scan complet peut trancher
+(`eol`, `vulnerability:...`, `httpsAvailable`, parité d'adresses). Ni note, ni
+baseline, ni webhook, ni dérogation. `--format json` affiche le document de
+mesure.
 
 # Checking multiple hosts
 `--host` (and `COS_HOST`) accepts a comma-separated list of hostnames, e.g.:

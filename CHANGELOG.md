@@ -24,6 +24,17 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   [ADR 0002](adr/0002-no-scan-result-caching.md) requires. Without such a
   scan the refusal is unchanged.
 
+- **`--verify-remediation` re-checks one finding without a full scan.**
+  After changing a single reverse-proxy setting, pass the finding ids the
+  full output reported (repeatable or comma-separated, a family root such as
+  `exposed` covers every member) and only the probes that measure them run.
+  The plugin answers `OK` when every one now passes, `WARNING`/`CRITICAL`
+  while one still fails, and `UNKNOWN` for an id only a full scan can settle
+  (`eol`, a vulnerability, address parity). No rating, baseline or webhook.
+  The measurement is `opencloud_local_scan.verification.verify`, which reuses
+  the scanner's own probes so its answer matches the next full scan. See
+  ADR 0072.
+
 ## [1.27.2] - 2026-09-19
 
 ### Added

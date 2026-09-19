@@ -74,6 +74,7 @@ from opencloud_local_scan.prometheus import (
 from opencloud_local_scan.releases import MODES as UPDATE_SOURCES
 from opencloud_local_scan.scanner import _NoRedirectSession, _PinnedHTTPAdapter
 from opencloud_local_scan.selfupdate import self_update_note
+from opencloud_local_scan.verification import verify as verify_remediation
 from opencloud_local_scan.versions import RELEASE_TRACK_CHOICES, TRACK_AUTO
 from opencloud_local_scan.waivers import Waiver, WaiverError, parse_waivers
 
@@ -2420,6 +2421,22 @@ def build_arg_parser() -> argparse.ArgumentParser:
         ),
     )
     output.add_argument(
+        "--verify-remediation",
+        action="append",
+        metavar="FINDING_ID",
+        default=None,
+        help=(
+            "Re-measure only the named finding (repeatable, or comma "
+            "separated) instead of running a full scan - for checking one "
+            "reverse-proxy change without waiting for everything else. Takes "
+            "the ids the full output reports, e.g. 'Strict-Transport-Security', "
+            "'corsOriginRestricted' or 'exposed' for every exposed path. OK when "
+            "every one now passes, WARNING or CRITICAL when one still fails, "
+            "UNKNOWN when one can only be verified by a full scan. No rating, "
+            "baseline or webhook."
+        ),
+    )
+    output.add_argument(
         "--prometheus-listen-port",
         type=int,
         default=_env_int("PROMETHEUS_LISTEN_PORT", 0),
@@ -3596,10 +3613,110 @@ def main() -> None:
         _fail(f"UNKNOWN: {exc}")
 
 
+#: Severities whose check, still failing after a fix, is a CRITICAL.
+_CRITICAL_SEVERITIES = frozenset({"critical", "high"})
+
+
+def _requested_finding_ids(values: list[str]) -> list[str]:
+    """Every id named by --verify-remediation, in order, without duplicates."""
+    ids = (part.strip() for value in values for part in value.split(","))
+    return list(dict.fromkeys(item for item in ids if item))
+
+
+def _verification_exit_code(results: list[dict[str, Any]]) -> NagiosExitCode:
+    """
+    Judge a verification document.
+
+    A check that still fails outranks one that could not be verified: the
+    operator has a definite answer about it. A failure at high or critical
+    severity is CRITICAL; any other - including a header, which carries no
+    severity - is WARNING.
+    """
+    failing = [entry for entry in results if entry.get("passed") is False]
+    if failing:
+        severities = {
+            str(check.get("severity") or "").lower()
+            for entry in failing
+            for check in entry.get("checks") or []
+            if not check.get("passed", True)
+        }
+        if severities & _CRITICAL_SEVERITIES:
+            return NagiosExitCode.CRITICAL
+        return NagiosExitCode.WARNING
+    if any(entry.get("passed") is None for entry in results):
+        return NagiosExitCode.UNKNOWN
+    return NagiosExitCode.OK
+
+
+def _verification_lines(host: str, document: dict[str, Any]) -> tuple[NagiosExitCode, list[str]]:
+    """The Nagios status line and detail lines for one verified host."""
+    results = document["results"]
+    exit_code = _verification_exit_code(results)
+    fixed = [entry["id"] for entry in results if entry.get("passed") is True]
+    failing = [entry["id"] for entry in results if entry.get("passed") is False]
+    unknown = [entry["id"] for entry in results if entry.get("passed") is None]
+    parts = []
+    if failing:
+        parts.append(f"still failing: {', '.join(failing)}")
+    if unknown:
+        parts.append(f"not verified: {', '.join(unknown)}")
+    if fixed:
+        parts.append(f"verified: {', '.join(fixed)}")
+    lines = [f"{exit_code.name}: {host} remediation check - {'; '.join(parts)}"]
+    for entry in results:
+        if entry.get("passed") is None:
+            lines.append(f"{entry['id']}: {entry.get('reason') or 'not verified'}")
+            continue
+        for check in entry.get("checks") or []:
+            state = "passes" if check.get("passed") else "fails"
+            detail = f" - {check['detail']}" if check.get("detail") else ""
+            lines.append(f"{check['id']}: {state}{detail}")
+    return exit_code, [_safe_monitoring_text(line) for line in lines]
+
+
+def _run_remediation_verification(hosts: list[str], args: argparse.Namespace) -> int:
+    """
+    Re-measure the findings named by --verify-remediation on every host.
+
+    Deliberately outside the scan pipeline: nothing is rated, compared with
+    a baseline or sent to a webhook, because a partial measurement is not a
+    state of the instance any of those should record.
+    """
+    finding_ids = _requested_finding_ids(args.verify_remediation)
+    if not finding_ids:
+        _fail("UNKNOWN: --verify-remediation needs at least one finding id.")
+    exit_codes: list[NagiosExitCode] = []
+    documents: list[dict[str, Any]] = []
+    for host in hosts:
+        context = _build_context(host, args)
+        check_if_ip_or_host(context.host, context)
+        try:
+            document = verify_remediation(
+                context.host, finding_ids, settings=context.scanner_settings
+            )
+        except (ScanError, *REQUEST_ERRORS) as exc:
+            exit_codes.append(NagiosExitCode.UNKNOWN)
+            if args.output_format != "json":
+                print(_safe_monitoring_text(f"UNKNOWN: {context.host} Scan failed: {exc}"))
+            continue
+        exit_code, lines = _verification_lines(context.host, document)
+        exit_codes.append(exit_code)
+        document["exit_code"] = int(exit_code)
+        documents.append(document)
+        if args.output_format != "json":
+            print("\n".join(lines))
+    if args.output_format == "json":
+        print(json.dumps(documents, indent=2))
+    return int(_aggregate_exit_code(exit_codes))
+
+
 def _run_checks(hosts: list[str], args: argparse.Namespace) -> None:
     """Scan every host in the requested output format."""
     if _CONFIG.source:
         LOGGER.debug("Using configuration file %s", _CONFIG.source)
+
+    if args.verify_remediation:
+        sys.exit(_run_remediation_verification(hosts, args))
 
     if args.prometheus_listen_port:
         serve_prometheus_metrics(hosts, args)
