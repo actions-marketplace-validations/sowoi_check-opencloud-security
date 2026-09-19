@@ -31,6 +31,7 @@
 
 <nav class="docs-toc card section-gap" aria-label="{{ t('docs.guide.toc.aria') }}" data-reveal>
   <p class="kicker">{{ t('docs.guide.toc.heading') }}</p>
+  <a href="#1270-2026-09-19" lang="en">[1.27.0] - 2026-09-19</a>
   <a href="#1261-2026-09-19" lang="en">[1.26.1] - 2026-09-19</a>
   <a href="#1260-2026-09-19" lang="en">[1.26.0] - 2026-09-19</a>
   <a href="#1253-2026-09-18" lang="en">[1.25.3] - 2026-09-18</a>
@@ -40,12 +41,36 @@
   <a href="#1242-2026-09-17" lang="en">[1.24.2] - 2026-09-17</a>
   <a href="#1241-2026-09-16" lang="en">[1.24.1] - 2026-09-16</a>
   <a href="#1240-2026-09-16" lang="en">[1.24.0] - 2026-09-16</a>
-  <a href="#1233-2026-09-16" lang="en">[1.23.3] - 2026-09-16</a>
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="en">
-<h2 id="1261-2026-09-19">[1.26.1] - 2026-09-19</h2>
+<h2 id="1270-2026-09-19">[1.27.0] - 2026-09-19</h2>
 <h3 id="added">Added</h3>
+<ul>
+<li>
+<p>The web report lists an advertised HTTP/3 listener (with its UDP ports) and
+  the upgrade path - what the recommended release fixes, what it leaves open
+  and which release clears everything - in all four languages.</p>
+</li>
+<li>
+<p><code>upgrade_path_complete</code> performance data (<code>1</code> when the recommended upgrade
+  clears every known advisory, <code>0</code> when it does not), and with
+  <code>--eol-warning</code> the <code>support_days_left</code> metric carries that window as its
+  warning range and the end of life as critical. The webhook payload gains
+  <code>eol_warning_days</code>, <code>eol_warning</code> and <code>upgrade_path</code>.</p>
+</li>
+<li>
+<p><code>--login-throttling</code> (<code>COS_LOGIN_THROTTLING</code>, YAML
+  <code>scanner.check_login_throttling</code>, also on <code>scan</code> and in the setup wizard)
+  sends six failed sign-ins for a random, non-existent account to the
+  built-in identity provider and records <code>loginThrottling</code> - whether an HTTP
+  429 or <code>Retry-After</code> slowed them down. Off by default, never graded, run
+  after every other probe, and never sent by the web service
+  (<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0069-login-throttling-is-observed-only-when-the-operator-asks.md">ADR 0069</a>).</p>
+</li>
+</ul>
+<h2 id="1261-2026-09-19">[1.26.1] - 2026-09-19</h2>
+<h3 id="added_1">Added</h3>
 <ul>
 <li>The operator's area has a <strong>Releases</strong> tab at <code>/admin/docs/releases</code>: the
   ten newest released sections of <code>CHANGELOG.md</code>, newest first, so an
@@ -53,7 +78,7 @@
   area. The publish workflow regenerates it together with the release notes.</li>
 </ul>
 <h2 id="1260-2026-09-19">[1.26.0] - 2026-09-19</h2>
-<h3 id="added_1">Added</h3>
+<h3 id="added_2">Added</h3>
 <ul>
 <li>
 <p><code>--eol-warning DAYS</code> (<code>COS_EOL_WARNING</code>, YAML <code>eol_warning</code>, and a setup
@@ -94,7 +119,7 @@
 </li>
 </ul>
 <h2 id="1253-2026-09-18">[1.25.3] - 2026-09-18</h2>
-<h3 id="added_2">Added</h3>
+<h3 id="added_3">Added</h3>
 <ul>
 <li>
 <p>The <code>/check-changelog-docs</code> skill checks that every new <code>Added</code> or
@@ -172,7 +197,7 @@
 </li>
 </ul>
 <h2 id="1252-2026-09-18">[1.25.2] - 2026-09-18</h2>
-<h3 id="added_3">Added</h3>
+<h3 id="added_4">Added</h3>
 <ul>
 <li>The Docker setup wizard moves while it works, in the four places where
   motion tells the operator something the static page could not. Section
@@ -294,7 +319,7 @@
   group only as a dependency of <code>mcp</code>; it is now listed there itself.</li>
 </ul>
 <h2 id="1250-2026-09-17">[1.25.0] - 2026-09-17</h2>
-<h3 id="added_4">Added</h3>
+<h3 id="added_5">Added</h3>
 <ul>
 <li><strong>The comparison journeys are covered in a real browser.</strong> The Playwright
   suite now downloads a scan report and uploads it as the baseline for a later
@@ -485,7 +510,7 @@
   gave that item.</li>
 </ul>
 <h2 id="1241-2026-09-16">[1.24.1] - 2026-09-16</h2>
-<h3 id="added_5">Added</h3>
+<h3 id="added_6">Added</h3>
 <ul>
 <li><strong>The frontend is tested in a real browser.</strong> <code>tests/test_webapp_browser_ux.py</code>
   and <code>tests/test_webapp_browser_e2e.py</code> drive the web application in WebKit
@@ -640,7 +665,7 @@
   frontend pages and German guide search content. Preserve section links across
   languages; French and Spanish continue to use English guide bodies.</li>
 </ul>
-<h3 id="added_6">Added</h3>
+<h3 id="added_7">Added</h3>
 <ul>
 <li>
 <p><strong>The comparison page takes the earlier scan as an uploaded report.</strong>
@@ -747,61 +772,6 @@
   holds the same two records. The generated frontend documentation and the
   public and operator search indexes were rebuilt so that the version they
   carry is this release's.</p>
-</li>
-</ul>
-<h2 id="1233-2026-09-16">[1.23.3] - 2026-09-16</h2>
-<h3 id="added_7">Added</h3>
-<ul>
-<li><strong>An operator can search the operator area.</strong> While the sign-in lasts,
-  <code>/search</code> also answers from the area's own pages - the overview, the
-  configuration and rules tabs and the two operator documents - and marks
-  those results as the operator area's. The index behind them is built into
-  the package rather than <code>frontend/static</code>, is served only by an authorised
-  route under <code>/admin</code>, and is sent <code>no-store</code> so that signing out ends
-  access to it immediately. Everybody else gets the public index alone and no
-  indication that another one exists.</li>
-</ul>
-<h3 id="fixed_6">Fixed</h3>
-<ul>
-<li><strong>The operator documents no longer carry broken images.</strong> The repository's
-  Markdown points at files beside it, which resolve to nothing once a page is
-  served from <code>/admin/docs/</code>. The architecture diagram is now served from this
-  origin, as <code>img-src 'self'</code> requires; the two interface screenshots are
-  megabytes each and show the page the reader is already on, so they become
-  links to the repository rather than weight in the bundle.</li>
-<li><strong>The two generated operator documents now look like the rest of the area.</strong>
-  <code>Architecture</code> and <code>Operations</code> never loaded <code>admin.css</code>, so the tab strip
-  above them rendered as bare links and neither page carried the signed-in
-  band or the ruled heading the other tabs have.</li>
-</ul>
-<h3 id="changed_5">Changed</h3>
-<ul>
-<li>
-<p><strong>The operator index is chosen from a table rather than named by a request.</strong>
-  The file each language's operator search index lives in is now a fixed entry
-  in one table in <code>webapp/search.py</code>, which both the build script and the
-  request path read. The language a request asks for could already only be one
-  of the four this frontend has - a cookie or <code>Accept-Language</code> is reduced to a
-  supported code or to nothing before anything else sees it - so no traversal
-  was reachable, but the name was still assembled from that value, which is a
-  shape static analysis rightly objects to and one refactor away from being
-  true. A cookie the visitor wrote by hand now selects an entry or misses the
-  table and gets English.</p>
-</li>
-<li>
-<p><strong>The agent guide is now part of the API page.</strong> <code>/ai</code> was a tab of its own
-  next to <code>/api</code>, which asked a reader wiring up software to guess whether a
-  curl call and an MCP endpoint were documented in the same place. Discovery,
-  WebMCP, client configuration and the rules for agents are now sections of
-  <code>/api</code>, which keeps its name. <code>/ai</code> redirects there permanently, and the
-  discovery document's <code>documentation</code> key follows it.</p>
-</li>
-<li>
-<p><strong>Reference data re-read and the generated documentation rebuilt.</strong> The
-  OpenCloud release schedule is unchanged (production 7.2.4, rolling 8.0.0)
-  and the advisory database brought no new entries, so this release carries
-  the same ratings as the last one. The bundled documentation pages and the
-  four search indexes are regenerated against the new version.</p>
 </li>
 </ul>
 </article>
