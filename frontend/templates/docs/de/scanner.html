@@ -33,6 +33,7 @@
   <a href="#tls" lang="de">TLS</a>
   <a href="#what-this-package-does-not-do" lang="de">Aufgaben außerhalb der Bibliothek</a>
   <a href="#using-it-directly" lang="de">Direkte Verwendung</a>
+  <a href="#verifying-a-fix-without-a-full-scan" lang="de">Eine Korrektur ohne vollen Scan prüfen</a>
   <a href="#comparing-a-scan-with-the-last-one" lang="de">Vergleich mit dem letzten Scan</a>
 </nav>
 
@@ -985,6 +986,27 @@ result = scan(
     release_settings=ReleaseSettings(mode=&quot;bundled&quot;),
 )
 </code></pre>
+<h2 id="verifying-a-fix-without-a-full-scan">Eine Korrektur ohne vollen Scan prüfen</h2>
+<p><code>opencloud_local_scan.verification.verify</code> misst nur die übergebenen Befunde
+neu und führt dafür ausschließlich die Proben des Scanners aus, die sie
+erzeugen. Darauf baut <code>--verify-remediation</code> auf (siehe <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0072-remediation-verification-re-measures-named-findings-without-a-full-scan.md">ADR 0072</a>).</p>
+<pre><code class="language-python">from opencloud_local_scan.verification import verify
+
+document = verify(
+    &quot;opencloud.example.com&quot;,
+    [&quot;Strict-Transport-Security&quot;, &quot;exposed&quot;],
+)
+for entry in document[&quot;results&quot;]:
+    print(entry[&quot;id&quot;], entry[&quot;passed&quot;], entry[&quot;reason&quot;])
+</code></pre>
+<p>Das Dokument enthält <code>domain</code>, <code>url</code>, <code>verifiedAt</code>, <code>probeGroups</code> (die
+tatsächlich gelaufenen Gruppen) und <code>results</code> mit einem Eintrag pro ID:
+<code>id</code>, <code>verifiable</code> (false für IDs, die nur ein voller Scan klären kann, etwa
+<code>eol</code> oder <code>vulnerability:...</code>), <code>passed</code> (<code>None</code>, wenn nichts gemessen
+wurde), <code>group</code>, <code>checks</code> in der Form der <code>extraChecks</code>-Einträge und
+<code>reason</code>. Wie <code>scan()</code> misst die Funktion nur und bewertet nicht: keine
+Bewertung, keine Waivers. <code>probe_group(id)</code> sagt dir vorab, welche Gruppe
+eine ID misst.</p>
 <h2 id="comparing-a-scan-with-the-last-one">Vergleich mit dem letzten Scan</h2>
 <p><code>opencloud_local_scan.baseline</code> speichert pro Host die vergleichbaren Befunde:
 Schwachstellen, veränderbare und nicht ausgenommene Schutzmaßnahmen,

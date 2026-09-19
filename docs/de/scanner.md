@@ -792,6 +792,32 @@ result = scan(
 )
 ```
 
+## Eine Korrektur ohne vollen Scan prüfen {#verifying-a-fix-without-a-full-scan}
+
+`opencloud_local_scan.verification.verify` misst nur die übergebenen Befunde
+neu und führt dafür ausschließlich die Proben des Scanners aus, die sie
+erzeugen. Darauf baut `--verify-remediation` auf (siehe [ADR 0072](../../adr/0072-remediation-verification-re-measures-named-findings-without-a-full-scan.md)).
+
+```python
+from opencloud_local_scan.verification import verify
+
+document = verify(
+    "opencloud.example.com",
+    ["Strict-Transport-Security", "exposed"],
+)
+for entry in document["results"]:
+    print(entry["id"], entry["passed"], entry["reason"])
+```
+
+Das Dokument enthält `domain`, `url`, `verifiedAt`, `probeGroups` (die
+tatsächlich gelaufenen Gruppen) und `results` mit einem Eintrag pro ID:
+`id`, `verifiable` (false für IDs, die nur ein voller Scan klären kann, etwa
+`eol` oder `vulnerability:...`), `passed` (`None`, wenn nichts gemessen
+wurde), `group`, `checks` in der Form der `extraChecks`-Einträge und
+`reason`. Wie `scan()` misst die Funktion nur und bewertet nicht: keine
+Bewertung, keine Waivers. `probe_group(id)` sagt dir vorab, welche Gruppe
+eine ID misst.
+
 ## Vergleich mit dem letzten Scan {#comparing-a-scan-with-the-last-one}
 
 `opencloud_local_scan.baseline` speichert pro Host die vergleichbaren Befunde:

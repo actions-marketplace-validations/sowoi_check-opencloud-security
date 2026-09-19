@@ -33,6 +33,7 @@
   <a href="#tls" lang="en">TLS</a>
   <a href="#what-this-package-does-not-do" lang="en">What this package does not do</a>
   <a href="#using-it-directly" lang="en">Using it directly</a>
+  <a href="#verifying-a-fix-without-a-full-scan" lang="en">Verifying a fix without a full scan</a>
   <a href="#comparing-a-scan-with-the-last-one" lang="en">Comparing a scan with the last one</a>
 </nav>
 
@@ -1126,6 +1127,60 @@ result = scan(
     release_settings=ReleaseSettings(mode=&quot;bundled&quot;),
 )
 </code></pre>
+<h2 id="verifying-a-fix-without-a-full-scan">Verifying a fix without a full scan</h2>
+<p><code>opencloud_local_scan.verification.verify</code> re-measures only the findings it is
+given, by running the scanner's own probes for them and nothing else. It is
+what <code>--verify-remediation</code> is built on (see
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0072-remediation-verification-re-measures-named-findings-without-a-full-scan.md">ADR 0072</a>).</p>
+<pre><code class="language-python">from opencloud_local_scan.verification import verify
+
+document = verify(
+    &quot;opencloud.example.com&quot;,
+    [&quot;Strict-Transport-Security&quot;, &quot;exposed&quot;],
+)
+for entry in document[&quot;results&quot;]:
+    print(entry[&quot;id&quot;], entry[&quot;passed&quot;], entry[&quot;reason&quot;])
+</code></pre>
+<p>The document has <code>domain</code>, <code>url</code>, <code>verifiedAt</code>, <code>probeGroups</code> (the groups
+that actually ran) and <code>results</code>, one entry per requested id in the order
+given:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>The requested id; a family root such as <code>exposed</code> covers every <code>exposed:...</code> member</td>
+</tr>
+<tr>
+<td><code>verifiable</code></td>
+<td>False for an id only a full scan can settle (<code>eol</code>, <code>vulnerability:...</code>, <code>httpsAvailable</code>, the address-parity checks) or that this build does not know</td>
+</tr>
+<tr>
+<td><code>passed</code></td>
+<td>True or false when measured, <code>None</code> when nothing was</td>
+</tr>
+<tr>
+<td><code>group</code></td>
+<td>The probe group that measured it</td>
+</tr>
+<tr>
+<td><code>checks</code></td>
+<td>The measured findings, in the same shape as <code>extraChecks</code> entries</td>
+</tr>
+<tr>
+<td><code>reason</code></td>
+<td>Why <code>passed</code> is <code>None</code>, otherwise empty</td>
+</tr>
+</tbody>
+</table>
+<p>Like <code>scan()</code>, it measures and never judges: no rating, no waivers, no
+remediation plan. <code>probe_group(id)</code> tells you in advance which group, if any,
+an id maps to. It raises <code>ScanError</code> when the instance cannot be reached.</p>
 <h2 id="comparing-a-scan-with-the-last-one">Comparing a scan with the last one</h2>
 <p><code>opencloud_local_scan.baseline</code> reduces a result document to the findings that
 are worth comparing - vulnerabilities, missing hardening measures that are

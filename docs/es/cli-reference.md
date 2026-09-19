@@ -62,6 +62,7 @@ check-opencloud-security --host <Hostname> --check-hardening
 | `--eol-warning DÍAS`          | Notifica WARNING cuando la línea llega al fin de vida en DÍAS días o menos (`0` lo desactiva) | `0` | `COS_EOL_WARNING` |
 | `--baseline`                  | Archivo que recuerda los hallazgos de la última ejecución, con una entrada por host | *Ninguno* | `COS_BASELINE` |
 | `--warn-on-new`               | Solo alerta sobre hallazgos nuevos o peores que en la línea base; requiere `--baseline` | *False* | `COS_WARN_ON_NEW` |
+| `--verify-remediation`        | Vuelve a medir solo los identificadores indicados (repetible, separados por comas) en lugar de un escaneo completo | *None* | - |
 | `--diff-format`               | Muestra los cambios respecto a la línea base como `text`, `markdown` o Slack Block Kit `slack`/`json` | `text` | `COS_DIFF_FORMAT` |
 | `--self-update-check`         | Avisa cuando hay una versión más reciente del complemento en PyPI; nunca cambia el código de salida | *False* | `COS_SELF_UPDATE_CHECK` |
 | `--webhook-url`               | Punto de acceso opcional al que se notifica cuando la comprobación alcanza el estado configurado | *Ninguno* (desactivado) | `COS_WEBHOOK_URL` |

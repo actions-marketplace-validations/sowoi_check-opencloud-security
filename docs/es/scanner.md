@@ -983,6 +983,31 @@ result = scan(
 )
 ```
 
+## Verificar una corrección sin un análisis completo {#verifying-a-fix-without-a-full-scan}
+
+`opencloud_local_scan.verification.verify` vuelve a medir solo los hallazgos
+indicados, ejecutando únicamente las sondas del escáner que los producen. Es
+la base de `--verify-remediation` (véase [ADR 0072](../../adr/0072-remediation-verification-re-measures-named-findings-without-a-full-scan.md)).
+
+```python
+from opencloud_local_scan.verification import verify
+
+document = verify(
+    "opencloud.example.com",
+    ["Strict-Transport-Security", "exposed"],
+)
+for entry in document["results"]:
+    print(entry["id"], entry["passed"], entry["reason"])
+```
+
+El documento contiene `domain`, `url`, `verifiedAt`, `probeGroups` (los
+grupos que se ejecutaron) y `results`, una entrada por identificador: `id`,
+`verifiable` (false si solo un análisis completo puede decidirlo, como `eol`
+o `vulnerability:...`), `passed` (`None` si no se midió nada), `group`,
+`checks` con la forma de las entradas de `extraChecks` y `reason`. Como
+`scan()`, mide y nunca juzga: sin calificación ni exenciones.
+`probe_group(id)` indica de antemano qué grupo mide un identificador.
+
 ## Comparar un análisis con el anterior {#comparing-a-scan-with-the-last-one}
 
 `opencloud_local_scan.baseline` reduce un documento de resultado a los

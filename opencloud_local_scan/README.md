@@ -946,6 +946,41 @@ result = scan(
 )
 ```
 
+## Verifying a fix without a full scan
+
+`opencloud_local_scan.verification.verify` re-measures only the findings it is
+given, by running the scanner's own probes for them and nothing else. It is
+what `--verify-remediation` is built on (see
+[ADR 0072](../adr/0072-remediation-verification-re-measures-named-findings-without-a-full-scan.md)).
+
+```python
+from opencloud_local_scan.verification import verify
+
+document = verify(
+    "opencloud.example.com",
+    ["Strict-Transport-Security", "exposed"],
+)
+for entry in document["results"]:
+    print(entry["id"], entry["passed"], entry["reason"])
+```
+
+The document has `domain`, `url`, `verifiedAt`, `probeGroups` (the groups
+that actually ran) and `results`, one entry per requested id in the order
+given:
+
+| Key | Meaning |
+|:----|:--------|
+| `id` | The requested id; a family root such as `exposed` covers every `exposed:...` member |
+| `verifiable` | False for an id only a full scan can settle (`eol`, `vulnerability:...`, `httpsAvailable`, the address-parity checks) or that this build does not know |
+| `passed` | True or false when measured, `None` when nothing was |
+| `group` | The probe group that measured it |
+| `checks` | The measured findings, in the same shape as `extraChecks` entries |
+| `reason` | Why `passed` is `None`, otherwise empty |
+
+Like `scan()`, it measures and never judges: no rating, no waivers, no
+remediation plan. `probe_group(id)` tells you in advance which group, if any,
+an id maps to. It raises `ScanError` when the instance cannot be reached.
+
 ## Comparing a scan with the last one
 
 `opencloud_local_scan.baseline` reduces a result document to the findings that
