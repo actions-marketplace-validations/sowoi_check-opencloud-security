@@ -606,6 +606,7 @@ class _Rejected(Exception):
         self_host: bool = False,
         key: str = "",
         params: dict[str, Any] | None = None,
+        cooldown_target: str = "",
     ) -> None:
         super().__init__(message)
         self.message = message
@@ -616,6 +617,9 @@ class _Rejected(Exception):
         self.key = key
         """The catalogue identifier for the same sentence, for the page."""
         self.params = params or {}
+        self.cooldown_target = cooldown_target
+        """The target a cooldown refused, so the page can offer the
+        visitor's own earlier result for it. Never another visitor's."""
 
     def translated(self, translate: Translator) -> str:
         """The message for a browser. The API keeps the English one."""
@@ -1354,6 +1358,7 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
                 retry_after=cooldown.retry_after,
                 self_host=True,
                 key="error.rate_limit.target",
+                cooldown_target=target.display,
             )
 
         identifier = str(uuid_module.uuid4())
@@ -1384,6 +1389,7 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
         error: str | None = None,
         error_self_host: bool = False,
         target_url: str = "",
+        cooldown_target: str = "",
     ) -> dict[str, Any]:
         """The form and its WebMCP schema, both from the same catalogues."""
         waivers = waiver_options(translate)
@@ -1396,6 +1402,7 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
             "error": error,
             "error_self_host": error_self_host,
             "target_url": target_url,
+            "cooldown_target": cooldown_target,
             "index_meta_tags": settings.index_meta_tags,
             "webmcp_tools": (
                 (_webmcp_scan_tool(tracks, waivers),) if mcp_enabled else ()
@@ -1727,6 +1734,7 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
                         error=exc.translated(translate),
                         error_self_host=exc.self_host,
                         target_url=str(submitted_url),
+                        cooldown_target=exc.cooldown_target,
                     ),
                     status=exc.status,
                 )
@@ -1987,6 +1995,11 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
             return JSONResponse(_scan_payload(record))
         translate = translator_for(request)
         summary = summarise(record.result, translate) if record.result else None
+        rescan_after = (
+            await rescan_wait(request, record)
+            if record.state in (STATE_COMPLETED, STATE_FAILED)
+            else 0
+        )
         return page(
             request,
             "scan.html",
@@ -2000,10 +2013,16 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
                 # or running has nothing to rescan and nothing to fix, and a
                 # countdown beside a progress bar would be answering a
                 # question nobody has yet.
-                "rescan_after": (
-                    await rescan_wait(request, record)
-                    if record.state in (STATE_COMPLETED, STATE_FAILED)
-                    else 0
+                "rescan_after": rescan_after,
+                # Arrived here from a refused submission (cooldown-offer.js):
+                # this is the reader's own earlier result, shown instead of a
+                # dead end. Only a finished report still inside a cooldown
+                # says so - otherwise the note would be describing a wait
+                # that is not there. The parameter carries no data.
+                "earlier_result": (
+                    request.query_params.get("earlier") == "1"
+                    and record.state == STATE_COMPLETED
+                    and rescan_after > 0
                 ),
                 "fragments": (
                     _configuration_fragments(summary) if summary else ()

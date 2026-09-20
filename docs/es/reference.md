@@ -148,10 +148,32 @@ Las pocas que escribirá casi a diario:
 | `--format` | `nagios`, `prometheus`, `otlp`, `checkmk`, `json`, `sarif` o `junit` |
 | `--ignore-hardening` | Acepta por su nombre un hallazgo que no se va a corregir |
 | `--baseline` / `--warn-on-new` | Alerta solo sobre hallazgos nuevos o peores que en la ejecución anterior |
+| `--verify-remediation` | Tras una corrección, vuelve a medir solo los hallazgos indicados en lugar de un escaneo completo |
 
 La prioridad es siempre **opción de línea de comandos > variable de entorno >
 [archivo de configuración](#configuration-file-and-secrets) > valor
 predeterminado**.
+
+## Verificar una corrección {#verifying-a-fix}
+
+Después de cambiar un solo ajuste - una cabecera en el proxy inverso, una ruta
+que ya no debe servir - no hace falta esperar a un escaneo completo.
+`--verify-remediation` toma los identificadores de hallazgo de la salida
+normal y ejecuta solo las sondas que los miden:
+
+```shell
+check-opencloud-security --host opencloud.example.com \
+  --verify-remediation Strict-Transport-Security,corsOriginRestricted
+```
+
+La opción se puede repetir y acepta identificadores separados por comas. Una
+familia como `exposed`, `authentication`, `debugEndpoint` o
+`versionDisclosure` comprueba todos sus miembros. `OK` significa que todos
+pasan ya; `WARNING` o `CRITICAL` (con gravedad alta o crítica), que alguno
+sigue fallando; `UNKNOWN`, que solo un escaneo completo puede decidirlo
+(`eol`, `vulnerability:...`, `httpsAvailable`, paridad de direcciones). No hay
+calificación, línea base, webhook ni exenciones. `--format json` imprime el
+documento de medición.
 
 ## Comprobar varios hosts {#checking-multiple-hosts}
 `--host` (y `COS_HOST`) admite una lista de nombres de host separados por

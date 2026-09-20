@@ -33,7 +33,7 @@ RESULT_KEYS = frozenset({
     "identityProvider", "ignored", "integrations", "ipv6Enabled", "latestVersionInBranch",
     "legacyVersion", "lifecycle", "loginThrottling", "product", "provenance", "rating",
     "ratingExplanation", "releaseType", "remediationPlan", "reverseProxy", "scannedAt",
-    "scanner", "setup", "tls", "tlsByAddress", "updates", "upgradePath", "url", "version",
+    "scanner", "setup", "tls", "tlsByAddress", "updates", "upgradePath", "upgradeRehearsal", "url", "version",
     "vulnerabilities", "waivers",
 })
 
@@ -42,7 +42,7 @@ PAYLOAD_KEYS = frozenset({
     "failed_extra_checks", "host", "lifecycle", "message", "missing_hardenings", "plugin",
     "plugin_version", "product", "product_version", "rating", "rating_label",
     "release_type", "scan_backend", "scan_uuid", "scanned_at", "status", "timestamp",
-    "update", "upgrade_path", "vulnerabilities", "vulnerability_count",
+    "update", "upgrade_path", "upgrade_rehearsal", "vulnerabilities", "vulnerability_count",
 })
 
 # Sections of the payload that are the scanner's own documents, copied as-is.

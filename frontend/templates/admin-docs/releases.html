@@ -31,6 +31,7 @@
 
 <nav class="docs-toc card section-gap" aria-label="{{ t('docs.guide.toc.aria') }}" data-reveal>
   <p class="kicker">{{ t('docs.guide.toc.heading') }}</p>
+  <a href="#1280-this-release" lang="en">[1.28.0] - this release</a>
   <a href="#1272-2026-09-19" lang="en">[1.27.2] - 2026-09-19</a>
   <a href="#1271-2026-09-19" lang="en">[1.27.1] - 2026-09-19</a>
   <a href="#1270-2026-09-19" lang="en">[1.27.0] - 2026-09-19</a>
@@ -40,12 +41,61 @@
   <a href="#1252-2026-09-18" lang="en">[1.25.2] - 2026-09-18</a>
   <a href="#1251-2026-09-18" lang="en">[1.25.1] - 2026-09-18</a>
   <a href="#1250-2026-09-17" lang="en">[1.25.0] - 2026-09-17</a>
-  <a href="#1242-2026-09-17" lang="en">[1.24.2] - 2026-09-17</a>
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="en">
-<h2 id="1272-2026-09-19">[1.27.2] - 2026-09-19</h2>
+<h2 id="1280-this-release">[1.28.0] - this release</h2>
 <h3 id="added">Added</h3>
+<ul>
+<li>
+<p><strong>Upgrade rehearsal: what each candidate release would fix, leave and
+  rate.</strong> The scan result gains <code>upgradeRehearsal</code>, which simulates every
+  release worth moving to (the newest patch of the installed line and the
+  newest release of each later line, only on the declared track) against the
+  advisory database and the release schedule. The plugin prints it as one
+  detail line, for example "Upgrade rehearsal: 7.2.4 fixes 3 findings,
+  leaves 1, reaches rating C", and the webhook payload carries it as
+  <code>upgrade_rehearsal</code>. The rating replays the scanner's own version rules and
+  keeps the instance's failed checks as caps, because an upgrade does not
+  change the proxy. See
+  <a href="/documentation/release-lifecycle#rehearse-every-upgrade">Rehearse every upgrade</a>.</p>
+</li>
+<li>
+<p><strong>A scan the target cooldown refuses now opens your earlier result.</strong> When
+  an instance was scanned too recently and this browser tab has already shown
+  a finished scan of it, the web application opens that result instead of
+  only refusing, says it is the earlier result, and counts down to when a new
+  scan is possible. The earlier result comes from the tab's own scan history
+  (the one the comparison offer keeps in <code>sessionStorage</code>); the server never
+  hands one visitor a scan somebody else started, as
+  <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0002-no-scan-result-caching.md">ADR 0002</a> requires. Without such a
+  scan the refusal is unchanged.</p>
+</li>
+<li>
+<p><strong><code>--verify-remediation</code> re-checks one finding without a full scan.</strong>
+  After changing a single reverse-proxy setting, pass the finding ids the
+  full output reported (repeatable or comma-separated, a family root such as
+  <code>exposed</code> covers every member) and only the probes that measure them run.
+  The plugin answers <code>OK</code> when every one now passes, <code>WARNING</code>/<code>CRITICAL</code>
+  while one still fails, and <code>UNKNOWN</code> for an id only a full scan can settle
+  (<code>eol</code>, a vulnerability, address parity). No rating, baseline or webhook.
+  The measurement is <code>opencloud_local_scan.verification.verify</code>, which reuses
+  the scanner's own probes so its answer matches the next full scan. See
+  ADR 0072.</p>
+</li>
+</ul>
+<h3 id="documentation">Documentation</h3>
+<ul>
+<li><strong>Translated release-lifecycle guides now include the upgrade-rehearsal
+  section.</strong> Their section anchors stay aligned with the English guide.</li>
+</ul>
+<h3 id="fixed">Fixed</h3>
+<ul>
+<li><strong>Pytest no longer collects mutmut's generated working copy.</strong> This avoids
+  an <code>ImportPathMismatchError</code> between the real and mutated test suites.</li>
+</ul>
+<h2 id="1272-2026-09-19">[1.27.2] - 2026-09-19</h2>
+<h3 id="added_1">Added</h3>
 <ul>
 <li><strong>Property-based tests for the parsers that read outside text.</strong>
   <code>tests/test_properties.py</code> uses Hypothesis, a new test-only dependency
@@ -86,7 +136,7 @@
   from 1.0.0 up to 4.0.8 and from 4.1.0 up to (but not including) 7.2.0.</li>
 </ul>
 <h2 id="1271-2026-09-19">[1.27.1] - 2026-09-19</h2>
-<h3 id="added_1">Added</h3>
+<h3 id="added_2">Added</h3>
 <ul>
 <li>
 <p>Codex can use the repository's Claude Code skills, hooks, subagent roles and
@@ -111,7 +161,7 @@
   (<code>check_untyped_defs</code> in <code>mypy.ini</code>), so CI type-checks the test suite
   too. The 98 errors that surfaced - all in <code>tests/</code> - are fixed.</li>
 </ul>
-<h3 id="fixed">Fixed</h3>
+<h3 id="fixed_1">Fixed</h3>
 <ul>
 <li>
 <p>The Codex scan driver no longer prints the raw scanner document, which could
@@ -126,7 +176,7 @@
 </li>
 </ul>
 <h2 id="1270-2026-09-19">[1.27.0] - 2026-09-19</h2>
-<h3 id="added_2">Added</h3>
+<h3 id="added_3">Added</h3>
 <ul>
 <li>
 <p>The web report lists an advertised HTTP/3 listener (with its UDP ports) and
@@ -151,7 +201,7 @@
 </li>
 </ul>
 <h2 id="1261-2026-09-19">[1.26.1] - 2026-09-19</h2>
-<h3 id="added_3">Added</h3>
+<h3 id="added_4">Added</h3>
 <ul>
 <li>The operator's area has a <strong>Releases</strong> tab at <code>/admin/docs/releases</code>: the
   ten newest released sections of <code>CHANGELOG.md</code>, newest first, so an
@@ -159,7 +209,7 @@
   area. The publish workflow regenerates it together with the release notes.</li>
 </ul>
 <h2 id="1260-2026-09-19">[1.26.0] - 2026-09-19</h2>
-<h3 id="added_4">Added</h3>
+<h3 id="added_5">Added</h3>
 <ul>
 <li>
 <p><code>--eol-warning DAYS</code> (<code>COS_EOL_WARNING</code>, YAML <code>eol_warning</code>, and a setup
@@ -200,7 +250,7 @@
 </li>
 </ul>
 <h2 id="1253-2026-09-18">[1.25.3] - 2026-09-18</h2>
-<h3 id="added_5">Added</h3>
+<h3 id="added_6">Added</h3>
 <ul>
 <li>
 <p>The <code>/check-changelog-docs</code> skill checks that every new <code>Added</code> or
@@ -233,7 +283,7 @@
   way.</p>
 </li>
 </ul>
-<h3 id="fixed_1">Fixed</h3>
+<h3 id="fixed_2">Fixed</h3>
 <ul>
 <li>The end-of-life alert no longer shows a double space ("The 2.x  release
   line") when the scan result names a release line but no release type.</li>
@@ -256,7 +306,7 @@
   still exercises the same hiding and revealing, and the motion itself
   stays covered on the landing page.</li>
 </ul>
-<h3 id="documentation">Documentation</h3>
+<h3 id="documentation_1">Documentation</h3>
 <ul>
 <li>
 <p>Polished awkward German guide wording and corrected inconsistent address forms.</p>
@@ -283,7 +333,7 @@
 </li>
 </ul>
 <h2 id="1252-2026-09-18">[1.25.2] - 2026-09-18</h2>
-<h3 id="added_6">Added</h3>
+<h3 id="added_7">Added</h3>
 <ul>
 <li>The Docker setup wizard moves while it works, in the four places where
   motion tells the operator something the static page could not. Section
@@ -319,7 +369,7 @@
   Affected anyone who ran <code>setup-wizard.py</code> from 1.9.0 to 1.25.1 in a
   directory somebody else could write to.</li>
 </ul>
-<h3 id="fixed_2">Fixed</h3>
+<h3 id="fixed_3">Fixed</h3>
 <ul>
 <li>A report page read without JavaScript no longer shows controls that only
   a script can make work: the configuration-fragment picker and the copy
@@ -369,7 +419,7 @@
   credentials.</li>
 </ul>
 <h2 id="1251-2026-09-18">[1.25.1] - 2026-09-18</h2>
-<h3 id="fixed_3">Fixed</h3>
+<h3 id="fixed_4">Fixed</h3>
 <ul>
 <li><strong>A release that stopped after its tag is finished by the next run.</strong> The
   release workflow skipped any version whose tag existed, so when v1.25.0 was
@@ -405,7 +455,7 @@
   group only as a dependency of <code>mcp</code>; it is now listed there itself.</li>
 </ul>
 <h2 id="1250-2026-09-17">[1.25.0] - 2026-09-17</h2>
-<h3 id="added_7">Added</h3>
+<h3 id="added_8">Added</h3>
 <ul>
 <li><strong>The comparison journeys are covered in a real browser.</strong> The Playwright
   suite now downloads a scan report and uploads it as the baseline for a later
@@ -543,7 +593,7 @@
   and no part of the file, because an audit trail is as attractive a place for
   a hostile upload to be quoted as an error page is.</li>
 </ul>
-<h3 id="fixed_4">Fixed</h3>
+<h3 id="fixed_5">Fixed</h3>
 <ul>
 <li>
 <p><strong>Two sentences about a refused upload printed their own placeholder.</strong> The
@@ -562,38 +612,6 @@
   English guide index also linked to a German index that was never written;
   it now points at the three translated guide directories.</p>
 </li>
-</ul>
-<h2 id="1242-2026-09-17">[1.24.2] - 2026-09-17</h2>
-<h3 id="changed_4">Changed</h3>
-<ul>
-<li><strong>The German interface and guides now address the reader as "du"
-  throughout.</strong> The remaining formal strings in the German catalogue and the
-  last formal sentences in <code>docs/de/</code> are rewritten, and the test that
-  tolerated a list of older formal strings now fails on any formal German
-  string, in the catalogue and in the German guides alike.</li>
-<li><strong>Spanish guide sources are now available in the frontend.</strong> Every public
-  guide has a matching <code>docs/es/</code> source, generated Spanish template and
-  search index entry, so a Spanish visitor no longer gets the English guide
-  under a notice. The languages with guide sources are listed once, in
-  <code>GUIDE_LANGUAGES</code>, for the generator, the route and the search index. See
-  <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0063-public-guides-have-spanish-sources.md">ADR 0063</a>.</li>
-</ul>
-<h3 id="fixed_5">Fixed</h3>
-<ul>
-<li><strong>The browser tests pass in Firefox again.</strong> Playwright's Firefox drops an
-  emulated colour scheme once a page sends
-  <code>Cross-Origin-Opener-Policy: same-origin</code>, so the dark-theme test now gives
-  Firefox a browser whose system theme is dark instead; and waiting for a
-  finished scan tolerates the moment during the result page's reload when the
-  new document has no body yet.</li>
-<li><strong>The MCP sign-in no longer warns about <code>validate_token_resource</code> at
-  startup.</strong> The token verifier already checks a token's audience against
-  <code>COS_WEB_MCP_AUTH_AUDIENCE</code>, so the MCP SDK is now told explicitly not to
-  also require the token's resource to equal the resource URL, which would
-  have refused valid tokens once SDK 3.0 turns that check on by default.</li>
-<li><strong>The grade page test matches the reworded English copy again.</strong> It now
-  looks for "Explanations for failed checks", the heading the copy polish
-  gave that item.</li>
 </ul>
 </article>
 {% endblock %}

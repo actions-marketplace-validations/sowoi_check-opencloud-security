@@ -33,6 +33,7 @@
   <a href="#tls" lang="fr">TLS</a>
   <a href="#what-this-package-does-not-do" lang="fr">What this package does not do</a>
   <a href="#using-it-directly" lang="fr">Using it directly</a>
+  <a href="#verifying-a-fix-without-a-full-scan" lang="fr">Vérifier une correction sans scan complet</a>
   <a href="#comparing-a-scan-with-the-last-one" lang="fr">Comparing a scan with the last one</a>
 </nav>
 
@@ -1111,6 +1112,26 @@ result = scan(
     release_settings=ReleaseSettings(mode=&quot;bundled&quot;),
 )
 </code></pre>
+<h2 id="verifying-a-fix-without-a-full-scan">Vérifier une correction sans scan complet</h2>
+<p><code>opencloud_local_scan.verification.verify</code> re-mesure uniquement les constats
+indiqués, en n'exécutant que les sondes du scanner qui les produisent. C'est
+la base de <code>--verify-remediation</code> (voir <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0072-remediation-verification-re-measures-named-findings-without-a-full-scan.md">ADR 0072</a>).</p>
+<pre><code class="language-python">from opencloud_local_scan.verification import verify
+
+document = verify(
+    &quot;opencloud.example.com&quot;,
+    [&quot;Strict-Transport-Security&quot;, &quot;exposed&quot;],
+)
+for entry in document[&quot;results&quot;]:
+    print(entry[&quot;id&quot;], entry[&quot;passed&quot;], entry[&quot;reason&quot;])
+</code></pre>
+<p>Le document contient <code>domain</code>, <code>url</code>, <code>verifiedAt</code>, <code>probeGroups</code> (les
+groupes réellement exécutés) et <code>results</code>, une entrée par identifiant : <code>id</code>,
+<code>verifiable</code> (false si seul un scan complet peut trancher, comme <code>eol</code> ou
+<code>vulnerability:...</code>), <code>passed</code> (<code>None</code> si rien n'a été mesuré), <code>group</code>,
+<code>checks</code> au format des entrées <code>extraChecks</code> et <code>reason</code>. Comme <code>scan()</code>, la
+fonction mesure sans juger : ni note, ni dérogation. <code>probe_group(id)</code>
+indique à l'avance quel groupe mesure un identifiant.</p>
 <h2 id="comparing-a-scan-with-the-last-one">Comparing a scan with the last one</h2>
 <p><code>opencloud_local_scan.baseline</code> reduces a result document to the findings that
 are worth comparing - vulnerabilities, missing hardening measures that are

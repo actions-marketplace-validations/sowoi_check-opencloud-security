@@ -21,6 +21,7 @@
   <a href="#prerequisites" lang="fr">Prerequisites</a>
   <a href="#installation" lang="fr">Installation</a>
   <a href="#cli-usage" lang="fr">CLI Usage</a>
+  <a href="#verifying-a-fix" lang="fr">Vérifier une correction</a>
   <a href="#checking-multiple-hosts" lang="fr">Checking multiple hosts</a>
   <a href="#prometheus-kubernetes-integration" lang="fr">Prometheus &amp; Kubernetes integration</a>
   <a href="#machine-readable-output-for-ci-jsonsarifjunit" lang="fr">Machine-readable output for CI (json/sarif/junit)</a>
@@ -216,10 +217,30 @@ comparisons, execution, output and notifications.</p>
 <td><code>--baseline</code> / <code>--warn-on-new</code></td>
 <td>Alert only on findings that are new or worse than last run</td>
 </tr>
+<tr>
+<td><code>--verify-remediation</code></td>
+<td>Re-measure only the named findings after a fix, instead of a full scan</td>
+</tr>
 </tbody>
 </table>
 <p>Precedence is always <strong>command-line flag &gt; environment variable &gt;
 <a href="#configuration-file-and-secrets">configuration file</a> &gt; default</strong>.</p>
+<h2 id="verifying-a-fix">Vérifier une correction</h2>
+<p>Après avoir modifié un seul réglage - un en-tête dans le reverse proxy, un
+chemin qu'il ne doit plus servir - inutile d'attendre un scan complet.
+<code>--verify-remediation</code> prend les identifiants de constat de la sortie normale
+et n'exécute que les sondes qui les mesurent :</p>
+<pre><code class="language-shell">check-opencloud-security --host opencloud.example.com \
+  --verify-remediation Strict-Transport-Security,corsOriginRestricted
+</code></pre>
+<p>L'option est répétable et accepte des identifiants séparés par des virgules.
+Une famille comme <code>exposed</code>, <code>authentication</code>, <code>debugEndpoint</code> ou
+<code>versionDisclosure</code> vérifie tous ses membres. <code>OK</code> signifie que tout passe
+désormais ; <code>WARNING</code> ou <code>CRITICAL</code> (gravité élevée ou critique), qu'un
+constat échoue encore ; <code>UNKNOWN</code>, que seul un scan complet peut trancher
+(<code>eol</code>, <code>vulnerability:...</code>, <code>httpsAvailable</code>, parité d'adresses). Ni note, ni
+baseline, ni webhook, ni dérogation. <code>--format json</code> affiche le document de
+mesure.</p>
 <h2 id="checking-multiple-hosts">Checking multiple hosts</h2>
 <p><code>--host</code> (and <code>COS_HOST</code>) accepts a comma-separated list of hostnames, e.g.:</p>
 <pre><code class="language-shell">check-opencloud-security --host opencloud1.example.com,opencloud2.example.com

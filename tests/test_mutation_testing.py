@@ -69,6 +69,13 @@ def test_the_mutmut_working_copy_is_ignored():
     assert "mutants/" in ignored
 
 
+def test_pytest_does_not_collect_the_mutmut_working_copy():
+    """The copied tests must not collide with the real tests' module names."""
+    pytest_options = _table("tool.pytest.ini_options")
+
+    assert re.search(r'^norecursedirs = \[\n(?:.*\n)*\s+"mutants",?\n\]$', pytest_options, re.MULTILINE)
+
+
 def test_the_skill_runs_in_the_read_only_agent():
     """/mutation-test forks into mutation-tester, which has no editing tools."""
     skill = (ROOT / ".claude/skills/mutation-test/SKILL.md").read_text(encoding="utf-8")

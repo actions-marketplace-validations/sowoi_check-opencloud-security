@@ -116,6 +116,19 @@
         {% endif %}
       </span>
     </p>
+    {#
+      A cooldown refusal is not the end of the road when this tab already
+      holds a finished scan of the same instance: cooldown-offer.js looks the
+      target up in the tab's own scan history (compare-offer.js keeps it, in
+      sessionStorage) and opens that result, marked as the earlier one, with
+      the countdown to the next scan. The server shares nothing across
+      visitors (ADR 0002); without such a scan, or without scripting, this
+      stays hidden and the refusal above is the answer.
+    #}
+    {% if cooldown_target %}
+    <p class="hint" data-cooldown-offer data-cooldown-target="{{ cooldown_target }}"
+       hidden aria-live="polite">{{ t('index.cooldown.opening') }}</p>
+    {% endif %}
     {% endif %}
 
     {#
@@ -302,4 +315,5 @@
 <script src="/static/js/app.js" defer></script>
 <script src="/static/js/waivers.js" defer></script>
 <script src="/static/js/remember.js" defer></script>
+<script src="/static/js/cooldown-offer.js" defer></script>
 {% endblock %}

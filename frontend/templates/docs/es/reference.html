@@ -196,11 +196,31 @@ de versiones, comparaciones, ejecución, salida y notificaciones.</p>
 <td><code>--baseline</code> / <code>--warn-on-new</code></td>
 <td>Alerta solo sobre hallazgos nuevos o peores que en la ejecución anterior</td>
 </tr>
+<tr>
+<td><code>--verify-remediation</code></td>
+<td>Tras una corrección, vuelve a medir solo los hallazgos indicados en lugar de un escaneo completo</td>
+</tr>
 </tbody>
 </table>
 <p>La prioridad es siempre <strong>opción de línea de comandos &gt; variable de entorno &gt;
 <a href="#configuration-file-and-secrets">archivo de configuración</a> &gt; valor
 predeterminado</strong>.</p>
+<h3 id="verifying-a-fix">Verificar una corrección</h3>
+<p>Después de cambiar un solo ajuste - una cabecera en el proxy inverso, una ruta
+que ya no debe servir - no hace falta esperar a un escaneo completo.
+<code>--verify-remediation</code> toma los identificadores de hallazgo de la salida
+normal y ejecuta solo las sondas que los miden:</p>
+<pre><code class="language-shell">check-opencloud-security --host opencloud.example.com \
+  --verify-remediation Strict-Transport-Security,corsOriginRestricted
+</code></pre>
+<p>La opción se puede repetir y acepta identificadores separados por comas. Una
+familia como <code>exposed</code>, <code>authentication</code>, <code>debugEndpoint</code> o
+<code>versionDisclosure</code> comprueba todos sus miembros. <code>OK</code> significa que todos
+pasan ya; <code>WARNING</code> o <code>CRITICAL</code> (con gravedad alta o crítica), que alguno
+sigue fallando; <code>UNKNOWN</code>, que solo un escaneo completo puede decidirlo
+(<code>eol</code>, <code>vulnerability:...</code>, <code>httpsAvailable</code>, paridad de direcciones). No hay
+calificación, línea base, webhook ni exenciones. <code>--format json</code> imprime el
+documento de medición.</p>
 <h3 id="checking-multiple-hosts">Comprobar varios hosts</h3>
 <p><code>--host</code> (y <code>COS_HOST</code>) admite una lista de nombres de host separados por
 comas, por ejemplo:</p>

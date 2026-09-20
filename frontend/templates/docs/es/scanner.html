@@ -33,6 +33,7 @@
   <a href="#tls" lang="es">TLS</a>
   <a href="#what-this-package-does-not-do" lang="es">Lo que este paquete no hace</a>
   <a href="#using-it-directly" lang="es">Usarlo directamente</a>
+  <a href="#verifying-a-fix-without-a-full-scan" lang="es">Verificar una corrección sin un análisis completo</a>
   <a href="#comparing-a-scan-with-the-last-one" lang="es">Comparar un análisis con el anterior</a>
 </nav>
 
@@ -1166,6 +1167,26 @@ result = scan(
     release_settings=ReleaseSettings(mode=&quot;bundled&quot;),
 )
 </code></pre>
+<h2 id="verifying-a-fix-without-a-full-scan">Verificar una corrección sin un análisis completo</h2>
+<p><code>opencloud_local_scan.verification.verify</code> vuelve a medir solo los hallazgos
+indicados, ejecutando únicamente las sondas del escáner que los producen. Es
+la base de <code>--verify-remediation</code> (véase <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0072-remediation-verification-re-measures-named-findings-without-a-full-scan.md">ADR 0072</a>).</p>
+<pre><code class="language-python">from opencloud_local_scan.verification import verify
+
+document = verify(
+    &quot;opencloud.example.com&quot;,
+    [&quot;Strict-Transport-Security&quot;, &quot;exposed&quot;],
+)
+for entry in document[&quot;results&quot;]:
+    print(entry[&quot;id&quot;], entry[&quot;passed&quot;], entry[&quot;reason&quot;])
+</code></pre>
+<p>El documento contiene <code>domain</code>, <code>url</code>, <code>verifiedAt</code>, <code>probeGroups</code> (los
+grupos que se ejecutaron) y <code>results</code>, una entrada por identificador: <code>id</code>,
+<code>verifiable</code> (false si solo un análisis completo puede decidirlo, como <code>eol</code>
+o <code>vulnerability:...</code>), <code>passed</code> (<code>None</code> si no se midió nada), <code>group</code>,
+<code>checks</code> con la forma de las entradas de <code>extraChecks</code> y <code>reason</code>. Como
+<code>scan()</code>, mide y nunca juzga: sin calificación ni exenciones.
+<code>probe_group(id)</code> indica de antemano qué grupo mide un identificador.</p>
 <h2 id="comparing-a-scan-with-the-last-one">Comparar un análisis con el anterior</h2>
 <p><code>opencloud_local_scan.baseline</code> reduce un documento de resultado a los
 hallazgos que merece la pena comparar (vulnerabilidades, medidas de refuerzo

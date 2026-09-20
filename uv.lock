@@ -447,7 +447,7 @@ wheels = [
 
 [[package]]
 name = "check-opencloud-security"
-version = "1.27.2"
+version = "1.28.0"
 source = { editable = "." }
 dependencies = [
     { name = "certifi" },
@@ -521,7 +521,7 @@ requires-dist = [
     { name = "redis", marker = "extra == 'web'", specifier = ">=5.3.1,<6" },
     { name = "requests", specifier = ">=2.34.2" },
     { name = "sigstore", marker = "extra == 'signing'", specifier = ">=4.5.0" },
-    { name = "types-requests", specifier = ">=2.33.0.20260712" },
+    { name = "types-requests", specifier = ">=2.33.0.20260906" },
     { name = "uvicorn", marker = "extra == 'web'", specifier = ">=0.52.4" },
 ]
 provides-extras = ["completion", "web", "signing", "mcp"]
@@ -531,22 +531,22 @@ mutation = [{ name = "mutmut", specifier = ">=3.8.0" }]
 test = [
     { name = "argcomplete", specifier = ">=3.7.2" },
     { name = "arq", specifier = ">=0.28.0" },
-    { name = "build", specifier = ">=1.5.0" },
-    { name = "cryptography", specifier = ">=50.0.0" },
+    { name = "build", specifier = ">=1.6.0" },
+    { name = "cryptography", specifier = ">=50.0.1" },
     { name = "fastapi", specifier = ">=0.141.1" },
     { name = "hatchling", specifier = ">=1.32.0" },
     { name = "httpx", specifier = ">=0.28.1" },
-    { name = "httpx2", specifier = ">=2.10.0" },
+    { name = "httpx2", specifier = ">=2.12.0" },
     { name = "hypothesis", specifier = ">=6.168.0" },
     { name = "jinja2", specifier = ">=3.1.6" },
     { name = "markdown", specifier = ">=3.10.3" },
-    { name = "mcp", specifier = ">=2.0.0" },
-    { name = "mypy", specifier = ">=2.3.0" },
+    { name = "mcp", specifier = ">=2.2.0" },
+    { name = "mypy", specifier = ">=2.3.1" },
     { name = "nox", specifier = ">=2026.8.17" },
     { name = "openapi-spec-validator", specifier = ">=0.9.0" },
     { name = "playwright", specifier = ">=1.63.0" },
     { name = "pytest", specifier = ">=9.1.1" },
-    { name = "pytest-cov", specifier = ">=7.0.0" },
+    { name = "pytest-cov", specifier = ">=7.1.0" },
     { name = "pytest-mock", specifier = ">=3.15.1" },
     { name = "python-multipart", specifier = ">=0.0.32" },
     { name = "redis", specifier = ">=5.3.1,<6" },

@@ -63,6 +63,7 @@ is needed.
 | [`test_waiver_expiry.py`](test_waiver_expiry.py) | A waiver with a reason and a deadline, and the alert coming back when it passes. |
 | [`test_change_explanation.py`](test_change_explanation.py) | Why two results differ, claimed only as far as the evidence supports. |
 | [`test_webapp_html_report.py`](test_webapp_html_report.py) | The standalone report: no request on opening, and nothing in it is markup. |
+| [`test_upgrade_rehearsal.py`](test_upgrade_rehearsal.py) | The upgrade rehearsal: each candidate release's fixes, leftovers and rating follow the scanner's own version rules and keep the finding caps. |
 | [`test_remediation.py`](test_remediation.py) | The remediation planner never promises a grade that its fixes would not reach. |
 | [`test_snippets.py`](test_snippets.py) | Configuration fragments for fixes, and that they match the prose describing them. |
 | [`test_explain.py`](test_explain.py) | Debug mode: why a rating is what it is, and what each hardening identifier means. |
@@ -82,6 +83,7 @@ is needed.
 | [`test_refresh_data.py`](test_refresh_data.py) | The command that refreshes reference data on a monitoring host. |
 | [`test_data_signing.py`](test_data_signing.py) | Sigstore attestation of refreshed reference data, and still working without `sigstore` installed. |
 | [`test_reference_data_limits.py`](test_reference_data_limits.py) | Size limits on the daily reference-data fetches, so an oversized response cannot crash the worker. |
+| [`test_verify_remediation.py`](test_verify_remediation.py) | `--verify-remediation` runs only the probes behind the named findings and agrees with a full scan. |
 | [`test_version.py`](test_version.py) | `pyproject.toml` is the only source of the version. |
 
 ## Plugin (`check_opencloud_security.py`)
@@ -120,6 +122,7 @@ is needed.
 | [`test_webapp_workflows.py`](test_webapp_workflows.py) | The workflow layer: async scans, polling, 404 vs 409, not resubmitting refused targets. |
 | [`test_webapp_worker.py`](test_webapp_worker.py) | The worker turns a queued uuid into a scan and a rendered dashboard. |
 | [`test_webapp_batch.py`](test_webapp_batch.py) | Batch submissions, with each target still checked against every limit. |
+| [`test_webapp_earlier_result.py`](test_webapp_earlier_result.py) | A cooldown refusal opens the tab's own earlier result, marked as earlier, with the countdown. |
 | [`test_webapp_rescan.py`](test_webapp_rescan.py) | Rescans go through the normal submission path, and reading the cooldown does not use it up. |
 | [`test_webapp_probe_guard.py`](test_webapp_probe_guard.py) | A client whose scans keep finding no OpenCloud, the same host included, is blocked for an hour; one finding OpenCloud never is. |
 | [`test_webapp_abuse_guards.py`](test_webapp_abuse_guards.py) | Networks instead of addresses, escalating blocks, refused targets as strikes, the daily cap, misleading DNS names and approval mode. |

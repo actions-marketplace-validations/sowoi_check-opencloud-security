@@ -170,6 +170,7 @@ ICINGA_EXCLUDED = {
     "--prometheus-listen-port": "Prometheus exporter",
     "--prometheus-listen-addr": "Prometheus exporter",
     "--scrape-interval": "Prometheus exporter",
+    "--verify-remediation": "a one-off check after a fix, not a recurring service",
 }
 
 _ARGUMENT = re.compile(r'^\s*"(--[a-z-]+)"\s*=\s*\{', re.MULTILINE)

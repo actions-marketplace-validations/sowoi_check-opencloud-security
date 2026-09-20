@@ -1346,6 +1346,10 @@ MESSAGES: dict[str, str] = {
     "result.tab.ready": "Bericht fertig: {target}",
     "result.tab.done": "Note {label}: {target}",
     "result.tab.failed": "Scan fehlgeschlagen: {target}",
+    "index.cooldown.opening": 'Dein vorheriges Ergebnis für diese Instanz wird geöffnet …',
+    "result.earlier.note": (
+        'Das ist dein vorheriges Ergebnis für diese Instanz. Die Instanz wurde gerade erst gescannt und kann noch nicht erneut gescannt werden; der Countdown unten zeigt, wann ein neuer Scan möglich ist.'
+    ),
     "result.compare.offer": "In diesem Tab wurde diese Instanz bereits um {time} gescannt.",
     "result.compare.offer.link": "Sehen, was sich seitdem geändert hat",
     "result.progress.kicker": "In Bearbeitung",

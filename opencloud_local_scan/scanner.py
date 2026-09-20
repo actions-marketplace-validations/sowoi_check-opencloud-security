@@ -86,6 +86,7 @@ from .coverage import (
     CoverageRecorder,
 )
 from .dnssec import check_dnssec
+from .rehearsal import rehearse as rehearse_upgrades
 from .releases import ReleaseSettings, UpdateInfo, fetch_update_info
 from .remediation import SEVERITY_RATING_CAP as _SEVERITY_RATING_CAP
 from .remediation import plan as remediation_plan
@@ -4024,6 +4025,24 @@ def scan(
         )
         rating = explanation.rating
 
+        # Every release worth moving to, replayed through the same version
+        # rules and held under the same finding caps as the rating above: an
+        # upgrade changes the version, never the proxy in front of it.
+        findings_ceiling = (
+            _rating_caps(MAX_RATING, findings)[0]
+            if settings.extra_checks and settings.extra_checks_affect_rating
+            else MAX_RATING
+        )
+        upgrade_rehearsal = rehearse_upgrades(
+            version=version,
+            database=database,
+            schedule=schedule,
+            findings_ceiling=findings_ceiling,
+            recommended=update_info.available_version or lifecycle.upgrade_to,
+            track=settings.release_track,
+            use_release_schedule=settings.use_release_schedule,
+        )
+
         scanned_at = datetime.now(timezone.utc)
         result: dict[str, Any] = {
             "domain": hostname,
@@ -4058,6 +4077,8 @@ def scan(
             # the lowest release that clears them all. None when there is
             # nothing to clear or no release to move to.
             "upgradePath": upgrade_path,
+            # What each candidate release would fix, leave and rate.
+            "upgradeRehearsal": upgrade_rehearsal,
             "hardenings": hardenings,
             "setup": {
                 "https": https,

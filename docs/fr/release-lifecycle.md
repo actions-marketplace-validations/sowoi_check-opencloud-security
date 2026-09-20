@@ -190,3 +190,35 @@ prints it as a detail line:
 ```text
 Upgrade path: 7.2.4 fixes GHSA-aaaa but is still affected by GHSA-bbbb; 7.3.0 is the first release that clears them all.
 ```
+
+## Répéter chaque mise à niveau {#rehearse-every-upgrade}
+
+`upgradePath` couvre la version unique recommandée par le scan.
+`upgradeRehearsal` couvre chaque version qui mérite une mise à niveau : le
+dernier correctif de la ligne installée et la dernière version de chaque ligne
+ultérieure (uniquement les lignes du canal déclaré, si l'instance en déclare
+un). Pour chacune, il indique les avis qu'elle `fixes`, ceux par lesquels elle
+reste `stillAffected`, ceux qu'elle `introduces`, si elle est `endOfLife` et le
+`rating` que le scan lui attribuerait.
+
+```json
+{"upgradeRehearsal": [
+  {"version": "7.2.4", "line": "7.2", "recommended": false,
+   "fixes": ["GHSA-aaaa"], "stillAffected": ["GHSA-bbbb"], "introduces": [],
+   "endOfLife": false, "versionRating": 2, "rating": 2}
+]}
+```
+
+La note utilise les mêmes règles de version que le scan. Les contrôles échoués
+de l'instance continuent de la plafonner (`versionRating` indique ce que la
+version seule permettrait), car une mise à niveau change la version, pas le
+proxy qui se trouve devant elle. Le plugin affiche une ligne de détail avec
+ses propres lettres de notation :
+
+```text
+Upgrade rehearsal: 7.2.4 fixes 1 finding, leaves 1, reaches rating D; 7.3.0 fixes 2 findings, leaves 0, reaches rating A+.
+```
+
+La répétition ne connaît que le calendrier et la base des avis, intégrés ou
+actualisés. Une version ou un avis publié ultérieurement peut modifier le
+résultat.

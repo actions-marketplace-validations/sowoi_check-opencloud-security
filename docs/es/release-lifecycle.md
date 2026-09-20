@@ -194,3 +194,34 @@ Cada rango de un aviso se compara con el destino, así que cuenta una
 corrección portada a otra línea. `safeVersion` es la versión más baja que
 incluye todas las correcciones que le faltan al destino, o `null` si alguna
 aún no existe. El plugin lo muestra como línea de detalle.
+
+## Ensayar cada actualización {#rehearse-every-upgrade}
+
+`upgradePath` cubre la única versión que recomienda el análisis.
+`upgradeRehearsal` cubre cada versión a la que merece la pena pasar: el último
+parche de la línea instalada y la versión más reciente de cada línea posterior
+(solo líneas del canal declarado, si la instancia declara uno). Para cada una
+indica los avisos que `fixes`, aquellos por los que sigue `stillAffected`, los
+que `introduces`, si está `endOfLife` y el `rating` que le daría el análisis.
+
+```json
+{"upgradeRehearsal": [
+  {"version": "7.2.4", "line": "7.2", "recommended": false,
+   "fixes": ["GHSA-aaaa"], "stillAffected": ["GHSA-bbbb"], "introduces": [],
+   "endOfLife": false, "versionRating": 2, "rating": 2}
+]}
+```
+
+La valoración usa las mismas reglas de versión que el análisis. Las
+comprobaciones fallidas de la instancia siguen limitándola (`versionRating`
+indica lo que permitiría la versión por sí sola), porque una actualización
+cambia la versión, no el proxy que tiene delante. El plugin muestra una línea
+de detalle con sus propias letras de valoración:
+
+```text
+Upgrade rehearsal: 7.2.4 fixes 1 finding, leaves 1, reaches rating D; 7.3.0 fixes 2 findings, leaves 0, reaches rating A+.
+```
+
+El ensayo solo conoce el calendario y la base de datos de avisos incluidos o
+actualizados. Una versión o un aviso publicado más adelante puede cambiar el
+resultado.

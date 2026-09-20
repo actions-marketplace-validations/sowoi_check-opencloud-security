@@ -45,6 +45,7 @@ check-opencloud-security --host <Hostname> --check-hardening
 | `--eol-warning TAGE`          | WARNING melden, wenn die Release-Linie in höchstens TAGE Tagen ihr Supportende erreicht (`0` ist aus) | `0`                                             | `COS_EOL_WARNING`               |
 | `--baseline`                  | Baseline-Datei mit einem Eintrag pro Host | keiner                                          | `COS_BASELINE`                  |
 | `--warn-on-new`               | Nur bei neuen oder verschlechterten Befunden alarmieren; benötigt --baseline | `false`                                         | `COS_WARN_ON_NEW`               |
+| `--verify-remediation`        | Nur die genannten Befund-IDs neu messen (wiederholbar, kommasepariert) statt eines vollen Scans | *None* | - |
 | `--diff-format`               | Vergleich als text, markdown oder Slack Block Kit mit slack/json ausgeben | `text`                                          | `COS_DIFF_FORMAT`               |
 | `--self-update-check`         | Auf eine neuere Plugin-Version auf PyPI hinweisen; Exitcode unverändert lassen | `false`                                         | `COS_SELF_UPDATE_CHECK`         |
 | `--webhook-url`               | Webhook-Ziel für Benachrichtigungen | keiner (deaktiviert)                               | `COS_WEBHOOK_URL`               |

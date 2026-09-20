@@ -290,6 +290,14 @@ release has known advisories and a newer release is recommended: the
 none yet). It is `null` otherwise. See
 [Does the upgrade clear the advisories?](../docs/release-lifecycle.md#does-the-upgrade-clear-the-advisories)
 
+`upgradeRehearsal` goes one step further: for every candidate release (the
+newest patch of the installed line and the newest release of each later line,
+restricted to the declared track) it lists what the release `fixes`, leaves
+`stillAffected` and `introduces`, whether it is `endOfLife`, and the 0-5
+`rating` the scan would give it - the version rules replayed, still capped by
+the instance's failed checks. An empty list when nothing newer is known. See
+[Rehearse every upgrade](../docs/release-lifecycle.md#rehearse-every-upgrade).
+
 `alternativeServices` records the instance's `Alt-Svc` header - whether it
 advertises HTTP/3 over UDP - as an observation that is never graded. See
 [Alternative services](../docs/scanner-checks.md#alternative-services-http3).
@@ -945,6 +953,41 @@ result = scan(
     release_settings=ReleaseSettings(mode="bundled"),
 )
 ```
+
+## Verifying a fix without a full scan
+
+`opencloud_local_scan.verification.verify` re-measures only the findings it is
+given, by running the scanner's own probes for them and nothing else. It is
+what `--verify-remediation` is built on (see
+[ADR 0072](../adr/0072-remediation-verification-re-measures-named-findings-without-a-full-scan.md)).
+
+```python
+from opencloud_local_scan.verification import verify
+
+document = verify(
+    "opencloud.example.com",
+    ["Strict-Transport-Security", "exposed"],
+)
+for entry in document["results"]:
+    print(entry["id"], entry["passed"], entry["reason"])
+```
+
+The document has `domain`, `url`, `verifiedAt`, `probeGroups` (the groups
+that actually ran) and `results`, one entry per requested id in the order
+given:
+
+| Key | Meaning |
+|:----|:--------|
+| `id` | The requested id; a family root such as `exposed` covers every `exposed:...` member |
+| `verifiable` | False for an id only a full scan can settle (`eol`, `vulnerability:...`, `httpsAvailable`, the address-parity checks) or that this build does not know |
+| `passed` | True or false when measured, `None` when nothing was |
+| `group` | The probe group that measured it |
+| `checks` | The measured findings, in the same shape as `extraChecks` entries |
+| `reason` | Why `passed` is `None`, otherwise empty |
+
+Like `scan()`, it measures and never judges: no rating, no waivers, no
+remediation plan. `probe_group(id)` tells you in advance which group, if any,
+an id maps to. It raises `ScanError` when the instance cannot be reached.
 
 ## Comparing a scan with the last one
 

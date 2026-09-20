@@ -74,6 +74,7 @@ from opencloud_local_scan.prometheus import (
 from opencloud_local_scan.releases import MODES as UPDATE_SOURCES
 from opencloud_local_scan.scanner import _NoRedirectSession, _PinnedHTTPAdapter
 from opencloud_local_scan.selfupdate import self_update_note
+from opencloud_local_scan.verification import verify as verify_remediation
 from opencloud_local_scan.versions import RELEASE_TRACK_CHOICES, TRACK_AUTO
 from opencloud_local_scan.waivers import Waiver, WaiverError, parse_waivers
 
@@ -469,6 +470,10 @@ def check_vulnerabilities(
         if path_line:
             detail_lines.append(path_line)
 
+    rehearsal_line = _upgrade_rehearsal_line(response_scan)
+    if rehearsal_line:
+        detail_lines.append(rehearsal_line)
+
     throttling = response_scan.get("loginThrottling")
     if isinstance(throttling, dict) and throttling.get("tested"):
         detail_lines.append(
@@ -653,6 +658,67 @@ def _upgrade_path_line(response_scan: dict[str, Any]) -> str:
         else "; no published release fixes all of them yet"
     )
     return f"Upgrade path: {target} {fixed_part}is still affected by {', '.join(remaining)}{after}."
+
+
+def _rehearsed_count(entry: dict[str, Any], key: str) -> int:
+    items = entry.get(key)
+    return len(items) if isinstance(items, list) else 0
+
+
+def _upgrade_rehearsal_line(response_scan: dict[str, Any]) -> str:
+    """
+    What each candidate release would do, graded with RATE_MAP.
+
+    The scanner rehearses the upgrade in its own 0-5 numbers; the letter is
+    this layer's judgement, like every other grade the plugin prints.
+    """
+    rehearsal = response_scan.get("upgradeRehearsal")
+    if not isinstance(rehearsal, list):
+        return ""
+    parts: list[str] = []
+    for entry in rehearsal:
+        if not isinstance(entry, dict) or not entry.get("version"):
+            continue
+        rating = entry.get("rating")
+        grade = RATE_MAP.get(rating, "?") if isinstance(rating, int) else "?"
+        fixes = _rehearsed_count(entry, "fixes")
+        left = _rehearsed_count(entry, "stillAffected")
+        new = _rehearsed_count(entry, "introduces")
+        noun = "finding" if fixes == 1 else "findings"
+        part = f"{entry['version']} fixes {fixes} {noun}, leaves {left}"
+        if new:
+            part += f", adds {new}"
+        if entry.get("endOfLife"):
+            part += ", is end of life"
+        parts.append(f"{part}, reaches rating {grade}")
+    if not parts:
+        return ""
+    return "Upgrade rehearsal: " + "; ".join(parts) + "."
+
+
+def _upgrade_rehearsal_payload(response_scan: dict[str, Any]) -> list[dict[str, Any]]:
+    """The scanner's rehearsal in this layer's snake_case, with the grade added."""
+    rehearsal = response_scan.get("upgradeRehearsal")
+    entries: list[dict[str, Any]] = []
+    for entry in rehearsal if isinstance(rehearsal, list) else ():
+        if not isinstance(entry, dict):
+            continue
+        rating = entry.get("rating")
+        entries.append(
+            {
+                "version": entry.get("version"),
+                "line": entry.get("line"),
+                "recommended": bool(entry.get("recommended")),
+                "fixes": list(entry.get("fixes") or ()),
+                "still_affected": list(entry.get("stillAffected") or ()),
+                "introduces": list(entry.get("introduces") or ()),
+                "end_of_life": bool(entry.get("endOfLife")),
+                "version_rating": entry.get("versionRating"),
+                "rating": rating,
+                "rating_label": RATE_MAP.get(rating) if isinstance(rating, int) else None,
+            }
+        )
+    return entries
 
 
 def _within_eol_window(context: ScanContext, response_scan: dict[str, Any]) -> bool:
@@ -876,6 +942,8 @@ def _build_webhook_payload(
         "eol_warning_days": context.eol_warning_days,
         "eol_warning": _within_eol_window(context, response_scan),
         "upgrade_path": response_scan.get("upgradePath") or None,
+        # Every candidate release, simulated; ``rating_label`` is RATE_MAP's.
+        "upgrade_rehearsal": _upgrade_rehearsal_payload(response_scan),
         "vulnerability_count": len(vulnerabilities),
         "vulnerabilities": [
             entry.get("id") for entry in vulnerabilities if isinstance(entry, dict)
@@ -2420,6 +2488,22 @@ def build_arg_parser() -> argparse.ArgumentParser:
         ),
     )
     output.add_argument(
+        "--verify-remediation",
+        action="append",
+        metavar="FINDING_ID",
+        default=None,
+        help=(
+            "Re-measure only the named finding (repeatable, or comma "
+            "separated) instead of running a full scan - for checking one "
+            "reverse-proxy change without waiting for everything else. Takes "
+            "the ids the full output reports, e.g. 'Strict-Transport-Security', "
+            "'corsOriginRestricted' or 'exposed' for every exposed path. OK when "
+            "every one now passes, WARNING or CRITICAL when one still fails, "
+            "UNKNOWN when one can only be verified by a full scan. No rating, "
+            "baseline or webhook."
+        ),
+    )
+    output.add_argument(
         "--prometheus-listen-port",
         type=int,
         default=_env_int("PROMETHEUS_LISTEN_PORT", 0),
@@ -3596,10 +3680,110 @@ def main() -> None:
         _fail(f"UNKNOWN: {exc}")
 
 
+#: Severities whose check, still failing after a fix, is a CRITICAL.
+_CRITICAL_SEVERITIES = frozenset({"critical", "high"})
+
+
+def _requested_finding_ids(values: list[str]) -> list[str]:
+    """Every id named by --verify-remediation, in order, without duplicates."""
+    ids = (part.strip() for value in values for part in value.split(","))
+    return list(dict.fromkeys(item for item in ids if item))
+
+
+def _verification_exit_code(results: list[dict[str, Any]]) -> NagiosExitCode:
+    """
+    Judge a verification document.
+
+    A check that still fails outranks one that could not be verified: the
+    operator has a definite answer about it. A failure at high or critical
+    severity is CRITICAL; any other - including a header, which carries no
+    severity - is WARNING.
+    """
+    failing = [entry for entry in results if entry.get("passed") is False]
+    if failing:
+        severities = {
+            str(check.get("severity") or "").lower()
+            for entry in failing
+            for check in entry.get("checks") or []
+            if not check.get("passed", True)
+        }
+        if severities & _CRITICAL_SEVERITIES:
+            return NagiosExitCode.CRITICAL
+        return NagiosExitCode.WARNING
+    if any(entry.get("passed") is None for entry in results):
+        return NagiosExitCode.UNKNOWN
+    return NagiosExitCode.OK
+
+
+def _verification_lines(host: str, document: dict[str, Any]) -> tuple[NagiosExitCode, list[str]]:
+    """The Nagios status line and detail lines for one verified host."""
+    results = document["results"]
+    exit_code = _verification_exit_code(results)
+    fixed = [entry["id"] for entry in results if entry.get("passed") is True]
+    failing = [entry["id"] for entry in results if entry.get("passed") is False]
+    unknown = [entry["id"] for entry in results if entry.get("passed") is None]
+    parts = []
+    if failing:
+        parts.append(f"still failing: {', '.join(failing)}")
+    if unknown:
+        parts.append(f"not verified: {', '.join(unknown)}")
+    if fixed:
+        parts.append(f"verified: {', '.join(fixed)}")
+    lines = [f"{exit_code.name}: {host} remediation check - {'; '.join(parts)}"]
+    for entry in results:
+        if entry.get("passed") is None:
+            lines.append(f"{entry['id']}: {entry.get('reason') or 'not verified'}")
+            continue
+        for check in entry.get("checks") or []:
+            state = "passes" if check.get("passed") else "fails"
+            detail = f" - {check['detail']}" if check.get("detail") else ""
+            lines.append(f"{check['id']}: {state}{detail}")
+    return exit_code, [_safe_monitoring_text(line) for line in lines]
+
+
+def _run_remediation_verification(hosts: list[str], args: argparse.Namespace) -> int:
+    """
+    Re-measure the findings named by --verify-remediation on every host.
+
+    Deliberately outside the scan pipeline: nothing is rated, compared with
+    a baseline or sent to a webhook, because a partial measurement is not a
+    state of the instance any of those should record.
+    """
+    finding_ids = _requested_finding_ids(args.verify_remediation)
+    if not finding_ids:
+        _fail("UNKNOWN: --verify-remediation needs at least one finding id.")
+    exit_codes: list[NagiosExitCode] = []
+    documents: list[dict[str, Any]] = []
+    for host in hosts:
+        context = _build_context(host, args)
+        check_if_ip_or_host(context.host, context)
+        try:
+            document = verify_remediation(
+                context.host, finding_ids, settings=context.scanner_settings
+            )
+        except (ScanError, *REQUEST_ERRORS) as exc:
+            exit_codes.append(NagiosExitCode.UNKNOWN)
+            if args.output_format != "json":
+                print(_safe_monitoring_text(f"UNKNOWN: {context.host} Scan failed: {exc}"))
+            continue
+        exit_code, lines = _verification_lines(context.host, document)
+        exit_codes.append(exit_code)
+        document["exit_code"] = int(exit_code)
+        documents.append(document)
+        if args.output_format != "json":
+            print("\n".join(lines))
+    if args.output_format == "json":
+        print(json.dumps(documents, indent=2))
+    return int(_aggregate_exit_code(exit_codes))
+
+
 def _run_checks(hosts: list[str], args: argparse.Namespace) -> None:
     """Scan every host in the requested output format."""
     if _CONFIG.source:
         LOGGER.debug("Using configuration file %s", _CONFIG.source)
+
+    if args.verify_remediation:
+        sys.exit(_run_remediation_verification(hosts, args))
 
     if args.prometheus_listen_port:
         serve_prometheus_metrics(hosts, args)

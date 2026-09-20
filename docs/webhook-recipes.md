@@ -88,6 +88,7 @@ end-of-life release:
   "eol_warning_days": 30,
   "eol_warning": false,
   "upgrade_path": null,
+  "upgrade_rehearsal": [],
   "vulnerability_count": 0,
   "vulnerabilities": [],
   "missing_hardenings": [],
@@ -103,6 +104,10 @@ end-of-life release:
 off) and `eol_warning` whether this result is inside it. `upgrade_path` is the
 scan's `upgradePath` - which advisories the recommended release fixes and which
 it leaves open - or `null` when there is nothing to clear.
+`upgrade_rehearsal` lists every candidate release with what it `fixes`, leaves
+(`still_affected`) and `introduces`, whether it is `end_of_life`, and the
+`rating` it would reach with its `rating_label` letter - see
+[Rehearse every upgrade](release-lifecycle.md#rehearse-every-upgrade).
 
 `scan_backend` is always `"local"` - it records how the result was obtained,
 so a receiver that also handles payloads from scanners with a remote backend

@@ -1,5 +1,5 @@
 <!-- TOC -->
-* [check-opencloud-security](#check-opencloud-security)
+* [Check OpenCloud Security](#check-opencloud-security)
 * [Try it online](#try-it-online)
     * [👉 **scan.okxo.de** - scan an instance in your browser, nothing to install](#-scanokxode---scan-an-instance-in-your-browser-nothing-to-install)
 * [Quick start](#quick-start)
@@ -9,6 +9,7 @@
 * [CLI Usage](#cli-usage)
   * [Command](#command)
   * [Options](#options)
+* [Verifying a fix](#verifying-a-fix)
 * [Checking multiple hosts](#checking-multiple-hosts)
 * [Prometheus & Kubernetes integration](#prometheus--kubernetes-integration)
 * [Machine-readable output for CI (json/sarif/junit)](#machine-readable-output-for-ci-jsonsarifjunit)
@@ -43,7 +44,7 @@
   * [Trademarks and affiliation](#trademarks-and-affiliation)
 <!-- TOC -->
 
-# check-opencloud-security
+# Check OpenCloud Security
 Check the security level of your [OpenCloud](https://opencloud.eu/) instance
 from your own monitoring system - misconfigurations, weak hardening, known
 vulnerabilities, **and whether a security update is pending**.
@@ -236,9 +237,41 @@ The handful you will actually type most days:
 | `--ignore-hardening` | Accept a finding you are not going to fix, by name |
 | `--waive-until` | Accept one until a deadline, with a reason, after which it alerts again |
 | `--baseline` / `--warn-on-new` | Alert only on findings that are new or worse than last run |
+| `--verify-remediation` | Re-measure only the named findings after a fix, instead of a full scan |
 
 Precedence is always **command-line flag > environment variable >
 [configuration file](#configuration-file-and-secrets) > default**.
+
+# Verifying a fix
+After changing one setting - a header in the reverse proxy, a path it should
+stop serving - there is no need to wait for a full scan to learn whether it
+worked. `--verify-remediation` takes the finding ids the full output reports
+and runs only the probes that measure them:
+
+```shell
+check-opencloud-security --host opencloud.example.com \
+  --verify-remediation Strict-Transport-Security,corsOriginRestricted
+```
+
+The flag is repeatable and accepts comma-separated ids. A family root such as
+`exposed`, `authentication`, `debugEndpoint` or `versionDisclosure`
+re-checks every member (`exposed:/.env`, ...). The exit code says whether the
+fix landed:
+
+| Result | Exit code |
+|:-------|:----------|
+| Every id now passes | `OK` |
+| One still fails | `WARNING`, or `CRITICAL` when that check is high or critical severity |
+| One can only be settled by a full scan | `UNKNOWN` |
+
+Findings that depend on the whole picture - `eol`, `vulnerability:...`,
+`httpsAvailable` and the address-parity checks - are reported as not
+verifiable rather than guessed; an id this version does not know is too. The
+run produces no rating, and never touches a baseline or sends a webhook: a
+partial measurement is not a state of the instance. Waivers are not applied
+either, since the question is whether the check itself now passes.
+`--format json` prints the measurement document instead; the same function is
+available to Python as `opencloud_local_scan.verification.verify`.
 
 # Checking multiple hosts
 `--host` (and `COS_HOST`) accepts a comma-separated list of hostnames, e.g.:

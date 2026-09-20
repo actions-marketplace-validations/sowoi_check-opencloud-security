@@ -22,6 +22,7 @@
   <a href="#prerequisites" lang="en">Prerequisites</a>
   <a href="#installation" lang="en">Installation</a>
   <a href="#cli-usage" lang="en">CLI Usage</a>
+  <a href="#verifying-a-fix" lang="en">Verifying a fix</a>
   <a href="#checking-multiple-hosts" lang="en">Checking multiple hosts</a>
   <a href="#prometheus-kubernetes-integration" lang="en">Prometheus &amp; Kubernetes integration</a>
   <a href="#machine-readable-output-for-ci-jsonsarifjunit" lang="en">Machine-readable output for CI (json/sarif/junit)</a>
@@ -221,10 +222,56 @@ comparisons, execution, output and notifications.</p>
 <td><code>--baseline</code> / <code>--warn-on-new</code></td>
 <td>Alert only on findings that are new or worse than last run</td>
 </tr>
+<tr>
+<td><code>--verify-remediation</code></td>
+<td>Re-measure only the named findings after a fix, instead of a full scan</td>
+</tr>
 </tbody>
 </table>
 <p>Precedence is always <strong>command-line flag &gt; environment variable &gt;
 <a href="#configuration-file-and-secrets">configuration file</a> &gt; default</strong>.</p>
+<h2 id="verifying-a-fix">Verifying a fix</h2>
+<p>After changing one setting - a header in the reverse proxy, a path it should
+stop serving - there is no need to wait for a full scan to learn whether it
+worked. <code>--verify-remediation</code> takes the finding ids the full output reports
+and runs only the probes that measure them:</p>
+<pre><code class="language-shell">check-opencloud-security --host opencloud.example.com \
+  --verify-remediation Strict-Transport-Security,corsOriginRestricted
+</code></pre>
+<p>The flag is repeatable and accepts comma-separated ids. A family root such as
+<code>exposed</code>, <code>authentication</code>, <code>debugEndpoint</code> or <code>versionDisclosure</code>
+re-checks every member (<code>exposed:/.env</code>, ...). The exit code says whether the
+fix landed:</p>
+<table>
+<thead>
+<tr>
+<th>Result</th>
+<th>Exit code</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Every id now passes</td>
+<td><code>OK</code></td>
+</tr>
+<tr>
+<td>One still fails</td>
+<td><code>WARNING</code>, or <code>CRITICAL</code> when that check is high or critical severity</td>
+</tr>
+<tr>
+<td>One can only be settled by a full scan</td>
+<td><code>UNKNOWN</code></td>
+</tr>
+</tbody>
+</table>
+<p>Findings that depend on the whole picture - <code>eol</code>, <code>vulnerability:...</code>,
+<code>httpsAvailable</code> and the address-parity checks - are reported as not
+verifiable rather than guessed; an id this version does not know is too. The
+run produces no rating, and never touches a baseline or sends a webhook: a
+partial measurement is not a state of the instance. Waivers are not applied
+either, since the question is whether the check itself now passes.
+<code>--format json</code> prints the measurement document instead; the same function is
+available to Python as <code>opencloud_local_scan.verification.verify</code>.</p>
 <h2 id="checking-multiple-hosts">Checking multiple hosts</h2>
 <p><code>--host</code> (and <code>COS_HOST</code>) accepts a comma-separated list of hostnames, e.g.:</p>
 <pre><code class="language-shell">check-opencloud-security --host opencloud1.example.com,opencloud2.example.com

@@ -78,6 +78,7 @@ project. Read the accepted records that affect an area before changing it.
 | [0069](0069-login-throttling-is-observed-only-when-the-operator-asks.md) | Login throttling is observed only when the operator asks | Proposed |
 | [0070](0070-the-operator-area-installs-attested-releases-in-place.md) | The operator area installs attested releases in place | Proposed |
 | [0071](0071-repository-advisories-are-a-second-advisory-source.md) | OpenCloud's repository advisories are a second advisory source | Proposed |
+| [0072](0072-remediation-verification-re-measures-named-findings-without-a-full-scan.md) | Remediation verification re-measures named findings without a full scan | Proposed |
 
 ## Writing a new record
 

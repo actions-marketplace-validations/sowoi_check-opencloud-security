@@ -150,9 +150,29 @@ zugehörigen Umgebungsvariablen. Häufig verwendet werden:</p>
 <td><code>--baseline</code> / <code>--warn-on-new</code></td>
 <td>Mit vorherigem Lauf vergleichen und nur bei Verschlechterung alarmieren</td>
 </tr>
+<tr>
+<td><code>--verify-remediation</code></td>
+<td>Nach einer Korrektur nur die genannten Befunde neu messen statt eines vollen Scans</td>
+</tr>
 </tbody>
 </table>
 <p>Es gilt: <strong>Kommandozeile &gt; Umgebungsvariable &gt; Konfigurationsdatei &gt; Standard</strong>.</p>
+<h3 id="verifying-a-fix">Eine Korrektur prüfen</h3>
+<p>Wenn du eine einzelne Einstellung geändert hast - einen Header im Reverse
+Proxy, einen Pfad, den er nicht mehr ausliefern soll -, musst du nicht auf
+einen vollen Scan warten. <code>--verify-remediation</code> nimmt die Befund-IDs aus der
+normalen Ausgabe und führt nur die Proben aus, die sie messen:</p>
+<pre><code class="language-shell">check-opencloud-security --host opencloud.example.com \
+  --verify-remediation Strict-Transport-Security,corsOriginRestricted
+</code></pre>
+<p>Die Option ist wiederholbar und nimmt kommaseparierte IDs. Eine Familie wie
+<code>exposed</code>, <code>authentication</code>, <code>debugEndpoint</code> oder <code>versionDisclosure</code> prüft
+alle ihre Mitglieder. <code>OK</code> heißt, jede ID besteht jetzt; <code>WARNING</code> bzw.
+<code>CRITICAL</code> (bei hoher oder kritischer Schwere), dass eine noch scheitert;
+<code>UNKNOWN</code>, dass nur ein voller Scan sie klären kann (<code>eol</code>,
+<code>vulnerability:...</code>, <code>httpsAvailable</code>, Adressparität). Es gibt keine
+Bewertung, keine Baseline, keinen Webhook und keine Ausnahmen (Waivers).
+<code>--format json</code> gibt das Messdokument aus.</p>
 <h3 id="checking-multiple-hosts">Mehrere Hosts prüfen</h3>
 <p><code>--host</code> und <code>COS_HOST</code> akzeptieren eine kommaseparierte Liste:</p>
 <pre><code class="language-shell">check-opencloud-security --host opencloud1.example.com,opencloud2.example.com
