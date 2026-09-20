@@ -1,41 +1,46 @@
-## check-opencloud-security 1.27.2
+## check-opencloud-security 1.28.0
 
 ### Added
 
-- **Property-based tests for the parsers that read outside text.**
-  `tests/test_properties.py` uses Hypothesis, a new test-only dependency
-  (reviewed in `security/dependencies/hypothesis.yml`), to generate inputs
-  for version parsing and comparison, advisory ranges, the
-  Strict-Transport-Security and Content-Security-Policy readers, the web
-  application's SSRF guard (private literals, IPv4-mapped and 6to4
-  addresses, arbitrary input) and the `;`-joined configuration lists.
-- **The output documents' key names are pinned.**
-  `tests/test_output_shape.py` fails when a top-level key of the scan result
-  or of the plugin's `--format json` / webhook payload is renamed, added or
-  dropped, or when a key breaks the camelCase (result) / snake_case (plugin)
-  convention, so a breaking rename cannot land unnoticed.
-- **The advisory database also reads OpenCloud's repository advisories.**
-  OpenCloud publishes some advisories only on its GitHub repository, where
-  OSV never sees them. The daily refresh (`scripts/update_vulnerability_db.py`,
-  new `--repository-url`) and the web application's refresh (new
-  `COS_WEB_ADVISORY_REPOSITORY_URL`, `off` to skip) now add those
-  advisories. Their version ranges are read strictly: an advisory fixed on two
-  release lines becomes one range per line, and prose ranges are never
-  guessed at. OSV stays the primary source, and if the repository feed can't
-  be read, OSV's answer is kept.
-  [ADR 0071](adr/0071-repository-advisories-are-a-second-advisory-source.md).
+- **Upgrade rehearsal: what each candidate release would fix, leave and
+  rate.** The scan result gains `upgradeRehearsal`, which simulates every
+  release worth moving to (the newest patch of the installed line and the
+  newest release of each later line, only on the declared track) against the
+  advisory database and the release schedule. The plugin prints it as one
+  detail line, for example "Upgrade rehearsal: 7.2.4 fixes 3 findings,
+  leaves 1, reaches rating C", and the webhook payload carries it as
+  `upgrade_rehearsal`. The rating replays the scanner's own version rules and
+  keeps the instance's failed checks as caps, because an upgrade does not
+  change the proxy. See
+  [Rehearse every upgrade](docs/release-lifecycle.md#rehearse-every-upgrade).
 
-### Changed
+- **A scan the target cooldown refuses now opens your earlier result.** When
+  an instance was scanned too recently and this browser tab has already shown
+  a finished scan of it, the web application opens that result instead of
+  only refusing, says it is the earlier result, and counts down to when a new
+  scan is possible. The earlier result comes from the tab's own scan history
+  (the one the comparison offer keeps in `sessionStorage`); the server never
+  hands one visitor a scan somebody else started, as
+  [ADR 0002](adr/0002-no-scan-result-caching.md) requires. Without such a
+  scan the refusal is unchanged.
 
-- **Polished recent German, Spanish and French web translations.** Fixed mixed
-  forms of address and several literal or awkward phrases in the operator
-  update messages, scan facts and coverage explanations.
+- **`--verify-remediation` re-checks one finding without a full scan.**
+  After changing a single reverse-proxy setting, pass the finding ids the
+  full output reported (repeatable or comma-separated, a family root such as
+  `exposed` covers every member) and only the probes that measure them run.
+  The plugin answers `OK` when every one now passes, `WARNING`/`CRITICAL`
+  while one still fails, and `UNKNOWN` for an id only a full scan can settle
+  (`eol`, a vulnerability, address parity). No rating, baseline or webhook.
+  The measurement is `opencloud_local_scan.verification.verify`, which reuses
+  the scanner's own probes so its answer matches the next full scan. See
+  ADR 0072.
 
-### Security
+### Documentation
 
-- **GHSA-gf4p-7p27-26w7 (CVE-2026-57500, "Access to internal metadata") is
-  now reported.** OpenCloud published it only as a repository advisory, which
-  never reaches OSV, the one feed the advisory database was refreshed from - so
-  every release before 4.0.8, and 5.0.0 up to 7.2.0, was rated as free of
-  known advisories. The bundled database now carries it, affecting releases
-  from 1.0.0 up to 4.0.8 and from 4.1.0 up to (but not including) 7.2.0.
+- **Translated release-lifecycle guides now include the upgrade-rehearsal
+  section.** Their section anchors stay aligned with the English guide.
+
+### Fixed
+
+- **Pytest no longer collects mutmut's generated working copy.** This avoids
+  an `ImportPathMismatchError` between the real and mutated test suites.

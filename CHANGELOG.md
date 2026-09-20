@@ -12,6 +12,8 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+## [1.28.0] - 2026-09-20
+
 ### Added
 
 - **Upgrade rehearsal: what each candidate release would fix, leave and
