@@ -180,6 +180,12 @@
 </ul>
 <h3 id="fixed">Fixed</h3>
 <ul>
+<li><strong>A gateway answer no longer fails the documented link check.</strong> An HTTP
+  408, 502, 503 or 504 comes from the machinery in front of a site, not from
+  the page, so it is now retried like a transport error and - when the whole
+  run is unlucky - reported without failing the workflow. A link that rotted
+  answers 404; a merge that fails because GitHub was briefly slow is exactly
+  the noise this check is meant to avoid.</li>
 <li><strong>Pytest no longer collects mutmut's generated working copy.</strong> This avoids
   an <code>ImportPathMismatchError</code> between the real and mutated test suites.</li>
 </ul>
