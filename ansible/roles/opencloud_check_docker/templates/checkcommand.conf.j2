@@ -82,6 +82,10 @@ object CheckCommand "{{ opencloud_check_command_name }}" {
             description = "Rating (0-5) at or below which the check is critical"
             value = "$opencloud_critical$"
         }
+        "--profile" = {
+            description = "Named threshold set - strict, ops or lenient - judging the result instead of the defaults"
+            value = "$opencloud_profile$"
+        }
         "--check-hardening" = {
             description = "Also report missing hardening measures and security headers"
             set_if = "$opencloud_check_hardening$"

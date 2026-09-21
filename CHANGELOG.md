@@ -38,6 +38,34 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   renders without the panel rather than as an instance with nothing to
   upgrade to.
 
+- **A golden corpus of frozen verdicts.** `tests/golden/` records the whole
+  judgement a handful of known instances earn - rating, grade, failed checks,
+  missing measures, the caps that produced the rating and the exit code under
+  the plugin's defaults and under every profile - and `tests/test_golden_corpus.py`
+  replays them. It is the assertion no single test makes: that a severity
+  raised or a measure added to the catalogue cannot silently re-grade every
+  instance that looks like one of these. The reference data is pinned in
+  `tests/golden_corpus.py`, so a published release or advisory does not move
+  the corpus; `python scripts/update_golden_corpus.py` rewrites it when the
+  new verdict is the intended one.
+
+### Changed
+
+- **The Icinga check commands offer `--profile`.** The three CheckCommand
+  definitions - `contrib/icinga2/check_opencloud_security.conf` and the
+  `opencloud_check_native` / `opencloud_check_docker` role templates - carry
+  the new option as `$opencloud_profile$`, next to `--warning` and
+  `--critical`. Without it an Icinga user could not reach a profile at all,
+  which is what `tests/test_monitoring_parity.py` is there to notice.
+
+- **The upgrade rehearsal's reporting is pinned by tests.** Mutation testing
+  found the two plugin helpers behind it under-covered: an end-of-life
+  candidate, a malformed entry, a rating outside the 0-5 range and seven of
+  the webhook payload's ten keys were asserted by nothing. The gaps are
+  closed, and `tests/test_verify_remediation.py` and
+  `tests/test_threshold_profiles.py` are now part of the mutmut test
+  selection, which reported "no tests" for `verification.py` before.
+
 ## [1.28.0] - 2026-09-20
 
 ### Added

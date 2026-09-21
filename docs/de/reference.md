@@ -554,6 +554,21 @@ check-opencloud-security --host opencloud.example.com --warning 1 --critical 0
 check-opencloud-security --host opencloud.example.com --warning 4 --critical 2
 ```
 
+### Schwellenwertprofile {#threshold-profiles}
+
+`--profile` / `COS_PROFILE` benennt einen fertigen Satz, statt dass du
+jedes Mal dieselben fünf Flags schreibst:
+
+| Profil | `--warning` | `--critical` | `--check-hardening` | `--update-warning` | `--eol-warning` |
+|:--|:--|:--|:--|:--|:--|
+| `strict` | `4` (`A`) | `2` (`D`) | an | an | `90` |
+| `ops` | `3` (`C`) | `1` (`E`) | an | aus | `30` |
+| `lenient` | `2` (`D`) | `0` (`F`) | aus | aus | `0` |
+
+Ein Profil entscheidet, **wie dieselben Messungen bewertet werden, nie wie
+hart die Instanz geprüft wird**. Ohne `--profile` bleibt alles wie zuvor, und
+alles, was du selbst setzt - Flag, Umgebungsvariable oder Datei - gewinnt.
+
 ## Schutzmaßnahmen bewerten {#hardening-checks}
 
 `--check-hardening` berücksichtigt fehlende Maßnahmen und Sicherheitsheader.

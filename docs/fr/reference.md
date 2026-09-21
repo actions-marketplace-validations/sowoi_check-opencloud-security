@@ -791,6 +791,20 @@ check-opencloud-security --host opencloud.example.com --warning 1 --critical 0
 check-opencloud-security --host opencloud.example.com --warning 4 --critical 2
 ```
 
+## Threshold profiles
+`--profile` / `COS_PROFILE` names a ready-made set instead of spelling out
+the same five flags every time:
+
+| Profile | `--warning` | `--critical` | `--check-hardening` | `--update-warning` | `--eol-warning` |
+|:--|:--|:--|:--|:--|:--|
+| `strict` | `4` (`A`) | `2` (`D`) | on | on | `90` |
+| `ops` | `3` (`C`) | `1` (`E`) | on | off | `30` |
+| `lenient` | `2` (`D`) | `0` (`F`) | off | off | `0` |
+
+A profile decides **how the same measurements are judged, never how hard the
+instance is probed**. Leaving it unset changes nothing, and anything you set
+yourself - a flag, an environment variable or a file - still wins.
+
 # Hardening checks
 Besides the pass/fail checks above, the scanner reports which hardening
 measures the instance has in place. With `--check-hardening` /

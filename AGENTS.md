@@ -63,6 +63,7 @@ for a remote scan service.
 | `scripts/build_wizard_release.py` | Builds the Docker setup wizard a release attaches: version stamped, checksum beside it |
 | `packaging/` | The nfpm recipe and the launchers behind the `.deb` and the `.rpm` |
 | `scripts/build_distro_packages.py` | Builds both of those from the already-built wheel |
+| `scripts/update_golden_corpus.py` | Regenerates `tests/golden/`: the verdict a frozen set of instances earns |
 | `tests/` | Test suite, including `tests/fake_opencloud.py` |
 | `docker/` | Every Dockerfile and compose file; the build context is the repository root |
 | `authentik/blueprints/` | What the signed-in stack provisions for itself: providers, a required second factor, invitation-only enrollment |

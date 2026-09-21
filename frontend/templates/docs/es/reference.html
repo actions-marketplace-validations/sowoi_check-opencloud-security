@@ -937,6 +937,50 @@ check-opencloud-security --host opencloud.example.com --warning 1 --critical 0
 ### Page on any critical finding
 check-opencloud-security --host opencloud.example.com --warning 4 --critical 2
 </code></pre>
+<h4 id="threshold-profiles">Perfiles de umbrales</h4>
+<p><code>--profile</code> / <code>COS_PROFILE</code> nombra un conjunto ya preparado en lugar de
+escribir siempre los mismos cinco indicadores:</p>
+<table>
+<thead>
+<tr>
+<th>Perfil</th>
+<th><code>--warning</code></th>
+<th><code>--critical</code></th>
+<th><code>--check-hardening</code></th>
+<th><code>--update-warning</code></th>
+<th><code>--eol-warning</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>strict</code></td>
+<td><code>4</code> (<code>A</code>)</td>
+<td><code>2</code> (<code>D</code>)</td>
+<td>sí</td>
+<td>sí</td>
+<td><code>90</code></td>
+</tr>
+<tr>
+<td><code>ops</code></td>
+<td><code>3</code> (<code>C</code>)</td>
+<td><code>1</code> (<code>E</code>)</td>
+<td>sí</td>
+<td>no</td>
+<td><code>30</code></td>
+</tr>
+<tr>
+<td><code>lenient</code></td>
+<td><code>2</code> (<code>D</code>)</td>
+<td><code>0</code> (<code>F</code>)</td>
+<td>no</td>
+<td>no</td>
+<td><code>0</code></td>
+</tr>
+</tbody>
+</table>
+<p>Un perfil decide <strong>cómo se juzgan las mismas mediciones, nunca con cuánta
+intensidad se sondea la instancia</strong>. Sin <code>--profile</code> nada cambia, y lo que
+usted fije - indicador, variable de entorno o archivo - siempre gana.</p>
 <h3 id="hardening-checks">Comprobaciones de refuerzo</h3>
 <p>Además de las comprobaciones de superado/fallido anteriores, el escáner
 notifica qué medidas de refuerzo tiene la instancia. Con <code>--check-hardening</code> /

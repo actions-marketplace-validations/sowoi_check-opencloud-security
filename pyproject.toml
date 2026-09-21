@@ -164,6 +164,8 @@ pytest_add_cli_args_test_selection = [
     "tests/test_eol_warning.py",
     "tests/test_upgrade_path.py",
     "tests/test_upgrade_rehearsal.py",
+    "tests/test_verify_remediation.py",
+    "tests/test_threshold_profiles.py",
 ]
 also_copy = ["tests", "webapp", "frontend", "docker", "authentik", "docs", "security", "README.md", "CHANGELOG.md"]
 

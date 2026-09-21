@@ -1,0 +1,24 @@
+{
+  "advisories": [],
+  "case": "demo_users",
+  "description": "An instance left with the documented demo accounts enabled.",
+  "endOfLife": false,
+  "exitCodes": {
+    "default": "WARNING",
+    "lenient": "WARNING",
+    "ops": "WARNING",
+    "strict": "CRITICAL"
+  },
+  "failedChecks": [
+    "demoUsersDisabled",
+    "reverseProxyDetected"
+  ],
+  "grade": "D",
+  "missingHardenings": [],
+  "missingHeaders": [],
+  "rating": 2,
+  "ratingBase": 5,
+  "ratingCaps": [
+    "demoUsersDisabled:critical:2"
+  ]
+}

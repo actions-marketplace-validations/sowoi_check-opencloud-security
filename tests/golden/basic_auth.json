@@ -1,0 +1,26 @@
+{
+  "advisories": [],
+  "case": "basic_auth",
+  "description": "PROXY_ENABLE_BASIC_AUTH=true, so the browser is offered Basic.",
+  "endOfLife": false,
+  "exitCodes": {
+    "default": "OK",
+    "lenient": "OK",
+    "ops": "OK",
+    "strict": "WARNING"
+  },
+  "failedChecks": [
+    "basicAuthDisabled",
+    "reverseProxyDetected"
+  ],
+  "grade": "A",
+  "missingHardenings": [
+    "basicAuthDisabled"
+  ],
+  "missingHeaders": [],
+  "rating": 4,
+  "ratingBase": 5,
+  "ratingCaps": [
+    "basicAuthDisabled:medium:4"
+  ]
+}
