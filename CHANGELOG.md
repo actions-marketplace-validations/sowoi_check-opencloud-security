@@ -38,6 +38,18 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   lists come from somebody else's HTML and a tab without a panel must be
   dropped rather than raise.
 
+### Fixed
+
+- The browser test for the severity filter no longer drops its own press in
+  WebKit on CI. Pressing a counter hides most of the list and reveals the
+  status line above it, so the page it leaves behind is a different height
+  from the one that was pressed; the test read the new count back with a
+  single sample and pressed *clear* straight away, on a control that was
+  still settling. WebKit dropped that press rather than delivering it, the
+  filter stayed on, and the run failed counting a list nobody had asked for.
+  Each press is now waited out for the count it asked for before the next one
+  is aimed, which still fails - loudly - if a press is ever genuinely lost.
+
 ## [1.29.0] - 2026-09-21
 
 ### Added
