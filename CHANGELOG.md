@@ -12,6 +12,8 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+## [1.29.0] - 2026-09-21
+
 ### Added
 
 - **A scan fingerprints the configuration it measured, so drift is visible

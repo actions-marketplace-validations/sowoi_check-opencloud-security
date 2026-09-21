@@ -1,79 +1,55 @@
-## check-opencloud-security 1.28.1
+## check-opencloud-security 1.29.0
 
 ### Added
 
-- **`--profile` judges a scan by a named threshold set.** `strict`, `ops` and
-  `lenient` each decide the five settings a team otherwise writes out by hand
-  - `--warning`, `--critical`, `--check-hardening`, `--update-warning` and
-  `--eol-warning` - so a monitoring definition can adopt a stance without
-  twelve flags. A profile decides **how the same measurements are judged,
-  never how hard the instance is probed**: there is no profile that scans
-  more or less. It is also the weakest source of a value, so an explicit
-  flag, an environment variable or a configuration key still wins, and the
-  `--debug` explanation names the profile a rating was judged by. Leaving it
-  unset keeps every default exactly as it was. See
-  [Threshold profiles](README.md#threshold-profiles).
-
-- **The web application renders the upgrade rehearsal.** The result page
-  gains a *What upgrading would buy you* panel: one row per candidate
-  release, with the advisories it clears, the ones it leaves, any it newly
-  brings in, whether it is already end of life, and the grade it would reach.
-  Where the version alone would rate better than the row shows, the panel
-  says so - the difference is this instance's own findings, which an upgrade
-  does not touch. Every number comes from the scanner's `upgradeRehearsal`;
-  the web layer only picks the letter and the tone, as it does for every
-  other grade on the page. A result stored before the rehearsal existed
-  renders without the panel rather than as an instance with nothing to
-  upgrade to.
-
-- **A golden corpus of frozen verdicts.** `tests/golden/` records the whole
-  judgement a handful of known instances earn - rating, grade, failed checks,
-  missing measures, the caps that produced the rating and the exit code under
-  the plugin's defaults and under every profile - and `tests/test_golden_corpus.py`
-  replays them. It is the assertion no single test makes: that a severity
-  raised or a measure added to the catalogue cannot silently re-grade every
-  instance that looks like one of these. The reference data is pinned in
-  `tests/golden_corpus.py`, so a published release or advisory does not move
-  the corpus; `python scripts/update_golden_corpus.py` rewrites it when the
-  new verdict is the intended one.
-
-### Changed
-
-- **The Icinga check commands offer `--profile`.** The three CheckCommand
-  definitions - `contrib/icinga2/check_opencloud_security.conf` and the
-  `opencloud_check_native` / `opencloud_check_docker` role templates - carry
-  the new option as `$opencloud_profile$`, next to `--warning` and
-  `--critical`. Without it an Icinga user could not reach a profile at all,
-  which is what `tests/test_monitoring_parity.py` is there to notice.
-
-- **The upgrade rehearsal's reporting is pinned by tests.** Mutation testing
-  found the two plugin helpers behind it under-covered: an end-of-life
-  candidate, a malformed entry, a rating outside the 0-5 range and seven of
-  the webhook payload's ten keys were asserted by nothing. The gaps are
-  closed, and `tests/test_verify_remediation.py` and
-  `tests/test_threshold_profiles.py` are now part of the mutmut test
-  selection, which reported "no tests" for `verification.py` before.
-
-### Security
-
-- **The web application sends `Strict-Transport-Security` over HTTPS.** The
-  generated reverse-proxy configuration deliberately adds no security headers
-  - "the application sends its own, and an `add_header` here would be one
-  more place they can disagree" - and HSTS was the one the application did
-  not send, so no deployment built by `docker/setup-wizard.py` had it. A
-  service whose subject is HTTPS enforcement now asks of itself what
-  `hstsLongMaxAge` and `hstsIncludeSubdomains` ask of the instances it
-  scans: `max-age=63072000; includeSubDomains`. Not `preload`, which is an
-  effectively irreversible submission to a list browsers ship and belongs to
-  whoever owns the domain. Sent only over TLS, because RFC 6797 forbids a
-  browser to record it from a cleartext hop - and the scheme is read from
-  `X-Forwarded-Proto` only where `COS_WEB_TRUST_FORWARDED_FOR` says a proxy
-  writes it, which is the same trust decision `client_address` makes.
-
-- **A tampered erasure receipt verifies as false rather than raising.**
-  `webapp.purge.verify` compared the expected digest with the receipt's
-  signature as `str`, and `hmac.compare_digest` raises `TypeError` on a
-  string outside ASCII - so a receipt edited to carry one answered an auditor
-  with a traceback instead of the `False` the function is read for. Both
-  sides are encoded now, exactly as the purge endpoint has always compared
-  its token. The endpoint itself was never affected.
+- **A scan fingerprints the configuration it measured, so drift is visible
+  without the grade moving.** A rewritten content security policy, a replaced
+  reverse proxy, public links that stopped requiring a password, a certificate
+  at a different issuer - none of that has to change a grade, and an operator
+  watching only the grade saw none of it. The result document now carries a
+  `configuration` block: grouped digests for transport, headers, sharing,
+  authentication and proxy, plus one over all five. **Digests only, never the
+  configuration** - a policy, an issuer and a server banner go in and a hash
+  comes out, so the block is safe on a public page, in a webhook and in an
+  uploaded report. The plugin prints `Configuration fingerprint: 9e3c4428`,
+  `--baseline` reports `No new findings, but the configuration changed
+  (headers)`, `check-opencloud-scanner diff` adds a `configurationChanged`
+  change, and the web application shows the groups under *Has this deployment
+  changed?*. Routine churn is deliberately excluded: a renewed certificate and
+  a proxy's new build number are not drift, and a group the two scans looked
+  at differently is reported as not comparable rather than as a change.
+  Nothing in it touches a rating, an exit code or an alert line. See
+  [ADR 0073](adr/0073-a-result-fingerprints-the-configuration-it-measured.md).
+- **`--policy` fails a deployment on explicit requirements, not on a grade.**
+  `-w`/`-c` and `--profile` judge an instance by its rating, which is the
+  wrong shape for a CI gate: a team that requires HTTPS enforcement and no
+  demo accounts cannot express that as a number. A policy file states it
+  directly - `minimum_rating`, `required_hardenings` and `forbidden` (a
+  missing measure, a failed check or a vulnerability id) - and anything it
+  asks for that an instance does not meet ends the run CRITICAL. A policy
+  only ever makes a verdict worse, a waiver does not excuse a requirement,
+  and an unknown key or measure is a usage error rather than a rule that
+  quietly requires nothing. `--format json` and the webhook payload carry the
+  verdict under `policy`. See [CI policy mode](README.md#ci-policy-mode) and
+  [`config/policy.example.yml`](config/policy.example.yml).
+- **`--format summary` reads a whole fleet in one table.** Checking a dozen
+  instances printed a dozen result blocks written for a monitoring system,
+  which is a lot to read when the question is just "which of these needs me
+  today". The new format prints one aligned row per host instead - host,
+  grade, version, end-of-life state, how many advisories apply, and how much
+  moved since `--baseline` - followed by the same tally the Nagios output
+  starts with. Rows keep the order the hosts were given and the exit code is
+  unchanged, so it works from a cron job that mails its output. The `NEW`
+  column distinguishes "no baseline given" (`-`) from "no new findings" (`0`),
+  and a host whose scan failed shows its Nagios status where the grade would
+  be. See [Reading a fleet in one table](README.md#reading-a-fleet-in-one-table).
+- **The output says how much it could actually measure.** A check that
+  passed and one that never ran left the same trace in the plugin's output -
+  nothing - so the plugin now prints a `Coverage:` line such as `84 checks
+  evaluated, 6 skipped, 2 indeterminate, 1 network-limited`, and the webhook
+  payload and `--format json` carry the same counts under `coverage`. The web
+  application's *What this scan did not measure* section shows the same four
+  numbers. `network_limited` is split out of the skipped and indeterminate
+  counts because a timeout or a missing route - DNSSEC, an external identity
+  provider, an optional endpoint - is the gap another vantage point might
+  close. Nothing in it changes a grade, an exit code or an alert line.
