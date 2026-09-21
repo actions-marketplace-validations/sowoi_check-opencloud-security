@@ -152,6 +152,110 @@ eingeklammerte IPv6-Adressen und vollständige URLs sind möglich. Bei
 unterschiedlichen Einstellungen je Instanz empfehlen sich getrennte
 [Konfigurationsdateien](../many-instances.md).
 
+## Eine Flotte in einer Tabelle {#reading-a-fleet-in-one-table}
+
+Die Ergebnisblöcke je Host sind für ein Monitoring-System geschrieben, und ein
+Dutzend davon liest sich mühsam. `--format summary` gibt denselben Lauf
+stattdessen als eine ausgerichtete Zeile je Host aus:
+
+```shell
+check-opencloud-security \
+  --host opencloud1.example.com,opencloud2.example.com \
+  --format summary
+```
+
+```text
+HOST                    GRADE  VERSION  EOL   VULNS  NEW
+opencloud1.example.com  A+     7.2.4    no    0      -
+opencloud2.example.com  F      6.9.1    YES   3      -
+
+Checked 2 host(s): overall CRITICAL (1 CRITICAL, 1 OK)
+```
+
+Die Spalten sind die Note, die dieses Plugin vergeben hat, die gemessene
+Version, der Lebenszyklus-Zustand, wie viele Meldungen zutreffen und wie viel
+sich seit der Referenzaufnahme bewegt hat. Die Zeilen behalten die Reihenfolge
+der angegebenen Hosts, und die letzte Zeile ist dieselbe Bilanz, mit der die
+Nagios-Ausgabe beginnt. Der Exit-Code bleibt unverändert - der schlechteste
+Status der Flotte -, also taugt das weiterhin für einen Cronjob, der seine
+Ausgabe verschickt.
+
+`EOL` steht auf `YES` nach dem Support-Ende, auf `soon` innerhalb des Fensters
+von [`--eol-warning-days`](#options) und sonst auf `no`. `NEW` braucht
+[`--baseline`](#options): ohne Referenz steht dort `-`, denn "nichts Neues" und
+"nicht feststellbar" sind verschiedene Antworten. Mit Referenz steht dort `new`
+im Lauf, der die Referenz aufnimmt, und danach `+n` für Befunde, die vorher
+nicht da waren. Ein Host, dessen Scan fehlgeschlagen ist, hat keine Note; in
+seiner Spalte `GRADE` steht stattdessen der Nagios-Status (`UNKNOWN`).
+
+Dieses Format ist für Menschen. Für Maschinen gibt es
+[`json`, `sarif` oder `junit`](#machine-readable-output-for-ci-jsonsarifjunit)
+mit denselben Befunden in auswertbarer Form.
+
+## CI-Richtlinienmodus {#ci-policy-mode}
+
+`-w`/`-c` und `--profile` beurteilen eine Instanz anhand ihrer **Note**, also
+anhand einer einzigen Zahl, die für alles Gemessene einsteht. Für ein
+Monitoring-System ist das die richtige Form und für ein Deployment-Tor die
+falsche: Wenn dein Team erzwungenes HTTPS und keine Demo-Konten verlangt,
+lässt sich das nicht als Note ausdrücken.
+
+`--policy` verweist auf eine Datei, die das ausdrücklich festhält:
+
+```yaml
+minimum_rating: 4
+required_hardenings:
+  - httpsEnforced
+  - corsOriginRestricted
+forbidden:
+  - demoUsersDisabled
+```
+
+```shell
+check-opencloud-security --host opencloud.example.com --policy policy.yml
+```
+
+```text
+CRITICAL: 2 policy violation(s) - required hardening 'httpsEnforced' is not in place (+1 more)
+OpenCloud 7.2.4 on opencloud.example.com, rating: A, last scanned: ...
+Policy violations (2):
+  - required hardening 'httpsEnforced' is not in place
+  - forbidden finding 'demoUsersDisabled' is present
+```
+
+Alle drei Schlüssel sind optional: `minimum_rating` ist eine Untergrenze für
+die Note von `0` (F) bis `5` (A+), `required_hardenings` nennt Maßnahmen, die
+vorhanden sein müssen, und `forbidden` nennt Befund-IDs, die nicht auftreten
+dürfen - eine fehlende Härtung, eine fehlgeschlagene Prüfung oder eine
+Schwachstellen-ID.
+
+Die Bezeichner sind dieselben, die der Scan selbst meldet; `--format json`
+listet sie für eine Instanz auf und `--debug` erklärt jeden einzelnen. `.json`
+wird als JSON gelesen, alles andere als YAML, und
+[`config/policy.example.yml`](../../config/policy.example.yml) ist ein
+kommentierter Ausgangspunkt.
+
+Ein Verstoß ist **CRITICAL**, denn es bringt wenig, eine Pipeline mit einem
+Status scheitern zu lassen, den sie womöglich toleriert. Eine Richtlinie macht
+ein Urteil nur schlechter, nie besser: Eine Instanz, die alle Anforderungen
+erfüllt, behält das Urteil, das Schwellwerte, Härtung, Lebenszyklus und
+Referenzaufnahme bereits gefällt haben, und in der Ausgabe steht
+`Policy: every requirement met`. Webhook-Payload und `--format json` führen
+dasselbe Urteil unter `policy`.
+
+Zwei Regeln solltest du kennen, bevor du eine Richtlinie schreibst:
+
+* **Ein Waiver entschuldigt keine Anforderung.** `--ignore-hardening` und
+  `--waive-until` sind der Betrieb vor Ort, der einen Befund akzeptiert; eine
+  Richtlinie ist die Organisation, die sagt, dass er nicht akzeptiert werden
+  darf. Könnte ein Waiver eine geforderte Maßnahme stummschalten, würde eine
+  Richtlinie nichts Durchsetzbares beschreiben.
+* **Ein Tippfehler ist ein Nutzungsfehler, kein stilles Durchwinken.** Ein
+  unbekannter Schlüssel, eine Note außerhalb von `0`-`5` oder eine Maßnahme,
+  die der Katalog nicht kennt, beenden den Lauf mit `UNKNOWN` samt Begründung.
+  Eine Richtlinie existiert, um Deployments scheitern zu lassen - eine Regel,
+  die stillschweigend nichts verlangt, wäre das schlechtestmögliche Ergebnis.
+
 ## Prometheus und Kubernetes {#prometheus-kubernetes-integration}
 
 `--format=prometheus` erzeugt eine einmalige Textausgabe. Der Exporter stellt
@@ -776,8 +880,22 @@ Aktuelle Instanz:
 $ check-opencloud-security -H opencloud.example.com
 OK: Server is up to date. No known vulnerabilities.
 OpenCloud 7.4.0 on opencloud.example.com, rating: A+, last scanned: 2026-05-29 08:50:58.000000
-Additional checks: all passed | rating=5;@0:3;@0:1;0;5 vulnerabilities=0;;;0; time=0.731s;;;0; extra_checks_failed=0;;;0;
+Additional checks: all passed
+Coverage: 84 checks evaluated, 6 skipped, 2 indeterminate, 1 network-limited | rating=5;@0:3;@0:1;0;5 vulnerabilities=0;;;0; time=0.731s;;;0; extra_checks_failed=0;;;0;
 ```
+
+Zwischen den Detailzeilen und den Leistungsdaten sagt eine Zeile `Coverage:`,
+wie viel der Prüfung tatsächlich zu einem Ergebnis kam - `84 checks evaluated,
+6 skipped, 2 indeterminate, 1 network-limited`. Eine bestandene Prüfung und
+eine, die nie lief, hinterlassen sonst dieselbe Spur, also benennt die Zeile
+die Lücken: `skipped` ist eine Prüfung, die der Scan nicht ausgeführt hat,
+`indeterminate` eine, die lief und nichts entscheiden konnte, und
+`network-limited` eine, die in eine Zeitüberschreitung lief oder keine Route
+hatte - DNSSEC, ein externer Identitätsanbieter, ein optionaler Endpunkt -,
+was ein anderer Standort beantworten könnte. Die Zeile ändert weder die Note
+noch den Exit-Code, und ein Ergebnisdokument von vor diesem Block bekommt gar
+keine Zeile, denn "dieser Bericht sagt es nicht" ist nicht "nichts wurde
+übersehen".
 
 Abgelaufenes Release, unabhängig von den Schwellen CRITICAL:
 

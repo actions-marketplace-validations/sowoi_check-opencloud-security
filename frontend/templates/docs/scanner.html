@@ -27,6 +27,7 @@
   <a href="#hardenings" lang="en">Hardenings</a>
   <a href="#what-the-scan-covered" lang="en">What the scan covered</a>
   <a href="#the-conditions-a-scan-ran-under" lang="en">The conditions a scan ran under</a>
+  <a href="#has-the-deployment-changed" lang="en">Has the deployment changed?</a>
   <a href="#debug-ports" lang="en">Debug ports</a>
   <a href="#every-resolved-address" lang="en">Every resolved address</a>
   <a href="#concurrency" lang="en">Concurrency</a>
@@ -794,15 +795,35 @@ excuse. The other two always carry one, from a closed set:</p>
   addresses are compared depend on the instance and the settings - so there is
   no fixed denominator.</li>
 <li><strong>Coverage never changes a grade.</strong> Nothing in the block reaches the rating,
-  the severities, the alert line, the exit code or the webhook payload. A
-  waived failure stays <code>failed</code> here; the acceptance is in
-  <code>extraChecks[].ignored</code>, because a waiver is a decision about alerting and
-  not about evidence.</li>
+  the severities, the alert line or the exit code. The webhook payload carries
+  the counts, but only as a report of what was measured - no receiver has to
+  read them to know the verdict. A waived failure stays <code>failed</code> here; the
+  acceptance is in <code>extraChecks[].ignored</code>, because a waiver is a decision
+  about alerting and not about evidence.</li>
 </ul>
 <p>A document written before this block existed simply has no <code>coverage</code> key,
 which is a report that does not say what it covered - not a scan without
 gaps. Read it with <code>coverage.coverage_of(result)</code>, which returns <code>None</code> for
 both a missing and a malformed block.</p>
+<h3 id="the-one-line-summary">The one-line summary</h3>
+<p><code>coverage.summary(result)</code> reduces the block to the four numbers a reader
+needs, and <code>coverage.summary_line(result)</code> writes them as one English
+sentence:</p>
+<pre><code>84 checks evaluated, 6 skipped, 2 indeterminate, 1 network-limited
+</code></pre>
+<p>Every check is in exactly one of the four. <code>evaluated</code> is a conclusion, pass
+or fail; <code>skipped</code> is a check the scanner decided not to run; <code>indeterminate</code>
+is one that ran and could not tell; <code>networkLimited</code> is split out of the last
+two because a timeout or a missing route is the one gap another vantage point
+might close - DNSSEC from a resolver that validates, an external identity
+provider that is reachable from elsewhere. Zero counts are left out of the
+sentence, but the number evaluated is always named. Both functions return
+<code>None</code> / <code>""</code> for a document that has no coverage block, so "nothing was
+missed" and "this report does not say" never read alike.</p>
+<p>The plugin prints the sentence as a <code>Coverage:</code> detail line, the webhook
+payload carries the same numbers under <code>coverage</code> (snake_case, as the payload
+is), and the web application shows them under <em>What this scan did not
+measure</em>.</p>
 <h2 id="the-conditions-a-scan-ran-under">The conditions a scan ran under</h2>
 <p>Two scans of the same instance can disagree without the instance having
 changed: the advisory database learned a CVE, a support window closed, the
@@ -845,7 +866,7 @@ existing summary, and <code>--format json</code> carries them as <code>explanati
 <tbody>
 <tr>
 <td><code>instance</code></td>
-<td>The version, or a check that started or stopped failing</td>
+<td>The version, a check that started or stopped failing, or a configuration group whose fingerprint moved</td>
 </tr>
 <tr>
 <td><code>referenceData</code></td>
@@ -872,6 +893,67 @@ contribute without one being chosen as <em>the</em> cause.</p>
 <p><code>limitations</code> lists what the comparison could not establish - most often that
 one of the two reports predates these blocks, and so cannot say what it was
 judged against or how much of it ran. That is reported rather than assumed.</p>
+<h2 id="has-the-deployment-changed">Has the deployment changed?</h2>
+<p>A grade says whether an instance is in good shape. It does not say whether it
+is still the same instance as last week. A policy rewritten without gaining
+<code>unsafe-inline</code>, a proxy replaced with a different product that sets the same
+headers, public links that stopped requiring a password and require one again,
+a certificate moved to another issuer - none of that has to move a grade, and
+an operator watching only the grade sees none of it.</p>
+<p><code>configuration</code> is a <strong>fingerprint</strong>: grouped digests of how the deployment is
+configured, and nothing it is configured to. See
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0073-a-result-fingerprints-the-configuration-it-measured.md">ADR 0073</a>.</p>
+<pre><code class="language-json">{
+  &quot;configuration&quot;: {
+    &quot;schema&quot;: 1,
+    &quot;digest&quot;: &quot;9e3c4428...&quot;,
+    &quot;groups&quot;: {
+      &quot;tls&quot;: {&quot;digest&quot;: &quot;89a97538...&quot;, &quot;scope&quot;: &quot;1d0f4b77...&quot;, &quot;facts&quot;: 12},
+      &quot;headers&quot;: {&quot;digest&quot;: &quot;cb25144c...&quot;, &quot;scope&quot;: &quot;b8e1a930...&quot;, &quot;facts&quot;: 13},
+      &quot;sharing&quot;: {&quot;digest&quot;: &quot;7b8a1ced...&quot;, &quot;scope&quot;: &quot;44c0ae51...&quot;, &quot;facts&quot;: 3},
+      &quot;authentication&quot;: {&quot;digest&quot;: &quot;588d045f...&quot;, &quot;scope&quot;: &quot;0a7be2cc...&quot;, &quot;facts&quot;: 6},
+      &quot;proxy&quot;: {&quot;digest&quot;: &quot;b7db6daf...&quot;, &quot;scope&quot;: &quot;ff31c084...&quot;, &quot;facts&quot;: 5}
+    }
+  }
+}
+</code></pre>
+<p>Two scans with the same group digest were looking at the same configuration
+for that group; two that differ were not. That is the entire claim, and these
+rules are what make it worth reading:</p>
+<ul>
+<li><strong>Digests only, never the configuration.</strong> A content security policy names
+  the origins a deployment trusts, a discovery document can name a tenant, a
+  server banner names an internal build. Every fact is hashed into its group
+  and discarded; a reader learns <em>that</em> sharing changed, never <em>what</em> it is
+  set to. The block is safe on a public page for the same reason it is safe in
+  a ticket.</li>
+<li><strong>Groups are the questions an operator asks.</strong> "Did TLS change?" is useful;
+  "did fact 37 change?" is not.</li>
+<li><strong>Only what the deployment decides.</strong> The transport group hashes the issuer,
+  the key, the signature algorithm and the negotiated protocols - not the
+  serial number, the dates or the certificate fingerprint, because a renewal
+  is routine. The proxy group hashes the vendor, not the banner, whose build
+  number moves with every patch.</li>
+<li><strong>A scan's own settings are never a fact.</strong> <code>scope</code> is a digest of <em>which</em>
+  facts a group looked at, without their values. Two groups are compared only
+  when their scopes match, so a run that stopped inspecting TLS reports "not
+  comparable" instead of drift. A group with nothing to hash at all is <code>none</code>.</li>
+<li><strong>It never changes a grade.</strong> Nothing here reaches the rating, the
+  severities, the alert line or the exit code.</li>
+</ul>
+<p>Read it with <code>fingerprint.fingerprint_of(result)</code>, which returns <code>None</code> for
+both a missing and a malformed block - a report that cannot say is not a
+deployment that did not change. <code>fingerprint.digests(result)</code> reduces it to
+one opaque <code>scope:digest</code> string per group, which is what a baseline file, a
+webhook receiver and a comparison all store, and
+<code>fingerprint.drift(before, after)</code> names the groups that differ:</p>
+<pre><code class="language-python">from opencloud_local_scan.fingerprint import digests, drift
+
+changed = drift(digests(last_week), digests(today))  # ('headers',)
+</code></pre>
+<p>The plugin prints <code>Configuration fingerprint: 9e3c4428</code> with each scan, and
+<code>--baseline</code> turns the same digests into <code>No new findings, but the
+configuration changed (headers)</code>.</p>
 <h2 id="debug-ports">Debug ports</h2>
 <p>Every OpenCloud service runs a debug listener serving <code>/healthz</code>, <code>/readyz</code>,
 <code>/metrics</code>, <code>/config</code> and <code>/debug/pprof</code>. <code>/metrics</code> exposes the exact version

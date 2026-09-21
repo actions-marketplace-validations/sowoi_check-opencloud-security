@@ -38,6 +38,8 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from opencloud_local_scan.coverage import COVERAGE_SCHEMA
+from opencloud_local_scan.fingerprint import FINGERPRINT_SCHEMA
+from opencloud_local_scan.fingerprint import GROUPS as CONFIGURATION_GROUPS
 from opencloud_local_scan.provenance import PROVENANCE_SCHEMA
 
 #: The largest upload that is read at all. Deliberately far below the
@@ -489,6 +491,41 @@ def _coverage(source: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def _configuration(source: Mapping[str, Any]) -> dict[str, Any]:
+    """
+    The uploaded report's configuration fingerprint, digest by digest.
+
+    Only our own group names, and only values that look like one of our
+    digests. An upload cannot introduce a group, and it cannot smuggle a
+    configuration value in where a digest belongs.
+    """
+    block = source.get("configuration")
+    if not isinstance(block, Mapping):
+        return {}
+    groups = block.get("groups")
+    if not isinstance(groups, Mapping):
+        return {}
+    rebuilt: dict[str, Any] = {}
+    for group in CONFIGURATION_GROUPS:
+        entry = groups.get(group)
+        digest = _digest(entry.get("digest") if isinstance(entry, Mapping) else None)
+        scope = _digest(entry.get("scope") if isinstance(entry, Mapping) else None)
+        rebuilt[group] = {
+            "digest": digest or "none",
+            # Without the scope, two uploads that looked at different things
+            # would compare as if they had looked at the same ones.
+            "scope": scope or "none",
+            "facts": _count(entry.get("facts") if isinstance(entry, Mapping) else 0),
+        }
+    return {
+        "configuration": {
+            "schema": FINGERPRINT_SCHEMA,
+            "digest": _digest(block.get("digest")) or "none",
+            "groups": rebuilt,
+        }
+    }
+
+
 def _digest(value: object) -> str:
     """A digest, or nothing. Anything that is not one of ours is dropped."""
     text = _text(value)
@@ -589,6 +626,7 @@ def _rebuild(source: Mapping[str, Any]) -> tuple[dict[str, Any], int]:
     # reports as a limitation rather than guessing at.
     document.update(_provenance(source))
     document.update(_coverage(source))
+    document.update(_configuration(source))
 
     updates = source.get("updates")
     if isinstance(updates, Mapping) and updates.get("available"):

@@ -24,6 +24,8 @@
   <a href="#cli-usage" lang="en">CLI Usage</a>
   <a href="#verifying-a-fix" lang="en">Verifying a fix</a>
   <a href="#checking-multiple-hosts" lang="en">Checking multiple hosts</a>
+  <a href="#reading-a-fleet-in-one-table" lang="en">Reading a fleet in one table</a>
+  <a href="#ci-policy-mode" lang="en">CI policy mode</a>
   <a href="#prometheus-kubernetes-integration" lang="en">Prometheus &amp; Kubernetes integration</a>
   <a href="#machine-readable-output-for-ci-jsonsarifjunit" lang="en">Machine-readable output for CI (json/sarif/junit)</a>
   <a href="#checkmk" lang="en">Checkmk</a>
@@ -211,8 +213,12 @@ comparisons, execution, output and notifications.</p>
 <td>Judge by a named threshold set - <code>strict</code>, <code>ops</code> or <code>lenient</code> - instead of setting each flag</td>
 </tr>
 <tr>
+<td><code>--policy</code></td>
+<td>Policy file of organization requirements; anything it asks for that is not met is CRITICAL</td>
+</tr>
+<tr>
 <td><code>--format</code></td>
-<td><code>nagios</code>, <code>prometheus</code>, <code>otlp</code>, <code>checkmk</code>, <code>json</code>, <code>sarif</code> or <code>junit</code></td>
+<td><code>nagios</code>, <code>prometheus</code>, <code>otlp</code>, <code>checkmk</code>, <code>summary</code>, <code>json</code>, <code>sarif</code> or <code>junit</code></td>
 </tr>
 <tr>
 <td><code>--ignore-hardening</code></td>
@@ -299,6 +305,104 @@ trailing comma) are dropped. Because there is no hosted API involved, each
 entry may be a hostname, an IPv4 address, a bracketed IPv6 address or a full
 URL, with or without a port:
 <code>--host 10.0.0.5:9200,[2001:db8::1],https://cloud.example.com/</code>.</p>
+<h2 id="reading-a-fleet-in-one-table">Reading a fleet in one table</h2>
+<p>The per-host result blocks are written for a monitoring system, and a dozen of
+them are a lot to read. <code>--format summary</code> prints the same run as one aligned
+row per host instead:</p>
+<pre><code class="language-shell">check-opencloud-security \
+  --host opencloud1.example.com,opencloud2.example.com \
+  --format summary
+</code></pre>
+<pre><code class="language-text">HOST                    GRADE  VERSION  EOL   VULNS  NEW
+opencloud1.example.com  A+     7.2.4    no    0      -
+opencloud2.example.com  F      6.9.1    YES   3      -
+
+Checked 2 host(s): overall CRITICAL (1 CRITICAL, 1 OK)
+</code></pre>
+<p>The columns are the grade this plugin decided, the version the scan measured,
+the lifecycle state, how many advisories apply, and how much moved since the
+baseline. Rows keep the order the hosts were given, and the last line is the
+same tally the Nagios output starts with. The exit code is unchanged - worst
+status across the fleet - so this stays usable from a cron job that mails its
+output.</p>
+<p><code>EOL</code> reads <code>YES</code> past end of life, <code>soon</code> inside the
+<a href="#options"><code>--eol-warning-days</code></a> window, and <code>no</code> otherwise. <code>NEW</code> needs
+<a href="#options"><code>--baseline</code></a>: without one it is <code>-</code>, because "nothing new" and "no
+way to tell" are different answers. With one it is <code>new</code> on the run that
+records the baseline, and <code>+n</code> afterwards for findings that were not there
+before. A host whose scan failed has no grade, so its <code>GRADE</code> cell carries the
+Nagios status (<code>UNKNOWN</code>) instead.</p>
+<p>This format is for people. For a machine, use
+<a href="#machine-readable-output-for-ci-jsonsarifjunit"><code>json</code>, <code>sarif</code> or <code>junit</code></a>,
+which carry the same findings in a parseable shape.</p>
+<h2 id="ci-policy-mode">CI policy mode</h2>
+<p><code>-w</code>/<code>-c</code> and <code>--profile</code> judge an instance by its <strong>grade</strong>, which is a
+single number standing in for everything the scan measured. That is the right
+shape for a monitoring system and the wrong shape for a deployment gate: a
+team that requires HTTPS enforcement and no demo accounts cannot express that
+as a rating.</p>
+<p><code>--policy</code> points at a file that says so explicitly:</p>
+<pre><code class="language-yaml">minimum_rating: 4
+required_hardenings:
+  - httpsEnforced
+  - corsOriginRestricted
+forbidden:
+  - demoUsersDisabled
+</code></pre>
+<pre><code class="language-shell">check-opencloud-security --host opencloud.example.com --policy policy.yml
+</code></pre>
+<pre><code class="language-text">CRITICAL: 2 policy violation(s) - required hardening 'httpsEnforced' is not in place (+1 more)
+OpenCloud 7.2.4 on opencloud.example.com, rating: A, last scanned: ...
+Policy violations (2):
+  - required hardening 'httpsEnforced' is not in place
+  - forbidden finding 'demoUsersDisabled' is present
+</code></pre>
+<p>All three keys are optional:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>minimum_rating</code></td>
+<td>A floor under the grade, <code>0</code> (F) to <code>5</code> (A+)</td>
+</tr>
+<tr>
+<td><code>required_hardenings</code></td>
+<td>Measures that must be in place</td>
+</tr>
+<tr>
+<td><code>forbidden</code></td>
+<td>Finding ids that must not be present - a missing hardening, a failed check, or a vulnerability id</td>
+</tr>
+</tbody>
+</table>
+<p>The identifiers are the ones the scan itself reports; <code>--format json</code> lists
+them for an instance and <code>--debug</code> explains each one. <code>.json</code> is read as JSON,
+anything else as YAML, and
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/config/policy.example.yml"><code>config/policy.example.yml</code></a> is a commented
+starting point.</p>
+<p>A violation is <strong>CRITICAL</strong>, because there is little point failing a pipeline
+with a status the pipeline might be configured to tolerate. A policy only ever
+makes a verdict worse: an instance that meets every requirement keeps whatever
+the thresholds, hardening, lifecycle and baseline rules already decided, and
+the output says <code>Policy: every requirement met</code>. The webhook payload and
+<code>--format json</code> carry the same verdict under <code>policy</code>, so a CI job need not
+parse the alert line.</p>
+<p>Two rules are worth knowing before you write one:</p>
+<ul>
+<li><strong>A waiver does not excuse a requirement.</strong> <code>--ignore-hardening</code> and
+  <code>--waive-until</code> are the local operator accepting a finding; a policy is the
+  organization saying it may not be accepted. If a waiver could silence a
+  required measure, a policy would describe nothing enforceable.</li>
+<li><strong>A typo is a usage error, not a silent pass.</strong> An unknown key, a rating
+  outside <code>0</code>-<code>5</code>, or a measure the catalogue does not know ends the run
+  <code>UNKNOWN</code> with the reason. A policy exists to fail deployments, so a rule
+  that quietly requires nothing is the worst outcome available.</li>
+</ul>
 <h2 id="prometheus-kubernetes-integration">Prometheus &amp; Kubernetes integration</h2>
 <p><code>--format=prometheus</code> produces a one-shot text payload; the built-in exporter
 serves <code>/metrics</code> for pull-based monitoring, refreshing each configured target
@@ -1253,9 +1357,17 @@ restores the normal alert state.</p>
 <p>The full state is still printed either way - only the alert is suppressed,
 never the evidence. <strong>An end-of-life release always alerts</strong>, however long it
 has been in the baseline.</p>
+<p>A baseline also remembers the scan's <strong>configuration fingerprint</strong> - grouped
+digests of how the instance is set up, never of what it is set to - so a run
+where nothing failed can still report that the deployment changed:</p>
+<pre><code>Baseline: No new findings since 2026-09-14T06:00:00Z, but the configuration changed (headers, proxy)
+</code></pre>
+<p>Only the group names are reported; the settings behind them are hashed and
+discarded. Drift never creates a finding and never changes the exit code.</p>
 <p><strong><a href="/documentation/baseline">Reporting only what changed</a></strong> has the diff formats
-(<code>text</code>, <code>markdown</code>, <code>slack</code>, <code>json</code>), what counts as a regression, and the
-rules that keep a baseline from hiding anything.</p>
+(<code>text</code>, <code>markdown</code>, <code>slack</code>, <code>json</code>), what counts as a regression, the
+configuration groups, and the rules that keep a baseline from hiding
+anything.</p>
 <h2 id="is-the-plugin-itself-up-to-date">Is the plugin itself up to date?</h2>
 <p><code>--self-update-check</code> checks PyPI at most once a day and adds a note when a newer plugin
 is available. Updating the plugin also refreshes its bundled release and advisory data.</p>
@@ -1358,8 +1470,28 @@ nothing to invalidate and no flag to force a fresh scan.</p>
 <pre><code class="language-Shell">$ check-opencloud-security -H opencloud.example.com
 OK: Server is up to date. No known vulnerabilities.
 OpenCloud 7.4.0 on opencloud.example.com, rating: A+, last scanned: 2026-05-29 08:50:58.000000
-Additional checks: all passed | rating=5;@0:3;@0:1;0;5 vulnerabilities=0;;;0; time=0.731s;;;0; extra_checks_failed=0;;;0;
+Additional checks: all passed
+Coverage: 84 checks evaluated, 6 skipped, 2 indeterminate, 1 network-limited
+Configuration fingerprint: 9e3c4428 | rating=5;@0:3;@0:1;0;5 vulnerabilities=0;;;0; time=0.731s;;;0; extra_checks_failed=0;;;0;
 </code></pre>
+<p>Between the detail lines and the performance data, a <code>Coverage:</code> line says how
+much of the check actually reached a conclusion - <code>84 checks evaluated, 6
+skipped, 2 indeterminate, 1 network-limited</code>. A check that passed and one that
+never ran leave the same trace otherwise, so the line names the gaps: <code>skipped</code>
+is a probe the scan did not run, <code>indeterminate</code> one that ran without
+deciding, and <code>network-limited</code> one that timed out or had no route - DNSSEC, an
+external identity provider, an optional endpoint - which another vantage point
+may be able to answer. It never changes the grade or the exit code, and a scan
+document that predates the coverage block prints no line at all, because "this
+report does not say" is not "nothing was missed".</p>
+<p>The <code>Configuration fingerprint:</code> line is a digest of how this deployment is
+configured - transport, headers, sharing, authentication and proxy hashed
+together - and never of what it is configured to. Two runs that print the same
+eight characters found the same configuration; two that differ did not, even
+where the grade stood still. With <code>--baseline</code> the comparison names the groups
+that moved; on its own the line is something to diff across runs. It never
+changes the grade or the exit code, and a scan document that carries no
+fingerprint prints no line.</p>
 <p>A major release that no longer receives fixes - always CRITICAL, regardless of
 the thresholds:</p>
 <pre><code class="language-Shell">$ check-opencloud-security -H opencloud.example.com

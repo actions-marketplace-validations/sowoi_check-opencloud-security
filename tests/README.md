@@ -93,6 +93,7 @@ is needed.
 |---|---|
 | [`test_rating_thresholds.py`](test_rating_thresholds.py) | How ratings and thresholds map to Nagios exit codes. |
 | [`test_threshold_profiles.py`](test_threshold_profiles.py) | `--profile`: the named threshold sets decide only how a scan is judged, never how it is probed, and never overrule a flag, an environment variable or a file. |
+| [`test_policy.py`](test_policy.py) | `--policy`: an organization's requirements as a deployment gate - each key passing and failing, that a waiver does not excuse one, and that a broken policy is UNKNOWN rather than a rule that quietly requires nothing. |
 | [`test_golden_corpus.py`](test_golden_corpus.py) | The golden corpus: the whole verdict a known instance earns - rating, findings, caps and exit code per threshold set - must not drift without somebody deciding it. |
 | [`test_check_vulnerabilities.py`](test_check_vulnerabilities.py) | The whole check in-process: the alert line, detail lines, perfdata, the baseline and the result payload all receive and print what the scan found. |
 | [`test_perfdata.py`](test_perfdata.py) | Plugin output: perfdata, hardening reporting, formatting. |
@@ -183,7 +184,9 @@ is needed.
 | [`test_webapp_i18n.py`](test_webapp_i18n.py) | The frontend is translated without changing API contracts. |
 | [`test_translation_quality.py`](test_translation_quality.py) | Structural differences between the catalogues fail; prose heuristics warn. |
 | [`test_coverage.py`](test_coverage.py) | Every check has one state, an unmeasured one says why, and none of it moves the grade. |
+| [`test_fingerprint.py`](test_fingerprint.py) | Configuration drift shows up, routine churn does not, and no configuration leaves the block. |
 | [`test_webapp_coverage.py`](test_webapp_coverage.py) | Scan gaps regrouped and translated, and an older report that records none. |
+| [`test_webapp_fingerprint.py`](test_webapp_fingerprint.py) | The fingerprint on the page: short digests, labelled groups, nothing it hashed. |
 | [`test_webapp_search.py`](test_webapp_search.py) | The browser search built at release, and what result data it may contain. |
 | [`test_frontend_documentation.py`](test_frontend_documentation.py) | Browser documentation generated from the Markdown guides. |
 

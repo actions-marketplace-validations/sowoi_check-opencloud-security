@@ -27,6 +27,7 @@
   <a href="#hardenings" lang="fr">Hardenings</a>
   <a href="#what-the-scan-covered" lang="fr">What the scan covered</a>
   <a href="#the-conditions-a-scan-ran-under" lang="fr">The conditions a scan ran under</a>
+  <a href="#has-the-deployment-changed" lang="fr">L'installation a-t-elle changé ?</a>
   <a href="#debug-ports" lang="fr">Debug ports</a>
   <a href="#every-resolved-address" lang="fr">Every resolved address</a>
   <a href="#concurrency" lang="fr">Concurrency</a>
@@ -781,6 +782,25 @@ excuse. The other two always carry one, from a closed set:</p>
 which is a report that does not say what it covered - not a scan without
 gaps. Read it with <code>coverage.coverage_of(result)</code>, which returns <code>None</code> for
 both a missing and a malformed block.</p>
+<h3 id="the-one-line-summary">Le résumé en une ligne</h3>
+<p><code>coverage.summary(result)</code> réduit le bloc aux quatre nombres dont une lectrice
+a besoin, et <code>coverage.summary_line(result)</code> les écrit en une phrase anglaise :</p>
+<pre><code>84 checks evaluated, 6 skipped, 2 indeterminate, 1 network-limited
+</code></pre>
+<p>Chaque vérification se trouve dans exactement l'un des quatre nombres.
+<code>evaluated</code> est une conclusion, réussie ou non ; <code>skipped</code> est une
+vérification que le scanner a choisi de ne pas lancer ; <code>indeterminate</code> est
+une vérification qui s'est exécutée sans pouvoir trancher ; <code>networkLimited</code>
+est isolé des deux précédents parce qu'un délai dépassé ou une route absente -
+DNSSEC, un fournisseur d'identité externe, un point d'accès facultatif - est
+la lacune qu'un autre point d'observation pourrait combler. La phrase omet les
+zéros, mais nomme toujours le nombre de vérifications évaluées. Les deux
+fonctions renvoient <code>None</code> et <code>""</code> pour un document sans bloc de couverture,
+afin que « rien n'a été manqué » et « ce rapport ne le dit pas » ne se lisent
+jamais pareil.</p>
+<p>Le greffon imprime la phrase comme une ligne de détail <code>Coverage:</code>, la charge
+utile du webhook porte les mêmes nombres sous <code>coverage</code>, et l'application web
+les affiche sous <em>Ce que cette analyse n'a pas mesuré</em>.</p>
 <h2 id="the-conditions-a-scan-ran-under">The conditions a scan ran under</h2>
 <p>Two scans of the same instance can disagree without the instance having
 changed: the advisory database learned a CVE, a support window closed, the
@@ -850,6 +870,62 @@ contribute without one being chosen as <em>the</em> cause.</p>
 <p><code>limitations</code> lists what the comparison could not establish - most often that
 one of the two reports predates these blocks, and so cannot say what it was
 judged against or how much of it ran. That is reported rather than assumed.</p>
+<h2 id="has-the-deployment-changed">L'installation a-t-elle changé ?</h2>
+<p>Une note dit si une instance est en bon état. Elle ne dit pas s'il s'agit
+encore de la même instance que la semaine dernière. Une politique réécrite sans
+gagner <code>unsafe-inline</code>, un proxy remplacé par un autre produit qui pose les
+mêmes en-têtes, des liens publics qui cessent d'exiger un mot de passe puis
+l'exigent de nouveau, un certificat passé chez un autre émetteur : rien de tout
+cela n'a à faire bouger une note, et qui ne regarde que la note n'en voit rien.</p>
+<p><code>configuration</code> est une <strong>empreinte</strong> : des condensats groupés de la manière
+dont l'installation est configurée, jamais de ce qu'elle contient. Voir
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0073-a-result-fingerprints-the-configuration-it-measured.md">ADR 0073</a>.</p>
+<pre><code class="language-json">{
+  &quot;configuration&quot;: {
+    &quot;schema&quot;: 1,
+    &quot;digest&quot;: &quot;9e3c4428...&quot;,
+    &quot;groups&quot;: {
+      &quot;tls&quot;: {&quot;digest&quot;: &quot;89a97538...&quot;, &quot;scope&quot;: &quot;1d0f4b77...&quot;, &quot;facts&quot;: 12},
+      &quot;headers&quot;: {&quot;digest&quot;: &quot;cb25144c...&quot;, &quot;scope&quot;: &quot;b8e1a930...&quot;, &quot;facts&quot;: 13},
+      &quot;sharing&quot;: {&quot;digest&quot;: &quot;7b8a1ced...&quot;, &quot;scope&quot;: &quot;44c0ae51...&quot;, &quot;facts&quot;: 3},
+      &quot;authentication&quot;: {&quot;digest&quot;: &quot;588d045f...&quot;, &quot;scope&quot;: &quot;0a7be2cc...&quot;, &quot;facts&quot;: 6},
+      &quot;proxy&quot;: {&quot;digest&quot;: &quot;b7db6daf...&quot;, &quot;scope&quot;: &quot;ff31c084...&quot;, &quot;facts&quot;: 5}
+    }
+  }
+}
+</code></pre>
+<p>Deux analyses dont le condensat de groupe est identique ont vu la même
+configuration ; deux qui diffèrent, non. C'est tout ce qui est affirmé, et ces
+règles sont ce qui rend l'affirmation utile :</p>
+<ul>
+<li><strong>Des condensats seulement, jamais la configuration.</strong> Une politique de
+  sécurité du contenu nomme les origines auxquelles une installation fait
+  confiance, un document de découverte peut nommer un locataire, une bannière de
+  serveur nomme une compilation interne. Chaque fait est condensé dans son groupe
+  puis oublié : on apprend <em>que</em> le partage a changé, jamais <em>en quoi</em>.</li>
+<li><strong>Les groupes sont les questions que pose l'exploitant.</strong> « TLS a-t-il
+  changé ? » est utile ; « le fait 37 a-t-il changé ? » ne l'est pas.</li>
+<li><strong>Seulement ce que l'installation décide.</strong> Le groupe transport condense
+  l'émetteur, la clé, l'algorithme de signature et les protocoles négociés, pas
+  le numéro de série, les dates ni l'empreinte du certificat, car un
+  renouvellement est une routine. Le groupe proxy condense le produit, pas la
+  bannière et son numéro de version.</li>
+<li><strong>Ce que décident les réglages de l'analyse n'est jamais un fait.</strong> <code>scope</code>
+  est un condensat de <em>quels</em> faits un groupe a pu regarder, sans leurs valeurs.
+  Deux groupes ne sont comparés que si leur portée coïncide : une exécution qui a
+  cessé d'inspecter TLS signale « non comparable » plutôt qu'un changement. Un
+  groupe sans aucun fait vaut <code>none</code>.</li>
+<li><strong>Cela ne change jamais une note.</strong> Rien ici n'atteint la notation, les
+  sévérités, la ligne d'alerte ou le code de sortie.</li>
+</ul>
+<p>Lisez le bloc avec <code>fingerprint.fingerprint_of(result)</code>, qui renvoie <code>None</code>
+pour un bloc absent comme pour un bloc malformé : un rapport qui ne peut pas le
+dire n'est pas une installation qui n'a pas changé. <code>fingerprint.digests(result)</code>
+le réduit à une chaîne opaque <code>scope:digest</code> par groupe, et
+<code>fingerprint.drift(before, after)</code> nomme les groupes qui diffèrent.</p>
+<p>Le greffon imprime <code>Configuration fingerprint: 9e3c4428</code> à chaque analyse, et
+<code>--baseline</code> en fait <code>No new findings, but the configuration changed
+(headers)</code>.</p>
 <h2 id="debug-ports">Debug ports</h2>
 <p>Every OpenCloud service runs a debug listener serving <code>/healthz</code>, <code>/readyz</code>,
 <code>/metrics</code>, <code>/config</code> and <code>/debug/pprof</code>. <code>/metrics</code> exposes the exact version

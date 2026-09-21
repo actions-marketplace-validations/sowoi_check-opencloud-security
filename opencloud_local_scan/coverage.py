@@ -207,3 +207,78 @@ def gaps(result: Mapping[str, Any]) -> list[dict[str, Any]]:
         if isinstance(entry, Mapping)
         and entry.get("state") in {NOT_CHECKED, INCONCLUSIVE}
     ]
+
+
+#: The reasons that mean the network stood in the way, rather than that the
+#: scanner chose not to look. A reader deciding whether to trust a grade
+#: treats these differently: a probe the operator turned off says something
+#: about the scan, an address that never answered says something about the
+#: path between the scanner and the instance, and a retry from elsewhere may
+#: well decide it.
+NETWORK_LIMITED: frozenset[str] = frozenset({TIMEOUT, NO_ROUTE})
+
+
+def summary(result: Mapping[str, Any]) -> dict[str, int] | None:
+    """
+    The coverage counts a reader needs, or nothing when the report has none.
+
+    Four numbers, and every check is in exactly one of them:
+
+    * ``evaluated`` - the check ran and reached a conclusion, pass or fail.
+    * ``skipped`` - the scanner decided not to run it.
+    * ``indeterminate`` - it ran and could not tell.
+    * ``networkLimited`` - it could not be run or decided because nothing
+      answered in time or there was no route. Split out of the two above
+      because it is the one gap another vantage point might close.
+
+    The counts come from the recorded entries, not from the ``counts`` block,
+    which does not carry the reasons this split needs.
+    """
+    coverage = coverage_of(result)
+    if coverage is None:
+        return None
+    totals = {"evaluated": 0, "skipped": 0, "indeterminate": 0, "networkLimited": 0}
+    for entry in coverage["checks"]:
+        if not isinstance(entry, Mapping):
+            continue
+        state = entry.get("state")
+        if state in {PASSED, FAILED}:
+            totals["evaluated"] += 1
+        elif entry.get("reason") in NETWORK_LIMITED:
+            totals["networkLimited"] += 1
+        elif state == NOT_CHECKED:
+            totals["skipped"] += 1
+        elif state == INCONCLUSIVE:
+            totals["indeterminate"] += 1
+    totals["total"] = sum(totals.values())
+    return totals
+
+
+#: The order the summary line reads in, and the word for each count.
+_SUMMARY_WORDS: tuple[tuple[str, str], ...] = (
+    ("evaluated", "evaluated"),
+    ("skipped", "skipped"),
+    ("indeterminate", "indeterminate"),
+    ("networkLimited", "network-limited"),
+)
+
+
+def summary_line(result: Mapping[str, Any]) -> str:
+    """
+    One English sentence of coverage, or ``""`` when the report has none.
+
+    ``84 checks evaluated, 6 skipped, 2 indeterminate, 1 network-limited``.
+    A count of zero is left out - it is the gaps that need saying - but the
+    number of checks evaluated is always named, including when it is zero,
+    because that is the number the rest are measured against.
+    """
+    totals = summary(result)
+    if totals is None:
+        return ""
+    parts = [f"{totals['evaluated']} checks evaluated"]
+    parts.extend(
+        f"{totals[key]} {word}"
+        for key, word in _SUMMARY_WORDS[1:]
+        if totals[key]
+    )
+    return ", ".join(parts)

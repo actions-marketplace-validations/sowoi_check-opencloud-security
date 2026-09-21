@@ -11,6 +11,8 @@
   * [Options](#options)
 * [Verifying a fix](#verifying-a-fix)
 * [Checking multiple hosts](#checking-multiple-hosts)
+* [Reading a fleet in one table](#reading-a-fleet-in-one-table)
+* [CI policy mode](#ci-policy-mode)
 * [Prometheus & Kubernetes integration](#prometheus--kubernetes-integration)
 * [Machine-readable output for CI (json/sarif/junit)](#machine-readable-output-for-ci-jsonsarifjunit)
 * [Checkmk](#checkmk)
@@ -235,7 +237,8 @@ The handful you will actually type most days:
 | `--check-hardening` | Also report missing hardening measures and security headers |
 | `-w, --warning` / `-c, --critical` | The ratings (0-5) at or below which the check warns or goes critical |
 | `--profile` | Judge by a named threshold set - `strict`, `ops` or `lenient` - instead of setting each flag |
-| `--format` | `nagios`, `prometheus`, `otlp`, `checkmk`, `json`, `sarif` or `junit` |
+| `--policy` | Policy file of organization requirements; anything it asks for that is not met is CRITICAL |
+| `--format` | `nagios`, `prometheus`, `otlp`, `checkmk`, `summary`, `json`, `sarif` or `junit` |
 | `--ignore-hardening` | Accept a finding you are not going to fix, by name |
 | `--waive-until` | Accept one until a deadline, with a reason, after which it alerts again |
 | `--baseline` / `--warn-on-new` | Alert only on findings that are new or worse than last run |
@@ -302,6 +305,109 @@ trailing comma) are dropped. Because there is no hosted API involved, each
 entry may be a hostname, an IPv4 address, a bracketed IPv6 address or a full
 URL, with or without a port:
 `--host 10.0.0.5:9200,[2001:db8::1],https://cloud.example.com/`.
+
+# Reading a fleet in one table
+
+The per-host result blocks are written for a monitoring system, and a dozen of
+them are a lot to read. `--format summary` prints the same run as one aligned
+row per host instead:
+
+```shell
+check-opencloud-security \
+  --host opencloud1.example.com,opencloud2.example.com \
+  --format summary
+```
+
+```text
+HOST                    GRADE  VERSION  EOL   VULNS  NEW
+opencloud1.example.com  A+     7.2.4    no    0      -
+opencloud2.example.com  F      6.9.1    YES   3      -
+
+Checked 2 host(s): overall CRITICAL (1 CRITICAL, 1 OK)
+```
+
+The columns are the grade this plugin decided, the version the scan measured,
+the lifecycle state, how many advisories apply, and how much moved since the
+baseline. Rows keep the order the hosts were given, and the last line is the
+same tally the Nagios output starts with. The exit code is unchanged - worst
+status across the fleet - so this stays usable from a cron job that mails its
+output.
+
+`EOL` reads `YES` past end of life, `soon` inside the
+[`--eol-warning-days`](#options) window, and `no` otherwise. `NEW` needs
+[`--baseline`](#options): without one it is `-`, because "nothing new" and "no
+way to tell" are different answers. With one it is `new` on the run that
+records the baseline, and `+n` afterwards for findings that were not there
+before. A host whose scan failed has no grade, so its `GRADE` cell carries the
+Nagios status (`UNKNOWN`) instead.
+
+This format is for people. For a machine, use
+[`json`, `sarif` or `junit`](#machine-readable-output-for-ci-jsonsarifjunit),
+which carry the same findings in a parseable shape.
+
+# CI policy mode
+
+`-w`/`-c` and `--profile` judge an instance by its **grade**, which is a
+single number standing in for everything the scan measured. That is the right
+shape for a monitoring system and the wrong shape for a deployment gate: a
+team that requires HTTPS enforcement and no demo accounts cannot express that
+as a rating.
+
+`--policy` points at a file that says so explicitly:
+
+```yaml
+minimum_rating: 4
+required_hardenings:
+  - httpsEnforced
+  - corsOriginRestricted
+forbidden:
+  - demoUsersDisabled
+```
+
+```shell
+check-opencloud-security --host opencloud.example.com --policy policy.yml
+```
+
+```text
+CRITICAL: 2 policy violation(s) - required hardening 'httpsEnforced' is not in place (+1 more)
+OpenCloud 7.2.4 on opencloud.example.com, rating: A, last scanned: ...
+Policy violations (2):
+  - required hardening 'httpsEnforced' is not in place
+  - forbidden finding 'demoUsersDisabled' is present
+```
+
+All three keys are optional:
+
+| Key | Means |
+|:--|:--|
+| `minimum_rating` | A floor under the grade, `0` (F) to `5` (A+) |
+| `required_hardenings` | Measures that must be in place |
+| `forbidden` | Finding ids that must not be present - a missing hardening, a failed check, or a vulnerability id |
+
+The identifiers are the ones the scan itself reports; `--format json` lists
+them for an instance and `--debug` explains each one. `.json` is read as JSON,
+anything else as YAML, and
+[`config/policy.example.yml`](config/policy.example.yml) is a commented
+starting point.
+
+A violation is **CRITICAL**, because there is little point failing a pipeline
+with a status the pipeline might be configured to tolerate. A policy only ever
+makes a verdict worse: an instance that meets every requirement keeps whatever
+the thresholds, hardening, lifecycle and baseline rules already decided, and
+the output says `Policy: every requirement met`. The webhook payload and
+`--format json` carry the same verdict under `policy`, so a CI job need not
+parse the alert line.
+
+Two rules are worth knowing before you write one:
+
+* **A waiver does not excuse a requirement.** `--ignore-hardening` and
+  `--waive-until` are the local operator accepting a finding; a policy is the
+  organization saying it may not be accepted. If a waiver could silence a
+  required measure, a policy would describe nothing enforceable.
+* **A typo is a usage error, not a silent pass.** An unknown key, a rating
+  outside `0`-`5`, or a measure the catalogue does not know ends the run
+  `UNKNOWN` with the reason. A policy exists to fail deployments, so a rule
+  that quietly requires nothing is the worst outcome available.
 
 # Prometheus & Kubernetes integration
 
@@ -1178,9 +1284,21 @@ The full state is still printed either way - only the alert is suppressed,
 never the evidence. **An end-of-life release always alerts**, however long it
 has been in the baseline.
 
+A baseline also remembers the scan's **configuration fingerprint** - grouped
+digests of how the instance is set up, never of what it is set to - so a run
+where nothing failed can still report that the deployment changed:
+
+```
+Baseline: No new findings since 2026-09-14T06:00:00Z, but the configuration changed (headers, proxy)
+```
+
+Only the group names are reported; the settings behind them are hashed and
+discarded. Drift never creates a finding and never changes the exit code.
+
 **[Reporting only what changed](docs/baseline.md)** has the diff formats
-(`text`, `markdown`, `slack`, `json`), what counts as a regression, and the
-rules that keep a baseline from hiding anything.
+(`text`, `markdown`, `slack`, `json`), what counts as a regression, the
+configuration groups, and the rules that keep a baseline from hiding
+anything.
 
 # Is the plugin itself up to date?
 `--self-update-check` checks PyPI at most once a day and adds a note when a newer plugin
@@ -1267,8 +1385,30 @@ A healthy instance:
 $ check-opencloud-security -H opencloud.example.com
 OK: Server is up to date. No known vulnerabilities.
 OpenCloud 7.4.0 on opencloud.example.com, rating: A+, last scanned: 2026-05-29 08:50:58.000000
-Additional checks: all passed | rating=5;@0:3;@0:1;0;5 vulnerabilities=0;;;0; time=0.731s;;;0; extra_checks_failed=0;;;0;
+Additional checks: all passed
+Coverage: 84 checks evaluated, 6 skipped, 2 indeterminate, 1 network-limited
+Configuration fingerprint: 9e3c4428 | rating=5;@0:3;@0:1;0;5 vulnerabilities=0;;;0; time=0.731s;;;0; extra_checks_failed=0;;;0;
 ```
+
+Between the detail lines and the performance data, a `Coverage:` line says how
+much of the check actually reached a conclusion - `84 checks evaluated, 6
+skipped, 2 indeterminate, 1 network-limited`. A check that passed and one that
+never ran leave the same trace otherwise, so the line names the gaps: `skipped`
+is a probe the scan did not run, `indeterminate` one that ran without
+deciding, and `network-limited` one that timed out or had no route - DNSSEC, an
+external identity provider, an optional endpoint - which another vantage point
+may be able to answer. It never changes the grade or the exit code, and a scan
+document that predates the coverage block prints no line at all, because "this
+report does not say" is not "nothing was missed".
+
+The `Configuration fingerprint:` line is a digest of how this deployment is
+configured - transport, headers, sharing, authentication and proxy hashed
+together - and never of what it is configured to. Two runs that print the same
+eight characters found the same configuration; two that differ did not, even
+where the grade stood still. With `--baseline` the comparison names the groups
+that moved; on its own the line is something to diff across runs. It never
+changes the grade or the exit code, and a scan document that carries no
+fingerprint prints no line.
 
 A major release that no longer receives fixes - always CRITICAL, regardless of
 the thresholds:

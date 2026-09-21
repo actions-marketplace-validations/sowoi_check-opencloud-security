@@ -190,6 +190,109 @@ entry may be a hostname, an IPv4 address, a bracketed IPv6 address or a full
 URL, with or without a port:
 `--host 10.0.0.5:9200,[2001:db8::1],https://cloud.example.com/`.
 
+## Toute une flotte dans un seul tableau {#reading-a-fleet-in-one-table}
+
+Les blocs de résultats par hôte sont écrits pour un système de supervision, et
+une douzaine d'entre eux font beaucoup à lire. `--format summary` imprime la
+même exécution sous la forme d'une ligne alignée par hôte :
+
+```shell
+check-opencloud-security \
+  --host opencloud1.example.com,opencloud2.example.com \
+  --format summary
+```
+
+```text
+HOST                    GRADE  VERSION  EOL   VULNS  NEW
+opencloud1.example.com  A+     7.2.4    no    0      -
+opencloud2.example.com  F      6.9.1    YES   3      -
+
+Checked 2 host(s): overall CRITICAL (1 CRITICAL, 1 OK)
+```
+
+Les colonnes sont la note décidée par ce greffon, la version mesurée par
+l'analyse, l'état du cycle de vie, le nombre d'avis qui s'appliquent et ce qui
+a bougé depuis la référence. Les lignes conservent l'ordre dans lequel les
+hôtes ont été donnés, et la dernière ligne est le même décompte que celui qui
+ouvre la sortie Nagios. Le code de sortie ne change pas - le pire statut de la
+flotte - : cela reste utilisable depuis une tâche cron qui envoie sa sortie.
+
+`EOL` vaut `YES` après la fin de vie, `soon` dans la fenêtre
+[`--eol-warning-days`](#options), et `no` sinon. `NEW` a besoin de
+[`--baseline`](#options) : sans référence, c'est `-`, car « rien de nouveau »
+et « aucun moyen de le savoir » sont deux réponses différentes. Avec une
+référence, c'est `new` lors de l'exécution qui l'enregistre, puis `+n` pour les
+constats qui n'étaient pas là avant. Un hôte dont l'analyse a échoué n'a pas de
+note : sa cellule `GRADE` porte le statut Nagios (`UNKNOWN`).
+
+Ce format est fait pour des personnes. Pour une machine, utilisez
+[`json`, `sarif` ou `junit`](#machine-readable-output-for-ci-jsonsarifjunit),
+qui portent les mêmes constats sous une forme analysable.
+
+## Mode politique CI {#ci-policy-mode}
+
+`-w`/`-c` et `--profile` jugent une instance sur sa **note**, un seul nombre
+qui tient lieu de tout ce que le scan a mesuré. C'est la bonne forme pour un
+système de supervision et la mauvaise pour une barrière de déploiement : une
+équipe qui exige HTTPS imposé et aucun compte de démonstration ne peut pas
+exprimer cela sous forme de note.
+
+`--policy` désigne un fichier qui l'énonce explicitement :
+
+```yaml
+minimum_rating: 4
+required_hardenings:
+  - httpsEnforced
+  - corsOriginRestricted
+forbidden:
+  - demoUsersDisabled
+```
+
+```shell
+check-opencloud-security --host opencloud.example.com --policy policy.yml
+```
+
+```text
+CRITICAL: 2 policy violation(s) - required hardening 'httpsEnforced' is not in place (+1 more)
+OpenCloud 7.2.4 on opencloud.example.com, rating: A, last scanned: ...
+Policy violations (2):
+  - required hardening 'httpsEnforced' is not in place
+  - forbidden finding 'demoUsersDisabled' is present
+```
+
+Les trois clés sont facultatives : `minimum_rating` est un plancher sous la
+note, de `0` (F) à `5` (A+), `required_hardenings` nomme les mesures qui
+doivent être en place, et `forbidden` nomme les identifiants de constats qui
+ne doivent pas être présents - une protection manquante, une vérification en
+échec ou un identifiant de vulnérabilité.
+
+Les identifiants sont ceux que le scan lui-même rapporte ; `--format json` les
+liste pour une instance et `--debug` explique chacun d'eux. Un fichier `.json`
+est lu comme du JSON, tout le reste comme du YAML, et
+[`config/policy.example.yml`](../../config/policy.example.yml) est un point de
+départ commenté.
+
+Une violation est **CRITICAL**, car il ne sert pas à grand-chose de faire
+échouer un pipeline avec un état qu'il est peut-être configuré pour tolérer.
+Une politique ne fait jamais qu'aggraver un verdict : une instance qui
+satisfait toutes les exigences conserve celui que les seuils, la protection,
+le cycle de vie et la référence ont déjà rendu, et la sortie indique
+`Policy: every requirement met`. La charge utile du webhook et `--format json`
+portent le même verdict sous `policy`.
+
+Deux règles méritent d'être connues avant d'en écrire une :
+
+* **Une dérogation n'excuse pas une exigence.** `--ignore-hardening` et
+  `--waive-until` sont l'exploitant local qui accepte un constat ; une
+  politique est l'organisation qui dit qu'il ne peut pas être accepté. Si une
+  dérogation pouvait faire taire une mesure exigée, une politique ne
+  décrirait rien d'applicable.
+* **Une faute de frappe est une erreur d'utilisation, pas un succès
+  silencieux.** Une clé inconnue, une note hors de `0`-`5` ou une mesure que
+  le catalogue ignore terminent l'exécution en `UNKNOWN` avec la raison. Une
+  politique existe pour faire échouer des déploiements : une règle qui
+  n'exige silencieusement rien serait le pire résultat possible.
+
 # Prometheus & Kubernetes integration
 
 `--format=prometheus` produces a one-shot text payload; the built-in exporter
@@ -1113,8 +1216,22 @@ A healthy instance:
 $ check-opencloud-security -H opencloud.example.com
 OK: Server is up to date. No known vulnerabilities.
 OpenCloud 7.4.0 on opencloud.example.com, rating: A+, last scanned: 2026-05-29 08:50:58.000000
-Additional checks: all passed | rating=5;@0:3;@0:1;0;5 vulnerabilities=0;;;0; time=0.731s;;;0; extra_checks_failed=0;;;0;
+Additional checks: all passed
+Coverage: 84 checks evaluated, 6 skipped, 2 indeterminate, 1 network-limited | rating=5;@0:3;@0:1;0;5 vulnerabilities=0;;;0; time=0.731s;;;0; extra_checks_failed=0;;;0;
 ```
+
+Entre les lignes de détail et les données de performance, une ligne
+`Coverage:` dit quelle part de la vérification a réellement abouti - `84
+checks evaluated, 6 skipped, 2 indeterminate, 1 network-limited`. Une
+vérification réussie et une qui n'a jamais eu lieu laissent sinon la même
+trace : la ligne nomme donc les lacunes. `skipped` est une sonde que l'analyse
+n'a pas lancée, `indeterminate` une qui s'est exécutée sans trancher, et
+`network-limited` une qui a dépassé le délai ou n'avait pas de route - DNSSEC,
+un fournisseur d'identité externe, un point d'accès facultatif -, ce qu'un
+autre point d'observation pourrait résoudre. Elle ne change ni la note ni le
+code de sortie, et un document antérieur au bloc de couverture n'imprime
+aucune ligne, car « ce rapport ne le dit pas » n'est pas « rien n'a été
+manqué ».
 
 A major release that no longer receives fixes - always CRITICAL, regardless of
 the thresholds:

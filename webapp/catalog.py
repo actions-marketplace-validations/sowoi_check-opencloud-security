@@ -29,6 +29,9 @@ from opencloud_local_scan import (
     failed_extra_checks,
 )
 from opencloud_local_scan.coverage import coverage_of, gaps
+from opencloud_local_scan.coverage import summary as coverage_summary
+from opencloud_local_scan.fingerprint import GROUPS as CONFIGURATION_GROUPS
+from opencloud_local_scan.fingerprint import NOT_MEASURED, fingerprint_of
 from opencloud_local_scan.hardening import catalogue_id, is_actionable
 from opencloud_local_scan.remediation import SEVERITY_RATING_CAP
 from opencloud_local_scan.versions import RELEASE_TRACK_CHOICES, TRACK_AUTO
@@ -555,6 +558,7 @@ def summarise(
         "upgradeRehearsal": _upgrade_rehearsal(result),
         "integrations": result.get("integrations") or {},
         "coverage": _coverage(result, translate),
+        "fingerprint": _fingerprint(result, translate),
         "counts": {
             "critical": sum(1 for item in issues if item["tag"] == "critical"),
             "warning": sum(1 for item in issues if item["tag"] == "warning"),
@@ -654,7 +658,13 @@ def _coverage(
     translate = translate or Translator()
     coverage = coverage_of(result)
     if coverage is None:
-        return {"available": False, "counts": {}, "gaps": [], "groups": []}
+        return {
+            "available": False,
+            "counts": {},
+            "summary": {},
+            "gaps": [],
+            "groups": [],
+        }
 
     listed = [
         {
@@ -685,12 +695,49 @@ def _coverage(
         groups[-1]["checks"].append(entry)
 
     counts = dict(coverage.get("counts") or {})
+    totals = coverage_summary(result) or {}
     return {
         "available": True,
         "counts": counts,
+        "summary": totals,
         "measured": int(counts.get("passed", 0)) + int(counts.get("failed", 0)),
         "gaps": listed,
         "groups": groups,
+    }
+
+
+def _fingerprint(
+    result: Mapping[str, Any], translate: Translator | None = None
+) -> dict[str, Any]:
+    """
+    The configuration fingerprint, shortened for a page rather than a diff.
+
+    Nothing is decided here either: the scanner hashed the configuration
+    while it ran, and this only shortens each digest to the first eight
+    characters - enough to compare two scans by eye, and still only a digest.
+    """
+    translate = translate or Translator()
+    block = fingerprint_of(result)
+    if block is None:
+        return {"available": False, "digest": "", "groups": []}
+    groups = block["groups"]
+    listed = []
+    for group in CONFIGURATION_GROUPS:
+        entry = groups.get(group) if isinstance(groups, Mapping) else None
+        digest = str(entry.get("digest")) if isinstance(entry, Mapping) else NOT_MEASURED
+        listed.append(
+            {
+                "group": group,
+                "label": translate(f"fingerprint.group.{group}"),
+                "digest": digest[:8] if digest != NOT_MEASURED else "",
+                "measured": digest != NOT_MEASURED,
+                "facts": int(entry.get("facts", 0)) if isinstance(entry, Mapping) else 0,
+            }
+        )
+    return {
+        "available": True,
+        "digest": str(block.get("digest"))[:8],
+        "groups": listed,
     }
 
 

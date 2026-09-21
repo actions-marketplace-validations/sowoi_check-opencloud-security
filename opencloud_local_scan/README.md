@@ -655,15 +655,41 @@ Two properties are worth relying on:
   addresses are compared depend on the instance and the settings - so there is
   no fixed denominator.
 - **Coverage never changes a grade.** Nothing in the block reaches the rating,
-  the severities, the alert line, the exit code or the webhook payload. A
-  waived failure stays `failed` here; the acceptance is in
-  `extraChecks[].ignored`, because a waiver is a decision about alerting and
-  not about evidence.
+  the severities, the alert line or the exit code. The webhook payload carries
+  the counts, but only as a report of what was measured - no receiver has to
+  read them to know the verdict. A waived failure stays `failed` here; the
+  acceptance is in `extraChecks[].ignored`, because a waiver is a decision
+  about alerting and not about evidence.
 
 A document written before this block existed simply has no `coverage` key,
 which is a report that does not say what it covered - not a scan without
 gaps. Read it with `coverage.coverage_of(result)`, which returns `None` for
 both a missing and a malformed block.
+
+### The one-line summary
+
+`coverage.summary(result)` reduces the block to the four numbers a reader
+needs, and `coverage.summary_line(result)` writes them as one English
+sentence:
+
+```
+84 checks evaluated, 6 skipped, 2 indeterminate, 1 network-limited
+```
+
+Every check is in exactly one of the four. `evaluated` is a conclusion, pass
+or fail; `skipped` is a check the scanner decided not to run; `indeterminate`
+is one that ran and could not tell; `networkLimited` is split out of the last
+two because a timeout or a missing route is the one gap another vantage point
+might close - DNSSEC from a resolver that validates, an external identity
+provider that is reachable from elsewhere. Zero counts are left out of the
+sentence, but the number evaluated is always named. Both functions return
+`None` / `""` for a document that has no coverage block, so "nothing was
+missed" and "this report does not say" never read alike.
+
+The plugin prints the sentence as a `Coverage:` detail line, the webhook
+payload carries the same numbers under `coverage` (snake_case, as the payload
+is), and the web application shows them under *What this scan did not
+measure*.
 
 ## The conditions a scan ran under
 
@@ -707,7 +733,7 @@ existing summary, and `--format json` carries them as `explanation`:
 
 | Category | What changed |
 |:--|:--|
-| `instance` | The version, or a check that started or stopped failing |
+| `instance` | The version, a check that started or stopped failing, or a configuration group whose fingerprint moved |
 | `referenceData` | The advisories, the release schedule, the release track, or a support window that simply elapsed |
 | `scanner` | The scanner's version, or how many checks reached a conclusion |
 | `policy` | A waiver expired, was added or was removed |
@@ -721,6 +747,76 @@ contribute without one being chosen as *the* cause.
 `limitations` lists what the comparison could not establish - most often that
 one of the two reports predates these blocks, and so cannot say what it was
 judged against or how much of it ran. That is reported rather than assumed.
+
+## Has the deployment changed?
+
+A grade says whether an instance is in good shape. It does not say whether it
+is still the same instance as last week. A policy rewritten without gaining
+`unsafe-inline`, a proxy replaced with a different product that sets the same
+headers, public links that stopped requiring a password and require one again,
+a certificate moved to another issuer - none of that has to move a grade, and
+an operator watching only the grade sees none of it.
+
+`configuration` is a **fingerprint**: grouped digests of how the deployment is
+configured, and nothing it is configured to. See
+[ADR 0073](../adr/0073-a-result-fingerprints-the-configuration-it-measured.md).
+
+```json
+{
+  "configuration": {
+    "schema": 1,
+    "digest": "9e3c4428...",
+    "groups": {
+      "tls": {"digest": "89a97538...", "scope": "1d0f4b77...", "facts": 12},
+      "headers": {"digest": "cb25144c...", "scope": "b8e1a930...", "facts": 13},
+      "sharing": {"digest": "7b8a1ced...", "scope": "44c0ae51...", "facts": 3},
+      "authentication": {"digest": "588d045f...", "scope": "0a7be2cc...", "facts": 6},
+      "proxy": {"digest": "b7db6daf...", "scope": "ff31c084...", "facts": 5}
+    }
+  }
+}
+```
+
+Two scans with the same group digest were looking at the same configuration
+for that group; two that differ were not. That is the entire claim, and these
+rules are what make it worth reading:
+
+- **Digests only, never the configuration.** A content security policy names
+  the origins a deployment trusts, a discovery document can name a tenant, a
+  server banner names an internal build. Every fact is hashed into its group
+  and discarded; a reader learns *that* sharing changed, never *what* it is
+  set to. The block is safe on a public page for the same reason it is safe in
+  a ticket.
+- **Groups are the questions an operator asks.** "Did TLS change?" is useful;
+  "did fact 37 change?" is not.
+- **Only what the deployment decides.** The transport group hashes the issuer,
+  the key, the signature algorithm and the negotiated protocols - not the
+  serial number, the dates or the certificate fingerprint, because a renewal
+  is routine. The proxy group hashes the vendor, not the banner, whose build
+  number moves with every patch.
+- **A scan's own settings are never a fact.** `scope` is a digest of *which*
+  facts a group looked at, without their values. Two groups are compared only
+  when their scopes match, so a run that stopped inspecting TLS reports "not
+  comparable" instead of drift. A group with nothing to hash at all is `none`.
+- **It never changes a grade.** Nothing here reaches the rating, the
+  severities, the alert line or the exit code.
+
+Read it with `fingerprint.fingerprint_of(result)`, which returns `None` for
+both a missing and a malformed block - a report that cannot say is not a
+deployment that did not change. `fingerprint.digests(result)` reduces it to
+one opaque `scope:digest` string per group, which is what a baseline file, a
+webhook receiver and a comparison all store, and
+`fingerprint.drift(before, after)` names the groups that differ:
+
+```python
+from opencloud_local_scan.fingerprint import digests, drift
+
+changed = drift(digests(last_week), digests(today))  # ('headers',)
+```
+
+The plugin prints `Configuration fingerprint: 9e3c4428` with each scan, and
+`--baseline` turns the same digests into `No new findings, but the
+configuration changed (headers)`.
 
 ## Debug ports
 

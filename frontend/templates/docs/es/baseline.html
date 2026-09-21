@@ -85,6 +85,22 @@ la franja de color en el nivel superior para los webhooks entrantes:</p>
   correcciones de seguridad, así que empeora cada día que sigue en producción
   y una línea base nunca puede darla por aceptada.</li>
 </ul>
+<h2 id="configuration-drift">Cambios de configuración</h2>
+<p>Una referencia también recuerda la <strong>huella de configuración</strong> del análisis:
+resúmenes agrupados de cómo está montada la instancia - transporte, cabeceras,
+compartición, autenticación, proxy - y nunca de con qué valores. Una ejecución
+en la que la nota y los hallazgos siguieron igual aún dice cuándo la
+instalación no lo hizo:</p>
+<pre><code class="language-text">Baseline: No new findings since 2026-09-14T06:00:00Z, but the configuration changed (headers, proxy)
+</code></pre>
+<p>Solo se informan los nombres de los grupos. Lo que dice ahora el ajuste no está
+en el archivo de referencia, ni en la salida, ni en el webhook - solo un
+resumen de él -, así que el archivo puede vivir junto al resto del estado de
+monitorización sin publicar cómo está configurada la instancia.</p>
+<p>El cambio se informa, no se juzga: no crea un hallazgo, no hace que una
+ejecución empeore y nunca cambia el código de salida. Una referencia escrita
+antes de que existieran las huellas simplemente no informa ningún cambio, que
+es la respuesta honesta para un archivo que no puede decirlo.</p>
 <h2 id="points-worth-knowing">Aspectos que conviene conocer</h2>
 <ul>
 <li>La primera ejecución no tiene nada con qué compararse, así que informa con

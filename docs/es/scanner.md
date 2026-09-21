@@ -676,6 +676,31 @@ la clave `coverage`, que es un informe que no dice lo que cubrió y no un
 análisis sin lagunas. Léalo con `coverage.coverage_of(result)`, que devuelve
 `None` tanto para un bloque ausente como para uno mal formado.
 
+### El resumen en una línea {#the-one-line-summary}
+
+`coverage.summary(result)` reduce el bloque a las cuatro cifras que necesita
+quien lo lee, y `coverage.summary_line(result)` las escribe como una frase en
+inglés:
+
+```
+84 checks evaluated, 6 skipped, 2 indeterminate, 1 network-limited
+```
+
+Cada comprobación está en exactamente una de las cuatro. `evaluated` es una
+conclusión, correcta o no; `skipped` es una comprobación que el escáner decidió
+no ejecutar; `indeterminate` es una que se ejecutó y no pudo decidir;
+`networkLimited` se separa de las dos anteriores porque un tiempo de espera
+agotado o una ruta que falta - DNSSEC, un proveedor de identidad externo, un
+extremo opcional - es la laguna que otro punto de observación podría cerrar.
+La frase omite los ceros, pero siempre nombra cuántas comprobaciones se
+evaluaron. Ambas funciones devuelven `None` y `""` para un documento sin bloque
+de cobertura, de modo que "no se pasó nada por alto" y "este informe no lo
+dice" nunca se leen igual.
+
+El complemento imprime la frase como una línea de detalle `Coverage:`, la
+carga útil del webhook lleva las mismas cifras en `coverage` y la aplicación
+web las muestra en *Lo que este análisis no midió*.
+
 ## En qué condiciones se ejecutó un análisis {#the-conditions-a-scan-ran-under}
 
 Dos análisis de la misma instancia pueden diferir sin que la instancia haya
@@ -734,6 +759,69 @@ se elija uno como la causa.
 `limitations` enumera lo que la comparación no pudo establecer, casi siempre que
 uno de los dos informes es anterior a estos bloques y por tanto no puede decir
 contra qué se juzgó ni cuánto se ejecutó. Eso se informa, no se supone.
+
+## ¿Ha cambiado la instalación? {#has-the-deployment-changed}
+
+Una nota dice si una instancia está en buena forma. No dice si sigue siendo la
+misma instancia que la semana pasada. Una política reescrita sin ganar
+`unsafe-inline`, un proxy sustituido por otro producto que pone las mismas
+cabeceras, enlaces públicos que dejan de pedir contraseña y vuelven a pedirla,
+un certificado trasladado a otro emisor: nada de eso tiene que mover la nota, y
+quien solo mira la nota no ve nada de ello.
+
+`configuration` es una **huella**: resúmenes criptográficos agrupados de cómo
+está configurada la instalación, y nunca de con qué valores. Véase
+[ADR 0073](../../adr/0073-a-result-fingerprints-the-configuration-it-measured.md).
+
+```json
+{
+  "configuration": {
+    "schema": 1,
+    "digest": "9e3c4428...",
+    "groups": {
+      "tls": {"digest": "89a97538...", "scope": "1d0f4b77...", "facts": 12},
+      "headers": {"digest": "cb25144c...", "scope": "b8e1a930...", "facts": 13},
+      "sharing": {"digest": "7b8a1ced...", "scope": "44c0ae51...", "facts": 3},
+      "authentication": {"digest": "588d045f...", "scope": "0a7be2cc...", "facts": 6},
+      "proxy": {"digest": "b7db6daf...", "scope": "ff31c084...", "facts": 5}
+    }
+  }
+}
+```
+
+Dos análisis con el mismo resumen de grupo vieron la misma configuración; dos
+que difieren, no. Eso es todo lo que se afirma, y estas reglas son las que lo
+hacen útil:
+
+- **Solo resúmenes, nunca la configuración.** Una política de seguridad de
+  contenido nombra los orígenes en los que confía una instalación, un documento
+  de descubrimiento puede nombrar un inquilino, un banner de servidor nombra una
+  compilación interna. Cada dato se resume dentro de su grupo y se descarta: se
+  aprende *que* la compartición cambió, nunca *a qué*.
+- **Los grupos son las preguntas que hace quien opera.** "¿Cambió TLS?" sirve;
+  "¿cambió el dato 37?" no.
+- **Solo lo que decide la instalación.** El grupo de transporte resume el
+  emisor, la clave, el algoritmo de firma y los protocolos negociados; no el
+  número de serie, las fechas ni la huella del certificado, porque una renovación
+  es rutina. El grupo del proxy resume el producto, no el banner con su número
+  de compilación.
+- **Lo que deciden los ajustes del análisis nunca es un dato.** `scope` es un
+  resumen de *qué* datos pudo mirar un grupo, sin sus valores. Dos grupos solo
+  se comparan cuando su alcance coincide, así que una ejecución que dejó de
+  inspeccionar TLS informa "no comparable" en lugar de un cambio. Un grupo sin
+  ningún dato es `none`.
+- **Nunca cambia una nota.** Nada de esto llega a la calificación, las
+  severidades, la línea de alerta ni el código de salida.
+
+Léelo con `fingerprint.fingerprint_of(result)`, que devuelve `None` tanto para
+un bloque ausente como para uno mal formado: un informe que no puede decirlo no
+es una instalación que no cambió. `fingerprint.digests(result)` lo reduce a una
+cadena opaca `scope:digest` por grupo y `fingerprint.drift(before, after)`
+nombra los grupos que difieren.
+
+El complemento imprime `Configuration fingerprint: 9e3c4428` en cada análisis,
+y `--baseline` lo convierte en `No new findings, but the configuration changed
+(headers)`.
 
 ## Puertos de depuración {#debug-ports}
 

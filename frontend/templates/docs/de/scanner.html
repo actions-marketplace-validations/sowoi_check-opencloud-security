@@ -27,6 +27,7 @@
   <a href="#hardenings" lang="de">Schutzmaßnahmen</a>
   <a href="#what-the-scan-covered" lang="de">Was der Scan abgedeckt hat</a>
   <a href="#the-conditions-a-scan-ran-under" lang="de">Unter welchen Bedingungen ein Scan lief</a>
+  <a href="#has-the-deployment-changed" lang="de">Hat sich die Installation geändert?</a>
   <a href="#debug-ports" lang="de">Debug-Ports</a>
   <a href="#every-resolved-address" lang="de">Alle aufgelösten Adressen</a>
   <a href="#concurrency" lang="de">Parallelität</a>
@@ -681,6 +682,25 @@ Schlüssel <code>coverage</code> - ein Bericht, der nicht sagt, was er abgedeckt
 nicht ein Scan ohne Lücken. Lies ihn mit <code>coverage.coverage_of(result)</code>, das
 sowohl für einen fehlenden als auch für einen fehlerhaften Block <code>None</code>
 zurückgibt.</p>
+<h3 id="the-one-line-summary">Die Zusammenfassung in einer Zeile</h3>
+<p><code>coverage.summary(result)</code> verdichtet den Block auf die vier Zahlen, die eine
+Leserin braucht, und <code>coverage.summary_line(result)</code> schreibt sie als einen
+englischen Satz:</p>
+<pre><code>84 checks evaluated, 6 skipped, 2 indeterminate, 1 network-limited
+</code></pre>
+<p>Jede Prüfung steckt in genau einer der vier Zahlen. <code>evaluated</code> ist ein
+Ergebnis, bestanden oder nicht; <code>skipped</code> ist eine Prüfung, die der Scanner
+nicht ausgeführt hat; <code>indeterminate</code> ist eine, die lief und nichts entscheiden
+konnte; <code>networkLimited</code> ist aus den beiden letzten herausgelöst, weil eine
+Zeitüberschreitung oder eine fehlende Route - DNSSEC, ein externer
+Identitätsanbieter, ein optionaler Endpunkt - die Lücke ist, die ein anderer
+Standort schließen könnte. Nullen lässt der Satz weg, die Zahl der
+ausgewerteten Prüfungen nennt er immer. Beide Funktionen geben für ein Dokument
+ohne Abdeckungsblock <code>None</code> beziehungsweise <code>""</code> zurück, damit "nichts wurde
+übersehen" und "dieser Bericht sagt es nicht" nie gleich klingen.</p>
+<p>Das Plugin gibt den Satz als Detailzeile <code>Coverage:</code> aus, die Webhook-Nutzlast
+trägt dieselben Zahlen unter <code>coverage</code>, und die Weboberfläche zeigt sie unter
+<em>Was dieser Scan nicht gemessen hat</em>.</p>
 <h2 id="the-conditions-a-scan-ran-under">Unter welchen Bedingungen ein Scan lief</h2>
 <p>Zwei Scans derselben Instanz können sich unterscheiden, ohne dass sich die
 Instanz geändert hat: Die Advisory-Datenbank hat eine CVE dazugelernt, ein
@@ -755,6 +775,63 @@ können beitragen, ohne dass eine davon zur Ursache erklärt wird.</p>
 dass einer der beiden Berichte älter als diese Blöcke ist und deshalb nicht
 sagen kann, wogegen er geprüft wurde oder wie viel davon lief. Das wird
 berichtet und nicht angenommen.</p>
+<h2 id="has-the-deployment-changed">Hat sich die Installation geändert?</h2>
+<p>Eine Note sagt, ob eine Instanz in gutem Zustand ist. Sie sagt nicht, ob es
+noch dieselbe Instanz wie letzte Woche ist. Eine neu geschriebene Richtlinie
+ohne <code>unsafe-inline</code>, ein ausgetauschter Proxy, der dieselben Header setzt,
+öffentliche Links, die erst kein Passwort mehr verlangen und dann wieder, ein
+Zertifikat bei einem anderen Aussteller - nichts davon muss eine Note bewegen,
+und wer nur auf die Note schaut, sieht nichts davon.</p>
+<p><code>configuration</code> ist ein <strong>Fingerabdruck</strong>: gruppierte Digests davon, wie die
+Installation konfiguriert ist, und nichts davon, worauf. Siehe
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0073-a-result-fingerprints-the-configuration-it-measured.md">ADR 0073</a>.</p>
+<pre><code class="language-json">{
+  &quot;configuration&quot;: {
+    &quot;schema&quot;: 1,
+    &quot;digest&quot;: &quot;9e3c4428...&quot;,
+    &quot;groups&quot;: {
+      &quot;tls&quot;: {&quot;digest&quot;: &quot;89a97538...&quot;, &quot;scope&quot;: &quot;1d0f4b77...&quot;, &quot;facts&quot;: 12},
+      &quot;headers&quot;: {&quot;digest&quot;: &quot;cb25144c...&quot;, &quot;scope&quot;: &quot;b8e1a930...&quot;, &quot;facts&quot;: 13},
+      &quot;sharing&quot;: {&quot;digest&quot;: &quot;7b8a1ced...&quot;, &quot;scope&quot;: &quot;44c0ae51...&quot;, &quot;facts&quot;: 3},
+      &quot;authentication&quot;: {&quot;digest&quot;: &quot;588d045f...&quot;, &quot;scope&quot;: &quot;0a7be2cc...&quot;, &quot;facts&quot;: 6},
+      &quot;proxy&quot;: {&quot;digest&quot;: &quot;b7db6daf...&quot;, &quot;scope&quot;: &quot;ff31c084...&quot;, &quot;facts&quot;: 5}
+    }
+  }
+}
+</code></pre>
+<p>Zwei Scans mit demselben Gruppen-Digest haben dieselbe Konfiguration gesehen,
+zwei mit verschiedenen nicht. Mehr wird nicht behauptet, und diese Regeln
+machen die Aussage brauchbar:</p>
+<ul>
+<li><strong>Nur Digests, nie die Konfiguration.</strong> Eine Content-Security-Policy nennt
+  die Herkünfte, denen eine Installation vertraut; ein Discovery-Dokument kann
+  einen Mandanten nennen; ein Server-Banner nennt einen internen Build. Jede
+  Tatsache wird in ihre Gruppe gehasht und verworfen. Man erfährt, <em>dass</em>
+  Freigaben sich geändert haben, nie <em>worauf</em> sie stehen.</li>
+<li><strong>Gruppen sind die Fragen, die Betreiber stellen.</strong> "Hat sich TLS geändert?"
+  ist nützlich, "hat sich Tatsache 37 geändert?" nicht.</li>
+<li><strong>Nur, was die Installation entscheidet.</strong> Die Transportgruppe hasht
+  Aussteller, Schlüssel, Signaturverfahren und ausgehandelte Protokolle - nicht
+  Seriennummer, Gültigkeitsdaten oder Zertifikats-Fingerabdruck, denn eine
+  Erneuerung ist Routine. Die Proxy-Gruppe hasht das Produkt, nicht das Banner
+  mit seiner Build-Nummer.</li>
+<li><strong>Was die Scan-Einstellungen entscheiden, ist nie eine Tatsache.</strong> <code>scope</code>
+  ist ein Digest darüber, <em>welche</em> Tatsachen eine Gruppe ansehen konnte, ohne
+  deren Werte. Zwei Gruppen werden nur bei gleichem Scope verglichen, also
+  meldet ein Lauf, der TLS nicht mehr inspiziert, "nicht vergleichbar" statt
+  einer Änderung. Eine Gruppe ohne jede Tatsache ist <code>none</code>.</li>
+<li><strong>Die Note ändert sich dadurch nie.</strong> Nichts davon erreicht Bewertung,
+  Schweregrade, Alarmzeile oder Exit-Code.</li>
+</ul>
+<p>Lies den Block mit <code>fingerprint.fingerprint_of(result)</code>, das für einen
+fehlenden wie für einen fehlerhaften Block <code>None</code> zurückgibt - ein Bericht,
+der es nicht sagen kann, ist keine Installation, die sich nicht geändert hat.
+<code>fingerprint.digests(result)</code> macht daraus eine undurchsichtige Zeichenkette
+<code>scope:digest</code> je Gruppe, und <code>fingerprint.drift(before, after)</code> nennt die
+Gruppen, die sich unterscheiden.</p>
+<p>Das Plugin gibt bei jedem Scan <code>Configuration fingerprint: 9e3c4428</code> aus, und
+<code>--baseline</code> macht daraus <code>No new findings, but the configuration changed
+(headers)</code>.</p>
 <h2 id="debug-ports">Debug-Ports</h2>
 <p>Debug-Listener liefern unter anderem <code>/healthz</code>, <code>/readyz</code>, <code>/metrics</code>,
 <code>/config</code> und <code>/debug/pprof</code>. Diese Endpunkte können Versionen und Konfigurationen

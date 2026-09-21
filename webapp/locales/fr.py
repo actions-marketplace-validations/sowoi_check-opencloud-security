@@ -1607,6 +1607,26 @@ MESSAGES: dict[str, str] = {
     "result.rescan.note": "La prochaine analyse conserve la cible, les exclusions et le canal de versions pour permettre la comparaison. Veuillez attendre la fin du délai, ou exécuter le scanner open source sans limite sur votre machine :",
     "result.rescan.self_host": "l'exécuter vous-même",
     "result.excluded.kicker": "Exclu",
+    "result.fingerprint.kicker": "Configuration",
+    "result.fingerprint.heading": "Cette installation a-t-elle changé ?",
+    "result.fingerprint.body": (
+        "Chaque groupe ci-dessous est une empreinte de la manière dont cette "
+        "instance est configurée, jamais de ce qu'elle contient. Comparez-les "
+        "avec une analyse plus ancienne : un groupe dont l'empreinte diffère "
+        "était configuré autrement, même si la note n'a pas bougé."
+    ),
+    "result.fingerprint.overall": "Tous groupes confondus : {digest}",
+    "result.fingerprint.unmeasured": "Non mesuré lors de cette analyse",
+    "result.fingerprint.unavailable": (
+        "Ce rapport n'enregistre aucune empreinte de configuration : il ne "
+        "peut donc pas dire si l'installation a changé. Ce n'est pas la même "
+        "chose qu'une installation restée identique."
+    ),
+    "fingerprint.group.tls": "Sécurité du transport",
+    "fingerprint.group.headers": "En-têtes de sécurité",
+    "fingerprint.group.sharing": "Partage",
+    "fingerprint.group.authentication": "Authentification",
+    "fingerprint.group.proxy": "Proxy et diffusion",
     "result.coverage.kicker": "Couverture",
     "result.coverage.heading": "Ce que cette analyse n'a pas mesuré",
     "result.coverage.note": (
@@ -1616,6 +1636,10 @@ MESSAGES: dict[str, str] = {
     ),
     "result.coverage.summary": (
         "{measured} vérifications sur {total} ont abouti à une conclusion."
+    ),
+    "result.coverage.breakdown": (
+        "{evaluated} vérifications évaluées, {skipped} ignorées, "
+        "{indeterminate} indéterminées, {networkLimited} limitées par le réseau."
     ),
     "result.coverage.complete": (
         "Toutes les vérifications prévues par cette analyse ont abouti."

@@ -264,6 +264,88 @@ trailing comma) are dropped. Because there is no hosted API involved, each
 entry may be a hostname, an IPv4 address, a bracketed IPv6 address or a full
 URL, with or without a port:
 <code>--host 10.0.0.5:9200,[2001:db8::1],https://cloud.example.com/</code>.</p>
+<h3 id="reading-a-fleet-in-one-table">Toute une flotte dans un seul tableau</h3>
+<p>Les blocs de résultats par hôte sont écrits pour un système de supervision, et
+une douzaine d'entre eux font beaucoup à lire. <code>--format summary</code> imprime la
+même exécution sous la forme d'une ligne alignée par hôte :</p>
+<pre><code class="language-shell">check-opencloud-security \
+  --host opencloud1.example.com,opencloud2.example.com \
+  --format summary
+</code></pre>
+<pre><code class="language-text">HOST                    GRADE  VERSION  EOL   VULNS  NEW
+opencloud1.example.com  A+     7.2.4    no    0      -
+opencloud2.example.com  F      6.9.1    YES   3      -
+
+Checked 2 host(s): overall CRITICAL (1 CRITICAL, 1 OK)
+</code></pre>
+<p>Les colonnes sont la note décidée par ce greffon, la version mesurée par
+l'analyse, l'état du cycle de vie, le nombre d'avis qui s'appliquent et ce qui
+a bougé depuis la référence. Les lignes conservent l'ordre dans lequel les
+hôtes ont été donnés, et la dernière ligne est le même décompte que celui qui
+ouvre la sortie Nagios. Le code de sortie ne change pas - le pire statut de la
+flotte - : cela reste utilisable depuis une tâche cron qui envoie sa sortie.</p>
+<p><code>EOL</code> vaut <code>YES</code> après la fin de vie, <code>soon</code> dans la fenêtre
+<a href="#options"><code>--eol-warning-days</code></a>, et <code>no</code> sinon. <code>NEW</code> a besoin de
+<a href="#options"><code>--baseline</code></a> : sans référence, c'est <code>-</code>, car « rien de nouveau »
+et « aucun moyen de le savoir » sont deux réponses différentes. Avec une
+référence, c'est <code>new</code> lors de l'exécution qui l'enregistre, puis <code>+n</code> pour les
+constats qui n'étaient pas là avant. Un hôte dont l'analyse a échoué n'a pas de
+note : sa cellule <code>GRADE</code> porte le statut Nagios (<code>UNKNOWN</code>).</p>
+<p>Ce format est fait pour des personnes. Pour une machine, utilisez
+<a href="#machine-readable-output-for-ci-jsonsarifjunit"><code>json</code>, <code>sarif</code> ou <code>junit</code></a>,
+qui portent les mêmes constats sous une forme analysable.</p>
+<h3 id="ci-policy-mode">Mode politique CI</h3>
+<p><code>-w</code>/<code>-c</code> et <code>--profile</code> jugent une instance sur sa <strong>note</strong>, un seul nombre
+qui tient lieu de tout ce que le scan a mesuré. C'est la bonne forme pour un
+système de supervision et la mauvaise pour une barrière de déploiement : une
+équipe qui exige HTTPS imposé et aucun compte de démonstration ne peut pas
+exprimer cela sous forme de note.</p>
+<p><code>--policy</code> désigne un fichier qui l'énonce explicitement :</p>
+<pre><code class="language-yaml">minimum_rating: 4
+required_hardenings:
+  - httpsEnforced
+  - corsOriginRestricted
+forbidden:
+  - demoUsersDisabled
+</code></pre>
+<pre><code class="language-shell">check-opencloud-security --host opencloud.example.com --policy policy.yml
+</code></pre>
+<pre><code class="language-text">CRITICAL: 2 policy violation(s) - required hardening 'httpsEnforced' is not in place (+1 more)
+OpenCloud 7.2.4 on opencloud.example.com, rating: A, last scanned: ...
+Policy violations (2):
+  - required hardening 'httpsEnforced' is not in place
+  - forbidden finding 'demoUsersDisabled' is present
+</code></pre>
+<p>Les trois clés sont facultatives : <code>minimum_rating</code> est un plancher sous la
+note, de <code>0</code> (F) à <code>5</code> (A+), <code>required_hardenings</code> nomme les mesures qui
+doivent être en place, et <code>forbidden</code> nomme les identifiants de constats qui
+ne doivent pas être présents - une protection manquante, une vérification en
+échec ou un identifiant de vulnérabilité.</p>
+<p>Les identifiants sont ceux que le scan lui-même rapporte ; <code>--format json</code> les
+liste pour une instance et <code>--debug</code> explique chacun d'eux. Un fichier <code>.json</code>
+est lu comme du JSON, tout le reste comme du YAML, et
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/config/policy.example.yml"><code>config/policy.example.yml</code></a> est un point de
+départ commenté.</p>
+<p>Une violation est <strong>CRITICAL</strong>, car il ne sert pas à grand-chose de faire
+échouer un pipeline avec un état qu'il est peut-être configuré pour tolérer.
+Une politique ne fait jamais qu'aggraver un verdict : une instance qui
+satisfait toutes les exigences conserve celui que les seuils, la protection,
+le cycle de vie et la référence ont déjà rendu, et la sortie indique
+<code>Policy: every requirement met</code>. La charge utile du webhook et <code>--format json</code>
+portent le même verdict sous <code>policy</code>.</p>
+<p>Deux règles méritent d'être connues avant d'en écrire une :</p>
+<ul>
+<li><strong>Une dérogation n'excuse pas une exigence.</strong> <code>--ignore-hardening</code> et
+  <code>--waive-until</code> sont l'exploitant local qui accepte un constat ; une
+  politique est l'organisation qui dit qu'il ne peut pas être accepté. Si une
+  dérogation pouvait faire taire une mesure exigée, une politique ne
+  décrirait rien d'applicable.</li>
+<li><strong>Une faute de frappe est une erreur d'utilisation, pas un succès
+  silencieux.</strong> Une clé inconnue, une note hors de <code>0</code>-<code>5</code> ou une mesure que
+  le catalogue ignore terminent l'exécution en <code>UNKNOWN</code> avec la raison. Une
+  politique existe pour faire échouer des déploiements : une règle qui
+  n'exige silencieusement rien serait le pire résultat possible.</li>
+</ul>
 <h2 id="prometheus-kubernetes-integration">Prometheus &amp; Kubernetes integration</h2>
 <p><code>--format=prometheus</code> produces a one-shot text payload; the built-in exporter
 serves <code>/metrics</code> for pull-based monitoring, refreshing each configured target
@@ -1285,8 +1367,21 @@ nothing to invalidate and no flag to force a fresh scan.</p>
 <pre><code class="language-Shell">$ check-opencloud-security -H opencloud.example.com
 OK: Server is up to date. No known vulnerabilities.
 OpenCloud 7.4.0 on opencloud.example.com, rating: A+, last scanned: 2026-05-29 08:50:58.000000
-Additional checks: all passed | rating=5;@0:3;@0:1;0;5 vulnerabilities=0;;;0; time=0.731s;;;0; extra_checks_failed=0;;;0;
+Additional checks: all passed
+Coverage: 84 checks evaluated, 6 skipped, 2 indeterminate, 1 network-limited | rating=5;@0:3;@0:1;0;5 vulnerabilities=0;;;0; time=0.731s;;;0; extra_checks_failed=0;;;0;
 </code></pre>
+<p>Entre les lignes de détail et les données de performance, une ligne
+<code>Coverage:</code> dit quelle part de la vérification a réellement abouti - <code>84
+checks evaluated, 6 skipped, 2 indeterminate, 1 network-limited</code>. Une
+vérification réussie et une qui n'a jamais eu lieu laissent sinon la même
+trace : la ligne nomme donc les lacunes. <code>skipped</code> est une sonde que l'analyse
+n'a pas lancée, <code>indeterminate</code> une qui s'est exécutée sans trancher, et
+<code>network-limited</code> une qui a dépassé le délai ou n'avait pas de route - DNSSEC,
+un fournisseur d'identité externe, un point d'accès facultatif -, ce qu'un
+autre point d'observation pourrait résoudre. Elle ne change ni la note ni le
+code de sortie, et un document antérieur au bloc de couverture n'imprime
+aucune ligne, car « ce rapport ne le dit pas » n'est pas « rien n'a été
+manqué ».</p>
 <p>A major release that no longer receives fixes - always CRITICAL, regardless of
 the thresholds:</p>
 <pre><code class="language-Shell">$ check-opencloud-security -H opencloud.example.com

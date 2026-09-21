@@ -97,6 +97,14 @@ receivers, use the generic document and adapt it to the format they expect.</p>
 <td><code>failed_extra_checks</code>, <code>missing_hardenings</code></td>
 <td>The findings themselves</td>
 </tr>
+<tr>
+<td><code>coverage</code></td>
+<td>How many checks reached a conclusion, and how many did not</td>
+</tr>
+<tr>
+<td><code>configuration</code></td>
+<td>Digests of how the deployment is configured, for spotting drift</td>
+</tr>
 </tbody>
 </table>
 <p>A scan that failed outright carries only <code>plugin</code>, <code>plugin_version</code>,
@@ -144,6 +152,8 @@ end-of-life release:</p>
   &quot;vulnerabilities&quot;: [],
   &quot;missing_hardenings&quot;: [],
   &quot;failed_extra_checks&quot;: [&quot;exposed:/opencloud.yaml&quot;],
+  &quot;coverage&quot;: {&quot;evaluated&quot;: 84, &quot;skipped&quot;: 6, &quot;indeterminate&quot;: 2, &quot;network_limited&quot;: 1, &quot;total&quot;: 93, &quot;summary&quot;: &quot;84 checks evaluated, 6 skipped, 2 indeterminate, 1 network-limited&quot;},
+  &quot;configuration&quot;: {&quot;digest&quot;: &quot;9e3c4428...&quot;, &quot;groups&quot;: {&quot;tls&quot;: &quot;1d0f4b77...:89a97538...&quot;, &quot;headers&quot;: &quot;b8e1a930...:cb25144c...&quot;, &quot;sharing&quot;: &quot;44c0ae51...:7b8a1ced...&quot;, &quot;authentication&quot;: &quot;0a7be2cc...:588d045f...&quot;, &quot;proxy&quot;: &quot;ff31c084...:b7db6daf...&quot;&#125;&#125;,
   &quot;scan_backend&quot;: &quot;local&quot;,
   &quot;scan_uuid&quot;: &quot;6a1d1bd0-...&quot;,
   &quot;update&quot;: {&quot;available&quot;: true, &quot;version&quot;: &quot;7.3.0&quot;, &quot;availableVersion&quot;: &quot;7.4.0&quot;, &quot;releasedAt&quot;: &quot;2026-08-03&quot;, &quot;source&quot;: &quot;feed&quot;, &quot;error&quot;: null, &quot;track&quot;: &quot;rolling&quot;, &quot;newestRelease&quot;: null},
@@ -433,6 +443,26 @@ point the webhook at something that echoes it, such as
 <code>python3 -m http.server</code> or a one-line receiver of your own.</p>
 <hr>
 <p><a href="/documentation">Back to the documentation index</a> | <a href="/documentation/reference">Back to the main README</a></p>
+<p><code>coverage</code> is the scan's own account of what it managed to measure. Every
+check is in exactly one of <code>evaluated</code> (a conclusion, pass or fail),
+<code>skipped</code> (the scanner did not run it), <code>indeterminate</code> (it ran and could not
+tell) and <code>network_limited</code> (nothing answered in time, or there was no route
+- the gap a retry from elsewhere may close). It is <code>null</code> for a scan document
+that predates the coverage block, which is a report that does not say rather
+than a scan with no gaps. Nothing in it changes the status or the rating; the
+plugin prints the same numbers as a <code>Coverage:</code> line in its output.</p>
+<p><code>configuration</code> is the scan's <strong>configuration fingerprint</strong>: one digest for
+the deployment as a whole, and one <code>scope:digest</code> string per group - <code>tls</code>,
+<code>headers</code>, <code>sharing</code>, <code>authentication</code>, <code>proxy</code>. Store them and compare them
+with the next notification: a group whose string differs was configured
+differently, even where the grade did not move. Nothing in it is the
+configuration itself - a content security policy, an issuer and a server
+banner all go in and only a hash comes out - so a receiver can keep these
+next to a ticket without publishing how the instance is set up. The <code>scope</code>
+half says which facts that group was able to look at, so two scans that
+probed differently compare as "not comparable" rather than as a change. It is
+<code>null</code> for a scan document that predates the block, and nothing in it changes
+the status or the rating.</p>
 </article>
 
 {% include "_page-nav.html" %}

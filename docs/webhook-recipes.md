@@ -43,6 +43,8 @@ The fields most receivers care about, from
 | `eol` | Whether that release still receives security fixes |
 | `update.availableVersion` | What to upgrade to |
 | `failed_extra_checks`, `missing_hardenings` | The findings themselves |
+| `coverage` | How many checks reached a conclusion, and how many did not |
+| `configuration` | Digests of how the deployment is configured, for spotting drift |
 
 A scan that failed outright carries only `plugin`, `plugin_version`,
 `timestamp`, `host`, `status`, `exit_code` and `message`. Any receiver that
@@ -93,6 +95,8 @@ end-of-life release:
   "vulnerabilities": [],
   "missing_hardenings": [],
   "failed_extra_checks": ["exposed:/opencloud.yaml"],
+  "coverage": {"evaluated": 84, "skipped": 6, "indeterminate": 2, "network_limited": 1, "total": 93, "summary": "84 checks evaluated, 6 skipped, 2 indeterminate, 1 network-limited"},
+  "configuration": {"digest": "9e3c4428...", "groups": {"tls": "1d0f4b77...:89a97538...", "headers": "b8e1a930...:cb25144c...", "sharing": "44c0ae51...:7b8a1ced...", "authentication": "0a7be2cc...:588d045f...", "proxy": "ff31c084...:b7db6daf..."}},
   "scan_backend": "local",
   "scan_uuid": "6a1d1bd0-...",
   "update": {"available": true, "version": "7.3.0", "availableVersion": "7.4.0", "releasedAt": "2026-08-03", "source": "feed", "error": null, "track": "rolling", "newestRelease": null},
@@ -427,3 +431,25 @@ point the webhook at something that echoes it, such as
 ---
 
 [Back to the documentation index](README.md) | [Back to the main README](../README.md)
+
+`coverage` is the scan's own account of what it managed to measure. Every
+check is in exactly one of `evaluated` (a conclusion, pass or fail),
+`skipped` (the scanner did not run it), `indeterminate` (it ran and could not
+tell) and `network_limited` (nothing answered in time, or there was no route
+- the gap a retry from elsewhere may close). It is `null` for a scan document
+that predates the coverage block, which is a report that does not say rather
+than a scan with no gaps. Nothing in it changes the status or the rating; the
+plugin prints the same numbers as a `Coverage:` line in its output.
+
+`configuration` is the scan's **configuration fingerprint**: one digest for
+the deployment as a whole, and one `scope:digest` string per group - `tls`,
+`headers`, `sharing`, `authentication`, `proxy`. Store them and compare them
+with the next notification: a group whose string differs was configured
+differently, even where the grade did not move. Nothing in it is the
+configuration itself - a content security policy, an issuer and a server
+banner all go in and only a hash comes out - so a receiver can keep these
+next to a ticket without publishing how the instance is set up. The `scope`
+half says which facts that group was able to look at, so two scans that
+probed differently compare as "not comparable" rather than as a change. It is
+`null` for a scan document that predates the block, and nothing in it changes
+the status or the rating.

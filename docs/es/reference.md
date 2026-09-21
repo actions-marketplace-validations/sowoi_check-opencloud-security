@@ -206,6 +206,108 @@ alojada, cada entrada puede ser un nombre de host, una dirección IPv4, una
 dirección IPv6 entre corchetes o una URL completa, con o sin puerto:
 `--host 10.0.0.5:9200,[2001:db8::1],https://cloud.example.com/`.
 
+## Toda la flota en una tabla {#reading-a-fleet-in-one-table}
+
+Los bloques de resultados por host están escritos para un sistema de
+monitorización, y una docena de ellos cuesta leer. `--format summary` imprime
+la misma ejecución como una fila alineada por host:
+
+```shell
+check-opencloud-security \
+  --host opencloud1.example.com,opencloud2.example.com \
+  --format summary
+```
+
+```text
+HOST                    GRADE  VERSION  EOL   VULNS  NEW
+opencloud1.example.com  A+     7.2.4    no    0      -
+opencloud2.example.com  F      6.9.1    YES   3      -
+
+Checked 2 host(s): overall CRITICAL (1 CRITICAL, 1 OK)
+```
+
+Las columnas son la nota que decidió este complemento, la versión que midió el
+análisis, el estado del ciclo de vida, cuántos avisos aplican y cuánto se ha
+movido desde la referencia. Las filas conservan el orden en que se indicaron
+los hosts, y la última línea es el mismo recuento con el que empieza la salida
+de Nagios. El código de salida no cambia - el peor estado de la flota -, así
+que sigue sirviendo desde una tarea cron que envía su salida por correo.
+
+`EOL` muestra `YES` pasado el fin de vida, `soon` dentro de la ventana de
+[`--eol-warning-days`](#options) y `no` en los demás casos. `NEW` necesita
+[`--baseline`](#options): sin referencia es `-`, porque "nada nuevo" y "no hay
+forma de saberlo" son respuestas distintas. Con ella es `new` en la ejecución
+que registra la referencia y `+n` después, para los hallazgos que antes no
+estaban. Un host cuyo análisis falló no tiene nota, así que su celda `GRADE`
+lleva el estado de Nagios (`UNKNOWN`).
+
+Este formato es para personas. Para una máquina usa
+[`json`, `sarif` o `junit`](#machine-readable-output-for-ci-jsonsarifjunit),
+que llevan los mismos hallazgos en una forma analizable.
+
+## Modo de política de CI {#ci-policy-mode}
+
+`-w`/`-c` y `--profile` juzgan una instancia por su **nota**, un único número
+que representa todo lo que el escaneo midió. Esa es la forma correcta para un
+sistema de monitorización y la equivocada para una barrera de despliegue: un
+equipo que exige HTTPS forzado y ningún usuario de demostración no puede
+expresarlo como una nota.
+
+`--policy` apunta a un archivo que lo dice explícitamente:
+
+```yaml
+minimum_rating: 4
+required_hardenings:
+  - httpsEnforced
+  - corsOriginRestricted
+forbidden:
+  - demoUsersDisabled
+```
+
+```shell
+check-opencloud-security --host opencloud.example.com --policy policy.yml
+```
+
+```text
+CRITICAL: 2 policy violation(s) - required hardening 'httpsEnforced' is not in place (+1 more)
+OpenCloud 7.2.4 on opencloud.example.com, rating: A, last scanned: ...
+Policy violations (2):
+  - required hardening 'httpsEnforced' is not in place
+  - forbidden finding 'demoUsersDisabled' is present
+```
+
+Las tres claves son opcionales: `minimum_rating` es un mínimo para la nota, de
+`0` (F) a `5` (A+), `required_hardenings` nombra las medidas que deben estar
+en su sitio y `forbidden` nombra los identificadores de hallazgos que no deben
+estar presentes: una protección ausente, una comprobación fallida o un
+identificador de vulnerabilidad.
+
+Los identificadores son los que el propio escaneo informa; `--format json` los
+enumera para una instancia y `--debug` explica cada uno. Un archivo `.json` se
+lee como JSON y cualquier otro como YAML, y
+[`config/policy.example.yml`](../../config/policy.example.yml) es un punto de
+partida comentado.
+
+Una infracción es **CRITICAL**, porque de poco sirve hacer fallar una
+canalización con un estado que quizá esté configurada para tolerar. Una
+política solo empeora un veredicto, nunca lo mejora: una instancia que cumple
+todos los requisitos conserva el que ya decidieron los umbrales, la
+protección, el ciclo de vida y la referencia, y la salida indica
+`Policy: every requirement met`. La carga del webhook y `--format json`
+llevan el mismo veredicto bajo `policy`.
+
+Conviene conocer dos reglas antes de escribir una:
+
+* **Una exención no disculpa un requisito.** `--ignore-hardening` y
+  `--waive-until` son el operador local aceptando un hallazgo; una política es
+  la organización diciendo que no puede aceptarse. Si una exención pudiera
+  silenciar una medida exigida, una política no describiría nada exigible.
+* **Una errata es un error de uso, no una aprobación silenciosa.** Una clave
+  desconocida, una nota fuera de `0`-`5` o una medida que el catálogo no
+  conoce terminan la ejecución en `UNKNOWN` con el motivo. Una política existe
+  para hacer fallar despliegues: una regla que en silencio no exige nada sería
+  el peor resultado posible.
+
 ## Integración con Prometheus y Kubernetes {#prometheus-kubernetes-integration}
 
 `--format=prometheus` produce una carga de texto de una sola ejecución; el
@@ -1172,8 +1274,21 @@ Una instancia sana:
 $ check-opencloud-security -H opencloud.example.com
 OK: Server is up to date. No known vulnerabilities.
 OpenCloud 7.4.0 on opencloud.example.com, rating: A+, last scanned: 2026-05-29 08:50:58.000000
-Additional checks: all passed | rating=5;@0:3;@0:1;0;5 vulnerabilities=0;;;0; time=0.731s;;;0; extra_checks_failed=0;;;0;
+Additional checks: all passed
+Coverage: 84 checks evaluated, 6 skipped, 2 indeterminate, 1 network-limited | rating=5;@0:3;@0:1;0;5 vulnerabilities=0;;;0; time=0.731s;;;0; extra_checks_failed=0;;;0;
 ```
+
+Entre las líneas de detalle y los datos de rendimiento, una línea `Coverage:`
+dice cuánto de la comprobación llegó realmente a una conclusión - `84 checks
+evaluated, 6 skipped, 2 indeterminate, 1 network-limited`. Una comprobación
+correcta y otra que nunca se ejecutó dejan por lo demás el mismo rastro, así
+que la línea nombra las lagunas: `skipped` es una prueba que el análisis no
+ejecutó, `indeterminate` una que se ejecutó sin decidir y `network-limited`
+una que agotó el tiempo o no tenía ruta - DNSSEC, un proveedor de identidad
+externo, un extremo opcional -, algo que otro punto de observación podría
+responder. No cambia la nota ni el código de salida, y un documento anterior
+al bloque de cobertura no imprime ninguna línea, porque "este informe no lo
+dice" no es "no se pasó nada por alto".
 
 Una versión mayor que ya no recibe correcciones, siempre CRITICAL,
 independientemente de los umbrales:

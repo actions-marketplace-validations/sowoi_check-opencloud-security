@@ -141,3 +141,43 @@ def test_the_result_page_shows_the_gaps_it_recorded():
     assert Translator()("coverage.reason.not_applicable") in page
     # The block explains; it never turns into a claim about the grade.
     assert Translator()("result.coverage.unavailable") not in page
+
+
+def test_the_summary_counts_reach_the_page():
+    """
+    The reader gets the four numbers, not only the gap list.
+
+    A page that lists gaps without saying how much was measured leaves the
+    reader to guess the denominator, which is the guess this block exists to
+    remove.
+    """
+    coverage = summarise(_document(coverage=_recorded()))["coverage"]
+
+    assert coverage["summary"] == {
+        "evaluated": 2,
+        "skipped": 2,
+        "indeterminate": 0,
+        "networkLimited": 0,
+        "total": 4,
+    }
+
+
+def test_a_report_without_coverage_has_no_summary_to_show():
+    assert summarise(_document())["coverage"]["summary"] == {}
+
+
+@pytest.mark.parametrize("locale", sorted(SUPPORTED_LOCALES))
+def test_every_language_names_the_four_coverage_numbers(locale):
+    """The breakdown is a sentence in each language, with all four counts in it."""
+    translate = Translator(locale)
+
+    line = translate(
+        "result.coverage.breakdown",
+        evaluated=84,
+        skipped=6,
+        indeterminate=2,
+        networkLimited=1,
+    )
+
+    assert "{" not in line
+    assert all(str(number) in line for number in (84, 6, 2, 1))

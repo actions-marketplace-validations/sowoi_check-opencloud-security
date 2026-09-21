@@ -74,6 +74,12 @@ for the naming rules.</p>
 <td><code>COS_PROFILE</code></td>
 </tr>
 <tr>
+<td><code>--policy</code></td>
+<td>Policy file of organization requirements: <code>minimum_rating</code>, <code>required_hardenings</code>, <code>forbidden</code>. A requirement not met is CRITICAL</td>
+<td><em>None</em></td>
+<td><code>COS_POLICY</code></td>
+</tr>
+<tr>
 <td><code>-w, --warning</code></td>
 <td>Rating (0-5) at or below which the check warns</td>
 <td><code>3</code> (<code>C</code>)</td>
@@ -153,7 +159,7 @@ for the naming rules.</p>
 </tr>
 <tr>
 <td><code>--format</code></td>
-<td>One-shot output format: <code>nagios</code>, <code>prometheus</code>, <code>otlp</code>, <code>checkmk</code>, <code>json</code>, <code>sarif</code> or <code>junit</code></td>
+<td>One-shot output format: <code>nagios</code>, <code>prometheus</code>, <code>otlp</code>, <code>checkmk</code>, <code>summary</code>, <code>json</code>, <code>sarif</code> or <code>junit</code></td>
 <td><code>nagios</code></td>
 <td><code>COS_FORMAT</code></td>
 </tr>

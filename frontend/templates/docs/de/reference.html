@@ -186,6 +186,89 @@ folgt dem höchsten Zustand: <code>CRITICAL</code> vor <code>WARNING</code>, <co
 eingeklammerte IPv6-Adressen und vollständige URLs sind möglich. Bei
 unterschiedlichen Einstellungen je Instanz empfehlen sich getrennte
 <a href="/documentation/many-instances">Konfigurationsdateien</a>.</p>
+<h3 id="reading-a-fleet-in-one-table">Eine Flotte in einer Tabelle</h3>
+<p>Die Ergebnisblöcke je Host sind für ein Monitoring-System geschrieben, und ein
+Dutzend davon liest sich mühsam. <code>--format summary</code> gibt denselben Lauf
+stattdessen als eine ausgerichtete Zeile je Host aus:</p>
+<pre><code class="language-shell">check-opencloud-security \
+  --host opencloud1.example.com,opencloud2.example.com \
+  --format summary
+</code></pre>
+<pre><code class="language-text">HOST                    GRADE  VERSION  EOL   VULNS  NEW
+opencloud1.example.com  A+     7.2.4    no    0      -
+opencloud2.example.com  F      6.9.1    YES   3      -
+
+Checked 2 host(s): overall CRITICAL (1 CRITICAL, 1 OK)
+</code></pre>
+<p>Die Spalten sind die Note, die dieses Plugin vergeben hat, die gemessene
+Version, der Lebenszyklus-Zustand, wie viele Meldungen zutreffen und wie viel
+sich seit der Referenzaufnahme bewegt hat. Die Zeilen behalten die Reihenfolge
+der angegebenen Hosts, und die letzte Zeile ist dieselbe Bilanz, mit der die
+Nagios-Ausgabe beginnt. Der Exit-Code bleibt unverändert - der schlechteste
+Status der Flotte -, also taugt das weiterhin für einen Cronjob, der seine
+Ausgabe verschickt.</p>
+<p><code>EOL</code> steht auf <code>YES</code> nach dem Support-Ende, auf <code>soon</code> innerhalb des Fensters
+von <a href="#options"><code>--eol-warning-days</code></a> und sonst auf <code>no</code>. <code>NEW</code> braucht
+<a href="#options"><code>--baseline</code></a>: ohne Referenz steht dort <code>-</code>, denn "nichts Neues" und
+"nicht feststellbar" sind verschiedene Antworten. Mit Referenz steht dort <code>new</code>
+im Lauf, der die Referenz aufnimmt, und danach <code>+n</code> für Befunde, die vorher
+nicht da waren. Ein Host, dessen Scan fehlgeschlagen ist, hat keine Note; in
+seiner Spalte <code>GRADE</code> steht stattdessen der Nagios-Status (<code>UNKNOWN</code>).</p>
+<p>Dieses Format ist für Menschen. Für Maschinen gibt es
+<a href="#machine-readable-output-for-ci-jsonsarifjunit"><code>json</code>, <code>sarif</code> oder <code>junit</code></a>
+mit denselben Befunden in auswertbarer Form.</p>
+<h3 id="ci-policy-mode">CI-Richtlinienmodus</h3>
+<p><code>-w</code>/<code>-c</code> und <code>--profile</code> beurteilen eine Instanz anhand ihrer <strong>Note</strong>, also
+anhand einer einzigen Zahl, die für alles Gemessene einsteht. Für ein
+Monitoring-System ist das die richtige Form und für ein Deployment-Tor die
+falsche: Wenn dein Team erzwungenes HTTPS und keine Demo-Konten verlangt,
+lässt sich das nicht als Note ausdrücken.</p>
+<p><code>--policy</code> verweist auf eine Datei, die das ausdrücklich festhält:</p>
+<pre><code class="language-yaml">minimum_rating: 4
+required_hardenings:
+  - httpsEnforced
+  - corsOriginRestricted
+forbidden:
+  - demoUsersDisabled
+</code></pre>
+<pre><code class="language-shell">check-opencloud-security --host opencloud.example.com --policy policy.yml
+</code></pre>
+<pre><code class="language-text">CRITICAL: 2 policy violation(s) - required hardening 'httpsEnforced' is not in place (+1 more)
+OpenCloud 7.2.4 on opencloud.example.com, rating: A, last scanned: ...
+Policy violations (2):
+  - required hardening 'httpsEnforced' is not in place
+  - forbidden finding 'demoUsersDisabled' is present
+</code></pre>
+<p>Alle drei Schlüssel sind optional: <code>minimum_rating</code> ist eine Untergrenze für
+die Note von <code>0</code> (F) bis <code>5</code> (A+), <code>required_hardenings</code> nennt Maßnahmen, die
+vorhanden sein müssen, und <code>forbidden</code> nennt Befund-IDs, die nicht auftreten
+dürfen - eine fehlende Härtung, eine fehlgeschlagene Prüfung oder eine
+Schwachstellen-ID.</p>
+<p>Die Bezeichner sind dieselben, die der Scan selbst meldet; <code>--format json</code>
+listet sie für eine Instanz auf und <code>--debug</code> erklärt jeden einzelnen. <code>.json</code>
+wird als JSON gelesen, alles andere als YAML, und
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/config/policy.example.yml"><code>config/policy.example.yml</code></a> ist ein
+kommentierter Ausgangspunkt.</p>
+<p>Ein Verstoß ist <strong>CRITICAL</strong>, denn es bringt wenig, eine Pipeline mit einem
+Status scheitern zu lassen, den sie womöglich toleriert. Eine Richtlinie macht
+ein Urteil nur schlechter, nie besser: Eine Instanz, die alle Anforderungen
+erfüllt, behält das Urteil, das Schwellwerte, Härtung, Lebenszyklus und
+Referenzaufnahme bereits gefällt haben, und in der Ausgabe steht
+<code>Policy: every requirement met</code>. Webhook-Payload und <code>--format json</code> führen
+dasselbe Urteil unter <code>policy</code>.</p>
+<p>Zwei Regeln solltest du kennen, bevor du eine Richtlinie schreibst:</p>
+<ul>
+<li><strong>Ein Waiver entschuldigt keine Anforderung.</strong> <code>--ignore-hardening</code> und
+  <code>--waive-until</code> sind der Betrieb vor Ort, der einen Befund akzeptiert; eine
+  Richtlinie ist die Organisation, die sagt, dass er nicht akzeptiert werden
+  darf. Könnte ein Waiver eine geforderte Maßnahme stummschalten, würde eine
+  Richtlinie nichts Durchsetzbares beschreiben.</li>
+<li><strong>Ein Tippfehler ist ein Nutzungsfehler, kein stilles Durchwinken.</strong> Ein
+  unbekannter Schlüssel, eine Note außerhalb von <code>0</code>-<code>5</code> oder eine Maßnahme,
+  die der Katalog nicht kennt, beenden den Lauf mit <code>UNKNOWN</code> samt Begründung.
+  Eine Richtlinie existiert, um Deployments scheitern zu lassen - eine Regel,
+  die stillschweigend nichts verlangt, wäre das schlechtestmögliche Ergebnis.</li>
+</ul>
 <h3 id="prometheus-kubernetes-integration">Prometheus und Kubernetes</h3>
 <p><code>--format=prometheus</code> erzeugt eine einmalige Textausgabe. Der Exporter stellt
 <code>/metrics</code> bereit und aktualisiert Ziele beim ersten Abruf sowie danach gemäß
@@ -835,8 +918,21 @@ Die <a href="/documentation/prometheus">Prometheus-Anleitung</a> zeigt weitere A
 <pre><code class="language-Shell">$ check-opencloud-security -H opencloud.example.com
 OK: Server is up to date. No known vulnerabilities.
 OpenCloud 7.4.0 on opencloud.example.com, rating: A+, last scanned: 2026-05-29 08:50:58.000000
-Additional checks: all passed | rating=5;@0:3;@0:1;0;5 vulnerabilities=0;;;0; time=0.731s;;;0; extra_checks_failed=0;;;0;
+Additional checks: all passed
+Coverage: 84 checks evaluated, 6 skipped, 2 indeterminate, 1 network-limited | rating=5;@0:3;@0:1;0;5 vulnerabilities=0;;;0; time=0.731s;;;0; extra_checks_failed=0;;;0;
 </code></pre>
+<p>Zwischen den Detailzeilen und den Leistungsdaten sagt eine Zeile <code>Coverage:</code>,
+wie viel der Prüfung tatsächlich zu einem Ergebnis kam - <code>84 checks evaluated,
+6 skipped, 2 indeterminate, 1 network-limited</code>. Eine bestandene Prüfung und
+eine, die nie lief, hinterlassen sonst dieselbe Spur, also benennt die Zeile
+die Lücken: <code>skipped</code> ist eine Prüfung, die der Scan nicht ausgeführt hat,
+<code>indeterminate</code> eine, die lief und nichts entscheiden konnte, und
+<code>network-limited</code> eine, die in eine Zeitüberschreitung lief oder keine Route
+hatte - DNSSEC, ein externer Identitätsanbieter, ein optionaler Endpunkt -,
+was ein anderer Standort beantworten könnte. Die Zeile ändert weder die Note
+noch den Exit-Code, und ein Ergebnisdokument von vor diesem Block bekommt gar
+keine Zeile, denn "dieser Bericht sagt es nicht" ist nicht "nichts wurde
+übersehen".</p>
 <p>Abgelaufenes Release, unabhängig von den Schwellen CRITICAL:</p>
 <pre><code class="language-Shell">$ check-opencloud-security -H opencloud.example.com
 CRITICAL: The 7.3 rolling release line is end-of-life and has no security fixes. Upgrade to 7.4.0.

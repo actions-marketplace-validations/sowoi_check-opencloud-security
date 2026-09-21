@@ -84,6 +84,29 @@ check-opencloud-security -H opencloud.example.com \
   so it gets worse every day it stays in production and can never be
   grandfathered in by a baseline.
 
+## Dérive de configuration {#configuration-drift}
+
+
+Une référence retient aussi l'**empreinte de configuration** de l'analyse : des
+condensats groupés de la façon dont l'instance est montée - transport,
+en-têtes, partage, authentification, proxy - et jamais de ce qu'elle contient.
+Une exécution où la note et les constats n'ont pas bougé dit malgré tout que
+l'installation, elle, a changé :
+
+```text
+Baseline: No new findings since 2026-09-14T06:00:00Z, but the configuration changed (headers, proxy)
+```
+
+Seuls les noms de groupes sont signalés. Ce que le réglage dit maintenant ne se
+trouve ni dans le fichier de référence, ni dans la sortie, ni dans le webhook -
+seulement un condensat -, si bien que le fichier peut voisiner avec le reste de
+l'état de supervision sans publier la configuration de l'instance.
+
+La dérive est signalée, jamais jugée : elle ne crée pas de constat, ne fait pas
+régresser une exécution et ne change jamais le code de sortie. Une référence
+écrite avant l'existence des empreintes ne signale aucune dérive, ce qui est la
+réponse honnête pour un fichier qui ne peut pas le dire.
+
 ## Points worth knowing
 
 

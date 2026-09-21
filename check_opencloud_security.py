@@ -32,6 +32,7 @@ from datetime import datetime, timezone
 from enum import IntEnum
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from typing import Any, NoReturn, TypeVar
 from urllib.parse import urlsplit, urlunsplit
 from xml.etree import ElementTree
@@ -49,6 +50,7 @@ from opencloud_local_scan import (
     __version__,
     failed_extra_checks,
     fetch_update_info,
+    load_config_file,
     load_configuration,
     release_settings_from_config,
     run_setup,
@@ -63,6 +65,12 @@ from opencloud_local_scan.baseline import (
     snapshot_of,
 )
 from opencloud_local_scan.completion import enable as enable_completion
+from opencloud_local_scan.coverage import summary as coverage_summary
+from opencloud_local_scan.coverage import summary_line as coverage_summary_line
+from opencloud_local_scan.fingerprint import digests as configuration_digests
+from opencloud_local_scan.fingerprint import fingerprint_of
+from opencloud_local_scan.fingerprint import unmeasured as unmeasured_groups
+from opencloud_local_scan.hardening import catalogue_id as hardening_catalogue_id
 from opencloud_local_scan.hardening import describe as describe_hardening
 from opencloud_local_scan.hardening import is_actionable
 from opencloud_local_scan.metrics import MetricFamily
@@ -221,6 +229,135 @@ WEBHOOK_TRIGGERS.update({
 })
 
 
+# --------------------------------------------------------------------------
+# CI policy mode: --policy. An organization writes down what it requires of
+# every instance, and a run that does not meet it is CRITICAL regardless of
+# what the generic rating thresholds would have said.
+#
+#     minimum_rating: 4
+#     required_hardenings:
+#       - hstsLongMaxAge
+#       - corsOriginRestricted
+#     forbidden:
+#       - demoUsersDisabled
+#
+# Three rules, deliberately no more: a floor under the grade, measures that
+# must be in place, and findings that must not appear. Anything expressible
+# as "which of the things this scan already measured do we insist on" fits
+# one of them; anything that needs a new measurement is a scanner change,
+# not a policy key.
+#
+# Two decisions worth stating, because both could reasonably go the other
+# way:
+#
+# * A waiver does not excuse a policy requirement. --ignore-hardening and
+#   --waive-until are the local operator accepting a finding; a policy is the
+#   organization saying it may not be accepted. If a waiver could silence a
+#   required measure, a policy would describe nothing enforceable.
+# * A key, or a hardening id the catalogue does not know, is a usage error
+#   (UNKNOWN), never a silent pass. A policy exists to fail deployments, so a
+#   typo that quietly requires nothing is the worst outcome available - the
+#   same reasoning behind RETIRED_FLAGS (E-7).
+# --------------------------------------------------------------------------
+
+_POLICY_KEYS = frozenset({"minimum_rating", "required_hardenings", "forbidden"})
+
+
+@dataclass(frozen=True)
+class Policy:
+    """The organization's requirements, as read from the policy file."""
+
+    #: Lowest acceptable rating, or None when the policy does not set one.
+    minimum_rating: int | None = None
+    #: Hardening measures that must be in place, waived or not.
+    required_hardenings: tuple[str, ...] = ()
+    #: Finding ids that must not be present - a missing hardening, a failed
+    #: extra check or a vulnerability.
+    forbidden: tuple[str, ...] = ()
+    #: Where it was read from, named in the output so a failing pipeline says
+    #: which policy failed it.
+    path: str = ""
+
+
+def _policy_string_list(value: Any, key: str, path: str) -> tuple[str, ...]:
+    """Read one list-of-names key, rejecting every other shape."""
+    if value is None:
+        return ()
+    if isinstance(value, str) or not isinstance(value, list):
+        raise ConfigurationError(f"Policy file {path}: '{key}' must be a list of names.")
+    names: list[str] = []
+    for entry in value:
+        if isinstance(entry, bool) or not isinstance(entry, (str, int)):
+            raise ConfigurationError(
+                f"Policy file {path}: '{key}' must contain names, "
+                f"not {type(entry).__name__}."
+            )
+        name = str(entry).strip()
+        if not name:
+            raise ConfigurationError(f"Policy file {path}: '{key}' has an empty entry.")
+        if name not in names:
+            names.append(name)
+    return tuple(names)
+
+
+def load_policy(path: str) -> Policy:
+    """
+    Read and validate a policy file ('.json' is read as JSON, anything else
+    as YAML - the rule every other file this plugin reads follows).
+
+    Everything that can be checked without a scan is checked here, so a
+    broken policy fails before any instance is probed rather than once per
+    host.
+    """
+    document = load_config_file(Path(path))
+
+    unknown = sorted(set(document) - _POLICY_KEYS)
+    if unknown:
+        raise ConfigurationError(
+            f"Policy file {path}: unknown key(s) {', '.join(unknown)}. "
+            f"Known keys: {', '.join(sorted(_POLICY_KEYS))}."
+        )
+
+    minimum = document.get("minimum_rating")
+    if minimum is not None:
+        if isinstance(minimum, bool) or not isinstance(minimum, int):
+            raise ConfigurationError(
+                f"Policy file {path}: 'minimum_rating' must be a whole number "
+                f"between {MIN_RATING} and {MAX_RATING}."
+            )
+        if not MIN_RATING <= minimum <= MAX_RATING:
+            raise ConfigurationError(
+                f"Policy file {path}: 'minimum_rating' {minimum} is outside "
+                f"{MIN_RATING}-{MAX_RATING} "
+                f"({RATE_MAP[MIN_RATING]} to {RATE_MAP[MAX_RATING]})."
+            )
+
+    required = _policy_string_list(
+        document.get("required_hardenings"), "required_hardenings", path
+    )
+    unrecognised = [
+        name for name in required if hardening_catalogue_id(name) is None
+    ]
+    if unrecognised:
+        raise ConfigurationError(
+            f"Policy file {path}: 'required_hardenings' names no such measure: "
+            f"{', '.join(unrecognised)}."
+        )
+
+    return Policy(
+        minimum_rating=minimum,
+        required_hardenings=required,
+        forbidden=_policy_string_list(document.get("forbidden"), "forbidden", path),
+        path=path,
+    )
+
+
+def _load_policy_argument(args: argparse.Namespace) -> Policy | None:
+    """The policy for this run, or None when --policy was not given."""
+    path = getattr(args, "policy", None)
+    return load_policy(path) if path else None
+
+
 @dataclass(frozen=True)
 class ScanContext:
     """Immutable configuration for a single scan run."""
@@ -264,6 +401,8 @@ class ScanContext:
     diff_format: str = "text"
     # Look up whether a newer plugin version has been published.
     self_update_check: bool = False
+    # The organization's requirements, when --policy was given.
+    policy: Policy | None = None
 
 
 @dataclass
@@ -607,9 +746,33 @@ def check_vulnerabilities(
     )
     detail_lines.extend(baseline_lines)
 
+    msg, exit_code, policy_lines, policy_block = _apply_policy(
+        context,
+        response_scan,
+        rating=rating,
+        vulnerabilities=vulnerabilities,
+        message=msg,
+        exit_code=exit_code,
+    )
+    detail_lines.extend(policy_lines)
+
     note = _self_update_line(context)
     if note:
         detail_lines.append(note)
+
+    # Said whether or not anything was missed: "6 skipped" and the silence
+    # that means nothing was skipped have to be different sentences, or a
+    # reader learns nothing from either.
+    coverage_line = coverage_summary_line(response_scan)
+    if coverage_line:
+        detail_lines.append(f"Coverage: {coverage_line}")
+
+    # The deployment's own fingerprint, so that a reconfiguration that moved
+    # no grade is still visible in the output an operator keeps. What
+    # changed, against the last run, is the baseline's line above.
+    configuration_line = _configuration_line(response_scan)
+    if configuration_line:
+        detail_lines.append(configuration_line)
 
     if context.debug:
         detail_lines.extend(
@@ -646,6 +809,7 @@ def check_vulnerabilities(
         update_info=update_info,
         extra_failures=extra_failures,
         baseline_diff=baseline_diff,
+        policy=policy_block,
     )
     delivered, fires = _send_or_defer_webhook(context, payload, exit_code)
     if not delivered:
@@ -956,6 +1120,63 @@ def _build_base_payload(
     }
 
 
+def _configuration_line(response_scan: dict[str, Any]) -> str | None:
+    """
+    The configuration fingerprint, short enough to read in an alert.
+
+    Eight hex characters of the digest over the five groups: enough for a
+    person to see that two runs differ, never enough to be mistaken for the
+    configuration itself. ``None`` for a scan document that carries no
+    fingerprint, because a report that cannot say must not look like a
+    deployment that never changes.
+    """
+    block = fingerprint_of(response_scan)
+    if block is None:
+        return None
+    line = f"Configuration fingerprint: {str(block.get('digest'))[:8]}"
+    missing = unmeasured_groups(configuration_digests(response_scan))
+    if missing:
+        line += f" ({', '.join(missing)} not measured)"
+    return line
+
+
+def _configuration_payload(response_scan: dict[str, Any]) -> dict[str, Any] | None:
+    """
+    The fingerprint for the payload: the digests, and nothing they were made of.
+
+    A receiver stores these and compares them itself, which is the whole
+    point of a digest - it can answer "did this deployment change?" without
+    ever being told what the deployment is set to.
+    """
+    block = fingerprint_of(response_scan)
+    if block is None:
+        return None
+    return {
+        "digest": block.get("digest"),
+        "groups": configuration_digests(response_scan),
+    }
+
+
+def _coverage_payload(response_scan: dict[str, Any]) -> dict[str, Any] | None:
+    """
+    The coverage counts for the payload, snake_case as the payload is.
+
+    ``None`` when the scan document has no coverage block: a receiver must
+    be able to tell "nothing was missed" from "this report does not say".
+    """
+    totals = coverage_summary(response_scan)
+    if totals is None:
+        return None
+    return {
+        "evaluated": totals["evaluated"],
+        "skipped": totals["skipped"],
+        "indeterminate": totals["indeterminate"],
+        "network_limited": totals["networkLimited"],
+        "total": totals["total"],
+        "summary": coverage_summary_line(response_scan),
+    }
+
+
 def _build_webhook_payload(
     context: ScanContext,
     *,
@@ -971,6 +1192,7 @@ def _build_webhook_payload(
     update_info: UpdateInfo | None = None,
     extra_failures: list[str] | None = None,
     baseline_diff: Comparison | None = None,
+    policy: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """
     Build the JSON document posted to the webhook.
@@ -1005,11 +1227,15 @@ def _build_webhook_payload(
         # text and the hardenings_missing metric.
         "missing_hardenings": missing_hardenings if context.check_hardening else [],
         "failed_extra_checks": extra_failures or [],
+        "coverage": _coverage_payload(response_scan),
+        "configuration": _configuration_payload(response_scan),
         "scan_backend": "local",
         "scan_uuid": scan_result.uuid,
         "update": update_info.as_dict() if update_info is not None else None,
         "duration_seconds": round(duration_seconds, 3) if duration_seconds is not None else None,
     }
+    if policy is not None:
+        payload["policy"] = policy
     if baseline_diff is not None:
         payload["baseline_diff"] = baseline_diff.as_dict()
         if context.diff_format in {"slack", "json"}:
@@ -2526,18 +2752,28 @@ def build_arg_parser() -> argparse.ArgumentParser:
     output.add_argument(
         "--format",
         dest="output_format",
-        choices=("nagios", "prometheus", "otlp", "json", "sarif", "junit", "checkmk"),
+        choices=(
+            "nagios",
+            "prometheus",
+            "otlp",
+            "json",
+            "sarif",
+            "junit",
+            "checkmk",
+            "summary",
+        ),
         default=_env("FORMAT") or "nagios",
         help=(
             "Output format for a one-shot scan: 'nagios', Prometheus text "
             "exposition, 'otlp' (the same metrics as OTLP/JSON, to pipe at a "
             "collector's /v1/metrics), 'checkmk' (one Checkmk local check "
-            "line per host), or a machine-readable document for every host "
-            "combined - 'json' (an array of the webhook payload shape), "
-            "'sarif' (2.1.0, for a code-scanning dashboard) or 'junit' XML "
-            "(one testsuite per host). The exit code keeps its Nagios meaning "
-            "under every format except the two metric ones, which report a "
-            "failed scan as a sample and exit 0. "
+            "line per host), 'summary' (an aligned table, one row per host, "
+            "for reading a fleet in one table), or a machine-readable document "
+            "for every host combined - 'json' (an array of the webhook "
+            "payload shape), 'sarif' (2.1.0, for a code-scanning dashboard) "
+            "or 'junit' XML (one testsuite per host). The exit code keeps its "
+            "Nagios meaning under every format except the two metric ones, "
+            "which report a failed scan as a sample and exit 0. "
             f"Default: nagios (env: {ENV_PREFIX}FORMAT)."
         ),
     )
@@ -2622,6 +2858,21 @@ def build_arg_parser() -> argparse.ArgumentParser:
             "never what is probed, and any of -w, -c, --check-hardening, "
             "--update-warning or --eol-warning given explicitly wins over it. "
             f"Default: unset (env: {ENV_PREFIX}PROFILE)."
+        ),
+    )
+    rating.add_argument(
+        "--policy",
+        default=_env("POLICY"),
+        help=(
+            "Path to a policy file ('.json' is read as JSON, anything else as "
+            "YAML) stating what this organization requires of every instance: "
+            "'minimum_rating' (0-5), 'required_hardenings' (measures that must "
+            "be in place) and 'forbidden' (finding ids that must not be "
+            "present). A requirement that is not met is CRITICAL, whatever the "
+            "thresholds would have said, so a pipeline can fail a deployment "
+            "on explicit policy rather than on a generic grade. A waiver does "
+            "not excuse a requirement, and an unknown key or measure is a "
+            f"usage error. Default: none (env: {ENV_PREFIX}POLICY)."
         ),
     )
     rating.add_argument(
@@ -2977,6 +3228,7 @@ def _build_context(host: str, args: argparse.Namespace) -> ScanContext:
         update_warning=args.update_warning,
         eol_warning_days=args.eol_warning,
         baseline_path=args.baseline,
+        policy=_load_policy_argument(args),
         warn_on_new=args.warn_on_new,
         diff_format=args.diff_format,
         self_update_check=args.self_update_check,
@@ -3161,7 +3413,8 @@ def _run_multi_host_checks(hosts: list[str], args: argparse.Namespace) -> Nagios
 # nagios/text path concatenates blocks would not parse as one.
 #
 # --format checkmk shares this runner and not that rule: its protocol is a
-# line per service, so several hosts are several lines by definition.
+# line per service, so several hosts are several lines by definition, and
+# --format summary is a table whose whole point is a row per host.
 # --------------------------------------------------------------------------
 
 # SARIF has three levels that matter here, matching the mapping the webapp's
@@ -3208,6 +3461,8 @@ def _run_machine_format_checks(hosts: list[str], args: argparse.Namespace) -> in
         print(json.dumps(_render_sarif(documents), indent=2))
     elif args.output_format == "checkmk":
         print(_render_checkmk(documents, exit_codes))
+    elif args.output_format == "summary":
+        print(_render_summary(documents, exit_codes))
     else:
         print(_render_junit(documents))
 
@@ -3525,6 +3780,221 @@ def _render_checkmk(
         # field.
         lines.append(f'{int(exit_code)} "{service}" {_checkmk_metrics(document)} {text}')
     return "\n".join(lines)
+
+
+# --------------------------------------------------------------------------
+# Fleet summary output: --format summary. One aligned row per host, for a
+# person reading a fleet in one table rather than a machine parsing it.
+#
+# It renders only what the other formats already carry - the grade the plugin
+# decided, the version and lifecycle the scan measured, the vulnerability
+# count, and how the baseline moved - so a row can never disagree with the
+# Nagios line or the JSON document for the same host. Nothing here decides
+# anything; picking a column is the whole of it.
+#
+# A scan that never produced a rating shows its Nagios status in the GRADE
+# column instead. That reads correctly because no grade is ever spelled
+# UNKNOWN: RATE_MAP is A+, A, C, D, E and F.
+# --------------------------------------------------------------------------
+
+_SUMMARY_HEADERS = ("HOST", "GRADE", "VERSION", "EOL", "VULNS", "NEW")
+
+
+def _summary_eol(payload: dict[str, Any]) -> str:
+    """
+    The lifecycle column: past end of life, inside the early warning window,
+    or supported.
+
+    The window is reported as 'soon' rather than as a day count because the
+    column has to stay narrow, and `--eol-warning-days` already decides what
+    soon means for this run.
+    """
+    if payload.get("eol"):
+        return "YES"
+    if payload.get("eol_warning"):
+        return "soon"
+    return "no"
+
+
+def _summary_new_findings(payload: dict[str, Any]) -> str:
+    """
+    How much the baseline moved for this host.
+
+    Without --baseline there is nothing to compare against, which is '-' and
+    not '0': no new findings and no way to tell are different answers. A
+    first run records the baseline instead of diffing against one.
+
+    The count comes from the rendered changes rather than from the Comparison
+    itself, because by the time a document reaches a renderer the comparison
+    is already the dict shape the webhook posts. Baseline.items() prefixes
+    exactly the new findings with '+ ', and resolved ones with '- '.
+    """
+    diff = payload.get("baseline_diff")
+    if not isinstance(diff, dict):
+        return "-"
+    if diff.get("first_run"):
+        return "new"
+    changes = diff.get("changes")
+    if not isinstance(changes, list):
+        return "?"
+    added = sum(
+        1
+        for change in changes
+        if isinstance(change, dict) and str(change.get("change", "")).startswith("+ ")
+    )
+    return f"+{added}" if added else "0"
+
+
+def _summary_row(
+    document: dict[str, Any], exit_code: NagiosExitCode
+) -> tuple[str, ...]:
+    """The six cells for one host, all already decided elsewhere."""
+    payload = document["payload"]
+    grade = payload.get("rating_label") or exit_code.name
+    count = payload.get("vulnerability_count")
+    return (
+        str(payload.get("host") or "unknown"),
+        str(grade),
+        str(payload.get("product_version") or "?"),
+        _summary_eol(payload),
+        str(count) if isinstance(count, int) else "?",
+        _summary_new_findings(payload),
+    )
+
+
+def _render_summary(
+    documents: list[dict[str, Any]], exit_codes: list[NagiosExitCode]
+) -> str:
+    """
+    Render the fleet as an aligned table followed by the run's one-line
+    tally.
+
+    Columns are padded to the widest cell rather than to a fixed width, so a
+    long hostname widens the table instead of being cut: this output is read,
+    not parsed, and a truncated host is a row nobody can act on. The last
+    column is not padded, which keeps trailing spaces out of every line.
+    """
+    rows = [
+        _summary_row(document, exit_code)
+        for document, exit_code in zip(documents, exit_codes)
+    ]
+    widths = [
+        max(len(row[column]) for row in (_SUMMARY_HEADERS, *rows))
+        for column in range(len(_SUMMARY_HEADERS))
+    ]
+
+    def _line(cells: tuple[str, ...]) -> str:
+        padded = [cell.ljust(widths[index]) for index, cell in enumerate(cells)]
+        return "  ".join(padded).rstrip()
+
+    lines = [_line(_SUMMARY_HEADERS), *(_line(row) for row in rows)]
+    lines.append("")
+    lines.append(_summarize_multi_host_result(exit_codes))
+    return "\n".join(lines)
+
+
+def _policy_findings(
+    response_scan: dict[str, Any], vulnerabilities: list[dict[str, Any]]
+) -> set[str]:
+    """
+    Every id a 'forbidden' entry can name, from all three sources at once: a
+    missing hardening measure, a failed extra check, a known vulnerability.
+
+    Waived and hardcoded measures are included on purpose. A policy asks
+    whether the instance is in that state, not whether this run chose to
+    alert on it.
+    """
+    found = set(_collect_missing_hardenings(response_scan))
+    found.update(failed_extra_checks(response_scan))
+    found.update(
+        str(entry.get("id"))
+        for entry in vulnerabilities
+        if isinstance(entry, dict) and entry.get("id")
+    )
+    return found
+
+
+def evaluate_policy(
+    policy: Policy,
+    response_scan: dict[str, Any],
+    *,
+    rating: int,
+    vulnerabilities: list[dict[str, Any]],
+) -> list[str]:
+    """
+    One sentence per requirement this instance does not meet, in the order
+    the policy states them, or an empty list when it meets all of them.
+
+    Nothing is measured here: every answer comes from the scan document the
+    run already produced.
+    """
+    violations: list[str] = []
+
+    if policy.minimum_rating is not None and rating < policy.minimum_rating:
+        violations.append(
+            f"rating {RATE_MAP.get(rating, 'Unknown')} is below the required "
+            f"{RATE_MAP.get(policy.minimum_rating, policy.minimum_rating)}"
+        )
+
+    missing = set(_collect_missing_hardenings(response_scan))
+    violations.extend(
+        f"required hardening '{name}' is not in place"
+        for name in policy.required_hardenings
+        if name in missing
+    )
+
+    present = _policy_findings(response_scan, vulnerabilities)
+    violations.extend(
+        f"forbidden finding '{name}' is present"
+        for name in policy.forbidden
+        if name in present
+    )
+
+    return violations
+
+
+def _apply_policy(
+    context: ScanContext,
+    response_scan: dict[str, Any],
+    *,
+    rating: int,
+    vulnerabilities: list[dict[str, Any]],
+    message: str,
+    exit_code: NagiosExitCode,
+) -> tuple[str, NagiosExitCode, list[str], dict[str, Any] | None]:
+    """
+    Apply the policy, if one was given, to a result that is otherwise decided.
+
+    A violation is CRITICAL because a policy is a deployment gate: there is
+    little point failing a pipeline with a status the pipeline might be
+    configured to tolerate. A policy never improves a verdict - an instance
+    that meets every requirement keeps whatever the thresholds, hardening,
+    lifecycle and baseline rules already decided.
+    """
+    if context.policy is None:
+        return message, exit_code, [], None
+
+    violations = evaluate_policy(
+        context.policy,
+        response_scan,
+        rating=rating,
+        vulnerabilities=vulnerabilities,
+    )
+    block: dict[str, Any] = {
+        "path": context.policy.path,
+        "passed": not violations,
+        "violations": list(violations),
+    }
+    if not violations:
+        return message, exit_code, ["Policy: every requirement met"], block
+
+    lines = [f"Policy violations ({len(violations)}):"]
+    lines.extend(f"  - {violation}" for violation in violations)
+    message = (
+        f"CRITICAL: {len(violations)} policy violation(s) - {violations[0]}"
+        + (f" (+{len(violations) - 1} more)" if len(violations) > 1 else "")
+    )
+    return message, NagiosExitCode.CRITICAL, lines, block
 
 
 def _scan_metric_families(context: ScanContext) -> list[MetricFamily]:
@@ -3915,7 +4385,7 @@ def _run_checks(hosts: list[str], args: argparse.Namespace) -> None:
         print(json.dumps(_otlp_metrics(hosts, args), indent=2))
         return
 
-    if args.output_format in {"json", "sarif", "junit", "checkmk"}:
+    if args.output_format in {"json", "sarif", "junit", "checkmk", "summary"}:
         sys.exit(_run_machine_format_checks(hosts, args))
 
     if len(hosts) == 1:

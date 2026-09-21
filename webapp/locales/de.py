@@ -1554,6 +1554,27 @@ MESSAGES: dict[str, str] = {
     "result.rescan.note": "Der nächste Scan verwendet dasselbe Ziel, dieselben Ausnahmen und denselben Release-Kanal, damit die Ergebnisse vergleichbar bleiben. Warte bitte die Pause ab oder nutze den quelloffenen Scanner ohne Begrenzung auf deinem Rechner:",
     "result.rescan.self_host": "selbst betreiben",
     "result.excluded.kicker": "Ausgeschlossen",
+    "result.fingerprint.kicker": "Konfiguration",
+    "result.fingerprint.heading": "Hat sich diese Installation geändert?",
+    "result.fingerprint.body": (
+        "Jede Gruppe unten ist ein Digest davon, wie diese Instanz "
+        "konfiguriert ist - nie davon, worauf sie konfiguriert ist. "
+        "Vergleiche sie mit einem früheren Scan: Eine Gruppe mit einem "
+        "anderen Digest war anders eingerichtet, auch wenn die Note gleich "
+        "geblieben ist."
+    ),
+    "result.fingerprint.overall": "Über alle Gruppen: {digest}",
+    "result.fingerprint.unmeasured": "In diesem Scan nicht gemessen",
+    "result.fingerprint.unavailable": (
+        "Dieser Bericht enthält keinen Konfigurations-Fingerabdruck und kann "
+        "deshalb nicht sagen, ob sich die Installation geändert hat. Das ist "
+        "nicht dasselbe wie eine Installation, die gleich geblieben ist."
+    ),
+    "fingerprint.group.tls": "Transportsicherheit",
+    "fingerprint.group.headers": "Sicherheits-Header",
+    "fingerprint.group.sharing": "Freigaben",
+    "fingerprint.group.authentication": "Anmeldung",
+    "fingerprint.group.proxy": "Proxy und Auslieferung",
     "result.coverage.kicker": "Abdeckung",
     "result.coverage.heading": "Was dieser Scan nicht gemessen hat",
     "result.coverage.note": (
@@ -1563,6 +1584,10 @@ MESSAGES: dict[str, str] = {
     ),
     "result.coverage.summary": (
         "{measured} von {total} Prüfungen kamen zu einem Ergebnis."
+    ),
+    "result.coverage.breakdown": (
+        "{evaluated} Prüfungen ausgewertet, {skipped} übersprungen, "
+        "{indeterminate} unentschieden, {networkLimited} netzwerkbedingt offen."
     ),
     "result.coverage.complete": (
         "Jede Prüfung, die dieser Scan vorgesehen hat, kam zu einem Ergebnis."
