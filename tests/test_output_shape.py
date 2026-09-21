@@ -38,7 +38,7 @@ RESULT_KEYS = frozenset({
 })
 
 PAYLOAD_KEYS = frozenset({
-    "domain", "duration_seconds", "eol", "eol_warning", "eol_warning_days", "exit_code",
+    "coverage", "domain", "duration_seconds", "eol", "eol_warning", "eol_warning_days", "exit_code",
     "failed_extra_checks", "host", "lifecycle", "message", "missing_hardenings", "plugin",
     "plugin_version", "product", "product_version", "rating", "rating_label",
     "release_type", "scan_backend", "scan_uuid", "scanned_at", "status", "timestamp",

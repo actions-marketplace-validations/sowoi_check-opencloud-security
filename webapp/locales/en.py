@@ -1628,6 +1628,10 @@ MESSAGES: dict[str, str] = {
         "reached no conclusion, so the grade says nothing about them."
     ),
     "result.coverage.summary": "{measured} of {total} checks reached a conclusion.",
+    "result.coverage.breakdown": (
+        "{evaluated} checks evaluated, {skipped} skipped, "
+        "{indeterminate} indeterminate, {networkLimited} network-limited."
+    ),
     "result.coverage.complete": (
         "Every check this scan considered reached a conclusion."
     ),

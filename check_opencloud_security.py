@@ -63,6 +63,8 @@ from opencloud_local_scan.baseline import (
     snapshot_of,
 )
 from opencloud_local_scan.completion import enable as enable_completion
+from opencloud_local_scan.coverage import summary as coverage_summary
+from opencloud_local_scan.coverage import summary_line as coverage_summary_line
 from opencloud_local_scan.hardening import describe as describe_hardening
 from opencloud_local_scan.hardening import is_actionable
 from opencloud_local_scan.metrics import MetricFamily
@@ -611,6 +613,13 @@ def check_vulnerabilities(
     if note:
         detail_lines.append(note)
 
+    # Said whether or not anything was missed: "6 skipped" and the silence
+    # that means nothing was skipped have to be different sentences, or a
+    # reader learns nothing from either.
+    coverage_line = coverage_summary_line(response_scan)
+    if coverage_line:
+        detail_lines.append(f"Coverage: {coverage_line}")
+
     if context.debug:
         detail_lines.extend(
             _explain_lines(context, response_scan, missing_hardenings, extra_failures)
@@ -956,6 +965,26 @@ def _build_base_payload(
     }
 
 
+def _coverage_payload(response_scan: dict[str, Any]) -> dict[str, Any] | None:
+    """
+    The coverage counts for the payload, snake_case as the payload is.
+
+    ``None`` when the scan document has no coverage block: a receiver must
+    be able to tell "nothing was missed" from "this report does not say".
+    """
+    totals = coverage_summary(response_scan)
+    if totals is None:
+        return None
+    return {
+        "evaluated": totals["evaluated"],
+        "skipped": totals["skipped"],
+        "indeterminate": totals["indeterminate"],
+        "network_limited": totals["networkLimited"],
+        "total": totals["total"],
+        "summary": coverage_summary_line(response_scan),
+    }
+
+
 def _build_webhook_payload(
     context: ScanContext,
     *,
@@ -1005,6 +1034,7 @@ def _build_webhook_payload(
         # text and the hardenings_missing metric.
         "missing_hardenings": missing_hardenings if context.check_hardening else [],
         "failed_extra_checks": extra_failures or [],
+        "coverage": _coverage_payload(response_scan),
         "scan_backend": "local",
         "scan_uuid": scan_result.uuid,
         "update": update_info.as_dict() if update_info is not None else None,
@@ -2526,18 +2556,28 @@ def build_arg_parser() -> argparse.ArgumentParser:
     output.add_argument(
         "--format",
         dest="output_format",
-        choices=("nagios", "prometheus", "otlp", "json", "sarif", "junit", "checkmk"),
+        choices=(
+            "nagios",
+            "prometheus",
+            "otlp",
+            "json",
+            "sarif",
+            "junit",
+            "checkmk",
+            "summary",
+        ),
         default=_env("FORMAT") or "nagios",
         help=(
             "Output format for a one-shot scan: 'nagios', Prometheus text "
             "exposition, 'otlp' (the same metrics as OTLP/JSON, to pipe at a "
             "collector's /v1/metrics), 'checkmk' (one Checkmk local check "
-            "line per host), or a machine-readable document for every host "
-            "combined - 'json' (an array of the webhook payload shape), "
-            "'sarif' (2.1.0, for a code-scanning dashboard) or 'junit' XML "
-            "(one testsuite per host). The exit code keeps its Nagios meaning "
-            "under every format except the two metric ones, which report a "
-            "failed scan as a sample and exit 0. "
+            "line per host), 'summary' (an aligned table, one row per host, "
+            "for reading a fleet at a glance), or a machine-readable document "
+            "for every host combined - 'json' (an array of the webhook "
+            "payload shape), 'sarif' (2.1.0, for a code-scanning dashboard) "
+            "or 'junit' XML (one testsuite per host). The exit code keeps its "
+            "Nagios meaning under every format except the two metric ones, "
+            "which report a failed scan as a sample and exit 0. "
             f"Default: nagios (env: {ENV_PREFIX}FORMAT)."
         ),
     )
@@ -3161,7 +3201,8 @@ def _run_multi_host_checks(hosts: list[str], args: argparse.Namespace) -> Nagios
 # nagios/text path concatenates blocks would not parse as one.
 #
 # --format checkmk shares this runner and not that rule: its protocol is a
-# line per service, so several hosts are several lines by definition.
+# line per service, so several hosts are several lines by definition, and
+# --format summary is a table whose whole point is a row per host.
 # --------------------------------------------------------------------------
 
 # SARIF has three levels that matter here, matching the mapping the webapp's
@@ -3208,6 +3249,8 @@ def _run_machine_format_checks(hosts: list[str], args: argparse.Namespace) -> in
         print(json.dumps(_render_sarif(documents), indent=2))
     elif args.output_format == "checkmk":
         print(_render_checkmk(documents, exit_codes))
+    elif args.output_format == "summary":
+        print(_render_summary(documents, exit_codes))
     else:
         print(_render_junit(documents))
 
@@ -3524,6 +3567,117 @@ def _render_checkmk(
         # split on a single space and read a second one as part of the next
         # field.
         lines.append(f'{int(exit_code)} "{service}" {_checkmk_metrics(document)} {text}')
+    return "\n".join(lines)
+
+
+# --------------------------------------------------------------------------
+# Fleet summary output: --format summary. One aligned row per host, for a
+# person reading a fleet at a glance rather than a machine parsing it.
+#
+# It renders only what the other formats already carry - the grade the plugin
+# decided, the version and lifecycle the scan measured, the vulnerability
+# count, and how the baseline moved - so a row can never disagree with the
+# Nagios line or the JSON document for the same host. Nothing here decides
+# anything; picking a column is the whole of it.
+#
+# A scan that never produced a rating shows its Nagios status in the GRADE
+# column instead. That reads correctly because no grade is ever spelled
+# UNKNOWN: RATE_MAP is A+, A, C, D, E and F.
+# --------------------------------------------------------------------------
+
+_SUMMARY_HEADERS = ("HOST", "GRADE", "VERSION", "EOL", "VULNS", "NEW")
+
+
+def _summary_eol(payload: dict[str, Any]) -> str:
+    """
+    The lifecycle column: past end of life, inside the early warning window,
+    or supported.
+
+    The window is reported as 'soon' rather than as a day count because the
+    column has to stay narrow, and `--eol-warning-days` already decides what
+    soon means for this run.
+    """
+    if payload.get("eol"):
+        return "YES"
+    if payload.get("eol_warning"):
+        return "soon"
+    return "no"
+
+
+def _summary_new_findings(payload: dict[str, Any]) -> str:
+    """
+    How much the baseline moved for this host.
+
+    Without --baseline there is nothing to compare against, which is '-' and
+    not '0': no new findings and no way to tell are different answers. A
+    first run records the baseline instead of diffing against one.
+
+    The count comes from the rendered changes rather than from the Comparison
+    itself, because by the time a document reaches a renderer the comparison
+    is already the dict shape the webhook posts. Baseline.items() prefixes
+    exactly the new findings with '+ ', and resolved ones with '- '.
+    """
+    diff = payload.get("baseline_diff")
+    if not isinstance(diff, dict):
+        return "-"
+    if diff.get("first_run"):
+        return "new"
+    changes = diff.get("changes")
+    if not isinstance(changes, list):
+        return "?"
+    added = sum(
+        1
+        for change in changes
+        if isinstance(change, dict) and str(change.get("change", "")).startswith("+ ")
+    )
+    return f"+{added}" if added else "0"
+
+
+def _summary_row(
+    document: dict[str, Any], exit_code: NagiosExitCode
+) -> tuple[str, ...]:
+    """The six cells for one host, all already decided elsewhere."""
+    payload = document["payload"]
+    grade = payload.get("rating_label") or exit_code.name
+    count = payload.get("vulnerability_count")
+    return (
+        str(payload.get("host") or "unknown"),
+        str(grade),
+        str(payload.get("product_version") or "?"),
+        _summary_eol(payload),
+        str(count) if isinstance(count, int) else "?",
+        _summary_new_findings(payload),
+    )
+
+
+def _render_summary(
+    documents: list[dict[str, Any]], exit_codes: list[NagiosExitCode]
+) -> str:
+    """
+    Render the fleet as an aligned table followed by the run's one-line
+    tally.
+
+    Columns are padded to the widest cell rather than to a fixed width, so a
+    long hostname widens the table instead of being cut: this output is read,
+    not parsed, and a truncated host is a row nobody can act on. The last
+    column is not padded, which keeps trailing spaces out of every line.
+    """
+    rows = [
+        _summary_row(document, exit_code)
+        for document, exit_code in zip(documents, exit_codes)
+    ]
+    widths = [
+        max(len(row[column]) for row in (_SUMMARY_HEADERS, *rows))
+        for column in range(len(_SUMMARY_HEADERS))
+    ]
+
+    def _line(cells: tuple[str, ...]) -> str:
+        padded = [cell.ljust(widths[index]) for index, cell in enumerate(cells)]
+        return "  ".join(padded).rstrip()
+
+    lines = [_line(_SUMMARY_HEADERS), *(_line(row) for row in rows)]
+    lines.append("")
+    lines.append(_summarize_multi_host_result(exit_codes))
     return "\n".join(lines)
 
 
@@ -3915,7 +4069,7 @@ def _run_checks(hosts: list[str], args: argparse.Namespace) -> None:
         print(json.dumps(_otlp_metrics(hosts, args), indent=2))
         return
 
-    if args.output_format in {"json", "sarif", "junit", "checkmk"}:
+    if args.output_format in {"json", "sarif", "junit", "checkmk", "summary"}:
         sys.exit(_run_machine_format_checks(hosts, args))
 
     if len(hosts) == 1:

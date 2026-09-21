@@ -252,7 +252,7 @@ line MAY belong to several tracks.
 ## 9. Output (`O`)
 
 - **O-1** `--format` MUST accept `nagios`, `prometheus`, `json`, `sarif`,
-  `junit` and `checkmk`, defaulting to `nagios`.
+  `junit`, `checkmk` and `summary`, defaulting to `nagios`.
 - **O-2** Performance data MUST always carry `rating` with its warning and
   critical thresholds and the range `0;5`, and `vulnerabilities` with a
   minimum of `0`. `hardenings_missing` MUST be emitted only when hardening
@@ -263,8 +263,9 @@ line MAY belong to several tracks.
   ones included.
 - **O-5** Machine-readable formats MUST combine every host of a multi-host run
   into one document, and MUST preserve the order the hosts were given.
-  `checkmk` is the one exception to the combining, never to the order: its
-  protocol is one line per service, so each host MUST get its own line.
+  `checkmk` and `summary` are the exceptions to the combining, never to the
+  order: a local check is one line per service and a table is one row per
+  host, so each host MUST get its own line.
 - **O-6** `--baseline` MUST NOT be able to hide a finding that is worse than
   the recorded one; a diff reports regressions, it does not suppress them.
 - **O-7** A `checkmk` line MUST carry the state the plugin itself decided -
@@ -273,6 +274,12 @@ line MAY belong to several tracks.
   a number and MUST carry no thresholds, and a metric whose measurement did
   not run MUST be left out rather than sent as a zero. The detail MUST stay
   on one line, because a newline in it starts another service.
+- **O-8** A `summary` row MUST report only what the run already decided - the
+  grade, the measured version, the lifecycle state, the vulnerability count
+  and the baseline movement - and MUST NOT reach a verdict of its own. A host
+  that never got a grade MUST show its Nagios status instead. The baseline
+  column MUST distinguish "no baseline given" from "no new findings", because
+  they are different answers.
 
 
 ## 10. The webhook (`H`)

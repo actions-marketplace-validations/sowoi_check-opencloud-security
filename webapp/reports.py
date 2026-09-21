@@ -934,10 +934,15 @@ def html_report(result: dict[str, Any], *, identifier: str | None = None) -> str
         )
     else:
         gaps = coverage.get("gaps") or []
+        totals = coverage.get("summary") or {}
         body = (
             f"<p>{_h(coverage.get('measured'))} of "
             f"{_h((coverage.get('counts') or {}).get('total'))} checks reached a "
             "conclusion.</p>"
+            f"<p class=\"note\">{_h(totals.get('evaluated', 0))} checks evaluated, "
+            f"{_h(totals.get('skipped', 0))} skipped, "
+            f"{_h(totals.get('indeterminate', 0))} indeterminate, "
+            f"{_h(totals.get('networkLimited', 0))} network-limited.</p>"
         )
         if gaps:
             body += _rows(

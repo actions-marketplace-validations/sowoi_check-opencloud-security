@@ -15,6 +15,7 @@ import pytest
 from opencloud_local_scan.coverage import (
     FAILED,
     INCONCLUSIVE,
+    NO_ROUTE,
     NOT_APPLICABLE,
     NOT_CHECKED,
     PASSED,
@@ -22,10 +23,14 @@ from opencloud_local_scan.coverage import (
     PROBE_DISABLED,
     REASONS,
     STATES,
+    TIMEOUT,
+    UNREADABLE,
     CoverageEntry,
     CoverageRecorder,
     coverage_of,
     gaps,
+    summary,
+    summary_line,
 )
 from opencloud_local_scan.scanner import (
     HARDENING_PREREQUISITES,
@@ -284,3 +289,82 @@ def test_the_gaps_helper_lists_exactly_what_did_not_conclude():
     assert listed
     assert {entry["state"] for entry in listed} == {NOT_CHECKED}
     assert all(entry["reason"] for entry in listed)
+
+
+def _document(*entries: tuple[str, str, str, str]) -> dict:
+    """A minimal result document carrying the given coverage entries."""
+    recorder = CoverageRecorder()
+    for check, group, state, reason in entries:
+        if state == PASSED:
+            recorder.measured(check, group, True)
+        elif state == FAILED:
+            recorder.measured(check, group, False)
+        elif state == NOT_CHECKED:
+            recorder.skipped(check, group, reason)
+        else:
+            recorder.inconclusive(check, group, reason)
+    return {"coverage": recorder.as_dict()}
+
+
+def test_the_summary_puts_every_check_in_exactly_one_bucket():
+    document = _document(
+        ("a", "hardening", PASSED, ""),
+        ("b", "hardening", FAILED, ""),
+        ("c", "tls", NOT_CHECKED, PROBE_DISABLED),
+        ("d", "dns", INCONCLUSIVE, UNREADABLE),
+        ("e", "dns", NOT_CHECKED, TIMEOUT),
+        ("f", "addressParity", INCONCLUSIVE, NO_ROUTE),
+    )
+
+    totals = summary(document)
+
+    assert totals == {
+        "evaluated": 2,
+        "skipped": 1,
+        "indeterminate": 1,
+        # Both the skipped and the inconclusive network reasons land here,
+        # and neither is counted twice.
+        "networkLimited": 2,
+        "total": 6,
+    }
+    assert totals["total"] == document["coverage"]["counts"]["total"]
+
+
+def test_the_summary_line_names_the_gaps_and_leaves_out_the_zeroes():
+    document = _document(
+        ("a", "hardening", PASSED, ""),
+        ("b", "tls", NOT_CHECKED, NOT_APPLICABLE),
+        ("c", "dns", INCONCLUSIVE, UNREADABLE),
+        ("d", "dns", NOT_CHECKED, NO_ROUTE),
+    )
+
+    assert summary_line(document) == (
+        "1 checks evaluated, 1 skipped, 1 indeterminate, 1 network-limited"
+    )
+
+    complete = _document(("a", "hardening", PASSED, ""))
+
+    assert summary_line(complete) == "1 checks evaluated"
+
+
+def test_a_summary_of_a_report_without_coverage_claims_nothing():
+    """
+    A document that predates the block is not a document with no gaps.
+
+    ``None`` and ``""`` are what the readers key on, so neither can be
+    confused with a scan that measured everything.
+    """
+    assert summary({}) is None
+    assert summary_line({}) == ""
+    assert summary({"coverage": {"counts": {"total": 3}}}) is None
+
+
+def test_a_real_scan_summarises_its_own_coverage():
+    result = _scan(extra_checks=False)
+
+    totals = summary(result)
+    assert totals is not None
+    assert totals["evaluated"] > 0
+    assert totals["skipped"] > 0
+    assert totals["total"] == len(result["coverage"]["checks"])
+    assert summary_line(result).startswith(f"{totals['evaluated']} checks evaluated")

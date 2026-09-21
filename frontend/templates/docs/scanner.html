@@ -794,15 +794,35 @@ excuse. The other two always carry one, from a closed set:</p>
   addresses are compared depend on the instance and the settings - so there is
   no fixed denominator.</li>
 <li><strong>Coverage never changes a grade.</strong> Nothing in the block reaches the rating,
-  the severities, the alert line, the exit code or the webhook payload. A
-  waived failure stays <code>failed</code> here; the acceptance is in
-  <code>extraChecks[].ignored</code>, because a waiver is a decision about alerting and
-  not about evidence.</li>
+  the severities, the alert line or the exit code. The webhook payload carries
+  the counts, but only as a report of what was measured - no receiver has to
+  read them to know the verdict. A waived failure stays <code>failed</code> here; the
+  acceptance is in <code>extraChecks[].ignored</code>, because a waiver is a decision
+  about alerting and not about evidence.</li>
 </ul>
 <p>A document written before this block existed simply has no <code>coverage</code> key,
 which is a report that does not say what it covered - not a scan without
 gaps. Read it with <code>coverage.coverage_of(result)</code>, which returns <code>None</code> for
 both a missing and a malformed block.</p>
+<h3 id="the-one-line-summary">The one-line summary</h3>
+<p><code>coverage.summary(result)</code> reduces the block to the four numbers a reader
+needs, and <code>coverage.summary_line(result)</code> writes them as one English
+sentence:</p>
+<pre><code>84 checks evaluated, 6 skipped, 2 indeterminate, 1 network-limited
+</code></pre>
+<p>Every check is in exactly one of the four. <code>evaluated</code> is a conclusion, pass
+or fail; <code>skipped</code> is a check the scanner decided not to run; <code>indeterminate</code>
+is one that ran and could not tell; <code>networkLimited</code> is split out of the last
+two because a timeout or a missing route is the one gap another vantage point
+might close - DNSSEC from a resolver that validates, an external identity
+provider that is reachable from elsewhere. Zero counts are left out of the
+sentence, but the number evaluated is always named. Both functions return
+<code>None</code> / <code>""</code> for a document that has no coverage block, so "nothing was
+missed" and "this report does not say" never read alike.</p>
+<p>The plugin prints the sentence as a <code>Coverage:</code> detail line, the webhook
+payload carries the same numbers under <code>coverage</code> (snake_case, as the payload
+is), and the web application shows them under <em>What this scan did not
+measure</em>.</p>
 <h2 id="the-conditions-a-scan-ran-under">The conditions a scan ran under</h2>
 <p>Two scans of the same instance can disagree without the instance having
 changed: the advisory database learned a CVE, a support window closed, the

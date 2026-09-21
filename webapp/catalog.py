@@ -29,6 +29,7 @@ from opencloud_local_scan import (
     failed_extra_checks,
 )
 from opencloud_local_scan.coverage import coverage_of, gaps
+from opencloud_local_scan.coverage import summary as coverage_summary
 from opencloud_local_scan.hardening import catalogue_id, is_actionable
 from opencloud_local_scan.remediation import SEVERITY_RATING_CAP
 from opencloud_local_scan.versions import RELEASE_TRACK_CHOICES, TRACK_AUTO
@@ -654,7 +655,13 @@ def _coverage(
     translate = translate or Translator()
     coverage = coverage_of(result)
     if coverage is None:
-        return {"available": False, "counts": {}, "gaps": [], "groups": []}
+        return {
+            "available": False,
+            "counts": {},
+            "summary": {},
+            "gaps": [],
+            "groups": [],
+        }
 
     listed = [
         {
@@ -685,9 +692,11 @@ def _coverage(
         groups[-1]["checks"].append(entry)
 
     counts = dict(coverage.get("counts") or {})
+    totals = coverage_summary(result) or {}
     return {
         "available": True,
         "counts": counts,
+        "summary": totals,
         "measured": int(counts.get("passed", 0)) + int(counts.get("failed", 0)),
         "gaps": listed,
         "groups": groups,

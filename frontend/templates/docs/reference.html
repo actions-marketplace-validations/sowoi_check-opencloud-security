@@ -24,6 +24,7 @@
   <a href="#cli-usage" lang="en">CLI Usage</a>
   <a href="#verifying-a-fix" lang="en">Verifying a fix</a>
   <a href="#checking-multiple-hosts" lang="en">Checking multiple hosts</a>
+  <a href="#reading-a-fleet-at-a-glance" lang="en">Reading a fleet at a glance</a>
   <a href="#prometheus-kubernetes-integration" lang="en">Prometheus &amp; Kubernetes integration</a>
   <a href="#machine-readable-output-for-ci-jsonsarifjunit" lang="en">Machine-readable output for CI (json/sarif/junit)</a>
   <a href="#checkmk" lang="en">Checkmk</a>
@@ -212,7 +213,7 @@ comparisons, execution, output and notifications.</p>
 </tr>
 <tr>
 <td><code>--format</code></td>
-<td><code>nagios</code>, <code>prometheus</code>, <code>otlp</code>, <code>checkmk</code>, <code>json</code>, <code>sarif</code> or <code>junit</code></td>
+<td><code>nagios</code>, <code>prometheus</code>, <code>otlp</code>, <code>checkmk</code>, <code>summary</code>, <code>json</code>, <code>sarif</code> or <code>junit</code></td>
 </tr>
 <tr>
 <td><code>--ignore-hardening</code></td>
@@ -299,6 +300,36 @@ trailing comma) are dropped. Because there is no hosted API involved, each
 entry may be a hostname, an IPv4 address, a bracketed IPv6 address or a full
 URL, with or without a port:
 <code>--host 10.0.0.5:9200,[2001:db8::1],https://cloud.example.com/</code>.</p>
+<h2 id="reading-a-fleet-at-a-glance">Reading a fleet at a glance</h2>
+<p>The per-host result blocks are written for a monitoring system, and a dozen of
+them are a lot to read. <code>--format summary</code> prints the same run as one aligned
+row per host instead:</p>
+<pre><code class="language-shell">check-opencloud-security \
+  --host opencloud1.example.com,opencloud2.example.com \
+  --format summary
+</code></pre>
+<pre><code class="language-text">HOST                    GRADE  VERSION  EOL   VULNS  NEW
+opencloud1.example.com  A+     7.2.4    no    0      -
+opencloud2.example.com  F      6.9.1    YES   3      -
+
+Checked 2 host(s): overall CRITICAL (1 CRITICAL, 1 OK)
+</code></pre>
+<p>The columns are the grade this plugin decided, the version the scan measured,
+the lifecycle state, how many advisories apply, and how much moved since the
+baseline. Rows keep the order the hosts were given, and the last line is the
+same tally the Nagios output starts with. The exit code is unchanged - worst
+status across the fleet - so this stays usable from a cron job that mails its
+output.</p>
+<p><code>EOL</code> reads <code>YES</code> past end of life, <code>soon</code> inside the
+<a href="#options"><code>--eol-warning-days</code></a> window, and <code>no</code> otherwise. <code>NEW</code> needs
+<a href="#options"><code>--baseline</code></a>: without one it is <code>-</code>, because "nothing new" and "no
+way to tell" are different answers. With one it is <code>new</code> on the run that
+records the baseline, and <code>+n</code> afterwards for findings that were not there
+before. A host whose scan failed has no grade, so its <code>GRADE</code> cell carries the
+Nagios status (<code>UNKNOWN</code>) instead.</p>
+<p>This format is for people. For a machine, use
+<a href="#machine-readable-output-for-ci-jsonsarifjunit"><code>json</code>, <code>sarif</code> or <code>junit</code></a>,
+which carry the same findings in a parseable shape.</p>
 <h2 id="prometheus-kubernetes-integration">Prometheus &amp; Kubernetes integration</h2>
 <p><code>--format=prometheus</code> produces a one-shot text payload; the built-in exporter
 serves <code>/metrics</code> for pull-based monitoring, refreshing each configured target

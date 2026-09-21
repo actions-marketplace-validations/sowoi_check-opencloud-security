@@ -1564,6 +1564,10 @@ MESSAGES: dict[str, str] = {
     "result.coverage.summary": (
         "{measured} von {total} Prüfungen kamen zu einem Ergebnis."
     ),
+    "result.coverage.breakdown": (
+        "{evaluated} Prüfungen ausgewertet, {skipped} übersprungen, "
+        "{indeterminate} unentschieden, {networkLimited} netzwerkbedingt offen."
+    ),
     "result.coverage.complete": (
         "Jede Prüfung, die dieser Scan vorgesehen hat, kam zu einem Ergebnis."
     ),

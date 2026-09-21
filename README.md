@@ -11,6 +11,7 @@
   * [Options](#options)
 * [Verifying a fix](#verifying-a-fix)
 * [Checking multiple hosts](#checking-multiple-hosts)
+* [Reading a fleet at a glance](#reading-a-fleet-at-a-glance)
 * [Prometheus & Kubernetes integration](#prometheus--kubernetes-integration)
 * [Machine-readable output for CI (json/sarif/junit)](#machine-readable-output-for-ci-jsonsarifjunit)
 * [Checkmk](#checkmk)
@@ -235,7 +236,7 @@ The handful you will actually type most days:
 | `--check-hardening` | Also report missing hardening measures and security headers |
 | `-w, --warning` / `-c, --critical` | The ratings (0-5) at or below which the check warns or goes critical |
 | `--profile` | Judge by a named threshold set - `strict`, `ops` or `lenient` - instead of setting each flag |
-| `--format` | `nagios`, `prometheus`, `otlp`, `checkmk`, `json`, `sarif` or `junit` |
+| `--format` | `nagios`, `prometheus`, `otlp`, `checkmk`, `summary`, `json`, `sarif` or `junit` |
 | `--ignore-hardening` | Accept a finding you are not going to fix, by name |
 | `--waive-until` | Accept one until a deadline, with a reason, after which it alerts again |
 | `--baseline` / `--warn-on-new` | Alert only on findings that are new or worse than last run |
@@ -302,6 +303,45 @@ trailing comma) are dropped. Because there is no hosted API involved, each
 entry may be a hostname, an IPv4 address, a bracketed IPv6 address or a full
 URL, with or without a port:
 `--host 10.0.0.5:9200,[2001:db8::1],https://cloud.example.com/`.
+
+# Reading a fleet at a glance
+
+The per-host result blocks are written for a monitoring system, and a dozen of
+them are a lot to read. `--format summary` prints the same run as one aligned
+row per host instead:
+
+```shell
+check-opencloud-security \
+  --host opencloud1.example.com,opencloud2.example.com \
+  --format summary
+```
+
+```text
+HOST                    GRADE  VERSION  EOL   VULNS  NEW
+opencloud1.example.com  A+     7.2.4    no    0      -
+opencloud2.example.com  F      6.9.1    YES   3      -
+
+Checked 2 host(s): overall CRITICAL (1 CRITICAL, 1 OK)
+```
+
+The columns are the grade this plugin decided, the version the scan measured,
+the lifecycle state, how many advisories apply, and how much moved since the
+baseline. Rows keep the order the hosts were given, and the last line is the
+same tally the Nagios output starts with. The exit code is unchanged - worst
+status across the fleet - so this stays usable from a cron job that mails its
+output.
+
+`EOL` reads `YES` past end of life, `soon` inside the
+[`--eol-warning-days`](#options) window, and `no` otherwise. `NEW` needs
+[`--baseline`](#options): without one it is `-`, because "nothing new" and "no
+way to tell" are different answers. With one it is `new` on the run that
+records the baseline, and `+n` afterwards for findings that were not there
+before. A host whose scan failed has no grade, so its `GRADE` cell carries the
+Nagios status (`UNKNOWN`) instead.
+
+This format is for people. For a machine, use
+[`json`, `sarif` or `junit`](#machine-readable-output-for-ci-jsonsarifjunit),
+which carry the same findings in a parseable shape.
 
 # Prometheus & Kubernetes integration
 

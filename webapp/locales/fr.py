@@ -1617,6 +1617,10 @@ MESSAGES: dict[str, str] = {
     "result.coverage.summary": (
         "{measured} vérifications sur {total} ont abouti à une conclusion."
     ),
+    "result.coverage.breakdown": (
+        "{evaluated} vérifications évaluées, {skipped} ignorées, "
+        "{indeterminate} indéterminées, {networkLimited} limitées par le réseau."
+    ),
     "result.coverage.complete": (
         "Toutes les vérifications prévues par cette analyse ont abouti."
     ),

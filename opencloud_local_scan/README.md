@@ -655,15 +655,41 @@ Two properties are worth relying on:
   addresses are compared depend on the instance and the settings - so there is
   no fixed denominator.
 - **Coverage never changes a grade.** Nothing in the block reaches the rating,
-  the severities, the alert line, the exit code or the webhook payload. A
-  waived failure stays `failed` here; the acceptance is in
-  `extraChecks[].ignored`, because a waiver is a decision about alerting and
-  not about evidence.
+  the severities, the alert line or the exit code. The webhook payload carries
+  the counts, but only as a report of what was measured - no receiver has to
+  read them to know the verdict. A waived failure stays `failed` here; the
+  acceptance is in `extraChecks[].ignored`, because a waiver is a decision
+  about alerting and not about evidence.
 
 A document written before this block existed simply has no `coverage` key,
 which is a report that does not say what it covered - not a scan without
 gaps. Read it with `coverage.coverage_of(result)`, which returns `None` for
 both a missing and a malformed block.
+
+### The one-line summary
+
+`coverage.summary(result)` reduces the block to the four numbers a reader
+needs, and `coverage.summary_line(result)` writes them as one English
+sentence:
+
+```
+84 checks evaluated, 6 skipped, 2 indeterminate, 1 network-limited
+```
+
+Every check is in exactly one of the four. `evaluated` is a conclusion, pass
+or fail; `skipped` is a check the scanner decided not to run; `indeterminate`
+is one that ran and could not tell; `networkLimited` is split out of the last
+two because a timeout or a missing route is the one gap another vantage point
+might close - DNSSEC from a resolver that validates, an external identity
+provider that is reachable from elsewhere. Zero counts are left out of the
+sentence, but the number evaluated is always named. Both functions return
+`None` / `""` for a document that has no coverage block, so "nothing was
+missed" and "this report does not say" never read alike.
+
+The plugin prints the sentence as a `Coverage:` detail line, the webhook
+payload carries the same numbers under `coverage` (snake_case, as the payload
+is), and the web application shows them under *What this scan did not
+measure*.
 
 ## The conditions a scan ran under
 

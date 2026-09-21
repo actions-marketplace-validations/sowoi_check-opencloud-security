@@ -97,6 +97,10 @@ receivers, use the generic document and adapt it to the format they expect.</p>
 <td><code>failed_extra_checks</code>, <code>missing_hardenings</code></td>
 <td>The findings themselves</td>
 </tr>
+<tr>
+<td><code>coverage</code></td>
+<td>How many checks reached a conclusion, and how many did not</td>
+</tr>
 </tbody>
 </table>
 <p>A scan that failed outright carries only <code>plugin</code>, <code>plugin_version</code>,
@@ -144,6 +148,7 @@ end-of-life release:</p>
   &quot;vulnerabilities&quot;: [],
   &quot;missing_hardenings&quot;: [],
   &quot;failed_extra_checks&quot;: [&quot;exposed:/opencloud.yaml&quot;],
+  &quot;coverage&quot;: {&quot;evaluated&quot;: 84, &quot;skipped&quot;: 6, &quot;indeterminate&quot;: 2, &quot;network_limited&quot;: 1, &quot;total&quot;: 93, &quot;summary&quot;: &quot;84 checks evaluated, 6 skipped, 2 indeterminate, 1 network-limited&quot;},
   &quot;scan_backend&quot;: &quot;local&quot;,
   &quot;scan_uuid&quot;: &quot;6a1d1bd0-...&quot;,
   &quot;update&quot;: {&quot;available&quot;: true, &quot;version&quot;: &quot;7.3.0&quot;, &quot;availableVersion&quot;: &quot;7.4.0&quot;, &quot;releasedAt&quot;: &quot;2026-08-03&quot;, &quot;source&quot;: &quot;feed&quot;, &quot;error&quot;: null, &quot;track&quot;: &quot;rolling&quot;, &quot;newestRelease&quot;: null},
@@ -433,6 +438,14 @@ point the webhook at something that echoes it, such as
 <code>python3 -m http.server</code> or a one-line receiver of your own.</p>
 <hr>
 <p><a href="/documentation">Back to the documentation index</a> | <a href="/documentation/reference">Back to the main README</a></p>
+<p><code>coverage</code> is the scan's own account of what it managed to measure. Every
+check is in exactly one of <code>evaluated</code> (a conclusion, pass or fail),
+<code>skipped</code> (the scanner did not run it), <code>indeterminate</code> (it ran and could not
+tell) and <code>network_limited</code> (nothing answered in time, or there was no route
+- the gap a retry from elsewhere may close). It is <code>null</code> for a scan document
+that predates the coverage block, which is a report that does not say rather
+than a scan with no gaps. Nothing in it changes the status or the rating; the
+plugin prints the same numbers as a <code>Coverage:</code> line in its output.</p>
 </article>
 
 {% include "_page-nav.html" %}

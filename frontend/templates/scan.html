@@ -829,6 +829,11 @@
   <p>{{ t('result.coverage.summary',
           measured=summary.coverage.measured,
           total=summary.coverage.counts.total) }}</p>
+  <p class="hint">{{ t('result.coverage.breakdown',
+          evaluated=summary.coverage.summary.evaluated,
+          skipped=summary.coverage.summary.skipped,
+          indeterminate=summary.coverage.summary.indeterminate,
+          networkLimited=summary.coverage.summary.networkLimited) }}</p>
   {% if summary.coverage.groups %}
   <p class="hint">{{ t('result.coverage.note') }}</p>
   {% for group in summary.coverage.groups %}

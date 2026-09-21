@@ -12,6 +12,30 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+### Added
+
+- **`--format summary` reads a whole fleet at a glance.** Checking a dozen
+  instances printed a dozen result blocks written for a monitoring system,
+  which is a lot to read when the question is just "which of these needs me
+  today". The new format prints one aligned row per host instead - host,
+  grade, version, end-of-life state, how many advisories apply, and how much
+  moved since `--baseline` - followed by the same tally the Nagios output
+  starts with. Rows keep the order the hosts were given and the exit code is
+  unchanged, so it works from a cron job that mails its output. The `NEW`
+  column distinguishes "no baseline given" (`-`) from "no new findings" (`0`),
+  and a host whose scan failed shows its Nagios status where the grade would
+  be. See [Reading a fleet at a glance](README.md#reading-a-fleet-at-a-glance).
+- **The output says how much it could actually measure.** A check that
+  passed and one that never ran left the same trace in the plugin's output -
+  nothing - so the plugin now prints a `Coverage:` line such as `84 checks
+  evaluated, 6 skipped, 2 indeterminate, 1 network-limited`, and the webhook
+  payload and `--format json` carry the same counts under `coverage`. The web
+  application's *What this scan did not measure* section shows the same four
+  numbers. `network_limited` is split out of the skipped and indeterminate
+  counts because a timeout or a missing route - DNSSEC, an external identity
+  provider, an optional endpoint - is the gap another vantage point might
+  close. Nothing in it changes a grade, an exit code or an alert line.
+
 ## [1.28.1] - 2026-09-21
 
 ### Added

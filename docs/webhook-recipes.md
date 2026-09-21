@@ -43,6 +43,7 @@ The fields most receivers care about, from
 | `eol` | Whether that release still receives security fixes |
 | `update.availableVersion` | What to upgrade to |
 | `failed_extra_checks`, `missing_hardenings` | The findings themselves |
+| `coverage` | How many checks reached a conclusion, and how many did not |
 
 A scan that failed outright carries only `plugin`, `plugin_version`,
 `timestamp`, `host`, `status`, `exit_code` and `message`. Any receiver that
@@ -93,6 +94,7 @@ end-of-life release:
   "vulnerabilities": [],
   "missing_hardenings": [],
   "failed_extra_checks": ["exposed:/opencloud.yaml"],
+  "coverage": {"evaluated": 84, "skipped": 6, "indeterminate": 2, "network_limited": 1, "total": 93, "summary": "84 checks evaluated, 6 skipped, 2 indeterminate, 1 network-limited"},
   "scan_backend": "local",
   "scan_uuid": "6a1d1bd0-...",
   "update": {"available": true, "version": "7.3.0", "availableVersion": "7.4.0", "releasedAt": "2026-08-03", "source": "feed", "error": null, "track": "rolling", "newestRelease": null},
@@ -427,3 +429,12 @@ point the webhook at something that echoes it, such as
 ---
 
 [Back to the documentation index](README.md) | [Back to the main README](../README.md)
+
+`coverage` is the scan's own account of what it managed to measure. Every
+check is in exactly one of `evaluated` (a conclusion, pass or fail),
+`skipped` (the scanner did not run it), `indeterminate` (it ran and could not
+tell) and `network_limited` (nothing answered in time, or there was no route
+- the gap a retry from elsewhere may close). It is `null` for a scan document
+that predates the coverage block, which is a report that does not say rather
+than a scan with no gaps. Nothing in it changes the status or the rating; the
+plugin prints the same numbers as a `Coverage:` line in its output.
