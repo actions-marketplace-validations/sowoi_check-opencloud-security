@@ -12,6 +12,7 @@
 * [Verifying a fix](#verifying-a-fix)
 * [Checking multiple hosts](#checking-multiple-hosts)
 * [Reading a fleet in one table](#reading-a-fleet-in-one-table)
+* [CI policy mode](#ci-policy-mode)
 * [Prometheus & Kubernetes integration](#prometheus--kubernetes-integration)
 * [Machine-readable output for CI (json/sarif/junit)](#machine-readable-output-for-ci-jsonsarifjunit)
 * [Checkmk](#checkmk)
