@@ -517,6 +517,7 @@
 {% if summary.coverage.gaps or not summary.coverage.available %}
   {% set _ = toc.append({"href": "#coverage", "label": t('result.coverage.heading'), "group": t('toc.group.details')}) %}
 {% endif %}
+{% set _ = toc.append({"href": "#configuration", "label": t('result.fingerprint.heading'), "group": t('toc.group.details')}) %}
 {% set _ = toc.append({"href": "#scan-limits", "label": t('result.scope.heading'), "group": t('toc.group.details')}) %}
 {% set _ = toc.append({"href": "#raw-document", "label": t('result.raw.heading'), "group": t('toc.group.details')}) %}
 {% set _ = toc.append({"href": "#exports", "label": t('result.export.heading'), "group": t('toc.group.keep')}) %}
@@ -847,6 +848,30 @@
   {% else %}
   <p class="hint">{{ t('result.coverage.complete') }}</p>
   {% endif %}
+  {% endif %}
+</section>
+
+{#
+  The configuration fingerprint. Digests of how the instance is set up, never
+  of what it is set to: a reader compares them with an earlier scan to see a
+  deployment change that moved no grade, and learns nothing else from them.
+#}
+<section class="card" data-reveal>
+  <p class="kicker">{{ t('result.fingerprint.kicker') }}</p>
+  <h2 id="configuration">{{ t('result.fingerprint.heading') }}</h2>
+  {% if not summary.fingerprint.available %}
+  <p class="hint">{{ t('result.fingerprint.unavailable') }}</p>
+  {% else %}
+  <p>{{ t('result.fingerprint.body') }}</p>
+  <ul class="plain-list">
+    {% for group in summary.fingerprint.groups %}
+    <li><strong>{{ group.label }}</strong> -
+      {% if group.measured %}<code>{{ group.digest }}</code>
+      {% else %}<span class="hint">{{ t('result.fingerprint.unmeasured') }}</span>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  <p class="hint">{{ t('result.fingerprint.overall', digest=summary.fingerprint.digest) }}</p>
   {% endif %}
 </section>
 

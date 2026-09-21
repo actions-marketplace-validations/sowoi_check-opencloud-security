@@ -29,7 +29,7 @@ SETTINGS = ScannerSettings(
 
 RESULT_KEYS = frozenset({
     "EOL", "addressObservations", "addresses", "advisorySources", "alternativeServices",
-    "capabilitiesAvailable", "coverage", "domain", "edition", "extraChecks", "hardenings",
+    "capabilitiesAvailable", "configuration", "coverage", "domain", "edition", "extraChecks", "hardenings",
     "identityProvider", "ignored", "integrations", "ipv6Enabled", "latestVersionInBranch",
     "legacyVersion", "lifecycle", "loginThrottling", "product", "provenance", "rating",
     "ratingExplanation", "releaseType", "remediationPlan", "reverseProxy", "scannedAt",
@@ -38,7 +38,7 @@ RESULT_KEYS = frozenset({
 })
 
 PAYLOAD_KEYS = frozenset({
-    "coverage", "domain", "duration_seconds", "eol", "eol_warning", "eol_warning_days", "exit_code",
+    "configuration", "coverage", "domain", "duration_seconds", "eol", "eol_warning", "eol_warning_days", "exit_code",
     "failed_extra_checks", "host", "lifecycle", "message", "missing_hardenings", "plugin",
     "plugin_version", "product", "product_version", "rating", "rating_label",
     "release_type", "scan_backend", "scan_uuid", "scanned_at", "status", "timestamp",

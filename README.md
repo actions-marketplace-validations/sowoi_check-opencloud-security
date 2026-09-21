@@ -1284,9 +1284,21 @@ The full state is still printed either way - only the alert is suppressed,
 never the evidence. **An end-of-life release always alerts**, however long it
 has been in the baseline.
 
+A baseline also remembers the scan's **configuration fingerprint** - grouped
+digests of how the instance is set up, never of what it is set to - so a run
+where nothing failed can still report that the deployment changed:
+
+```
+Baseline: No new findings since 2026-09-14T06:00:00Z, but the configuration changed (headers, proxy)
+```
+
+Only the group names are reported; the settings behind them are hashed and
+discarded. Drift never creates a finding and never changes the exit code.
+
 **[Reporting only what changed](docs/baseline.md)** has the diff formats
-(`text`, `markdown`, `slack`, `json`), what counts as a regression, and the
-rules that keep a baseline from hiding anything.
+(`text`, `markdown`, `slack`, `json`), what counts as a regression, the
+configuration groups, and the rules that keep a baseline from hiding
+anything.
 
 # Is the plugin itself up to date?
 `--self-update-check` checks PyPI at most once a day and adds a note when a newer plugin
@@ -1374,7 +1386,8 @@ $ check-opencloud-security -H opencloud.example.com
 OK: Server is up to date. No known vulnerabilities.
 OpenCloud 7.4.0 on opencloud.example.com, rating: A+, last scanned: 2026-05-29 08:50:58.000000
 Additional checks: all passed
-Coverage: 84 checks evaluated, 6 skipped, 2 indeterminate, 1 network-limited | rating=5;@0:3;@0:1;0;5 vulnerabilities=0;;;0; time=0.731s;;;0; extra_checks_failed=0;;;0;
+Coverage: 84 checks evaluated, 6 skipped, 2 indeterminate, 1 network-limited
+Configuration fingerprint: 9e3c4428 | rating=5;@0:3;@0:1;0;5 vulnerabilities=0;;;0; time=0.731s;;;0; extra_checks_failed=0;;;0;
 ```
 
 Between the detail lines and the performance data, a `Coverage:` line says how
@@ -1387,6 +1400,15 @@ external identity provider, an optional endpoint - which another vantage point
 may be able to answer. It never changes the grade or the exit code, and a scan
 document that predates the coverage block prints no line at all, because "this
 report does not say" is not "nothing was missed".
+
+The `Configuration fingerprint:` line is a digest of how this deployment is
+configured - transport, headers, sharing, authentication and proxy hashed
+together - and never of what it is configured to. Two runs that print the same
+eight characters found the same configuration; two that differ did not, even
+where the grade stood still. With `--baseline` the comparison names the groups
+that moved; on its own the line is something to diff across runs. It never
+changes the grade or the exit code, and a scan document that carries no
+fingerprint prints no line.
 
 A major release that no longer receives fixes - always CRITICAL, regardless of
 the thresholds:

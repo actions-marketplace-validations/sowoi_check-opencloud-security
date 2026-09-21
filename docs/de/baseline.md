@@ -56,6 +56,29 @@ check-opencloud-security -H opencloud.example.com \
 - Eine niedrigere Bewertung als beim vorherigen Durchlauf.
 - **Eine Version nach ihrem Supportende, bei jedem Scan.** Da sie keine Sicherheitsupdates mehr erhält, unterdrückt eine Baseline diesen Alarm niemals.
 
+## Konfigurationsänderungen {#configuration-drift}
+
+
+Eine Baseline merkt sich auch den **Konfigurations-Fingerabdruck** des Scans:
+gruppierte Digests davon, wie die Instanz eingerichtet ist - Transport,
+Header, Freigaben, Anmeldung, Proxy - und nichts davon, worauf. Ein Lauf, bei
+dem Note und Befunde gleich geblieben sind, sagt trotzdem, wenn die
+Installation das nicht ist:
+
+```text
+Baseline: No new findings since 2026-09-14T06:00:00Z, but the configuration changed (headers, proxy)
+```
+
+Gemeldet werden nur die Gruppennamen. Was die Einstellung jetzt sagt, steht
+weder in der Baseline-Datei noch in der Ausgabe oder im Webhook - nur ein Hash
+davon -, also kann die Datei neben dem übrigen Monitoring-Zustand liegen, ohne
+zu veröffentlichen, wie die Instanz konfiguriert ist.
+
+Eine Änderung wird gemeldet, nicht bewertet: Sie erzeugt keinen Befund, macht
+keinen Lauf zur Verschlechterung und ändert nie den Exit-Code. Eine Baseline
+aus der Zeit vor den Fingerabdrücken meldet schlicht keine Änderung - die
+ehrliche Antwort für eine Datei, die es nicht sagen kann.
+
 ## Verhalten und Dateirechte {#points-worth-knowing}
 
 - Der erste Durchlauf meldet den regulären Status und legt die Baseline an. Ohne Vergleichsdaten wird nichts unterdrückt.

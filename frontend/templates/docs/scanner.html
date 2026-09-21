@@ -27,6 +27,7 @@
   <a href="#hardenings" lang="en">Hardenings</a>
   <a href="#what-the-scan-covered" lang="en">What the scan covered</a>
   <a href="#the-conditions-a-scan-ran-under" lang="en">The conditions a scan ran under</a>
+  <a href="#has-the-deployment-changed" lang="en">Has the deployment changed?</a>
   <a href="#debug-ports" lang="en">Debug ports</a>
   <a href="#every-resolved-address" lang="en">Every resolved address</a>
   <a href="#concurrency" lang="en">Concurrency</a>
@@ -865,7 +866,7 @@ existing summary, and <code>--format json</code> carries them as <code>explanati
 <tbody>
 <tr>
 <td><code>instance</code></td>
-<td>The version, or a check that started or stopped failing</td>
+<td>The version, a check that started or stopped failing, or a configuration group whose fingerprint moved</td>
 </tr>
 <tr>
 <td><code>referenceData</code></td>
@@ -892,6 +893,67 @@ contribute without one being chosen as <em>the</em> cause.</p>
 <p><code>limitations</code> lists what the comparison could not establish - most often that
 one of the two reports predates these blocks, and so cannot say what it was
 judged against or how much of it ran. That is reported rather than assumed.</p>
+<h2 id="has-the-deployment-changed">Has the deployment changed?</h2>
+<p>A grade says whether an instance is in good shape. It does not say whether it
+is still the same instance as last week. A policy rewritten without gaining
+<code>unsafe-inline</code>, a proxy replaced with a different product that sets the same
+headers, public links that stopped requiring a password and require one again,
+a certificate moved to another issuer - none of that has to move a grade, and
+an operator watching only the grade sees none of it.</p>
+<p><code>configuration</code> is a <strong>fingerprint</strong>: grouped digests of how the deployment is
+configured, and nothing it is configured to. See
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0073-a-result-fingerprints-the-configuration-it-measured.md">ADR 0073</a>.</p>
+<pre><code class="language-json">{
+  &quot;configuration&quot;: {
+    &quot;schema&quot;: 1,
+    &quot;digest&quot;: &quot;9e3c4428...&quot;,
+    &quot;groups&quot;: {
+      &quot;tls&quot;: {&quot;digest&quot;: &quot;89a97538...&quot;, &quot;scope&quot;: &quot;1d0f4b77...&quot;, &quot;facts&quot;: 12},
+      &quot;headers&quot;: {&quot;digest&quot;: &quot;cb25144c...&quot;, &quot;scope&quot;: &quot;b8e1a930...&quot;, &quot;facts&quot;: 13},
+      &quot;sharing&quot;: {&quot;digest&quot;: &quot;7b8a1ced...&quot;, &quot;scope&quot;: &quot;44c0ae51...&quot;, &quot;facts&quot;: 3},
+      &quot;authentication&quot;: {&quot;digest&quot;: &quot;588d045f...&quot;, &quot;scope&quot;: &quot;0a7be2cc...&quot;, &quot;facts&quot;: 6},
+      &quot;proxy&quot;: {&quot;digest&quot;: &quot;b7db6daf...&quot;, &quot;scope&quot;: &quot;ff31c084...&quot;, &quot;facts&quot;: 5}
+    }
+  }
+}
+</code></pre>
+<p>Two scans with the same group digest were looking at the same configuration
+for that group; two that differ were not. That is the entire claim, and these
+rules are what make it worth reading:</p>
+<ul>
+<li><strong>Digests only, never the configuration.</strong> A content security policy names
+  the origins a deployment trusts, a discovery document can name a tenant, a
+  server banner names an internal build. Every fact is hashed into its group
+  and discarded; a reader learns <em>that</em> sharing changed, never <em>what</em> it is
+  set to. The block is safe on a public page for the same reason it is safe in
+  a ticket.</li>
+<li><strong>Groups are the questions an operator asks.</strong> "Did TLS change?" is useful;
+  "did fact 37 change?" is not.</li>
+<li><strong>Only what the deployment decides.</strong> The transport group hashes the issuer,
+  the key, the signature algorithm and the negotiated protocols - not the
+  serial number, the dates or the certificate fingerprint, because a renewal
+  is routine. The proxy group hashes the vendor, not the banner, whose build
+  number moves with every patch.</li>
+<li><strong>A scan's own settings are never a fact.</strong> <code>scope</code> is a digest of <em>which</em>
+  facts a group looked at, without their values. Two groups are compared only
+  when their scopes match, so a run that stopped inspecting TLS reports "not
+  comparable" instead of drift. A group with nothing to hash at all is <code>none</code>.</li>
+<li><strong>It never changes a grade.</strong> Nothing here reaches the rating, the
+  severities, the alert line or the exit code.</li>
+</ul>
+<p>Read it with <code>fingerprint.fingerprint_of(result)</code>, which returns <code>None</code> for
+both a missing and a malformed block - a report that cannot say is not a
+deployment that did not change. <code>fingerprint.digests(result)</code> reduces it to
+one opaque <code>scope:digest</code> string per group, which is what a baseline file, a
+webhook receiver and a comparison all store, and
+<code>fingerprint.drift(before, after)</code> names the groups that differ:</p>
+<pre><code class="language-python">from opencloud_local_scan.fingerprint import digests, drift
+
+changed = drift(digests(last_week), digests(today))  # ('headers',)
+</code></pre>
+<p>The plugin prints <code>Configuration fingerprint: 9e3c4428</code> with each scan, and
+<code>--baseline</code> turns the same digests into <code>No new findings, but the
+configuration changed (headers)</code>.</p>
 <h2 id="debug-ports">Debug ports</h2>
 <p>Every OpenCloud service runs a debug listener serving <code>/healthz</code>, <code>/readyz</code>,
 <code>/metrics</code>, <code>/config</code> and <code>/debug/pprof</code>. <code>/metrics</code> exposes the exact version

@@ -84,6 +84,28 @@ check-opencloud-security -H opencloud.example.com \
   so it gets worse every day it stays in production and can never be
   grandfathered in by a baseline.
 
+## Configuration drift
+
+
+A baseline also remembers the scan's **configuration fingerprint**: grouped
+digests of how the instance is set up - transport, headers, sharing,
+authentication, proxy - and nothing it is set up to. A run whose grade and
+findings both stood still still says so when the deployment did not:
+
+```text
+Baseline: No new findings since 2026-09-14T06:00:00Z, but the configuration changed (headers, proxy)
+```
+
+The group names are the only thing reported. What the setting now says is not
+in the baseline file, the output or the webhook - only a hash of it - so the
+file can live beside the rest of your monitoring state without publishing how
+the instance is configured.
+
+Drift is reported, never judged: it does not create a finding, it does not
+make a run regress, and it never changes the exit code. A baseline written
+before fingerprints existed simply reports no drift, which is the honest
+answer for a file that cannot say.
+
 ## Points worth knowing
 
 

@@ -88,6 +88,29 @@ check-opencloud-security -H opencloud.example.com \
   correcciones de seguridad, así que empeora cada día que sigue en producción
   y una línea base nunca puede darla por aceptada.
 
+## Cambios de configuración {#configuration-drift}
+
+
+Una referencia también recuerda la **huella de configuración** del análisis:
+resúmenes agrupados de cómo está montada la instancia - transporte, cabeceras,
+compartición, autenticación, proxy - y nunca de con qué valores. Una ejecución
+en la que la nota y los hallazgos siguieron igual aún dice cuándo la
+instalación no lo hizo:
+
+```text
+Baseline: No new findings since 2026-09-14T06:00:00Z, but the configuration changed (headers, proxy)
+```
+
+Solo se informan los nombres de los grupos. Lo que dice ahora el ajuste no está
+en el archivo de referencia, ni en la salida, ni en el webhook - solo un
+resumen de él -, así que el archivo puede vivir junto al resto del estado de
+monitorización sin publicar cómo está configurada la instancia.
+
+El cambio se informa, no se juzga: no crea un hallazgo, no hace que una
+ejecución empeore y nunca cambia el código de salida. Una referencia escrita
+antes de que existieran las huellas simplemente no informa ningún cambio, que
+es la respuesta honesta para un archivo que no puede decirlo.
+
 ## Aspectos que conviene conocer {#points-worth-knowing}
 
 

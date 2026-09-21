@@ -414,3 +414,70 @@ def test_the_payload_says_nothing_rather_than_none_missed(capsys):
     recorded = plugin._RESULT_PAYLOAD.get()
     assert recorded is not None
     assert recorded["payload"]["coverage"] is None
+
+
+# --- the configuration fingerprint ---
+def _fingerprinted(**groups):
+    """A result document carrying a fingerprint with the given group digests."""
+    return result(
+        configuration={
+            "schema": 1,
+            "digest": "deadbeef" + "0" * 56,
+            "groups": {
+                group: {"digest": digest, "scope": "scope" + group, "facts": 3}
+                for group, digest in groups.items()
+            },
+        }
+    )
+
+
+FULL = {
+    "tls": "a" * 64,
+    "headers": "b" * 64,
+    "sharing": "c" * 64,
+    "authentication": "d" * 64,
+    "proxy": "e" * 64,
+}
+
+
+def test_the_fingerprint_line_is_short_enough_to_read(capsys):
+    """An operator compares two runs by eye; 64 characters defeats that."""
+    _, _, details, _ = run(_fingerprinted(**FULL), capsys)
+
+    assert "Configuration fingerprint: deadbeef" in details
+
+
+def test_the_fingerprint_line_names_what_it_could_not_measure(capsys):
+    """Four groups out of five is not a fingerprint of the deployment."""
+    partial = dict(FULL)
+    partial["tls"] = "none"
+    _, _, details, _ = run(_fingerprinted(**partial), capsys)
+
+    assert "Configuration fingerprint: deadbeef (tls not measured)" in details
+
+
+def test_a_scan_without_a_fingerprint_prints_no_line(capsys):
+    """A report that cannot say must not look like one with nothing to say."""
+    _, _, details, _ = run(result(), capsys)
+
+    assert [line for line in details if line.startswith("Configuration")] == []
+
+
+def test_the_payload_carries_the_digests_and_nothing_else(capsys):
+    """A receiver compares digests; it is never handed the configuration."""
+    run(_fingerprinted(**FULL), capsys)
+    recorded = plugin._RESULT_PAYLOAD.get()
+    assert recorded is not None
+    configuration = recorded["payload"]["configuration"]
+
+    assert configuration["digest"].startswith("deadbeef")
+    assert set(configuration["groups"]) == set(FULL)
+    assert configuration["groups"]["tls"] == "scopetls:" + "a" * 64
+
+
+def test_the_payload_says_nothing_when_the_scan_recorded_no_fingerprint(capsys):
+    run(result(), capsys)
+    recorded = plugin._RESULT_PAYLOAD.get()
+    assert recorded is not None
+
+    assert recorded["payload"]["configuration"] is None

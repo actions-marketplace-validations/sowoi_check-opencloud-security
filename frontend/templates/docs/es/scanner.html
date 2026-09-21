@@ -27,6 +27,7 @@
   <a href="#hardenings" lang="es">Refuerzos</a>
   <a href="#what-the-scan-covered" lang="es">Lo que cubrió el análisis</a>
   <a href="#the-conditions-a-scan-ran-under" lang="es">En qué condiciones se ejecutó un análisis</a>
+  <a href="#has-the-deployment-changed" lang="es">¿Ha cambiado la instalación?</a>
   <a href="#debug-ports" lang="es">Puertos de depuración</a>
   <a href="#every-resolved-address" lang="es">Todas las direcciones resueltas</a>
   <a href="#concurrency" lang="es">Concurrencia</a>
@@ -908,6 +909,62 @@ se elija uno como la causa.</p>
 <p><code>limitations</code> enumera lo que la comparación no pudo establecer, casi siempre que
 uno de los dos informes es anterior a estos bloques y por tanto no puede decir
 contra qué se juzgó ni cuánto se ejecutó. Eso se informa, no se supone.</p>
+<h2 id="has-the-deployment-changed">¿Ha cambiado la instalación?</h2>
+<p>Una nota dice si una instancia está en buena forma. No dice si sigue siendo la
+misma instancia que la semana pasada. Una política reescrita sin ganar
+<code>unsafe-inline</code>, un proxy sustituido por otro producto que pone las mismas
+cabeceras, enlaces públicos que dejan de pedir contraseña y vuelven a pedirla,
+un certificado trasladado a otro emisor: nada de eso tiene que mover la nota, y
+quien solo mira la nota no ve nada de ello.</p>
+<p><code>configuration</code> es una <strong>huella</strong>: resúmenes criptográficos agrupados de cómo
+está configurada la instalación, y nunca de con qué valores. Véase
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0073-a-result-fingerprints-the-configuration-it-measured.md">ADR 0073</a>.</p>
+<pre><code class="language-json">{
+  &quot;configuration&quot;: {
+    &quot;schema&quot;: 1,
+    &quot;digest&quot;: &quot;9e3c4428...&quot;,
+    &quot;groups&quot;: {
+      &quot;tls&quot;: {&quot;digest&quot;: &quot;89a97538...&quot;, &quot;scope&quot;: &quot;1d0f4b77...&quot;, &quot;facts&quot;: 12},
+      &quot;headers&quot;: {&quot;digest&quot;: &quot;cb25144c...&quot;, &quot;scope&quot;: &quot;b8e1a930...&quot;, &quot;facts&quot;: 13},
+      &quot;sharing&quot;: {&quot;digest&quot;: &quot;7b8a1ced...&quot;, &quot;scope&quot;: &quot;44c0ae51...&quot;, &quot;facts&quot;: 3},
+      &quot;authentication&quot;: {&quot;digest&quot;: &quot;588d045f...&quot;, &quot;scope&quot;: &quot;0a7be2cc...&quot;, &quot;facts&quot;: 6},
+      &quot;proxy&quot;: {&quot;digest&quot;: &quot;b7db6daf...&quot;, &quot;scope&quot;: &quot;ff31c084...&quot;, &quot;facts&quot;: 5}
+    }
+  }
+}
+</code></pre>
+<p>Dos análisis con el mismo resumen de grupo vieron la misma configuración; dos
+que difieren, no. Eso es todo lo que se afirma, y estas reglas son las que lo
+hacen útil:</p>
+<ul>
+<li><strong>Solo resúmenes, nunca la configuración.</strong> Una política de seguridad de
+  contenido nombra los orígenes en los que confía una instalación, un documento
+  de descubrimiento puede nombrar un inquilino, un banner de servidor nombra una
+  compilación interna. Cada dato se resume dentro de su grupo y se descarta: se
+  aprende <em>que</em> la compartición cambió, nunca <em>a qué</em>.</li>
+<li><strong>Los grupos son las preguntas que hace quien opera.</strong> "¿Cambió TLS?" sirve;
+  "¿cambió el dato 37?" no.</li>
+<li><strong>Solo lo que decide la instalación.</strong> El grupo de transporte resume el
+  emisor, la clave, el algoritmo de firma y los protocolos negociados; no el
+  número de serie, las fechas ni la huella del certificado, porque una renovación
+  es rutina. El grupo del proxy resume el producto, no el banner con su número
+  de compilación.</li>
+<li><strong>Lo que deciden los ajustes del análisis nunca es un dato.</strong> <code>scope</code> es un
+  resumen de <em>qué</em> datos pudo mirar un grupo, sin sus valores. Dos grupos solo
+  se comparan cuando su alcance coincide, así que una ejecución que dejó de
+  inspeccionar TLS informa "no comparable" en lugar de un cambio. Un grupo sin
+  ningún dato es <code>none</code>.</li>
+<li><strong>Nunca cambia una nota.</strong> Nada de esto llega a la calificación, las
+  severidades, la línea de alerta ni el código de salida.</li>
+</ul>
+<p>Léelo con <code>fingerprint.fingerprint_of(result)</code>, que devuelve <code>None</code> tanto para
+un bloque ausente como para uno mal formado: un informe que no puede decirlo no
+es una instalación que no cambió. <code>fingerprint.digests(result)</code> lo reduce a una
+cadena opaca <code>scope:digest</code> por grupo y <code>fingerprint.drift(before, after)</code>
+nombra los grupos que difieren.</p>
+<p>El complemento imprime <code>Configuration fingerprint: 9e3c4428</code> en cada análisis,
+y <code>--baseline</code> lo convierte en <code>No new findings, but the configuration changed
+(headers)</code>.</p>
 <h2 id="debug-ports">Puertos de depuración</h2>
 <p>Cada servicio de OpenCloud ejecuta un servicio de depuración que sirve
 <code>/healthz</code>, <code>/readyz</code>, <code>/metrics</code>, <code>/config</code> y <code>/debug/pprof</code>. <code>/metrics</code>

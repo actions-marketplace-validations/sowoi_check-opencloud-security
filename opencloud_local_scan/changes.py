@@ -31,6 +31,9 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from .coverage import coverage_of
+from .fingerprint import digests as fingerprint_digests
+from .fingerprint import drift as configuration_drift
+from .fingerprint import incomparable as configuration_incomparable
 from .provenance import provenance_of
 
 #: The instance itself changed: a different version, a check that started or
@@ -171,6 +174,24 @@ def explain(
             )
         )
 
+    before_configuration = fingerprint_digests(previous)
+    after_configuration = fingerprint_digests(current)
+    if not before_configuration or not after_configuration:
+        limitations.append(
+            "At least one report does not record a configuration fingerprint, "
+            "so a deployment that was reconfigured without moving a grade "
+            "cannot be told from one that was left alone."
+        )
+    else:
+        narrowed = configuration_incomparable(before_configuration, after_configuration)
+        if narrowed:
+            limitations.append(
+                "The two scans looked at different things in the "
+                f"{', '.join(narrowed)} configuration, so those group(s) are "
+                "not compared here - a difference in them would not show up "
+                "as a change."
+            )
+
     changes.extend(_instance_changes(previous, current))
     changes.extend(_reference_changes(previous, current, limitations))
     changes.extend(_scanner_changes(previous, current, limitations))
@@ -218,6 +239,21 @@ def _instance_changes(
                 "versionChanged",
                 f"The instance moved from {before} to {after}.",
                 {"from": before, "to": after},
+            )
+        )
+
+    drifted = configuration_drift(
+        fingerprint_digests(previous), fingerprint_digests(current)
+    )
+    if drifted:
+        changes.append(
+            Change(
+                INSTANCE,
+                "configurationChanged",
+                f"The {', '.join(drifted)} configuration is not the one the "
+                "earlier scan saw. That establishes the deployment changed; "
+                "what it was changed to is not recorded, by design.",
+                {"groups": list(drifted)},
             )
         )
 

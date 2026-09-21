@@ -720,6 +720,69 @@ contribute without one being chosen as *the* cause.
 one of the two reports predates these blocks, and so cannot say what it was
 judged against or how much of it ran. That is reported rather than assumed.
 
+## L'installation a-t-elle changé ? {#has-the-deployment-changed}
+
+Une note dit si une instance est en bon état. Elle ne dit pas s'il s'agit
+encore de la même instance que la semaine dernière. Une politique réécrite sans
+gagner `unsafe-inline`, un proxy remplacé par un autre produit qui pose les
+mêmes en-têtes, des liens publics qui cessent d'exiger un mot de passe puis
+l'exigent de nouveau, un certificat passé chez un autre émetteur : rien de tout
+cela n'a à faire bouger une note, et qui ne regarde que la note n'en voit rien.
+
+`configuration` est une **empreinte** : des condensats groupés de la manière
+dont l'installation est configurée, jamais de ce qu'elle contient. Voir
+[ADR 0073](../../adr/0073-a-result-fingerprints-the-configuration-it-measured.md).
+
+```json
+{
+  "configuration": {
+    "schema": 1,
+    "digest": "9e3c4428...",
+    "groups": {
+      "tls": {"digest": "89a97538...", "scope": "1d0f4b77...", "facts": 12},
+      "headers": {"digest": "cb25144c...", "scope": "b8e1a930...", "facts": 13},
+      "sharing": {"digest": "7b8a1ced...", "scope": "44c0ae51...", "facts": 3},
+      "authentication": {"digest": "588d045f...", "scope": "0a7be2cc...", "facts": 6},
+      "proxy": {"digest": "b7db6daf...", "scope": "ff31c084...", "facts": 5}
+    }
+  }
+}
+```
+
+Deux analyses dont le condensat de groupe est identique ont vu la même
+configuration ; deux qui diffèrent, non. C'est tout ce qui est affirmé, et ces
+règles sont ce qui rend l'affirmation utile :
+
+- **Des condensats seulement, jamais la configuration.** Une politique de
+  sécurité du contenu nomme les origines auxquelles une installation fait
+  confiance, un document de découverte peut nommer un locataire, une bannière de
+  serveur nomme une compilation interne. Chaque fait est condensé dans son groupe
+  puis oublié : on apprend *que* le partage a changé, jamais *en quoi*.
+- **Les groupes sont les questions que pose l'exploitant.** « TLS a-t-il
+  changé ? » est utile ; « le fait 37 a-t-il changé ? » ne l'est pas.
+- **Seulement ce que l'installation décide.** Le groupe transport condense
+  l'émetteur, la clé, l'algorithme de signature et les protocoles négociés, pas
+  le numéro de série, les dates ni l'empreinte du certificat, car un
+  renouvellement est une routine. Le groupe proxy condense le produit, pas la
+  bannière et son numéro de version.
+- **Ce que décident les réglages de l'analyse n'est jamais un fait.** `scope`
+  est un condensat de *quels* faits un groupe a pu regarder, sans leurs valeurs.
+  Deux groupes ne sont comparés que si leur portée coïncide : une exécution qui a
+  cessé d'inspecter TLS signale « non comparable » plutôt qu'un changement. Un
+  groupe sans aucun fait vaut `none`.
+- **Cela ne change jamais une note.** Rien ici n'atteint la notation, les
+  sévérités, la ligne d'alerte ou le code de sortie.
+
+Lisez le bloc avec `fingerprint.fingerprint_of(result)`, qui renvoie `None`
+pour un bloc absent comme pour un bloc malformé : un rapport qui ne peut pas le
+dire n'est pas une installation qui n'a pas changé. `fingerprint.digests(result)`
+le réduit à une chaîne opaque `scope:digest` par groupe, et
+`fingerprint.drift(before, after)` nomme les groupes qui diffèrent.
+
+Le greffon imprime `Configuration fingerprint: 9e3c4428` à chaque analyse, et
+`--baseline` en fait `No new findings, but the configuration changed
+(headers)`.
+
 ## Debug ports
 
 Every OpenCloud service runs a debug listener serving `/healthz`, `/readyz`,

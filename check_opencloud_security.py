@@ -67,6 +67,9 @@ from opencloud_local_scan.baseline import (
 from opencloud_local_scan.completion import enable as enable_completion
 from opencloud_local_scan.coverage import summary as coverage_summary
 from opencloud_local_scan.coverage import summary_line as coverage_summary_line
+from opencloud_local_scan.fingerprint import digests as configuration_digests
+from opencloud_local_scan.fingerprint import fingerprint_of
+from opencloud_local_scan.fingerprint import unmeasured as unmeasured_groups
 from opencloud_local_scan.hardening import catalogue_id as hardening_catalogue_id
 from opencloud_local_scan.hardening import describe as describe_hardening
 from opencloud_local_scan.hardening import is_actionable
@@ -764,6 +767,13 @@ def check_vulnerabilities(
     if coverage_line:
         detail_lines.append(f"Coverage: {coverage_line}")
 
+    # The deployment's own fingerprint, so that a reconfiguration that moved
+    # no grade is still visible in the output an operator keeps. What
+    # changed, against the last run, is the baseline's line above.
+    configuration_line = _configuration_line(response_scan)
+    if configuration_line:
+        detail_lines.append(configuration_line)
+
     if context.debug:
         detail_lines.extend(
             _explain_lines(context, response_scan, missing_hardenings, extra_failures)
@@ -1110,6 +1120,43 @@ def _build_base_payload(
     }
 
 
+def _configuration_line(response_scan: dict[str, Any]) -> str | None:
+    """
+    The configuration fingerprint, short enough to read in an alert.
+
+    Eight hex characters of the digest over the five groups: enough for a
+    person to see that two runs differ, never enough to be mistaken for the
+    configuration itself. ``None`` for a scan document that carries no
+    fingerprint, because a report that cannot say must not look like a
+    deployment that never changes.
+    """
+    block = fingerprint_of(response_scan)
+    if block is None:
+        return None
+    line = f"Configuration fingerprint: {str(block.get('digest'))[:8]}"
+    missing = unmeasured_groups(configuration_digests(response_scan))
+    if missing:
+        line += f" ({', '.join(missing)} not measured)"
+    return line
+
+
+def _configuration_payload(response_scan: dict[str, Any]) -> dict[str, Any] | None:
+    """
+    The fingerprint for the payload: the digests, and nothing they were made of.
+
+    A receiver stores these and compares them itself, which is the whole
+    point of a digest - it can answer "did this deployment change?" without
+    ever being told what the deployment is set to.
+    """
+    block = fingerprint_of(response_scan)
+    if block is None:
+        return None
+    return {
+        "digest": block.get("digest"),
+        "groups": configuration_digests(response_scan),
+    }
+
+
 def _coverage_payload(response_scan: dict[str, Any]) -> dict[str, Any] | None:
     """
     The coverage counts for the payload, snake_case as the payload is.
@@ -1181,6 +1228,7 @@ def _build_webhook_payload(
         "missing_hardenings": missing_hardenings if context.check_hardening else [],
         "failed_extra_checks": extra_failures or [],
         "coverage": _coverage_payload(response_scan),
+        "configuration": _configuration_payload(response_scan),
         "scan_backend": "local",
         "scan_uuid": scan_result.uuid,
         "update": update_info.as_dict() if update_info is not None else None,

@@ -1521,6 +1521,26 @@ MESSAGES: dict[str, str] = {
     "result.rescan.note": "El próximo análisis utiliza el mismo destino, las mismas exclusiones y el mismo canal para poder comparar los resultados. Espere a que termine el intervalo o ejecute el escáner de código abierto sin límites en su equipo:",
     "result.rescan.self_host": "ejecútelo usted mismo",
     "result.excluded.kicker": "Excluido",
+    "result.fingerprint.kicker": "Configuración",
+    "result.fingerprint.heading": "¿Ha cambiado esta instalación?",
+    "result.fingerprint.body": (
+        "Cada grupo de abajo es un resumen criptográfico de cómo está "
+        "configurada esta instancia, nunca de con qué valores. Compáralos con "
+        "un análisis anterior: un grupo con un resumen distinto estaba "
+        "configurado de otra manera, aunque la nota siga siendo la misma."
+    ),
+    "result.fingerprint.overall": "En todos los grupos: {digest}",
+    "result.fingerprint.unmeasured": "No se midió en este análisis",
+    "result.fingerprint.unavailable": (
+        "Este informe no registra ninguna huella de configuración, así que no "
+        "puede decir si la instalación cambió. Eso no es lo mismo que una "
+        "instalación que siguió igual."
+    ),
+    "fingerprint.group.tls": "Seguridad del transporte",
+    "fingerprint.group.headers": "Cabeceras de seguridad",
+    "fingerprint.group.sharing": "Compartición",
+    "fingerprint.group.authentication": "Autenticación",
+    "fingerprint.group.proxy": "Proxy y entrega",
     "result.coverage.kicker": "Cobertura",
     "result.coverage.heading": "Lo que este análisis no midió",
     "result.coverage.note": (

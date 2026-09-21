@@ -1621,6 +1621,26 @@ MESSAGES: dict[str, str] = {
     "result.rescan.note": "The next scan uses the same target, waivers and release track so you can compare the results. Please wait for the cooldown, or run the open-source scanner on your own machine without limits:",
     "result.rescan.self_host": "run it yourself",
     "result.excluded.kicker": "Excluded",
+    "result.fingerprint.kicker": "Configuration",
+    "result.fingerprint.heading": "Has this deployment changed?",
+    "result.fingerprint.body": (
+        "Each group below is a digest of how this instance is configured, "
+        "never of what it is configured to. Compare them with an earlier "
+        "scan: a group with a different digest was set up differently, even "
+        "when the grade stayed the same."
+    ),
+    "result.fingerprint.overall": "Across all groups: {digest}",
+    "result.fingerprint.unmeasured": "Not measured in this scan",
+    "result.fingerprint.unavailable": (
+        "This report records no configuration fingerprint, so it cannot say "
+        "whether the deployment changed. That is not the same as a "
+        "deployment that stayed the same."
+    ),
+    "fingerprint.group.tls": "Transport security",
+    "fingerprint.group.headers": "Security headers",
+    "fingerprint.group.sharing": "Sharing",
+    "fingerprint.group.authentication": "Authentication",
+    "fingerprint.group.proxy": "Proxy and delivery",
     "result.coverage.kicker": "Coverage",
     "result.coverage.heading": "What this scan did not measure",
     "result.coverage.note": (

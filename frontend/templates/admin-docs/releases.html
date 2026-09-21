@@ -47,6 +47,24 @@
 <h2 id="1290-this-release">[1.29.0] - this release</h2>
 <h3 id="added">Added</h3>
 <ul>
+<li><strong>A scan fingerprints the configuration it measured, so drift is visible
+  without the grade moving.</strong> A rewritten content security policy, a replaced
+  reverse proxy, public links that stopped requiring a password, a certificate
+  at a different issuer - none of that has to change a grade, and an operator
+  watching only the grade saw none of it. The result document now carries a
+  <code>configuration</code> block: grouped digests for transport, headers, sharing,
+  authentication and proxy, plus one over all five. <strong>Digests only, never the
+  configuration</strong> - a policy, an issuer and a server banner go in and a hash
+  comes out, so the block is safe on a public page, in a webhook and in an
+  uploaded report. The plugin prints <code>Configuration fingerprint: 9e3c4428</code>,
+  <code>--baseline</code> reports <code>No new findings, but the configuration changed
+  (headers)</code>, <code>check-opencloud-scanner diff</code> adds a <code>configurationChanged</code>
+  change, and the web application shows the groups under <em>Has this deployment
+  changed?</em>. Routine churn is deliberately excluded: a renewed certificate and
+  a proxy's new build number are not drift, and a group the two scans looked
+  at differently is reported as not comparable rather than as a change.
+  Nothing in it touches a rating, an exit code or an alert line. See
+  <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0073-a-result-fingerprints-the-configuration-it-measured.md">ADR 0073</a>.</li>
 <li><strong><code>--policy</code> fails a deployment on explicit requirements, not on a grade.</strong>
   <code>-w</code>/<code>-c</code> and <code>--profile</code> judge an instance by its rating, which is the
   wrong shape for a CI gate: a team that requires HTTPS enforcement and no

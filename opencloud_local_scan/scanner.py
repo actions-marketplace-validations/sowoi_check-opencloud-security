@@ -62,6 +62,7 @@ from urllib3 import PoolManager
 from urllib3.exceptions import ConnectTimeoutError, NewConnectionError
 
 from .caa import check_caa_record
+from .fingerprint import build as build_fingerprint
 from .provenance import build as build_provenance
 
 
@@ -4105,6 +4106,16 @@ def scan(
             # say what it covered, not one that covered everything.
             "coverage": coverage.as_dict(),
         }
+        # Digests of how this deployment is configured, so that a change an
+        # operator made shows up even when it moved no grade. Built from the
+        # document above plus the two things it keeps only the verdicts of:
+        # the response headers and the capabilities document. See
+        # `fingerprint.py` for what is hashed and what deliberately is not.
+        result["configuration"] = build_fingerprint(
+            result,
+            headers=dict(root_response.headers) if root_response is not None else None,
+            capabilities=capabilities,
+        )
         # Built from the objects this scan was handed, at the moment it ran.
         # A worker that refreshes its advisory database between the scan and
         # the report would otherwise describe the scan with data it never saw.

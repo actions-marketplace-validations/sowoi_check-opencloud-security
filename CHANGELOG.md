@@ -14,6 +14,24 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ### Added
 
+- **A scan fingerprints the configuration it measured, so drift is visible
+  without the grade moving.** A rewritten content security policy, a replaced
+  reverse proxy, public links that stopped requiring a password, a certificate
+  at a different issuer - none of that has to change a grade, and an operator
+  watching only the grade saw none of it. The result document now carries a
+  `configuration` block: grouped digests for transport, headers, sharing,
+  authentication and proxy, plus one over all five. **Digests only, never the
+  configuration** - a policy, an issuer and a server banner go in and a hash
+  comes out, so the block is safe on a public page, in a webhook and in an
+  uploaded report. The plugin prints `Configuration fingerprint: 9e3c4428`,
+  `--baseline` reports `No new findings, but the configuration changed
+  (headers)`, `check-opencloud-scanner diff` adds a `configurationChanged`
+  change, and the web application shows the groups under *Has this deployment
+  changed?*. Routine churn is deliberately excluded: a renewed certificate and
+  a proxy's new build number are not drift, and a group the two scans looked
+  at differently is reported as not comparable rather than as a change.
+  Nothing in it touches a rating, an exit code or an alert line. See
+  [ADR 0073](adr/0073-a-result-fingerprints-the-configuration-it-measured.md).
 - **`--policy` fails a deployment on explicit requirements, not on a grade.**
   `-w`/`-c` and `--profile` judge an instance by its rating, which is the
   wrong shape for a CI gate: a team that requires HTTPS enforcement and no

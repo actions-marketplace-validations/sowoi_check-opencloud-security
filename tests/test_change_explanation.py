@@ -334,3 +334,63 @@ def test_a_waivers_block_that_is_a_list_names_no_waiver_change():
     before = _document(provenance=_provenance(waivers=["debugPort:*"]))
 
     assert not _codes(before, _document()) & {"waiversAdded", "waiversRemoved"}
+
+
+# ------------------------------------------------------- configuration drift
+def _configuration(**groups: str) -> dict:
+    """A fingerprint block whose groups carry the given scope:digest values."""
+    filled = {"tls": "s1:d1", "headers": "s2:d2", "sharing": "s3:d3",
+              "authentication": "s4:d4", "proxy": "s5:d5"}
+    filled.update(groups)
+    return {
+        "schema": 1,
+        "digest": "overall",
+        "groups": {
+            group: {"scope": value.split(":")[0], "digest": value.split(":")[1], "facts": 3}
+            for group, value in filled.items()
+        },
+    }
+
+
+def test_a_reconfigured_deployment_is_named_as_an_instance_change():
+    """A change the operator made belongs to the instance, not to the data."""
+    before = _document(configuration=_configuration())
+    after = _document(configuration=_configuration(headers="s2:other"))
+
+    change = _change(before, after, "configurationChanged")
+
+    assert change.category == INSTANCE
+    assert change.evidence == {"groups": ["headers"]}
+    assert "headers" in change.summary
+
+
+def test_an_unchanged_deployment_produces_no_configuration_change():
+    before = _document(configuration=_configuration())
+
+    assert "configurationChanged" not in _codes(before, _document(configuration=_configuration()))
+
+
+def test_two_scans_that_looked_at_different_things_say_so_instead():
+    """
+    A narrower scan is not a redeployment.
+
+    Reporting it as one would make every run with a probe turned off look
+    like somebody changed the instance.
+    """
+    before = _document(configuration=_configuration())
+    after = _document(configuration=_configuration(tls="other-scope:d9"))
+
+    explanation = explain(before, after)
+
+    assert "configurationChanged" not in {change.code for change in explanation.changes}
+    assert any("not compared here" in item for item in explanation.limitations)
+
+
+def test_a_report_without_a_fingerprint_reports_a_limitation():
+    """A report that cannot say must not be read as a deployment that held still."""
+    explanation = explain(_document(), _document(configuration=_configuration()))
+
+    assert any(
+        "does not record a configuration fingerprint" in item
+        for item in explanation.limitations
+    )

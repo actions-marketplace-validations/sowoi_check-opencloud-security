@@ -184,7 +184,9 @@ is needed.
 | [`test_webapp_i18n.py`](test_webapp_i18n.py) | The frontend is translated without changing API contracts. |
 | [`test_translation_quality.py`](test_translation_quality.py) | Structural differences between the catalogues fail; prose heuristics warn. |
 | [`test_coverage.py`](test_coverage.py) | Every check has one state, an unmeasured one says why, and none of it moves the grade. |
+| [`test_fingerprint.py`](test_fingerprint.py) | Configuration drift shows up, routine churn does not, and no configuration leaves the block. |
 | [`test_webapp_coverage.py`](test_webapp_coverage.py) | Scan gaps regrouped and translated, and an older report that records none. |
+| [`test_webapp_fingerprint.py`](test_webapp_fingerprint.py) | The fingerprint on the page: short digests, labelled groups, nothing it hashed. |
 | [`test_webapp_search.py`](test_webapp_search.py) | The browser search built at release, and what result data it may contain. |
 | [`test_frontend_documentation.py`](test_frontend_documentation.py) | Browser documentation generated from the Markdown guides. |
 

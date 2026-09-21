@@ -8,6 +8,7 @@ import pytest
 
 import check_opencloud_security as check
 from opencloud_local_scan.baseline import (
+    FORMAT_VERSION,
     Snapshot,
     load_baseline,
     snapshot_of,
@@ -420,3 +421,91 @@ def test_a_waived_measure_is_not_recorded_in_the_baseline(tmp_path):
 
     assert "hardening:basicAuthDisabled" in comparison.current.findings
     assert "hardening:cspWithoutUnsafeInline" not in comparison.current.findings
+
+
+# --- configuration drift ---
+def _snapshot(**configuration: str) -> Snapshot:
+    """A snapshot with no findings, so only the configuration can differ."""
+    return Snapshot(rating=5, eol=False, findings=(), configuration=dict(configuration))
+
+
+def test_a_deployment_that_changed_is_reported_although_nothing_else_did(tmp_path):
+    """
+    The whole point: the grade stood still and the deployment did not.
+
+    Without this line the run reads as "nothing to see", which is the exact
+    misreading the fingerprint exists to prevent.
+    """
+    store = load_baseline(tmp_path / "baseline.json")
+    store.record("host", _snapshot(tls="scope:aaa", headers="scope:bbb"))
+
+    comparison = store.compare("host", _snapshot(tls="scope:aaa", headers="scope:ccc"))
+
+    assert comparison.configuration_drift == ("headers",)
+    assert "the configuration changed (headers)" in comparison.summary()
+    assert {"category": "Configuration", "change": "headers settings changed"} in (
+        comparison.items()
+    )
+
+
+def test_an_unchanged_deployment_reports_no_drift(tmp_path):
+    store = load_baseline(tmp_path / "baseline.json")
+    store.record("host", _snapshot(tls="scope:aaa", headers="scope:bbb"))
+
+    comparison = store.compare("host", _snapshot(tls="scope:aaa", headers="scope:bbb"))
+
+    assert comparison.configuration_drift == ()
+    assert "configuration" not in comparison.summary()
+
+
+def test_drift_never_makes_a_run_regress(tmp_path):
+    """
+    A change is a fact to report, not a finding to alert on.
+
+    An exit code that moved because a header was reworded would make the
+    fingerprint the noisiest thing in the plugin.
+    """
+    store = load_baseline(tmp_path / "baseline.json")
+    store.record("host", _snapshot(headers="scope:bbb"))
+
+    comparison = store.compare("host", _snapshot(headers="scope:ccc"))
+
+    assert comparison.regressed is False
+    assert comparison.new_findings == ()
+
+
+def test_a_stored_baseline_carries_the_fingerprint_across_runs(tmp_path, result):
+    """A digest that is not written down cannot be compared next week."""
+    path = tmp_path / "baseline.json"
+    store = load_baseline(path)
+    current = snapshot_of(result)
+    assert current.configuration, "a real scan fingerprints its configuration"
+    store.record("host", current)
+    store.save()
+
+    reloaded = load_baseline(path).snapshot("host")
+
+    assert reloaded is not None
+    assert reloaded.configuration == current.configuration
+
+
+def test_a_baseline_written_before_fingerprints_existed_still_loads(tmp_path):
+    """An older file is one that cannot say, and must not stop the run."""
+    path = tmp_path / "baseline.json"
+    path.write_text(
+        json.dumps(
+            {
+                "version": FORMAT_VERSION,
+                "hosts": {"host": {"rating": 5, "eol": False, "findings": []}},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    stored = load_baseline(path).snapshot("host")
+
+    assert stored is not None
+    assert stored.configuration == {}
+    assert load_baseline(path).compare(
+        "host", _snapshot(headers="scope:bbb")
+    ).configuration_drift == ()

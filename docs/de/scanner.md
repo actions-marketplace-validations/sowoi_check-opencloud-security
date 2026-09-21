@@ -618,6 +618,70 @@ dass einer der beiden Berichte älter als diese Blöcke ist und deshalb nicht
 sagen kann, wogegen er geprüft wurde oder wie viel davon lief. Das wird
 berichtet und nicht angenommen.
 
+## Hat sich die Installation geändert? {#has-the-deployment-changed}
+
+Eine Note sagt, ob eine Instanz in gutem Zustand ist. Sie sagt nicht, ob es
+noch dieselbe Instanz wie letzte Woche ist. Eine neu geschriebene Richtlinie
+ohne `unsafe-inline`, ein ausgetauschter Proxy, der dieselben Header setzt,
+öffentliche Links, die erst kein Passwort mehr verlangen und dann wieder, ein
+Zertifikat bei einem anderen Aussteller - nichts davon muss eine Note bewegen,
+und wer nur auf die Note schaut, sieht nichts davon.
+
+`configuration` ist ein **Fingerabdruck**: gruppierte Digests davon, wie die
+Installation konfiguriert ist, und nichts davon, worauf. Siehe
+[ADR 0073](../../adr/0073-a-result-fingerprints-the-configuration-it-measured.md).
+
+```json
+{
+  "configuration": {
+    "schema": 1,
+    "digest": "9e3c4428...",
+    "groups": {
+      "tls": {"digest": "89a97538...", "scope": "1d0f4b77...", "facts": 12},
+      "headers": {"digest": "cb25144c...", "scope": "b8e1a930...", "facts": 13},
+      "sharing": {"digest": "7b8a1ced...", "scope": "44c0ae51...", "facts": 3},
+      "authentication": {"digest": "588d045f...", "scope": "0a7be2cc...", "facts": 6},
+      "proxy": {"digest": "b7db6daf...", "scope": "ff31c084...", "facts": 5}
+    }
+  }
+}
+```
+
+Zwei Scans mit demselben Gruppen-Digest haben dieselbe Konfiguration gesehen,
+zwei mit verschiedenen nicht. Mehr wird nicht behauptet, und diese Regeln
+machen die Aussage brauchbar:
+
+- **Nur Digests, nie die Konfiguration.** Eine Content-Security-Policy nennt
+  die Herkünfte, denen eine Installation vertraut; ein Discovery-Dokument kann
+  einen Mandanten nennen; ein Server-Banner nennt einen internen Build. Jede
+  Tatsache wird in ihre Gruppe gehasht und verworfen. Man erfährt, *dass*
+  Freigaben sich geändert haben, nie *worauf* sie stehen.
+- **Gruppen sind die Fragen, die Betreiber stellen.** "Hat sich TLS geändert?"
+  ist nützlich, "hat sich Tatsache 37 geändert?" nicht.
+- **Nur, was die Installation entscheidet.** Die Transportgruppe hasht
+  Aussteller, Schlüssel, Signaturverfahren und ausgehandelte Protokolle - nicht
+  Seriennummer, Gültigkeitsdaten oder Zertifikats-Fingerabdruck, denn eine
+  Erneuerung ist Routine. Die Proxy-Gruppe hasht das Produkt, nicht das Banner
+  mit seiner Build-Nummer.
+- **Was die Scan-Einstellungen entscheiden, ist nie eine Tatsache.** `scope`
+  ist ein Digest darüber, *welche* Tatsachen eine Gruppe ansehen konnte, ohne
+  deren Werte. Zwei Gruppen werden nur bei gleichem Scope verglichen, also
+  meldet ein Lauf, der TLS nicht mehr inspiziert, "nicht vergleichbar" statt
+  einer Änderung. Eine Gruppe ohne jede Tatsache ist `none`.
+- **Die Note ändert sich dadurch nie.** Nichts davon erreicht Bewertung,
+  Schweregrade, Alarmzeile oder Exit-Code.
+
+Lies den Block mit `fingerprint.fingerprint_of(result)`, das für einen
+fehlenden wie für einen fehlerhaften Block `None` zurückgibt - ein Bericht,
+der es nicht sagen kann, ist keine Installation, die sich nicht geändert hat.
+`fingerprint.digests(result)` macht daraus eine undurchsichtige Zeichenkette
+`scope:digest` je Gruppe, und `fingerprint.drift(before, after)` nennt die
+Gruppen, die sich unterscheiden.
+
+Das Plugin gibt bei jedem Scan `Configuration fingerprint: 9e3c4428` aus, und
+`--baseline` macht daraus `No new findings, but the configuration changed
+(headers)`.
+
 ## Debug-Ports {#debug-ports}
 
 Debug-Listener liefern unter anderem `/healthz`, `/readyz`, `/metrics`,

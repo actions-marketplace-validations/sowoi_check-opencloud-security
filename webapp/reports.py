@@ -958,6 +958,33 @@ def html_report(result: dict[str, Any], *, identifier: str | None = None) -> str
             )
         sections.append("<h2>What this scan did not measure</h2>" + body)
 
+    # --- whether the deployment itself changed
+    fingerprint = summary.get("fingerprint") or {}
+    if not fingerprint.get("available"):
+        sections.append(
+            "<h2>Has this deployment changed?</h2>"
+            '<p class="note">This report records no configuration fingerprint, '
+            "so it cannot say whether the deployment changed since an earlier "
+            "scan. That is not the same as one that stayed the same.</p>"
+        )
+    else:
+        fingerprint_rows: list[tuple[str, str]] = [
+            (
+                _h(group.get("label")),
+                _h(group.get("digest")) if group.get("measured") else "not measured",
+            )
+            for group in fingerprint.get("groups") or []
+        ]
+        sections.append(
+            "<h2>Has this deployment changed?</h2>"
+            "<p>Each digest below stands for how this instance is configured, "
+            "never for what it is configured to. Compare them with an earlier "
+            "report: a group whose digest differs was set up differently, even "
+            "where the grade did not move.</p>"
+            + _rows(fingerprint_rows, ("Configuration", "Digest"))
+            + f'<p class="note">Across all groups: {_h(fingerprint.get("digest"))}.</p>'
+        )
+
     # --- what it was judged against
     provenance = provenance_of(result)
     if provenance is None:
