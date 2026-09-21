@@ -21,6 +21,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from .documentation import DOCUMENTATION_PAGES
+from .revisions import recorded_date
 
 SITE_NAME = "OpenCloud Security Scan"
 
@@ -214,13 +215,20 @@ def wants_robots_tag(path: str, *, allow_indexing: bool) -> bool:
 
 def last_modified(templates_dir: Path, page: PublicPage) -> date:
     """
-    When the page last changed, taken from the template that renders it.
+    When the page last changed, taken from the recorded revision of its
+    template, and only from its modification time when there is no record.
 
     Automatic on purpose: a hand-maintained date in a sitemap is a date that
     is wrong within a release, and a crawler that learns to distrust it stops
-    reading it.
+    reading it. The modification time alone is no better - a checkout or a
+    container build writes every template at once, so every page would claim
+    to have changed on release day. The record in `revisions.py` is keyed by
+    the template's digest and therefore moves only when the page does.
     """
     candidate = templates_dir / page.template
+    recorded = recorded_date(candidate, page.template)
+    if recorded is not None:
+        return recorded
     try:
         stamp = candidate.stat().st_mtime
     except OSError:

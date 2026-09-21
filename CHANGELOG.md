@@ -25,6 +25,19 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   what `webapp/mcp_server.py`, `wf.EXPORT_FORMATS` and `webapp/openapi.py`
   actually serve.
 
+- **A page's `<lastmod>` in `sitemap.xml` now moves only when the page really
+  changed.** The date came from the modification time of the template that
+  renders the page, and a checkout, a container build and an unpacked release
+  tarball all write every template at once - so every public page claimed to
+  have changed on release day, and a crawler told that everything changed
+  learns nothing from the file. Each public page's date is now recorded next
+  to a digest of its template in `webapp/data/page-revisions.json`, and
+  `scripts/update_page_revisions.py` moves a date only when that digest does.
+  A page the record has never seen, or one edited since it was written, still
+  falls back to the modification time rather than publishing a date that is
+  no longer true. CI checks the record with `--check`, as it does for the
+  generated documentation.
+
 - **The German, Spanish and French pages no longer drop names the English
   text uses to say what this is.** The translated "About" paragraph called the
   plugin a generic monitoring plugin, so a reader of those pages never learned

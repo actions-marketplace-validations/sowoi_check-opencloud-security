@@ -181,6 +181,7 @@ is needed.
 | [`test_webapp_frontend_controls.py`](test_webapp_frontend_controls.py) | Report and form controls work without scripting, which only enhances them. |
 | [`test_webapp_print.py`](test_webapp_print.py) | The printed or PDF report, including dark mode not printing a blank page. |
 | [`test_webapp_share.py`](test_webapp_share.py) | Sharing a report never contacts a third party or leaks the capability link. |
+| [`test_webapp_page_revisions.py`](test_webapp_page_revisions.py) | A sitemap date belongs to the page: it moves when the template's digest does, and a new deployment alone never moves it. |
 | [`test_webapp_seo.py`](test_webapp_seo.py) | Docs pages are indexable, results never are, there is no third-party card metadata, and the mobile nav fits. |
 | [`test_webapp_i18n.py`](test_webapp_i18n.py) | The frontend is translated without changing API contracts. |
 | [`test_translation_quality.py`](test_translation_quality.py) | Structural differences between the catalogues fail; prose heuristics warn. |
