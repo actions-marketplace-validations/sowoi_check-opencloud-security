@@ -312,7 +312,7 @@ def _summary_table(stdout: str) -> tuple[list[str], dict[str, dict[str, str]]]:
     rows: dict[str, dict[str, str]] = {}
     for line in lines[1:-1]:
         cells = line.split()
-        rows[cells[0]] = dict(zip(headers[1:], cells[1:]))
+        rows[cells[0]] = dict(zip(headers[1:], cells[1:], strict=True))
     return headers, rows
 
 

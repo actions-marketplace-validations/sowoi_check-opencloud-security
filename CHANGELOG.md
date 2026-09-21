@@ -12,6 +12,22 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+### Changed
+
+- **A result list that no longer lines up with the checks that produced it is
+  now an error rather than a shorter report.** Every place the scanner and the
+  plugin pair a list of checks with the results `_run_all` returned for them -
+  the exposed paths, the protected endpoints, the debug endpoints and ports,
+  the demo accounts, and the per-host rows of the `checkmk` and `summary`
+  output formats - zipped the two without asserting they were the same length.
+  The lengths match by construction today, so nothing changes for any scan that
+  runs; what changes is the failure mode if a later edit breaks that pairing.
+  Silently dropping the tail would have meant a report that omits checks
+  without saying so, which reads as an instance that passed them. The one
+  pairing deliberately left lenient is the lifecycle page parser, where the two
+  lists come from somebody else's HTML and a tab without a panel must be
+  dropped rather than raise.
+
 ## [1.29.0] - 2026-09-21
 
 ### Added

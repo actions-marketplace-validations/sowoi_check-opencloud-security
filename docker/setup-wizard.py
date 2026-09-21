@@ -1157,7 +1157,7 @@ def step_card(
     right_rows += [""] * (height - len(right_rows))
     side = style.accent(_SIDE)
     lines = [style.accent(f"  {_TOP_LEFT}{_LIGHT * (left + 2)}┬{_LIGHT * (right + 2)}{_TOP_RIGHT}")]
-    for text, step in zip(left_rows, right_rows):
+    for text, step in zip(left_rows, right_rows, strict=True):
         pad_left = " " * max(0, left - _visible(text))
         pad_right = " " * max(0, right - _visible(step))
         lines.append(f"  {side} {text}{pad_left} {side} {step}{pad_right} {side}")

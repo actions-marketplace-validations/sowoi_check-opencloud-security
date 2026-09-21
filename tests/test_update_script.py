@@ -162,7 +162,7 @@ def test_a_line_with_no_date_at_all_is_dropped():
         + tab("Rolling")
         + tab("Production")
         + "</ul>"
-        + panel([("v7.6.0", "TBD"), ("v7.5.0", "2026 August 25")] + ROLLING[3:])
+        + panel([("v7.6.0", "TBD"), ("v7.5.0", "2026 August 25"), *ROLLING[3:]])
         + panel(PRODUCTION)
     )
 

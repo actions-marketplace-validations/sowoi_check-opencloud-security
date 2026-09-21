@@ -183,6 +183,10 @@ def extract(html: str) -> dict[str, Any]:
     parser.feed(html)
 
     tracks: dict[str, list[tuple[tuple[int, int, int], str | None]]] = {}
+    # Deliberately not strict: the two lists come from somebody else's
+    # HTML, and a page that grows a tab without a panel must drop the
+    # odd one out rather than raise. MIN_LINES is what refuses a
+    # document that lost too much this way.
     for label, rows in zip(parser.labels, parser.panels):
         track = TRACK_LABELS.get(label.strip().lower())
         if track is None:
