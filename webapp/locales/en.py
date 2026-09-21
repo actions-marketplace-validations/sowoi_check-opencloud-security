@@ -1537,6 +1537,31 @@ MESSAGES: dict[str, str] = {
         "These values are hardcoded in OpenCloud and cannot be changed through "
         "configuration. They prevent the plan from reaching a higher grade."
     ),
+    "result.rehearsal.kicker": "Upgrade rehearsal",
+    "result.rehearsal.heading": "What upgrading would buy you",
+    "result.rehearsal.lede": (
+        "Every release worth moving to, rated before anybody installs it. An "
+        "upgrade changes the version, not the reverse proxy, so the findings "
+        "on this page stay exactly as this scan measured them."
+    ),
+    "result.rehearsal.line": "line {line}",
+    "result.rehearsal.recommended": "recommended",
+    "result.rehearsal.eol": "end of life",
+    "result.rehearsal.grade": "would reach {label}",
+    "result.rehearsal.fixes": "Fixes",
+    "result.rehearsal.still": "Still affected by",
+    "result.rehearsal.introduces": "Newly affected by",
+    "result.rehearsal.clean": "Clears every advisory this version is affected by.",
+    "result.rehearsal.nothing": "Fixes none of the advisories this version is affected by.",
+    "result.rehearsal.capped": (
+        "The version alone would reach {label}; the findings on this page hold "
+        "this upgrade where it is."
+    ),
+    "result.rehearsal.note": (
+        "Rehearsed against the release schedule and the advisory database this "
+        "scan used, and nothing else. A release or an advisory published since "
+        "is not in it."
+    ),
     "result.eol.alert": (
         "This release no longer receives security fixes. Nothing else on this page "
         "can lift the grade until it is upgraded."

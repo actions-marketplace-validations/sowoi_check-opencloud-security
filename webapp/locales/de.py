@@ -1466,6 +1466,32 @@ MESSAGES: dict[str, str] = {
         "über die Konfiguration ändern. Deshalb kann der Maßnahmenplan "
         "keine bessere Note erreichen."
     ),
+    "result.rehearsal.kicker": "Upgrade-Probe",
+    "result.rehearsal.heading": "Was dir ein Upgrade bringen würde",
+    "result.rehearsal.lede": (
+        "Jede Version, auf die sich ein Wechsel lohnt, bewertet bevor sie "
+        "jemand installiert. Ein Upgrade ändert die Version, nicht den "
+        "Reverse Proxy - die Befunde auf dieser Seite bleiben genau so, wie "
+        "dieser Scan sie gemessen hat."
+    ),
+    "result.rehearsal.line": "Linie {line}",
+    "result.rehearsal.recommended": "empfohlen",
+    "result.rehearsal.eol": "Support-Ende",
+    "result.rehearsal.grade": "erreicht {label}",
+    "result.rehearsal.fixes": "Behebt",
+    "result.rehearsal.still": "Weiterhin betroffen von",
+    "result.rehearsal.introduces": "Neu betroffen von",
+    "result.rehearsal.clean": "Räumt jede Sicherheitsmeldung dieser Version aus.",
+    "result.rehearsal.nothing": "Behebt keine der Sicherheitsmeldungen dieser Version.",
+    "result.rehearsal.capped": (
+        "Die Version allein würde {label} erreichen; die Befunde auf dieser "
+        "Seite halten das Upgrade dort, wo es steht."
+    ),
+    "result.rehearsal.note": (
+        "Geprobt gegen den Releaseplan und die Advisory-Datenbank, die dieser "
+        "Scan benutzt hat, und gegen nichts sonst. Eine seither veröffentlichte "
+        "Version oder Sicherheitsmeldung steckt nicht darin."
+    ),
     "result.eol.alert": (
         "Dieses Release erhält keine Sicherheitsfixes mehr. Nichts anderes auf "
         "dieser Seite kann die Note anheben, bis es aktualisiert wird."

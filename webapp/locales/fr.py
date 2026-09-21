@@ -1522,6 +1522,32 @@ MESSAGES: dict[str, str] = {
         "modifiées dans la configuration. Le plan ne peut donc pas atteindre "
         "une note supérieure."
     ),
+    "result.rehearsal.kicker": "Répétition de mise à niveau",
+    "result.rehearsal.heading": "Ce qu’une mise à niveau vous apporterait",
+    "result.rehearsal.lede": (
+        "Chaque version qui mérite une mise à niveau, notée avant que "
+        "quiconque ne l’installe. Une mise à niveau change la version, pas le "
+        "proxy inverse : les constats de cette page restent exactement ceux "
+        "que cette analyse a mesurés."
+    ),
+    "result.rehearsal.line": "ligne {line}",
+    "result.rehearsal.recommended": "recommandée",
+    "result.rehearsal.eol": "fin de vie",
+    "result.rehearsal.grade": "atteindrait {label}",
+    "result.rehearsal.fixes": "Corrige",
+    "result.rehearsal.still": "Toujours concernée par",
+    "result.rehearsal.introduces": "Désormais concernée par",
+    "result.rehearsal.clean": "Libère cette version de tous ses avis de sécurité.",
+    "result.rehearsal.nothing": "Ne corrige aucun des avis qui concernent cette version.",
+    "result.rehearsal.capped": (
+        "La version seule atteindrait {label} ; les constats de cette page "
+        "maintiennent la mise à niveau où elle est."
+    ),
+    "result.rehearsal.note": (
+        "Répétée avec le calendrier des versions et la base d’avis "
+        "qu’a utilisés cette analyse, et rien d’autre. Une version ou un avis "
+        "publiés depuis n’y figurent pas."
+    ),
     "result.eol.alert": (
         "Cette version ne reçoit plus de correctifs de sécurité. Rien "
         "d'autre sur cette page ne peut faire remonter la note tant qu'elle "

@@ -222,3 +222,9 @@ Upgrade rehearsal: 7.2.4 fixes 1 finding, leaves 1, reaches rating D; 7.3.0 fixe
 La répétition ne connaît que le calendrier et la base des avis, intégrés ou
 actualisés. Une version ou un avis publié ultérieurement peut modifier le
 résultat.
+
+L'application web affiche les mêmes entrées sous **Ce qu'une mise à niveau
+vous apporterait** : une ligne par version candidate, avec les avis qu'elle
+lève, ceux qu'elle laisse et la note qu'elle atteindrait. Lorsque la version
+seule obtiendrait mieux, l'écart vient des constats de cette instance, qu'une
+mise à niveau ne touche pas.

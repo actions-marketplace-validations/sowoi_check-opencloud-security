@@ -45,8 +45,37 @@
 
 <article class="docs-article card section-gap" data-reveal lang="en">
 <h2 id="1281-this-release">[1.28.1] - this release</h2>
-<h2 id="1280-2026-09-20">[1.28.0] - 2026-09-20</h2>
 <h3 id="added">Added</h3>
+<ul>
+<li><strong><code>--profile</code> judges a scan by a named threshold set.</strong> <code>strict</code>, <code>ops</code> and
+  <code>lenient</code> each decide the five settings a team otherwise writes out by hand</li>
+<li>
+<p><code>--warning</code>, <code>--critical</code>, <code>--check-hardening</code>, <code>--update-warning</code> and
+  <code>--eol-warning</code> - so a monitoring definition can adopt a stance without
+  twelve flags. A profile decides <strong>how the same measurements are judged,
+  never how hard the instance is probed</strong>: there is no profile that scans
+  more or less. It is also the weakest source of a value, so an explicit
+  flag, an environment variable or a configuration key still wins, and the
+  <code>--debug</code> explanation names the profile a rating was judged by. Leaving it
+  unset keeps every default exactly as it was. See
+  <a href="/documentation/reference#threshold-profiles">Threshold profiles</a>.</p>
+</li>
+<li>
+<p><strong>The web application renders the upgrade rehearsal.</strong> The result page
+  gains a <em>What upgrading would buy you</em> panel: one row per candidate
+  release, with the advisories it clears, the ones it leaves, any it newly
+  brings in, whether it is already end of life, and the grade it would reach.
+  Where the version alone would rate better than the row shows, the panel
+  says so - the difference is this instance's own findings, which an upgrade
+  does not touch. Every number comes from the scanner's <code>upgradeRehearsal</code>;
+  the web layer only picks the letter and the tone, as it does for every
+  other grade on the page. A result stored before the rehearsal existed
+  renders without the panel rather than as an instance with nothing to
+  upgrade to.</p>
+</li>
+</ul>
+<h2 id="1280-2026-09-20">[1.28.0] - 2026-09-20</h2>
+<h3 id="added_1">Added</h3>
 <ul>
 <li>
 <p><strong>Upgrade rehearsal: what each candidate release would fix, leave and
@@ -96,7 +125,7 @@
   an <code>ImportPathMismatchError</code> between the real and mutated test suites.</li>
 </ul>
 <h2 id="1272-2026-09-19">[1.27.2] - 2026-09-19</h2>
-<h3 id="added_1">Added</h3>
+<h3 id="added_2">Added</h3>
 <ul>
 <li><strong>Property-based tests for the parsers that read outside text.</strong>
   <code>tests/test_properties.py</code> uses Hypothesis, a new test-only dependency
@@ -137,7 +166,7 @@
   from 1.0.0 up to 4.0.8 and from 4.1.0 up to (but not including) 7.2.0.</li>
 </ul>
 <h2 id="1271-2026-09-19">[1.27.1] - 2026-09-19</h2>
-<h3 id="added_2">Added</h3>
+<h3 id="added_3">Added</h3>
 <ul>
 <li>
 <p>Codex can use the repository's Claude Code skills, hooks, subagent roles and
@@ -177,7 +206,7 @@
 </li>
 </ul>
 <h2 id="1270-2026-09-19">[1.27.0] - 2026-09-19</h2>
-<h3 id="added_3">Added</h3>
+<h3 id="added_4">Added</h3>
 <ul>
 <li>
 <p>The web report lists an advertised HTTP/3 listener (with its UDP ports) and
@@ -202,7 +231,7 @@
 </li>
 </ul>
 <h2 id="1261-2026-09-19">[1.26.1] - 2026-09-19</h2>
-<h3 id="added_4">Added</h3>
+<h3 id="added_5">Added</h3>
 <ul>
 <li>The operator's area has a <strong>Releases</strong> tab at <code>/admin/docs/releases</code>: the
   ten newest released sections of <code>CHANGELOG.md</code>, newest first, so an
@@ -210,7 +239,7 @@
   area. The publish workflow regenerates it together with the release notes.</li>
 </ul>
 <h2 id="1260-2026-09-19">[1.26.0] - 2026-09-19</h2>
-<h3 id="added_5">Added</h3>
+<h3 id="added_6">Added</h3>
 <ul>
 <li>
 <p><code>--eol-warning DAYS</code> (<code>COS_EOL_WARNING</code>, YAML <code>eol_warning</code>, and a setup
@@ -251,7 +280,7 @@
 </li>
 </ul>
 <h2 id="1253-2026-09-18">[1.25.3] - 2026-09-18</h2>
-<h3 id="added_6">Added</h3>
+<h3 id="added_7">Added</h3>
 <ul>
 <li>
 <p>The <code>/check-changelog-docs</code> skill checks that every new <code>Added</code> or
@@ -334,7 +363,7 @@
 </li>
 </ul>
 <h2 id="1252-2026-09-18">[1.25.2] - 2026-09-18</h2>
-<h3 id="added_7">Added</h3>
+<h3 id="added_8">Added</h3>
 <ul>
 <li>The Docker setup wizard moves while it works, in the four places where
   motion tells the operator something the static page could not. Section

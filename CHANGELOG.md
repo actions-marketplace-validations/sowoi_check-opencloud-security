@@ -12,6 +12,32 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+### Added
+
+- **`--profile` judges a scan by a named threshold set.** `strict`, `ops` and
+  `lenient` each decide the five settings a team otherwise writes out by hand
+  - `--warning`, `--critical`, `--check-hardening`, `--update-warning` and
+  `--eol-warning` - so a monitoring definition can adopt a stance without
+  twelve flags. A profile decides **how the same measurements are judged,
+  never how hard the instance is probed**: there is no profile that scans
+  more or less. It is also the weakest source of a value, so an explicit
+  flag, an environment variable or a configuration key still wins, and the
+  `--debug` explanation names the profile a rating was judged by. Leaving it
+  unset keeps every default exactly as it was. See
+  [Threshold profiles](README.md#threshold-profiles).
+
+- **The web application renders the upgrade rehearsal.** The result page
+  gains a *What upgrading would buy you* panel: one row per candidate
+  release, with the advisories it clears, the ones it leaves, any it newly
+  brings in, whether it is already end of life, and the grade it would reach.
+  Where the version alone would rate better than the row shows, the panel
+  says so - the difference is this instance's own findings, which an upgrade
+  does not touch. Every number comes from the scanner's `upgradeRehearsal`;
+  the web layer only picks the letter and the tone, as it does for every
+  other grade on the page. A result stored before the rehearsal existed
+  renders without the panel rather than as an instance with nothing to
+  upgrade to.
+
 ## [1.28.0] - 2026-09-20
 
 ### Added

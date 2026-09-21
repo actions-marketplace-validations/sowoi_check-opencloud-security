@@ -552,6 +552,7 @@ def summarise(
         "reverseProxy": result.get("reverseProxy") or {},
         "alternativeServices": _alternative_services(result),
         "upgradePath": _upgrade_path(result),
+        "upgradeRehearsal": _upgrade_rehearsal(result),
         "integrations": result.get("integrations") or {},
         "coverage": _coverage(result, translate),
         "counts": {
@@ -591,6 +592,52 @@ def _upgrade_path(result: Mapping[str, Any]) -> dict[str, Any]:
         "open": ", ".join(still),
         "safe": str(path.get("safeVersion") or ""),
     }
+
+
+def _upgrade_rehearsal(result: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """
+    Every candidate release the scanner rehearsed, oldest first.
+
+    The scanner decided all of it - which releases are worth moving to, what
+    each one fixes and leaves, and the rating it would reach. This adds the
+    letter and the tone the page renders that rating with, which is the same
+    pair every other grade on the page goes through, and nothing else.
+    """
+    entries = result.get("upgradeRehearsal")
+    if not isinstance(entries, list):
+        return []
+    rehearsed: list[dict[str, Any]] = []
+    for entry in entries:
+        if not isinstance(entry, Mapping) or not entry.get("version"):
+            continue
+        rating = entry.get("rating")
+        rehearsed.append(
+            {
+                "version": str(entry["version"]),
+                "line": str(entry.get("line") or ""),
+                "recommended": bool(entry.get("recommended")),
+                "endOfLife": bool(entry.get("endOfLife")),
+                "fixes": [str(item) for item in entry.get("fixes") or ()],
+                "stillAffected": [str(item) for item in entry.get("stillAffected") or ()],
+                "introduces": [str(item) for item in entry.get("introduces") or ()],
+                "rating": rating,
+                "label": rating_label(rating),
+                "tone": rating_tone(rating),
+                # What the version alone would allow. Where it is better than
+                # the rating, the difference is the instance's own findings,
+                # which an upgrade does not touch - and saying so is the
+                # difference between "upgrading is not worth it" and
+                # "upgrading is not enough on its own".
+                "versionRating": entry.get("versionRating"),
+                "versionLabel": rating_label(entry.get("versionRating")),
+                "cappedByFindings": (
+                    isinstance(rating, int)
+                    and isinstance(entry.get("versionRating"), int)
+                    and rating < entry["versionRating"]
+                ),
+            }
+        )
+    return rehearsed
 
 
 def _coverage(

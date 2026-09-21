@@ -2255,6 +2255,20 @@ details.waivers[open] > summary::after { transform: rotate(-135deg); }
     color: var(--ink-faint); background: transparent; border: 1px solid var(--line);
 }
 
+/* The rehearsal grades a release nobody has installed, so its colour is the
+   tone of the rating that release would reach - not, as above, whether a
+   step improved anything. */
+.rehearsal-grade {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: .74rem; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .06em;
+    border-radius: 4px; padding: .18rem .55rem;
+    color: var(--bad-ink); background: var(--bad-soft);
+}
+.rehearsal-grade[data-tone="good"] { color: var(--good-ink); background: var(--good-soft); }
+.rehearsal-grade[data-tone="fair"] { color: var(--fair-ink); background: var(--fair-soft); }
+
 .facts { display: grid; grid-template-columns: auto 1fr; gap: .35rem 1rem; margin: .6rem 0 0; }
 .facts dt { color: var(--ink-faint); font-size: .88rem; }
 .facts dd { margin: 0; font-size: .95rem; overflow-wrap: anywhere; }
