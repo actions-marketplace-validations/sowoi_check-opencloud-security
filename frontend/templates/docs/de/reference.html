@@ -217,6 +217,58 @@ seiner Spalte <code>GRADE</code> steht stattdessen der Nagios-Status (<code>UNKN
 <p>Dieses Format ist für Menschen. Für Maschinen gibt es
 <a href="#machine-readable-output-for-ci-jsonsarifjunit"><code>json</code>, <code>sarif</code> oder <code>junit</code></a>
 mit denselben Befunden in auswertbarer Form.</p>
+<h3 id="ci-policy-mode">CI-Richtlinienmodus</h3>
+<p><code>-w</code>/<code>-c</code> und <code>--profile</code> beurteilen eine Instanz anhand ihrer <strong>Note</strong>, also
+anhand einer einzigen Zahl, die für alles Gemessene einsteht. Für ein
+Monitoring-System ist das die richtige Form und für ein Deployment-Tor die
+falsche: Wenn dein Team erzwungenes HTTPS und keine Demo-Konten verlangt,
+lässt sich das nicht als Note ausdrücken.</p>
+<p><code>--policy</code> verweist auf eine Datei, die das ausdrücklich festhält:</p>
+<pre><code class="language-yaml">minimum_rating: 4
+required_hardenings:
+  - httpsEnforced
+  - corsOriginRestricted
+forbidden:
+  - demoUsersDisabled
+</code></pre>
+<pre><code class="language-shell">check-opencloud-security --host opencloud.example.com --policy policy.yml
+</code></pre>
+<pre><code class="language-text">CRITICAL: 2 policy violation(s) - required hardening 'httpsEnforced' is not in place (+1 more)
+OpenCloud 7.2.4 on opencloud.example.com, rating: A, last scanned: ...
+Policy violations (2):
+  - required hardening 'httpsEnforced' is not in place
+  - forbidden finding 'demoUsersDisabled' is present
+</code></pre>
+<p>Alle drei Schlüssel sind optional: <code>minimum_rating</code> ist eine Untergrenze für
+die Note von <code>0</code> (F) bis <code>5</code> (A+), <code>required_hardenings</code> nennt Maßnahmen, die
+vorhanden sein müssen, und <code>forbidden</code> nennt Befund-IDs, die nicht auftreten
+dürfen - eine fehlende Härtung, eine fehlgeschlagene Prüfung oder eine
+Schwachstellen-ID.</p>
+<p>Die Bezeichner sind dieselben, die der Scan selbst meldet; <code>--format json</code>
+listet sie für eine Instanz auf und <code>--debug</code> erklärt jeden einzelnen. <code>.json</code>
+wird als JSON gelesen, alles andere als YAML, und
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/config/policy.example.yml"><code>config/policy.example.yml</code></a> ist ein
+kommentierter Ausgangspunkt.</p>
+<p>Ein Verstoß ist <strong>CRITICAL</strong>, denn es bringt wenig, eine Pipeline mit einem
+Status scheitern zu lassen, den sie womöglich toleriert. Eine Richtlinie macht
+ein Urteil nur schlechter, nie besser: Eine Instanz, die alle Anforderungen
+erfüllt, behält das Urteil, das Schwellwerte, Härtung, Lebenszyklus und
+Referenzaufnahme bereits gefällt haben, und in der Ausgabe steht
+<code>Policy: every requirement met</code>. Webhook-Payload und <code>--format json</code> führen
+dasselbe Urteil unter <code>policy</code>.</p>
+<p>Zwei Regeln solltest du kennen, bevor du eine Richtlinie schreibst:</p>
+<ul>
+<li><strong>Ein Waiver entschuldigt keine Anforderung.</strong> <code>--ignore-hardening</code> und
+  <code>--waive-until</code> sind der Betrieb vor Ort, der einen Befund akzeptiert; eine
+  Richtlinie ist die Organisation, die sagt, dass er nicht akzeptiert werden
+  darf. Könnte ein Waiver eine geforderte Maßnahme stummschalten, würde eine
+  Richtlinie nichts Durchsetzbares beschreiben.</li>
+<li><strong>Ein Tippfehler ist ein Nutzungsfehler, kein stilles Durchwinken.</strong> Ein
+  unbekannter Schlüssel, eine Note außerhalb von <code>0</code>-<code>5</code> oder eine Maßnahme,
+  die der Katalog nicht kennt, beenden den Lauf mit <code>UNKNOWN</code> samt Begründung.
+  Eine Richtlinie existiert, um Deployments scheitern zu lassen - eine Regel,
+  die stillschweigend nichts verlangt, wäre das schlechtestmögliche Ergebnis.</li>
+</ul>
 <h3 id="prometheus-kubernetes-integration">Prometheus und Kubernetes</h3>
 <p><code>--format=prometheus</code> erzeugt eine einmalige Textausgabe. Der Exporter stellt
 <code>/metrics</code> bereit und aktualisiert Ziele beim ersten Abruf sowie danach gemäß

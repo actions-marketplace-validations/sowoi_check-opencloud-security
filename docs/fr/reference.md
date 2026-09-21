@@ -229,6 +229,70 @@ Ce format est fait pour des personnes. Pour une machine, utilisez
 [`json`, `sarif` ou `junit`](#machine-readable-output-for-ci-jsonsarifjunit),
 qui portent les mêmes constats sous une forme analysable.
 
+## Mode politique CI {#ci-policy-mode}
+
+`-w`/`-c` et `--profile` jugent une instance sur sa **note**, un seul nombre
+qui tient lieu de tout ce que le scan a mesuré. C'est la bonne forme pour un
+système de supervision et la mauvaise pour une barrière de déploiement : une
+équipe qui exige HTTPS imposé et aucun compte de démonstration ne peut pas
+exprimer cela sous forme de note.
+
+`--policy` désigne un fichier qui l'énonce explicitement :
+
+```yaml
+minimum_rating: 4
+required_hardenings:
+  - httpsEnforced
+  - corsOriginRestricted
+forbidden:
+  - demoUsersDisabled
+```
+
+```shell
+check-opencloud-security --host opencloud.example.com --policy policy.yml
+```
+
+```text
+CRITICAL: 2 policy violation(s) - required hardening 'httpsEnforced' is not in place (+1 more)
+OpenCloud 7.2.4 on opencloud.example.com, rating: A, last scanned: ...
+Policy violations (2):
+  - required hardening 'httpsEnforced' is not in place
+  - forbidden finding 'demoUsersDisabled' is present
+```
+
+Les trois clés sont facultatives : `minimum_rating` est un plancher sous la
+note, de `0` (F) à `5` (A+), `required_hardenings` nomme les mesures qui
+doivent être en place, et `forbidden` nomme les identifiants de constats qui
+ne doivent pas être présents - une protection manquante, une vérification en
+échec ou un identifiant de vulnérabilité.
+
+Les identifiants sont ceux que le scan lui-même rapporte ; `--format json` les
+liste pour une instance et `--debug` explique chacun d'eux. Un fichier `.json`
+est lu comme du JSON, tout le reste comme du YAML, et
+[`config/policy.example.yml`](../../config/policy.example.yml) est un point de
+départ commenté.
+
+Une violation est **CRITICAL**, car il ne sert pas à grand-chose de faire
+échouer un pipeline avec un état qu'il est peut-être configuré pour tolérer.
+Une politique ne fait jamais qu'aggraver un verdict : une instance qui
+satisfait toutes les exigences conserve celui que les seuils, la protection,
+le cycle de vie et la référence ont déjà rendu, et la sortie indique
+`Policy: every requirement met`. La charge utile du webhook et `--format json`
+portent le même verdict sous `policy`.
+
+Deux règles méritent d'être connues avant d'en écrire une :
+
+* **Une dérogation n'excuse pas une exigence.** `--ignore-hardening` et
+  `--waive-until` sont l'exploitant local qui accepte un constat ; une
+  politique est l'organisation qui dit qu'il ne peut pas être accepté. Si une
+  dérogation pouvait faire taire une mesure exigée, une politique ne
+  décrirait rien d'applicable.
+* **Une faute de frappe est une erreur d'utilisation, pas un succès
+  silencieux.** Une clé inconnue, une note hors de `0`-`5` ou une mesure que
+  le catalogue ignore terminent l'exécution en `UNKNOWN` avec la raison. Une
+  politique existe pour faire échouer des déploiements : une règle qui
+  n'exige silencieusement rien serait le pire résultat possible.
+
 # Prometheus & Kubernetes integration
 
 `--format=prometheus` produces a one-shot text payload; the built-in exporter

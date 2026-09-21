@@ -277,6 +277,57 @@ lleva el estado de Nagios (<code>UNKNOWN</code>).</p>
 <p>Este formato es para personas. Para una máquina usa
 <a href="#machine-readable-output-for-ci-jsonsarifjunit"><code>json</code>, <code>sarif</code> o <code>junit</code></a>,
 que llevan los mismos hallazgos en una forma analizable.</p>
+<h3 id="ci-policy-mode">Modo de política de CI</h3>
+<p><code>-w</code>/<code>-c</code> y <code>--profile</code> juzgan una instancia por su <strong>nota</strong>, un único número
+que representa todo lo que el escaneo midió. Esa es la forma correcta para un
+sistema de monitorización y la equivocada para una barrera de despliegue: un
+equipo que exige HTTPS forzado y ningún usuario de demostración no puede
+expresarlo como una nota.</p>
+<p><code>--policy</code> apunta a un archivo que lo dice explícitamente:</p>
+<pre><code class="language-yaml">minimum_rating: 4
+required_hardenings:
+  - httpsEnforced
+  - corsOriginRestricted
+forbidden:
+  - demoUsersDisabled
+</code></pre>
+<pre><code class="language-shell">check-opencloud-security --host opencloud.example.com --policy policy.yml
+</code></pre>
+<pre><code class="language-text">CRITICAL: 2 policy violation(s) - required hardening 'httpsEnforced' is not in place (+1 more)
+OpenCloud 7.2.4 on opencloud.example.com, rating: A, last scanned: ...
+Policy violations (2):
+  - required hardening 'httpsEnforced' is not in place
+  - forbidden finding 'demoUsersDisabled' is present
+</code></pre>
+<p>Las tres claves son opcionales: <code>minimum_rating</code> es un mínimo para la nota, de
+<code>0</code> (F) a <code>5</code> (A+), <code>required_hardenings</code> nombra las medidas que deben estar
+en su sitio y <code>forbidden</code> nombra los identificadores de hallazgos que no deben
+estar presentes: una protección ausente, una comprobación fallida o un
+identificador de vulnerabilidad.</p>
+<p>Los identificadores son los que el propio escaneo informa; <code>--format json</code> los
+enumera para una instancia y <code>--debug</code> explica cada uno. Un archivo <code>.json</code> se
+lee como JSON y cualquier otro como YAML, y
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/config/policy.example.yml"><code>config/policy.example.yml</code></a> es un punto de
+partida comentado.</p>
+<p>Una infracción es <strong>CRITICAL</strong>, porque de poco sirve hacer fallar una
+canalización con un estado que quizá esté configurada para tolerar. Una
+política solo empeora un veredicto, nunca lo mejora: una instancia que cumple
+todos los requisitos conserva el que ya decidieron los umbrales, la
+protección, el ciclo de vida y la referencia, y la salida indica
+<code>Policy: every requirement met</code>. La carga del webhook y <code>--format json</code>
+llevan el mismo veredicto bajo <code>policy</code>.</p>
+<p>Conviene conocer dos reglas antes de escribir una:</p>
+<ul>
+<li><strong>Una exención no disculpa un requisito.</strong> <code>--ignore-hardening</code> y
+  <code>--waive-until</code> son el operador local aceptando un hallazgo; una política es
+  la organización diciendo que no puede aceptarse. Si una exención pudiera
+  silenciar una medida exigida, una política no describiría nada exigible.</li>
+<li><strong>Una errata es un error de uso, no una aprobación silenciosa.</strong> Una clave
+  desconocida, una nota fuera de <code>0</code>-<code>5</code> o una medida que el catálogo no
+  conoce terminan la ejecución en <code>UNKNOWN</code> con el motivo. Una política existe
+  para hacer fallar despliegues: una regla que en silencio no exige nada sería
+  el peor resultado posible.</li>
+</ul>
 <h3 id="prometheus-kubernetes-integration">Integración con Prometheus y Kubernetes</h3>
 <p><code>--format=prometheus</code> produce una carga de texto de una sola ejecución; el
 exportador incorporado sirve <code>/metrics</code> para monitorización por consulta,

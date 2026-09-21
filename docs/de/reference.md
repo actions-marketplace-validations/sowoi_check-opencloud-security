@@ -192,6 +192,70 @@ Dieses Format ist für Menschen. Für Maschinen gibt es
 [`json`, `sarif` oder `junit`](#machine-readable-output-for-ci-jsonsarifjunit)
 mit denselben Befunden in auswertbarer Form.
 
+## CI-Richtlinienmodus {#ci-policy-mode}
+
+`-w`/`-c` und `--profile` beurteilen eine Instanz anhand ihrer **Note**, also
+anhand einer einzigen Zahl, die für alles Gemessene einsteht. Für ein
+Monitoring-System ist das die richtige Form und für ein Deployment-Tor die
+falsche: Wenn dein Team erzwungenes HTTPS und keine Demo-Konten verlangt,
+lässt sich das nicht als Note ausdrücken.
+
+`--policy` verweist auf eine Datei, die das ausdrücklich festhält:
+
+```yaml
+minimum_rating: 4
+required_hardenings:
+  - httpsEnforced
+  - corsOriginRestricted
+forbidden:
+  - demoUsersDisabled
+```
+
+```shell
+check-opencloud-security --host opencloud.example.com --policy policy.yml
+```
+
+```text
+CRITICAL: 2 policy violation(s) - required hardening 'httpsEnforced' is not in place (+1 more)
+OpenCloud 7.2.4 on opencloud.example.com, rating: A, last scanned: ...
+Policy violations (2):
+  - required hardening 'httpsEnforced' is not in place
+  - forbidden finding 'demoUsersDisabled' is present
+```
+
+Alle drei Schlüssel sind optional: `minimum_rating` ist eine Untergrenze für
+die Note von `0` (F) bis `5` (A+), `required_hardenings` nennt Maßnahmen, die
+vorhanden sein müssen, und `forbidden` nennt Befund-IDs, die nicht auftreten
+dürfen - eine fehlende Härtung, eine fehlgeschlagene Prüfung oder eine
+Schwachstellen-ID.
+
+Die Bezeichner sind dieselben, die der Scan selbst meldet; `--format json`
+listet sie für eine Instanz auf und `--debug` erklärt jeden einzelnen. `.json`
+wird als JSON gelesen, alles andere als YAML, und
+[`config/policy.example.yml`](../../config/policy.example.yml) ist ein
+kommentierter Ausgangspunkt.
+
+Ein Verstoß ist **CRITICAL**, denn es bringt wenig, eine Pipeline mit einem
+Status scheitern zu lassen, den sie womöglich toleriert. Eine Richtlinie macht
+ein Urteil nur schlechter, nie besser: Eine Instanz, die alle Anforderungen
+erfüllt, behält das Urteil, das Schwellwerte, Härtung, Lebenszyklus und
+Referenzaufnahme bereits gefällt haben, und in der Ausgabe steht
+`Policy: every requirement met`. Webhook-Payload und `--format json` führen
+dasselbe Urteil unter `policy`.
+
+Zwei Regeln solltest du kennen, bevor du eine Richtlinie schreibst:
+
+* **Ein Waiver entschuldigt keine Anforderung.** `--ignore-hardening` und
+  `--waive-until` sind der Betrieb vor Ort, der einen Befund akzeptiert; eine
+  Richtlinie ist die Organisation, die sagt, dass er nicht akzeptiert werden
+  darf. Könnte ein Waiver eine geforderte Maßnahme stummschalten, würde eine
+  Richtlinie nichts Durchsetzbares beschreiben.
+* **Ein Tippfehler ist ein Nutzungsfehler, kein stilles Durchwinken.** Ein
+  unbekannter Schlüssel, eine Note außerhalb von `0`-`5` oder eine Maßnahme,
+  die der Katalog nicht kennt, beenden den Lauf mit `UNKNOWN` samt Begründung.
+  Eine Richtlinie existiert, um Deployments scheitern zu lassen - eine Regel,
+  die stillschweigend nichts verlangt, wäre das schlechtestmögliche Ergebnis.
+
 ## Prometheus und Kubernetes {#prometheus-kubernetes-integration}
 
 `--format=prometheus` erzeugt eine einmalige Textausgabe. Der Exporter stellt

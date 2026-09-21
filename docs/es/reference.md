@@ -245,6 +245,69 @@ Este formato es para personas. Para una máquina usa
 [`json`, `sarif` o `junit`](#machine-readable-output-for-ci-jsonsarifjunit),
 que llevan los mismos hallazgos en una forma analizable.
 
+## Modo de política de CI {#ci-policy-mode}
+
+`-w`/`-c` y `--profile` juzgan una instancia por su **nota**, un único número
+que representa todo lo que el escaneo midió. Esa es la forma correcta para un
+sistema de monitorización y la equivocada para una barrera de despliegue: un
+equipo que exige HTTPS forzado y ningún usuario de demostración no puede
+expresarlo como una nota.
+
+`--policy` apunta a un archivo que lo dice explícitamente:
+
+```yaml
+minimum_rating: 4
+required_hardenings:
+  - httpsEnforced
+  - corsOriginRestricted
+forbidden:
+  - demoUsersDisabled
+```
+
+```shell
+check-opencloud-security --host opencloud.example.com --policy policy.yml
+```
+
+```text
+CRITICAL: 2 policy violation(s) - required hardening 'httpsEnforced' is not in place (+1 more)
+OpenCloud 7.2.4 on opencloud.example.com, rating: A, last scanned: ...
+Policy violations (2):
+  - required hardening 'httpsEnforced' is not in place
+  - forbidden finding 'demoUsersDisabled' is present
+```
+
+Las tres claves son opcionales: `minimum_rating` es un mínimo para la nota, de
+`0` (F) a `5` (A+), `required_hardenings` nombra las medidas que deben estar
+en su sitio y `forbidden` nombra los identificadores de hallazgos que no deben
+estar presentes: una protección ausente, una comprobación fallida o un
+identificador de vulnerabilidad.
+
+Los identificadores son los que el propio escaneo informa; `--format json` los
+enumera para una instancia y `--debug` explica cada uno. Un archivo `.json` se
+lee como JSON y cualquier otro como YAML, y
+[`config/policy.example.yml`](../../config/policy.example.yml) es un punto de
+partida comentado.
+
+Una infracción es **CRITICAL**, porque de poco sirve hacer fallar una
+canalización con un estado que quizá esté configurada para tolerar. Una
+política solo empeora un veredicto, nunca lo mejora: una instancia que cumple
+todos los requisitos conserva el que ya decidieron los umbrales, la
+protección, el ciclo de vida y la referencia, y la salida indica
+`Policy: every requirement met`. La carga del webhook y `--format json`
+llevan el mismo veredicto bajo `policy`.
+
+Conviene conocer dos reglas antes de escribir una:
+
+* **Una exención no disculpa un requisito.** `--ignore-hardening` y
+  `--waive-until` son el operador local aceptando un hallazgo; una política es
+  la organización diciendo que no puede aceptarse. Si una exención pudiera
+  silenciar una medida exigida, una política no describiría nada exigible.
+* **Una errata es un error de uso, no una aprobación silenciosa.** Una clave
+  desconocida, una nota fuera de `0`-`5` o una medida que el catálogo no
+  conoce terminan la ejecución en `UNKNOWN` con el motivo. Una política existe
+  para hacer fallar despliegues: una regla que en silencio no exige nada sería
+  el peor resultado posible.
+
 ## Integración con Prometheus y Kubernetes {#prometheus-kubernetes-integration}
 
 `--format=prometheus` produce una carga de texto de una sola ejecución; el
