@@ -12,6 +12,8 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+## [1.29.1] - 2026-09-21
+
 ### Changed
 
 - **The `--policy` deployment gate is now covered by tests mutation testing
