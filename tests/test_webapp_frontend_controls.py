@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import asyncio
 import re
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 
@@ -104,7 +105,9 @@ def test_a_counter_is_pressable_exactly_when_it_has_findings_behind_it():
     counters = _counters(page)
 
     for severity, markup in counters.items():
-        count = int(re.search(r"<strong>(\d+)</strong>", markup).group(1))
+        shown = re.search(r"<strong>(\d+)</strong>", markup)
+        assert shown is not None, severity
+        count = int(shown.group(1))
         disabled = "disabled" in markup
         assert disabled == (count == 0), (
             f"the {severity} counter counts {count} and "
@@ -182,6 +185,35 @@ def test_the_scheme_switch_is_offered_with_a_name_and_no_inline_handler():
     assert "aria-label=" in button
     assert "onclick" not in button
     assert "style=" not in button
+
+
+def test_the_scheme_switch_still_switches_where_nothing_can_be_stored():
+    """Otherwise the button works once and then looks broken.
+
+    `apply` writes the chosen scheme to the document and to localStorage, and
+    it promises in as many words that a browser refusing the write still
+    honours the press. But the press after that asked *storage* what was on
+    screen, got nothing, and fell back to the system's scheme - the one the
+    first press had just moved away from - so it computed the same scheme
+    again and the page did not change. Private windows and blocked site data
+    are exactly where that happens.
+    """
+    source = (
+        Path(__file__).resolve().parents[1]
+        / "frontend" / "static" / "js" / "theme-toggle.js"
+    ).read_text(encoding="utf-8")
+    current = source[
+        source.index("function current()") : source.index("function paintBrowserChrome")
+    ]
+
+    # The scheme the document is in is read, and read before the two that can
+    # disagree with it.
+    assert 'root.getAttribute("data-theme")' in source
+    assert current.index("applied()") < current.index("stored()")
+    assert current.index("stored()") < current.index("night")
+    # And the press is still what writes both, so the attribute stays true.
+    press = source[source.index("function apply(") :]
+    assert 'root.setAttribute("data-theme", theme)' in press
 
 
 def test_both_theme_colour_tags_can_be_repointed_at_the_chosen_scheme():
@@ -284,3 +316,76 @@ def test_the_progress_card_times_the_wait_without_interrupting_the_reader():
     assert 'aria-live="off"' in elapsed
     # The estimate does not depend on the script having run.
     assert "progress-timing" in page
+
+
+# ------------------------------------------------------- the remembered settings
+
+
+def _remember_offer(page: str) -> str:
+    start = page.index("data-remember ")
+    return page[page.rindex("<p", 0, start) : page.index("</p>", start)]
+
+
+def test_the_last_settings_are_offered_by_a_line_hidden_until_its_script_fills_it():
+    """Without the script nothing is remembered, so nothing may be offered."""
+    page = _landing()
+    offer = _remember_offer(page)
+
+    assert "hidden" in offer[: offer.index(">")]
+    for placeholder in ("{track}", "{format}", "{waivers}", "{count}"):
+        assert placeholder in offer, "the sentences are the server's"
+    assert "data-remember-apply" in offer and "data-remember-forget" in offer
+    assert '<script src="/static/js/remember.js" defer></script>' in page
+
+
+def test_the_remembered_settings_add_no_inline_script_handler_or_style():
+    """The CSP drops anything inline, and the buttons would silently do nothing."""
+    offer = _remember_offer(_landing())
+
+    assert "onclick" not in offer.lower()
+    assert "style=" not in offer
+    assert "<script" not in offer.lower()
+
+
+def test_the_address_is_never_among_the_remembered_settings():
+    """The instance scanned is the browser's to remember on the visitor's terms, not a second copy."""
+    source = (
+        Path(__file__).resolve().parents[1] / "frontend" / "static" / "js" / "remember.js"
+    ).read_text()
+    stored = source[source.index("function current()") : source.index("function load()")]
+
+    assert "target_url" not in stored
+    assert "track:" in stored and "waivers:" in stored
+    # Offered, never applied unasked: the only assignments sit behind the click.
+    before_click = source[: source.index('apply.addEventListener("click"')]
+    assert "track.value =" not in before_click
+    assert ".checked =" not in before_click
+
+
+#: Properties of an HTML form that a control of the same name replaces when a
+#: script reads them. `form.action` naming an input sent a POST to
+#: `/[object HTMLInputElement]`; `form.submit` naming one makes `form.submit()`
+#: throw.
+_FORM_PROPERTIES = (
+    "action", "method", "submit", "reset", "target", "elements", "length",
+    "enctype", "encoding", "acceptCharset", "noValidate", "id", "className",
+)
+
+
+def test_no_template_names_a_control_after_a_form_property_it_would_shadow():
+    """A field called `action` or `submit` silently breaks the script driving its form."""
+    templates = Path(__file__).resolve().parents[1] / "frontend" / "templates"
+    offending = [
+        f"{path.relative_to(templates)}: name={name!r}"
+        for path in sorted(templates.rglob("*.html"))
+        for name in re.findall(
+            r'<(?:input|button|select|textarea)\b[^>]*\bname="([^"]+)"',
+            path.read_text(encoding="utf-8"),
+        )
+        if name in _FORM_PROPERTIES
+    ]
+
+    assert offending == []
+    # The pattern still sees the controls it is meant to judge.
+    admin = (templates / "admin.html").read_text(encoding="utf-8")
+    assert re.search(r'<input\b[^>]*\bname="source"', admin)

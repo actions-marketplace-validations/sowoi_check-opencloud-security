@@ -133,6 +133,17 @@ bug that fails closed harmed availability rather than security. Say which, in
 `declined_because`. Never publish an advisory - that is the maintainer's call,
 like the version bump. See `AGENTS.md`, "Security advisories".
 
+**A new Python dependency needs an approved record before it is used.** That
+covers `pyproject.toml` (dependencies, extras, groups, build requirements) and
+`uvx` tools in workflows. `security/dependencies/<name>.yml` justifies the
+package, names the tests that exercise it and holds a security review:
+vulnerabilities, maintenance, provenance, install time, network use, native
+code, transitive packages, license. `scripts/check_dependencies.py --check`
+fails without one and CI runs it. Draft the record as `proposed`. Only the
+maintainer sets `approved`, and `security/dependencies/grandfathered.txt`
+never gains a name. Prefer the standard library or an existing package. See
+`AGENTS.md`, "Adding a Python dependency", and ADR 0060.
+
 **The version has exactly one source: `pyproject.toml`.**
 `opencloud_local_scan.__version__` derives it (package metadata when installed,
 the file itself in a checkout) and the plugin imports that. Never write a
@@ -141,7 +152,8 @@ never bump the number: a bump landing on `main` publishes to PyPI.
 
 **Document every change in both `CHANGELOG.md` and `RELEASE.md` under the
 version declared in `pyproject.toml`.** Never invent or bump a version number;
-the user decides that number.
+the user decides that number. `python scripts/check_pull_request.py --base origin/main`
+checks both locally.
 
 **Some hardening findings can never be fixed.** Flags OpenCloud hardcodes are
 marked `actionable=False` in `hardening.py`: they stay in the result document
@@ -152,14 +164,24 @@ before adding a check for it.
 **Some findings are reported but never alerted on.** `setup.advisoryHeaders`
 (`Permissions-Policy`, the two Cross-Origin policies,
 `Cross-Origin-Embedder-Policy`) grades headers *no* OpenCloud sends, and
-`setup.advisoryChecks` (`securityTxtPublished`) does the same for what is not
-a header - in both cases the absence describes the software rather than the
-deployment. They are measured, explained by `--debug` and catalogued, but
-never reach the alert line, the `hardenings_missing` metric, the webhook, an
-exit code or the waiver list. See ADR 0028 and ADR 0034.
+`setup.advisoryChecks` (`securityTxtPublished`, `hstsPreloadEligible`) does
+the same for what is not a header - in both cases the absence describes the
+software rather than the deployment. They are measured, explained by
+`--debug` and catalogued, but never reach the alert line, the
+`hardenings_missing` metric, the webhook, an exit code or the waiver list. See
+ADR 0028, ADR 0034 and ADR 0037.
 
 **The scanner only ever uses safe methods** - `GET`, `HEAD`, `PROPFIND`,
 `TRACE`. A test asserts that set; nothing may widen it.
+
+**The scan probes only the origin it was pointed at**, which is what makes the
+web application's SSRF pinning meaningful. The collaboration-backend findings
+(`companionAdminConsole`, `companionEditorHttps`) are measured only where a
+proxy publishes that backend on the instance's own origin, and are absent -
+never passing - otherwise; never follow the editor host named inside the
+discovery document. The DNS lookups (`caa.py`, `dnssec.py`) query only the
+resolver in `/etc/resolv.conf`, never a public one. See ADR 0024, ADR 0036 and
+ADR 0038.
 
 **Never write a real hostname, IP address or token** into code, tests, fixtures,
 documentation or a commit message. `opencloud.example.com` is the placeholder
@@ -194,7 +216,16 @@ overwrite the compose files that ship in `docker/`, and reads an existing
 re-run edits a deployment. Asked for automatic
 updates, it adds Watchtower scoped by label to the stack's own containers and
 detects the Docker socket for the user running it - a rootless Docker serves
-it under `/run/user/<uid>`, not `/var/run`. Keep it independent of
+it under `/run/user/<uid>`, not `/var/run`. Switching on `/admin` or the
+sign-in on `/mcp` interactively makes the bundled Authentik the default at the
+provider question (only on that change; `--sign-in` alone adds no provider).
+Its colour is hand-written ANSI, never Rich or questionary, and never reaches
+a pipe, a test or a `NO_COLOR` terminal. It never prints a credential (masked
+on a re-run, typed without an echo), diffs only non-secret files and backs up
+whatever it replaces. Its version is stamped into the release download by
+`scripts/build_wizard_release.py` - the repository copy keeps
+`RELEASE_VERSION = ""` - and the documented download is
+`releases/latest/download`, never `main` (ADR 0049). Keep it independent of
 `opencloud_local_scan.wizard`, which sets up a monitoring check;
 `tests/test_docker_wizard.py` asserts both the split and the independence.
 
@@ -288,7 +319,8 @@ remove it, do not imply a partnership, and add it to any new user-facing page.
 **Search is a release artefact, never a runtime crawl.**
 `webapp/search.py` explicitly lists the public templates,
 `scripts/build_search_index.py` writes the English index and its German,
-Spanish and French overlays, and only the release workflow refreshes them.
+Spanish and French overlays, and only automation refreshes them: every pull
+request to `main` (`search-index.yml`, ADR 0050) and the release workflow.
 Never give the generator a store, API, result template, export, UUID or
 network input; scan results and submitted addresses must be structurally
 impossible to index.
@@ -301,9 +333,19 @@ carrying another catalogue. A validated `cos_locale` cookie wins over the
 weighted `Accept-Language` header, then English is the fallback. The language
 switch is a POST to `/language` and may return only to a validated local path.
 Keep OpenAPI, Arazzo, MCP, discovery documents and exports in English, and
-keep remote scan evidence verbatim. Generated guide bodies remain English
-under `lang="en"` with a localized notice and chrome. See
-[ADR 0020](../adr/0020-frontend-language-is-request-scoped.md).
+keep remote scan evidence verbatim. Public guide bodies have English, German,
+French and Spanish sources (`docs/`, `docs/de/`, `docs/fr/`, `docs/es/`), and
+adding or removing a guide updates all four; a locale without sources gets the
+English body under `lang="en"` with a localized notice. See
+[ADR 0020](../adr/0020-frontend-language-is-request-scoped.md) and
+[ADR 0063](../adr/0063-public-guides-have-spanish-sources.md).
+
+**German text addresses the reader informally, with "du".** Every German
+string - in `webapp/locales/de.py` and in the guides under `docs/de/` - uses
+`du`/`dein`/`dir` and informal imperatives (`Prüfe`, `Starte`), never
+`Sie`/`Ihr`/`Ihnen`. `tests/test_webapp_i18n.py` fails on a formal string in
+the catalogue or in a German guide. Spanish (formal "usted", in the catalogue
+and under `docs/es/`) and French keep their existing register.
 
 ## The agent-facing surfaces
 

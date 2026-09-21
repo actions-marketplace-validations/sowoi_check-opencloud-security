@@ -1,10 +1,10 @@
 # Webhook recipes
 
 The [webhook](../README.md#webhook-notifications) posts the plugin's own JSON
-document by default. That is deliberate: it carries the whole verdict, not a
-rendered sentence. `--webhook-format` can render it as Slack or Discord's own
-shape directly (see [below](#slack-mattermost-discord)); anything else still
-wants the generic document, and needs a few lines of translation in between.
+document by default, including the status and findings. Use `--webhook-format`
+to send Slack or Discord messages (see [below](#slack-mattermost-discord)),
+or push notifications for [ntfy or Gotify](#ntfy-and-gotify). For other
+receivers, use the generic document and adapt it to the format they expect.
 
 Two rules apply to every recipe here:
 
@@ -43,6 +43,8 @@ The fields most receivers care about, from
 | `eol` | Whether that release still receives security fixes |
 | `update.availableVersion` | What to upgrade to |
 | `failed_extra_checks`, `missing_hardenings` | The findings themselves |
+| `coverage` | How many checks reached a conclusion, and how many did not |
+| `configuration` | Digests of how the deployment is configured, for spotting drift |
 
 A scan that failed outright carries only `plugin`, `plugin_version`,
 `timestamp`, `host`, `status`, `exit_code` and `message`. Any receiver that
@@ -85,16 +87,31 @@ end-of-life release:
     "scheduleSource": "https://docs.opencloud.eu/docs/admin/resources/lifecycle/",
     "scheduleNote": null
   },
+  "eol_warning_days": 30,
+  "eol_warning": false,
+  "upgrade_path": null,
+  "upgrade_rehearsal": [],
   "vulnerability_count": 0,
   "vulnerabilities": [],
   "missing_hardenings": [],
   "failed_extra_checks": ["exposed:/opencloud.yaml"],
+  "coverage": {"evaluated": 84, "skipped": 6, "indeterminate": 2, "network_limited": 1, "total": 93, "summary": "84 checks evaluated, 6 skipped, 2 indeterminate, 1 network-limited"},
+  "configuration": {"digest": "9e3c4428...", "groups": {"tls": "1d0f4b77...:89a97538...", "headers": "b8e1a930...:cb25144c...", "sharing": "44c0ae51...:7b8a1ced...", "authentication": "0a7be2cc...:588d045f...", "proxy": "ff31c084...:b7db6daf..."}},
   "scan_backend": "local",
   "scan_uuid": "6a1d1bd0-...",
   "update": {"available": true, "version": "7.3.0", "availableVersion": "7.4.0", "releasedAt": "2026-08-03", "source": "feed", "error": null, "track": "rolling", "newestRelease": null},
   "duration_seconds": 1.234
 }
 ```
+
+`eol_warning_days` is the `--eol-warning` window the check ran with (`0` when
+off) and `eol_warning` whether this result is inside it. `upgrade_path` is the
+scan's `upgradePath` - which advisories the recommended release fixes and which
+it leaves open - or `null` when there is nothing to clear.
+`upgrade_rehearsal` lists every candidate release with what it `fixes`, leaves
+(`still_affected`) and `introduces`, whether it is `end_of_life`, and the
+`rating` it would reach with its `rating_label` letter - see
+[Rehearse every upgrade](release-lifecycle.md#rehearse-every-upgrade).
 
 `scan_backend` is always `"local"` - it records how the result was obtained,
 so a receiver that also handles payloads from scanners with a remote backend
@@ -156,16 +173,16 @@ def verify(raw_body: bytes, header: str, secret: str) -> bool:
 Use `hmac.compare_digest` rather than `==`; comparing hex digests with a
 short-circuiting comparison leaks how much of a guess was correct.
 
-In a Flask or FastAPI receiver, reach for the raw body rather than the parsed
-JSON - `await request.body()` in FastAPI, `request.get_data()` in Flask.
-Frameworks that only hand you a parsed object cannot verify this signature at
-all, and the honest fix is to read the body yourself before parsing.
+Read the raw body with `await request.body()` in FastAPI or
+`request.get_data()` in Flask. Signature verification requires the original
+bytes, so read the body before parsing it as JSON.
 
 Three things worth knowing:
 
-- **The signature covers whatever was sent**, including the chat-native
-  documents `--webhook-format slack` and `discord` produce. Slack and Discord
-  ignore the header; it is there for receivers that check it.
+- **The signature covers whatever was sent**, including the chat-native and
+  push documents `--webhook-format slack`, `discord`, `ntfy` and `gotify`
+  produce. Those services ignore the header; it is there for receivers that
+  check it.
 - **No signature header is sent when no secret is set.** A receiver that
   requires one should reject the request rather than treat a missing header
   as valid.
@@ -210,10 +227,10 @@ webhook:
 within the heartbeat interval, so a plugin that cannot run at all shows up as
 well.
 
-Uptime Kuma stores the JSON body it receives and shows it on the monitor, so
-the rating, the OpenCloud version and the reason for the state are visible in
-the heartbeat detail. To surface the state in the message column too, use the
-push URL's own query parameters alongside the webhook:
+A Push monitor records the status supplied through its own protocol. Do not rely on it
+to interpret the plugin’s generic JSON as an OpenCloud verdict. To report the measured
+state, map the plugin result to the Push URL’s `status` and `msg` parameters. These
+payload fields are useful when writing an adapter:
 
 | Field in the payload      | What it tells you in Uptime Kuma                         |
 |:--------------------------|:---------------------------------------------------------|
@@ -224,9 +241,8 @@ push URL's own query parameters alongside the webhook:
 | `update.availableVersion` | What to upgrade to                                       |
 | `duration_seconds`        | How long the scan took                                   |
 
-If you would rather have Uptime Kuma go down on *any* problem, keep
-`--webhook-on always` and add a keyword check on the JSON, or run a second
-Push monitor fed by a wrapper that only pushes when the plugin exits `0`:
+To mark any non-OK plugin result as down, use a wrapper that sends the appropriate Push
+status:
 
 ```shell
 check-opencloud-security --host opencloud.example.com \
@@ -234,8 +250,8 @@ check-opencloud-security --host opencloud.example.com \
   || curl -fsS 'https://kuma.example.com/api/push/<token>?status=down&msg=opencloud'
 ```
 
-The webhook route is the better one of the two: it pushes on every outcome and
-carries the detail, while the wrapper only carries up or down.
+Use the direct heartbeat to detect missing scheduled runs. Use the wrapper or a
+result-aware adapter when the monitor must also reflect the security check’s status.
 
 ## Slack, Mattermost, Discord
 
@@ -303,11 +319,47 @@ reachable from elsewhere is an open relay into your chat system.
 Discord accepts a compatible payload at `<webhook-url>/slack`. Mattermost
 accepts Slack's format directly.
 
-## ntfy
+## ntfy and Gotify
 
-ntfy takes a plain body plus headers, so `curl` in a wrapper is simpler than a
-webhook receiver. This shape also works for any "notify me if it fails"
-service:
+Both are built in, and neither needs an adapter:
+
+```shell
+check-opencloud-security --host opencloud.example.com \
+  --webhook-url https://ntfy.example.com/opencloud \
+  --webhook-format ntfy
+
+check-opencloud-security --host opencloud.example.com \
+  --webhook-url https://gotify.example.com/message \
+  --webhook-header 'X-Gotify-Key: ...' \
+  --webhook-format gotify
+```
+
+**For ntfy, give the topic URL.** ntfy reads a JSON publication only at its
+server root, taking the topic from the document rather than from the path, so
+the plugin reads the topic off the URL you configured and posts to the root of
+that same server. Scheme, host and port are untouched, so the address checked
+by the SSRF guard is the address posted to. A URL naming no topic is refused
+when the check starts, rather than 400-ing on every notification for the life
+of the configuration. This is the only format whose URL is rewritten, and only
+ever its path - see
+[ADR 0040](../adr/0040-a-push-format-may-rewrite-the-path-never-the-host.md).
+
+**For Gotify, keep the token out of the URL if you can.** `?token=...` works
+and is redacted in the plugin's own logs, but `--webhook-header 'X-Gotify-Key:
+...'` keeps it out of the URL entirely - and out of any proxy log between the
+two hosts. Either way, `--webhook-secret` still signs the body, so a receiver
+that verifies `X-COS-Signature` can do so here as it does everywhere else.
+
+Priorities follow the state: CRITICAL arrives at ntfy's `urgent` and Gotify's
+8, WARNING at `default` and 5, UNKNOWN at `high` and 5, and an OK - which only
+`--webhook-on always` ever sends - at the quietest value each service has, so
+a dead-man's switch does not buzz anybody nightly to say nothing is wrong.
+
+### Doing it in a wrapper instead
+
+Worth keeping if you want the plugin's full text rather than its summary, or a
+priority scheme of your own. This shape also works for any other "notify me if
+it fails" service:
 
 ```shell
 #!/bin/sh
@@ -379,3 +431,25 @@ point the webhook at something that echoes it, such as
 ---
 
 [Back to the documentation index](README.md) | [Back to the main README](../README.md)
+
+`coverage` is the scan's own account of what it managed to measure. Every
+check is in exactly one of `evaluated` (a conclusion, pass or fail),
+`skipped` (the scanner did not run it), `indeterminate` (it ran and could not
+tell) and `network_limited` (nothing answered in time, or there was no route
+- the gap a retry from elsewhere may close). It is `null` for a scan document
+that predates the coverage block, which is a report that does not say rather
+than a scan with no gaps. Nothing in it changes the status or the rating; the
+plugin prints the same numbers as a `Coverage:` line in its output.
+
+`configuration` is the scan's **configuration fingerprint**: one digest for
+the deployment as a whole, and one `scope:digest` string per group - `tls`,
+`headers`, `sharing`, `authentication`, `proxy`. Store them and compare them
+with the next notification: a group whose string differs was configured
+differently, even where the grade did not move. Nothing in it is the
+configuration itself - a content security policy, an issuer and a server
+banner all go in and only a hash comes out - so a receiver can keep these
+next to a ticket without publishing how the instance is set up. The `scope`
+half says which facts that group was able to look at, so two scans that
+probed differently compare as "not comparable" rather than as a change. It is
+`null` for a scan document that predates the block, and nothing in it changes
+the status or the rating.

@@ -1,3 +1,15 @@
+# The generated search indexes. They are a pure function of the templates, the
+# catalogues and the version, and they are also checked in, so two branches
+# that touch any of those conflict on the same lines with nothing for a person
+# to decide. The driver rebuilds the file instead of merging it - which is what
+# the pull request and release workflows would produce anyway (ADR 0050).
+# Register it once per clone: python scripts/setup_git_merge_drivers.py
+# See CONTRIBUTING.md, "Generated files and merge conflicts".
+frontend/static/search-index.json merge=search-index linguist-generated
+frontend/static/search-index.de.json merge=search-index linguist-generated
+frontend/static/search-index.es.json merge=search-index linguist-generated
+frontend/static/search-index.fr.json merge=search-index linguist-generated
+
 secrets/ export-ignore
 tests/ export-ignore
 scripts/ export-ignore
@@ -8,6 +20,7 @@ contrib/ export-ignore
 docker-compose.yml export-ignore
 .dockerignore export-ignore
 .github/ export-ignore
+.claude/ export-ignore
 .gitattributes export-ignore
 .gitignore export-ignore
 AGENTS.md export-ignore

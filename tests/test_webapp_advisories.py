@@ -133,7 +133,13 @@ class FakeAdvisoryFeed:
 
 def refresh_settings(**overrides: Any):
     """Web settings with the advisory refresh on, pointing at a test feed."""
-    options: dict[str, Any] = {"advisory_refresh": True, "schedule_refresh": False}
+    # The repository source is off unless a test turns it on: it would reach
+    # api.github.com from the suite otherwise.
+    options: dict[str, Any] = {
+        "advisory_refresh": True,
+        "schedule_refresh": False,
+        "advisory_repository_url": None,
+    }
     options.update(overrides)
     return settings(**options)
 

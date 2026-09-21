@@ -14,12 +14,13 @@ hour for Redis to do it.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
 pytest.importorskip("fastapi", reason="the web application extra is not installed")
 
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from webapp.app import create_app
@@ -30,16 +31,27 @@ MEMORY_URL = "memory://tests"
 
 
 def settings(**overrides: Any) -> WebSettings:
-    """Web settings for a test: no cooldown and no client limit unless asked."""
+    """Web settings for a test: no cooldown, client limit, daily cap or probe block unless asked."""
     defaults: dict[str, Any] = {
         "redis_url": MEMORY_URL,
         "ip_rate_limit": 0,
         "target_cooldown": 0,
+        "probe_limit": 0,
+        "daily_scan_limit": 0,
         "result_ttl": 3600,
         "public_base_url": "http://testserver",
+        # The advisory refresh's second source is api.github.com; tests stay offline.
+        "advisory_repository_url": None,
+        # The operator area's release check asks PyPI; tests stay offline.
+        "update_check": False,
     }
     defaults.update(overrides)
     return WebSettings(**defaults)
+
+
+def app_state(test_client: TestClient) -> Any:
+    """The application's ``state``; ``TestClient.app`` is typed as a bare ASGI app."""
+    return cast(FastAPI, test_client.app).state
 
 
 def client(**overrides: Any) -> TestClient:

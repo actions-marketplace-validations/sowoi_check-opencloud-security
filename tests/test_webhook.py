@@ -33,10 +33,13 @@ def posts(monkeypatch):
     class _Response:
         status_code = 200
 
+        def close(self):
+            pass
+
         def raise_for_status(self):
             pass
 
-    def _post(url, **kwargs):
+    def _post(self, url, **kwargs):
         # The plugin posts pre-serialised bytes (`data=`) rather than handing
         # requests an object, so that the bytes it signed are the bytes that go
         # out. Parse them back under "json" so a test can talk about the
@@ -47,7 +50,7 @@ def posts(monkeypatch):
         recorded.append((url, kwargs))
         return _Response()
 
-    monkeypatch.setattr(plugin.requests, "post", _post)
+    monkeypatch.setattr(plugin.requests.Session, "post", _post)
     return recorded
 
 
@@ -170,7 +173,7 @@ def test_webhook_failure_does_not_change_the_check_state(monkeypatch, capsys):
     def _boom(*args, **kwargs):
         raise requests.exceptions.ConnectionError("hook is down")
 
-    monkeypatch.setattr(plugin.requests, "post", _boom)
+    monkeypatch.setattr(plugin.requests.Session, "post", _boom)
 
     code = run(CRITICAL_RESULT, webhook_url="https://x/")
 
@@ -248,14 +251,17 @@ def test_private_webhooks_require_an_explicit_opt_out(monkeypatch):
     class _Response:
         status_code = 200
 
+        def close(self):
+            pass
+
         def raise_for_status(self):
             pass
 
-    monkeypatch.setattr(
-        plugin.requests,
-        "post",
-        lambda url, **kwargs: posted.append((url, kwargs)) or _Response(),
-    )
+    def post(self, url, **kwargs):
+        posted.append((url, kwargs))
+        return _Response()
+
+    monkeypatch.setattr(plugin.requests.Session, "post", post)
 
     sent = plugin._send_webhook(
         ScanContext(
@@ -280,6 +286,36 @@ def test_invalid_or_unresolvable_webhook_urls_are_blocked(monkeypatch, url):
     monkeypatch.setattr(plugin.socket, "getaddrinfo", _raise)
 
     assert plugin._is_safe_webhook_url(url) is False
+
+
+def test_an_unparsable_webhook_url_is_refused_rather_than_raising(posts, caplog):
+    """
+    A monitoring plugin answers with a state, never with a traceback.
+
+    An unclosed IPv6 literal is a URL `urlsplit` refuses, and the refusal used
+    to happen inside the log call that was explaining why the webhook was
+    blocked - so a typo in `--webhook-url` replaced the check result with a
+    stack trace. The delivery must fail, the URL must stay out of the log, and
+    the check must still say what it found.
+    """
+    caplog.set_level("DEBUG")
+    context = ScanContext(
+        host="cloud.example.com",
+        webhook_url="http://[::1/hook?token=secret",
+    )
+
+    assert plugin._send_webhook(context, {"status": "CRITICAL"}) is False
+    assert posts == []
+    assert "secret" not in caplog.text
+    # Redaction is total: every caller is a log call, so there is no URL it may
+    # answer with an exception.
+    assert plugin._redact_url("http://[::1/hook?token=secret") == "<redacted>"
+    # The negative half - a URL it can parse still names the host it went to,
+    # which is the whole point of logging it at all.
+    assert (
+        plugin._redact_url("https://hooks.example.com/x?token=secret")
+        == "https://hooks.example.com/<redacted>"
+    )
 
 
 def test_ipv6_private_address_is_blocked(monkeypatch):
@@ -358,12 +394,12 @@ def test_dns_rebinding_attack_is_prevented(monkeypatch, caplog):
         def raise_for_status(self):
             pass
 
-    def _post(url, **kwargs):
+    def _post(self, url, **kwargs):
         posted.append((url, kwargs))
         return _Response()
 
     monkeypatch.setattr(plugin.socket, "getaddrinfo", _getaddrinfo_rebinding)
-    monkeypatch.setattr(plugin.requests, "post", _post)
+    monkeypatch.setattr(plugin.requests.Session, "post", _post)
 
     sent = plugin._send_webhook(
         ScanContext(
@@ -395,15 +431,18 @@ def test_a_redirecting_receiver_is_never_followed(monkeypatch, caplog):
         # still a receiver that did not accept the payload.
         status_code = 302
 
+        def close(self):
+            pass
+
         def raise_for_status(self):  # a 3xx is not an error to requests
             pass
 
-    def _post(url, **kwargs):
+    def _post(self, url, **kwargs):
         posted.append((url, kwargs))
         return _Redirect()
 
     monkeypatch.setattr(plugin.socket, "getaddrinfo", _fake_getaddrinfo("93.184.216.34"))
-    monkeypatch.setattr(plugin.requests, "post", _post)
+    monkeypatch.setattr(plugin.requests.Session, "post", _post)
 
     sent = plugin._send_webhook(
         ScanContext(
@@ -435,10 +474,13 @@ def test_a_delivered_webhook_still_reports_success(monkeypatch):
     class _Ok:
         status_code = 200
 
+        def close(self):
+            pass
+
         def raise_for_status(self):
             pass
 
-    monkeypatch.setattr(plugin.requests, "post", lambda url, **kwargs: _Ok())
+    monkeypatch.setattr(plugin.requests.Session, "post", lambda self, url, **kwargs: _Ok())
 
     sent = plugin._send_webhook(
         ScanContext(host="cloud.example.com", webhook_url="https://hooks.example.com/x"),
@@ -713,3 +755,147 @@ def test_discord_digest_reports_ok_count_as_a_field():
     fields = {field["name"]: field["value"] for field in rendered["embeds"][0]["fields"]}
     assert fields["OK"] == "1 host(s)"
     assert "bad.example.com - CRITICAL" in fields
+
+
+# --- ntfy and Gotify ---
+def test_ntfy_format_publishes_to_the_server_root_with_the_topic_from_the_url(posts):
+    """
+    ntfy reads a JSON publication only at its root, taking the topic from the
+    document. The operator still configures the topic URL they already have.
+    """
+    run(
+        CRITICAL_RESULT,
+        webhook_url="https://ntfy.example.com/opencloud",
+        webhook_format="ntfy",
+    )
+
+    url, kwargs = posts[0]
+    assert url == "https://ntfy.example.com/"
+    body = kwargs["json"]
+    assert body["topic"] == "opencloud"
+    assert body["title"] == "cloud.example.com - CRITICAL"
+    assert body["priority"] == 5
+    assert body["tags"] == ["rotating_light"]
+
+
+def test_ntfy_topic_survives_a_reverse_proxy_prefix(posts):
+    """A topic never contains a slash, so the last segment is the topic."""
+    run(
+        CRITICAL_RESULT,
+        webhook_url="https://example.com/ntfy/opencloud",
+        webhook_format="ntfy",
+    )
+
+    url, kwargs = posts[0]
+    assert url == "https://example.com/"
+    assert kwargs["json"]["topic"] == "opencloud"
+
+
+def test_ntfy_priority_falls_with_the_severity(posts):
+    """An OK only --webhook-on always ever sends must not buzz like a CRITICAL."""
+    run(OK_RESULT, webhook_url="https://n/t", webhook_on="always", webhook_format="ntfy")
+
+    body = posts[0][1]["json"]
+    assert body["priority"] == 2
+    assert body["tags"] == ["white_check_mark"]
+
+
+def test_a_push_title_does_not_repeat_the_host_in_the_body(posts):
+    """
+    A phone shows the title above the body; the chat formats have no title
+    field and must carry the host inside the text instead.
+    """
+    run(CRITICAL_RESULT, webhook_url="https://n/t", webhook_format="ntfy")
+
+    body = posts[0][1]["json"]
+    assert body["title"].startswith("cloud.example.com")
+    assert not body["message"].startswith("cloud.example.com")
+    assert not body["message"].startswith("*cloud.example.com*")
+
+
+def test_gotify_format_posts_to_the_url_it_was_given(posts):
+    """Gotify takes the token from the URL or a header, so nothing is rewritten."""
+    run(
+        CRITICAL_RESULT,
+        webhook_url="https://gotify.example.com/message?token=abc",
+        webhook_format="gotify",
+    )
+
+    url, kwargs = posts[0]
+    assert url == "https://gotify.example.com/message?token=abc"
+    body = kwargs["json"]
+    assert set(body) == {"title", "message", "priority"}
+    assert body["title"] == "cloud.example.com - CRITICAL"
+    assert body["priority"] == 8
+
+
+def test_gotify_carries_no_credential_in_the_body(posts):
+    """The token belongs in the URL or the header, never in what is published."""
+    run(
+        CRITICAL_RESULT,
+        webhook_url="https://gotify.example.com/message?token=s3cret",
+        webhook_format="gotify",
+    )
+
+    assert "s3cret" not in json.dumps(posts[0][1]["json"])
+
+
+@pytest.mark.parametrize("fmt", ["ntfy", "gotify"])
+def test_a_push_digest_is_rendered_rather_than_falling_back_to_the_flat_document(fmt):
+    """
+    A digest with no formatter of its own would post the generic document,
+    which neither service can read - ntfy would reject it for having no topic.
+    """
+    payload = plugin._build_digest_webhook_payload(
+        [_host_payload("bad.example.com", "CRITICAL"), _host_payload("ok.example.com", "OK")]
+    )
+
+    rendered = plugin._WEBHOOK_DIGEST_FORMATTERS[fmt](payload)
+
+    assert rendered["title"] == "2 host(s) checked - CRITICAL"
+    assert "bad.example.com" in rendered["message"]
+    assert "ok.example.com" not in rendered["message"]
+    assert "1 host(s) OK, not shown" in rendered["message"]
+
+
+def test_a_push_digest_truncates_a_large_fleet():
+    """The same cap the chat digests use, for the same reason."""
+    payloads = [_host_payload(f"host{i}.example.com", "CRITICAL") for i in range(30)]
+    payload = plugin._build_digest_webhook_payload(payloads)
+
+    message = plugin._ntfy_digest_webhook_payload(payload)["message"]
+
+    assert "...and 10 more" in message
+    assert "host25.example.com" not in message
+
+
+def test_only_ntfy_has_its_url_rewritten(posts):
+    """Every other format posts exactly where the operator pointed it."""
+    for fmt in ("generic", "slack", "discord", "gotify"):
+        posts.clear()
+        run(CRITICAL_RESULT, webhook_url="https://hooks.example.com/x/y", webhook_format=fmt)
+        assert posts[0][0] == "https://hooks.example.com/x/y"
+
+
+def test_ntfy_without_a_topic_is_refused_before_the_first_scan(capsys):
+    """
+    A root URL names no destination, so ntfy would answer 400 on every
+    notification for the life of the configuration.
+    """
+    parser = plugin.build_arg_parser()
+    args = parser.parse_args(
+        ["--host", "cloud.example.com", "--webhook-url", "https://ntfy.example.com/",
+         "--webhook-format", "ntfy"]
+    )
+
+    with pytest.raises(SystemExit):
+        plugin._validate_thresholds(parser, args)
+
+    assert "needs --webhook-url to name a topic" in capsys.readouterr().err
+
+
+def test_deprecated_ipv6_site_local_addresses_are_blocked(monkeypatch):
+    """fec0::/10 is private space no `is_private` flag covers (RFC 3879)."""
+    for address in ("fec0::1", "feff:ffff::1"):
+        monkeypatch.setattr(plugin.socket, "getaddrinfo", _fake_getaddrinfo(address))
+        assert plugin._is_safe_webhook_url("https://hooks.example.com/x") is False

@@ -7,7 +7,7 @@ Run it with::
 
 One job per scan, ``max_jobs`` of them at a time, and that number comes from
 ``COS_WEB_MAX_WORKERS`` - never from a request. The scan itself is blocking
-(the scanner speaks ``requests``), so it goes to a thread and leaves the event
+(the scanner speaks ``requests``), so it goes to a child process and leaves the event
 loop free to keep the other jobs' status keys current.
 
 Logging here is lifecycle only: a uuid and a state. No target, no client, no
@@ -25,15 +25,18 @@ from typing import Any, ClassVar
 from opencloud_local_scan import ScanError
 
 from .advisories import refresh_advisories, stored_database
+from .blocklist import effective_exclusions
 from .catalog import sanitize_release_track
 from .encryption import ensure_encryption_ready
 from .queue import redis_settings
-from .redis_backend import RedisBackend, create_backend
-from .runner import execute_scan
+from .ratelimit import probe_policy, record_strike
+from .redis_backend import RedisBackend, RedisUnavailable, create_backend
+from .scan_process import execute_scan_process
 from .schedule import refresh_schedule, stored_schedule
 from .settings import WebSettings
-from .ssrf import TargetRejected, validate_target
+from .ssrf import TargetRejected, ensure_blocklist_ready, validate_target
 from .store import WORKER_HEARTBEAT_KEY, ScanStore
+from .updates import follow_update, restart_into
 
 LOGGER = logging.getLogger("check_opencloud.web.worker")
 HEARTBEAT_INTERVAL_SECONDS = 10
@@ -71,13 +74,22 @@ async def run_scan(ctx: dict[str, Any], uuid: str) -> str:
         return "expired"
 
     await store.mark_running(uuid)
+    # Taken now rather than when the scan ends, so the fingerprint is gone
+    # from the scan's namespace for however long the scan itself takes.
+    prober = await store.take_prober(uuid)
     LOGGER.info("scan_started %s", uuid)
 
     try:
+        # Read when the job starts rather than taken from startup: a target
+        # excluded in the operator's area while this job sat in the queue is
+        # refused here, which is what the area promises when it says a change
+        # takes effect immediately.
+        exclusions = await effective_exclusions(store.backend, settings)
         target = validate_target(
             str(record.metadata.get("target") or ""),
             allow_private=settings.allow_private_targets,
             allowed_hosts=settings.extra_hosts_allowed,
+            blocked_targets=exclusions,
         )
         ignore = tuple(str(name) for name in record.metadata.get("ignoreHardenings") or ())
         track = sanitize_release_track(record.metadata.get("releaseTrack"))
@@ -90,10 +102,14 @@ async def run_scan(ctx: dict[str, Any], uuid: str) -> str:
         # advisory published after this image was built is exactly the one a
         # visitor most needs to hear about.
         database = await stored_database(store.backend, settings)
-        result = await asyncio.wait_for(
-            asyncio.to_thread(
-                execute_scan, target, ignore, settings, track, schedule, database
-            ),
+        result = await execute_scan_process(
+            target,
+            ignore,
+            settings,
+            track,
+            schedule,
+            database,
+            exclusions,
             timeout=settings.job_timeout,
         )
     except TargetRejected as exc:
@@ -103,19 +119,62 @@ async def run_scan(ctx: dict[str, Any], uuid: str) -> str:
     except asyncio.TimeoutError:
         await store.mark_failed(uuid, "The instance took too long to answer.")
         LOGGER.info("scan_timeout %s", uuid)
+        await _count_non_opencloud(store, settings, prober, uuid)
         return "failed"
     except ScanError as exc:
         await store.mark_failed(uuid, str(exc))
         LOGGER.info("scan_failed %s", uuid)
+        await _count_non_opencloud(store, settings, prober, uuid)
         return "failed"
-    except Exception:  # pragma: no cover - defensive; a crash must not leak
+    except Exception:  # noqa: BLE001 - defensive; a crash must not leak  # pragma: no cover
         await store.mark_failed(uuid, "The scan could not be completed.")
-        LOGGER.exception("scan_error %s", uuid)
+        LOGGER.error("scan_error %s", uuid)
         return "failed"
 
     await store.mark_completed(uuid, result)
     LOGGER.info("scan_completed %s", uuid)
     return "completed"
+
+
+async def _count_non_opencloud(
+    store: ScanStore, settings: WebSettings, prober: str | None, uuid: str
+) -> None:
+    """
+    Hold a scan that found no OpenCloud against the client that asked for it.
+
+    Only a :class:`ScanError` or a timeout gets here - the scanner reached for
+    ``status.php`` and found nothing, something else, or silence. A target the
+    guard refused is not counted: that is this deployment's own list talking,
+    not a stranger's probe. A store that cannot count leaves the scan's
+    outcome as it was; the guard is a deterrent, and losing one strike is
+    better than losing the visitor's answer.
+    """
+    if not prober:
+        return
+    try:
+        outcome = await record_strike(store.backend, prober, probe_policy(settings))
+    except RedisUnavailable:  # pragma: no cover - defensive; see the docstring
+        LOGGER.info("probe_guard_unavailable %s", uuid)
+        return
+    if outcome.blocked:
+        LOGGER.info("probe_block_started %s", uuid)
+
+
+async def follow_operator_update(ctx: dict[str, Any]) -> str:
+    """
+    Switch to the release the operator's area installed (ADR 0070).
+
+    Every minute, and on every worker - unlike the refreshes, each container
+    has its own tmpfs and has to verify and unpack the bundle for itself.
+    A scan running at that moment is cut short; the area warns of that.
+    """
+    settings: WebSettings = ctx["web_settings"]
+    tree = await follow_update(ctx["backend"], settings)
+    if tree is None:
+        return "unchanged"
+    LOGGER.info("worker_update_restarting tree=%s", tree.name)
+    restart_into(tree)
+    return "restarting"  # pragma: no cover - restart_into does not return
 
 
 async def refresh_release_schedule(ctx: dict[str, Any]) -> str:
@@ -153,6 +212,10 @@ async def startup(ctx: dict[str, Any]) -> None:
     # the configuration out here meant COS_WEB_ENCRYPT_RESULTS encrypted
     # nothing at all while looking like it did.
     ensure_encryption_ready(settings)
+    # For the same reason: the worker re-checks the target itself, so a
+    # deployment whose exclusions the API refused to start on must not have a
+    # worker that came up happily and scanned them anyway.
+    ensure_blocklist_ready(settings.blocked_targets)
     ctx["store"] = ScanStore(
         backend=ctx["backend"],
         ttl=settings.result_ttl,
@@ -221,6 +284,16 @@ def reference_data_jobs(settings: WebSettings) -> list:
                 minute=41,
                 run_at_startup=True,
                 unique=True,
+                timeout=REFRESH_JOB_TIMEOUT_SECONDS,
+                max_tries=1,
+            )
+        )
+    if settings.admin_update_dir:
+        jobs.append(
+            cron(
+                follow_operator_update,
+                name="follow_operator_update",
+                second=5,
                 timeout=REFRESH_JOB_TIMEOUT_SECONDS,
                 max_tries=1,
             )

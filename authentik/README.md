@@ -9,7 +9,16 @@ first start, Authentik applies the blueprint and creates the provider without
 manual admin-interface setup. It uses `state: created`, so later changes made
 by an operator are not overwritten on restart.
 
-The blueprint contains no secrets. It reads the client ID, client secret,
+`blueprints/opencloud-admin.yaml` provisions the proxy provider in front of
+`/admin`. `blueprints/opencloud-mfa.yaml` requires every account to enrol and
+use a second factor (TOTP or WebAuthn) when it signs in, and is re-applied so
+the requirement stays on. `blueprints/opencloud-enrollment.yaml` provides the
+invitation-only enrollment flow the Docker setup wizard prints a link to: a
+listed username chooses a password and enrols a second factor, with nothing
+created in the admin interface. Without `COS_AUTHENTIK_ENROLLMENT_TOKEN` it
+creates no invitation.
+
+The blueprints contain no secrets. They read the client ID, client secret,
 redirect URI, and application slug from environment variables written to
 `docker/.env` by `docker/authentik-env.sh`. Keep that `.env` file private and
 do not put its values in this directory or commit them.

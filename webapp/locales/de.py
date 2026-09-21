@@ -6,15 +6,131 @@ MESSAGES: dict[str, str] = {
     # ---------------------------------------------------------------- site
     # ------------------------------------------------ der Betriebsbereich
     "admin.title": "Betriebsbereich",
-    "admin.description": "Dienstzustand, Referenzdaten und das Audit-Protokoll.",
+    "admin.description": "Dienstzustand, Referenzdaten und das Audit-Log.",
     "admin.kicker": "Betrieb",
+    "admin.tabs.aria": "Betreiberbereich",
+    "admin.tabs.overview": "Überblick",
+    "admin.tabs.configuration": "Konfiguration",
+    "admin.tabs.rules": "Regeln",
+    "admin.config.title": "Konfiguration",
+    "admin.config.lede": "Alle COS_WEB_*-Variablen, die dieser Dienst liest, und ihre aktuell wirksamen Werte.",
+    "admin.config.scope": "Hier stehen die beim Start wirksamen Einstellungen dieses Webprozesses. OpenCloud und der Scan-Worker haben eine eigene Konfiguration. Bei Zugangsdaten wird nur angezeigt, ob sie gesetzt sind.",
+    "admin.config.source.environment": "Gesetzt",
+    "admin.config.source.default": "Standard",
+    "admin.config.secret.set": "Gesetzt (Wert verborgen)",
+    "admin.config.unset": "Nicht gesetzt",
+    "admin.config.default": "Dokumentierter Standard:",
+    "admin.config.unknown.kicker": "Schreibweise prüfen",
+    "admin.config.unknown.heading": "Variablen, die dieser Dienst nicht liest",
+    "admin.config.unknown.lede": "Diese Variablen beginnen mit COS_WEB_, gehören aber zu keiner bekannten Einstellung. Prüfe die Schreibweise: Bei einem Tippfehler gilt weiterhin der Standardwert. Die Werte dieser Variablen werden nicht angezeigt.",
+    "admin.config.group.storage": "Speicher und Worker",
+    "admin.config.group.scanning": "Ablauf eines Scans",
+    "admin.config.group.targets": "Was gescannt werden darf",
+    "admin.config.group.limits": "Ratenbegrenzung und Missbrauchsschutz",
+    "admin.config.group.approval": "Freigabe von Zielen",
+    "admin.config.group.network": "Öffentliche Adresse, Proxy und Indexierung",
+    "admin.config.group.reference": "Release- und Advisory-Daten",
+    "admin.config.group.interfaces": "API-Dokumentation und Agent-Endpunkt",
+    "admin.config.group.mcp_auth": "Anmeldung am Agent-Endpunkt",
+    "admin.config.group.admin": "Betreiberbereich",
+    "admin.config.group.audit": "Audit-Log",
+    "admin.config.group.protection": "Löschung, Signaturen und Verschlüsselung",
+    "admin.config.group.frontend": "Frontend",
+    "admin.rules.title": "Geltende Regeln",
+    "admin.rules.lede": "Wie eine Note entsteht und welche Regeln diese Bereitstellung für Anfragen durchsetzt – einschließlich der aktuell wirksamen Werte.",
+    "admin.rules.scope": "Die Übersicht zeigt die Einstellungen beim Start dieses Prozesses und die im Code festgelegten Regeln. Zieladressen und Angaben zu Besuchern werden hier nicht angezeigt.",
+    "admin.rules.on": "Aktiv",
+    "admin.rules.off": "Aus",
+    "admin.rules.variables": "Gesetzt über",
+    "admin.rules.rating.kicker": "Noten",
+    "admin.rules.rating.heading": "Wie eine Instanz bewertet wird",
+    "admin.rules.rating.lede": "Die Bewertung stammt vom Scanner selbst; dieser Dienst zeigt sie nur an. Diese Regeln gelten für jeden Scan hier.",
+    "admin.rules.rating.scale": "Die Skala",
+    "admin.rules.rating.caps": "Was eine fehlgeschlagene Prüfung mit der Note macht",
+    "admin.rules.rating.version.title": "Die Version bestimmt die Ausgangsnote",
+    "admin.rules.rating.version.body": "Die Ausgangsnote richtet sich nach dem Supportstatus der Release-Linie und den bekannten Schwachstellen der Version. Fehlgeschlagene Prüfungen können die Note verschlechtern.",
+    "admin.rules.rating.overrides.title": "Supportende und Release-Track",
+    "admin.rules.rating.shared.title": "Eine Obergrenze pro Schweregrad",
+    "admin.rules.rating.extra.title": "Zusatzprüfungen zählen zur Note",
+    "admin.rules.rating.extra.body": "Transportsicherheit, Header und die übrigen Zusatzprüfungen begrenzen die Note wie Härtungsprüfungen, statt nur im Bericht zu erscheinen.",
+    "admin.rules.rating.waivers.title": "Ausnahmen, die Besucher wählen können",
+    "admin.rules.rating.waivers.body": "{count} Härtungsprüfungen können im Formular ausgenommen werden. Eine ausgenommene Prüfung begrenzt die Note nicht mehr und bleibt markiert im Bericht; das Supportende lässt sich nicht ausnehmen.",
+    "admin.rules.rating.track.title": "Release-Track",
+    "admin.rules.rating.track.body": "Ohne Auswahl im Formular gilt der Track {track}. Der Track ändert, wie eine Version bewertet wird, nie wie intensiv die Instanz geprüft wird.",
+    "admin.rules.rating.reference.title": "Referenzdaten für die Bewertung",
+    "admin.rules.rating.reference.body": "{advisories} Sicherheitsmeldungen in der Datenbank; Release-Zeitplan vom {schedule}.",
+    "admin.rules.rating.more": "Die <a href=\"/grades\">Notenseite</a> erklärt Besuchern jede Note mit denselben Begriffen.",
+    "admin.rules.group.submissions": "Limits für Einreichungen",
+    "admin.rules.group.submissions.lede": "Wie oft ein Client fragen darf, und wie sich der Dienst unter Last verhält.",
+    "admin.rules.group.probe": "Scan-Sperre",
+    "admin.rules.group.probe.lede": "Grenzen für wiederholte Anfragen an Ziele, die sich nicht scannen lassen.",
+    "admin.rules.group.targets": "Was gescannt werden darf",
+    "admin.rules.group.targets.lede": "Geprüft, bevor irgendetwas eine Verbindung aufbaut, und erneut bei jeder Weiterleitung.",
+    "admin.rules.group.scanner": "Wie intensiv ein Host geprüft wird",
+    "admin.rules.group.scanner.lede": "Die Einstellungen, mit denen jeder Scan dieser Bereitstellung ausgeführt wird. Anfragen können sie nicht ändern.",
+    "admin.rules.group.operator": "Zugangsdaten und Betreiberaktionen",
+    "admin.rules.group.operator.lede": "Limits für Anfragen mit Zugangsdaten und für Aktionen im Betreiberbereich.",
+    "admin.rules.rule.client_limit.title": "Limit pro Client",
+    "admin.rules.rule.client_limit.body": "Höchstens {limit} Einreichungen pro Client alle {window}. Eine IPv4-Adresse ist ein Client; ein IPv6-Client ist sein /{ipv6}.",
+    "admin.rules.rule.daily_cap.title": "Tageslimit",
+    "admin.rules.rule.daily_cap.body": "Höchstens {limit} Einreichungen pro Client alle {window}, zusätzlich zum Limit pro Client.",
+    "admin.rules.rule.target_cooldown.title": "Abkühlzeit pro Ziel",
+    "admin.rules.rule.target_cooldown.body": "Dieselbe Instanz darf einmal alle {cooldown} gescannt werden, egal wer fragt.",
+    "admin.rules.rule.batch.title": "Stapelgröße",
+    "admin.rules.rule.batch.body": "Ein Stapel enthält höchstens {limit} Ziele, und jedes zählt gegen jedes Limit.",
+    "admin.rules.rule.queue.title": "Warteschlange bei hoher Auslastung",
+    "admin.rules.rule.queue.body": "{workers} Scans laufen gleichzeitig; weitere Einreichungen warten der Reihe nach und werden nie wegen Last abgelehnt.",
+    "admin.rules.rule.agent_wait.title": "Grenze automatischer Wiederholungen",
+    "admin.rules.rule.agent_wait.body": "MCP und die Workflows warten eine Retry-After-Zeit von bis zu {wait} selbst ab, höchstens {attempts} Mal. Bei längerer Wartezeit geht die Antwort an den Aufrufer zurück.",
+    "admin.rules.rule.probe_block.title": "Sperre nach wiederholten Verstößen",
+    "admin.rules.rule.probe_block.body": "{limit} Verstöße innerhalb von {window} sperren das Netz des Clients für {block}.",
+    "admin.rules.rule.probe_escalation.title": "Wiederholte Sperren werden länger",
+    "admin.rules.rule.probe_escalation.body": "Ein Netz, das innerhalb von {repeat} nach seiner letzten Sperre erneut gesperrt wird, wartet jedes Mal {factor}-mal länger: {steps}.",
+    "admin.rules.rule.probe_network.title": "Die Sperre gilt für ein Netz",
+    "admin.rules.rule.probe_network.body": "Eine Sperre gilt für das IPv4-/{ipv4} und das IPv6-/{ipv6} des Clients, damit die nächste Adresse sie nicht umgehen kann.",
+    "admin.rules.rule.strike_scans.title": "Ein Scan ohne OpenCloud ist ein Verstoß",
+    "admin.rules.rule.strike_scans.body": "status.php antwortete nicht, lieferte kein JSON, nannte ein anderes Produkt, oder die Zeit lief ab. Derselbe Host erneut ist ein weiterer Verstoß; ein abgeschlossener Scan nie.",
+    "admin.rules.rule.strike_refusals.title": "Ein abgelehntes Ziel ist ein Verstoß",
+    "admin.rules.rule.strike_refusals.body": "Eine Einreichung, die wegen ihres Ziels abgelehnt wird, zählt; ein Tippfehler oder ein nicht auflösbarer Name nicht:",
+    "admin.rules.refusal.blocked": "eine Adresse, die dieses Deployment ausschließt",
+    "admin.rules.refusal.internal": "ein lokaler oder interner Name",
+    "admin.rules.refusal.not_approved": "eine Instanz, die der Freigabemodus nicht freigegeben hat",
+    "admin.rules.refusal.private": "eine private, Loopback- oder Link-Local-Adresse",
+    "admin.rules.refusal.unstable": "ein Name, dessen Abfragen sich widersprechen",
+    "admin.rules.refusal.wildcard_dns": "ein Wildcard- oder Rebinding-DNS-Name",
+    "admin.rules.rule.private_addresses.title": "Nur öffentliche Adressen",
+    "admin.rules.rule.private_addresses.body": "Jede Adresse, auf die ein Name auflöst, muss öffentlich sein; eine private Antwort lehnt das Ziel ab. Über die privaten Bereiche hinaus werden auch diese abgelehnt:",
+    "admin.rules.rule.internal_names.title": "Lokale Namen und Metadaten-Endpunkte",
+    "admin.rules.rule.internal_names.body": "Nach Name wie nach Adresse abgelehnt:",
+    "admin.rules.rule.wildcard_dns.title": "Wildcard- und Rebinding-DNS-Namen",
+    "admin.rules.rule.wildcard_dns.body": "Namen unter diesen Diensten zeigen dorthin, wo ihre Schreibweise es sagt. Die Adresse dahinter lässt sich weiterhin direkt eingeben:",
+    "admin.rules.rule.dns_consistency.title": "Ein Name muss zweimal gleich auflösen",
+    "admin.rules.rule.dns_consistency.body": "Ein eingereichter Name wird zweimal abgefragt und abgelehnt, wenn die Antworten keine Adresse teilen; jede Adresse aus beiden wird geprüft.",
+    "admin.rules.rule.redirects.title": "Jede Weiterleitung wird geprüft",
+    "admin.rules.rule.redirects.body": "Eine Weiterleitung wird wie das eingereichte Ziel aufgelöst und geprüft, bevor ihr gefolgt wird. Der Scan stellt nur Verbindungen zu Adressen her, die die Prüfung bestanden haben.",
+    "admin.rules.rule.exclusions.title": "Ausschlüsse",
+    "admin.rules.rule.exclusions.body": "{count} ausgeschlossene Einträge aus der Umgebung und dem Tab „Übersicht“.",
+    "admin.rules.rule.allowed_hosts.title": "Vom Schutz ausgenommene Hosts",
+    "admin.rules.rule.allowed_hosts.body": "Diese Namen umgehen die Regeln für öffentliche Adressen. Ausschlüsse gelten weiterhin:",
+    "admin.rules.rule.approval.title": "Freigabemodus",
+    "admin.rules.rule.approval.body": "Nur freigegebene Instanzen werden gescannt; alles andere wird mit 403 abgelehnt. {count} gelistete Einträge; DNS-Freigabeeintrag: {record}.",
+    "admin.rules.rule.stop_when_not_opencloud.title": "Eine Anfrage für einen Host ohne OpenCloud",
+    "admin.rules.rule.stop_when_not_opencloud.body": "Eine Antwort von status.php, die nicht OpenCloud ist, beendet den Scan, ohne erneuten Versuch über unverifiziertes HTTPS oder einfaches HTTP.",
+    "admin.rules.rule.single_address.title": "Eine Adresse pro Scan",
+    "admin.rules.rule.single_address.body": "Ein Name mit mehreren Adressen wird auf einer davon gescannt, nie auf jedem Knoten eines Pools.",
+    "admin.rules.rule.no_port_scan.title": "Keine zusätzlichen Ports",
+    "admin.rules.rule.no_port_scan.body": "Nur der eingereichte Port wird kontaktiert; die Debug-Ports werden nicht geprüft.",
+    "admin.rules.rule.load.title": "Last pro Scan",
+    "admin.rules.rule.load.body": "Höchstens {concurrency} gleichzeitige Anfragen mit jeweils {timeout} Zeit; ein gesamter Scan wird nach {job} abgebrochen.",
+    "admin.rules.rule.purge_attempts.title": "Versuche mit dem Löschzugang",
+    "admin.rules.rule.purge_attempts.body": "{limit} falsche Zugangsdaten pro Client innerhalb von {window}, danach abgelehnt, bis das Fenster endet. Richtige werden nie gezählt.",
+    "admin.rules.rule.admin_refresh.title": "Aktualisierungsknöpfe",
+    "admin.rules.rule.admin_refresh.body": "Jede Aktualisierung der Referenzdaten kann einmal alle {cooldown} ausgelöst werden.",
+    "admin.docs.kicker": "Betreiberdokumentation",
+    "admin.docs.source": "Aus <code>{file}</code> im Repository, auf Englisch.",
     "admin.band": "Betriebsbereich - angemeldet als {user}",
     "admin.band.signout": "Abmelden",
-    "admin.lede": (
-        "Was diese Installation gerade tut, was sie weiß, und die beiden "
-        "Aktualisierungen, die der Worker sonst einmal täglich ausführt. Nichts "
-        "hier lässt sich zu einem einzelnen Scan befragen."
-    ),
+    "admin.lede": "Prüfe den Dienstzustand und die Referenzdaten oder starte die täglichen Aktualisierungen des Workers manuell.",
     "admin.noscript": (
         "Die Werte oben werden per JavaScript eingesetzt. Ohne JavaScript lade "
         "die Seite neu, um die aktuellen zu sehen; beide Schaltflächen "
@@ -22,11 +138,7 @@ MESSAGES: dict[str, str] = {
     ),
     "admin.state.kicker": "Jetzt",
     "admin.state.heading": "Dienstzustand",
-    "admin.state.lede": (
-        "Zählwerte und eingestellte Grenzen. Kein Ziel, keine UUID und keine "
-        "Client-Adresse steht hier, weil nichts davon dort liegt, wo diese "
-        "Ansicht lesen könnte."
-    ),
+    "admin.state.lede": "Aktuelle Zählerstände und konfigurierte Begrenzungen. Einzelne Scanergebnisse und Client-Adressen sind hier nicht abrufbar.",
     "admin.state.worker": "Worker",
     "admin.state.worker.up": "Läuft",
     "admin.state.worker.down": "Antwortet nicht",
@@ -38,6 +150,10 @@ MESSAGES: dict[str, str] = {
     "admin.state.ratelimit": "Ratenbegrenzung",
     "admin.state.ratelimit.value": "{limit} pro {window}s",
     "admin.state.cooldown.value": "{seconds}s pro Ziel",
+    "admin.state.guard": "Missbrauchsschutz",
+    "admin.state.guard.value": "{active} Netze gesperrt",
+    "admin.state.guard.week": "letzte 7 Tage: {blocks} Sperren, {strikes} Verstöße, {daily}-mal Tageslimit erreicht",
+    "admin.state.guard.off": "Scan-Sperre aus",
     "admin.state.schedule": "Release-Zeitplan",
     "admin.state.advisories": "Advisories",
     "admin.state.checked": "geprüft {when}",
@@ -56,10 +172,7 @@ MESSAGES: dict[str, str] = {
     "admin.state.age.seconds": "Vor {seconds}s gelesen",
     "admin.state.age.minutes": "Vor {minutes}m gelesen",
     "admin.state.age.waiting": "Warten auf den ersten Messwert",
-    "admin.state.stale": (
-        "Der Dienst hat eine Weile nicht geantwortet. Oben steht der letzte "
-        "Messwert, den er geliefert hat - nicht zwingend der aktuelle Stand."
-    ),
+    "admin.state.stale": "Der Dienst hat seit einiger Zeit nicht geantwortet. Die angezeigten Werte stammen von der letzten Abfrage und sind möglicherweise veraltet.",
     "admin.state.refresh": "Erneut lesen",
     "admin.state.copy": "Diagnose kopieren",
     "admin.state.copy.done": "Kopiert",
@@ -97,7 +210,7 @@ MESSAGES: dict[str, str] = {
         "prüft."
     ),
     "admin.surfaces.encrypt": "Ergebnisse verschlüsselt gespeichert",
-    "admin.surfaces.audit": "Audit-Protokoll",
+    "admin.surfaces.audit": "Audit-Log",
     "admin.surfaces.audit.file": (
         "Wird in eine Datei geschrieben, die den Container überdauert."
     ),
@@ -106,12 +219,75 @@ MESSAGES: dict[str, str] = {
         "auf der Platte."
     ),
     "admin.surfaces.targets": "Ziele im Klartext protokolliert",
+    "admin.update.kicker": "Release",
+    "admin.update.heading": "Updates",
+    "admin.update.running": "Läuft mit {version}.",
+    "admin.update.available": "Release {version} ist verfügbar.",
+    "admin.update.current": "Das ist das neueste Release.",
+    "admin.update.unknown": "Ob es ein neueres Release gibt, ließ sich nicht herausfinden.",
+    "admin.update.off": "Die Update-Prüfung ist ausgeschaltet (COS_WEB_UPDATE_CHECK).",
+    "admin.update.install": "{version} jetzt installieren",
+    "admin.update.downtime": "Das Bundle wird gegen seine GitHub-Build-Attestierung geprüft, dann starten Webdienst und Worker damit neu - eine kurze Ausfallzeit, ein laufender Scan bricht ab. Das Update hält, bis die Container neu starten.",
+    "admin.update.manual": "Installieren von hier ist ausgeschaltet (COS_WEB_ADMIN_UPDATE_DIR). Zieh das neue Image und erstelle die Container neu.",
+    "admin.update.outcome.requested": "Geprüft und installiert. Der Dienst startet gleich neu - lade die Seite neu.",
+    "admin.update.outcome.current": "Es gibt nichts Neueres zu installieren.",
+    "admin.update.outcome.disabled": "Automatische Updates sind in dieser Installation nicht eingerichtet.",
+    "admin.update.outcome.failed": "Das Release ließ sich nicht laden oder prüfen. Nichts wurde geändert; das Log nennt den Grund.",
+    "admin.exclusions.kicker": "Ausschlüsse",
+    "admin.exclusions.heading": "Adressen, die dieser Dienst nicht scannt",
+    "admin.exclusions.lede": (
+        "Ein Eintrag gilt ab der nächsten Anfrage, in jedem Prozess, ohne "
+        "Neustart - und ein Scan, der bereits in der Warteschlange steht, "
+        "wird abgelehnt statt ausgeführt. Nichts hier bringt diesen Dienst "
+        "dazu, etwas zu scannen: die Liste lehnt ausschließlich ab."
+    ),
+    "admin.exclusions.add.label": "Hostname, .Suffix-Domain, Adresse oder CIDR-Bereich",
+    "admin.exclusions.add.placeholder": "opencloud.example.com",
+    "admin.exclusions.add.action": "Ausschließen",
+    "admin.exclusions.add.hint": (
+        "Eine Domain mit führendem Punkt schließt auch alles darunter aus. "
+        "Ein Bereich wird gegen jede Adresse geprüft, zu der ein Hostname "
+        "auflöst."
+    ),
+    "admin.exclusions.remove": "Zurücknehmen",
+    "admin.exclusions.empty": "In dieser Installation ist nichts ausgeschlossen.",
+    "admin.exclusions.source.configured": "Aus der Umgebung",
+    "admin.exclusions.updated": "Zuletzt hier geändert am {when}.",
+    "admin.exclusions.durability": (
+        "Hier hinzugefügte Einträge liegen in Redis, das diese Bereitstellung "
+        "jederzeit leeren kann. Was dauerhaft gelten soll, gehört in "
+        "COS_WEB_BLOCKED_TARGETS - dort kann es auf dieser Seite nicht "
+        "zurückgenommen werden."
+    ),
+    "admin.exclusions.unreadable": (
+        "Der Speicher hat nicht geantwortet, die Ausschlüsse lassen sich "
+        "gerade weder lesen noch ändern. Sie gelten weiterhin: ein Scan, der "
+        "sie nicht prüfen kann, wird abgelehnt und nicht ausgeführt."
+    ),
+    "admin.blocklist.error.shape": (
+        "Das ist kein Eintrag. Bitte einen Hostnamen, eine Domain mit "
+        "führendem Punkt, eine Adresse oder einen CIDR-Bereich angeben."
+    ),
+    "admin.blocklist.error.configured": (
+        "Dieser Eintrag stammt aus COS_WEB_BLOCKED_TARGETS. Dort entfernen "
+        "und den Dienst neu starten, damit Bereitstellung und Liste nicht auseinanderlaufen."
+    ),
+    "admin.blocklist.error.full": (
+        "Diese Liste ist voll. Dauerhafte Einträge gehören in "
+        "COS_WEB_BLOCKED_TARGETS."
+    ),
+    "admin.blocklist.error.long": (
+        "Dieser Eintrag ist länger, als ein Hostname sein kann. Was damit "
+        "gemeint sein könnte, erreicht diesen Dienst ohnehin nie."
+    ),
+    "admin.outcome.excluded": "Ausgeschlossen. Ab der nächsten Anfrage abgelehnt.",
+    "admin.outcome.withdrawn": "Zurückgenommen. Kann wieder gescannt werden.",
     "admin.actions.kicker": "Referenzdaten",
-    "admin.actions.heading": "Aktualisieren, wogegen der Scanner bewertet",
+    "admin.actions.heading": "Referenzdaten aktualisieren",
     "admin.actions.lede": (
         "Dieselben zwei Aktualisierungen, die der Worker täglich ausführt, mit "
-        "denselben Regeln: Ein Zeitplan, der eine Release-Linie verloren hat, "
-        "wird abgelehnt, eine Advisory-Datenbank gewinnt nur hinzu, und ein "
+        "denselben Regeln: Ein Zeitplan, dem eine Release-Linie fehlt, "
+        "wird abgelehnt, eine Advisory-Datenbank darf nur Einträge hinzugewinnen, und ein "
         "fehlgeschlagener Abruf ändert nichts."
     ),
     "admin.actions.schedule": "Release-Zeitplan abgleichen",
@@ -121,7 +297,7 @@ MESSAGES: dict[str, str] = {
     "admin.outcome.updated": "Aktualisiert. Das neue Dokument ist in Gebrauch.",
     "admin.outcome.unchanged": "Bereits aktuell - nichts geändert.",
     "admin.outcome.rejected": (
-        "Abgelehnt: Das Abgerufene hat die Prüfungen nicht bestanden, die "
+        "Abgelehnt: Die abgerufenen Daten haben die Prüfungen nicht bestanden; die "
         "bisherigen Daten bleiben in Gebrauch."
     ),
     "admin.outcome.failed": "Konnte nicht abgerufen werden. Nichts geändert.",
@@ -141,11 +317,10 @@ MESSAGES: dict[str, str] = {
     "admin.search.kicker": "Suchindex",
     "admin.search.heading": "Ist der ausgelieferte Index noch aktuell",
     "admin.search.lede": (
-        "Der Index entsteht beim Release und wird schreibgeschützt "
-        "ausgeliefert, deshalb meldet diese Ansicht nur, statt neu zu bauen. "
-        "Verglichen werden die Seiten, die Sprachen und das Release, für das er "
-        "erzeugt wurde - nicht der Fließtext, den nur der Generator gewinnen "
-        "kann."
+        "Der Suchindex wird beim Build erzeugt und kann hier nicht geändert "
+        "werden. Diese Ansicht prüft, ob Seiten, Sprachen und Release-Version "
+        "zum laufenden Dienst passen. Die vollständigen Seitentexte werden "
+        "dabei nicht verglichen."
     ),
     "admin.search.fresh": "Aktuell",
     "admin.search.stale": "Veraltet",
@@ -157,27 +332,38 @@ MESSAGES: dict[str, str] = {
         "Indiziert, aber nicht mehr ausgeliefert: {list}."
     ),
     "admin.search.detail.unstamped": (
-        "Der Index nennt keine Release, für die er gebaut wurde; nur seine "
+        "Der Index nennt kein Release, für das er gebaut wurde; nur seine "
         "Seiten und Sprachen ließen sich vergleichen."
     ),
     "admin.search.detail.changed": "{count} Seitentitel oder Kurzbeschreibungen haben sich seither geändert.",
     "admin.search.detail.unreadable": "Der Index konnte nicht gelesen werden.",
+    "admin.search.remedy": (
+        "Ein veröffentlichtes Release liefert immer einen passend erzeugten "
+        "Index aus, dieser Build ist also kein Release wie veröffentlicht - "
+        "meist ein Image oder Bundle, das zwischen zwei Releases aus einem "
+        "Checkout gebaut wurde. Spiele ein veröffentlichtes Release ein "
+        "oder erzeuge den Index in diesem Checkout neu und baue neu:"
+    ),
+    "admin.search.remedy.commit": (
+        "Von Hand muss nichts eingecheckt werden: Jeder Pull Request auf main "
+        "erzeugt den Index neu und checkt ihn in seinen Branch ein."
+    ),
     "admin.search.fix": (
-        "Ein veralteter Index wird vom Release-Workflow erneuert, der ihn neu "
-        "erzeugt und eincheckt. Hier gibt es nichts zu drücken."
+        "Jeder Pull Request auf main und der Release-Workflow erzeugen den "
+        "Index neu und checken ihn ein. In dieser Ansicht kannst du den Index nicht neu erstellen."
     ),
     "admin.audit.kicker": "Audit",
-    "admin.audit.heading": "Das Protokoll, während es geschrieben wird",
+    "admin.audit.heading": "Audit-Log",
     "admin.audit.lede": (
-        "Scan-Anfragen, Ablehnungen und ausgelöste Grenzen, sobald sie "
-        "auftreten. Das Mitlesen öffnet eine Verbindung; ohne Aufforderung wird "
+        "Scan-Anfragen, Ablehnungen und ausgelöste Limits in Echtzeit. Das "
+        "Live-Verfolgen öffnet eine Verbindung; ohne Aufforderung wird "
         "nichts übertragen."
     ),
     "admin.audit.privacy": (
-        "Eine Client-Adresse ist ein gekürzter HMAC unter einem Salt, das "
-        "dieser Prozess hält, und nichts führt von dort zurück zu einer "
-        "Adresse. Diese Ansicht kann nicht mehr zeigen, als das Audit-Protokoll "
-        "ohnehin festgehalten hat."
+        "Client-Adressen erscheinen nur als gekürzte HMAC-Fingerabdrücke. "
+        "Das dafür verwendete Salt bleibt in diesem Prozess. Die Ansicht "
+        "zeigt ausschließlich die Einträge des Audit-Logs und kann keine "
+        "Client-Adressen auflösen."
     ),
     "admin.audit.replicas": (
         "Diese Installation führt keine Audit-Datei, deshalb stammen diese "
@@ -185,20 +371,20 @@ MESSAGES: dict[str, str] = {
         "bei mehr als einer Replik ist das ein Teil des Protokolls und nicht "
         "das ganze."
     ),
-    "admin.audit.follow": "Mitlesen",
+    "admin.audit.follow": "Live verfolgen",
     "admin.audit.stop": "Anhalten",
     "admin.audit.clear": "Leeren",
-    "admin.audit.empty": "Noch nichts.",
+    "admin.audit.empty": "Noch keine Einträge.",
     "admin.audit.closed": (
         "Die Verbindung hat ihre Grenze von {minutes} Minuten erreicht und "
         "wurde vom Dienst geschlossen. Bis dahin ist nichts verloren gegangen; "
-        "„Mitlesen“ öffnet eine neue."
+        "„Live verfolgen“ öffnet eine neue."
     ),
     "admin.audit.disabled": (
-        "Diese Installation führt kein Audit-Protokoll, es gibt also nichts "
-        "mitzulesen. COS_WEB_AUDIT_LOG schaltet es ein."
+        "Diese Installation führt kein Audit-Log, es gibt also nichts live zu "
+        "verfolgen. COS_WEB_AUDIT_LOG schaltet es ein."
     ),
-    "admin.audit.state.off": "Kein Mitlesen",
+    "admin.audit.state.off": "Nicht aktiv",
     "admin.audit.state.live": "Live",
     "admin.audit.state.reconnecting": "Verbindet neu",
     "admin.audit.state.unsupported": "Von diesem Browser nicht unterstützt",
@@ -224,8 +410,8 @@ MESSAGES: dict[str, str] = {
     "nav.catalogue": "Katalog",
     "nav.docs": "Doku",
     "nav.search": "Suche",
+    "nav.compare": "Vergleichen",
     "nav.api": "API",
-    "nav.ai": "KI",
     "nav.privacy": "Datenschutz",
     "nav.about": "Über",
     # --------------------------------------------------- language switcher
@@ -234,29 +420,12 @@ MESSAGES: dict[str, str] = {
     "lang.apply": "Sprache ändern",
     "lang.note": "Der Scan selbst bleibt unverändert; nur diese Seite wird übersetzt.",
     # ------------------------------------------------------------- footer
-    "footer.note.title": "Ein stiller Dienst, mit Absicht.",
-    "footer.note.body": (
-        "Scans laufen von diesem Server gegen die von dir eingegebene Adresse. "
-        "Ergebnisse liegen {minutes} Minuten im Speicher und sind danach weg. "
-        "Basiert auf dem <code>check-opencloud-security</code>-Scanner - kein "
-        "Tracking, keine Konten, keine Analyse."
-    ),
+    "footer.note.title": "Über diesen Dienst",
+    "footer.note.body": "Der Scan läuft von diesem Server aus gegen die eingegebene Adresse. Ergebnisse sind {minutes} Minuten verfügbar und laufen danach ab. Grundlage ist <code>check-opencloud-security</code>; ein Konto ist nicht nötig. Es gibt weder Tracking noch Analysewerkzeuge.",
     "footer.note.run_yourself": "Selbst ausführen",
     "footer.version.title": "Die Scanner-Version, die dieses Ergebnis erzeugt hat",
     "footer.version.label": "Backend v{version}",
-    "footer.legal.scope": (
-        "<strong>Diese Prüfung ist nicht erschöpfend, und eine gute Note ist kein "
-        "Zertifikat.</strong> Sie liest, was eine öffentlich erreichbare "
-        "OpenCloud-Instanz einem anonymen Besucher zeigt: ihre Version, die "
-        "Advisories zu dieser Version, ihren Transport, ihre Header und eine "
-        "Reihe von Einstellungen, die ohne Anmeldung sichtbar sind. Ein "
-        "&ldquo;A&rdquo; bedeutet, dass nichts davon fehlgeschlagen ist - nicht, "
-        "dass die Instanz sicher ist. Alles hinter der Anmeldung, der Server, auf "
-        "dem sie läuft, das Netzwerk drumherum, die Daten darin und die Personen "
-        "mit Konten darauf liegen außerhalb dessen, was ein nicht angemeldeter "
-        "Scan sehen kann. Behandle das Ergebnis als einen Faktor unter "
-        "mehreren, niemals als Sicherheitsaudit oder Penetrationstest."
-    ),
+    "footer.legal.scope": "<strong>Diese Prüfung ist nicht erschöpfend, und eine gute Note ist kein Zertifikat.</strong> Sie liest die gemeldete Version, passende Sicherheitsmeldungen, TLS, Header und öffentlich sichtbare Einstellungen einschließlich der dokumentierten Demo-Konten. Eine gute Note bedeutet, dass nichts davon fehlgeschlagen ist - nicht, dass die Instanz sicher ist. Private Dateien, Betriebssystem, Backups, Kontoberechtigungen und das umgebende Netzwerk werden nicht untersucht. Nutze den Bericht ergänzend zu deinen übrigen Prüfungen; er ist niemals ein Sicherheitsaudit oder ein Penetrationstest.",
     "footer.legal.trademark": (
         "Dies ist ein unabhängiges Community-Projekt. Es steht in keiner "
         "Verbindung zur OpenCloud GmbH und wird von diesem Unternehmen weder "
@@ -268,6 +437,9 @@ MESSAGES: dict[str, str] = {
     # --------------------------------------------------- the contents list
     "toc.heading": "Auf dieser Seite",
     "toc.aria": "Auf dieser Seite",
+    "toc.group.act": "Beheben",
+    "toc.group.details": "Details",
+    "toc.group.keep": "Mitnehmen",
     # --------------------------------------------------------- cross-links
     "pagenav.kicker": "Weiterlesen",
     "pagenav.aria": "Mehr über diesen Dienst",
@@ -278,26 +450,27 @@ MESSAGES: dict[str, str] = {
     ),
     "pagenav.grades.title": "Was die Noten bedeuten",
     "pagenav.grades.blurb": (
-        "Jede Stufe von A+ bis F, was eine Note nach unten drückt und wie man sie "
-        "verbessert."
+        "Was die Noten von A+ bis F bedeuten und wie du die Bewertung "
+        "verbessern kannst."
     ),
     "pagenav.catalogue.title": "Was der Scanner prüft",
     "pagenav.catalogue.blurb": (
-        "Jedes Härtungsmerkmal, jeden Header- und TLS-Check und jede bekannte "
-        "Sicherheitslücke - unabhängig von einem einzelnen Scan."
+        "Härtungsmaßnahmen, Header- und TLS-Prüfungen sowie bekannte "
+        "Sicherheitslücken – unabhängig von einem einzelnen Scan."
     ),
     "pagenav.docs.title": "CLI-Dokumentation",
     "pagenav.docs.blurb": (
         "Den Scanner von einem Terminal aus installieren, konfigurieren und "
         "automatisieren."
     ),
-    "pagenav.api.title": "Scannen per Skript",
-    "pagenav.api.blurb": "Die JSON-API, die Fair-Use-Grenzen und das OpenAPI-Schema.",
-    "pagenav.ai.title": "Für KI-Agenten",
-    "pagenav.ai.blurb": "Discovery, OpenAPI, Arazzo-Workflows und der MCP-Endpunkt.",
+    "pagenav.api.title": "Scannen per Skript oder Agent",
+    "pagenav.api.blurb": (
+        "Die JSON-API, die Fair-Use-Grenzen, das OpenAPI-Schema und der "
+        "MCP-Endpunkt."
+    ),
     "pagenav.privacy.title": "Was dieser Server speichert",
     "pagenav.privacy.blurb": (
-        "Im Speicher, für {minutes} Minuten, und was das Log auslässt."
+        "Welche Daten für {minutes} Minuten gespeichert werden und was im Log steht."
     ),
     "pagenav.about.title": "Über OpenCloud",
     "pagenav.about.blurb": (
@@ -309,99 +482,65 @@ MESSAGES: dict[str, str] = {
         "Zurück zum Formular. Dauert ein paar Sekunden, keine Anmeldung nötig."
     ),
     # ---------------------------------------------------------------- 404
-    "notfound.title": "Hier ist nichts",
+    "notfound.title": "Seite nicht gefunden",
     "notfound.description": (
         "Die Adresse existiert nicht, oder der Scan, auf den sie zeigte, ist "
         "bereits abgelaufen."
     ),
     "notfound.kicker": "Nicht gefunden",
-    "notfound.lede": (
-        "Entweder existiert die Adresse nicht, oder es war ein Scan und dieser "
-        "Scan ist verschwunden: Ergebnisse werden {minutes} Minuten gehalten und "
-        "dann verworfen, sodass ein Link von heute Morgen nicht mehr öffnet. Eine "
-        "Kennung, die nie existiert hat, sieht von hier aus genau gleich aus - "
-        "dieser Dienst kann dir nicht sagen, welcher Fall vorliegt, und "
-        "versucht es bewusst auch nicht."
-    ),
+    "notfound.lede": "Diese Seite existiert nicht oder das Scanergebnis ist abgelaufen. Ergebnisse sind {minutes} Minuten lang abrufbar. Starte einen neuen Scan, um einen aktuellen Bericht zu erhalten.",
     "notfound.action": "Neuen Scan starten",
     # ------------------------------------------------------- landing page
     "index.title": "Eine OpenCloud-Instanz scannen",
-    "index.description": (
-        "Eine OpenCloud-Instanz auf bekannte Schwachstellen, fehlende Härtung und "
-        "schwache Sicherheits-Header prüfen. Kostenlos, unabhängig, und nichts "
-        "wird gespeichert."
-    ),
-    "index.eyebrow": "Unabhängig &middot; air-gapped &middot; nichts wird gespeichert",
-    "index.headline": (
-        'Wie sicher ist deine <em class="swash">OpenCloud-Instanz</em>?'
-    ),
-    "index.lede": (
-        "Gib die Adresse einer Instanz ein, für die du verantwortlich bist. "
-        "Dieser Server spricht sie über HTTPS an, wie es jeder Besucher "
-        "täte, liest, was sie ohne Anmeldung veröffentlicht, und benotet das "
-        "Ergebnis von <strong>A+</strong> bis <strong>F</strong>."
-    ),
+    "index.description": "Prüfe eine OpenCloud-Instanz auf bekannte Schwachstellen, fehlende Schutzmaßnahmen, unsichere HTTP-Header und verfügbare Updates. Kostenlos und ohne Anmeldung.",
+    "index.eyebrow": "Unabhängig &middot; lokal bereitgestellte Inhalte &middot; befristete Ergebnisse",
+    "index.headline": "Wie sicher ist deine <em class=\"swash\">OpenCloud-Instanz</em>?",
+    "index.lede": "Gib die Adresse einer OpenCloud-Instanz ein, die du prüfen darfst. Der Scanner untersucht öffentlich zugängliche Einstellungen, HTTP-Header und die Softwareversion. Daraus ergibt sich eine Bewertung von <strong>A+</strong> bis <strong>F</strong>.",
     "index.form.kicker": "Scan-Anfrage",
     "index.form.hint": "Ein paar Sekunden &middot; keine Anmeldung",
-    "index.error.self_host": (
-        "Nichts für ungut - die Grenzen halten diesen kleinen Dienst am Laufen. "
-        "Der Scanner ist Open Source, du kannst diese exakte Prüfung also selbst "
-        "ausführen, so oft du möchtest:"
-    ),
+    "index.error.self_host": "Entschuldige die Wartezeit. Die Begrenzung hält den Dienst für alle verfügbar. Du kannst den quelloffenen Scanner auch auf deinem eigenen Rechner ausführen, so oft du möchtest:",
     "index.field.label": "Adresse der Instanz",
     "index.field.title": (
         "Die Basisadresse der Instanz: ein Hostname, optionaler Port und "
         "optionaler einfacher Unterordner. Keine Query, kein Fragment, keine "
         "Parameter, keine Escapes und keine Traversierung."
     ),
-    "index.field.hint": (
-        "Der Hostname allein genügt - <code>https://</code> wird angenommen. Ein "
-        "Unterordner wie <code>/opencloud</code> wird unterstützt; Queries, "
-        "Fragmente, Parameter und Pfad-Traversierung werden abgelehnt. Nur "
-        "öffentliche Adressen, und nur Instanzen, die du betreibst oder für "
-        "deren Test du eine Erlaubnis hast."
-    ),
+    "index.field.hint": "Der Hostname genügt; ohne Schema wird <code>https://</code> verwendet. Ein einfacher Unterordner wie <code>/opencloud</code> ist möglich. Querys, Fragmente, Parameter und Pfadwechsel sind nicht erlaubt. Prüfe nur öffentliche Instanzen, für die du eine Berechtigung hast.",
     "index.field.invalid": (
         "Keine gültige Adresse: ein Hostname, optionaler Port und ein einfacher "
         "Unterordner - keine Query, kein Fragment und keine Parameter."
     ),
-    "index.submit": "Prüfung starten",
-    "index.submit.busy": "Prüfung wird gestartet...",
-    "index.track.label": "Release-Track",
-    "index.track.hint": (
-        "Bestimmt, wie lange dieses Release unterstützt wird und auf welches "
-        "Release es zum Upgrade rät."
-    ),
+    "index.submit": "Scan starten",
+    "index.submit.busy": "Scan wird gestartet …",
+    "index.track.label": "Release-Kanal",
+    "index.track.hint": "Bestimmt, ob die Version noch unterstützt wird und welches Update empfohlen wird.",
     "index.format.label": "Anzeigen als",
-    "index.format.dashboard": "Ein Dashboard",
-    "index.format.json": "Das rohe JSON",
+    "index.format.dashboard": "Ergebnisübersicht",
+    "index.format.json": "JSON-Daten",
     "index.format.hint": "Beide stammen aus demselben Scan.",
     "index.waivers.summary": "Bestimmte Prüfungen ignorieren (optional)",
     "index.waivers.selected": "Bestimmte Prüfungen ignorieren ({count} ausgewählt)",
-    "index.waivers.hint": (
-        "Eine ausgesetzte Prüfung bleibt im Bericht und wird weiterhin angezeigt "
-        "- sie hört nur auf, die Note nach unten zu drücken. Nur Prüfungen, die "
-        "tatsächlich fehlgeschlagen sind, können ausgesetzt werden."
-    ),
+    "index.remember.summary": "Einstellungen deines letzten Scans in diesem Browser: {track} · {format} · {waivers}.",
+    "index.remember.waivers.none": "keine ausgesetzten Prüfungen",
+    "index.remember.waivers.one": "1 ausgesetzte Prüfung",
+    "index.remember.waivers.many": "{count} ausgesetzte Prüfungen",
+    "index.remember.apply": "Wieder verwenden",
+    "index.remember.forget": "Vergessen",
+    "index.waivers.hint": "Ausgenommene Befunde bleiben im Bericht sichtbar, senken aber die Bewertung nicht. Ausnahmen gelten nur für fehlgeschlagene Prüfungen.",
     "index.waivers.search.label": "Prüfungen filtern",
     "index.waivers.search.placeholder": "Nach Name suchen...",
     "index.waivers.search.empty": "Keine Prüfung passt zu deiner Suche.",
-    "index.assurance.aria": "Wie dieser Dienst mit Ihren Daten umgeht",
-    "index.assurance.airgapped.title": "100 % air-gapped",
-    "index.assurance.airgapped.body": (
-        "Jedes Byte stammt von diesem Ursprung. Kein CDN, kein Font-Dienst, "
-        "keine Analyse."
-    ),
-    "index.assurance.nostore.title": "Keine Datenspeicherung",
+    "index.assurance.aria": "Wie dieser Dienst mit deinen Daten umgeht",
+    "index.assurance.airgapped.title": "Keine externen Seiteninhalte",
+    "index.assurance.airgapped.body": "Schriften, Skripte und Bilder stammen von diesem Server. Die Seite verwendet weder CDN noch Analysewerkzeuge.",
+    "index.assurance.nostore.title": "Befristete Speicherung",
     "index.assurance.nostore.body": (
         "Das Ergebnis liegt im Speicher und wird in dem Moment verworfen, in dem "
         "es abläuft."
     ),
     "index.assurance.noaccount.title": "Keine Registrierung nötig",
-    "index.assurance.noaccount.body": (
-        "Kein Konto, keine Anmeldung, keine E-Mail-Adresse, kein Warten."
-    ),
-    "index.assurance.ephemeral.title": "Flüchtige Ergebnisse",
+    "index.assurance.noaccount.body": "Starte einen Scan ohne Benutzerkonto und ohne Angabe einer E-Mail-Adresse.",
+    "index.assurance.ephemeral.title": "Ergebnislink mit Ablaufzeit",
     "index.assurance.ephemeral.body": (
         "Der Link funktioniert {minutes} Minuten nach dem Scan nicht mehr."
     ),
@@ -439,67 +578,35 @@ MESSAGES: dict[str, str] = {
     # --------------------------------------------------------- grade scale
     "grade.5.headline": "Nichts gefunden",
     "grade.5.meaning": (
-        "Das Release ist aktuell für seinen Track, keine Advisory trifft auf die "
-        "Version zu, und jede Prüfung, die der Scan durchführen konnte, ist "
+        "Das Release ist auf seinem Kanal aktuell. Die Datenbank enthält keine "
+        "passende Sicherheitsmeldung, und alle durchgeführten Prüfungen wurden "
         "bestanden."
     ),
-    "grade.5.improve": (
-        "Hier bleiben: Achte auf das nächste Release auf deinem Track, und "
-        "führe den Scan nach jeder Änderung am Reverse Proxy oder der "
-        "Anmeldung erneut aus."
-    ),
+    "grade.5.improve": "Halte die Instanz auf deinem Release-Kanal aktuell. Wiederhole den Scan nach Änderungen am Reverse Proxy oder an der Anmeldung.",
     "grade.4.headline": "Ein Update wartet",
     "grade.4.meaning": (
-        "Es existiert ein neueres Patch-Release in derselben Release-Linie. An "
-        "der installierten Version ist nichts bekanntermaßen falsch - sie ist "
-        "einfach nicht die neueste."
+        "Für diese Release-Linie gibt es ein neueres Patch-Release. Für die "
+        "installierte Version sind keine passenden Sicherheitsmeldungen bekannt."
     ),
-    "grade.4.improve": (
-        "Installiere das anstehende Update. Es ist dieselbe Release-Linie, "
-        "also das kleinstmögliche Upgrade."
-    ),
+    "grade.4.improve": "Installiere das empfohlene Update innerhalb deiner Release-Linie.",
     "grade.3.headline": "Eine Release-Linie zurück",
     "grade.3.meaning": (
-        "Die Instanz läuft auf einer älteren Linie als der aktuellen für ihren "
-        "Track. Sie wird möglicherweise noch unterstützt, ist aber nicht mehr "
-        "dort, wo Fixes zuerst ankommen."
+        "Die Instanz verwendet eine ältere Release-Linie als die aktuellste "
+        "ihres Kanals. Diese ältere Linie wird möglicherweise noch unterstützt."
     ),
-    "grade.3.improve": (
-        "Wechsle zur aktuellen Linie deines Tracks. Der Scan nennt, welche "
-        "das ist, und weist nie auf einen Track hin, den du nicht gewählt hast."
-    ),
-    "grade.2.headline": "Advisories treffen auf diese Version zu",
+    "grade.3.improve": "Aktualisiere auf die empfohlene Release-Linie deines Kanals. Der Bericht nennt das passende Ziel.",
+    "grade.2.headline": "Bekannte Schwachstellen in dieser Version",
     "grade.2.meaning": (
-        "Die installierte Version erscheint in der Advisory-Datenbank. Keine der "
-        "zutreffenden Advisories ist als kritisch oder hoch eingestuft, was der "
-        "einzige Grund ist, warum es nicht niedriger ausfällt."
+        "Für die installierte Version sind Schwachstellen bekannt. Keine davon "
+        "hat den Schweregrad hoch oder kritisch."
     ),
-    "grade.2.improve": (
-        "Aktualisiere auf die behobene Version für deine Release-Linie. Die "
-        "Ergebnisseite nennt sie - eine Advisory kann auf mehreren Linien separat "
-        "behoben werden."
-    ),
-    "grade.1.headline": "Eine kritische oder hohe Advisory trifft zu",
-    "grade.1.meaning": (
-        "Mindestens eine Advisory, die auf die installierte Version zutrifft, ist "
-        "als kritisch oder hoch eingestuft. Dies ist ein bekannter, "
-        "veröffentlichter und behobener Weg hinein."
-    ),
-    "grade.1.improve": (
-        "Aktualisiere jetzt, vor allem anderen auf der Seite. Nichts anderes, "
-        "was sich ändern lässt, hebt die Note über dieses Niveau."
-    ),
+    "grade.2.improve": "Installiere die Korrekturversion für deine Release-Linie. Der Bericht berücksichtigt, dass eine Sicherheitsmeldung mehrere getrennt korrigierte Linien betreffen kann.",
+    "grade.1.headline": "Schwachstelle mit hohem oder kritischem Schweregrad",
+    "grade.1.meaning": "Mindestens eine bekannte Schwachstelle der installierten Version hat den Schweregrad hoch oder kritisch.",
+    "grade.1.improve": "Installiere die im Bericht genannte Korrekturversion und prüfe die Hinweise der Sicherheitsmeldung.",
     "grade.0.headline": "Nicht mehr unterstützt",
-    "grade.0.meaning": (
-        "Die Release-Linie erhält überhaupt keine Sicherheitsfixes mehr. Das "
-        "überstimmt jedes andere Signal, einschließlich eines Waivers: Eine "
-        "Instanz, die niemand patcht, kann nicht danach benotet werden, wie "
-        "ordentlich ihre Header sind."
-    ),
-    "grade.0.improve": (
-        "Wechsle zu einer unterstützten Release-Linie. Welche Linien wie "
-        "lange unterstützt werden, steht im Release-Zeitplan, den der Scan liest."
-    ),
+    "grade.0.meaning": "Diese Versionslinie erhält keine Sicherheitsupdates mehr. Sie erhält die Note F, unabhängig von anderen Befunden oder Ausnahmen.",
+    "grade.0.improve": "Wechsle auf eine unterstützte Release-Linie. Der Release-Zeitplan nennt die verfügbaren Kanäle und deren Supportende.",
     # ---------------------------------------------------------- grades page
     "grades.title": "Was die Noten bedeuten",
     "grades.description": (
@@ -507,12 +614,7 @@ MESSAGES: dict[str, str] = {
         "was sie nach unten drückt, und der kürzeste Weg zur nächsthöheren."
     ),
     "grades.kicker": "Die Skala",
-    "grades.lede": (
-        "Jeder Scan endet in einem Buchstaben. Er ergibt sich aus zwei Dingen - "
-        "welches Release die Instanz betreibt und welche Prüfungen "
-        "fehlgeschlagen sind - und diese Seite ist die gesamte Rechnung dahinter, "
-        "in der Reihenfolge, in der der Scanner sie ausführt."
-    ),
+    "grades.lede": "Die Bewertung berücksichtigt den Supportstatus der installierten Version, bekannte Schwachstellen und fehlgeschlagene Prüfungen. Hier erfährst du, wie die Ausgangsnote entsteht, welche Befunde sie begrenzen und welche Änderungen sie verbessern.",
     "grades.scale.kicker": "Sechs Stufen",
     "grades.scale.heading": "Die Skala, beste Note zuerst",
     "grades.scale.intro": (
@@ -525,95 +627,41 @@ MESSAGES: dict[str, str] = {
     ),
     "grades.row.prefix": "Note {label}: ",
     "grades.row.score": "{rating} von 5",
-    "grades.row.improve": "Um aufzusteigen:",
+    "grades.row.improve": "So verbesserst du die Note:",
     "grades.caps.kicker": "Die Obergrenze",
-    "grades.caps.heading": "Was eine fehlgeschlagene Prüfung einer Note antun kann",
+    "grades.caps.heading": "Wie fehlgeschlagene Prüfungen die Note begrenzen",
     "grades.caps.intro": (
-        "Die Version legt die Startnote fest. Fehlgeschlagene Prüfungen können "
-        "sie nicht anheben - sie können sie nur nach unten drücken, und wie weit, "
-        "hängt vom Schweregrad der schlimmsten fehlgeschlagenen Prüfung ab:"
+        "Die Version bestimmt die Ausgangsnote. Fehlgeschlagene Prüfungen "
+        "begrenzen sie abhängig vom Schweregrad. Es gilt die niedrigste "
+        "dieser Obergrenzen:"
     ),
     "grades.caps.at_best": "bestenfalls",
-    "grades.caps.shared": (
-        "Befunde gleichen Schweregrads teilen sich eine Obergrenze, sodass das "
-        "Beheben eines von drei mittleren Befunden nichts bewegt, bis auch der "
-        "letzte verschwunden ist. Deshalb ordnet die Ergebnisseite den Plan so, "
-        "wie sie es tut, und deshalb druckt sie die Note, die jeder Schritt "
-        "tatsächlich erreichen würde."
-    ),
-    "grades.caps.rules": (
-        "Zwei Regeln stehen über alldem. <strong>End of Life überstimmt "
-        "alles</strong>, einschließlich eines Waivers: Eine Release-Linie, die "
-        "keine Sicherheitsfixes mehr erhält, ist ein <strong>F</strong>, "
-        "unabhängig davon, wie sauber der Rest des Berichts ist. Und "
-        "<strong>vor seinem Track zu sein bedeutet nicht, dahinter zu "
-        "sein</strong> - ein Release, das neuer ist als das aktuelle für den "
-        "gewählten Track, wird als vorauslaufend gemeldet und nie als nicht "
-        "unterstützt benotet."
-    ),
+    "grades.caps.shared": "Befunde desselben Schweregrads setzen dieselbe Obergrenze. Bei drei mittleren Befunden reicht es daher nicht, nur einen zu beheben. Der Maßnahmenplan zeigt alle drei Schritte und den Punkt, an dem sich die Note verbessert.",
+    "grades.caps.rules": "Zwei Regeln haben Vorrang. <strong>Das Supportende bestimmt immer die Note</strong>: Ein nicht mehr unterstütztes Release erhält auch mit Ausnahmen ein <strong>F</strong>. <strong>Ein Release, das neuer ist als der Stand seines angegebenen Kanals, gilt nicht als veraltet</strong>; der Bericht weist darauf hin, dass es diesem Kanal voraus ist.",
     "grades.improve.kicker": "Der kürzeste Weg",
-    "grades.improve.heading": "Wie dieser Scanner beim Aufsteigen hilft",
-    "grades.improve.intro": (
-        "Eine Note allein ist eine Punktetafel, was um vier Uhr nachmittags nicht "
-        "viel nützt. Jede Ergebnisseite trägt außerdem die vier Dinge, die daraus "
-        "die Arbeit eines Nachmittags machen:"
-    ),
-    "grades.improve.plan": (
-        "<strong>Ein Sanierungsplan, in Reihenfolge des Nutzens.</strong> Jeder "
-        "Schritt sagt, was zu ändern ist und welche Note die Instanz halten "
-        "würde, sobald dieser Schritt und alles darüber erledigt ist - so kannst "
-        "du aufhören, wo sich der Aufwand nicht mehr lohnt."
-    ),
-    "grades.improve.release": (
-        '<strong>Das genaue Release, zu dem gewechselt werden sollte.</strong> '
-        "Nicht \"aktualisieren\": die Version, die die Advisory <em>auf der "
-        "Linie behebt, auf der du tatsächlich bist</em>, und nie ein Sprung auf "
-        "einen Track, den du nicht gewählt hast."
-    ),
+    "grades.improve.heading": "Befunde beheben",
+    "grades.improve.intro": "Jeder Bericht enthält die Informationen, die du für die nächsten Schritte brauchst:",
+    "grades.improve.plan": "<strong>Ein Maßnahmenplan nach Priorität.</strong> Jeder Schritt beschreibt die nötige Änderung und die erreichbare Note, wenn dieser und alle vorherigen Schritte erledigt sind.",
+    "grades.improve.release": "<strong>Eine konkrete Update-Empfehlung.</strong> Der Bericht nennt die Version, die die Schwachstelle <em>in deiner Versionslinie</em> behebt, und berücksichtigt den gewählten Release-Kanal.",
     "grades.improve.explained": (
-        "<strong>Jede fehlgeschlagene Prüfung, erklärt.</strong> Was gemessen "
-        "wurde, warum es wichtig ist, und der Fix, mit einem Link zur "
-        "OpenCloud-Dokumentation für die dahinterstehende Einstellung."
+        "<strong>Erklärungen zu fehlgeschlagenen Prüfungen.</strong> Du erfährst, "
+        "was geprüft wurde, warum es relevant ist und wie du den Befund behebst. "
+        "Ein Link führt zur passenden Einstellung in der OpenCloud-Dokumentation."
     ),
-    "grades.improve.waiver": (
-        "<strong>Ein Waiver für die, mit denen du zu leben entschieden "
-        "hast.</strong> Eine ausgesetzte Prüfung bleibt im Bericht und bleibt "
-        "sichtbar - sie hört nur auf, die Note zu deckeln, sodass eine bewusste "
-        "Entscheidung nicht für immer wie ein Fehlschlag aussieht. Sie kann keine "
-        "bestandene Prüfung verstecken und kein End-of-Life-Release retten."
-    ),
-    "grades.improve.rerun": (
-        "Führe ihn danach erneut aus. Dieselbe Instanz, derselbe Scan, und "
-        "der Buchstabe ändert sich - was der einzige Beweis ist, dass irgendetwas "
-        "davon funktioniert hat."
-    ),
-    "grades.limits.kicker": "Ehrlichkeit",
+    "grades.improve.waiver": "<strong>Ausnahmen für bewusst akzeptierte Befunde.</strong> Diese bleiben sichtbar, begrenzen aber die Note nicht mehr. Eine Ausnahme gilt nur für eine fehlgeschlagene Prüfung und ändert nichts an der Bewertung einer nicht mehr unterstützten Version.",
+    "grades.improve.rerun": "Prüfe nach den Änderungen mit einem weiteren Scan, welche Befunde behoben sind.",
+    "grades.limits.kicker": "Prüfumfang",
     "grades.limits.heading": "Was eine gute Note nicht ist",
-    "grades.limits.body": (
-        "Ein <strong>A+</strong> bedeutet, dass nichts, was dieser Scan geprüft "
-        "hat, fehlgeschlagen ist. Es ist kein Zertifikat, und es ist kein "
-        "Penetrationstest. Alles hinter der Anmeldung, das Betriebssystem, die "
-        "Container-Laufzeit, die Backups, die Konten und die Personen, die sie "
-        "innehaben, liegen außerhalb dessen, was ein nicht angemeldeter Scan "
-        "sehen kann. Behandle den Buchstaben als einen Faktor unter mehreren "
-        '- <a href="/how-it-works">wie der Scan funktioniert</a> listet auf, was '
-        "er liest, und jede Ergebnisseite wiederholt die Grenzen unterhalb der "
-        "Note."
-    ),
+    "grades.limits.body": "Ein <strong>A+</strong> bedeutet, dass die für die Note ausgewerteten Prüfungen keinen Fehler ergeben haben. Private Dateien, Betriebssystem, Backups und Kontoberechtigungen sind davon nicht erfasst. Prüfe diese Bereiche gesondert. Unter <a href=\"/how-it-works\">So funktioniert der Scan</a> findest du Umfang und Grenzen.",
     # -------------------------------------------------------------- catalogue
     "catalogue.title": "Was der Scanner prüft",
     "catalogue.description": (
-        "Jedes Härtungsmerkmal, jeden Sicherheits-Header, jeden TLS-Check und "
-        "jede bekannte Sicherheitslücke, unabhängig von einem einzelnen "
+        "Härtungsmaßnahmen, Sicherheits-Header, TLS-Prüfungen und "
+        "bekannte Sicherheitslücken, unabhängig von einem einzelnen "
         "Scan-Ergebnis."
     ),
     "catalogue.kicker": "Referenz",
-    "catalogue.lede": (
-        "Dies ist die vollständige Menge: Jeder Check unten kann auf einer "
-        "Ergebnisseite erscheinen, und jede Sicherheitslücke unten ist eine, "
-        "gegen die ein Scan bewertet wird. Nichts hier hängt von einer "
-        "bestimmten Instanz ab."
-    ),
+    "catalogue.lede": "Hier findest du die möglichen Prüfungen und die Sicherheitsmeldungen, mit denen der Scanner eine Version abgleicht. Der Katalog beschreibt den Prüfumfang, ohne eine Instanz zu scannen.",
     "catalogue.checks.kicker": "Checks",
     "catalogue.checks.heading": "Jeder Check, nach Kategorie",
     "catalogue.checks.lede": (
@@ -635,23 +683,12 @@ MESSAGES: dict[str, str] = {
     "catalogue.advisories.unfixed": "Noch keine Korrektur veröffentlicht",
     # -------------------------------------------------- how the scan works
     "how.title": "Wie der Scan funktioniert",
-    "how.description": (
-        "Was dieser Scanner an einer OpenCloud-Instanz testet, und was zwischen "
-        "dem Drücken des Buttons und dem Lesen der Note passiert."
-    ),
-    "how.kicker": "Die Methode",
-    "how.lede": (
-        "Alles, was dieser Dienst meldet, findet er selbst heraus, indem er die "
-        "von dir eingegebene Adresse über HTTPS anspricht, wie es jeder "
-        "Besucher täte. Niemand Drittes wird gefragt, und niemand meldet sich an."
-    ),
+    "how.description": "Welche Informationen der Scanner prüft und wie aus der Anfrage ein Bericht entsteht.",
+    "how.kicker": "Prüfumfang und Ablauf",
+    "how.lede": "Der Scanner verbindet sich direkt mit der eingegebenen Adresse und wertet die Antworten selbst aus. Er prüft Informationen, die ohne Benutzerkonto zugänglich sind, und bewertet die installierte Version anhand seiner Release- und Schwachstellendaten.",
     "how.tests.heading": "Was geprüft wird",
     "how.tests.version.title": "Version und Lebenszyklus",
-    "how.tests.version.body": (
-        "Welches Release läuft, ob es noch Sicherheitsfixes erhält, und ob eine "
-        "veröffentlichte Advisory darauf zutrifft. Ein Release nach seinem End of "
-        "Life ist ein F, egal was sonst stimmt."
-    ),
+    "how.tests.version.body": "Installierte Version, Supportstatus und passende Sicherheitsmeldungen. Ein nicht mehr unterstütztes Release erhält F.",
     "how.tests.transport.title": "Transport und Header",
     "how.tests.transport.body": (
         "HTTPS-Erreichbarkeit, das Zertifikat und seine verbleibende Laufzeit, "
@@ -659,41 +696,18 @@ MESSAGES: dict[str, str] = {
         "Browser tatsächlich gesendet werden - HSTS, CSP, Frame- und "
         "Content-Type-Schutz."
     ),
-    "how.tests.hardening.title": "Härtung und Exposition",
-    "how.tests.hardening.body": (
-        "Basic Authentication, Passwort- und Ablaufregeln für öffentliche Links, "
-        "Passwortregeln, Verzeichnisauflistung, exponierte Endpunkte und alles, "
-        "was der Welt die Version verkündet."
-    ),
-    "how.pipeline.kicker": "Die Pipeline",
-    "how.pipeline.heading": "Was passiert, wenn du den Button drückst",
-    "how.pipeline.lede": (
-        "Vier Schritte, und beim dritten kommt die Warteschlange ins Spiel."
-    ),
-    "how.pipeline.step1": (
-        "<strong>Deine Adresse wird geprüft.</strong> Private, lokale und "
-        "Cloud-Metadaten-Adressen werden abgelehnt, bevor überhaupt eine "
-        "Verbindung aufgebaut wird."
-    ),
-    "how.pipeline.step2": (
-        "<strong>Ein Scan erhält eine zufällige Kennung.</strong> Diese Kennung "
-        "ist der einzige Weg, das Ergebnis zu erreichen. Es gibt keine Liste der "
-        "Scans, und keine Möglichkeit, eine zu erraten."
-    ),
-    "how.pipeline.step3": (
-        "<strong>Er wartet, bis er an der Reihe ist.</strong> Eine feste Anzahl "
-        "von Scans läuft gleichzeitig. Sind alle beschäftigt, reiht sich deiner "
-        "ein, und dir wird deine Position in der Reihe genannt - nichts wird "
-        "abgelehnt, nur weil der Dienst beliebt ist."
-    ),
-    "how.pipeline.step4": (
-        "<strong>Das Ergebnis läuft ab.</strong> Nach {minutes} Minuten "
-        "funktioniert die Kennung nicht mehr und das Ergebnis ist weg, ohne dass "
-        "etwas auf Festplatte geschrieben wurde."
-    ),
+    "how.tests.hardening.title": "Schutzmaßnahmen und öffentliche Zugänge",
+    "how.tests.hardening.body": "Basic Auth, Passwort- und Ablaufregeln für öffentliche Links, Passwortrichtlinien, Verzeichnisauflistungen, erreichbare interne Endpunkte und veröffentlichte Versionsangaben.",
+    "how.pipeline.kicker": "Ablauf",
+    "how.pipeline.heading": "Von der Anfrage zum Ergebnis",
+    "how.pipeline.lede": "Jeder Scan durchläuft diese vier Schritte.",
+    "how.pipeline.step1": "<strong>Die Zieladresse wird geprüft.</strong> Private, lokale und Cloud-Metadaten-Adressen werden vor dem Verbindungsaufbau abgewiesen.",
+    "how.pipeline.step2": "<strong>Der Scan erhält eine zufällige Kennung.</strong> Sie ermöglicht den Zugriff auf das Ergebnis. Eine Liste aller Scans gibt es nicht.",
+    "how.pipeline.step3": "<strong>Der Scan kommt in die Warteschlange.</strong> Es können nur begrenzt viele Scans gleichzeitig laufen. Sind alle Worker beschäftigt, wartet dein Scan. Die Seite zeigt seine Position in der Warteschlange an.",
+    "how.pipeline.step4": "<strong>Das Ergebnis läuft ab.</strong> Nach {minutes} Minuten ist es über seine Kennung nicht mehr abrufbar.",
     "how.faq.kicker": "Fragen",
     "how.faq.heading": "Häufig gestellte Fragen",
-    "how.faq.q1": "Ist das offizielle OpenCloud-Software?",
+    "how.faq.q1": "Ist das die offizielle OpenCloud-Software?",
     "how.faq.a1": (
         "Nein. Dies ist ein unabhängiges Community-Projekt, das in keiner "
         "Verbindung zur OpenCloud GmbH steht und von diesem Unternehmen weder "
@@ -702,44 +716,20 @@ MESSAGES: dict[str, str] = {
         "verwendet, um die geprüfte Software zu benennen."
     ),
     "how.faq.q2": "Bedeutet eine gute Note, dass eine Instanz sicher ist?",
-    "how.faq.a2": (
-        "Nein. Der Scan liest nur, was eine öffentlich erreichbare Instanz "
-        "einem anonymen Besucher zeigt - ihre Version, die Advisories zu dieser "
-        "Version, ihren Transport, ihre Header und eine Reihe von Einstellungen, "
-        "die ohne Anmeldung sichtbar sind. Alles hinter dem Login, der Server, "
-        "auf dem sie läuft, das Netzwerk drumherum und die Personen mit Konten "
-        "darauf liegen außerhalb dessen, was ein nicht authentifizierter Scan "
-        "sehen kann. Betrachte ein Ergebnis als einen Baustein unter "
-        "mehreren, niemals als Sicherheitsaudit oder Penetrationstest."
-    ),
-    "how.faq.q3": "Wie lange bewahrst du das Ergebnis eines Scans auf?",
-    "how.faq.a3": (
-        "Nur im Speicher, für {minutes} Minuten, danach ist es weg. Keine "
-        "Konten, keine Analyse, kein Tracking - den Rest liest du unter "
-        '<a href="/privacy">Was dieser Server speichert</a>.'
-    ),
-    "how.faq.q4": "Gibt es ein Ratenlimit?",
+    "how.faq.a2": "Nein. Der Scan prüft die gemeldete Version, passende Sicherheitsmeldungen und von außen sichtbare Einstellungen sowie die veröffentlichten Demo-Zugangsdaten. Private Dateien, Betriebssystem, Backups und Kontoberechtigungen werden nicht untersucht. Der Bericht unterstützt deine Sicherheitsprüfung, ersetzt aber weder Audit noch Penetrationstest.",
+    "how.faq.q3": "Wie lange bleibt ein Scan-Ergebnis gespeichert?",
+    "how.faq.a3": "Das Ergebnis ist {minutes} Minuten verfügbar und läuft danach ab. Weitere Angaben stehen unter <a href=\"/privacy\">Was dieser Server speichert</a>.",
+    "how.faq.q4": "Wie oft kann ich scannen?",
     "how.faq.a4": (
-        "Ja, pro Besucher und pro gescanntem Ziel, damit weder ein einzelner "
-        "Besucher die Warteschlange blockiert noch dieselbe Instanz Schlag auf "
-        "Schlag gescannt wird. Die genauen Werte für diese Installation stehen "
+        "Es gelten Limits pro Besucher und Ziel, damit die Warteschlange für "
+        "alle verfügbar bleibt und dieselbe Instanz nicht zu oft gescannt wird. "
+        "Die genauen Werte für diese Installation stehen "
         '<a href="/api#api-limits">auf der API-Seite</a>.'
     ),
     "how.faq.q5": "Kann ich ohne Ratenlimit scannen?",
-    "how.faq.a5": (
-        "Ja - der Scanner ist Open Source. Führe ihn mit "
-        '<a href="/cli">einem einzigen Docker-Befehl</a> auf deiner eigenen '
-        "Maschine aus, ohne Limit und ohne Website dazwischen."
-    ),
+    "how.faq.a5": "Ja. Du kannst den quelloffenen Scanner mit <a href=\"/cli\">einem Docker-Befehl</a> auf deinem eigenen Rechner ausführen. Die Limits dieses Webdienstes gelten dort nicht.",
     "how.faq.q6": "Sagt mir ein Scan, ob ein OpenCloud-Update ansteht?",
-    "how.faq.a6": (
-        "Ja. Jeder Scan vergleicht die gemeldete Version mit dem "
-        "OpenCloud-Release-Feed und meldet ein anstehendes Update oder eine "
-        "nicht mehr unterstützte Version genauso wie einen fehlenden Header - "
-        'sieh dir <a href="/documentation/reference#update-check">den '
-        "Update-Check</a> an, um zu sehen, wie die empfohlene Version "
-        "ermittelt wird."
-    ),
+    "how.faq.a6": "Ja. Die gemeldete Version wird mit den verfügbaren Release-Daten abgeglichen, einschließlich Supportstatus und Release-Kanal. Unter <a href=\"/documentation/reference#update-check\">Update-Prüfung</a> ist beschrieben, wie die Empfehlung entsteht.",
     # --------------------------------------------------------------- privacy
     "privacy.title": "Was dieser Server speichert",
     "privacy.description": (
@@ -747,24 +737,14 @@ MESSAGES: dict[str, str] = {
         "Betriebslog aufzeichnet und was nicht."
     ),
     "privacy.kicker": "Datenschutz",
-    "privacy.lede": "Kurze Antwort: der Scan, für {minutes} Minuten, im Speicher.",
+    "privacy.lede": "Scan-Ergebnisse bleiben {minutes} Minuten verfügbar und laufen danach ab.",
     "privacy.retention.kicker": "Speicherdauer",
-    "privacy.retention.heading": "Solange ein Scan lebt",
-    "privacy.retention.body": (
-        "Die von dir übermittelte Adresse, die Prüfungen, die du zu ignorieren "
-        "wähltest, und das Ergebnis liegen {minutes} Minuten im Speicher, unter "
-        "einem Schlüssel, der aus der zufälligen Kennung deines Scans abgeleitet "
-        "ist, und werden dann vom Speicher selbst verworfen. Das Betriebslog "
-        "vermerkt, dass ein Scan erstellt, gestartet und beendet wurde, "
-        "ausschließlich anhand dieser zufälligen Kennung - nicht die Adresse, "
-        "nicht das Ergebnis und nicht deine IP-Adresse, die nur als "
-        "Einweg-Fingerabdruck für die Ratenbegrenzung gezählt wird."
-    ),
-    "privacy.self_host": (
-        "Möchtest du es lieber selbst betreiben? Derselbe Scanner ist eine "
-        "Kommandozeilenprüfung und ein Python-Paket. In keinem der beiden Fälle "
-        "spricht hier irgendetwas mit einem Drittanbieterdienst."
-    ),
+    "privacy.retention.heading": "Gespeicherte Scandaten",
+    "privacy.retention.body": "Zieladresse, gewählte Ausnahmen und Ergebnis werden unter der zufälligen Scan-Kennung für {minutes} Minuten gespeichert. Danach laufen sie ab. Das normale Betriebslog nennt nur diese Kennung und die Ereignisse Erstellung, Start und Abschluss. Client-Adressen werden für die Nutzungsgrenzen nur als Einweg-Fingerabdruck verarbeitet. Ein Betreiber kann zusätzlich ein separates Audit-Log konfigurieren.",
+    "privacy.uploads.kicker": "Hochgeladene Berichte",
+    "privacy.uploads.heading": "Wenn du einen Bericht zum Vergleich hochlädst",
+    "privacy.uploads.body": "Die hochgeladene Datei wird im Arbeitsspeicher für den Vergleich gelesen. Inhalt und Dateiname werden nicht aufbewahrt. Der Vergleich ist über eine zufällige Kennung {minutes} Minuten abrufbar, damit du ihn erneut öffnen oder teilen kannst. Danach läuft er ab und lässt sich ohne die verworfene Datei nicht erneut berechnen.",
+    "privacy.self_host": "Für den eigenen Betrieb stehen derselbe Scanner als Kommandozeilenprogramm und die Python-Bibliothek bereit. Der Scan verbindet sich direkt von deinem Rechner mit der Instanz.",
     # ----------------------------------------------------------- legal notice
     "legal.title": "Impressum",
     "legal.description": (
@@ -788,20 +768,10 @@ MESSAGES: dict[str, str] = {
         "unabhängiges Community-Projekt ist."
     ),
     "about.kicker": "Über",
-    "about.lede": (
-        "Das eine ist eine Datei-, Sync- und Sharing-Plattform. Das andere ist "
-        "eine Community-Prüfung, die sie von außen betrachtet."
-    ),
+    "about.lede": "OpenCloud dient zum Speichern, Synchronisieren und Teilen von Dateien. Dieser unabhängige Scanner prüft die Sicherheitseinstellungen, die eine Instanz nach außen erkennen lässt.",
     "about.platform.kicker": "Die Plattform",
     "about.platform.heading": "Über OpenCloud",
-    "about.platform.body": (
-        '<a href="https://opencloud.eu/" rel="noopener noreferrer">OpenCloud</a> '
-        "ist die Datei-, Sync- und Sharing-Plattform, die dieses Werkzeug prüft - "
-        "Open Source, in Deutschland entwickelt, und dokumentiert unter "
-        '<a href="https://docs.opencloud.eu/" rel="noopener noreferrer">'
-        "docs.opencloud.eu</a>, wo jeder von diesem Scanner vorgeschlagene Fix "
-        "ordentlich beschrieben ist. Danke an die Menschen, die es machen."
-    ),
+    "about.platform.body": "<a href=\"https://opencloud.eu/\" rel=\"noopener noreferrer\">OpenCloud</a> ist eine Open-Source-Plattform zum Speichern, Synchronisieren und Teilen von Dateien. Die Anleitungen zur Administration stehen unter <a href=\"https://docs.opencloud.eu/\" rel=\"noopener noreferrer\">docs.opencloud.eu</a>.",
     "about.platform.independent": (
         "Dieser Scanner ist ein unabhängiges Community-Projekt. Er steht in "
         "keiner Verbindung zur OpenCloud GmbH und wird von diesem Unternehmen "
@@ -811,60 +781,35 @@ MESSAGES: dict[str, str] = {
     ),
     "about.project.kicker": "Das Projekt",
     "about.project.heading": "Über diesen Scanner",
-    "about.project.body": (
-        "Alles, was du hier siehst, wird von <code>check-opencloud-security</code> "
-        "erzeugt, einem Nagios- und Icinga-Plugin mit einer Scanner-Bibliothek "
-        "dahinter. Diese Seite ist eine Möglichkeit, es zu nutzen; ein Befehl auf "
-        "deiner eigenen Maschine, ohne Ratenlimit und ohne Warteschlange, ist die "
-        "andere."
-    ),
-    "about.project.origin": (
-        "Das Projekt wurde von <strong>Massoud Ahmed</strong> ins Leben gerufen, "
-        "um OpenCloud-Nutzern eine unabhängige Alternative zu "
-        "<code>scan.nextcloud.com</code> zu geben: einen Scanner, gebaut für "
-        "OpenClouds Release-Tracks, Einstellungen und Deployment-Modell, der "
-        'vollständig auf der eigenen Maschine des Betreibers laufen kann. '
-        '<a href="{project}" rel="noopener noreferrer">Das Projekt ist auf '
-        "GitHub</a>."
-    ),
+    "about.project.body": "Die Ergebnisse stammen aus <code>check-opencloud-security</code>, einem Monitoring-Plugin mit eigener Scanner-Bibliothek. Du kannst es über diese Website oder lokal auf deinem Rechner verwenden.",
+    "about.project.origin": "<strong>Massoud Ahmed</strong> hat das Projekt entwickelt, um OpenClouds Release-Kanäle, Einstellungen und typische Installationen mit einem lokal ausführbaren Scanner zu prüfen. <a href=\"{project}\" rel=\"noopener noreferrer\">Quellcode und Beiträge findest du auf GitHub</a>.",
     # ------------------------------------------------------------------- API
-    "api.title": "Scannen per Skript",
+    "api.title": "Scannen per Skript oder Agent",
     "api.description": (
-        "Die JSON-API hinter dem Formular: wie man einen Scan einreicht, ihn "
-        "abfragt, und was dieser Server einem Aufrufer nicht zu entscheiden "
-        "erlaubt."
+        "So startest du Scans über die JSON-API und fragst Ergebnisse ab. "
+        "Mit Angaben zu Limits, OpenAPI, Arazzo-Workflows und dem MCP-Endpunkt."
     ),
     "api.kicker": "Die API",
-    "api.lede": (
-        "Das Formular ist eine von zwei Vordertüren; die andere ist JSON, und es "
-        "ist derselbe Handler."
-    ),
+    "api.lede": "Über die JSON-API kannst du Scans starten, ihren Fortschritt abfragen und Ergebnisse herunterladen. Für Skripte und Agenten gelten dieselben Prüfungen und Begrenzungen wie für das Formular im Browser.",
     "api.submit.kicker": "Einreichen & abfragen",
     "api.submit.heading": "Einreichen und abfragen",
     "api.submit.body": (
-        "Eine Einreichung antwortet mit <code>202</code> und der Kennung des "
-        "Scans; das Abfragen liefert <code>queued</code>, <code>running</code> "
-        "oder das fertige Ergebnis, und <code>404</code>, sobald er abgelaufen "
-        "ist. Nur vier Felder werden gelesen - die Adresse, die auszusetzenden "
-        "Prüfungen, der Release-Track und das Ausgabeformat. Alles andere im "
-        "Body, allen voran Nebenläufigkeit und Timeouts, wird abgelehnt: Wie "
-        "hart dieser Server prüft, ist keine Entscheidung des Aufrufers."
+        "Nach dem Start erhältst du <code>202</code> und die Scan-Kennung. "
+        "Bei der Statusabfrage bekommst du <code>queued</code>, <code>running</code> "
+        "oder das fertige Ergebnis. Abgelaufene Scans liefern <code>404</code>. "
+        "Du kannst vier Angaben übergeben: Adresse, ausgenommene Prüfungen, "
+        "Release-Kanal und Ausgabeformat. Andere Felder werden abgelehnt. "
+        "Parallelität und Zeitlimits legt der Betreiber fest."
     ),
     "api.limits.kicker": "Fair Use",
     "api.limits.heading": "Fair Use",
-    "api.limits.enforced": (
-        "Fair Use wird durchgesetzt statt nur erbeten: {client} Einreichungen "
-        "pro {window} Minute(n) von einer Adresse, und {cooldown}, beide "
-        "beantwortet mit <code>429</code> und einem <code>Retry-After</code>."
-    ),
-    "api.limits.cooldown": "ein Scan pro Ziel alle {minutes} Minute(n)",
-    "api.limits.no_cooldown": "keine Abkühlzeit pro Ziel",
+    "api.limits.enforced": "Diese Installation erlaubt {client} Anfragen je Adresse innerhalb von {window} Minute(n), mit {cooldown}. Bei Überschreitung antwortet sie mit <code>429</code> und einem <code>Retry-After</code>-Header.",
+    "api.limits.cooldown": "einer Wartezeit von {minutes} Minute(n) zwischen Scans desselben Ziels",
+    "api.limits.no_cooldown": "keiner Wartezeit zwischen Scans desselben Ziels",
+    "api.limits.daily": "Höchstens {count} Scans pro Netz am Tag.",
+    "api.limits.probe": "Ein Netz, dessen Scans immer wieder keine OpenCloud finden, wird eine Weile pausiert.",
     "api.limits.none": "Dieses Deployment setzt kein Ratenlimit.",
-    "api.limits.self_host": (
-        "Wenn du eines triffst und lieber nicht warten möchtest: Das Ganze läuft "
-        'auch auf deiner eigenen Maschine: <a href="{project}" '
-        'rel="noopener noreferrer">das Projekt ist auf GitHub</a>.'
-    ),
+    "api.limits.self_host": "Du kannst den Scanner auch lokal ausführen und damit unabhängig von diesen Limits nutzen: <a href=\"{project}\" rel=\"noopener noreferrer\">Quellcode auf GitHub</a>.",
     "api.schema.kicker": "Das Schema",
     "api.schema.heading": "Das Schema",
     "api.schema.body": (
@@ -885,45 +830,25 @@ MESSAGES: dict[str, str] = {
         "unter <code>/redoc</code>) sind bei diesem Deployment abgeschaltet; ein "
         "Betreiber schaltet sie mit <code>COS_WEB_ENABLE_DOCS=true</code> ein."
     ),
-    "api.agents.kicker": "Agenten",
-    "api.agents.heading": "Für KI-Agenten",
-    "api.agents.body": (
-        "Software, die nicht für diesen Dienst geschrieben wurde, hat eine "
-        'eigene Seite: <a href="/ai">für KI-Agenten</a> sammelt das '
-        "Discovery-Dokument, das OpenAPI-Schema, die Arazzo-Workflows und den "
-        "MCP-Endpunkt an einem Ort."
-    ),
-    # -------------------------------------------------------------------- AI
-    "ai.title": "Für KI-Agenten",
-    "ai.description": (
-        "Alles, was Software braucht, um diesen Scanner zu nutzen, ohne dafür "
-        "geschrieben worden zu sein: das Discovery-Dokument, das OpenAPI-Schema, "
-        "die Arazzo-Workflows und der MCP-Endpunkt."
-    ),
-    "ai.kicker": "Maschinelle Gäste",
-    "ai.lede": (
-        "Dieser Dienst soll von Software nutzbar sein, die nicht für ihn "
-        "geschrieben wurde. Alles, was ein Agent braucht, ist öffentlich "
-        "verfügbar, ohne Konto: was die API kann, wie sich ihre Aufrufe zu einer "
-        "Aufgabe zusammensetzen, und ein Weg, diese Aufgabe direkt auszuführen."
-    ),
-    "ai.discovery.kicker": "Discovery",
-    "ai.discovery.heading": "Von einer Adresse aus starten",
-    "ai.discovery.discovery": (
+    # ------------------------------------------------- API, for agents
+    "api.agents.kicker": "KI-Agenten",
+    "api.agents.heading": "Von einer Adresse aus starten",
+    "api.agents.intro": "Agenten finden die API-Funktionen und Scanabläufe in den folgenden öffentlichen Beschreibungen. Dafür ist kein Benutzerkonto nötig.",
+    "api.agents.discovery": (
         "<strong>Discovery</strong> - "
         '<a href="/.well-known/ai.json">/.well-known/ai.json</a> nennt alles '
         "Folgende, mit absoluten URLs. Hier starten."
     ),
-    "ai.discovery.openapi": (
+    "api.agents.openapi": (
         '<strong>OpenAPI</strong> - <a href="/openapi.json">/openapi.json</a>, '
         "jede Operation mit ihren echten Statuscodes und Antwortformen."
     ),
-    "ai.discovery.arazzo": (
+    "api.agents.arazzo": (
         '<strong>Arazzo-Workflows</strong> - <a href="/arazzo.json">'
         "/arazzo.json</a>, der Lebenszyklus eines Scans: einreichen, abfragen, "
         "Abschluss erkennen, exportieren."
     ),
-    "ai.discovery.mcp": (
+    "api.agents.mcp": (
         "<strong>MCP</strong> - <code>{url}</code>, ein Model-Context-Protocol-"
         "Endpunkt über streambares HTTP. Werkzeuge: <code>scan_instance</code>, "
         "<code>scan_instances</code>, <code>get_scan_result</code>, "
@@ -933,95 +858,52 @@ MESSAGES: dict[str, str] = {
         "Prompts benennen die Aufgaben selbst, etwa "
         "<code>audit_instance</code>, das eine Instanz prüft und den "
         "Sanierungsplan schreibt, und <code>review_transport_security</code>, "
-        "das nur das Zertifikat und den Handshake betrachtet. Er beantwortet das "
-        "Protokoll statt einen Browser, ist also eine Adresse zum Konfigurieren "
-        "statt eine Seite zum Öffnen."
+        "das nur das Zertifikat und den Handshake betrachtet. Trage die "
+        "MCP-Adresse in deinem Agenten ein. Sie ist keine Webseite, die du "
+        "im Browser öffnen kannst."
     ),
-    "ai.discovery.summary": (
-        "Die drei Dokumente beschreiben einen Dienst aus drei Blickwinkeln: "
-        "OpenAPI sagt, was die API kann, und Arazzo sagt, wie sich diese "
-        "Operationen zu einer Aufgabe zusammensetzen. Sie werden aus demselben "
-        "Code erzeugt, den der Server ausführt, sodass keines von ihnen "
-        "unbemerkt veralten kann."
-    ),
-    "ai.discovery.summary_mcp": (
-        "Die drei Dokumente beschreiben einen Dienst aus drei Blickwinkeln: "
-        "OpenAPI sagt, was die API kann, Arazzo sagt, wie sich diese Operationen "
-        "zu einer Aufgabe zusammensetzen, und MCP übergibt diese Aufgabe einem "
-        "Agenten als aufrufbares Werkzeug. Sie werden aus demselben Code erzeugt, "
-        "den der Server ausführt, sodass keines von ihnen unbemerkt veralten "
-        "kann."
-    ),
-    "ai.webmcp.kicker": "Im Browser",
-    "ai.webmcp.heading": "Die Seite als Werkzeug verwenden",
-    "ai.webmcp.intro": (
+    "api.agents.summary": "OpenAPI beschreibt die verfügbaren Operationen, Arazzo deren Ablauf vom Auftrag bis zum Ergebnis. Beide Dokumente werden aus dem Dienstcode erzeugt.",
+    "api.agents.summary_mcp": "OpenAPI beschreibt die Operationen, Arazzo die Abläufe und MCP stellt diese Abläufe als Werkzeuge für Agenten bereit. Alle verwenden dieselbe Implementierung des Dienstes.",
+    "api.webmcp.kicker": "Im Browser",
+    "api.webmcp.heading": "Die Seite als Werkzeug verwenden",
+    "api.webmcp.intro": (
         "Ein Browser mit Unterstützung für den "
         '<a href="https://webmachinelearning.github.io/webmcp/" '
         'rel="noopener noreferrer">WebMCP-Entwurf</a> kann Aktionen direkt auf '
         "der geöffneten Seite entdecken. Ein separater Client ist nicht nötig."
     ),
-    "ai.webmcp.landing": (
+    "api.webmcp.landing": (
         "Auf der Startseite stellt <code>scan_opencloud_security</code> einen Scan "
         "in die Warteschlange. Das Schema enthält die Release-Tracks, "
         "Ausgabeformate und Ausnahmen, die diese Seite anbietet."
     ),
-    "ai.webmcp.result": (
+    "api.webmcp.result": (
         "Auf einer Ergebnisseite liest <code>get_scan_result</code> den aktuellen "
         "Scan. <code>export_scan_report</code> lädt JSON, CSV, SARIF oder PDF für "
         "die bereits angezeigte UUID herunter."
     ),
-    "ai.webmcp.boundary": (
+    "api.webmcp.boundary": (
         "Jedes Browser-Werkzeug verwendet dieselbe JSON-API mit "
         "<code>Accept: application/json</code>. SSRF-Schutz, Limits, Ziel-Wartezeit, "
         "Warteschlange und UUID-Isolierung bleiben wirksam."
     ),
-    "ai.webmcp.support": (
+    "api.webmcp.support": (
         "WebMCP ist noch ein Entwurf und wird von Browsern ohne Unterstützung "
         "ignoriert. Wird MCP für diese Bereitstellung abgeschaltet, verschwinden "
         "auch die Browser-Werkzeuge."
     ),
-    "ai.clients.kicker": "Konfiguration",
-    "ai.clients.heading": "In einen Client einbinden",
-    "ai.clients.intro": (
-        "Die meisten Agenten-Werkzeuge nehmen eine URL und einen Transport. "
-        "Dieser hier ist streambares HTTP, ohne Authentifizierung und ohne "
-        "Konto:"
-    ),
-    "ai.clients.body": (
-        "Ausgearbeitete Konfigurationen für Claude Code, Claude Desktop, GitHub "
-        "Copilot in VS Code und der CLI, Cursor, Zed und Windsurf - gegen dieses "
-        "Deployment oder ein eigenes - findest du in "
-        '<a href="{project}/blob/main/docs/mcp.md" rel="noopener noreferrer">'
-        "der MCP-Anleitung</a>."
-    ),
-    "ai.rules.kicker": "Die Regeln",
-    "ai.rules.heading": "Dieselben Regeln wie für alle anderen",
-    "ai.rules.body": (
-        "Die Regeln sind für einen Agenten dieselben wie für jeden anderen. Ein "
-        "Scan ist asynchron, und die UUID ist der einzige Weg zurück zu ihm; "
-        "ein <code>429</code> ist eine Einladung, langsamer zu machen, keine "
-        "Ablehnung; und wenn du mehr als eine Handvoll Instanzen prüfst, "
-        'bitte <a href="{project}" rel="noopener noreferrer">führe den '
-        "Scanner selbst aus</a> - es ist derselbe Code, auf deiner eigenen "
-        "Maschine, ohne Grenzen."
-    ),
+    "api.clients.kicker": "Konfiguration",
+    "api.clients.heading": "Agent-Client einrichten",
+    "api.clients.intro": "Trage im Client die Endpunkt-URL und den Transporttyp Streamable HTTP ein. Falls der Betreiber eine Authentifizierung verlangt, musst du dich außerdem anmelden.",
+    "api.clients.body": "Die <a href=\"{project}/blob/main/docs/mcp.md\" rel=\"noopener noreferrer\">MCP-Anleitung</a> enthält Konfigurationen für Claude Code, Claude Desktop, GitHub Copilot, Cursor, Zed und Windsurf, sowohl für diesen Dienst als auch für eigene Installationen.",
+    "api.rules.kicker": "Die Regeln",
+    "api.rules.heading": "Dieselben Regeln wie für alle anderen",
+    "api.rules.body": "Agenten verwenden dieselben Abläufe und Limits. Scans laufen asynchron; ihre UUID ermöglicht den späteren Zugriff. Bei <code>429</code> wartest du die angegebene Frist ab. Für regelmäßige Prüfungen vieler Instanzen kannst du <a href=\"{project}\" rel=\"noopener noreferrer\">den Scanner lokal betreiben</a>.",
     # -------------------------------- Docker one-liners, on /documentation
-    "cli.lede": (
-        "Einem fremden Server eine Adresse anzuvertrauen ist ein vernünftiger "
-        "Grund zum Zögern. Du musst es nicht: Diese Seite ist dieselbe "
-        "Prüfung, als ein Befehl auf deiner eigenen Maschine."
-    ),
+    "cli.lede": "Führe den Scanner auf deinem eigenen Rechner aus, um den Scan selbst zu kontrollieren und die Begrenzungen dieses Dienstes zu umgehen. Die folgenden Befehle verwenden denselben Scanner wie diese Website.",
     "cli.oneliner.kicker": "Die Einzeiler",
     "cli.oneliner.heading": "Ein Befehl, nichts installiert",
-    "cli.oneliner.body": (
-        "Das ist die ganze Sache. Er gibt dasselbe Urteil aus, das diese "
-        "Website zeichnet - die Note, den Release-Lebenszyklus, die Advisories "
-        "und jede fehlgeschlagene Prüfung - und beendet sich mit dem "
-        "Nagios-Statuscode, sodass dieselbe Zeile in einem Skript, einer "
-        "Pipeline oder einem Cron-Job funktioniert. Nichts wird irgendwohin "
-        "gesendet: Der Container spricht mit deiner Instanz und mit niemandem "
-        "sonst."
-    ),
+    "cli.oneliner.body": "Der Befehl gibt die Note, den Supportstatus, zutreffende Sicherheitshinweise und fehlgeschlagene Prüfungen aus. Mit dem Nagios-Exitcode lässt er sich in Monitoring, Skripte, CI oder Cronjobs einbinden. Der Scan läuft im Container und verbindet sich direkt mit deiner Instanz.",
     "cli.json.kicker": "Als JSON",
     "cli.json.heading": "Das gesamte Ergebnisdokument",
     "cli.json.body": (
@@ -1030,23 +912,12 @@ MESSAGES: dict[str, str] = {
         "<strong>Aufgelöst zu</strong> - die IPv4- und IPv6-Adressen, auf die "
         "der Name während des Scans zeigte."
     ),
-    "cli.private.kicker": "Dein eigenes Netzwerk",
+    "cli.private.kicker": "Internes Netzwerk",
     "cli.private.heading": "Die Instanzen, die diese Website nicht scannt",
-    "cli.private.body": (
-        "Ein öffentlicher Dienst, der private Adressen scannen würde, ist ein "
-        "öffentlicher Dienst, der auf das interne Netzwerk eines anderen "
-        "gerichtet werden kann, deshalb lehnt dieser hier ab. Deine eigene "
-        "Maschine hat dieses Problem nicht: eine Staging-Box, ein Name, den nur "
-        "dein Resolver kennt, oder eine Instanz, die das LAN nie verlässt, "
-        "funktionieren alle über die Kommandozeile."
-    ),
+    "cli.private.body": "Führe den Kommandozeilen-Scanner auf einem Rechner aus, der deine interne Instanz erreicht. Private Adressen und interne DNS-Namen werden unterstützt. Öffentliche Scandienste beschränken solche Ziele, um Zugriffe in ihre eigenen internen Netze zu verhindern.",
     "cli.nodocker.kicker": "Kein Docker?",
     "cli.nodocker.heading": "Ohne Container",
-    "cli.nodocker.body": (
-        "Die Prüfung ist ein gewöhnliches Python-Programm auf PyPI, sodass "
-        "<code>uv</code> oder <code>pipx</code> es holen und ausführen, ohne "
-        "irgendetwas dauerhaft zu installieren."
-    ),
+    "cli.nodocker.body": "Der Scanner ist auch auf PyPI verfügbar. Mit <code>uv</code> führst du ihn bei Bedarf aus; mit <code>pipx</code> installierst du ihn in einer eigenen Python-Umgebung.",
     # ------------------------------------------------ CLI documentation index
     "docs.index.title": "CLI-Dokumentation",
     "docs.index.description": (
@@ -1055,13 +926,8 @@ MESSAGES: dict[str, str] = {
         "gesammelt."
     ),
     "docs.index.kicker": "Dokumentation",
-    "docs.index.heading": "Den Scanner von deinem Terminal aus ausführen",
-    "docs.index.lede": (
-        "Die praktische CLI-Referenz, zusammengetragen aus dem "
-        "Projekt-README und den Anleitungen unter <code>docs/</code>. Beginne "
-        "mit einem Befehl; heb dir den Rest auf, bis die Prüfung Teil "
-        "von Monitoring, CI oder einer Flotte wird."
-    ),
+    "docs.index.heading": "Den Scanner im Terminal verwenden",
+    "docs.index.lede": "Installiere den Scanner, führe die erste Prüfung aus und richte regelmäßige Scans ein. Die Anleitungen aus <code>docs/</code> erklären Monitoring, CI, Bereitstellung und die Prüfungen hinter den Befunden.",
     "docs.index.toc.quickstart": "Schnellstart",
     "docs.index.toc.commands": "Befehle",
     "docs.index.toc.options": "Nützliche Optionen",
@@ -1072,13 +938,10 @@ MESSAGES: dict[str, str] = {
     "docs.index.quickstart.heading": (
         "Eine Prüfung, ohne irgendetwas zu installieren"
     ),
-    "docs.index.quickstart.container": (
-        "Oder nutze den veröffentlichten Container. Er führt dasselbe "
-        "Plugin aus und liefert denselben Nagios/Icinga-Exit-Code:"
-    ),
+    "docs.index.quickstart.container": "Alternativ verwendest du das veröffentlichte Container-Image. Es führt dasselbe Plugin aus und liefert denselben Nagios-/Icinga-Exitcode:",
     "docs.index.quickstart.note": (
         "Das Plugin spricht direkt mit der Instanz. Es sendet die Adresse weder "
-        "an diese Website noch an einen entfernten Urteilsdienst."
+        "an diese Website noch an einen externen Bewertungsdienst."
     ),
     "docs.index.commands.kicker": "Zwei Einstiegspunkte",
     "docs.index.commands.heading": "Das Urteil und das Ergebnisdokument",
@@ -1091,7 +954,7 @@ MESSAGES: dict[str, str] = {
         "Die Scanner-Bibliothek als CLI: das vollständige JSON-Ergebnisdokument "
         "für ein Skript, eine Pipeline oder eine Ad-hoc-Untersuchung."
     ),
-    "docs.index.options.kicker": "Die alltäglichen Flags",
+    "docs.index.options.kicker": "Häufig verwendete Optionen",
     "docs.index.options.heading": "Nützliche Optionen",
     "docs.index.option.host": (
         "Hostname, IP oder URL; durch Komma getrennt für mehrere Instanzen."
@@ -1108,15 +971,13 @@ MESSAGES: dict[str, str] = {
         "wiederholbar und mit Wildcard-Unterstützung."
     ),
     "docs.index.option.debug": (
-        "Erklären, wo die Bewertung begann und was sie nach unten drückte."
+        "Ausgangsnote und Auswirkungen der einzelnen Befunde erklären."
     ),
-    "docs.index.option.insecure": (
-        "Zertifikatsprüfung für eine Instanz überspringen, die du kontrollierst."
-    ),
+    "docs.index.option.insecure": "Zertifikatsverifikation überspringen; nur für bewusst nicht vertrauenswürdige Zertifikate verwenden.",
     "docs.index.option.thresholds": (
         "Die Bewertungsschwellen wählen, die auf Monitoring-Zustände abbilden."
     ),
-    "docs.index.option.format": "Nagios-Ausgabe oder Prometheus-Text drucken.",
+    "docs.index.option.format": "Ergebnisse im Nagios- oder Prometheus-Format ausgeben.",
     "docs.index.option.baseline": (
         "Nur bei Befunden alarmieren, die neu sind oder sich gegenüber dem "
         "letzten Lauf verschlechtert haben."
@@ -1131,7 +992,7 @@ MESSAGES: dict[str, str] = {
         "vollständige Optionstabelle</a> enthält jeden Standardwert und seine "
         "<code>COS_</code>-Umgebungsvariable."
     ),
-    "docs.index.configuration.kicker": "Eine Richtung",
+    "docs.index.configuration.kicker": "Einstellungen",
     "docs.index.configuration.heading": "Konfiguration und Rangfolge",
     "docs.index.configuration.intro": (
         "Einstellungen können aus einer YAML- oder JSON-Datei, der Umgebung "
@@ -1139,7 +1000,7 @@ MESSAGES: dict[str, str] = {
     ),
     "docs.index.precedence.aria": "Konfigurationsrangfolge, höchste zuerst",
     "docs.index.precedence.cli": "CLI-Flag",
-    "docs.index.precedence.cli.note": "die explizite Antwort für diesen Lauf",
+    "docs.index.precedence.cli.note": "deine Angabe für diesen Aufruf",
     "docs.index.precedence.env": "Umgebung",
     "docs.index.precedence.env.note": (
         "<code>COS_*</code>, nützlich in Containern und Diensten"
@@ -1148,7 +1009,7 @@ MESSAGES: dict[str, str] = {
     "docs.index.precedence.file.note": "die dauerhaften Standardwerte des Betreibers",
     "docs.index.precedence.default": "Eingebauter Standardwert",
     "docs.index.precedence.default.note": (
-        "die sichere Antwort, wenn nichts angegeben wurde"
+        "gilt, wenn du keinen Wert angibst"
     ),
     "docs.index.configuration.wizard": (
         "Den Assistenten die erste Datei schreiben lassen:"
@@ -1178,9 +1039,9 @@ MESSAGES: dict[str, str] = {
         "<code>--prometheus-listen-port</code> freigeben."
     ),
     "docs.index.monitoring.ci": (
-        "<strong>CI:</strong> denselben Befehl in einer Pipeline ausführen; der "
-        "Statuscode lässt eine fehlgeschlagene Richtlinie den Job ohne "
-        "Wrapper scheitern lassen."
+        "<strong>CI:</strong> denselben Befehl in einer Pipeline ausführen. "
+        "Der Exitcode lässt den Job fehlschlagen, wenn die eingestellten "
+        "Schwellenwerte überschritten werden. Ein Wrapper ist nicht nötig."
     ),
     "docs.index.monitoring.scheduled": (
         "<strong>Geplante Prüfungen:</strong> systemd, cron, Kubernetes und die "
@@ -1194,14 +1055,158 @@ MESSAGES: dict[str, str] = {
     ),
     # --------------------------------------------------- generated guide pages
     "docs.guide.kicker": "CLI-Dokumentation",
-    "docs.guide.english_notice": (
-        "Diese Anleitung wird aus der Dokumentation des Projekts erzeugt und ist "
-        "nur auf Englisch verfügbar. Die Seite drumherum ist übersetzt; der Text "
-        "unten ist es nicht."
-    ),
+    "docs.guide.english_notice": "Diese Anleitung gibt es auf Deutsch, Englisch, Französisch und Spanisch. Für deine gewählte Sprache wird die englische Fassung angezeigt.",
     "docs.guide.toc.heading": "Auf dieser Seite",
     "docs.guide.toc.aria": "Auf dieser Seite",
+    # ---------------------------------------------------------------- compare
+    "compare.title": "Zwei Scans vergleichen",
+    "compare.description": (
+        "Zwei abgeschlossene Scans derselben Instanz vergleichen und sehen, "
+        "was behoben wurde, was neu ist und was weiterhin offen ist."
+    ),
+    "compare.eyebrow": "Haben die Korrekturen gewirkt?",
+    "compare.heading": "Zwei Scans vergleichen",
+    "compare.lede": "Gib die UUIDs eines früheren und eines späteren Scans ein. Beide Ergebnisse müssen noch verfügbar sein. Ist der frühere Scan abgelaufen, verwende unten einen heruntergeladenen Bericht.",
+    "compare.form.baseline": "Früherer Scan",
+    "compare.form.current": "Späterer Scan",
+    "compare.form.placeholder": "Die UUID aus der Adresse einer Ergebnisseite",
+    "compare.form.submit": "Vergleichen",
+    "compare.form.hint": (
+        "Die UUID ist der Teil nach <code>/scan/</code> in der Adresse "
+        "einer Ergebnisseite. Sie ist die gesamte Berechtigung für dieses "
+        "Ergebnis - behandle sie wie ein Passwort."
+    ),
+    "compare.error.unknown.baseline": (
+        "Der frühere Scan ist unbekannt oder abgelaufen. Hier lässt er sich "
+        "nicht nachschlagen: Scanne die Instanz erneut und vergleiche die "
+        "beiden neuesten Ergebnisse."
+    ),
+    "compare.error.unknown.current": (
+        "Der spätere Scan ist unbekannt oder abgelaufen. Hier lässt er sich "
+        "nicht nachschlagen: Scanne die Instanz erneut und vergleiche die "
+        "beiden neuesten Ergebnisse."
+    ),
+    "compare.error.unfinished.baseline": (
+        "Der frühere Scan ist noch nicht abgeschlossen. Öffne seine "
+        "Ergebnisseite, warte ihn ab und vergleiche erneut."
+    ),
+    "compare.error.unfinished.current": (
+        "Der spätere Scan ist noch nicht abgeschlossen. Öffne seine "
+        "Ergebnisseite, warte ihn ab und vergleiche erneut."
+    ),
+    "compare.error.same": (
+        "Beide Felder nennen denselben Scan, es gibt also nichts zu "
+        "vergleichen. Scanne die Instanz erneut und vergleiche die neue "
+        "UUID mit dieser."
+    ),
+    "compare.error.different_targets": "Die beiden Scans betreffen unterschiedliche Instanzen und werden deshalb nicht verglichen. Vergleiche zwei Scans derselben Instanz.",
+    "compare.verdict.kicker": "Zwischen den beiden Scans",
+    "compare.verdict.improved": "Es ist besser geworden",
+    "compare.verdict.unchanged": "Nichts hat sich geändert",
+    "compare.verdict.regressed": "Es ist schlechter geworden",
+    "compare.rating.up": "Die Note ist um {points} Punkt(e) gestiegen.",
+    "compare.rating.down": "Die Note ist um {points} Punkt(e) gefallen.",
+    "compare.rating.same": "Die Note ist gleich geblieben. Trotzdem können Befunde behoben worden sein: Mehrere Befunde können dieselbe Bewertungsgrenze setzen. Die Listen unten zeigen die einzelnen Änderungen.",
+    "compare.side.baseline": "Früher",
+    "compare.side.current": "Später",
+    "compare.side.target": "Instanz",
+    "compare.side.version": "Version",
+    "compare.side.scanned": "Gescannt",
+    "compare.side.unknown": "Nicht ermittelt",
+    "compare.side.open": "Dieses Ergebnis öffnen",
+    "compare.introduced.heading": "Neue Funde ({count})",
+    "compare.introduced.none": "Seit dem früheren Scan ist nichts neu.",
+    "compare.resolved.heading": "Behobene Funde ({count})",
+    "compare.resolved.none": (
+        "Nichts, was im früheren Scan offen war, ist verschwunden."
+    ),
+    "compare.unchanged.heading": "Weiterhin offen ({count})",
+    "compare.unchanged.none": "In beiden Scans ist nichts offen.",
+    "compare.changes.heading": "Was der Vergleich einzeln aufführt",
+    "compare.changes.category": "Kategorie",
+    "compare.changes.change": "Änderung",
+    "compare.nothing_stored": (
+        "Dieser Vergleich wurde aus den beiden Ergebnissen berechnet und "
+        "nirgends gespeichert. Beim Neuladen wird er erneut berechnet; läuft "
+        "eines der Ergebnisse ab, lässt er sich gar nicht mehr erfragen."
+    ),
     # ----------------------------------------------------------------- search
+    # ------------------------------------------- Vergleich mit einer Datei
+    "compare.upload.kicker": "Schon einen Bericht zur Hand?",
+    "compare.upload.heading": "Einen früheren Bericht mit einem Scan vergleichen",
+    "compare.upload.lede": (
+        "Lade einen früher heruntergeladenen Bericht hoch - JSON oder CSV - "
+        "und vergleiche ihn mit einem Scan dieses Dienstes. Nützlich, wenn "
+        "der frühere Scan längst abgelaufen ist, die Datei aber noch da "
+        "ist."
+    ),
+    "compare.upload.field.report": "Früherer Bericht",
+    "compare.upload.field.current": "Späterer Scan",
+    "compare.upload.field.hint": (
+        "Die Datei <code>.json</code> oder <code>.csv</code> aus den Downloads "
+        "einer Ergebnisseite. Bis zu {kilobytes} KB."
+    ),
+    "compare.upload.submit": "Mit dieser Datei vergleichen",
+    "compare.upload.privacy": (
+        "Die Datei wird einmal im Arbeitsspeicher gelesen, um den Vergleich zu "
+        "berechnen, und weder auf die Festplatte geschrieben noch aufbewahrt. "
+        "Der Vergleich selbst wird {minutes} Minuten vorgehalten, damit diese "
+        "Seite neu geladen werden kann, und ist danach ebenfalls weg."
+    ),
+    "compare.upload.source.kicker": "Quelle des früheren Berichts",
+    "compare.upload.source.json": (
+        "Die frühere Seite stammt aus einem hochgeladenen JSON-Bericht. Sie hat "
+        "hier keine Ergebnisseite - die Datei wurde gelesen und verworfen."
+    ),
+    "compare.upload.source.csv": (
+        "Die frühere Seite stammt aus einem hochgeladenen CSV-Bericht. Sie hat "
+        "hier keine Ergebnisseite - die Datei wurde gelesen und verworfen."
+    ),
+    "compare.upload.source.dropped": "{count} Einträge mit unbekannten Befundkennungen wurden beim Vergleich ausgelassen.",
+    "compare.upload.source.missing.httpsEnforced": (
+        "Die hochgeladene Datei hält nicht fest, ob HTTPS erzwungen wurde. Diese "
+        "Maßnahme blieb deshalb auf beiden Seiten außen vor, statt geraten zu "
+        "werden. Eine CSV-Datei von vor dieser Neuerung ist so eine Datei."
+    ),
+    "compare.upload.source.missing.update": (
+        "Die hochgeladene Datei hält nicht fest, ob ein Update ausstand. "
+        "Ausstehende Updates blieben deshalb auf beiden Seiten außen vor, statt "
+        "geraten zu werden. Eine CSV-Datei von vor dieser Neuerung ist so eine "
+        "Datei."
+    ),
+    "compare.upload.expires": "Dieser Vergleich ist noch etwa {minutes} Minuten abrufbar. Danach brauchst du die ursprüngliche Datei für einen neuen Vergleich.",
+    "compare.upload.error.missing": (
+        "Es wurde keine Datei hochgeladen. Wähle den JSON- oder "
+        "CSV-Bericht, den du früher heruntergeladen hast."
+    ),
+    "compare.upload.error.no_current": "Gib die UUID des Scans an, mit dem du den hochgeladenen Bericht vergleichen möchtest.",
+    "compare.upload.error.empty": "Diese Datei ist leer.",
+    "compare.upload.error.too_large": "Die Datei überschreitet die erlaubte Größe von {kilobytes} KB.",
+    "compare.upload.error.unreadable": (
+        "Diese Datei ließ sich weder als JSON noch als CSV lesen. Lade die "
+        "Datei genau so hoch, wie sie heruntergeladen wurde, ohne sie zu "
+        "öffnen und neu zu speichern."
+    ),
+    "compare.upload.error.not_a_report": (
+        "Diese Datei sieht nicht nach einem Scanbericht dieses Dienstes aus. "
+        "Erwartet werden die Downloads von einer Ergebnisseite."
+    ),
+    "compare.upload.error.rate_limit": (
+        "Das sind viele Berichte aus deinem Netz in kurzer Zeit. Warte eine "
+        "Minute und versuche es erneut."
+    ),
+    "compare.upload.error.blocked": (
+        "Mehrere zuletzt aus deinem Netz angefragte Ziele waren keine "
+        "erreichbaren OpenCloud-Instanzen. Dieser Dienst legt deshalb eine "
+        "Pause ein - auch für Uploads. Der Scanner und sein Vergleich laufen "
+        "ohne jede Begrenzung auch auf deinem eigenen Rechner."
+    ),
+    "compare.upload.error.expired": (
+        "Dieser Vergleich ist abgelaufen. Vergleiche aus einer "
+        "hochgeladenen Datei werden nur {minutes} Minuten vorgehalten, und "
+        "die Datei selbst wurde nie aufbewahrt - lade sie erneut hoch, um "
+        "dieselbe Frage zu stellen."
+    ),
     "search.title": "Suche",
     "search.description": (
         "Die Scanner-Dokumentation und öffentliche Anleitungen durchsuchen. "
@@ -1217,10 +1222,8 @@ MESSAGES: dict[str, str] = {
     "search.label": "Dokumentation durchsuchen",
     "search.placeholder": "TLS, Docker, Waiver...",
     "search.submit": "Suchen",
-    "search.status.idle": (
-        "Gib einen Begriff ein, um die Dokumentation dieses Releases zu "
-        "durchsuchen."
-    ),
+    "search.scope.operator": "Betriebsbereich",
+    "search.status.idle": "Gib einen Suchbegriff ein.",
     "search.status.results": "{count} Ergebnis(se) in diesem Release.",
     "search.status.empty": "Keine öffentliche Dokumentation passte zu dieser Suche.",
     "search.status.error": "Die Suche ist vorübergehend nicht verfügbar.",
@@ -1228,7 +1231,7 @@ MESSAGES: dict[str, str] = {
     # opposed to the words on the page itself.
     "search.page.index.title": "Eine OpenCloud-Instanz scannen",
     "search.page.index.summary": (
-        "Einen öffentlichen Sicherheitsscan gegen eine OpenCloud-Instanz "
+        "Einen öffentlichen Sicherheitsscan für eine OpenCloud-Instanz "
         "ausführen."
     ),
     "search.page.how.title": "Wie der Scanner funktioniert",
@@ -1253,13 +1256,8 @@ MESSAGES: dict[str, str] = {
     ),
     "search.page.api.title": "API",
     "search.page.api.summary": (
-        "Scans einreichen, Ergebnisse abfragen, Berichte exportieren und "
-        "gespeicherte Daten löschen."
-    ),
-    "search.page.ai.title": "KI und MCP",
-    "search.page.ai.summary": (
-        "Maschinenlesbares OpenAPI, Arazzo, Discovery, MCP-Werkzeuge und "
-        "Prompts."
+        "Scans einreichen, Ergebnisse abfragen, Berichte exportieren und den "
+        "Dienst per OpenAPI, Arazzo oder MCP aus einem Agenten heraus steuern."
     ),
     "search.page.privacy.title": "Datenschutz",
     "search.page.privacy.summary": (
@@ -1278,18 +1276,22 @@ MESSAGES: dict[str, str] = {
         "Dieser Dienst akzeptiert {fields} nicht. Der Scan läuft ausschließlich "
         "mit serverseitigen Einstellungen."
     ),
-    "error.rate_limit.client": (
-        "Das sind viele Scans aus deinem Netzwerk in kurzer Zeit. Warte eine "
-        "Minute und versuche es erneut."
+    "error.rate_limit.client": "Aus deinem Netzwerk wurden in kurzer Zeit viele Scans angefragt. Bitte warte eine Minute und versuche es erneut.",
+    "error.rate_limit.probe": "Mehrere zuletzt angefragte Ziele waren keine erreichbaren OpenCloud-Instanzen. Weitere Scans aus deinem Netzwerk sind vorübergehend gesperrt. Für deine eigene Instanz kannst du den Scanner auch lokal ausführen.",
+    "error.rate_limit.daily": "Das heutige Scan-Limit für dein Netzwerk ist erreicht. Versuche es morgen erneut oder führe den Scanner lokal ohne dieses Tageslimit aus.",
+    "error.target.wildcard_dns": "Dieser Name gehört zu einem Wildcard-DNS-Dienst. Gib den eigenen Hostnamen oder die IP-Adresse der Instanz ein.",
+    "error.target.unstable": (
+        "Dieser Hostname liefert bei jeder Abfrage andere Adressen, daher kann "
+        "dieser Dienst nicht verlässlich bestimmen, was er scannen würde."
     ),
-    "error.rate_limit.target": (
-        "Diese Instanz wurde erst vor kurzem gescannt. Bitte gib ihr ein "
-        "paar Minuten."
+    "error.target.not_approved": (
+        "Dieser Dienst scannt nur Instanzen, die dafür freigegeben wurden. Bitte "
+        "den Betreiber, sie hinzuzufügen, oder veröffentliche den DNS-Eintrag, "
+        "der sie freigibt."
     ),
+    "error.rate_limit.target": "Diese Instanz wurde kürzlich gescannt. Bitte warte einige Minuten.",
     "error.target.invalid": "Diese Adresse kann nicht gescannt werden.",
-    "error.target.empty": (
-        "Gib die Adresse der zu scannenden OpenCloud-Instanz ein."
-    ),
+    "error.target.empty": "Gib die Adresse der OpenCloud-Instanz ein.",
     "error.target.too_long": "Diese Adresse ist zu lang.",
     "error.target.characters": (
         "Diese Adresse enthält Zeichen, die ein Hostname nicht haben kann."
@@ -1301,17 +1303,13 @@ MESSAGES: dict[str, str] = {
     "error.target.credentials": (
         "Zugangsdaten in der Adresse werden nicht akzeptiert."
     ),
-    "error.target.address_only": (
-        "Gib nur die Basisadresse der Instanz ein. Ein einfacher "
-        "Unterordner wird akzeptiert, Queries, Fragmente, Parameter und "
-        "Pfad-Traversierung jedoch nicht."
-    ),
+    "error.target.address_only": "Gib die Basisadresse ein, bei Bedarf mit einfachem Unterordner. Querys, Fragmente, Parameter und Pfadwechsel sind nicht erlaubt.",
     "error.target.port": "Diese Adresse hat einen ungültigen Port.",
     "error.target.no_host": "Diese Adresse hat keinen Hostnamen.",
     "error.target.hostname_shape": (
         "Das ist kein Hostname, den dieser Dienst scannen kann."
     ),
-    "error.target.unresolved": "Dieser Hostname löst sich nicht auf.",
+    "error.target.unresolved": "Für diesen Hostnamen konnte keine IP-Adresse ermittelt werden.",
     "error.target.hostname_long": "Dieser Hostname ist zu lang.",
     "error.target.internal": (
         "Lokale und interne Adressen können nicht gescannt werden."
@@ -1320,49 +1318,61 @@ MESSAGES: dict[str, str] = {
         "Diese Adresse zeigt in ein privates, lokales oder link-lokales "
         "Netzwerk, das dieser Dienst nicht scannt."
     ),
+    "error.target.blocked": (
+        "Dieser Dienst wurde gebeten, diese Adresse nicht zu scannen."
+    ),
+    "error.store_unavailable": (
+        "Dieser Dienst kann seine eigene Konfiguration gerade nicht lesen und "
+        "scannt nicht, solange unklar ist, welche Ziele ausgeschlossen sind. Bitte versuche "
+        "es in einigen Minuten erneut."
+    ),
     # ----------------------------------------------------------- result page
     "result.title": "Scan-Ergebnisse",
     "result.description": (
         "Das Ergebnis eines öffentlichen Scans, lesbar nur mit seiner eigenen "
         "Kennung."
     ),
-    "result.kicker": "Lagebericht",
+    "result.kicker": "Sicherheitsprüfung",
     "result.heading": "Scan-Ergebnis",
     "result.track.title": (
         "Der Release-Track, gegen den dieser Scan bewertet wurde"
     ),
     "result.track.label": "{track}-Track",
     "result.another": "Eine weitere Instanz scannen",
-    "result.progress.kicker": "In Bearbeitung",
-    "result.progress.queued.title": "Wartet auf einen Scanner-Worker",
-    "result.progress.queued.detail": (
-        "Gerade sind alle Worker beschäftigt. Dein Scan behält seinen Platz in "
-        "der Reihe und startet, sobald einer frei ist."
+    "result.compare": "Mit einem früheren Scan vergleichen",
+    "result.tab.queued": "In der Warteschlange: {target}",
+    "result.tab.queued.position": "Platz {position}: {target}",
+    "result.tab.running": "Wird gescannt: {target}",
+    "result.tab.ready": "Bericht fertig: {target}",
+    "result.tab.done": "Note {label}: {target}",
+    "result.tab.failed": "Scan fehlgeschlagen: {target}",
+    "index.cooldown.opening": 'Dein vorheriges Ergebnis für diese Instanz wird geöffnet …',
+    "result.earlier.note": (
+        'Das ist dein vorheriges Ergebnis für diese Instanz. Die Instanz wurde gerade erst gescannt und kann noch nicht erneut gescannt werden; der Countdown unten zeigt, wann ein neuer Scan möglich ist.'
     ),
+    "result.compare.offer": "In diesem Tab wurde diese Instanz bereits um {time} gescannt.",
+    "result.compare.offer.link": "Sehen, was sich seitdem geändert hat",
+    "result.progress.kicker": "In Bearbeitung",
+    "result.progress.queued.title": "Wartet auf einen freien Scanner-Prozess",
+    "result.progress.queued.detail": "Alle Worker sind beschäftigt. Dein Scan wartet an seiner Position, bis ein Worker frei wird.",
     "result.progress.running.title": "Die Instanz wird gescannt",
     "result.progress.running.detail": (
-        "Liest, was die Instanz veröffentlicht: Version, Fähigkeiten, "
-        "Zertifikat, Header und die Endpunkte, die sie ohne Anmeldung "
-        "preisgibt."
+        "Der Scanner prüft Version, Funktionen, Zertifikat, Header und "
+        "Endpunkte, die ohne Anmeldung erreichbar sind."
     ),
     "result.progress.step.queued": "In Warteschlange",
     "result.progress.step.running": "Läuft",
     "result.progress.step.done": "Ergebnis",
     "result.progress.estimate": "Die meisten Scans sind in unter einer Minute fertig.",
-    "result.progress.elapsed": "{duration} vergangen",
-    "result.progress.noscript": (
-        "Diese Seite aktualisiert sich mit JavaScript. Ohne dieses lädst du "
-        "die Seite in ein paar Sekunden neu, um das Ergebnis zu sehen."
-    ),
+    "result.progress.elapsed": "seit {duration}",
+    "result.progress.noscript": "Mit JavaScript aktualisiert sich diese Seite automatisch. Andernfalls lade sie nach einigen Sekunden neu.",
     "result.progress.queue.position": (
         "Scan in Warteschlange. Position in der Reihe: #{position} von "
         "{length}."
     ),
-    "result.progress.queue.next": (
-        "Scan in Warteschlange. Du bist als Nächstes dran."
-    ),
+    "result.progress.queue.next": "Dein Scan ist als Nächstes an der Reihe.",
     "result.progress.queue.waiting": (
-        "Wartet darauf, dass ein Scanner-Worker dies übernimmt."
+        "Wartet darauf, dass ein Scanner-Prozess den Auftrag übernimmt."
     ),
     "result.progress.done.title": "Bericht fertig",
     "result.progress.done.detail": "Die Note steht fest. Der Bericht wird geöffnet.",
@@ -1371,22 +1381,18 @@ MESSAGES: dict[str, str] = {
         "Der Scan konnte nicht abgeschlossen werden. Das Ergebnis wird geöffnet."
     ),
     "result.failed.fallback": "Der Scan konnte nicht abgeschlossen werden.",
-    "result.failed.body": (
-        "Es wurde nichts benotet, weil nichts Brauchbares zurückkam. Prüfe, "
-        "ob die Adresse stimmt, ob die Instanz aus dem öffentlichen Internet "
-        "erreichbar ist, und ob es sich um eine OpenCloud-Instanz handelt."
-    ),
+    "result.failed.body": "Der Scanner konnte nicht genügend Informationen für eine Bewertung abrufen. Prüfe die Adresse und stelle sicher, dass dort OpenCloud läuft und die Instanz von diesem Dienst aus erreichbar ist.",
     "result.document.kicker": "Ergebnisdokument",
     "result.document.heading": "Ergebnisdokument",
     "result.document.lede": (
-        "Dasselbe Dokument, das die Kommandozeilenprüfung und das Nagios-Plugin "
+        "Dasselbe Dokument, das das Kommandozeilen-Tool und das Nagios-Plugin "
         "auswerten."
     ),
     "result.verdict.kicker": "Urteil",
     "result.verdict.heading": "Gesamtbewertung",
     "result.verdict.dial": "Note {label}, {rating} von 5",
     "result.facts.instance": "Instanz",
-    "result.facts.resolved": "Aufgelöst zu",
+    "result.facts.resolved": "Aufgelöste Adressen",
     "result.facts.ipv6.heading": "IPv6-Erreichbarkeit",
     "result.facts.ipv6.note": (
         "Nicht geprüft - dieses Deployment hat keine ausgehende IPv6-"
@@ -1419,9 +1425,16 @@ MESSAGES: dict[str, str] = {
     "result.facts.signin.link": "wie die OpenCloud-Anmeldung eingerichtet wird",
     "result.facts.proxy": "Reverse Proxy",
     "result.facts.proxy.detected": "Erkannt",
+    "result.facts.http3": "HTTP/3",
+    "result.facts.http3.value": "Über UDP {ports} angekündigt - prüfe, ob deine Firewall diesen Verkehr bewusst zulässt (nicht bewertet)",
+    "result.facts.http3.noport": "Über UDP angekündigt - prüfe, ob deine Firewall diesen Verkehr bewusst zulässt (nicht bewertet)",
+    "result.facts.upgrade_path": "Update-Pfad",
+    "result.facts.upgrade_path.complete": "{target} behebt alle bekannten Sicherheitsmeldungen",
+    "result.facts.upgrade_path.partial": "{target} lässt {open} noch offen; {safe} ist die erste Version, die alle behebt",
+    "result.facts.upgrade_path.unfixed": "{target} lässt {open} noch offen; noch keine veröffentlichte Version behebt alle offenen Meldungen",
     "result.facts.office": "Office",
     "result.facts.calendar": "Kalender",
-    "result.facts.calendar.detected": "Etwas antwortet auf den CalDAV-Pfad",
+    "result.facts.calendar.detected": "Ein Dienst antwortet am CalDAV-Pfad",
     "result.facts.newest": "Neuestes Release",
     "result.facts.score": "Punktzahl",
     "result.facts.score.value": "{rating} von 5",
@@ -1432,33 +1445,51 @@ MESSAGES: dict[str, str] = {
     "result.counter.passed": "Bestanden",
     "result.verdict.why": "Warum diese Note:",
     "result.verdict.caveat": (
-        "Eine Note sagt, dass die unten stehenden Prüfungen bestanden wurden, "
-        "nicht, dass die Instanz sicher ist. Dieser Scan ist nicht erschöpfend: "
-        "Er sieht nur, was die Instanz einem anonymen Besucher zeigt. "
+        "Die Note fasst die unten stehenden Prüfungen zusammen. Sie bestätigt "
+        "nicht, dass die Instanz sicher ist: Der Scan sieht nur, was sie "
+        "ohne Anmeldung zugänglich macht. "
         '<a href="#scan-limits">Was er nicht sehen kann</a>.'
     ),
-    "result.fix": "Fix:",
+    "result.fix": "Behebung:",
     "result.documentation": "Dokumentation",
     "result.explain.title": "Was diese Prüfung bedeutet",
-    "result.plan.kicker": "Sanierungsplan",
-    "result.plan.heading": "Was dich zu {label} bringt",
+    "result.plan.kicker": "Maßnahmenplan",
+    "result.plan.heading": "Schritte zur Note {label}",
     "result.plan.then": "dann {label}",
     "result.plan.still": "immer noch {label}",
-    "result.plan.note": (
-        "Die Reihenfolge ist die, die sich am schnellsten auszahlt, und die Note "
-        "neben einem Schritt ist die Bewertung, die erreicht würde, sobald "
-        "dieser Schritt und alles darüber erledigt ist. Befunde gleichen "
-        "Schweregrads teilen sich eine Obergrenze, sodass sich die Note erst "
-        "bewegt, wenn der letzte von ihnen verschwunden ist - deshalb kann ein "
-        "Schritt notwendig sein und trotzdem für sich allein nichts versprechen."
-    ),
+    "result.plan.note": "Der Plan priorisiert Änderungen, die die Bewertung verbessern. Die Note neben einem Schritt setzt voraus, dass dieser und alle vorherigen Schritte erledigt sind. Befunde gleicher Schwere begrenzen die Note gemeinsam. Deshalb können mehrere Korrekturen nötig sein, bevor sie steigt.",
     "result.plan.blocked.heading": (
-        "Drückt die Note nach unten, und ist nicht behebbar"
+        "Begrenzt die Note und lässt sich nicht konfigurieren"
     ),
     "result.plan.blocked.note": (
-        "OpenCloud hat diese fest codiert, sodass keine Einstellung sie "
-        "erreicht. Sie sind der Grund, warum der obige Plan dort endet, wo er "
-        "endet."
+        "Diese Werte sind im OpenCloud-Code festgelegt. Du kannst sie nicht "
+        "über die Konfiguration ändern. Deshalb kann der Maßnahmenplan "
+        "keine bessere Note erreichen."
+    ),
+    "result.rehearsal.kicker": "Upgrade-Simulation",
+    "result.rehearsal.heading": "Was ein Upgrade beheben würde",
+    "result.rehearsal.lede": (
+        "Jede sinnvolle Zielversion wird bewertet, bevor sie jemand installiert. "
+        "Ein Upgrade ändert die Version, nicht den Reverse Proxy. Die Befunde "
+        "auf dieser Seite bleiben daher unverändert."
+    ),
+    "result.rehearsal.line": "Versionslinie {line}",
+    "result.rehearsal.recommended": "empfohlen",
+    "result.rehearsal.eol": "Ende des Supports",
+    "result.rehearsal.grade": "erreicht {label}",
+    "result.rehearsal.fixes": "Behebt",
+    "result.rehearsal.still": "Weiterhin betroffen:",
+    "result.rehearsal.introduces": "Neu betroffen:",
+    "result.rehearsal.clean": "Behebt alle Sicherheitsmeldungen, die diese Version betreffen.",
+    "result.rehearsal.nothing": "Behebt keine Sicherheitsmeldung, die diese Version betrifft.",
+    "result.rehearsal.capped": (
+        "Die Version allein würde {label} erreichen; die Befunde auf dieser "
+        "Seite halten die Bewertung auf ihrem aktuellen Stand."
+    ),
+    "result.rehearsal.note": (
+        "Diese Simulation nutzt nur den Releaseplan und die Sicherheitsmeldungs-"
+        "datenbank, die diesem Scan vorlag. Später veröffentlichte Versionen "
+        "oder Meldungen sind nicht enthalten."
     ),
     "result.eol.alert": (
         "Dieses Release erhält keine Sicherheitsfixes mehr. Nichts anderes auf "
@@ -1477,9 +1508,9 @@ MESSAGES: dict[str, str] = {
     "result.findings.kicker": "Befunde",
     "result.findings.heading": "Fehlgeschlagene Prüfungen",
     "result.findings.lede": (
-        "Jeder deckelt die Note auf dem Niveau, das sein Schweregrad zulässt. "
-        "Behebe zuerst die kritischen: Sie drücken die Punktzahl am "
-        "stärksten nach unten."
+        "Jeder Befund begrenzt die Note abhängig von seinem Schweregrad. "
+        "Behebe zuerst die kritischen Befunde, da sie die Bewertung am "
+        "stärksten verschlechtern."
     ),
     "result.findings.filter.aria": "Befunde nach Schweregrad filtern",
     "result.findings.filter.active": "Zeigt nur Befunde mit Schweregrad {severity}.",
@@ -1491,85 +1522,124 @@ MESSAGES: dict[str, str] = {
     ),
     "result.hardening.kicker": "Härtung",
     "result.hardening.heading": "Härtung, die sich lohnt",
-    "result.hardening.lede": (
-        "Einstellungen, die nicht aktiviert sind. Keine davon ist eine aktive "
-        "Schwachstelle; jede beseitigt einen Weg hinein."
-    ),
+    "result.hardening.lede": "Diese Einstellungen bieten zusätzlichen Schutz vor typischen Risiken. Prüfe zu jedem Befund die Erklärung und den vorgeschlagenen Lösungsweg.",
     "result.hardening.tag": "Härtung",
     "result.header.tag": "Header",
     # ------------------------------------------------- configuration fragment
-    "result.fragment.kicker": "Die Behebung, ausgeschrieben",
-    "result.fragment.heading": "Das hier in Ihre Konfiguration einfügen",
+    "result.fragment.kicker": "Konfigurationsvorlage",
+    "result.fragment.heading": "In die Konfiguration einfügen",
     "result.fragment.lede": (
         "Die Befunde von oben, in der Syntax der Datei, die geändert werden "
-        "muss. Wählen Sie, wo Ihre Instanz konfiguriert wird."
+        "muss. Wähle, wo deine Instanz konfiguriert wird."
     ),
     "result.fragment.caution": (
-        "Lesen Sie vor dem Einfügen die Zeile „Behebung“ jedes Befundes. Dies "
+        "Lies vor dem Einfügen die Zeile „Behebung“ jedes Befundes. Dies "
         "sind die Werte, nach denen die Prüfungen suchen, keine Bewertung "
-        "dessen, was Ihre Installation braucht."
+        "dessen, was deine Installation braucht."
     ),
     "result.fragment.picker": "Konfigurationsformat",
     "result.fragment.file": "Gehört in {name}.",
     "result.fragment.copy": "Kopieren",
     "result.fragment.copied": "Kopiert",
     "result.fragment.copy_failed": "Kopieren fehlgeschlagen",
-    "result.fragment.nothing": (
-        "Hier wird nichts auf diese Weise gesetzt. Was offen ist, gehört "
-        "nach {flavours}."
-    ),
+    "result.fragment.nothing": "Kein offener Befund lässt sich in diesem Format beheben. Die passenden Einstellungen findest du unter {flavours}.",
     "result.fragment.elsewhere": (
         "Diese werden woanders behoben - sie gehören nach {flavours}:"
     ),
-    "result.fragment.undecided": (
-        "Für diese gibt es keinen Wert zum Einfügen: der richtige ist eine "
-        "Entscheidung über diese Installation, und die Zeile „Behebung“ des "
-        "Befundes ist die ganze Antwort."
-    ),
+    "result.fragment.undecided": "Bei diesen Befunden hängt der passende Wert von deiner Installation ab. Folge den Hinweisen zur Behebung des jeweiligen Befunds.",
     # ------------------------------------------------------------ scan again
     "result.rescan": "Erneut scannen",
     "result.rescan.ready": "Diese Instanz kann erneut gescannt werden.",
     "result.rescan.wait": "Erneut scannen möglich in {countdown}.",
-    "result.rescan.note": (
-        "Gleiches Ziel, gleiche Ausnahmen, gleicher Release-Track - damit das "
-        "nächste Ergebnis mit diesem vergleichbar ist. Die Wartezeit hält "
-        "diesen kleinen Dienst am Laufen; der Scanner ist quelloffen und "
-        "läuft auf Ihrem eigenen Rechner ganz ohne Limits:"
-    ),
+    "result.rescan.note": "Der nächste Scan verwendet dasselbe Ziel, dieselben Ausnahmen und denselben Release-Kanal, damit die Ergebnisse vergleichbar bleiben. Warte bitte die Pause ab oder nutze den quelloffenen Scanner ohne Begrenzung auf deinem Rechner:",
     "result.rescan.self_host": "selbst betreiben",
     "result.excluded.kicker": "Ausgeschlossen",
+    "result.fingerprint.kicker": "Konfiguration",
+    "result.fingerprint.heading": "Hat sich diese Installation geändert?",
+    "result.fingerprint.body": (
+        "Jede Gruppe unten ist ein Digest davon, wie diese Instanz "
+        "konfiguriert ist - nie davon, worauf sie konfiguriert ist. "
+        "Vergleiche sie mit einem früheren Scan: Eine Gruppe mit einem "
+        "anderen Digest war anders eingerichtet, auch wenn die Note gleich "
+        "geblieben ist."
+    ),
+    "result.fingerprint.overall": "Über alle Gruppen: {digest}",
+    "result.fingerprint.unmeasured": "In diesem Scan nicht gemessen",
+    "result.fingerprint.unavailable": (
+        "Dieser Bericht enthält keinen Konfigurations-Fingerabdruck und kann "
+        "deshalb nicht sagen, ob sich die Installation geändert hat. Das ist "
+        "nicht dasselbe wie eine Installation, die gleich geblieben ist."
+    ),
+    "fingerprint.group.tls": "Transportsicherheit",
+    "fingerprint.group.headers": "Sicherheits-Header",
+    "fingerprint.group.sharing": "Freigaben",
+    "fingerprint.group.authentication": "Anmeldung",
+    "fingerprint.group.proxy": "Proxy und Auslieferung",
+    "result.coverage.kicker": "Abdeckung",
+    "result.coverage.heading": "Was dieser Scan nicht gemessen hat",
+    "result.coverage.note": (
+        "Eine Note beschreibt, was dieser Scan festgestellt hat. Diese "
+        "Prüfungen kamen zu keinem Ergebnis; über sie sagt die Note also "
+        "nichts aus."
+    ),
+    "result.coverage.summary": (
+        "{measured} von {total} Prüfungen kamen zu einem Ergebnis."
+    ),
+    "result.coverage.breakdown": (
+        "{evaluated} Prüfungen ausgewertet, {skipped} übersprungen, "
+        "{indeterminate} unentschieden, {networkLimited} netzwerkbedingt offen."
+    ),
+    "result.coverage.complete": (
+        "Jede Prüfung, die dieser Scan vorgesehen hat, kam zu einem Ergebnis."
+    ),
+    "result.coverage.unavailable": (
+        "Dieser Bericht entstand, bevor Scans ihre Abdeckung festgehalten "
+        "haben; er sagt also nicht, welche Prüfungen gelaufen sind. Das ist "
+        "nicht dasselbe wie ein Scan ohne Lücken."
+    ),
+    "coverage.reason.not_applicable": "Trifft auf diese Instanz nicht zu",
+    "coverage.reason.probe_disabled": "Die Prüfung war für diesen Scan abgeschaltet",
+    "coverage.reason.prerequisite_missing": (
+        "Die Instanz hat die für diese Prüfung nötigen Daten nicht veröffentlicht"
+    ),
+    "coverage.reason.timeout": "Nichts hat rechtzeitig geantwortet",
+    "coverage.reason.unreadable": "Die Antwort war nicht lesbar",
+    "coverage.reason.no_route": "Dieser Scanner hat keine Route zu dieser Adresse",
+    "coverage.group.hardening": "Härtungseinstellungen",
+    "coverage.group.header": "Sicherheits-Header",
+    "coverage.group.advisoryHeader": "Empfohlene Header",
+    "coverage.group.advisoryCheck": "Empfohlene Beobachtungen",
+    "coverage.group.extraCheck": "Zusatzprüfungen",
+    "coverage.group.tls": "Transportsicherheit",
+    "coverage.group.dns": "DNS",
+    "coverage.group.addressParity": "Adressen",
+    "coverage.group.capabilities": "Funktionen",
+    "coverage.group.updates": "Updates",
+    "coverage.group.integrations": "Integrationen",
     "result.excluded.heading": "Gemeldet, aber nicht gezählt",
-    "result.excluded.waived.heading": "Du batest darum, diese zu ignorieren",
+    "result.excluded.waived.heading": "Von dir ausgenommene Befunde",
     "result.excluded.waived.note": (
-        "Sie sind trotzdem fehlgeschlagen. Sie haben die Note nur nicht mehr "
-        "nach unten gedrückt."
+        "Diese Prüfungen sind fehlgeschlagen, beeinflussen die Note wegen "
+        "deiner Ausnahmen aber nicht."
     ),
-    "result.excluded.unfixable.heading": "Niemand kann diese ändern",
-    "result.excluded.unfixable.note": (
-        "OpenCloud hat diese Flags fest codiert, sodass sie auf jeder "
-        "existierenden Instanz gleich ausfallen. Sie werden der Vollständigkeit "
-        "halber angezeigt und von der Note ausgeschlossen."
-    ),
+    "result.excluded.unfixable.heading": "Von OpenCloud fest vorgegeben",
+    "result.excluded.unfixable.note": "Diese Werte sind im OpenCloud-Code festgelegt und können nicht konfiguriert werden. Sie dienen zur Information und beeinflussen die Bewertung nicht.",
     "result.scope.kicker": "Umfang",
     "result.scope.heading": "Was dieser Scan nicht sehen kann",
     "result.scope.body": (
-        "Alles oben wurde ohne Anmeldung gelesen, was der Sinn der Sache ist und "
-        "zugleich die Grenze. <strong>Das Fehlen eines Befunds ist kein Beweis "
-        "für Sicherheit</strong>, und die höchste Note, die diese Seite vergeben "
-        "kann, ist keine Aussage darüber, dass die Instanz sicher ist - nur, "
-        "dass nichts hier Geprüftes fehlgeschlagen ist. Ganze Kategorien liegen "
-        "vollständig außerhalb dessen, was ein nicht angemeldeter Scan erreicht: "
-        "das Betriebssystem und seine Pakete, die Container-Laufzeit, die "
-        "eigene Konfiguration des Reverse Proxy, Backups und ihre "
-        "Wiederherstellung, der Speicher hinter der Instanz, Geheimnisse und "
-        "Schlüsselverwaltung, Konten, Passwörter und Multi-Faktor-Anmeldung, "
-        "die Berechtigungen bestehender Freigaben, die Software-Lieferkette, "
-        "und alles, was sich nur einem angemeldeten Benutzer zeigt. Ebenso "
-        "diese zwei, die sichtbar sein sollten und es nicht sind:"
+        "Der Scan prüft öffentlich zugängliche Informationen. <strong>Keine "
+        "Befunde bedeuten nicht, dass die Instanz sicher ist</strong> – auch "
+        "bei der besten Note. Nicht geprüft werden Betriebssystem und Pakete, "
+        "Container-Laufzeit, Reverse-Proxy-Konfiguration, Backups und "
+        "Wiederherstellung, Speicher, Geheimnisse und Schlüsselverwaltung, "
+        "Konten, Passwörter, Multi-Faktor-Anmeldung, bestehende "
+        "Freigabeberechtigungen und die Software-Lieferkette. Auch Daten, die "
+        "erst nach der Anmeldung zugänglich sind, liegen außerhalb des "
+        "Prüfumfangs. Zwei weitere Bereiche solltest du gesondert prüfen:"
     ),
     "result.scope.audit": (
-        "<strong>Audit-Protokollierung.</strong> Der Audit-Dienst von OpenCloud "
-        "konsumiert nur den internen Event-Bus - er veröffentlicht keinen "
+        "<strong>Audit-Logging.</strong> Der Audit-Dienst von OpenCloud "
+        "nutzt nur den internen Event-Bus – er veröffentlicht keinen "
         "Endpunkt und erscheint in keinem nicht angemeldeten Dokument -, sodass "
         "von außen überhaupt nicht festgestellt werden kann, ob er läuft. Er "
         "wird nicht geprüft."
@@ -1611,8 +1681,8 @@ MESSAGES: dict[str, str] = {
     "result.tls.lifetime": "Ausgestellt für",
     "result.tls.lifetime.days": "{days} Tag(e)",
     "result.tls.ocsp": "OCSP-Stapling",
-    "result.tls.ocsp.stapled": "Eine Widerrufsantwort ist angeheftet",
-    "result.tls.ocsp.not_stapled": "Nicht angeheftet",
+    "result.tls.ocsp.stapled": "Eine Widerrufsantwort wird mitgeliefert",
+    "result.tls.ocsp.not_stapled": "Nicht mitgeliefert",
     "result.tls.ocsp.undetermined": "Nicht ermittelt",
     "result.raw.kicker": "Rohdaten",
     "result.raw.heading": "Technische Details",
@@ -1622,12 +1692,15 @@ MESSAGES: dict[str, str] = {
     "result.raw.summary": "Das rohe JSON anzeigen",
     "result.export.kicker": "Export",
     "result.export.heading": "Dieses Ergebnis mitnehmen",
-    "result.export.lede": (
-        "Derselbe Scan, auf vier Arten dargestellt. Jede wird erzeugt, wenn du "
-        "danach fragst, und verschwindet mit dem Scan selbst."
-    ),
+    "result.export.lede": "Lade denselben Bericht in einem der vier Formate herunter. Die Downloads sind verfügbar, bis der Scan abläuft.",
     "result.export.pdf": "PDF-Bericht",
     "result.export.pdf.hint": "Für ein Ticket, eine Überprüfung oder einen Ausdruck.",
+    "result.export.html": "Bericht herunterladen",
+    "result.export.html.hint": (
+        "Eine Datei, die noch lesbar ist, wenn dieser Link abgelaufen ist. "
+        "Sie öffnet offline, stellt keine Netzwerkanfrage und aktualisiert "
+        "sich nicht."
+    ),
     "result.export.csv": "CSV",
     "result.export.csv.hint": "Eine Zeile pro Befund, für eine Tabellenkalkulation.",
     "result.export.sarif": "SARIF",
@@ -1640,22 +1713,10 @@ MESSAGES: dict[str, str] = {
     ),
     "result.share.kicker": "Teilen",
     "result.share.heading": "Diesen Bericht teilen",
-    "result.share.lede": (
-        "Per E-Mail oder über die eigene Zwischenablage. Nichts läuft über "
-        "diesen Dienst, und kein anderes Unternehmen wird um Hilfe gebeten."
-    ),
-    "result.share.warning": (
-        "Die Adresse dieser Seite ist das Einzige, was sie schützt: Wer sie "
-        "hat, kann den Bericht lesen, bis er abläuft. Wer sie in einen Kanal "
-        "stellt, teilt sie mit allen dort - und mit allem, was Links abruft, "
-        "um eine Vorschau zu bauen. Kopiere stattdessen die Zusammenfassung, "
-        "wenn es um die Befunde geht."
-    ),
+    "result.share.lede": "Kopiere den Link oder eine Zusammenfassung, oder öffne einen Entwurf in deinem E-Mail-Programm. Der Dienst versendet den Bericht nicht selbst.",
+    "result.share.warning": "Wer diesen Link erhält, kann den Bericht bis zum Ablauf lesen. Beim Teilen in einem Kanal erhalten auch dessen Teilnehmer und mögliche Vorschau-Dienste Zugriff. Teile nur die Zusammenfassung, wenn du den Bericht nicht freigeben möchtest.",
     "result.share.email": "Per E-Mail teilen",
-    "result.share.email.hint": (
-        "Öffnet dein eigenes Mailprogramm mit fertiger Nachricht. Bis du "
-        "sendest, verlässt nichts deinen Browser."
-    ),
+    "result.share.email.hint": "Öffnet eine vorbereitete Nachricht in deinem E-Mail-Programm. Gesendet wird sie erst, wenn du dort bestätigst.",
     "result.share.email.subject": "OpenCloud-Sicherheitsbericht für {target}",
     "result.share.email.body": (
         "Hier ist der Sicherheitsbericht für unsere OpenCloud-Instanz:\n\n"
@@ -1682,7 +1743,7 @@ MESSAGES: dict[str, str] = {
     "result.share.done": "Kopiert",
     "result.share.failed": "Kopieren nicht möglich",
     "result.share.fallback": "Die Adresse dieses Berichts:",
-    "result.feedback.prompt": "Glaubst du, dass der Scan etwas falsch bewertet hat?",
+    "result.feedback.prompt": "Wurde ein Befund deiner Ansicht nach falsch bewertet?",
     "result.feedback.link": "Falsch positives oder falsch negatives Ergebnis melden",
     "result.expiry.one": (
         "Diese Seite läuft in etwa 1 Minute ab, danach funktioniert der Link "
@@ -1691,6 +1752,14 @@ MESSAGES: dict[str, str] = {
     "result.expiry.many": (
         "Diese Seite läuft in etwa {minutes} Minuten ab, danach funktioniert "
         "der Link nicht mehr und das Ergebnis ist weg."
+    ),
+    "result.expiry.warning.one": "Dieser Bericht verschwindet in etwa 1 Minute.",
+    "result.expiry.warning.many": (
+        "Dieser Bericht verschwindet in etwa {minutes} Minuten."
+    ),
+    "result.expiry.warning.action": "Lade eine Kopie herunter, um ihn zu behalten",
+    "result.expiry.gone": (
+        "Dieser Bericht ist abgelaufen. Der Link und seine Downloads funktionieren nicht mehr."
     ),
     # ----------------------------------------- transport facts beside the grade
     "tls.fact.protocol": "TLS-Version",

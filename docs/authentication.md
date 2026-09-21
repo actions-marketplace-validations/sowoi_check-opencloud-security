@@ -1,16 +1,11 @@
 # Authentication: what this scanner checks, and why
 
-Ten checks look at how an instance authenticates requests: whether protected
-endpoints actually demand a session, whether HTTP Basic auth is still
-offered as a bypass around the identity provider, whether the documented demo
-accounts still work, two properties OpenCloud's own capabilities document
-publishes about account search and password strength, whether the identity
-provider can be located at all, and four properties of the OpenID Connect
-discovery document that provider publishes. None of them submit a guessed
-credential anywhere - see [What the scan deliberately does not
-answer](scanner-checks.md#what-the-scan-deliberately-does-not-answer) for what is
-out of scope on principle, and the demo-account section below for the one
-documented exception.
+The scanner checks access to protected endpoints, HTTP Basic authentication, documented
+demo accounts and the authentication settings published in OpenCloud’s capabilities and
+OpenID Connect discovery documents. It does not guess credentials. The demo-account
+check uses only the published credentials described below; see [scan
+limits](scanner-checks.md#what-the-scan-deliberately-does-not-answer) for the full
+scope.
 
 <!-- TOC -->
 * [Authentication: what this scanner checks, and why](#authentication-what-this-scanner-checks-and-why)

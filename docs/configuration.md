@@ -1,9 +1,8 @@
 # Secrets in the configuration
 
-No credential this plugin uses - a GitHub token, a webhook URL, a service
-token - has to be written into the configuration file or the process
-environment. Any value may instead be a reference that is resolved when it is
-needed.
+Keep credentials out of the configuration file by referring to their source instead.
+GitHub tokens, webhook URLs and service tokens can be read from a file, an environment
+variable or a command when needed.
 
 The file itself, where it is looked for and how its keys map onto environment
 variables, is in

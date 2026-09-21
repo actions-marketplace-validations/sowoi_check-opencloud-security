@@ -16,6 +16,9 @@ check-opencloud-security.yml
 .github/
 .pre-commit-config.yaml
 
+# Claude Code skills and agent tooling
+.claude/
+
 # Virtualenvs and packaging output
 .venv/
 .venv*/
@@ -76,3 +79,6 @@ docker/README.md
 .vscode/
 *.swp
 .DS_Store
+
+# Backups the Docker setup wizard keeps, one of them a copy of a .env.
+*.bak

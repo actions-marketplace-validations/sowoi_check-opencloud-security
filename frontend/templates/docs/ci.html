@@ -11,15 +11,14 @@
   <p class="lede">{{ t('docs.ci.description') }}</p>
 </section>
 
-{% if locale != 'en' %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
 <article class="docs-article card section-gap" data-reveal lang="en">
-<p>A scheduled pipeline is a reasonable place for this check when you have no
-monitoring system, or when you want a second opinion that runs from outside
-your own network. It is not a replacement for one: a pipeline that stops
-running is silent, and silence is indistinguishable from a healthy instance.</p>
+<p>Use a scheduled CI pipeline for regular scans or to check an instance from another
+network. Monitor whether the pipeline runs as well as what it reports: a missed job
+produces no scan result.</p>
 <p>Whatever the platform, three things decide whether it works:</p>
 <ul>
 <li><strong>The runner has to reach the instance.</strong> A hosted runner cannot scan
@@ -261,10 +260,9 @@ get the result somewhere people look, keep the job green and post the outcome:</
             echo '```'
           } &gt;&gt; &quot;$GITHUB_STEP_SUMMARY&quot;
 </code></pre>
-<p>Or set <code>--webhook-url</code> and let the check report itself - see
-<a href="/documentation/webhooks">Webhook recipes</a>. That route survives the workflow being
-disabled after sixty days of repository inactivity, which the summary does
-not.</p>
+<p>Alternatively, set <code>--webhook-url</code> to deliver the result directly; see <a href="/documentation/webhooks">Webhook
+recipes</a>. Delivery still depends on the workflow running. If
+scheduled runs are disabled, neither summaries nor webhooks are produced.</p>
 <h3 id="the-json-document-instead">The JSON document instead</h3>
 <p>For anything that has to make a decision - a policy gate, a dashboard, an
 issue filed automatically - use the scanner rather than the plugin. It prints
@@ -358,10 +356,9 @@ want to know about.</p>
 <p>Add the schedule under <em>Build → Pipeline schedules</em>; the <code>rules</code> block above
 keeps the job out of ordinary commit pipelines.</p>
 <h2 id="using-the-container-image-instead-of-installing">Using the container image instead of installing</h2>
-<p>No image is published to a registry, so a container job builds it first. It
-runs as an unprivileged user and carries a <code>HEALTHCHECK</code> - see
-<a href="/documentation/installation#docker">Docker</a>. Build it once, push it to your own registry,
-and pin the tag:</p>
+<p>This example builds the plugin image from the checkout. The published
+<code>okxo/opencloud-scanner</code> image is another option when you select the plugin with
+<code>--entrypoint check-opencloud-security</code>.</p>
 <pre><code class="language-shell">docker build -f docker/Dockerfile \
   -t registry.example.com/check-opencloud-security:1.1.0 .
 docker push registry.example.com/check-opencloud-security:1.1.0

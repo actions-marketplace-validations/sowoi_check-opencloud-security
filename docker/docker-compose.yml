@@ -44,17 +44,63 @@ services:
     ports:
       - "127.0.0.1:8811:8811"
     environment:
+      # The operator's area says when a newer release is on GitHub and can
+      # install it: the release's web bundle, verified against its build
+      # attestation, unpacked on the tmpfs below and run in place of the
+      # image's code until the container restarts (ADR 0070). Unset
+      # COS_WEB_ADMIN_UPDATE_DIR to only be told; COS_WEB_UPDATE_CHECK=false
+      # with no outbound access.
+      COS_WEB_UPDATE_CHECK: "${COS_WEB_UPDATE_CHECK:-true}"
+      COS_WEB_ADMIN_UPDATE_DIR: "${COS_WEB_ADMIN_UPDATE_DIR-/var/lib/opencloud-scan/update}"
       COS_WEB_REDIS_URL: "redis://:${COS_REDIS_PASSWORD:-}@redis:6379/0"
+      # COS_WEB_FRONTEND_DIR is not set: the image ships the templates and
+      # static assets next to webapp/, where the default looks.
       # How long a result stays readable. Also the lifetime of every key.
       COS_WEB_RESULT_TTL: "3600"
       # Rate limits: per client address, and per target instance.
       COS_WEB_IP_RATE_LIMIT: "10"
       COS_WEB_IP_RATE_WINDOW: "60"
       COS_WEB_TARGET_COOLDOWN: "300"
+      # Salt for the rate-limit and cooldown keys. Unset, each process draws
+      # its own at startup, which is fine for this single web container; run
+      # more than one and every one needs the same value, or a client gets
+      # one allowance per process.
+      # COS_WEB_RATE_LIMIT_SALT: "${COS_WEB_RATE_LIMIT_SALT:-}"
+      # Scans from one client address that may find no OpenCloud - nothing
+      # answering, something else answering - inside the window before that
+      # address is blocked, and for how long. The same host again counts again.
+      # The worker counts and this service refuses, so both need the same
+      # values. COS_WEB_PROBE_LIMIT "0" disables the block. A block earned
+      # again within the repeat window lasts six times longer, up to the max.
+      COS_WEB_PROBE_LIMIT: "5"
+      COS_WEB_PROBE_WINDOW: "300"
+      COS_WEB_PROBE_BLOCK: "3600"
+      COS_WEB_PROBE_BLOCK_MAX: "86400"
+      COS_WEB_PROBE_REPEAT_WINDOW: "86400"
+      # How much of an address counts as one client, the daily cap per client,
+      # and the double DNS lookup that refuses names built to rebind.
+      COS_WEB_PROBE_IPV4_PREFIX: "24"
+      COS_WEB_CLIENT_IPV6_PREFIX: "64"
+      COS_WEB_DAILY_SCAN_LIMIT: "50"
+      COS_WEB_DNS_CONSISTENCY_CHECK: "true"
+      # Scan approved instances only: COS_WEB_APPROVED_TARGETS, or a TXT record
+      # _check-opencloud-security.<host> naming this service (COS_WEB_APPROVAL_DNS).
+      COS_WEB_REQUIRE_APPROVAL: "false"
       # Targets one POST /api/scans/batch may carry. A batch is a convenience,
       # not a discount: every target still counts against the client limit and
       # still claims its own cooldown.
       COS_WEB_MAX_BATCH_TARGETS: "10"
+      # Addresses this deployment will not scan, whoever asks: hostnames,
+      # .suffix domains and CIDR ranges, separated by ';'. Set it once in a
+      # .env file next to this one - the worker below reads the same variable,
+      # because it checks the target again before the scan:
+      #
+      #     COS_WEB_BLOCKED_TARGETS="opencloud.example.com;.example.org;203.0.113.0/24"
+      #
+      # It outranks COS_WEB_ALLOWED_HOSTS and COS_WEB_ALLOW_PRIVATE_TARGETS,
+      # and an entry that is none of those shapes refuses startup rather than
+      # excluding nothing quietly.
+      COS_WEB_BLOCKED_TARGETS: "${COS_WEB_BLOCKED_TARGETS:-}"
       # Only set this when a reverse proxy of your own is in front. The header
       # is then read from the right, COS_WEB_TRUSTED_PROXY_HOPS entries in,
       # because that end is the only part a proxy writes - nginx, Traefik and
@@ -151,6 +197,16 @@ services:
       # Scopes a token must carry, separated by ';'. Empty means any valid
       # token from the named issuer is enough.
       COS_WEB_MCP_AUTH_SCOPES: "${COS_WEB_MCP_AUTH_SCOPES:-}"
+      # The operator's area at /admin. Off, its routes are not registered and
+      # the path 404s. On, it trusts the identity headers only from an
+      # authentik outpost that adds the proxy secret (32+ characters), and
+      # only for the users listed (';'-separated) - an empty list refuses to
+      # start. `docker-compose.authentik.yml` is the stack that puts the
+      # outpost in front; see docs/authentik.md.
+      # COS_WEB_ADMIN_ENABLED: "true"
+      # COS_WEB_ADMIN_PROXY_SECRET: "${COS_WEB_ADMIN_PROXY_SECRET:-}"
+      # COS_WEB_ADMIN_USERS: "alice;bob"
+      # COS_WEB_ADMIN_SIGN_OUT_URL: "/outpost.goauthentik.io/sign_out"
       # An audit record for every scan request, rejection and triggered limit,
       # on the check_opencloud.web.audit logger as one JSON object per line.
       # Off by default: the ordinary log carries lifecycle markers and uuids
@@ -178,6 +234,9 @@ services:
       # COS_WEB_AUDIT_LOG_FILE: "/var/log/opencloud-scan/audit.log"
       # COS_WEB_AUDIT_LOG_MAX_BYTES: "10000000"
       # COS_WEB_AUDIT_LOG_BACKUPS: "5"
+      # "external" leaves rotation to logrotate on the host; this process then
+      # only reopens the file once it has been replaced.
+      # COS_WEB_AUDIT_LOG_ROTATION: "service"
       # Erasure on request: DELETE /api/purge answers 404 until a secret is
       # set here, because the call deletes results belonging to whoever is
       # currently reading them. The signing key makes the proof of deletion
@@ -201,6 +260,7 @@ services:
     read_only: true
     tmpfs:
       - /tmp:size=16m
+      - /var/lib/opencloud-scan/update:size=64m,uid=10001,gid=10001,mode=0700
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -218,6 +278,8 @@ services:
       redis:
         condition: service_healthy
     environment:
+      # Follows an update the operator's area installed (ADR 0070).
+      COS_WEB_ADMIN_UPDATE_DIR: "${COS_WEB_ADMIN_UPDATE_DIR-/var/lib/opencloud-scan/update}"
       COS_WEB_REDIS_URL: "redis://:${COS_REDIS_PASSWORD:-}@redis:6379/0"
       COS_WEB_RESULT_TTL: "3600"
       # Scans running at once, and probes in flight within one scan. These two
@@ -226,10 +288,21 @@ services:
       COS_WEB_MAX_WORKERS: "5"
       COS_WEB_SCAN_CONCURRENCY: "4"
       COS_WEB_SCAN_TIMEOUT: "15"
+      # The same probe guard the web service reads: the worker is where a scan
+      # turns out not to be OpenCloud, so it is what counts and imposes the block.
+      COS_WEB_PROBE_LIMIT: "5"
+      COS_WEB_PROBE_WINDOW: "300"
+      COS_WEB_PROBE_BLOCK: "3600"
+      COS_WEB_PROBE_BLOCK_MAX: "86400"
+      COS_WEB_PROBE_REPEAT_WINDOW: "86400"
       COS_WEB_JOB_TIMEOUT: "180"
       # Refuse private, loopback and link-local targets. Turn this on only for
       # a deployment that is meant to scan its own network.
       COS_WEB_ALLOW_PRIVATE_TARGETS: "false"
+      # The same exclusions the API refuses submissions with. The worker
+      # resolves and checks the target once more immediately before scanning,
+      # so a list it did not have would be a list a queued job walks past.
+      COS_WEB_BLOCKED_TARGETS: "${COS_WEB_BLOCKED_TARGETS:-}"
       # Connecting to extra ports on a host a stranger submitted is a port
       # scan. Off unless the targets are your own.
       COS_WEB_CHECK_DEBUG_PORTS: "false"
@@ -280,6 +353,7 @@ services:
     read_only: true
     tmpfs:
       - /tmp:size=16m
+      - /var/lib/opencloud-scan/update:size=64m,uid=10001,gid=10001,mode=0700
     security_opt:
       - no-new-privileges:true
     cap_drop:

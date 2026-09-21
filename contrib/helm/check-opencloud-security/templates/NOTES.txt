@@ -1,0 +1,34 @@
+{{ .Chart.Name }} {{ .Chart.Version }} installed as {{ .Release.Name }} in namespace {{ .Release.Namespace }}.
+
+{{ if .Values.cronJob.enabled -}}
+Scheduled scan: {{ .Values.cronJob.schedule }}{{ with .Values.cronJob.timeZone }} ({{ . }}){{ end }}
+  Instances: {{ join ", " .Values.cronJob.hosts }}
+  Image:     {{ include "check-opencloud-security.image" . }}
+
+Run it now rather than waiting for the schedule:
+
+  kubectl create job --from=cronjob/{{ include "check-opencloud-security.fullname" . }} \
+    {{ include "check-opencloud-security.fullname" . }}-now --namespace {{ .Release.Namespace }}
+  kubectl logs job/{{ include "check-opencloud-security.fullname" . }}-now --namespace {{ .Release.Namespace }}
+
+A failed Job means the check returned WARNING or CRITICAL. The output says
+which findings; docs/hardening.md explains each one.
+{{- if not .Values.cronJob.webhook.enabled }}
+
+A failed Job is a blunt signal. cronJob.webhook.enabled sends the result with
+its reason attached - see docs/webhook-recipes.md.
+{{- end }}
+{{- else -}}
+The scheduled scan is disabled (cronJob.enabled=false).
+{{- end }}
+
+{{ if .Values.scanService.enabled -}}
+Scan service: http://{{ include "check-opencloud-security.fullname" . }}-scanner.{{ .Release.Namespace }}:{{ .Values.scanService.service.port }}
+  Every endpoint but /healthz needs the token in Secret {{ .Values.scanService.existingSecret }}.
+{{- if not .Values.scanService.networkPolicy.enabled }}
+
+  No NetworkPolicy was created. A scan service that can reach the whole
+  cluster is a request forgery engine with a REST API: set
+  scanService.networkPolicy.enabled and name the instances it may reach.
+{{- end }}
+{{- end }}

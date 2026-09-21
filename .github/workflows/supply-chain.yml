@@ -10,16 +10,54 @@ on:
 
 permissions:
   contents: read
-  id-token: write
-  attestations: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  dependencies:
-    name: Audit dependencies and build an SBOM
+  # ADR 0060: a new dependency is justified, tested and security-reviewed,
+  # and approved by a maintainer, before it is used. On a pull request the
+  # grandfather list is also compared with the base, because growing it is
+  # the one way around the rule that the tree alone cannot show.
+  dependency-policy:
+    name: Every dependency is reviewed
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+
+      - name: Check the dependency records
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ -n "$BASE_REF" ]; then
+            uv run --locked python scripts/check_dependencies.py --check --base "origin/$BASE_REF"
+          else
+            uv run --locked python scripts/check_dependencies.py --check
+          fi
+
+  dependencies:
+    name: Audit dependencies and build an SBOM
+    runs-on: ubuntu-latest
+    # Only this job attests, so only this job may mint a token for it.
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - name: Install uv
         uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1

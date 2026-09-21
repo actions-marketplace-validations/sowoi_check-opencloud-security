@@ -1,6 +1,6 @@
 # ADR 0029: A comparison is two live results, judged by the plugin's own arithmetic
 
-- Status: Accepted
+- Status: Accepted; comparing different instances superseded by ADR 0059
 - Date: 2026-08-30
 
 ## Context

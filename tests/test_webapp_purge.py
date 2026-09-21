@@ -176,6 +176,27 @@ def test_a_tampered_receipt_stops_verifying():
     assert verify(forged, SIGNING_KEY) is False
 
 
+def test_a_receipt_signed_with_something_that_is_not_a_digest_is_refused():
+    """A signature is checked, never decoded: an edited receipt answers False, not a traceback.
+
+    `hmac.compare_digest` raises TypeError on a `str` outside ASCII, and this
+    function is handed a file somebody else may have edited - an auditor
+    reading `verify(...) is False` has to get an answer rather than an
+    exception. The endpoint's own token comparison already encodes both sides
+    for the same reason.
+    """
+    test_client = _enabled_client()
+    _submit(test_client, "https://forget.example.com")
+    payload = test_client.request(
+        "DELETE", "/api/purge?target=forget.example.com", headers=AUTH
+    ).json()
+
+    for value in ("\u00e9" * 64, "", "not a digest", "\N{SNOWMAN}"):
+        forged = json.loads(json.dumps(payload))
+        forged["signature"]["value"] = value
+        assert verify(forged, SIGNING_KEY) is False, repr(value)
+
+
 def test_an_unsigned_receipt_is_returned_when_no_signing_key_is_configured():
     """The erasure still happens; only its provability depends on the operator."""
     test_client = client(purge_token=TOKEN, purge_signing_key=None)

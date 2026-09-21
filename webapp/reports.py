@@ -20,26 +20,35 @@ from __future__ import annotations
 
 import csv
 import io
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from datetime import datetime, timezone
+from html import escape
 from typing import Any
 
 from opencloud_local_scan import __version__, describe_hardening
+from opencloud_local_scan.provenance import provenance_of
 
 from .catalog import rating_label, summarise
 
 PROJECT_URL = "https://github.com/sowoi/check-opencloud-security"
 
-EXPORT_FORMATS = ("json", "csv", "sarif", "pdf")
+EXPORT_FORMATS = ("json", "csv", "sarif", "pdf", "html")
 
 MEDIA_TYPES = {
     "json": "application/json",
     "csv": "text/csv; charset=utf-8",
     "sarif": "application/sarif+json",
     "pdf": "application/pdf",
+    "html": "text/html; charset=utf-8",
 }
 
-FILE_SUFFIXES = {"json": "json", "csv": "csv", "sarif": "sarif.json", "pdf": "pdf"}
+FILE_SUFFIXES = {
+    "json": "json",
+    "csv": "csv",
+    "sarif": "sarif.json",
+    "pdf": "pdf",
+    "html": "html",
+}
 
 # A spreadsheet treats a cell starting with one of these as a formula, and
 # `=cmd|' /C calc'!A0` in one is code execution on the machine of whoever
@@ -193,6 +202,23 @@ def csv_report(result: dict[str, Any]) -> str:
     _write(writer, "Version", summary.get("version") or "unknown")
     _write(writer, "Release track", summary.get("releaseType") or "unknown")
     _write(writer, "End of life", "yes" if summary.get("eol") else "no")
+    # Written as a fact of its own rather than left to the fix steps, because
+    # this file is also read back: `webapp.imports` compares a pending update
+    # like any other finding, and a row that is simply absent cannot be told
+    # apart from one that said "none". See ADR 0057.
+    updates = summary.get("updates") or {}
+    _write(
+        writer,
+        "Update available",
+        str(updates.get("availableVersion") or "unknown")
+        if updates.get("available")
+        else "no",
+    )
+    # Written for the same reason, and it is the one finding the findings
+    # table below cannot carry: "HTTPS is not enforced" is measured in
+    # `setup.https`, not in the hardening block the rows are drawn from.
+    https = summary.get("https") or {}
+    _write(writer, "HTTPS enforced", "no" if https.get("enforced") is False else "yes")
     _write(
         writer, "Rating", f"{summary.get('rating')}", rating_label(summary.get("rating"))
     )
@@ -639,3 +665,389 @@ def pdf_report(result: dict[str, Any], *, identifier: str | None = None) -> byte
         "respective owners and are used only to identify the software checked."
     )
     return doc.render()
+
+
+# --------------------------------------------------------------- HTML report
+
+#: The whole of the report's presentation. Inline because the file has to be
+#: readable from a disk with no network and no neighbouring assets: a
+#: stylesheet link would be a blank page for whoever opens it next year. Only
+#: fonts the machine already has are named, for the same reason - a font
+#: service would be a request to somebody else's server every time the report
+#: is opened.
+_REPORT_CSS = """
+:root { color-scheme: light dark; }
+* { box-sizing: border-box; }
+body {
+  margin: 0 auto; padding: 24px 16px 64px; max-width: 52rem;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, "Noto Sans", sans-serif;
+  line-height: 1.55; color: #1b1f24; background: #ffffff;
+}
+h1 { font-size: 1.6rem; margin: 0 0 4px; }
+h2 { font-size: 1.2rem; margin: 32px 0 8px; padding-bottom: 4px;
+     border-bottom: 1px solid #d8dee4; }
+h3 { font-size: 1rem; margin: 20px 0 4px; }
+p, li { font-size: 0.95rem; }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+       font-size: 0.87em; background: #f2f4f7; padding: 1px 4px;
+       border-radius: 3px; overflow-wrap: anywhere; }
+a { color: #0b5cad; }
+.lede { color: #57606a; margin: 0 0 20px; }
+.grade { display: inline-block; font-size: 1.05rem; font-weight: 600;
+         border: 2px solid currentColor; border-radius: 6px;
+         padding: 2px 10px; margin-right: 8px; }
+.grade-good { color: #1a7f37; }
+.grade-fair { color: #9a6700; }
+.grade-poor { color: #b42318; }
+table { border-collapse: collapse; width: 100%; margin: 8px 0 4px; }
+th, td { text-align: left; vertical-align: top; padding: 6px 8px;
+         border-bottom: 1px solid #d8dee4; font-size: 0.92rem; }
+th { background: #f6f8fa; font-weight: 600; }
+td.wrap { overflow-wrap: anywhere; }
+.tag { display: inline-block; font-size: 0.78rem; font-weight: 600;
+       border-radius: 10px; padding: 1px 8px; border: 1px solid currentColor; }
+.tag-critical { color: #b42318; }
+.tag-warning { color: #9a6700; }
+.tag-info { color: #0b5cad; }
+.note { border-left: 3px solid #d8dee4; padding: 4px 0 4px 12px;
+        color: #57606a; margin: 12px 0; }
+.muted { color: #57606a; }
+footer { margin-top: 40px; padding-top: 12px; border-top: 1px solid #d8dee4;
+         color: #57606a; font-size: 0.85rem; }
+@media (prefers-color-scheme: dark) {
+  body { color: #e6edf3; background: #0d1117; }
+  h2, th, td, footer, .note { border-color: #30363d; }
+  th { background: #161b22; }
+  code { background: #161b22; }
+  a { color: #6cb6ff; }
+  .lede, .muted, .note, footer { color: #9198a1; }
+  .grade-good { color: #3fb950; }
+  .grade-fair { color: #d29922; }
+  .grade-poor { color: #ff7b72; }
+}
+@media print {
+  body { max-width: none; padding: 0; color: #000; background: #fff; }
+  h2 { break-after: avoid; }
+  tr, li, .note { break-inside: avoid; }
+  a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 0.8em;
+                           color: #444; word-break: break-all; }
+  footer { break-before: avoid; }
+}
+"""
+
+#: The grades that get each tone. The letters come from the plugin's RATE_MAP
+#: through `summarise`; this only decides which of three colours to use.
+_GRADE_TONES = {"good": "grade-good", "fair": "grade-fair", "poor": "grade-poor"}
+
+
+def _h(value: object) -> str:
+    """
+    One value, safe to put anywhere in the document.
+
+    Half of what a report carries is a string the *scanned* instance chose -
+    its product name, a `WWW-Authenticate` challenge, a certificate subject -
+    and the other half is text an operator typed into a waiver. Neither is
+    this project's, so neither is markup.
+    """
+    return escape("" if value is None else str(value), quote=True)
+
+
+def _link(url: object, text: object = None) -> str:
+    """
+    A documentation link, or plain text when the address is not one.
+
+    Only `http(s)` survives: a `javascript:` or `data:` address in a report
+    that somebody opens from their own disk is the one place it would run
+    with nothing to stop it.
+    """
+    address = str(url or "")
+    label = _h(text if text is not None else address)
+    if not address.startswith(("https://", "http://")):
+        return label
+    return f'<a href="{_h(address)}" rel="noopener noreferrer">{label}</a>'
+
+
+def _rows(rows: Sequence[Sequence[str]], headers: tuple[str, ...]) -> str:
+    """One table, or nothing at all when there is nothing to put in it."""
+    if not rows:
+        return ""
+    head = "".join(f"<th scope=\"col\">{_h(name)}</th>" for name in headers)
+    body = "".join(
+        "<tr>" + "".join(f'<td class="wrap">{cell}</td>' for cell in row) + "</tr>"
+        for row in rows
+    )
+    return f"<table><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>"
+
+
+def _severity_tag(tag: object) -> str:
+    name = str(tag or "info")
+    known = name if name in {"critical", "warning", "info"} else "info"
+    return f'<span class="tag tag-{known}">{_h(name)}</span>'
+
+
+def html_report(result: dict[str, Any], *, identifier: str | None = None) -> str:
+    """
+    The scan as one file that still reads after the link has expired.
+
+    A result link is a capability with a time limit (ADR 0007), which is the
+    right behaviour for a page a stranger can reach and the wrong behaviour
+    for the evidence somebody needs at the end of the quarter. This is the
+    same report as the dashboard, in a file that outlives the service's TTL
+    because it no longer depends on the service at all.
+
+    What makes that true is what is *not* here: no stylesheet to fetch, no
+    font service, no script, no image, no form, no rescan control, no polling
+    and no erasure token. Opening the file makes no request to anybody. The
+    documentation links are the only addresses in it, and they are followed
+    only if the reader chooses to.
+
+    Nothing is decided here either. Every grade, severity, order and
+    remediation step is what `summarise` already read out of the scanner's
+    own document.
+    """
+    summary = summarise(result)
+    generated = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    tone = _GRADE_TONES.get(str(summary.get("tone")), "grade-fair")
+    sections: list[str] = []
+
+    # --- what was scanned, and what it scored
+    facts: list[tuple[str, str]] = [
+        ("Instance", f"<code>{_h(summary.get('domain') or 'unknown')}</code>"),
+        (
+            "Product",
+            _h(f"{summary.get('product') or 'unknown'} {summary.get('version') or ''}".strip()),
+        ),
+        ("Release track", _h(summary.get("releaseType") or "unknown")),
+    ]
+    scanned = _scanned_at(result)
+    facts.append(("Scanned at", _h(scanned) if scanned else '<span class="muted">not recorded</span>'))
+    if identifier:
+        facts.append(("Scan reference", f"<code>{_h(identifier)}</code>"))
+    sections.append(
+        f"<h2>The scan</h2>{_rows(facts, ('Field', 'Value'))}"
+    )
+
+    reason = (summary.get("explanation") or {}).get("reason")
+    if reason:
+        sections.append(f'<p class="note">Why this grade: {_h(reason)}</p>')
+
+    counts = summary.get("counts") or {}
+    sections.append(
+        "<h2>Summary</h2>"
+        + _rows(
+            [
+                ("Critical findings", _h(counts.get("critical", 0))),
+                ("Warnings", _h(counts.get("warning", 0))),
+                ("Informational", _h(counts.get("info", 0))),
+                ("Known advisories", _h(counts.get("vulnerabilities", 0))),
+                ("Checks passed", _h(summary.get("passedCount", 0))),
+            ],
+            ("Count of", "Number"),
+        )
+    )
+
+    # --- what to do about it
+    plan = summary.get("remediation") or {}
+    if plan.get("steps"):
+        steps = [
+            (
+                _severity_tag(step.get("tag")),
+                _h(step.get("check") or step.get("id")),
+                _h(step.get("action") or step.get("detail") or ""),
+                _h(f"{step.get('ratingAfter')} ({step.get('label')})"),
+            )
+            for step in plan["steps"]
+        ]
+        sections.append(
+            f"<h2>What gets you to {_h(plan.get('achievableLabel') or 'a better grade')}</h2>"
+            + _rows(steps, ("Severity", "Check", "What to change", "Grade after"))
+        )
+
+    # --- what is wrong
+    issues = summary.get("issues") or []
+    if issues:
+        rows = [
+            (
+                _severity_tag(issue.get("tag")),
+                _h(issue.get("id")),
+                _h(issue.get("detail") or issue.get("explanation") or ""),
+                _link(issue.get("reference"), "documentation") if issue.get("reference") else "",
+            )
+            for issue in issues
+        ]
+        sections.append(
+            "<h2>Findings</h2>" + _rows(rows, ("Severity", "Check", "What was observed", "More"))
+        )
+    else:
+        sections.append("<h2>Findings</h2><p>No check failed in this scan.</p>")
+
+    advisories = _advisory_rows(summary)
+    if advisories:
+        sections.append(
+            "<h2>Known advisories for this version</h2>"
+            + _rows(
+                [tuple(_h(cell) for cell in row) for row in advisories],
+                ("Advisory", "Severity", "Fixed in"),
+            )
+        )
+
+    # --- what was accepted, and by whom
+    waived = summary.get("waived") or []
+    raw_waivers = result.get("waivers")
+    waivers: list[Any] = raw_waivers if isinstance(raw_waivers, list) else []
+    if waived or waivers:
+        parts = ["<h2>Accepted, and not counted in the grade</h2>"]
+        if waived:
+            parts.append(
+                _rows(
+                    [
+                        (_h(item.get("id")), _h(item.get("detail") or ""))
+                        for item in waived
+                    ],
+                    ("Check", "What was observed"),
+                )
+            )
+        records = [
+            (
+                f"<code>{_h(record.get('pattern'))}</code>",
+                _h(record.get("reason") or ""),
+                _h(record.get("expiresAt") or "no expiry"),
+                _h(record.get("state") or ""),
+            )
+            for record in waivers
+            if isinstance(record, Mapping)
+        ]
+        if records:
+            parts.append("<h3>The waivers that were configured</h3>")
+            parts.append(_rows(records, ("Pattern", "Reason", "Expires", "State")))
+        sections.append("".join(parts))
+
+    # --- what the scan could not see
+    coverage = summary.get("coverage") or {}
+    if not coverage.get("available"):
+        sections.append(
+            "<h2>What this scan did not measure</h2>"
+            '<p class="note">This report does not record its coverage, so it '
+            "cannot say which checks ran. That is not the same as a scan with "
+            "no gaps.</p>"
+        )
+    else:
+        gaps = coverage.get("gaps") or []
+        totals = coverage.get("summary") or {}
+        body = (
+            f"<p>{_h(coverage.get('measured'))} of "
+            f"{_h((coverage.get('counts') or {}).get('total'))} checks reached a "
+            "conclusion.</p>"
+            f"<p class=\"note\">{_h(totals.get('evaluated', 0))} checks evaluated, "
+            f"{_h(totals.get('skipped', 0))} skipped, "
+            f"{_h(totals.get('indeterminate', 0))} indeterminate, "
+            f"{_h(totals.get('networkLimited', 0))} network-limited.</p>"
+        )
+        if gaps:
+            body += _rows(
+                [
+                    (
+                        _h(gap.get("groupLabel")),
+                        _h(gap.get("id")),
+                        _h(f"{gap.get('reasonLabel')}. {gap.get('detail')}".strip()),
+                    )
+                    for gap in gaps
+                ],
+                ("Area", "Check", "Why it did not conclude"),
+            )
+        sections.append("<h2>What this scan did not measure</h2>" + body)
+
+    # --- whether the deployment itself changed
+    fingerprint = summary.get("fingerprint") or {}
+    if not fingerprint.get("available"):
+        sections.append(
+            "<h2>Has this deployment changed?</h2>"
+            '<p class="note">This report records no configuration fingerprint, '
+            "so it cannot say whether the deployment changed since an earlier "
+            "scan. That is not the same as one that stayed the same.</p>"
+        )
+    else:
+        fingerprint_rows: list[tuple[str, str]] = [
+            (
+                _h(group.get("label")),
+                _h(group.get("digest")) if group.get("measured") else "not measured",
+            )
+            for group in fingerprint.get("groups") or []
+        ]
+        sections.append(
+            "<h2>Has this deployment changed?</h2>"
+            "<p>Each digest below stands for how this instance is configured, "
+            "never for what it is configured to. Compare them with an earlier "
+            "report: a group whose digest differs was set up differently, even "
+            "where the grade did not move.</p>"
+            + _rows(fingerprint_rows, ("Configuration", "Digest"))
+            + f'<p class="note">Across all groups: {_h(fingerprint.get("digest"))}.</p>'
+        )
+
+    # --- what it was judged against
+    provenance = provenance_of(result)
+    if provenance is None:
+        sections.append(
+            "<h2>What this scan was judged against</h2>"
+            '<p class="note">This report predates the record of its own '
+            "conditions, so the scanner version and the reference data it used "
+            "are not available.</p>"
+        )
+    else:
+        advisory_data = provenance.get("advisoryData") or {}
+        schedule_data = provenance.get("scheduleData") or {}
+        sections.append(
+            "<h2>What this scan was judged against</h2>"
+            + _rows(
+                [
+                    ("Scanner version", _h(provenance.get("scannerVersion"))),
+                    ("Release track asked for", _h(provenance.get("releaseTrack"))),
+                    (
+                        "Advisory data",
+                        _h(f"{advisory_data.get('count', 0)} record(s), digest ")
+                        + f"<code>{_h(str(advisory_data.get('digest'))[:16])}</code>",
+                    ),
+                    (
+                        "Release schedule",
+                        _h(f"generated {schedule_data.get('updated') or 'unknown'}, digest ")
+                        + f"<code>{_h(str(schedule_data.get('digest'))[:16])}</code>",
+                    ),
+                ],
+                ("Field", "Value"),
+            )
+        )
+
+    body = "".join(sections)
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>OpenCloud security scan - {_h(summary.get('domain') or 'report')}</title>
+<style>{_REPORT_CSS}</style>
+</head>
+<body>
+<main>
+<h1>OpenCloud security scan</h1>
+<p class="lede">
+  <span class="grade {tone}">{_h(summary.get('label'))}</span>
+  {_h(summary.get('rating'))} out of 5{' - end of life' if summary.get('eol') else ''}
+  for <code>{_h(summary.get('domain') or 'unknown')}</code>
+</p>
+{body}
+<footer>
+<p>Generated {_h(generated)} by check-opencloud-security {_h(__version__)}.</p>
+<p>This file is a copy. It stays readable after the result link on the service
+has expired or been erased, because it no longer depends on the service - and
+for the same reason it will not update, and deleting the scan there does not
+delete this. Opening it makes no network request; the documentation links are
+followed only if you choose to.</p>
+<p>{_link(PROJECT_URL)}</p>
+</footer>
+</main>
+</body>
+</html>
+"""
+

@@ -23,6 +23,11 @@
     var countLabel = root.getAttribute("data-search-results-label") || "{count}";
     var emptyLabel = root.getAttribute("data-search-empty-label") || "";
     var errorLabel = root.getAttribute("data-search-error-label") || "";
+    // Present only for a reader the server is authorising as an operator.
+    // The endpoint refuses anybody else, so the worst an edited attribute
+    // buys is a 404 and the public results on their own.
+    var adminBase = root.getAttribute("data-search-admin-index") || "";
+    var adminLabel = root.getAttribute("data-search-admin-label") || "";
     input.value = query.slice(0, 120);
 
     function overlayUrl() {
@@ -100,6 +105,12 @@
             heading.textContent = page.title;
             summary.textContent = page.summary;
             link.append(heading, summary);
+            if (page.scope === "admin" && adminLabel) {
+                var badge = document.createElement("span");
+                badge.className = "search-result-scope";
+                badge.textContent = adminLabel;
+                link.appendChild(badge);
+            }
             item.appendChild(link);
             results.appendChild(item);
         });
@@ -114,6 +125,29 @@
                 throw new Error("index unavailable");
             }
             return response.json();
+        });
+    }
+
+    // The operator area's pages, when this reader is allowed them. A failure
+    // is not an error the page reports: the sign-in may simply have ended, and
+    // the public results are still the right answer.
+    function withAdminPages(pages) {
+        if (!adminBase) {
+            return Promise.resolve(pages);
+        }
+        return load(adminBase).then(function (index) {
+            var extra = Array.isArray(index.pages) ? index.pages : [];
+            return pages.concat(extra.map(function (entry) {
+                return {
+                    path: entry.path,
+                    title: entry.title,
+                    summary: entry.summary,
+                    body: entry.body,
+                    scope: "admin"
+                };
+            }));
+        }, function () {
+            return pages;
         });
     }
 
@@ -132,6 +166,7 @@
                 return pages;
             });
         })
+        .then(withAdminPages)
         .then(show)
         .catch(function () {
             status.textContent = errorLabel;

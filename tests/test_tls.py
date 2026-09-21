@@ -585,8 +585,10 @@ def test_transparency_is_only_judged_for_a_publicly_trusted_certificate():
 def test_the_advertised_early_data_limit_is_read_from_the_session():
     """`Max Early Data` is the server's own statement of how much replayable
     0-RTT it will accept, which is the only part of this a scan can measure."""
-    assert tls._MAX_EARLY_DATA.search("    Max Early Data: 16384\n").group(1) == "16384"
-    assert tls._MAX_EARLY_DATA.search("    Max Early Data: 0\n").group(1) == "0"
+    limit = tls._MAX_EARLY_DATA.search("    Max Early Data: 16384\n")
+    assert limit is not None and limit.group(1) == "16384"
+    none_accepted = tls._MAX_EARLY_DATA.search("    Max Early Data: 0\n")
+    assert none_accepted is not None and none_accepted.group(1) == "0"
     assert tls._MAX_EARLY_DATA.search("Max Early Data: none\n") is None
 
 

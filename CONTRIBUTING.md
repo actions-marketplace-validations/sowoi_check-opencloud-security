@@ -3,12 +3,17 @@
   * [Guidelines](#guidelines)
   * [Local setup](#local-setup)
     * [1. Install `uv`](#1-install-uv)
+    * [2. Register the merge drivers](#2-register-the-merge-drivers)
+  * [Generated files and merge conflicts](#generated-files-and-merge-conflicts)
   * [Install Dependencies](#install-dependencies)
     * [Exporting a requirements.txt](#exporting-a-requirementstxt)
   * [Running Tests](#running-tests)
     * [End-to-end tests](#end-to-end-tests)
+    * [The bundled release schedule](#the-bundled-release-schedule)
+  * [The documented OpenCloud links](#the-documented-opencloud-links)
   * [Linting](#linting)
   * [Changelog entries](#changelog-entries)
+    * [If your entry goes under `### Security`](#if-your-entry-goes-under--security)
   * [Releasing](#releasing)
 <!-- TOC -->
 
@@ -46,6 +51,60 @@ If you haven't already, install the `uv` package manager (or your preferred inst
 ```
 pipx install uv
 ```
+
+### 2. Register the merge drivers
+
+Once per clone:
+
+```
+python scripts/setup_git_merge_drivers.py
+```
+
+See below for what it prevents. Skipping it costs you nothing but the
+occasional conflict you would have had anyway.
+
+## Generated files and merge conflicts
+
+`frontend/static/search-index.json` and its three locale overlays are
+**generated** — a pure function of the templates, the catalogues and the
+version — and they are also checked in, because the frontend serves them and
+`tests/test_webapp_search.py` reads them. That combination conflicts on merge
+for a reason no person can settle: two branches that touch a template, a
+string or `pyproject.toml` produce different bytes on the same lines, and
+neither side was written by hand. Resolving one by picking a side means
+choosing between two stale answers.
+
+So the resolution is always the same — rebuild — and
+`scripts/setup_git_merge_drivers.py` teaches git to do it for you.
+`.gitattributes` points those four files at a `search-index` merge driver, and
+the setup script registers what that driver *is* in your `.git/config`. Git
+splits it that way on purpose: a driver is an arbitrary command, and a
+repository able to hand one to everyone who clones it would be a repository
+that runs code on clone. That is why this cannot be automatic.
+
+Rebuilding is the correct resolution and not merely the convenient one: the
+index is only ever written by the generator — on every pull request to `main`
+by `search-index.yml`, which commits the result to your branch, and again by
+the release workflow (ADR 0050). `test_only_automation_refreshes_the_index`
+keeps every other workflow away from it, so a rebuild produces what CI would
+produce anyway.
+
+Without the setup step you get the ordinary conflict, exactly as before.
+Resolve it by hand with:
+
+```
+python scripts/build_search_index.py && git add frontend/static/search-index*.json
+```
+
+If git says `fatal: custom merge driver search-index lacks command line`, the
+config is half-written — re-run the setup script.
+
+**The data files are not covered, deliberately.**
+`opencloud_local_scan/data/release_schedule.json` and `vulnerabilities.json`
+are generated too, but from the network rather than from this tree, and they
+ship in the wheel. A conflict there is a real question about which fetch is
+newer, so it stays a conflict for a person to answer — re-run
+`scripts/update_release_schedule.py` or `scripts/update_vulnerability_db.py`.
 
 ## Install Dependencies
 
@@ -182,6 +241,30 @@ A sitemap that cannot be read condemns nothing, and only `/docs/` paths are
 held to it: a sitemap lists pages, so an image missing from one proves
 nothing.
 
+## Translations
+
+The frontend is written in English and translated into German, French and
+Spanish, and the operator guides have their own sources under `docs/de/`,
+`docs/fr/` and `docs/es/`. [`TRANSLATING.md`](TRANSLATING.md) is the style
+guide: the form of address each language uses, the terminology, what happens
+to example hostnames and placeholders, and the review workflow.
+
+```shell
+uv run python scripts/check_translations.py             # the full report
+uv run python scripts/check_translations.py --check     # only what fails CI
+uv run python scripts/check_translations.py --strict    # warnings fail too
+```
+
+The split is the point. A missing key, a lost `{placeholder}`, changed inline
+markup, a translated `href` or a relative link that resolves to nothing are
+facts about the string: they break a page or a format string, they are
+errors, and CI refuses them. Whether a sentence sounds like German is not
+something this script can know, so the prose heuristics - form of address,
+a string left in English, a dropped product name, a glossary term rendered
+two ways - name a key and leave the judgement to a reviewer. Record a
+warning you have decided about in the script's `ACCEPTED` table with its
+reason rather than removing the check.
+
 ## Linting
 We use Ruff for linting and code formatting checks.
 
@@ -206,8 +289,15 @@ it:
 - What you added, and why it matters to an operator.
 ```
 
+Leave [`RELEASE.md`](RELEASE.md) alone: the release writes it from this
+section and overwrites it, so until then it describes the previous release.
+
 Do not write a `## [x.y.z]` heading and do not bump the version - the release
 picks your entry up under whichever number the maintainer chooses.
+
+Check it before opening the pull request with
+`python scripts/check_pull_request.py --base origin/main`; pass
+`--labels skip-changelog` for a change that genuinely needs no notes.
 
 ### If your entry goes under `### Security`
 
@@ -260,6 +350,11 @@ derives `__version__` from it - from the installed package metadata, or from
 the file itself when running out of a checkout - and the plugin imports that.
 Nothing else needs editing.
 
+The
+[release dry run](.github/workflows/release-dry-run.yml) has by then built the
+notes, the wheel, the `.deb`, the `.rpm`, the web bundle and both images on
+that pull request.
+
 The workflow then:
 
 1. `scripts/release_notes.py` renames `## [Unreleased]` in
@@ -267,7 +362,11 @@ The workflow then:
    body to `RELEASE.md` (overwritten on every release) and leaves a fresh empty
    `## [Unreleased]` behind.
 2. Both files are committed back to `main` with `[skip ci]`.
-3. The package is built and published to PyPI.
+3. The wheel, the SBOM, the `.deb`, the `.rpm` and the web bundle are built and
+   attested, and only then is the package published to PyPI - so a failed
+   build never leaves a version on PyPI without a release. If a later step
+   fails, the next push to `main` finishes the release; files PyPI already
+   holds are skipped.
 4. The tag `v<version>` is created and a GitHub release is opened with
    `RELEASE.md` as its body, followed by GitHub's generated
    "What's Changed" section.

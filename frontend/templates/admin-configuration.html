@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{#
+  The operator area's configuration tab: every COS_WEB_* variable, and what
+  this web process is running with.
+
+  Server-rendered and never repainted - each value was read once at startup,
+  so a poll could not move it. The value column is the setting in effect,
+  after the parsing and fallbacks the settings apply; the source column says
+  only whether the environment named it. A credential is never on this page:
+  webapp/configuration.py reduces every one to set or not set before the
+  template sees it, so no template edit can print one by accident.
+
+  Descriptions are the repository's own English from docs/webapp.md, marked
+  lang="en" the way the generated operator documents are.
+#}
+
+{% block title %}{{ t('admin.config.title') }}{% endblock %}
+{% block description %}{{ t('admin.config.lede') }}{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/static/css/admin.css">
+{% endblock %}
+
+{% block content %}
+<section class="admin-band" role="note">
+  <span class="admin-band-dot" aria-hidden="true"></span>
+  <p class="flush">
+    {{ t('admin.band', user=operator.username) }}
+  </p>
+  {% if sign_out_url %}
+  <a class="admin-band-exit" href="{{ sign_out_url }}">{{ t('admin.band.signout') }}</a>
+  {% endif %}
+</section>
+
+{% include "_admin-tabs.html" %}
+
+<section class="page-head admin-head">
+  <p class="kicker">{{ t('admin.kicker') }}</p>
+  <h1>{{ t('admin.config.title') }}</h1>
+  <p class="lede">{{ t('admin.config.lede') }}</p>
+</section>
+
+<p class="hint section-gap">{{ t('admin.config.scope') }}</p>
+
+{% if configuration_unrecognised %}
+<section class="card section-gap admin-config-unknown" aria-labelledby="admin-config-unknown" data-reveal>
+  <p class="kicker">{{ t('admin.config.unknown.kicker') }}</p>
+  <h2 id="admin-config-unknown">{{ t('admin.config.unknown.heading') }}</h2>
+  <p class="lede">{{ t('admin.config.unknown.lede') }}</p>
+  <ul class="admin-config-unknown-list">
+    {% for name in configuration_unrecognised %}
+    <li><code>{{ name }}</code></li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% for group, rows in configuration_groups %}
+<section class="card section-gap" aria-labelledby="admin-config-{{ group }}" data-reveal>
+  <h2 id="admin-config-{{ group }}">{{ t('admin.config.group.' ~ group) }}</h2>
+  <ul class="admin-config">
+    {% for row in rows %}
+    <li class="admin-config-row" data-source="{{ row.source }}"
+        {% if row.secret %}data-secret="true"{% endif %}>
+      <code class="admin-config-name">COS_WEB_{{ row.name }}</code>
+      <span class="admin-config-source">
+        {{ t('admin.config.source.' ~ row.source) }}
+      </span>
+      <span class="admin-config-value">
+        {% if row.secret %}
+          {{ t('admin.config.secret.set') if row.value else t('admin.config.unset') }}
+        {% elif row.value is not none %}
+          <code>{{ row.value }}</code>
+        {% else %}
+          {{ t('admin.config.unset') }}
+        {% endif %}
+      </span>
+      {% if row.description %}
+      <span class="admin-config-description" lang="en">{{ row.description }}</span>
+      {% endif %}
+      {% if row.documented_default %}
+      <span class="admin-config-default">
+        {{ t('admin.config.default') }} <span lang="en">{{ row.documented_default }}</span>
+      </span>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endfor %}
+{% endblock %}

@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.cookies.description') }}</p>
 </section>
 
-{% if locale != 'en' %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -25,13 +25,11 @@
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="en">
-<p>Every <code>Set-Cookie</code> header the public response actually sends is inspected for
-three attributes browsers use to limit what a cookie can be used for. Nothing
-is guessed and no cookie value is retained - only the attributes on cookies
-OpenCloud or its reverse proxy already sent are read.</p>
-<p>If the scanned response sets no cookie at all, none of these three checks
-appear in the result: there is nothing to grade, and a check that always
-passed because it never ran would be misleading.</p>
+<p>The scanner inspects the <code>Set-Cookie</code> headers in public responses for four cookie
+protections. It reads the attributes set by OpenCloud or its reverse proxy and does not
+retain cookie values.</p>
+<p>If the response sets no cookies, these checks are omitted. An unperformed check is not
+reported as a pass.</p>
 <!-- TOC -->
 <ul>
 <li><a href="#cookie-attributes-what-this-scanner-checks-and-why">Cookie attributes: what this scanner checks, and why</a></li>
@@ -53,41 +51,33 @@ If the instance terminates TLS in a reverse proxy, this is usually the
 proxy's own session or CSRF cookie rather than one OpenCloud itself sets - see
 <a href="/documentation/reverse-proxy">Reverse proxies</a> for the header set this check reads.</p>
 <h2 id="2-can-page-scripts-read-the-cookie-cookiehttponly">2. Can page scripts read the cookie: <code>cookieHttpOnly</code></h2>
-<p>Without <code>HttpOnly</code>, JavaScript running on the page can read the cookie
-through <code>document.cookie</code>. A cookie that carries a session or CSRF token has
-no legitimate reason to be readable by page scripts; being readable only
-means that a single successful cross-site scripting injection can steal it
-outright, turning what would otherwise be a contained UI bug into full
-session theft.</p>
-<p><strong>Fix:</strong> set <code>HttpOnly</code> unless a browser script must deliberately read that
-specific cookie - a genuine requirement for most consent or preference
-cookies, but not for anything used to authenticate a request.</p>
+<p>Without <code>HttpOnly</code>, scripts running on the page can read a cookie through
+<code>document.cookie</code>. For session cookies this increases the impact of an injected script.
+Some CSRF-token designs deliberately require JavaScript access, so assess the cookie’s
+purpose before changing the attribute.</p>
+<p><strong>Fix:</strong> use <code>HttpOnly</code> for cookies that scripts do not need to read, especially session
+cookies. Confirm the application’s requirements before applying the attribute to every
+cookie.</p>
 <h2 id="3-is-the-cookie-sent-on-cross-site-requests-cookiesamesite">3. Is the cookie sent on cross-site requests: <code>cookieSameSite</code></h2>
-<p>Without a <code>SameSite</code> attribute, a cookie is attached to requests that
-originate from another site - the mechanism behind cross-site request
-forgery (CSRF), where a page the victim never intended to trust triggers a
-request that carries their OpenCloud session along with it.</p>
+<p><code>SameSite</code> controls when the browser includes a cookie in cross-site requests. Many
+current browsers apply a Lax-like default when it is omitted, but an explicit value
+makes the intended behavior clear. The check reports the missing attribute rather than
+proving that a CSRF attack is possible.</p>
 <p><strong>Fix:</strong> set <code>SameSite=Lax</code> or <code>SameSite=Strict</code> unless a documented
 cross-site flow genuinely needs <code>SameSite=None</code> (which additionally requires
 <code>Secure</code>). <code>Lax</code> is right for most session cookies: it still allows a
 top-level navigation such as clicking a shared link to arrive signed in.</p>
 <h2 id="4-does-the-cookie-name-carry-a-prefix-cookieprefix">4. Does the cookie name carry a prefix: <code>cookiePrefix</code></h2>
-<p>The three attributes above all govern how a cookie is <em>read</em>. None of them
-governs how one is <em>written</em>, and that is the gap the <code>__Host-</code> and
-<code>__Secure-</code> name prefixes close. A cookie called <code>session</code> can be overwritten
-by any sibling subdomain, or over plain HTTP on the same host, however
-carefully its <code>Secure</code> and <code>HttpOnly</code> flags were set - the browser has no way
-to know which of the two writers is the real application. A cookie called
-<code>__Host-session</code> can only be set over HTTPS, with <code>Path=/</code> and no <code>Domain</code>,
-so nothing but the exact origin can touch it. The prefix is enforced on the
-name itself, before any attribute is consulted, which is what makes it the
-one cookie protection an attacker on a neighbouring subdomain cannot work
-around.</p>
+<p>Cookie-name prefixes add rules for setting a cookie. Supporting browsers require
+<code>__Secure-</code> cookies to be set securely with <code>Secure</code>. <code>__Host-</code> additionally requires
+<code>Path=/</code> and forbids <code>Domain</code>, binding the cookie to the host that set it. This helps
+prevent a sibling subdomain from setting a competing parent-domain cookie. It does not
+isolate cookies by port.</p>
 <p>The check reports two different failures, because they have one fix:</p>
 <ul>
 <li><strong>A cookie that claims a prefix it does not honour</strong> - <code>__Host-</code> with a
-  <code>Domain</code> attribute, with a <code>Path</code> other than <code>/</code>, or without <code>Secure</code>. Every
-  browser rejects such a cookie outright, so this is not a theoretical
+  <code>Domain</code> attribute, with a <code>Path</code> other than <code>/</code>, or without <code>Secure</code>. Supporting
+  browsers reject such a cookie, so this is not a theoretical
   weakness: the session it carries silently does not work. The detail names
   which rule was broken.</li>
 <li><strong>No observed cookie carrying a prefix at all</strong>, which is the ordinary

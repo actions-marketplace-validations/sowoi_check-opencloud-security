@@ -7,10 +7,20 @@ retypes a dashboard.
 - `cron/` - a `cron.d` drop-in file.
 - `prometheus/alerts.yml` - alerting rules for the plugin's own exporter.
 - `grafana/dashboard.json` - a dashboard for the same metrics.
+- `icinga2/check_opencloud_security.conf` - the complete Icinga 2
+  `CheckCommand`, one argument per option that makes sense on a service.
+- `checkmk/opencloud_security` - a Checkmk local check, for an agent host that
+  can reach an instance the Checkmk server cannot.
+- `helm/check-opencloud-security/` - a Helm chart: the scheduled scan as a
+  `CronJob`, and optionally the shared scan service with a `NetworkPolicy`
+  bounding what it may reach.
 
 See the "Scheduling without Icinga2 / Nagios" section in the main
-[README.md](../README.md) for the two scheduling examples, and
-[Prometheus and Grafana](../docs/prometheus.md) for the other two.
+[README.md](../README.md) for the two scheduling examples,
+[Prometheus and Grafana](../docs/prometheus.md) for the next two,
+[Checkmk](../docs/checkmk.md) for the one after - including why it is installed
+in a `local/3600/` subdirectory rather than in `local/` itself - and
+[Kubernetes](../docs/kubernetes.md) for the chart.
 
 The scheduling examples rely on the `COS_*` environment variables documented
 in the main README instead of command-line flags, so the same plugin

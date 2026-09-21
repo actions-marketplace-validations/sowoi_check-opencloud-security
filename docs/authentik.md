@@ -1,21 +1,11 @@
 # Authentik in front of the MCP endpoint
 
-The scan service answers anybody, and for the public deployment that is the
-whole point of it. An estate running the service for itself usually wants the
-opposite for the agent endpoint: `/mcp` executes the same workflows a browser
-gets, and there are deployments where "the same workflows a browser gets"
-should still mean "and only our agents". This page is that deployment, whole:
-one compose file that brings up the scan service *and*
-[Authentik](https://goauthentik.io), with `/mcp` requiring a token from the
-first minute.
+This guide runs the scan service and Authentik in one Compose stack, with token
+authentication enabled on `/mcp` from startup. Use it when MCP should be available only
+to agents authorized by your identity provider.
 
-Two things it is *not*. It is not a login for the website - the pages and the
-HTTP API are unchanged, and adding one is not what this is for. And it is not
-a way to buy more scanning: **authentication decides who may ask, never how
-hard**. An authenticated agent meets exactly the same client rate limit, the
-same per-target cooldown, the same SSRF guard and the same queue as a stranger
-with a browser. A sign-in that raised a limit would have turned itself into a
-way around it.
+The website and HTTP API remain public. Authentication controls access to MCP; it does
+not increase scan allowances or bypass the target cooldown, SSRF checks or queue.
 
 <!-- TOC -->
 * [Authentik in front of the MCP endpoint](#authentik-in-front-of-the-mcp-endpoint)
@@ -23,6 +13,14 @@ way around it.
   * [Running the stack](#running-the-stack)
   * [Sending mail](#sending-mail)
   * [What the blueprint created](#what-the-blueprint-created)
+  * [A second factor for everybody](#a-second-factor-for-everybody)
+    * [What the person sees](#what-the-person-sees)
+    * [How it is enforced](#how-it-is-enforced)
+  * [Accounts without the admin interface](#accounts-without-the-admin-interface)
+  * [An operator for /admin](#an-operator-for-admin)
+    * [With the wizard](#with-the-wizard)
+    * [By hand, in the Authentik interface](#by-hand-in-the-authentik-interface)
+    * [Checking it](#checking-it)
   * [Pointing the scanner at it](#pointing-the-scanner-at-it)
   * [Adding somebody who may use the endpoint](#adding-somebody-who-may-use-the-endpoint)
     * [A group, and the binding that makes it mean something](#a-group-and-the-binding-that-makes-it-mean-something)
@@ -44,9 +42,8 @@ way around it.
 
 ## How it works
 
-This service is an OAuth 2.0 **resource server** and nothing more. It has no
-login page, no session, no user table, no client secret and no way to issue a
-token. What it does is check one:
+The scan service acts as an OAuth 2.0 resource server. It verifies tokens issued by the
+provider and has no login page, sessions, user database or client secret:
 
 1. An agent presents `Authorization: Bearer <token>` on its MCP requests.
 2. The service fetches the provider's published signing keys - the JWKS - and
@@ -84,13 +81,13 @@ Then open **<http://127.0.0.1:9000/if/flow/initial-setup/>** - the trailing
 slash is required, without it you get a 404 - and set the password for the
 `akadmin` account. That flow is offered once.
 
-That is the whole setup. There is no provider to create, no client ID to copy
-between two windows, and nothing to switch on afterwards: **the sign-in
-follows the endpoint.** `COS_WEB_MCP_AUTH_ENABLED` in that file is
-`${COS_WEB_ENABLE_MCP:-true}`, so bringing up this stack means `/mcp` requires
-a token, and turning the endpoint off turns the sign-in off with it. There is
-no combination of these two variables that leaves the endpoint open by
-accident.
+The first sign-in after that asks `akadmin` to enrol a second factor - an
+authenticator app or a security key - before it completes; see
+[a second factor for everybody](#a-second-factor-for-everybody).
+
+The blueprint creates the provider and application. In this Compose file,
+`COS_WEB_MCP_AUTH_ENABLED` follows `${COS_WEB_ENABLE_MCP:-true}`, so enabling MCP also
+requires authentication. Disabling MCP disables both together.
 
 `authentik-env.sh` writes six secrets into `docker/.env` and never overwrites
 one it finds, so running it twice is safe:
@@ -104,9 +101,8 @@ one it finds, so running it twice is safe:
 | `AUTHENTIK_CLIENT_SECRET` | The OAuth client secret |
 | `COS_WEB_PURGE_TOKEN` | The operator credential for erasure, which is a different thing entirely |
 
-Keep them somewhere you will still have them after the disk does not.
-`AUTHENTIK_SECRET_KEY` signs everything in the database, so a database
-restored next to a different key is an unusable database.
+Back up `.env` with the Authentik data. Preserve `AUTHENTIK_SECRET_KEY` during a restore
+so that the restored installation can use its existing cryptographic state.
 
 Reachable from somewhere other than your laptop? Two variables, and nothing
 else changes:
@@ -143,11 +139,9 @@ Notes on the stack, and where it differs from the upstream one:
 
 ## Sending mail
 
-Authentik starts with exactly one account, and the way back into it is an
-email. Until a mail server is configured it uses local delivery, which means
-the message goes into the container and stays there: a forgotten `akadmin`
-password is then a database edit rather than a link in an inbox. Configure it
-before there is anything in Authentik worth keeping.
+Configure SMTP before relying on account recovery. Without an external mail server,
+recovery messages are delivered locally inside the container and do not reach users’
+inboxes.
 
 Every setting is a variable in `docker/.env`, and both Authentik services read
 them - the server sends the test message, the worker sends everything else, so
@@ -261,6 +255,228 @@ To do it by hand instead - against an Authentik you already run, say - the
 wizard under **Applications → Applications → Create with wizard** asks for the
 same things in the same order, and the table above is the answer sheet.
 
+## A second factor for everybody
+
+`authentik/blueprints/opencloud-mfa.yaml` is mounted with the others, and it
+makes a second factor part of every sign-in. Authentik's default
+authentication flow already contains a stage that checks one -
+`default-authentication-mfa-validation` - but it ships set to *skip* an
+account that has none, which on a new directory is every account. The
+blueprint sets that same stage to *configure*:
+
+| | Value |
+|:--|:-----|
+| **Account without a factor** | Taken through enrolling one before the sign-in completes |
+| **Offered** | TOTP (an authenticator app) and WebAuthn (a security key or passkey) |
+| **Accepted afterwards** | TOTP, WebAuthn, and static recovery codes created from the user's own settings |
+| **Re-applied** | Every hour (`state: present`), so it cannot be switched off in the interface and forgotten |
+
+### What the person sees
+
+1. **The first sign-in after the password** stops at *Configure an
+   authenticator* and offers the two kinds.
+2. **An authenticator app** (TOTP): scan the QR code with any authenticator
+   app, then type the six-digit code it shows to confirm.
+3. **A security key or passkey** (WebAuthn): the browser asks to touch the key,
+   or to use the device's own passkey, and names it.
+4. **Every sign-in after that** asks for a code or a touch after the password.
+5. **Recovery codes** are worth creating straight away: under the user's own
+   settings - the avatar, then **Settings → MFA Devices → Enroll → Static
+   tokens** - Authentik shows a set of one-time codes. Keep them where the phone
+   is not.
+
+More than one factor can be enrolled from the same page, and a second
+device - a key as well as an app - is the cheapest recovery there is.
+
+### How it is enforced
+
+It changes the default flow's own stage rather than binding a second one, so a
+person with an authenticator is asked once, not twice. To lift the
+requirement, remove the file from the blueprint directory; the stage keeps its
+last setting until you change it.
+
+Two things it does not touch. **Agents** using `client_credentials` sign in
+with an app password and never run a flow, so a token for `/mcp` needs no code
+from anybody's phone. And **a lost authenticator** is recovered by an
+administrator: sign in as `akadmin`, open **Directory → Users**, and delete
+the person's device under *MFA Authenticators*; their next sign-in enrols a
+new one.
+
+## Accounts without the admin interface
+
+A stack written by `docker/setup-wizard.py` goes one step further, and nobody
+creates an account by hand at all. The wizard asks **who signs in**, by
+username - everybody on the operator's guest list, `COS_WEB_ADMIN_USERS`, is on
+it whether repeated or not - and writes three things:
+
+| Where | What |
+|:------|:-----|
+| `.env` | `AUTHENTIK_ENROLLMENT_TOKEN`, a random UUID, and `AUTHENTIK_BOOTSTRAP_PASSWORD` for `akadmin` |
+| The compose file | `COS_AUTHENTIK_ACCOUNTS`, the usernames, and `COS_WEB_ADMIN_USERS`, for both Authentik containers |
+| `authentik/blueprints/` | `opencloud-enrollment.yaml` and `opencloud-mfa.yaml`, beside the other two |
+
+and it ends by printing one link:
+
+```
+https://sso.example.com/if/flow/opencloud-scanner-enrollment/?itoken=<AUTHENTIK_ENROLLMENT_TOKEN>
+```
+
+The token is a credential, so the wizard prints the placeholder rather than
+the value, and beside it the command that assembles the real link from `.env`:
+
+```
+echo "https://sso.example.com/if/flow/opencloud-scanner-enrollment/?itoken=$(sed -n 's/^AUTHENTIK_ENROLLMENT_TOKEN=//p' .env)"
+```
+
+Each person named opens it, types their username, an email address and a
+password, enrols an authenticator app or a security key, and is signed in.
+Somebody on the operator's guest list lands in `opencloud-scanner-operators`,
+the group `/admin` is bound to, on the way. Nothing is clicked in Authentik -
+by them or by you.
+
+The link is a way in, so three things bound it:
+
+- **Only the listed names.** A username not in `COS_AUTHENTIK_ACCOUNTS` is
+  refused at the form, and an empty list admits nobody.
+- **Each name once.** The username field refuses a name that already exists,
+  so a name that has enrolled cannot be claimed again, and the link is useless
+  once everybody on the list has used it.
+- **Only with the token.** Without it - or with any other - the flow answers
+  *access denied* before showing a field.
+
+Treat it like a password until everybody has used it. To add somebody later,
+run the wizard again, add the name, and send the same link; to retire the
+link, replace `AUTHENTIK_ENROLLMENT_TOKEN` in `.env` with a new UUID and
+restart the Authentik containers, and the invitation is re-applied under the
+new token. A person who stops after the password and before the second factor
+has an account already: signing in normally takes them through enrolling the
+factor then.
+
+**`akadmin` is kept for recovery.** `AUTHENTIK_BOOTSTRAP_PASSWORD` gives it a
+random password on the very first start, which also closes the
+`/if/flow/initial-setup/` flow - otherwise the first person to reach it would
+become the administrator. It too is asked to enrol a second factor on its
+first sign-in. The variable has no effect on a database that already has
+`akadmin`.
+
+`docker-compose.authentik.yml`, run by hand, mounts the enrollment blueprint
+as well but has no token, so no invitation is created and the flow cannot be
+used; accounts there are made as described under
+[adding somebody](#adding-somebody-who-may-use-the-endpoint).
+
+The link is not printed by `--non-interactive`, which prints nothing; build it
+from the public address of Authentik and `AUTHENTIK_ENROLLMENT_TOKEN` in `.env`,
+as the comment at the top of the generated compose file shows.
+
+## An operator for /admin
+
+The operator's area needs two things to agree about one person, and they live
+on different sides of the forward auth:
+
+| Where | What it decides |
+|:------|:----------------|
+| Authentik: membership of `opencloud-scanner-operators` | Whether the sign-in is allowed to reach `scan.example.com` at all. The `/admin` application is bound to that group, so anybody outside it is stopped at Authentik |
+| The scan service: `COS_WEB_ADMIN_USERS` | Whether the username the outpost forwards is an operator of *this* deployment |
+
+A person needs both: the same username in the group and on the list. What
+follows is the same result reached two ways, and the check at the end applies
+to either.
+
+### With the wizard
+
+Run `docker/setup-wizard.py`, turn the operator's area on, and answer:
+
+- **the operator's guest list** (`admin_users`) with the username, for example
+  `scanokko`;
+- **who signs in** (`authentik_accounts`) - the guest list is added to it
+  anyway, so there is nothing to repeat.
+
+Bring the stack up, build the enrollment link from `.env` with the command the
+wizard printed (see [accounts without the admin
+interface](#accounts-without-the-admin-interface)), and send it to that person.
+They open it and:
+
+1. type the username exactly as it is on the guest list, an email address and
+   a password;
+2. enrol a second factor - scan the QR code with an authenticator app, or
+   register a security key or passkey (see [what the person
+   sees](#what-the-person-sees));
+3. are signed in, already in `opencloud-scanner-operators`.
+
+They can then open `https://scan.example.com/admin`. To add an operator later,
+run the wizard again against the same directory, add the name to the guest
+list, restart the Authentik containers so they read the new list, and send the
+same link.
+
+### By hand, in the Authentik interface
+
+For an account that already existed before it was put on the guest list, a
+database the enrollment flow never ran against, or an Authentik you run
+yourself.
+
+**1. Get into `akadmin`.** On a stack the wizard wrote, the password is
+`AUTHENTIK_BOOTSTRAP_PASSWORD` in `.env` - but only if the database was created
+by that stack. The variable is applied on the very first start and ignored on a
+database that already has `akadmin`, so a regenerated `.env` next to an older
+volume has a password nothing accepts. Mint a one-time way in instead:
+
+```bash
+docker compose exec authentik_worker ak create_recovery_key 10 akadmin
+```
+
+It prints a path, valid for ten minutes. Open it on Authentik's public
+address - `https://sso.example.com` followed by that path - and you are signed
+in as `akadmin` without a password; set one under the user settings. The
+first sign-in asks `akadmin` to enrol a second factor like everybody else.
+
+**2. Create the person.** **Directory → Users → New User → Internal User**. The
+username must be spelled exactly as it is in `COS_WEB_ADMIN_USERS` - the
+service compares the forwarded name, not the email or the display name. Give
+it an email address, so a password recovery has somewhere to go.
+
+**3. Give them a password.** On the user's page, **Set password**, or better
+**Email recovery link** if [mail](#sending-mail) is configured, or **Create
+recovery link** to hand the link over some other way. A link means the
+password never passes through your clipboard.
+
+**4. Put them in the group.** On the user's page, **Groups → Add to existing
+group → `opencloud-scanner-operators`**. Or from the group's side:
+**Directory → Groups → opencloud-scanner-operators → Users → Add existing
+user**. Do not tick *Superuser* anywhere: an Authentik superuser administers
+Authentik, which is not what being an operator of the scanner means.
+
+**5. They sign in.** They open `https://scan.example.com/admin`, are sent to
+Authentik, sign in, enrol a second factor, and are sent back.
+
+Steps 2 and 4 can be done from a shell instead - each command on one line, as
+written, because `ak shell -c` runs the string as a script and a pasted
+indentation is a syntax error:
+
+```bash
+# Create the account with no usable password; hand them a recovery link after.
+docker compose exec authentik_worker ak shell -c "from authentik.core.models import User; u = User(username='scanokko', email='scanokko@example.com', name='scanokko'); u.set_unusable_password(); u.save(); print('CREATED')" 2>&1 | grep -E 'CREATED|Error'
+docker compose exec authentik_worker ak create_recovery_key 60 scanokko
+
+# Put it in the operator group.
+docker compose exec authentik_worker ak shell -c "from authentik.core.models import Group, User; Group.objects.get(name='opencloud-scanner-operators').users.add(User.objects.get(username='scanokko')); print('ADDED')" 2>&1 | grep -E 'ADDED|Error|DoesNotExist'
+```
+
+The recovery link from `create_recovery_key` is how that person sets their own
+password; it expires after the minutes given.
+
+### Checking it
+
+Membership is the part that fails silently - the person signs in, and Authentik
+shows an error instead of sending them back:
+
+```bash
+docker compose exec authentik_worker ak shell -c "from authentik.core.models import Group; g = Group.objects.get(name='opencloud-scanner-operators'); print('IN_GROUP', g.users.filter(username='scanokko').exists())" 2>&1 | grep -E 'IN_GROUP|Error|DoesNotExist'
+```
+
+And the negative case, which is worth the minute: an account that is *not* in
+the group must get Authentik's error, not the area. **Events → Logs** records
+every refusal with the account and the application it was refused.
+
 ## Pointing the scanner at it
 
 The stack above does this for you - the values below are already in
@@ -368,12 +584,10 @@ client takes them through Authentik, they log in, and the client gets a token.
 Nothing has to be copied, and there is no per-user configuration on the
 scanner side at all.
 
-**Multi-factor authentication is worth the two minutes here.** The endpoint
-executes scans against systems the person is responsible for, and a password
-alone is a password alone. The user enrols an authenticator from their own
-settings page at `/if/user/#/settings`; requiring it for everybody is a
-matter of adding an authenticator validation stage to the authentication
-flow, which is Authentik's business rather than this project's.
+**A second factor is already required.** The person is taken through
+enrolling one on their first sign-in - see
+[a second factor for everybody](#a-second-factor-for-everybody) - so there is
+nothing to switch on for them.
 
 ### The agent that is nobody
 
@@ -410,11 +624,10 @@ same token endpoint:
 | An agent acting for a person | That person's username and an app password | **Directory → Tokens and App passwords** |
 | An agent acting for nobody | A service account's username and app password | Shown once when the service account was created |
 
-**Authentik does not do machine-to-machine with a client ID and a client
-secret**, whatever the grant type is called. Identification is by *username*,
-authentication is by an *app password*, and the client secret is only how the
-request proves which provider it is asking. This trips up everybody who has
-used another provider first.
+For an explicitly named service account, use its username and app password along with
+the provider’s client ID and secret. Authentik also supports the client-only request
+described below, which creates a shared service account. Choose a separate account per
+caller when you need individual revocation.
 
 ### As a service account
 
@@ -577,10 +790,9 @@ symptom is confusing because everything else works. Pass `Host` and
 `AUTHENTIK_LISTEN__TRUSTED_PROXY_CIDRS` if it is outside the private ranges.
 Authentik cannot run under a subpath; give it a hostname.
 
-**The scanner needs to know its own address**, because that is what a token's
-audience is checked against and what the metadata document publishes. Set
-`COS_WEB_PUBLIC_BASE_URL`. [The reverse proxy guide](reverse-proxy.md) has
-worked configuration for both.
+Set `COS_WEB_PUBLIC_BASE_URL` to the scanner’s public address for resource metadata. The
+token audience is configured separately through `COS_WEB_MCP_AUTH_AUDIENCE`. The
+[reverse proxy guide](reverse-proxy.md) includes working configurations.
 
 ## Backing it up
 
@@ -622,10 +834,8 @@ The volume names are prefixed with the Compose project name, which is the
 directory name unless you set `COMPOSE_PROJECT_NAME`. `docker volume ls` will
 tell you what they actually came out as.
 
-Treat the result as a credential store, because it is one: the dump contains
-every token and every signing key Authentik holds, and `.env` contains the key
-that makes them usable. Encrypt it, keep it off the machine that made it, and
-test the restore - an untested backup is a belief, not a backup.
+The backup contains credentials and signing keys. Encrypt it, keep a copy off the host
+and test a restore with the matching database version and `.env`.
 
 ## Restoring it
 
@@ -674,6 +884,14 @@ fetched again on the first request.
 | The token request itself is refused, before `/mcp` is ever reached | The account is not bound to the application. **Events → Logs** records it as a denied authorization, naming the account |
 | It worked until a group binding was added, using only the client secret | That path runs as the service account Authentik generated, `ak-check-opencloud-security-client_credentials`, and it is not in the group either. Add it, or move to a service account of your own |
 | `invalid_grant` on a `client_credentials` request | The `password` is an **app password**, not the user's login password and not an API token. Create one under **Directory → Tokens and App passwords** |
+| The enrollment link answers *access denied* | The token is not the one in `.env`, or the stack was started without `AUTHENTIK_ENROLLMENT_TOKEN`. Check **Customisation → Blueprints** for `check-opencloud-security - enrollment` |
+| "This username is not one this invitation was issued for." | The name is not in `COS_AUTHENTIK_ACCOUNTS`. Run the wizard again and add it; the list is read when the form is submitted, after a restart of the Authentik containers |
+| "Username is already taken." on the enrollment link | That name has enrolled already. Sign in normally instead |
+| Somebody lost their authenticator | Sign in as `akadmin` (password `AUTHENTIK_BOOTSTRAP_PASSWORD` in `.env`) and delete their device under **Directory → Users** |
+| `AUTHENTIK_BOOTSTRAP_PASSWORD` is refused for `akadmin` | The database is older than that `.env` - the variable is applied on the first start only. `docker compose exec authentik_worker ak create_recovery_key 10 akadmin` prints a one-time sign-in; see [an operator for /admin](#by-hand-in-the-authentik-interface) |
+| Signing in to `/admin` works at Authentik, which then shows an error instead of sending you back | The account is not in `opencloud-scanner-operators`. See [checking it](#checking-it) |
+| Authentik is in the group and `/admin` still refuses | The username is not in `COS_WEB_ADMIN_USERS`, or is spelled differently there |
+| `password authentication failed for user "authentik"` in the Authentik log | `AUTHENTIK_PG_PASS` in `.env` is not the password the database volume was created with - PostgreSQL reads `POSTGRES_PASSWORD` only when it initialises an empty volume. Set the old value back, or change the database user's password to the new one with `ALTER USER authentik WITH PASSWORD '...'` through `docker compose exec authentik_postgresql psql -U authentik` |
 | The password recovery mail never arrives | No mail server, so Authentik delivered it locally. See [sending mail](#sending-mail) |
 | No `WWW-Authenticate` on the 401 | Something in front is stripping it. The header is how a client finds the provider |
 | The endpoint is open when it should not be | `COS_WEB_MCP_AUTH_ENABLED` did not reach the container. `/.well-known/ai.json` reports what the service actually believes: `mcp.authentication.type` |

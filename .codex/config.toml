@@ -1,0 +1,20 @@
+# Project-scoped Codex defaults. Hooks are defined in hooks.json, so this file
+# does not duplicate that source or cause Codex to load the hooks twice.
+
+[agents]
+max_concurrent_threads_per_session = 4
+
+[agents.mutation_tester]
+description = "Read-only mutation-testing triage for the plugin and scanner."
+config_file = "./agents/mutation-tester.toml"
+
+[agents.preflight_runner]
+description = "Read-only local CI and generated-file checks."
+config_file = "./agents/preflight-runner.toml"
+
+# Equivalent of the repository's .mcp.json. The browser policy remains in its
+# existing Claude configuration file; this entry only gives Codex the same
+# reviewed stdio server and does not copy or modify that file.
+[mcp_servers.playwright]
+command = "uv"
+args = ["run", "--group", "test", "playwright", "mcp", "--config", ".claude/playwright-mcp.json"]

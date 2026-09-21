@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.reverse-proxy.description') }}</p>
 </section>
 
-{% if locale != 'en' %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -312,19 +312,52 @@ backend opencloud
   own configuration (<code>proxy_set_header X-Forwarded-Host $host;</code>) rather than
   forwarding whatever arrived. A default virtual host that refuses a name it
   does not recognise closes the same door for the <code>Host</code> header.</li>
-<li><strong>HTTP left open.</strong> A redirect is enough; this check follows it and grades
+<li><strong>No default server.</strong> Without one, nginx answers a <code>Host</code> it has no
+  <code>server_name</code> for from whichever <code>server</code> block it loaded first for that
+  port - often a different application on the same machine - and Apache from
+  the first <code>&lt;VirtualHost&gt;</code>. When that site redirects with <code>$host</code>, the probe
+  host comes back in the <code>Location</code>, and <code>forwardedHostIgnored</code> fails with
+  <code>Host comes back as the address it redirects to</code> although OpenCloud never
+  saw the request and <code>OC_URL</code> is set correctly. A different certificate or a
+  different set of headers on a request with a made-up <code>Host</code> is the tell:</li>
+</ul>
+<p><code>bash
+  curl -sI -H "Host: unknown.invalid" https://opencloud.example.com/.well-known/openid-configuration</code></p>
+<p>Give the proxy an explicit default server that refuses every name it does
+  not serve, and write redirects in other sites with their own name rather
+  than <code>$host</code>:</p>
+<p><code>nginx
+  server {
+      listen 80 default_server;
+      listen [::]:80 default_server;
+      listen 443 ssl default_server;
+      listen [::]:443 ssl default_server;
+      server_name _;
+      ssl_reject_handshake on;   # nginx 1.19.4 and later; no certificate needed
+      return 444;
+  }</code></p>
+<p>In Apache, make the first <code>&lt;VirtualHost&gt;</code> for each port one that serves
+  nothing (<code>Redirect 403 /</code>). Caddy and Traefik answer an unknown name
+  without routing it to a site, so they need nothing here.
+- <strong>HTTP left open.</strong> A redirect is enough; this check follows it and grades
   the destination. What it will not forgive is a plain-HTTP listener that
   serves the interface as well - that is the <code>httpsEnforced</code> flag
-  <a href="#two-findings-decided-here-that-are-not-headers">above</a>.</li>
-<li><strong>A self-signed or expired certificate.</strong> The scan refuses to establish a
-  version over an untrusted connection, and no header can make up for that.</li>
-</ul>
+  <a href="#two-findings-decided-here-that-are-not-headers">above</a>.
+- <strong>A self-signed or expired certificate.</strong> The scan refuses to establish a
+  version over an untrusted connection, and no header can make up for that.</p>
 <h2 id="in-front-of-the-scan-service">In front of the scan service</h2>
 <p>The web application in this repository - <a href="/documentation/web-service"><code>docs/webapp.md</code></a> - is a
 plain ASGI service on one port. It sends its own security headers, including a
 <code>Content-Security-Policy</code> with no <code>unsafe-inline</code>, so a proxy has nothing to
 add. What it does need is the truth about who is calling and enough patience
 for a scan to finish.</p>
+<p><strong>You do not have to copy any of this by hand.</strong>
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docker/setup-wizard.py"><code>docker/setup-wizard.py</code></a> writes the nginx, Apache,
+Caddy or Traefik configuration for a generated deployment, following the notes
+below and filling in the host name, the port and - where the stack brings its
+own identity provider - the forward auth in front of <code>/admin</code> and a site for
+Authentik itself at the host name of its public address. These sections
+are what it generates, and the reference for a deployment it did not write.</p>
 <h3 id="what-the-service-needs-from-a-proxy">What the service needs from a proxy</h3>
 <ul>
 <li><strong>A real client address.</strong> The rate limit and the target cooldown are the

@@ -43,7 +43,7 @@ COPY --from=builder /dist/*.whl /tmp/
 # copy of the checks. 'mcp' is what serves /mcp; without it the endpoint is
 # simply not mounted and everything else still works.
 RUN set -eu \
-    && uv pip install --system --no-cache "$(echo /tmp/*.whl)[web,mcp]" \
+    && uv pip install --system --no-cache "$(echo /tmp/*.whl)[web,mcp,signing]" \
     && rm -rf /tmp/*.whl /bin/uv \
     && useradd --no-create-home --shell /usr/sbin/nologin --uid 10001 scanner
 
@@ -53,7 +53,11 @@ RUN set -eu \
 # the volume is mounted: Docker copies the mount point's ownership into a fresh
 # named volume, and a directory created by the mount instead would belong to
 # root and be unwritable by the process that needs it.
-RUN install -d -o 10001 -g 10001 -m 0700 /var/log/opencloud-scan
+#
+# The second is where COS_WEB_ADMIN_UPDATE_DIR points: the mount point of the
+# tmpfs a release installed from the operator's area is unpacked onto (ADR 0070).
+RUN install -d -o 10001 -g 10001 -m 0700 \
+        /var/log/opencloud-scan /var/lib/opencloud-scan/update
 
 WORKDIR /app
 

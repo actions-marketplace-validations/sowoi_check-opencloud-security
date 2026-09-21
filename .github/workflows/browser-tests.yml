@@ -1,0 +1,69 @@
+name: browser tests
+
+# The web application in real browser engines: scripts, stylesheets and the
+# Content-Security-Policy that the ASGI tests in run-tests.yml never execute.
+# Two engines, neither of them Google's (ADR 0061): WebKit and Firefox. The
+# main test job installs `playwright` too but no browser, so these modules
+# skip there; here PLAYWRIGHT_TESTS_REQUIRED turns a missing browser into a
+# failure instead.
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "webapp/**"
+      - "frontend/**"
+      - "opencloud_local_scan/**"
+      - "tests/browser_support.py"
+      - "tests/test_webapp_browser_*.py"
+      - "tests/fake_opencloud.py"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/browser-tests.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  browser:
+    name: ${{ matrix.browser }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [webkit, firefox, chromium]
+
+    env:
+      PLAYWRIGHT_BROWSER: ${{ matrix.browser }}
+      PLAYWRIGHT_TESTS_REQUIRED: "1"
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+
+      - name: Install the project
+        run: uv sync --locked --group test
+
+      # Downloads the browser build from Microsoft's mirror and the system
+      # libraries it needs through apt. Chromium is Google's build, run behind
+      # the dead proxy like the others: see ADR 0068.
+      - name: Install the browser
+        run: uv run playwright install --with-deps "$PLAYWRIGHT_BROWSER"
+
+      - name: Run the browser tests
+        run: uv run pytest tests/test_webapp_browser_*.py -q

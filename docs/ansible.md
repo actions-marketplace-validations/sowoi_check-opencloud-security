@@ -1,11 +1,9 @@
 # Automated deployment with Ansible
 
-Prefer not to click through Icinga Director or configure hosts by hand?
-[`ansible/`](../ansible/README.md) contains ready-to-use playbooks that install
-and configure check-opencloud-security - native or Docker - on one or more
-Icinga2 hosts, including the `CheckCommand` and `Service` objects described in
-[Icinga Director](icinga-director.md) and
-[Icinga2 / Nagios](installation.md#icinga2--nagios).
+The playbooks in [`ansible/`](../ansible/README.md) install and configure the plugin on
+one or more Icinga2 hosts, using either a native installation or Docker. They also
+create the `CheckCommand` and `Service` objects described in [Icinga
+Director](icinga-director.md) and [Icinga2 / Nagios](installation.md#icinga2--nagios).
 
 This page is the short version. [`ansible/README.md`](../ansible/README.md) is
 the reference, and it is the file kept in step with the roles themselves.
@@ -72,6 +70,12 @@ cases - set it explicitly.
 Leave `opencloud_check_interval` at `24h` or higher. Each run is a real scan
 against a real instance rather than a cached lookup, and nothing about an
 instance's rating changes from minute to minute.
+
+Every other option of the `CheckCommand` - `--eol-warning`, `--release-track`, `--ignore-hardening` and the rest - is set through `opencloud_check_extra_vars`, a map from the custom variable name without its `opencloud_` prefix to its value; a list repeats the flag once per element.
+
+```ini
+opencloud_check_extra_vars={"eol_warning": 30, "ignore_hardening": ["hstsPreload"]}
+```
 
 The full variable table, including the ones specific to each role, is in
 [`ansible/README.md`](../ansible/README.md#variable-reference).

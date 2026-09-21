@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.scanner.description') }}</p>
 </section>
 
-{% if locale != 'en' %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -25,21 +25,25 @@
   <a href="#update-check" lang="en">Update check</a>
   <a href="#vulnerabilities" lang="en">Vulnerabilities</a>
   <a href="#hardenings" lang="en">Hardenings</a>
+  <a href="#what-the-scan-covered" lang="en">What the scan covered</a>
+  <a href="#the-conditions-a-scan-ran-under" lang="en">The conditions a scan ran under</a>
+  <a href="#has-the-deployment-changed" lang="en">Has the deployment changed?</a>
   <a href="#debug-ports" lang="en">Debug ports</a>
+  <a href="#every-resolved-address" lang="en">Every resolved address</a>
   <a href="#concurrency" lang="en">Concurrency</a>
   <a href="#tls" lang="en">TLS</a>
   <a href="#what-this-package-does-not-do" lang="en">What this package does not do</a>
   <a href="#using-it-directly" lang="en">Using it directly</a>
+  <a href="#verifying-a-fix-without-a-full-scan" lang="en">Verifying a fix without a full scan</a>
   <a href="#comparing-a-scan-with-the-last-one" lang="en">Comparing a scan with the last one</a>
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="en">
 <p>The scan engine behind <code>check-opencloud-security</code> and the
 <code>check-opencloud-scanner</code> service.</p>
-<p>This package <strong>is</strong> the built-in scanner. It talks to an instance over HTTP(S), reads what OpenCloud exposes without
-authentication, probes for the misconfigurations that actually occur in
-OpenCloud deployments, and returns a single result document with a <code>0</code>-<code>5</code>
-rating.</p>
+<p>The scanner connects directly to the instance over HTTP(S), checks publicly observable
+settings and returns one result document with a rating from <code>0</code> to <code>5</code>. It also tests
+the documented demo credentials against the instance’s own identity provider.</p>
 <p>The rating scale follows the ratings of the Nextcloud scan API, so that
 existing thresholds, performance data, webhooks and dashboards keep their
 meaning.</p>
@@ -97,14 +101,10 @@ meaning.</p>
 </ul>
 <p>Everything else is inferred from response headers, status codes and TCP
 connects.</p>
-<p><code>/status.php</code> is not proof of OpenCloud, though: ownCloud and Nextcloud serve
-the same endpoint, which OpenCloud inherited from them. A status document
-whose product name carries either of those names is refused with <code>ScanError</code>
-rather than scanned - their releases, advisories and defaults are not
-OpenCloud's, and a verdict here would be a confident answer about the wrong
-software. See
-<a href="/documentation/what-is-opencloud"><code>docs/what-is-opencloud.md</code></a> for the fork
-history behind all three, and what actually differs between them.</p>
+<p>A <code>/status.php</code> response alone does not identify OpenCloud. The scanner checks the
+reported product and raises <code>ScanError</code> for another product, whose releases, advisories
+and defaults would not match this database. See <a href="/documentation/what-is-opencloud">What OpenCloud
+is</a>.</p>
 <h3 id="the-version-trap">The version trap</h3>
 <p><code>/status.php</code> reports three version fields:</p>
 <pre><code class="language-json">{&quot;version&quot;: &quot;0.1.0.0&quot;, &quot;versionstring&quot;: &quot;0.1.0&quot;, &quot;productversion&quot;: &quot;7.4.0&quot;}
@@ -165,12 +165,10 @@ to check.</p>
 </table>
 <p>then <strong>capped</strong> by the worst failed additional check: <code>critical</code> -&gt; at most <code>2</code>
 (D), <code>high</code> -&gt; <code>3</code> (C), <code>medium</code> -&gt; <code>4</code> (A), <code>low</code> -&gt; <code>5</code> (A+).</p>
-<p>Capping rather than assigning is a deliberate choice. One exposed path is a
-real problem, but it is not the same problem as running a release that receives
-no security fixes at all, and a monitoring system that cannot tell them apart
-is not useful. The consequence to be aware of: a single critical finding lands
-at <code>D</code>, which the plugin's default <code>--critical 1</code> reports as WARNING. Run with
-<code>--critical 2</code> if such a finding should page.</p>
+<p>A cap can only lower the starting rating, so a configuration finding cannot improve an
+end-of-life result. Note the monitoring consequence: a critical finding caps the score
+at <code>2</code> (<code>D</code>), which the default <code>--critical 1</code> reports as WARNING. Use <code>--critical 2</code> to
+make it CRITICAL.</p>
 <p>To report the findings without touching the rating at all:</p>
 <pre><code class="language-yaml">scanner:
   extra_checks_rating: false
@@ -309,14 +307,10 @@ two-year window the documentation promises. A line that is out of support gets
   ages between updates and a fresh release must not trip the alarm;</li>
 <li>the newest line of a track, which has nothing to upgrade to.</li>
 </ul>
-<p>A version ahead of the file is also <em>said out loud</em>. When the reported release
-is newer than the newest one recorded for its line - or sits on a line newer
-than every line on record - the verdict carries <code>scheduleStale: true</code> together
-with <code>scheduleUpdated</code>, <code>scheduleSource</code> and a <code>scheduleNote</code> naming the
-<a href="https://docs.opencloud.eu/docs/admin/resources/lifecycle/">lifecycle page</a>. It is a remark about this package's data and
-never a finding: the rating, the upgrade recommendation and the end-of-life
-verdict are all exactly what they would be without it. <code>ReleaseSchedule.is_behind()</code>
-is the same question asked directly.</p>
+<p>When the instance is newer than the schedule, the result includes <code>scheduleStale</code>,
+<code>scheduleUpdated</code>, <code>scheduleSource</code> and a <code>scheduleNote</code> linking to the <a href="https://docs.opencloud.eu/docs/admin/resources/lifecycle/">lifecycle
+page</a>. These describe the reference data without changing the rating or
+update recommendation. <code>ReleaseSchedule.is_behind()</code> exposes the same comparison.</p>
 <p>The plugin keeps the schedule that shipped with it: a monitoring host runs the
 check every few minutes and must not turn that into a documentation fetch, so
 the file is refreshed by upgrading. The web application is the other case - a
@@ -379,6 +373,26 @@ an explicit unknown.</p>
 understands a plain <code>{"tag_name": ...}</code> document and a list of releases, so an
 internal mirror needs no special format. Drafts and prereleases are skipped.</p>
 <h2 id="vulnerabilities">Vulnerabilities</h2>
+<p>Beside <code>vulnerabilities</code>, a result carries <code>upgradePath</code> when the installed
+release has known advisories and a newer release is recommended: the
+<code>target</code>, the advisories it <code>fixes</code>, the ones it is <code>stillAffected</code> by, and
+<code>safeVersion</code>, the lowest release past every missing fix (<code>null</code> when one has
+none yet). It is <code>null</code> otherwise. See
+<a href="/documentation/release-lifecycle#does-the-upgrade-clear-the-advisories">Does the upgrade clear the advisories?</a></p>
+<p><code>upgradeRehearsal</code> goes one step further: for every candidate release (the
+newest patch of the installed line and the newest release of each later line,
+restricted to the declared track) it lists what the release <code>fixes</code>, leaves
+<code>stillAffected</code> and <code>introduces</code>, whether it is <code>endOfLife</code>, and the 0-5
+<code>rating</code> the scan would give it - the version rules replayed, still capped by
+the instance's failed checks. An empty list when nothing newer is known. See
+<a href="/documentation/release-lifecycle#rehearse-every-upgrade">Rehearse every upgrade</a>.</p>
+<p><code>alternativeServices</code> records the instance's <code>Alt-Svc</code> header - whether it
+advertises HTTP/3 over UDP - as an observation that is never graded. See
+<a href="/documentation/scanner-checks#alternative-services-http3">Alternative services</a>.</p>
+<p><code>loginThrottling</code> is <code>null</code> unless <code>check_login_throttling</code> is set; then it
+records whether six failed sign-ins for a non-existent account were slowed
+down. Never graded. See
+<a href="/documentation/scanner-checks#failed-sign-ins-opt-in">Failed sign-ins</a>.</p>
 <h3 id="refreshing-reference-data-on-a-monitoring-host">Refreshing reference data on a monitoring host</h3>
 <p>The package includes a separate <code>refresh-data</code> command for installations that
 cannot wait for a package upgrade:</p>
@@ -529,6 +543,8 @@ missing header or an instance whose capabilities endpoint does not report that
 feature. An older release therefore does not accumulate phantom findings, and
 <code>capabilitiesAvailable</code> in the result document says whether the second half of
 the table could be evaluated at all.</p>
+<p>Which of them was omitted, and why, is recorded in <code>coverage</code> - see
+<a href="#what-the-scan-covered">What the scan covered</a>.</p>
 <p>The additional probes also read the public web configuration: wildcard embed
 message origins fail <code>webEmbedMessageOriginRestricted</code>, delegated iframe
 authentication without an explicit origin fails
@@ -591,14 +607,25 @@ move the rating:</p>
 <p><code>setup.advisoryChecks</code> is the other block that cannot move the rating, and for
 a different reason: not that the observation is neutral, but that OpenCloud
 satisfies it on no instance, so counting it would report the shipped state of
-the software as a fault in this deployment. It currently holds one entry,
-<code>securityTxtPublished</code> - whether <code>/.well-known/security.txt</code> carries the
-<code>Contact</code> field RFC 9116 requires, so that somebody who finds a flaw knows
-where to send it. The body is what is read, not the status code: an instance
-whose frontend answers every unknown path with its own shell returns 200 for
-that path too. The block is <code>{}</code> rather than a dictionary of <code>false</code> when the
-extra checks are off, because an observation nobody made is not one that
-failed. See
+the software as a fault in this deployment. It holds two entries:</p>
+<ul>
+<li><code>securityTxtPublished</code> - whether <code>/.well-known/security.txt</code> carries the
+  <code>Contact</code> field RFC 9116 requires, so that somebody who finds a flaw knows
+  where to send it. The body is what is read, not the status code: an
+  instance whose frontend answers every unknown path with its own shell
+  returns 200 for that path too.</li>
+<li><code>hstsPreloadEligible</code> - whether the <code>Strict-Transport-Security</code> header
+  would actually be accepted for browser preloading, which needs a max-age of
+  at least a year, <code>includeSubDomains</code> and <code>preload</code> together. <code>hstsPreload</code>
+  in the <code>hardenings</code> block answers the narrower question of whether the
+  directive is present at all; OpenCloud's proxy sends it alongside ten years
+  and no <code>includeSubDomains</code>, so the header on every stock instance asks for
+  something the preload list refuses. Whether the domain is <em>on</em> the list is
+  deliberately not measured - see
+  <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0037-preload-eligibility-is-measured-list-membership-is-not.md">ADR 0037</a>.</li>
+</ul>
+<p>The block is <code>{}</code> rather than a dictionary of <code>false</code> when the extra checks
+are off, because an observation nobody made is not one that failed. See
 <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0034-an-advisory-observation-need-not-be-a-header.md">ADR 0034</a>.</p>
 <p>The <code>identityProvider</code> observation names an external provider when its OIDC
 issuer identifies one. For Keycloak, Authelia and Authentik it also includes
@@ -619,17 +646,12 @@ it without changing the result shape.</p>
   provider is registered says nothing about WOPI secrets, share permissions or
   the second service's own configuration, all of which sit behind a login.</li>
 </ul>
-<p>Everything else the scanner does is a read. It never submits a form and never
-guesses a password. The one credential it sends is the documented demo one:
-when the instance runs OpenCloud's built-in identity provider,
-<code>_demo_user_finding</code> asks <code>/ocs/v1.php/cloud/user</code> with each of the accounts
-<code>IDM_CREATE_DEMO_USERS</code> creates - <code>dennis</code>, <code>margaret</code>, <code>alan</code>, <code>lynn</code> and
-<code>mary</code>, all with the password published in OpenCloud's documentation. An
-accepted login is <code>demoUsersDisabled</code>, a <code>critical</code> finding, because <code>dennis</code>
-is an administrator. Nothing is guessed, nothing is sent to an external
-identity provider, and a rejection is the answer the check came for - so no
-result here can be taken as evidence that authentication works, only that
-those particular accounts are gone.</p>
+<p>The scanner does not use ordinary user credentials. The documented exception is
+<code>_demo_user_finding</code>: with the built-in provider, it tests the published demo accounts
+through <code>/ocs/v1.php/cloud/user</code>. A successful login produces the critical
+<code>demoUsersDisabled</code> finding. No credentials go to an external provider. Rejection
+confirms only that those demo credentials failed, not that authentication is secure in
+every respect.</p>
 <h3 id="explaining-the-flags">Explaining the flags</h3>
 <p><code>hardening.py</code> is the catalogue that turns these identifiers into something an
 operator can act on. For each flag it holds a plain-language meaning, the
@@ -659,17 +681,13 @@ $ check-opencloud-scanner explain --category transport
 $ check-opencloud-scanner explain --list
 $ check-opencloud-scanner explain --format json cookieSecure
 </code></pre>
-<p>It reads nothing but its own package - no configuration file, no network, no
-instance - so it answers at three in the morning on a host that cannot reach
-anything. Header names and per-path findings are accepted as they appear in an
-alert; <code>exposed:/config/opencloud.yaml</code> resolves to the <code>exposed</code> family the
-catalogue actually lists. With no identifier it prints the whole catalogue. An
-identifier it does not know exits 1 and suggests the nearest ones, rather than
-printing the placeholder above as though it were an answer.</p>
+<p>The command works offline and reads only the installed catalogue. It accepts header
+names and path-specific identifiers such as <code>exposed:/config/opencloud.yaml</code>. With no
+identifier it prints the whole catalogue. An unknown identifier returns exit code 1 and
+suggests nearby names.</p>
 <h3 id="the-same-fix-as-configuration">The same fix, as configuration</h3>
-<p>The sentence above is what a person reads. <code>snippets.py</code> writes the same
-answer in the syntax of the file that has to change, from the <code>env_fix</code> and
-<code>header_fix</code> pairs the catalogue entries carry:</p>
+<p><code>snippets.py</code> turns the catalogue’s <code>env_fix</code> and <code>header_fix</code> entries into
+configuration snippets:</p>
 <pre><code class="language-python">from opencloud_local_scan import configuration_fragment
 
 print(configuration_fragment([&quot;basicAuthDisabled&quot;, &quot;demoUsersDisabled&quot;], &quot;compose&quot;).text)
@@ -687,13 +705,255 @@ response headers on whatever terminates TLS in front of it. Rendering a header
 into a Compose environment block would produce a line that does nothing, so a
 flavour reports what it cannot express in <code>Fragment.elsewhere</code> instead, and
 <code>flavours_for</code> names the flavours that can.</p>
-<p>It renders, it does not decide. Every name and value comes from the
-catalogue - this module holds no configuration knowledge of its own - and a
-check whose right value is a decision about the deployment (a CORS origin, a
-path to a CSP file) carries no pair at all. Those land in
-<code>Fragment.undecided</code> rather than being guessed at with a placeholder: a
-fragment that has to be edited before it is pasted is worse than the sentence
-it replaced, because it looks finished.</p>
+<p>All configuration names and values come from the catalogue. Settings that depend on the
+deployment, such as a CORS origin or CSP file path, appear in <code>Fragment.undecided</code>. They
+require an operator’s choice before a usable snippet can be generated.</p>
+<h2 id="what-the-scan-covered">What the scan covered</h2>
+<p>A passed check and a check that never ran leave the same shape in this
+document: nothing. <code>coverage</code> is where the difference is written down. See
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0064-a-scan-records-what-it-did-not-measure.md">ADR 0064</a>.</p>
+<pre><code class="language-json">{
+  &quot;coverage&quot;: {
+    &quot;schema&quot;: 1,
+    &quot;counts&quot;: {&quot;passed&quot;: 49, &quot;failed&quot;: 10, &quot;not_checked&quot;: 12, &quot;inconclusive&quot;: 0, &quot;total&quot;: 71},
+    &quot;checks&quot;: [
+      {&quot;id&quot;: &quot;Content-Security-Policy&quot;, &quot;group&quot;: &quot;header&quot;, &quot;state&quot;: &quot;passed&quot;},
+      {&quot;id&quot;: &quot;directoryListing&quot;, &quot;group&quot;: &quot;extraCheck&quot;, &quot;state&quot;: &quot;failed&quot;},
+      {&quot;id&quot;: &quot;tlsInspection&quot;, &quot;group&quot;: &quot;tls&quot;, &quot;state&quot;: &quot;not_checked&quot;,
+       &quot;reason&quot;: &quot;not_applicable&quot;, &quot;detail&quot;: &quot;The instance answered over plain HTTP.&quot;}
+    ]
+  }
+}
+</code></pre>
+<p>Every check the scan considered appears exactly once, in one of four states:</p>
+<table>
+<thead>
+<tr>
+<th>State</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>passed</code></td>
+<td>The check ran and the instance satisfied it</td>
+</tr>
+<tr>
+<td><code>failed</code></td>
+<td>The check ran and the instance did not satisfy it</td>
+</tr>
+<tr>
+<td><code>not_checked</code></td>
+<td>The scanner did not run the check</td>
+</tr>
+<tr>
+<td><code>inconclusive</code></td>
+<td>The scanner ran the check and could not decide</td>
+</tr>
+</tbody>
+</table>
+<p><code>passed</code> and <code>failed</code> carry no reason - a measurement that ran needs no
+excuse. The other two always carry one, from a closed set:</p>
+<table>
+<thead>
+<tr>
+<th>Reason</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>not_applicable</code></td>
+<td>The check cannot apply to this deployment - no certificate on a plain-HTTP instance, no second address to compare</td>
+</tr>
+<tr>
+<td><code>probe_disabled</code></td>
+<td>A setting turned the probe off for this scan</td>
+</tr>
+<tr>
+<td><code>prerequisite_missing</code></td>
+<td>The instance did not publish what the check reads</td>
+</tr>
+<tr>
+<td><code>timeout</code></td>
+<td>Nothing answered in time</td>
+</tr>
+<tr>
+<td><code>unreadable</code></td>
+<td>Something answered and could not be understood</td>
+</tr>
+<tr>
+<td><code>no_route</code></td>
+<td>There is no route to that address family from where the scan ran</td>
+</tr>
+</tbody>
+</table>
+<p>Two properties are worth relying on:</p>
+<ul>
+<li><strong>The total is what this scan considered</strong>, not a constant. The checks are
+  dynamic - which paths are probed, which debug ports are dialled, which
+  addresses are compared depend on the instance and the settings - so there is
+  no fixed denominator.</li>
+<li><strong>Coverage never changes a grade.</strong> Nothing in the block reaches the rating,
+  the severities, the alert line or the exit code. The webhook payload carries
+  the counts, but only as a report of what was measured - no receiver has to
+  read them to know the verdict. A waived failure stays <code>failed</code> here; the
+  acceptance is in <code>extraChecks[].ignored</code>, because a waiver is a decision
+  about alerting and not about evidence.</li>
+</ul>
+<p>A document written before this block existed simply has no <code>coverage</code> key,
+which is a report that does not say what it covered - not a scan without
+gaps. Read it with <code>coverage.coverage_of(result)</code>, which returns <code>None</code> for
+both a missing and a malformed block.</p>
+<h3 id="the-one-line-summary">The one-line summary</h3>
+<p><code>coverage.summary(result)</code> reduces the block to the four numbers a reader
+needs, and <code>coverage.summary_line(result)</code> writes them as one English
+sentence:</p>
+<pre><code>84 checks evaluated, 6 skipped, 2 indeterminate, 1 network-limited
+</code></pre>
+<p>Every check is in exactly one of the four. <code>evaluated</code> is a conclusion, pass
+or fail; <code>skipped</code> is a check the scanner decided not to run; <code>indeterminate</code>
+is one that ran and could not tell; <code>networkLimited</code> is split out of the last
+two because a timeout or a missing route is the one gap another vantage point
+might close - DNSSEC from a resolver that validates, an external identity
+provider that is reachable from elsewhere. Zero counts are left out of the
+sentence, but the number evaluated is always named. Both functions return
+<code>None</code> / <code>""</code> for a document that has no coverage block, so "nothing was
+missed" and "this report does not say" never read alike.</p>
+<p>The plugin prints the sentence as a <code>Coverage:</code> detail line, the webhook
+payload carries the same numbers under <code>coverage</code> (snake_case, as the payload
+is), and the web application shows them under <em>What this scan did not
+measure</em>.</p>
+<h2 id="the-conditions-a-scan-ran-under">The conditions a scan ran under</h2>
+<p>Two scans of the same instance can disagree without the instance having
+changed: the advisory database learned a CVE, a support window closed, the
+scanner was upgraded, a waiver expired. <code>provenance</code> records what was known
+at the time, so a comparison can tell those apart from a real regression. See
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0066-a-result-records-the-conditions-it-was-produced-under.md">ADR 0066</a>.</p>
+<pre><code class="language-json">{
+  &quot;provenance&quot;: {
+    &quot;schema&quot;: 1,
+    &quot;scannerVersion&quot;: &quot;1.25.0&quot;,
+    &quot;scannedAt&quot;: &quot;2026-09-17T19:56:35.852320+00:00&quot;,
+    &quot;releaseTrack&quot;: &quot;auto&quot;,
+    &quot;advisoryData&quot;: {&quot;digest&quot;: &quot;7ffa242f...&quot;, &quot;count&quot;: 1},
+    &quot;scheduleData&quot;: {&quot;digest&quot;: &quot;6e9468bf...&quot;, &quot;updated&quot;: &quot;2026-09-15&quot;},
+    &quot;waivers&quot;: {&quot;active&quot;: [], &quot;expired&quot;: []},
+    &quot;coverage&quot;: {&quot;measured&quot;: 59, &quot;total&quot;: 71}
+  }
+}
+</code></pre>
+<p><code>digest</code> is a SHA-256 over the reference data's own identifying fields in
+canonical form, so the same advisories hash the same however they were
+serialised, merged or ordered. It is a digest rather than a copy - embedding
+the database would put megabytes of other people's advisories in every report -
+and rather than a file path, which would publish where the machine keeps its
+files. <code>scheduleData.updated</code> is when the schedule was <em>generated</em>, which is
+not when it was read; <code>scannedAt</code> is the scan.</p>
+<p><code>waivers</code> records patterns and states, never the reason text: a reason is
+prose written for a person, and a comparison that diffed it would report a
+corrected typo as a change of policy.</p>
+<h3 id="comparing-two-results">Comparing two results</h3>
+<p><code>check-opencloud-scanner diff</code> prints the contributing changes under the
+existing summary, and <code>--format json</code> carries them as <code>explanation</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>What changed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>instance</code></td>
+<td>The version, a check that started or stopped failing, or a configuration group whose fingerprint moved</td>
+</tr>
+<tr>
+<td><code>referenceData</code></td>
+<td>The advisories, the release schedule, the release track, or a support window that simply elapsed</td>
+</tr>
+<tr>
+<td><code>scanner</code></td>
+<td>The scanner's version, or how many checks reached a conclusion</td>
+</tr>
+<tr>
+<td><code>policy</code></td>
+<td>A waiver expired, was added or was removed</td>
+</tr>
+<tr>
+<td><code>unknown</code></td>
+<td>Something moved and nothing recorded accounts for it</td>
+</tr>
+</tbody>
+</table>
+<p>The wording is deliberately conservative. A changed digest establishes that
+the reference data differed; it does not establish that it caused any
+particular grade to move, and the sentence says so. Several changes may
+contribute without one being chosen as <em>the</em> cause.</p>
+<p><code>limitations</code> lists what the comparison could not establish - most often that
+one of the two reports predates these blocks, and so cannot say what it was
+judged against or how much of it ran. That is reported rather than assumed.</p>
+<h2 id="has-the-deployment-changed">Has the deployment changed?</h2>
+<p>A grade says whether an instance is in good shape. It does not say whether it
+is still the same instance as last week. A policy rewritten without gaining
+<code>unsafe-inline</code>, a proxy replaced with a different product that sets the same
+headers, public links that stopped requiring a password and require one again,
+a certificate moved to another issuer - none of that has to move a grade, and
+an operator watching only the grade sees none of it.</p>
+<p><code>configuration</code> is a <strong>fingerprint</strong>: grouped digests of how the deployment is
+configured, and nothing it is configured to. See
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0073-a-result-fingerprints-the-configuration-it-measured.md">ADR 0073</a>.</p>
+<pre><code class="language-json">{
+  &quot;configuration&quot;: {
+    &quot;schema&quot;: 1,
+    &quot;digest&quot;: &quot;9e3c4428...&quot;,
+    &quot;groups&quot;: {
+      &quot;tls&quot;: {&quot;digest&quot;: &quot;89a97538...&quot;, &quot;scope&quot;: &quot;1d0f4b77...&quot;, &quot;facts&quot;: 12},
+      &quot;headers&quot;: {&quot;digest&quot;: &quot;cb25144c...&quot;, &quot;scope&quot;: &quot;b8e1a930...&quot;, &quot;facts&quot;: 13},
+      &quot;sharing&quot;: {&quot;digest&quot;: &quot;7b8a1ced...&quot;, &quot;scope&quot;: &quot;44c0ae51...&quot;, &quot;facts&quot;: 3},
+      &quot;authentication&quot;: {&quot;digest&quot;: &quot;588d045f...&quot;, &quot;scope&quot;: &quot;0a7be2cc...&quot;, &quot;facts&quot;: 6},
+      &quot;proxy&quot;: {&quot;digest&quot;: &quot;b7db6daf...&quot;, &quot;scope&quot;: &quot;ff31c084...&quot;, &quot;facts&quot;: 5}
+    }
+  }
+}
+</code></pre>
+<p>Two scans with the same group digest were looking at the same configuration
+for that group; two that differ were not. That is the entire claim, and these
+rules are what make it worth reading:</p>
+<ul>
+<li><strong>Digests only, never the configuration.</strong> A content security policy names
+  the origins a deployment trusts, a discovery document can name a tenant, a
+  server banner names an internal build. Every fact is hashed into its group
+  and discarded; a reader learns <em>that</em> sharing changed, never <em>what</em> it is
+  set to. The block is safe on a public page for the same reason it is safe in
+  a ticket.</li>
+<li><strong>Groups are the questions an operator asks.</strong> "Did TLS change?" is useful;
+  "did fact 37 change?" is not.</li>
+<li><strong>Only what the deployment decides.</strong> The transport group hashes the issuer,
+  the key, the signature algorithm and the negotiated protocols - not the
+  serial number, the dates or the certificate fingerprint, because a renewal
+  is routine. The proxy group hashes the vendor, not the banner, whose build
+  number moves with every patch.</li>
+<li><strong>A scan's own settings are never a fact.</strong> <code>scope</code> is a digest of <em>which</em>
+  facts a group looked at, without their values. Two groups are compared only
+  when their scopes match, so a run that stopped inspecting TLS reports "not
+  comparable" instead of drift. A group with nothing to hash at all is <code>none</code>.</li>
+<li><strong>It never changes a grade.</strong> Nothing here reaches the rating, the
+  severities, the alert line or the exit code.</li>
+</ul>
+<p>Read it with <code>fingerprint.fingerprint_of(result)</code>, which returns <code>None</code> for
+both a missing and a malformed block - a report that cannot say is not a
+deployment that did not change. <code>fingerprint.digests(result)</code> reduces it to
+one opaque <code>scope:digest</code> string per group, which is what a baseline file, a
+webhook receiver and a comparison all store, and
+<code>fingerprint.drift(before, after)</code> names the groups that differ:</p>
+<pre><code class="language-python">from opencloud_local_scan.fingerprint import digests, drift
+
+changed = drift(digests(last_week), digests(today))  # ('headers',)
+</code></pre>
+<p>The plugin prints <code>Configuration fingerprint: 9e3c4428</code> with each scan, and
+<code>--baseline</code> turns the same digests into <code>No new findings, but the
+configuration changed (headers)</code>.</p>
 <h2 id="debug-ports">Debug ports</h2>
 <p>Every OpenCloud service runs a debug listener serving <code>/healthz</code>, <code>/readyz</code>,
 <code>/metrics</code>, <code>/config</code> and <code>/debug/pprof</code>. <code>/metrics</code> exposes the exact version
@@ -738,6 +998,27 @@ costs up to fifteen seconds per scan. <code>check_debug_ports: false</code>,
 available.</p>
 <p>The same handlers are also probed on the main address, where they must never
 appear at all (<code>debugEndpoint:</code> findings).</p>
+<h2 id="every-resolved-address">Every resolved address</h2>
+<p><code>check_all_addresses=True</code> (<code>--all-addresses</code> on <code>scan</code>) repeats the
+node-dependent part of a scan - <code>status.php</code>, the root page's graded headers,
+capabilities, the authentication challenge, the identity provider and the demo
+accounts - against each address the name resolved to, one after another, and
+emits <code>addressParity</code>. Each request keeps the hostname in <code>Host</code> and SNI and is
+pinned to one address through its own session. The addresses are the
+resolver's answer, or <code>pinned_addresses</code> when given, so a pinned scan never
+widens past what the caller vetted; IPv6 is skipped when <code>ipv6_enabled</code> is
+false. What each address served is listed under <code>addressObservations</code>:</p>
+<pre><code class="language-json">{&quot;addressObservations&quot;: [
+  {&quot;address&quot;: &quot;198.51.100.1&quot;, &quot;reachable&quot;: true, &quot;version&quot;: &quot;7.2.3&quot;,
+   &quot;headers&quot;: {&quot;Strict-Transport-Security&quot;: true}, &quot;hardenings&quot;: {},
+   &quot;demoUsersDisabled&quot;: true, &quot;error&quot;: &quot;&quot;}
+]}
+</code></pre>
+<p>The first address is the reference; severity follows the worst difference
+(demo accounts as <code>demoUsersDisabled</code>, another release <code>high</code>, anything else
+<code>medium</code>); waived names are not compared. With one address, or with the
+setting off (the default), there is no finding and the list is empty. See
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0042-every-resolved-address-is-compared-only-when-the-operator-asks.md">ADR 0042</a>.</p>
 <h2 id="concurrency">Concurrency</h2>
 <p>A scan is dominated by waiting: around twenty HTTP requests plus the debug-port
 connects, issued one after the other. <code>concurrency</code> runs the independent ones
@@ -800,7 +1081,7 @@ nothing about ratings. Beyond the handshake and trust it reports:</p>
 </tr>
 <tr>
 <td><code>tlsCertificateLifetime</code></td>
-<td>Is it valid for longer than the 398 days browsers accept?</td>
+<td>Is it valid for longer than the scanner’s 398-day threshold?</td>
 </tr>
 <tr>
 <td><code>tlsCipherSuite</code></td>
@@ -817,6 +1098,10 @@ nothing about ratings. Beyond the handshake and trust it reports:</p>
 <tr>
 <td><code>tlsCaaRecord</code></td>
 <td>Does the name have a DNS CAA record naming at least one authorized issuer?</td>
+</tr>
+<tr>
+<td><code>tlsDnssec</code></td>
+<td>Is the zone signed, so that the address every check above rests on can be trusted? Absent rather than failed when the resolver in use does not speak DNSSEC</td>
 </tr>
 <tr>
 <td><code>cookieSecure</code>, <code>cookieHttpOnly</code>, <code>cookieSameSite</code></td>
@@ -900,10 +1185,12 @@ argument list and no shell.</p>
 result = scan(&quot;opencloud.example.com&quot;, settings=ScannerSettings(timeout=10))
 print(result[&quot;rating&quot;], result[&quot;version&quot;], result[&quot;extraChecks&quot;])
 </code></pre>
-<p><code>scan()</code> raises <code>ScanError</code> when the instance cannot be identified as an
-OpenCloud - an unreachable <code>/status.php</code>, a non-JSON response, a JSON document
-without any recognisable version field, or one naming ownCloud or Nextcloud as
-the product.</p>
+<p><code>scan()</code> raises <code>ScanError</code> when it cannot identify OpenCloud: the endpoint is
+unreachable, its response is not suitable JSON, version fields are missing or the
+product is different. Cases where a service answered raise <code>NotOpenCloud</code>. By default
+the scanner retries an unsuitable HTTPS response without certificate verification and
+then over HTTP. <code>ScannerSettings(stop_when_not_opencloud=True)</code> stops after the first
+such response; the public web application enables it.</p>
 <p>The document also carries <code>addresses</code>, the IPv4 and IPv6 the hostname resolved
 to while the scan ran:</p>
 <pre><code class="language-json">{&quot;addresses&quot;: {&quot;ipv4&quot;: [&quot;198.51.100.7&quot;], &quot;ipv6&quot;: [&quot;2001:db8::7&quot;]&#125;&#125;
@@ -929,6 +1216,60 @@ result = scan(
     release_settings=ReleaseSettings(mode=&quot;bundled&quot;),
 )
 </code></pre>
+<h2 id="verifying-a-fix-without-a-full-scan">Verifying a fix without a full scan</h2>
+<p><code>opencloud_local_scan.verification.verify</code> re-measures only the findings it is
+given, by running the scanner's own probes for them and nothing else. It is
+what <code>--verify-remediation</code> is built on (see
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0072-remediation-verification-re-measures-named-findings-without-a-full-scan.md">ADR 0072</a>).</p>
+<pre><code class="language-python">from opencloud_local_scan.verification import verify
+
+document = verify(
+    &quot;opencloud.example.com&quot;,
+    [&quot;Strict-Transport-Security&quot;, &quot;exposed&quot;],
+)
+for entry in document[&quot;results&quot;]:
+    print(entry[&quot;id&quot;], entry[&quot;passed&quot;], entry[&quot;reason&quot;])
+</code></pre>
+<p>The document has <code>domain</code>, <code>url</code>, <code>verifiedAt</code>, <code>probeGroups</code> (the groups
+that actually ran) and <code>results</code>, one entry per requested id in the order
+given:</p>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>The requested id; a family root such as <code>exposed</code> covers every <code>exposed:...</code> member</td>
+</tr>
+<tr>
+<td><code>verifiable</code></td>
+<td>False for an id only a full scan can settle (<code>eol</code>, <code>vulnerability:...</code>, <code>httpsAvailable</code>, the address-parity checks) or that this build does not know</td>
+</tr>
+<tr>
+<td><code>passed</code></td>
+<td>True or false when measured, <code>None</code> when nothing was</td>
+</tr>
+<tr>
+<td><code>group</code></td>
+<td>The probe group that measured it</td>
+</tr>
+<tr>
+<td><code>checks</code></td>
+<td>The measured findings, in the same shape as <code>extraChecks</code> entries</td>
+</tr>
+<tr>
+<td><code>reason</code></td>
+<td>Why <code>passed</code> is <code>None</code>, otherwise empty</td>
+</tr>
+</tbody>
+</table>
+<p>Like <code>scan()</code>, it measures and never judges: no rating, no waivers, no
+remediation plan. <code>probe_group(id)</code> tells you in advance which group, if any,
+an id maps to. It raises <code>ScanError</code> when the instance cannot be reached.</p>
 <h2 id="comparing-a-scan-with-the-last-one">Comparing a scan with the last one</h2>
 <p><code>opencloud_local_scan.baseline</code> reduces a result document to the findings that
 are worth comparing - vulnerabilities, missing hardening measures that are

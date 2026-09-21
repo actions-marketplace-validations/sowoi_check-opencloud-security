@@ -15,6 +15,7 @@ from __future__ import annotations
 import asyncio
 import json
 import time
+import warnings
 
 import pytest
 
@@ -82,10 +83,12 @@ def _local_keys(monkeypatch, signing_key):
     def _named(key_id):
         """The provider's key, published under one name."""
 
+        published_as = key_id
+
         class _Key:
             key = signing_key.public_key()
+            key_id = published_as
 
-        _Key.key_id = key_id
         return _Key()
 
     class _Keys:
@@ -259,6 +262,26 @@ def test_a_valid_token_gets_through(signing_key):
         )
         assert response.status_code == 200
         assert "serverInfo" in response.text
+
+
+def test_the_audience_is_checked_by_the_verifier_not_the_resource_url(signing_key):
+    """
+    The configured audience is not the resource URL, and the token above
+    still gets through - so the SDK must not also demand one equal to the
+    other. Saying so explicitly also keeps the SDK from warning at startup
+    that it will begin demanding it in 3.0.
+    """
+    assert AUDIENCE != RESOURCE
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        configured = mcp_auth.auth_settings(_auth_settings())
+        with _client() as served:
+            response = _initialize(
+                served, {"authorization": f"Bearer {_token(signing_key)}"}
+            )
+    assert getattr(configured, "validate_token_resource", False) is False
+    assert response.status_code == 200
+    assert not [w for w in caught if "validate_token_resource" in str(w.message)]
 
 
 @pytest.mark.parametrize(

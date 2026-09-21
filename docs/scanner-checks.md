@@ -17,6 +17,7 @@ paragraph; the individual checks are explained one group at a time in
   * [What the scanner checks](#what-the-scanner-checks)
   * [Reading the version correctly](#reading-the-version-correctly)
   * [Debug ports](#debug-ports)
+  * [Every resolved address](#every-resolved-address)
 <!-- TOC -->
 
 
@@ -24,15 +25,11 @@ paragraph; the individual checks are explained one group at a time in
 
 Read from the instance itself:
 
-- product, `productversion` and edition from `/status.php`; a server whose
-  product name says ownCloud or Nextcloud is refused rather than rated,
-  because it serves the same endpoint but is not the same software - see
-  [`docs/what-is-opencloud.md`](what-is-opencloud.md) for where the three
-  projects came from and how they diverged. `/status.php`
-  also carries `maintenance`, `installed` and `needsDbUpgrade`, but OpenCloud's
-  own handler for it hardcodes all three (`false`, `true`, `false`) rather than
-  reading real state, so this scanner does not check them - see
-  [`docs/status-php.md`](status-php.md).
+- product, `productversion` and edition from `/status.php`. Other products are
+  refused because their releases and advisories do not match this scanner’s
+  database. OpenCloud hardcodes `maintenance`, `installed` and `needsDbUpgrade`,
+  so those fields are not treated as live health checks; see
+  [the status endpoint](status-php.md).
 - the IPv4 and IPv6 addresses the name resolved to while the scan ran,
   reported as `addresses` in the result document and shown as **Resolved to**
   on a web result page - context, never a finding, and empty when a name
@@ -64,6 +61,18 @@ Read from the instance itself:
   carry the `Contact` field RFC 9116 requires - a 200 alone means nothing on
   an instance whose frontend answers every unknown path with its own shell.
   See [ADR 0034](../adr/0034-an-advisory-observation-need-not-be-a-header.md)
+- whether the `Strict-Transport-Security` header would actually be accepted
+  for browser preloading, as `hstsPreloadEligible` under the same
+  `setup.advisoryChecks`. `hstsPreload` already reports whether the header
+  *asks* to be preloaded; this reports whether asking could work, which needs
+  a max-age of at least a year, `includeSubDomains` and `preload` together.
+  OpenCloud's own proxy sends ten years and `preload` but no
+  `includeSubDomains`, so every stock instance asks for something the list
+  refuses - a fact about OpenCloud rather than about the deployment, which is
+  why it is explained and never counted. Membership of the list itself is
+  deliberately not measured: the only ways to know are to ask a third party
+  for it or to ship tens of megabytes of it. See
+  [ADR 0037](../adr/0037-preload-eligibility-is-measured-list-membership-is-not.md)
 - `hardenings` derived from those headers and capabilities
 - known vulnerabilities from the [advisory database](../README.md#advisory-database) and
   the resulting rating (`0`-`5`)
@@ -78,18 +87,22 @@ Plus the additional checks (`extraChecks` in the JSON, disable with
 | `tlsDeprecatedProtocol`                                                                                                                    | high          | The server still accepts TLS 1.0 or 1.1 even though it negotiated something newer with us                   |
 | `tlsHostname`                                                                                                                              | high          | The certificate does not cover the name it was asked for                                                    |
 | `tlsChain`                                                                                                                                 | medium        | The chain is missing an intermediate, so it validates only for clients that happen to have one cached       |
-| `tlsCertificateLifetime`                                                                                                                   | low           | The certificate is valid for longer than the 398 days browsers accept                                       |
+| `tlsCertificateLifetime`                                                                                                                   | low           | The certificate is valid for longer than the scanner’s 398-day threshold                                       |
 | `tlsCipherSuite`                                                                                                                           | medium        | The cipher suite negotiated by this scan is weak or lacks forward secrecy                                   |
 | `tlsCertificatePolicy`                                                                                                                     | medium        | The certificate has a weak key or an MD5/SHA-1 signature                                                    |
 | `tlsAddressParity`                                                                                                                          | medium        | IPv4 and IPv6 present different TLS services, or one is unreachable                                          |
+| `addressParity`                                                                                                                             | high/medium   | With `--all-addresses`: the resolved addresses serve a different release, headers, hardening or demo-account state, or one does not answer|
 | `tlsCaaRecord`                                                                                                                             | low           | No DNS CAA record restricts which certificate authorities may issue for this name                            |
+| `tlsDnssec`                                                                                                                                | low           | The zone answering for this name is not signed, so a forged address cannot be detected - absent, never failed, when the resolver used does not speak DNSSEC |
+| `companionAdminConsole`                                                                                                                    | high          | A collaboration backend published on this origin answers on its administration console path                  |
+| `companionEditorHttps`                                                                                                                     | high          | That backend advertises editor addresses over plain HTTP in its WOPI discovery document                      |
 | `cookieSecure`, `cookieHttpOnly`, `cookieSameSite`                                                                                        | high - low    | An observed cookie lacks Secure, HttpOnly or SameSite                                                        |
 | `cookiePrefix`                                                                                                                             | low           | No observed cookie uses the `__Host-`/`__Secure-` name prefix, or one claims a prefix it does not honour     |
 | `tlsOcspStapling`                                                                                                                          | low           | No OCSP response stapled to the handshake, although the certificate names a responder                       |
-| `tlsCertificateTransparency`                                                                                                               | medium        | A publicly trusted certificate carries no signed certificate timestamps, so Chrome and Safari will refuse it |
+| `tlsCertificateTransparency`                                                                                                               | medium        | A publicly trusted certificate carries no embedded signed certificate timestamps |
 | `tlsEarlyData`                                                                                                                             | low           | The server's session tickets invite a TLS 1.3 0-RTT flight, which has no replay protection                  |
 | `corsOriginRestricted`                                                                                                                     | critical/medium | Any origin may read the API's responses; critical when credentials are allowed with it                     |
-| `traceMethodDisabled`                                                                                                                      | medium        | The server answers `TRACE` by echoing the request, session cookie included                                  |
+| `traceMethodDisabled`                                                                                                                      | medium        | The server answers `TRACE` by echoing the request                                  |
 | `forwardedHostIgnored`                                                                                                                     | medium        | A host name the caller supplied comes back in the discovery document, so a caller chooses where a sign-in goes |
 | `header:<name>`                                                                                                                            | high - low    | One of the headers above missing or too weak                                                                |
 | `authentication:/remote.php/dav/files/`, `/graph/v1.0/users`, `/ocs/v1.php/cloud/user`                                                     | critical/high | An endpoint that must demand authentication answered anyway                                                 |
@@ -141,11 +154,9 @@ and no check requires an external one. It only softens `basicAuthDisabled`,
 which is `medium` normally and `low` when the interactive login goes through an
 external provider.
 
-Nothing is submitted to the instance to establish this. The discovery document
-and the `Location` header are read, and no login form is ever filled in - a
-scanner that guesses credentials against somebody's instance is a scanner
-nobody should point at their server, and an identity provider is the worst
-place to start.
+Provider detection reads the discovery document and its `Location` header without
+submitting a login. The separate demo-account check below is the only probe that sends
+credentials.
 
 When no provider can be found at all, `identityProviderDetected` fails at
 severity `low` and `--debug` points at [OpenCloud's own
@@ -203,20 +214,65 @@ that host coming back in the `Location` it redirects to or in the `issuer`,
  "detail": "A host name the caller supplied is published back: X-Forwarded-Host comes back as the issuer it publishes"}
 ```
 
-Those URLs are where a client sends the next sign-in, so a caller who picks
-the host has picked where an authentication request goes. On its own it
-misleads only whoever sent the header, which is why it is `medium` rather
-than higher; behind a cache it becomes the answer everybody gets, and behind
-a proxy that forwards a client's own `X-Forwarded-Host` it is a stranger who
-chooses. It means the instance was never told its public address and derives
-one from each request - set `OC_URL`, and set the forwarded headers from the
-proxy's configuration rather than passing the client's through.
+These URLs direct authentication requests. A caller-controlled hostname initially
+affects that caller’s response, which is why the finding is `medium`. A shared cache or
+a proxy forwarding untrusted `X-Forwarded-Host` values can extend the effect to other
+users. Set `OC_URL` and have the proxy supply forwarded headers from its own
+configuration.
+
+When only `Host` comes back, as the address it redirects to, look at the proxy
+before the instance: with no default server, a name the proxy has no site for
+is answered by whichever site it loaded first for that port, and a redirect
+there built from `$host` repeats the probe host whatever `OC_URL` says. An
+explicit default server that refuses unknown names fixes it - see
+[No default server](reverse-proxy.md#mistakes-that-cost-a-grade).
 
 Only a URL a client would be *sent* to counts. A default virtual host that
 refuses an unrecognised name commonly prints that name in its error page, and
 reading the body for it would report the correct behaviour as the finding.
 An instance that publishes no discovery document at all is not judged either
 way: two errors are the scan learning nothing, not a pass.
+
+### Alternative services (HTTP/3)
+
+`alternativeServices` records what the instance advertises in its `Alt-Svc`
+header. An `h3` entry tells every browser to try HTTP/3 over **UDP** on the
+named port - a listener a firewall written for TCP 443 may not cover, and one
+a reverse proxy can enable without anybody deciding to.
+
+```json
+{"alternativeServices": {"advertised": true, "http3": true,
+  "entries": [{"protocol": "h3", "host": "", "port": 443, "udp": true}],
+  "header": "h3=\":443\"; ma=86400"}}
+```
+
+It is an observation and is never graded: HTTP/3 is not a weakness, only
+something to firewall on purpose. The plugin prints a detail line when it sees
+one. The advertised address is never probed - it is the target's word, not an
+origin the scan was pointed at
+([ADR 0036](../adr/0036-a-companion-service-is-probed-only-where-the-scan-was-pointed.md)).
+`Alt-Svc: clear` records nothing as advertised, and without a response to read
+the header from the key is `null`.
+
+### Failed sign-ins (opt-in)
+
+With `--login-throttling` (`COS_LOGIN_THROTTLING`, or
+`scanner.check_login_throttling`) the scan sends six failed sign-ins, one
+after another, for a random account that cannot exist, and records whether
+the instance slowed them down - an HTTP `429` or a `Retry-After` header:
+
+```json
+{"loginThrottling": {"tested": true, "attempts": 4, "throttled": true,
+  "evidence": "HTTP 429, Retry-After: 30", "statuses": [401, 401, 401, 429]}}
+```
+
+It is off by default, asks only the built-in identity provider, runs after
+every other probe so it cannot hide the demo accounts behind a `429`, and is
+never graded: many deployments throttle over a longer window or at a layer a
+short burst does not reach, so "not throttled" is a prompt to look, not a
+verdict. The public web service never sends it
+([ADR 0069](../adr/0069-login-throttling-is-observed-only-when-the-operator-asks.md)).
+Without the option the key is `null`.
 
 ### Office and calendar integrations
 
@@ -238,6 +294,19 @@ observations rather than verdicts:
 
 Neither becomes a check and neither can move the rating.
 
+What the deployment *publishes* is a separate question, and it does become a
+check. Where a reverse proxy serves the collaboration backend on the
+instance's own origin, `/hosting/discovery` answers with the document the WOPI
+protocol specifies, and two findings follow from it: whether the editor's
+administration console is reachable (`companionAdminConsole`), and whether
+the editor addresses it advertises use HTTPS (`companionEditorHttps`).
+
+The scanner probes only the submitted origin. It does not follow an editor hostname from
+the discovery document, because that would let the target choose another connection
+destination. A separately hosted editor therefore gets no finding from these checks.
+Assess that service with suitable editor-specific tools; see [ADR
+0036](../adr/0036-a-companion-service-is-probed-only-where-the-scan-was-pointed.md).
+
 ### What the scan deliberately does not answer
 
 - **Audit logging.** OpenCloud's audit service only consumes the internal
@@ -257,13 +326,9 @@ Neither becomes a check and neither can move the rating.
   matters more than several of the things above, and none of it is visible
   over HTTP.
 
-Everything in that list still has to be got right, so
-**[Running OpenCloud in a secure infrastructure](secure-deployment.md)**
-covers the part a scan cannot see: putting Keycloak, Authentik or Authelia in
-front of the instance, turning the audit service on and getting its log off
-the host, firewalling the ports Docker publishes behind your back, what the
-people using the instance should be told, and where scheduled scanning with
-this plugin fits alongside all of it.
+[Running OpenCloud in a secure infrastructure](secure-deployment.md) covers these
+separate operational checks: identity-provider policies, audit logging, firewall rules,
+user guidance and scheduled monitoring.
 
 [opencloud-idp]: https://docs.opencloud.eu/docs/admin/configuration/authentication-and-user-management/external-idp
 [opencloud-demo-users]: https://docs.opencloud.eu/docs/admin/resources/demo-user/
@@ -276,14 +341,10 @@ this plugin fits alongside all of it.
 {"version":"0.1.0.0","versionstring":"0.1.0","productversion":"7.4.0"}
 ```
 
-`version` and `versionstring` are hardcoded constants OpenCloud sends to keep
-old sync clients happy - they are the same on every instance and say nothing
-about the release. The real release is **`productversion`** only. The scanner
-uses `productversion`, falls back to the capabilities endpoint, and reports
-`legacyVersion: true` in the result document when an instance offers nothing
-but the placeholder. Anything comparing versions from `/status.php` by hand
-(including other monitoring scripts you may already run) is almost certainly
-reading the wrong field.
+`version` and `versionstring` are compatibility values. The actual release is
+`productversion`. The scanner prefers that field, falls back to capabilities and sets
+`legacyVersion: true` if only a placeholder is available. Check which field your own
+monitoring scripts read as well.
 
 ## Debug ports
 
@@ -334,3 +395,49 @@ lists the same findings in the same order whatever the value is. Values above
 scanner:
   concurrency: 8
 ```
+
+## Every resolved address
+
+A scan dials the name once and sees whichever address the resolver put first.
+For a name behind a pool of nodes that is one node, and the node that missed a
+configuration rollout - no HSTS, demo accounts still signing in, an older
+release - is invisible. [`tlsAddressParity`](tls.md) compares only the TLS
+identity of one IPv4 and one IPv6 address, which several nodes behind one
+certificate share whatever they serve.
+
+`--all-addresses` (`COS_ALL_ADDRESSES`, `scanner.check_all_addresses`)
+repeats the part of the scan a rollout changes against each resolved address,
+one after another:
+
+- the release in `/status.php` (or the capabilities document),
+- the graded security headers, compared by verdict rather than value, so a CSP
+  nonce is not a difference,
+- the hardening measures read from the root page, capabilities, the
+  authentication challenge and the identity provider,
+- whether a documented demo account signs in.
+
+What the nodes share - certificate chain, CAA, DNSSEC, debug ports - is not
+asked again. Each request keeps the hostname in `Host` and SNI; only the
+address the connection goes to changes, and the addresses are the resolver's
+answer for that name, never anything the instance said. IPv6 addresses are
+skipped when `scanner.ipv6_enabled` is off.
+
+The result is `addressParity`, with the first address as the reference:
+
+| Difference on another address                  | Severity                                  |
+|:-----------------------------------------------|:------------------------------------------|
+| A demo account signs in where it did not       | as `demoUsersDisabled` on its own         |
+| A different release                            | high                                      |
+| A header or hardening measure passes/fails     | medium                                    |
+| The address resolves but does not answer       | medium                                    |
+
+Waived headers and checks are not compared. A name with one address gets no
+finding at all - an absence, not a pass - and no extra requests. What each
+address served is in the result document as `addressObservations`.
+
+It is off by default: about a dozen requests per address, a demo sign-in
+among them. It sees what DNS sees - nodes behind a single load-balancer
+address, a resolver returning a rotating subset, or GeoDNS answering for the
+monitoring host's location all limit what can be compared. The public web
+service never runs it
+([ADR 0042](../adr/0042-every-resolved-address-is-compared-only-when-the-operator-asks.md)).

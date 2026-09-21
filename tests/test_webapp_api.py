@@ -19,6 +19,7 @@ from opencloud_local_scan.vulndb import load_database
 from tests.webapp_support import (  # noqa: F401 - the fixtures are autouse
     _isolated_backend,
     _offline_resolver,
+    app_state,
     backend,
     client,
     settings,
@@ -50,7 +51,15 @@ def test_the_landing_page_offers_the_form_and_the_privacy_promises():
     body = page.text
     assert 'name="target_url"' in body
     assert 'name="ignore_hardenings"' in body
-    for promise in ("air-gapped", "No data stored", "No registration needed", "Ephemeral"):
+    # The four assurance cards, by the claim each one makes. "No data stored"
+    # used to be one of them and was not true - a result lives in Redis until
+    # it expires - so the card now says how long instead.
+    for promise in (
+        "No external page assets",
+        "Temporary storage",
+        "No registration needed",
+        "Ephemeral",
+    ):
         assert promise in body
     # A form that offers a concurrency field would make the prohibition a lie.
     assert 'name="concurrency"' not in body
@@ -494,7 +503,9 @@ def test_an_expired_scan_page_explains_itself_in_html():
     page = test_client.get(f"/scan/{identifier}", headers={"Accept": "text/html"})
 
     assert page.status_code == 404
-    assert "that scan is gone" in page.text
+    # It has to say the result expired rather than only that the page is
+    # unknown, or a visitor reads a dropped result as a broken link.
+    assert "scan result has expired" in page.text
 
 
 def test_every_key_written_for_a_scan_carries_a_ttl():
@@ -573,7 +584,6 @@ def test_nothing_is_loaded_from_a_third_party():
             "/documentation",
             "/search",
             "/api",
-            "/ai",
             "/privacy",
             "/about",
         )
@@ -650,7 +660,7 @@ def test_the_health_endpoint_rejects_an_unavailable_redis_backend(monkeypatch):
     async def unavailable(*_keys):
         raise RedisUnavailable()
 
-    monkeypatch.setattr(test_client.app.state.backend, "health", unavailable)
+    monkeypatch.setattr(app_state(test_client).backend, "health", unavailable)
 
     response = test_client.get("/healthz")
 
@@ -726,7 +736,6 @@ def test_every_page_carries_the_trademark_notice():
             "/documentation",
             "/search",
             "/api",
-            "/ai",
             "/privacy",
             "/about",
         )
@@ -759,7 +768,6 @@ def test_every_page_says_the_check_is_not_exhaustive_and_a_grade_is_not_a_certif
             "/documentation",
             "/search",
             "/api",
-            "/ai",
             "/privacy",
             "/about",
         )
@@ -794,7 +802,6 @@ def test_the_footer_names_the_backend_version_on_every_page():
             "/documentation",
             "/search",
             "/api",
-            "/ai",
             "/privacy",
             "/about",
         )
@@ -1000,6 +1007,7 @@ def test_a_redirect_to_a_private_address_is_refused_like_a_submission():
         "http://[::1]/",
         "file:///etc/passwd",
         "http://100.64.0.1/",
+        "http://[fec0::1]/",
     ):
         assert guard(hop) is False, hop
 
@@ -1020,6 +1028,21 @@ def test_the_scanner_the_web_service_builds_carries_that_guard():
     assert ScannerSettings().redirect_guard is None
 
 
+def test_a_web_scan_never_dials_every_address_even_when_the_environment_asks(monkeypatch):
+    """The per-address pass is the plugin's; a stranger's URL must not buy it (ADR 0042)."""
+    monkeypatch.setenv("COS_SCANNER_CHECK_ALL_ADDRESSES", "true")
+    target = validate_target("opencloud.example.com")
+
+    assert scanner_settings_for(target, (), settings()).check_all_addresses is False
+    assert client().post(
+        "/api/scans", json={"target_url": "opencloud.example.com"}
+    ).status_code == 202
+    assert client().post(
+        "/api/scans",
+        json={"target_url": "opencloud.example.com", "check_all_addresses": True},
+    ).status_code == 422
+
+
 def test_a_path_that_is_not_a_uuid_is_a_404_and_never_a_redis_lookup():
     """
     The identifier is interpolated into a Redis key, so it must be an uuid.
@@ -1038,6 +1061,32 @@ def test_a_path_that_is_not_a_uuid_is_a_404_and_never_a_redis_lookup():
     ).json()["uuid"]
     assert is_scan_uuid(real) is True
     assert test_client.get(f"/api/scans/{real}").status_code == 200
+
+
+def test_only_the_canonical_spelling_of_an_uuid_is_one_of_ours():
+    """
+    ``UUID()`` also parses braces, ``urn:uuid:``, upper case and no hyphens.
+
+    Each spelling would interpolate into a *different* Redis key for the same
+    scan, and the urn form puts colons into a key name ``_identifiers_for``
+    splits on - so an erasure request would no longer recognise the scan as
+    one of its own to delete.
+    """
+    test_client = client()
+    real = test_client.post(
+        "/api/scans", json={"target_url": "opencloud.example.com"}
+    ).json()["uuid"]
+    assert is_scan_uuid(real) is True
+
+    for spelling in (
+        real.replace("-", ""),
+        f"{{{real}}}",
+        f"urn:uuid:{real}",
+        real.upper(),
+    ):
+        assert spelling != real
+        assert is_scan_uuid(spelling) is False
+        assert test_client.get(f"/api/scans/{spelling}").status_code == 404
 
 
 def test_an_unparseable_address_is_an_answer_rather_than_a_crash():
@@ -1105,3 +1154,15 @@ def test_the_api_page_states_the_limits_and_links_the_schema_when_it_is_on():
     loud = client(enable_docs=True).get("/api").text
     assert 'href="/docs"' in loud
     assert 'href="/openapi.json"' in loud
+
+
+def test_a_web_scan_never_sends_failed_sign_ins_even_when_the_environment_asks(monkeypatch):
+    """Throttling is measured with logins; a stranger's URL must not send them (ADR 0069)."""
+    monkeypatch.setenv("COS_SCANNER_CHECK_LOGIN_THROTTLING", "true")
+    target = validate_target("opencloud.example.com")
+
+    assert scanner_settings_for(target, (), settings()).check_login_throttling is False
+    assert client().post(
+        "/api/scans",
+        json={"target_url": "opencloud.example.com", "check_login_throttling": True},
+    ).status_code == 422

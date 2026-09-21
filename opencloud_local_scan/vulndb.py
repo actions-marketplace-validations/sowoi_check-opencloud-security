@@ -33,7 +33,7 @@ from typing import Any
 
 import requests
 
-from .versions import is_in_range, normalise_version
+from .versions import compare_versions, is_in_range, normalise_version
 
 LOGGER = logging.getLogger("check_opencloud.vulndb")
 
@@ -125,8 +125,14 @@ def _parse_range(expression: str | None) -> tuple[str | None, str | None]:
     introduced: str | None = None
     fixed: str | None = None
     for operator, version in _RANGE_PART.findall(expression):
-        if operator in {">=", ">"}:
+        if operator == ">=":
             introduced = version
+        elif operator == ">":
+            # Exclusive lower bound: '> 7.0.0' says 7.0.0 itself is not
+            # affected. Treating it as '>=' reports the one release the
+            # advisory went out of its way to exclude, so an extra component
+            # moves the bound just past it - above 7.0.0, still below 7.0.1.
+            introduced = f"{version}.1"
         elif operator == "<":
             fixed = version
         elif operator == "<=":
@@ -146,28 +152,35 @@ def _from_github(entry: dict[str, Any]) -> Advisory | None:
     if not identifier:
         return None
 
-    introduced: str | None = None
-    fixed: str | None = None
+    # GitHub lists one `vulnerabilities` entry per affected range, so an
+    # advisory patched separately on two release lines carries two of them for
+    # the same package. Reading only the first one leaves every instance on the
+    # other line unreported - the false negative _from_osv already collects
+    # every range to avoid.
+    ranges: list[tuple[str | None, str | None]] = []
+    matched = False
     for affected in entry.get("vulnerabilities") or []:
         if not isinstance(affected, dict):
             continue
         package = affected.get("package") or {}
         if not _is_opencloud_package(str(package.get("name", ""))):
             continue
+        matched = True
         introduced, fixed = _parse_range(affected.get("vulnerable_version_range"))
         if not fixed:
             fixed = normalise_version(affected.get("first_patched_version")) or fixed
-        break
-    else:
+        if (introduced or fixed) and (introduced, fixed) not in ranges:
+            ranges.append((introduced, fixed))
+
+    if not matched:
         return None
 
-    if not introduced and not fixed:
+    if not ranges:
         # A package matched but said nothing about which releases it affects -
         # an unparseable `vulnerable_version_range` with no patched version.
-        # Reaching the `break` above only proves the advisory is about
-        # OpenCloud, not that it is bounded, and an unbounded advisory matches
-        # every version there has ever been. Same refusal as _from_osv and
-        # _from_native.
+        # Matching the package only proves the advisory is about OpenCloud, not
+        # that it is bounded, and an unbounded advisory matches every version
+        # there has ever been. Same refusal as _from_osv and _from_native.
         LOGGER.warning(
             "Ignoring advisory %s: its OpenCloud entry names no affected "
             "version range, so it would match every release.",
@@ -186,8 +199,9 @@ def _from_github(entry: dict[str, Any]) -> Advisory | None:
             for item in (entry.get("cwes") or [])
             if isinstance(item, dict) and item.get("cwe_id")
         ),
-        introduced=introduced,
-        fixed=fixed,
+        introduced=ranges[0][0],
+        fixed=ranges[0][1],
+        ranges=tuple(ranges),
     )
 
 
@@ -398,6 +412,39 @@ class VulnerabilityDatabase:
             hits,
             key=lambda advisory: (-SEVERITY_ORDER.get(advisory.severity, 0), advisory.id),
         )
+
+    def upgrade_path(self, version: str | None, target: str | None) -> dict[str, Any] | None:
+        """
+        What moving from ``version`` to ``target`` does about its advisories.
+
+        ``fixes`` are the advisories the target no longer carries,
+        ``stillAffected`` the ones it does - checked against every range of
+        the original advisory, so a fix backported to another line counts.
+        ``safeVersion`` is the lowest release that clears all of them on the
+        target's line, or None when an advisory has no fix there yet.
+        Returns None without a target or without an advisory to clear.
+        """
+        if not target or compare_versions(target, version) <= 0:
+            return None
+        current = [advisory for advisory in self.advisories if advisory.affects(version)]
+        if not current:
+            return None
+        fixes = sorted(a.id for a in current if not a.affects(target))
+        remaining = [a for a in current if a.affects(target)]
+        safe: str | None = target
+        for advisory in remaining:
+            fixed = advisory.for_version(target).fixed
+            if not fixed:
+                safe = None
+                break
+            if compare_versions(fixed, safe) > 0:
+                safe = fixed
+        return {
+            "target": target,
+            "fixes": fixes,
+            "stillAffected": sorted(a.id for a in remaining),
+            "safeVersion": safe,
+        }
 
     def worst_severity(self, version: str | None) -> str | None:
         """Return the highest severity affecting the given version."""

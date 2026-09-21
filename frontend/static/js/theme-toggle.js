@@ -30,15 +30,29 @@
         try {
             var value = window.localStorage.getItem("theme");
             return value === "light" || value === "dark" ? value : null;
-        } catch (error) {
+        } catch (_error) {
             return null;
         }
     }
 
-    // What the reader is actually looking at: their own choice if they have
-    // made one, and the system's answer if they have not.
+    // The scheme on the document, which is the one thing here that is always
+    // true: theme.js wrote it from storage before the first paint, and every
+    // press since has written it again.
+    function applied() {
+        var value = root.getAttribute("data-theme");
+        return value === "light" || value === "dark" ? value : null;
+    }
+
+    // What the reader is actually looking at: the scheme the document is
+    // already in, their stored choice, and the system's answer last.
+    //
+    // The attribute has to come first because `apply` writes it whether or
+    // not the write to storage succeeds. Asking storage instead, in a browser
+    // that refuses to remember, answered with the system's scheme - the one
+    // the first press had just moved away from - so the second press computed
+    // the same scheme again and the button stopped switching after one go.
     function current() {
-        return stored() || (night && night.matches ? "dark" : "light");
+        return applied() || stored() || (night && night.matches ? "dark" : "light");
     }
 
     /*
@@ -62,7 +76,7 @@
         paintBrowserChrome(theme);
         try {
             window.localStorage.setItem("theme", theme);
-        } catch (error) {
+        } catch (_error) {
             // A browser that will not remember it still honours it for this
             // page, which is better than refusing to switch at all.
         }

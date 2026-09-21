@@ -22,6 +22,7 @@ from opencloud_local_scan.scanner import (
     scan,
 )
 from opencloud_local_scan.versions import load_release_schedule
+from opencloud_local_scan.waivers import scan_clock
 from tests.fake_opencloud import FakeOpenCloud, InstanceBehaviour
 
 TODAY = date(2026, 8, 12)
@@ -76,7 +77,7 @@ def test_a_waived_check_no_longer_caps_the_rating():
     """This is the point of the option: accepting a finding changes the grade."""
     findings = [Finding("basicAuthDisabled", "high", False, "basic auth is on")]
     settings = ScannerSettings(ignore_hardenings=("basicAuthDisabled",))
-    _apply_waivers(settings, findings, {}, {}, {"enforced": True})
+    _apply_waivers(settings, findings, {}, {}, {"enforced": True}, scan_clock())
 
     explanation = _compute_rating(
         eol=False,
@@ -99,7 +100,7 @@ def test_waiving_one_finding_leaves_the_others_capping():
         Finding("exposed:/data", "critical", False, "readable without auth"),
     ]
     settings = ScannerSettings(ignore_hardenings=("basicAuthDisabled",))
-    _apply_waivers(settings, findings, {}, {}, {"enforced": True})
+    _apply_waivers(settings, findings, {}, {}, {"enforced": True}, scan_clock())
 
     explanation = _compute_rating(
         eol=False,
@@ -119,7 +120,9 @@ def test_a_waiver_for_a_passing_check_changes_nothing():
     findings = [Finding("basicAuthDisabled", "high", True, "")]
     settings = ScannerSettings(ignore_hardenings=("basicAuthDisabled",))
 
-    ignored = _apply_waivers(settings, findings, {}, {}, {"enforced": True})
+    ignored, _ = _apply_waivers(
+        settings, findings, {}, {}, {"enforced": True}, scan_clock()
+    )
 
     assert ignored == []
     assert findings[0].ignored is False
@@ -129,7 +132,7 @@ def test_an_end_of_life_release_cannot_be_waived_away():
     """Waivers cover checks, not the fact that a release gets no security fixes."""
     findings = [Finding("basicAuthDisabled", "high", False, "basic auth is on")]
     settings = ScannerSettings(ignore_hardenings=("*",))
-    _apply_waivers(settings, findings, {}, {}, {"enforced": True})
+    _apply_waivers(settings, findings, {}, {}, {"enforced": True}, scan_clock())
 
     explanation = _compute_rating(
         eol=True,
@@ -217,11 +220,11 @@ def test_a_waived_measure_is_marked_in_the_debug_explanation(capsys):
 def test_a_waived_measure_is_left_out_of_the_webhook(monkeypatch, capsys):
     """An accepted finding should not page anyone."""
     sent: list[dict] = []
-    monkeypatch.setattr(
-        plugin,
-        "_send_webhook",
-        lambda context, payload: sent.append(payload) or True,
-    )
+    def send(context, payload):
+        sent.append(payload)
+        return True
+
+    monkeypatch.setattr(plugin, "_send_webhook", send)
 
     hooked = {
         "check_hardening": True,
@@ -319,11 +322,13 @@ def test_without_a_declared_track_the_longest_support_wins():
 
 def test_a_rolling_instance_is_end_of_life_once_the_next_release_ships():
     """Three weeks is the whole point of the rolling track."""
-    status = load_release_schedule().status_for("7.2.4", today=TODAY, track="rolling")
+    schedule = load_release_schedule()
+    status = schedule.status_for("7.2.4", today=TODAY, track="rolling")
 
     assert status.state == "endOfLife"
     assert status.declared_track == "rolling"
-    assert status.upgrade_to == "7.5.0"
+    assert status.upgrade_to == schedule.latest_for("rolling")
+    assert status.upgrade_to != "7.2.4"
 
 
 def test_the_same_version_is_current_on_the_production_track():
@@ -462,7 +467,7 @@ def test_an_older_release_than_the_production_track_is_still_rated_f():
 def test_the_auto_release_track_reaches_the_scan(capsys):
     """'auto' has to be usable end to end, not just parsed."""
     behaviour = InstanceBehaviour()
-    behaviour.status_payload["productversion"] = "7.5.0"
+    behaviour.status_payload["productversion"] = load_release_schedule().latest_for("rolling")
 
     result = run_scan(behaviour, release_track="auto")
     output, _ = run(result, capsys)

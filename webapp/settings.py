@@ -13,13 +13,21 @@ import os
 import re
 from dataclasses import dataclass, field
 
-from opencloud_local_scan.advisory_source import OSV_QUERY_URL
+from opencloud_local_scan.advisory_source import (
+    OSV_QUERY_URL,
+    REPOSITORY_ADVISORIES_URL,
+)
 from opencloud_local_scan.schedule_source import LIFECYCLE_URL
 
 ENV_PREFIX = "COS_WEB_"
 
 DEFAULT_REDIS_URL = "redis://127.0.0.1:6379/0"
 DEFAULT_RESULT_TTL_SECONDS = 3600
+# A comparison against an uploaded report is the one thing this service holds
+# that cannot be recomputed, because the upload it was drawn from is discarded
+# as soon as it has been read. Five minutes is the outside edge, enforced in
+# `comparisons.clamp_ttl`: an operator may shorten this window, never widen it.
+DEFAULT_COMPARISON_TTL_SECONDS = 300
 DEFAULT_MAX_WORKERS = 5
 DEFAULT_SCAN_CONCURRENCY = 4
 DEFAULT_SCAN_TIMEOUT_SECONDS = 15
@@ -27,6 +35,24 @@ DEFAULT_JOB_TIMEOUT_SECONDS = 180
 DEFAULT_IP_RATE_LIMIT = 10
 DEFAULT_IP_RATE_WINDOW_SECONDS = 60
 DEFAULT_TARGET_COOLDOWN_SECONDS = 300
+# Five scans that found no OpenCloud inside five minutes is not somebody
+# checking their own instance, it is somebody using this one to map what
+# answers where - and an hour is long enough to make that pointless.
+DEFAULT_PROBE_LIMIT = 5
+DEFAULT_PROBE_WINDOW_SECONDS = 300
+DEFAULT_PROBE_BLOCK_SECONDS = 3600
+# A network blocked again soon after its last block is blocked for longer:
+# an hour, six, then a day, remembered for a day after each block ends.
+DEFAULT_PROBE_BLOCK_MAX_SECONDS = 86400
+DEFAULT_PROBE_REPEAT_WINDOW_SECONDS = 86400
+# How much of an address counts as one client. An IPv6 subscriber is handed a
+# whole /64; an IPv4 /24 is usually one hosting customer or one office.
+DEFAULT_PROBE_IPV4_PREFIX = 24
+DEFAULT_CLIENT_IPV6_PREFIX = 64
+# Enough to check every instance a small company runs several times over; not
+# enough to walk a list overnight a few scans a minute at a time.
+DEFAULT_DAILY_SCAN_LIMIT = 50
+DAILY_WINDOW_SECONDS = 86400
 DEFAULT_MAX_BATCH_TARGETS = 10
 # One reverse proxy, which is what a deployment that turns
 # COS_WEB_TRUST_FORWARDED_FOR on almost always has.
@@ -87,6 +113,13 @@ def _env(name: str) -> str | None:
         return None
     value = value.strip()
     return value or None
+
+
+def _repository_url(value: str | None) -> str | None:
+    """COS_WEB_ADVISORY_REPOSITORY_URL: unset is the default, ``off`` is none."""
+    if value is None:
+        return REPOSITORY_ADVISORIES_URL
+    return None if value.lower() in {"off", "false", "0", "none"} else value
 
 
 def _env_int(name: str, default: int, *, minimum: int = 0) -> int:
@@ -183,6 +216,10 @@ class WebSettings:
     result_ttl: int = DEFAULT_RESULT_TTL_SECONDS
     """How long a finished scan stays readable before Redis expires it."""
 
+    comparison_ttl: int = DEFAULT_COMPARISON_TTL_SECONDS
+    """How long a comparison against an uploaded report stays readable.
+    Clamped to five minutes whatever is configured; shorter is honoured."""
+
     max_workers: int = DEFAULT_MAX_WORKERS
     """How many scans the worker pool runs at once. Never client-configurable."""
 
@@ -215,14 +252,72 @@ class WebSettings:
     extra_hosts_allowed: tuple[str, ...] = field(default_factory=tuple)
     """Hostnames exempted from the SSRF guard, for on-premise deployments."""
 
+    blocked_targets: tuple[str, ...] = field(default_factory=tuple)
+    """Addresses this deployment will not scan, whoever asks.
+
+    Hostnames, ``.suffix`` domains and CIDR ranges, checked against the name
+    *and* against every address it resolves to. Unlike every other setting
+    here it only ever refuses: an entry outranks ``extra_hosts_allowed`` and
+    ``allow_private_targets``, because "we do not scan that" is an answer the
+    settings that loosen the guard have no business reopening. The list is
+    what an operator points at when an instance owner asks to be left alone.
+    """
+
     ip_rate_limit: int = DEFAULT_IP_RATE_LIMIT
     ip_rate_window: int = DEFAULT_IP_RATE_WINDOW_SECONDS
     target_cooldown: int = DEFAULT_TARGET_COOLDOWN_SECONDS
 
+    probe_limit: int = DEFAULT_PROBE_LIMIT
+    """Scans from one client address that may find no OpenCloud - an
+    unreachable host, something other than JSON on ``status.php``, another
+    product - inside ``probe_window`` before that address is blocked for
+    ``probe_block``. The same host scanned again counts again. ``0`` disables.
+    The worker counts and the API refuses, so both processes read it."""
+
+    probe_window: int = DEFAULT_PROBE_WINDOW_SECONDS
+    probe_block: int = DEFAULT_PROBE_BLOCK_SECONDS
+    probe_block_max: int = DEFAULT_PROBE_BLOCK_MAX_SECONDS
+    """The longest a repeated block may grow to. Each block inside
+    ``probe_repeat_window`` of the last one ends lasts six times longer."""
+    probe_repeat_window: int = DEFAULT_PROBE_REPEAT_WINDOW_SECONDS
+
+    probe_ipv4_prefix: int = DEFAULT_PROBE_IPV4_PREFIX
+    """The IPv4 network the probe guard counts as one client. ``32`` counts
+    single addresses. The per-minute and daily limits always count single
+    IPv4 addresses, because a /24 of strangers behind one shared limit is a
+    capacity problem nobody caused."""
+    client_ipv6_prefix: int = DEFAULT_CLIENT_IPV6_PREFIX
+    """The IPv6 network every client limit counts as one client."""
+
+    daily_scan_limit: int = DEFAULT_DAILY_SCAN_LIMIT
+    """Submissions per client per day, on top of the per-minute limit.
+    ``0`` disables."""
+
+    dns_consistency_check: bool = True
+    """Resolve a submitted hostname twice and refuse it when the two answers
+    share no address - the signature of a name built to answer differently
+    each time it is asked."""
+
+    require_approval: bool = False
+    """Scan only approved targets: those in ``approved_targets``, or - with
+    ``approval_dns`` - those whose own DNS says this service may."""
+    approved_targets: tuple[str, ...] = field(default_factory=tuple)
+    """Hostnames and ``.suffix`` domains approved for scanning."""
+    approval_dns: bool = True
+    """Accept a TXT record at ``_check-opencloud-security.<host>`` naming this
+    service's hostname as approval, when approval is required."""
+
     trust_forwarded_for: bool = False
     """Read the client address from ``X-Forwarded-For``. Only behind a proxy
     that appends to or overwrites the header, and only with
-    ``trusted_proxy_hops`` set to match how many of them there are."""
+    ``trusted_proxy_hops`` set to match how many of them there are.
+
+    It governs ``X-Forwarded-Proto`` with it, which is how a service the
+    proxy reaches over plain HTTP knows the *visitor* arrived over TLS and
+    may therefore send ``Strict-Transport-Security``. Off, a TLS deployment
+    behind a proxy sends no HSTS - so an operator terminating TLS in front
+    of this service wants it on for that reason too, not only for the rate
+    limit."""
 
     trusted_proxy_hops: int = DEFAULT_TRUSTED_PROXY_HOPS
     """How many proxies of this deployment's own sit in front of the service.
@@ -309,6 +404,11 @@ class WebSettings:
     advisory_refresh_url: str = OSV_QUERY_URL
     """Where the advisories are read from. Operator configuration, so it may
     point at a mirror of the feed; it is never a request field."""
+
+    advisory_repository_url: str | None = REPOSITORY_ADVISORIES_URL
+    """OpenCloud's repository advisories on GitHub, read with every refresh
+    to add the ones OSV never received (ADR 0071). ``off`` skips them; a
+    failure to read them keeps OSV's answer rather than failing the refresh."""
 
     enable_docs: bool = False
     """Serve the browsable API pages at ``/docs`` and ``/redoc``. Off by
@@ -409,6 +509,16 @@ class WebSettings:
     """The shortest gap between two operator-triggered refreshes of the same
     reference data, so a button cannot be held down against somebody else's
     server."""
+
+    update_check: bool = True
+    """Ask GitHub, at most every few hours and only for the operator's area,
+    whether a newer release of this service exists."""
+
+    admin_update_dir: str | None = None
+    """A writable tmpfs the operator's area unpacks a newer release onto.
+    Set, the area installs it: the bundle is verified against its GitHub
+    build attestation and the web and worker processes restart on it until
+    the container restarts (ADR 0070). Unset, the area only says one exists."""
 
     admin_sign_out_url: str | None = None
     """Where the operator's area sends somebody who wants to stop being signed
@@ -512,6 +622,9 @@ class WebSettings:
         return cls(
             redis_url=_env("REDIS_URL") or DEFAULT_REDIS_URL,
             result_ttl=_env_int("RESULT_TTL", DEFAULT_RESULT_TTL_SECONDS, minimum=30),
+            comparison_ttl=_env_int(
+                "COMPARISON_TTL", DEFAULT_COMPARISON_TTL_SECONDS, minimum=30
+            ),
             max_workers=_env_int("MAX_WORKERS", DEFAULT_MAX_WORKERS, minimum=1),
             scan_concurrency=_env_int(
                 "SCAN_CONCURRENCY", DEFAULT_SCAN_CONCURRENCY, minimum=1
@@ -523,11 +636,34 @@ class WebSettings:
             check_debug_ports=_env_bool("CHECK_DEBUG_PORTS", False),
             ipv6_enabled=_env_bool("IPV6_ENABLED", False),
             extra_hosts_allowed=_env_list("ALLOWED_HOSTS"),
+            blocked_targets=_env_list("BLOCKED_TARGETS"),
             ip_rate_limit=_env_int("IP_RATE_LIMIT", DEFAULT_IP_RATE_LIMIT),
             ip_rate_window=_env_int(
                 "IP_RATE_WINDOW", DEFAULT_IP_RATE_WINDOW_SECONDS, minimum=1
             ),
             target_cooldown=_env_int("TARGET_COOLDOWN", DEFAULT_TARGET_COOLDOWN_SECONDS),
+            probe_limit=_env_int("PROBE_LIMIT", DEFAULT_PROBE_LIMIT),
+            probe_window=_env_int(
+                "PROBE_WINDOW", DEFAULT_PROBE_WINDOW_SECONDS, minimum=1
+            ),
+            probe_block=_env_int("PROBE_BLOCK", DEFAULT_PROBE_BLOCK_SECONDS, minimum=1),
+            probe_block_max=_env_int(
+                "PROBE_BLOCK_MAX", DEFAULT_PROBE_BLOCK_MAX_SECONDS, minimum=1
+            ),
+            probe_repeat_window=_env_int(
+                "PROBE_REPEAT_WINDOW", DEFAULT_PROBE_REPEAT_WINDOW_SECONDS
+            ),
+            probe_ipv4_prefix=min(
+                32, _env_int("PROBE_IPV4_PREFIX", DEFAULT_PROBE_IPV4_PREFIX, minimum=8)
+            ),
+            client_ipv6_prefix=min(
+                128, _env_int("CLIENT_IPV6_PREFIX", DEFAULT_CLIENT_IPV6_PREFIX, minimum=32)
+            ),
+            daily_scan_limit=_env_int("DAILY_SCAN_LIMIT", DEFAULT_DAILY_SCAN_LIMIT),
+            dns_consistency_check=_env_bool("DNS_CONSISTENCY_CHECK", True),
+            require_approval=_env_bool("REQUIRE_APPROVAL", False),
+            approved_targets=_env_list("APPROVED_TARGETS"),
+            approval_dns=_env_bool("APPROVAL_DNS", True),
             trust_forwarded_for=_env_bool("TRUST_FORWARDED_FOR", False),
             trusted_proxy_hops=_env_int(
                 "TRUSTED_PROXY_HOPS", DEFAULT_TRUSTED_PROXY_HOPS, minimum=1
@@ -545,6 +681,7 @@ class WebSettings:
             ),
             advisory_refresh=_env_bool("ADVISORY_REFRESH", True),
             advisory_refresh_url=_env("ADVISORY_REFRESH_URL") or OSV_QUERY_URL,
+            advisory_repository_url=_repository_url(_env("ADVISORY_REPOSITORY_URL")),
             enable_docs=_env_bool("ENABLE_DOCS", False),
             enable_mcp=_env_bool("ENABLE_MCP", True),
             mcp_allowed_hosts=_env_list("MCP_ALLOWED_HOSTS"),
@@ -566,6 +703,8 @@ class WebSettings:
                 "ADMIN_AUDIT_BUFFER", DEFAULT_ADMIN_AUDIT_BUFFER, minimum=0
             ),
             admin_sign_out_url=_env("ADMIN_SIGN_OUT_URL"),
+            update_check=_env_bool("UPDATE_CHECK", True),
+            admin_update_dir=_env("ADMIN_UPDATE_DIR"),
             admin_refresh_cooldown=_env_int(
                 "ADMIN_REFRESH_COOLDOWN",
                 DEFAULT_ADMIN_REFRESH_COOLDOWN_SECONDS,

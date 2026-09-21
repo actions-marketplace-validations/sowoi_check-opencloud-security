@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.secure-deployment.description') }}</p>
 </section>
 
-{% if locale != 'en' %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -29,14 +29,11 @@
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="en">
-<p>This scanner grades what an OpenCloud instance shows the internet. That is a
-useful thing to know and it is not the whole of security. Everything on this
-page is the part a scan cannot see: who your identity provider is, whether
-anybody would notice a break-in, what the firewall allows, and what the people
-using the instance have been told.</p>
-<p>Read it as the companion to the check, not as a replacement for it. The last
-section explains where the two meet - what continuous monitoring with this
-plugin actually buys you once the rest is in place.</p>
+<p>An external scan covers only part of operating OpenCloud securely. This guide covers the
+remaining work: identity-provider policies, audit logging, firewall rules, host
+maintenance, backups and user guidance.</p>
+<p>Use these controls alongside scheduled scanning. The final section explains what regular
+scans can detect after the deployment is in place.</p>
 <blockquote>
 <p>Every setting below is quoted from OpenCloud's own documentation and links
 to it. OpenCloud moves fast; when a variable here disagrees with the linked
@@ -109,17 +106,15 @@ welcome.</p>
    │  storage   │               │  log sink   │  off-host, append-only
    └────────────┘               └─────────────┘
 </code></pre>
-<p>Three properties of that diagram are what the rest of this page is about: only
-one thing is reachable from the internet, sign-in happens somewhere that can
-enforce a second factor, and what happens inside gets written down somewhere
-the instance itself cannot rewrite.</p>
+<p>Expose the intended public entry points, enforce your sign-in policy at the identity
+provider and send audit records to a separate system. The sections below describe each
+part.</p>
 <h2 id="1-put-a-real-identity-provider-in-front">1. Put a real identity provider in front</h2>
 <h3 id="why-before-how">Why, before how</h3>
-<p>OpenCloud ships with a built-in identity provider (<code>idp</code>) and identity
-management (<code>idm</code>). They are there so that <code>opencloud init</code> produces something
-that works, and for a single-user instance that may be all you ever need. They
-are not where you want your organisation's accounts to live, for reasons that
-have nothing to do with their quality:</p>
+<p>OpenCloud includes an identity provider (<code>idp</code>) and identity management (<code>idm</code>) for a
+working initial installation. An external provider is useful when an organization needs
+shared account lifecycle, multifactor authentication and consistent policies across
+services:</p>
 <ul>
 <li><strong>Second factors.</strong> An external provider gives you TOTP, WebAuthn or
   passkeys across every application you run, configured once.</li>
@@ -134,6 +129,13 @@ have nothing to do with their quality:</p>
 softens the HTTP Basic authentication finding from medium to low when an
 external one is detected - see
 <a href="/documentation/authentication#6-can-the-identity-provider-be-found-at-all-identityproviderdetected">Authentication</a>.</p>
+<blockquote>
+<p><strong>Step by step, for each of the three:</strong> this section is the summary and the
+reasoning. <a href="/documentation/identity-providers">Putting an identity provider in front of OpenCloud, step by
+step</a> is the tutorial - installing each provider,
+the four OpenCloud clients every one of them needs, verifying it worked, and
+moving an instance that already has accounts.</p>
+</blockquote>
 <h3 id="what-opencloud-needs-whichever-provider-you-pick">What OpenCloud needs, whichever provider you pick</h3>
 <p>The variables are the same for all three; only the issuer URL and the way you
 create the client differ. From
@@ -188,7 +190,7 @@ create the client differ. From
 </tr>
 </tbody>
 </table>
-<p>Two decisions in that table deserve more thought than they usually get:</p>
+<p>Review account provisioning and role assignment together:</p>
 <p><strong>Autoprovisioning is an access-control decision.</strong> With
 <code>PROXY_AUTOPROVISION_ACCOUNTS=true</code>, anybody your provider will authenticate
 gets an OpenCloud account the first time they visit. That is right when the
@@ -200,11 +202,15 @@ side, not by leaving autoprovisioning off and creating accounts by hand.</p>
 <code>GRAPH_ASSIGN_DEFAULT_USER_ROLE=true</code> is the misconfiguration that gives
 everyone a role you did not intend.</p>
 <h3 id="keycloak">Keycloak</h3>
+<blockquote>
+<p><a href="/documentation/identity-providers#tutorial-a-keycloak">The step-by-step Keycloak tutorial</a> is the whole job;
+what follows is the shape of it.</p>
+</blockquote>
 <p>The most common choice where an organisation already runs one. Create a realm
 (or reuse yours), then a client:</p>
 <ul>
-<li><strong>Client type</strong> OpenID Connect, <strong>Client ID</strong> <code>OpenCloudDesktop</code> for the
-  desktop and mobile clients, plus a web client for the browser.</li>
+<li><strong>Client type</strong> OpenID Connect. Register the web, desktop, Android and iOS
+  clients separately, using the client IDs in the linked provider tutorial.</li>
 <li><strong>Public client</strong> with PKCE - OpenCloud's clients are public clients and
   cannot keep a secret. Set <em>Proof Key for Code Exchange</em> to <code>S256</code>.</li>
 <li><strong>Valid redirect URIs</strong> must include the desktop client's loopback
@@ -215,6 +221,10 @@ everyone a role you did not intend.</p>
 <code>roles</code> claim, then set <code>PROXY_ROLE_ASSIGNMENT_OIDC_CLAIM=roles</code>. Give the
 realm a password policy and require OTP for the administrator role at minimum.</p>
 <h3 id="authentik">Authentik</h3>
+<blockquote>
+<p><a href="/documentation/identity-providers#tutorial-b-authentik">The step-by-step Authentik tutorial</a> is the whole job;
+what follows is the shape of it.</p>
+</blockquote>
 <p>This repository already ships an Authentik stack, though for a different
 purpose - it protects <a href="/documentation/authentik">the scan service's own MCP endpoint</a>, not
 OpenCloud. The provider configuration is the same shape:</p>
@@ -232,6 +242,10 @@ OpenCloud. The provider configuration is the same shape:</p>
 worked example of provisioning a provider from a file rather than by clicking,
 which is worth copying whatever you are configuring.</p>
 <h3 id="authelia">Authelia</h3>
+<blockquote>
+<p><a href="/documentation/identity-providers#tutorial-c-authelia">The step-by-step Authelia tutorial</a> is the whole job;
+what follows is the shape of it.</p>
+</blockquote>
 <p>The lightest of the three, and a good fit where the reverse proxy is already
 doing forward authentication. Authelia's OpenID Connect provider is configured
 in <code>configuration.yml</code> rather than a UI:</p>

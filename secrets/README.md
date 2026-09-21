@@ -21,12 +21,10 @@ chmod 600 secrets/scanner_token secrets/releases_token
 | `scanner_token` | `scanner` (`COS_SERVICE_TOKEN`) | Shared token for the scan service. Requests without it are rejected. |
 | `releases_token` | `scanner` and `check` (`COS_RELEASES_TOKEN`) | Raises the GitHub rate limit for the update check against the OpenCloud release feed. |
 
-Neither secret is required. Without `scanner_token` the scan service accepts
-every request, so only run it that way on a trusted network. Without
-`releases_token` the update check still works, but sixty anonymous GitHub
-requests per hour and IP address are shared with everything else on that
-address - with `releases.mode: auto` a rate-limited lookup silently falls back
-to the release schedule bundled with the package.
+The scan-service token is required for a listener outside loopback, including the
+monitoring container’s network listener. The release-feed token is optional; without it,
+anonymous API limits apply and `releases.mode: auto` falls back to bundled data when the
+feed cannot be read.
 
 Trailing newlines are stripped when a secret is read, so `openssl rand -hex 32 >
 file` and `echo secret > file` both work.

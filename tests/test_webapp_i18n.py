@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from pathlib import Path
 from string import Formatter
 
 import pytest
@@ -17,9 +18,12 @@ from webapp.i18n import (
     LANGUAGE_COOKIE,
     Translator,
     negotiate_locale,
+    parse_accept_language,
     safe_next_path,
 )
 from webapp.locales import CATALOGUES
+
+GERMAN_GUIDES = Path(__file__).resolve().parent.parent / "docs" / "de"
 
 FRONTEND_PATHS = (
     "/",
@@ -28,8 +32,8 @@ FRONTEND_PATHS = (
     "/catalogue",
     "/documentation",
     "/search",
+    "/compare",
     "/api",
-    "/ai",
     "/privacy",
     "/about",
 )
@@ -51,6 +55,25 @@ def test_browser_language_negotiation_honours_regions_and_quality(
 ):
     """A browser's weighted language list must select the best supported locale."""
     assert negotiate_locale(header) == expected
+
+
+def test_a_quality_that_is_not_a_number_is_not_a_preference():
+    """
+    ``q=nan`` parses as a float and then compares false against everything.
+
+    Left in, it decides the order of the weighted list by whichever
+    comparisons Python happened to make, so the language a visitor is served
+    stops following the header they sent. A weight that is not a weight is
+    dropped like an unparsable one, while a client that overshoots the range
+    is still understood.
+    """
+    assert parse_accept_language("de;q=nan") == ()
+    assert negotiate_locale("de;q=nan,fr;q=0.5") == "fr"
+    # The negative half: a real weight in the same header still counts, and an
+    # out-of-range one is clamped rather than discarded.
+    assert parse_accept_language("de;q=nan,fr;q=0.5") == (("fr", 0.5),)
+    assert parse_accept_language("de;q=1.5") == (("de", 1.0),)
+    assert negotiate_locale("de;q=1.5,fr;q=0.9") == "de"
 
 
 def test_a_chosen_language_persists_and_overrides_the_browser():
@@ -175,3 +198,80 @@ def _fields(value: str) -> tuple[str, ...]:
 
 def _tags(value: str) -> tuple[str, ...]:
     return tuple(re.findall(r"</?[^>]+>", value))
+
+
+# ----------------------------------------------------------- German register
+
+#: German is written in the informal "du" (see AGENTS.md, "Frontend prose"),
+#: in the catalogue and in the guides under `docs/de/` alike.
+
+#: "Sie", "Ihnen" and "Ihr..." capitalised in the middle of a sentence can only
+#: be the formal address. At the start of a sentence they may just as well mean
+#: "she" or "they", so those are left alone - the guideline still applies there,
+#: the test cannot tell.
+_FORMAL_GERMAN = re.compile(r"\b(?:Sie|Ihnen|Ihr(?:e[mnrs]?)?)\b")
+
+
+def _formal_address(value: str) -> list[str]:
+    text = re.sub(r"<[^>]+>", "", value)
+    found = []
+    for match in _FORMAL_GERMAN.finditer(text):
+        before = text[: match.start()].rstrip()
+        if before and before[-1] not in ".!?:-\u2013":
+            found.append(match.group(0))
+    return found
+
+
+@pytest.mark.parametrize(
+    ("text", "formal"),
+    [
+        ("Prüfe die Adresse und starte den Scan erneut.", False),
+        ("Prüfen Sie die Adresse.", True),
+        ("Das sind viele Berichte aus Ihrem Netz.", True),
+        ("Von Ihnen ausgenommene Befunde", True),
+        ("Wie sicher ist <em>Ihre</em> Instanz?", True),
+        # Third person at a sentence start: "they", not the reader.
+        ("Die Werte sind fest. Sie dienen zur Information.", False),
+        ("<strong>Der Scan erhält eine Kennung.</strong> Sie ermöglicht den Zugriff.", False),
+        ("OpenCloud prüft sie und ihre Werte.", False),
+    ],
+)
+def test_the_formal_address_detector_tells_the_reader_from_a_third_person(
+    text: str, formal: bool
+):
+    """A detector that flags "they" would push translators into worse German."""
+    assert bool(_formal_address(text)) is formal
+
+
+def test_german_strings_address_the_reader_informally():
+    """
+    German text is "du", and the catalogue must not drift back.
+
+    Copying a register from another project is the easy mistake; this names
+    the key that did it.
+    """
+    formal = {
+        key: _formal_address(value)
+        for key, value in CATALOGUES["de"].items()
+        if _formal_address(value)
+    }
+
+    assert formal == {}
+
+
+def test_german_guides_address_the_reader_informally():
+    """The German guide sources follow the same register as the catalogue."""
+    formal = {}
+    for path in sorted(GERMAN_GUIDES.glob("*.md")):
+        # Code blocks and inline code are commands and identifiers, not prose.
+        prose = re.sub(
+            r"^```.*?^```",
+            lambda block: "\n" * block[0].count("\n"),
+            path.read_text(encoding="utf-8"),
+            flags=re.MULTILINE | re.DOTALL,
+        )
+        prose = re.sub(r"`[^`\n]*`", "", prose)
+        for number, line in enumerate(prose.splitlines(), start=1):
+            if _formal_address(line):
+                formal[f"{path.name}:{number}"] = line
+    assert formal == {}

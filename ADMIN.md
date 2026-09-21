@@ -3,18 +3,35 @@
 Internal operations notes for system administrators who run or maintain this
 repository and its deployments.
 
-This document is **not** published. It is deliberately absent from every
-manifest that ships something outward:
+This document is **not** published to anybody who has not been let in. It is
+deliberately absent from every manifest that puts something in front of a
+stranger:
 
 | Artefact | Why ADMIN.md stays out |
 |:--|:--|
 | PyPI wheel | `[tool.hatch.build.targets.wheel] only-include` names only `check_opencloud_security.py` and `opencloud_local_scan` |
 | PyPI sdist | `[tool.hatch.build.targets.sdist] include` is an explicit file list |
-| Web bundle | `scripts/build_web_bundle.py` copies a named list of files |
-| `/documentation` | Generated only from the pages in `webapp/documentation.py` |
+| `/documentation` | Generated only from `DOCUMENTATION_PAGES` in `webapp/documentation.py` |
 | Site search | `webapp/search.py` lists the public templates explicitly |
+| Sitemap and `robots.txt` | Built from the same public manifest; the operator area is in neither |
 
 Adding this file to any of those lists would publish it, so don't.
+
+**The one place it is rendered** is the operator's area, at
+`/admin/docs/operations` — see [The operator's area at
+/admin](#the-operators-area-at-admin). That is not an exception to the rule
+above but an application of it: the area authorises every request through the
+outpost and answers **404** to everybody else, and it reads from a manifest of
+its own, `OPERATOR_DOCUMENTATION_PAGES`, which deliberately feeds none of the
+surfaces in that table. `tests/test_webapp_admin.py` holds it to all of that.
+
+What this does change: the *rendered* page is generated at build time into
+`frontend/templates/admin-docs/`, so its text travels inside the web bundle
+and the container image even though no unauthorised request can reach it.
+That is acceptable only because this file is already world-readable in the
+public repository — it is operations notes, not credentials. **Keep it that
+way: nothing that would not survive being read by a stranger belongs in this
+file.**
 
 For *developer* rules — architecture, layer boundaries, ADR policy, the
 release process — read `AGENTS.md`. For diagnosing a *scan* that reports
@@ -214,8 +231,10 @@ python scripts/build_frontend_documentation.py --check   # fail if stale (CI run
   CI rejects stale output.
 - Never hand-edit the generated HTML. The next build discards it.
 
-Generated guide bodies stay English under `lang="en"` with localized chrome
-(ADR 0020) — that is intentional, not a missing translation.
+Public guide bodies are generated from English, German, French and Spanish
+sources (`docs/`, `docs/de/`, `docs/fr/`, `docs/es/`; ADR 0063). A locale
+without sources gets the English body under `lang="en"` with localized chrome
+(ADR 0020).
 
 ## Rebuilding the search index
 
@@ -287,6 +306,7 @@ cd docker
 ./setup-wizard.py \
     --non-interactive \
     --preset private \
+    --image-source build \
     --output-dir ~/scan-test \
     --compose-file docker-compose.local.yml \
     --env-file .env.local
@@ -298,13 +318,14 @@ What each part is doing, and why:
 |:--|:--|
 | `--preset private` | Sets `COS_WEB_ALLOW_PRIVATE_TARGETS=true`, so a scan of a local instance is allowed at all. Also turns indexing off and the audit log on |
 | `--non-interactive` | Takes every default and generates the credentials. Drop it to be asked question by question, with an explanation and an example answer for each |
+| `--image-source build` | Builds the code in this checkout. Without it the stack pulls the published Docker Hub image, which is the default and not what you are testing |
 | `--output-dir ~/scan-test` | **Write outside the repository.** See the warning below |
-| `--compose-file` / `--env-file` | Any name but the four that ship. The wizard refuses `docker-compose.yml`, `docker-compose.dockerhub.yml`, `docker-compose.authentik.yml` and `docker-compose.monitoring.yml` outright, because the next `git pull` would take a hand-made deployment with it |
+| `--compose-file` / `--env-file` | Any name but the four that ship. The wizard refuses `docker-compose.yml`, `docker-compose.dockerhub.yml`, `docker-compose.authentik.yml` and `docker-compose.monitoring.yml` unless `--force` is given, because the next `git pull` would take a hand-made deployment with it |
 
-The image source defaults to `build`, not to the published Docker Hub image,
-and the wizard resolves the build context to the repository root as an
-**absolute** path. That is what makes `--output-dir` anywhere work while still
-building the code in front of you.
+The image source defaults to the published Docker Hub image, so this recipe
+asks for `build` explicitly. For a build, the wizard resolves the context to
+the repository root as an **absolute** path. That is what makes `--output-dir`
+anywhere work while still building the code in front of you.
 
 Then:
 
@@ -405,6 +426,7 @@ picks them up. Nothing is written to disk.
 | `COS_WEB_SCHEDULE_REFRESH_URL` | lifecycle page | Override the source |
 | `COS_WEB_ADVISORY_REFRESH` | on | Daily advisory re-read |
 | `COS_WEB_ADVISORY_REFRESH_URL` | OSV | Override the source |
+| `COS_WEB_ADVISORY_REPOSITORY_URL` | OpenCloud's GitHub advisories | Second source for advisories OSV never received; `off` skips it |
 
 Redis keys, if you need to look:
 
@@ -452,6 +474,13 @@ COS_WEB_ADMIN_USERS=okko;sam
 The wizard asks for all three (`docker/setup-wizard.py`, the "operator's area"
 section) and generates the secret into `.env`.
 
+**An operator is a username in two places**: in `COS_WEB_ADMIN_USERS`, and in
+Authentik's `opencloud-scanner-operators` group, which the `/admin` application
+is bound to. The wizard's enrollment link does both; creating the account and
+adding it to the group by hand, getting into `akadmin` with a recovery key, and
+the second factor every sign-in requires are in
+[`docs/authentik.md`](docs/authentik.md#an-operator-for-admin).
+
 **Off means absent, not protected.** With `COS_WEB_ADMIN_ENABLED` unset the
 routes are never registered and `/admin` answers the same 404 as any other
 unknown path, so a deployment that does not use the area does not disclose
@@ -470,6 +499,17 @@ headers only because the proxy also sends `COS_WEB_ADMIN_PROXY_SECRET` as
   unreachable - which is the failure mode you want, but it will look like a
   bug. `authentik/blueprints/opencloud-admin.yaml` provisions the provider,
   the operator group and the outpost for the bundled stack.
+
+**The wizard writes the proxy configuration that does this.** Turn the area on
+and ask it for the bundled Authentik, and its reverse proxy question produces
+a working nginx, Caddy or Traefik file: every request to `/admin` is shown to
+the outpost first, and only what the outpost accepts is passed on, carrying
+the identity headers and `X-COS-Admin-Proxy`. The secret is not written into
+that file - nginx gets a one-line `include` of an owner-readable snippet, and
+Caddy and Traefik read it from their own environment. Apache is the exception:
+it has no forward auth of its own, so the generated file routes everything
+*except* the area and says why. See
+[`docker/README.md`](docker/README.md#the-reverse-proxy).
 
 **A deployment that cannot enforce the sign-in refuses to start.** No secret,
 a secret under 32 characters, or an empty `COS_WEB_ADMIN_USERS` all raise at
@@ -499,14 +539,78 @@ What the area does:
 |:--|:--|
 | Service state | Worker liveness, queue depth, the configured limits, and how long ago each reference document was last read - relative (`checked 6h ago`), with the exact stamp on the element, turning the accent past two daily cycles and naming which failure has been stopping it. The worker tile has three answers, not two: the heartbeat it reads is a key in Redis, so **Cannot tell** means the store did not answer and nothing was learned about the worker either way |
 | What this deployment offers | `/mcp` and whether a token is required, `/docs`, indexing, private-network targets, encryption at rest, and what the audit trail keeps and where. Settings rather than readings, so the card is rendered once and never polled - a value that changed did so in a process the open page is no longer talking to |
+| Exclusions | The addresses this service will not scan. The **one card that writes**: an entry added here refuses the next submission in every process without a restart, and a scan already waiting in the queue is refused rather than run. Entries from `COS_WEB_BLOCKED_TARGETS` are shown and cannot be withdrawn here |
 | Reference data | Runs the same daily `refresh_schedule` / `refresh_advisories` the worker does, with the same guards, behind a 60-second per-action cooldown |
-| Search index | **Reports** whether the shipped index still matches this build. It never rebuilds - that stays the release workflow's job. Three verdicts, not two: an index that does not name the release it was built for is **Cannot tell**, because its pages and languages could be compared and its copy could not |
+| Search index | **Reports** whether the shipped index still matches this build. It never rebuilds - every pull request to main and the release workflow do that. When it is out of date, the card lists every reason and shows how to fix it. Three verdicts, not two: an index that does not name the release it was built for is **Cannot tell**, because its pages and languages could be compared and its copy could not |
 | Audit | Streams the audit records as they are written, from the log file when one is configured and otherwise from a bounded in-memory ring |
+
+Beside the overview there are five more places, reached from the tab strip at
+the top of every page in the area:
+
+| Tab | What it shows |
+|:--|:--|
+| Configuration | Every `COS_WEB_*` variable the web service reads, grouped, with the value **in effect** - after parsing, clamping and fallbacks, so a malformed value shows the default it fell back to - whether the environment set it or the default applies, and the documented default and description from the table in `docs/webapp.md`. A token, key, salt or the Redis password is only ever **set** or **not set**. `COS_WEB_*` names the service does not read are listed by name, without their values, because a misspelt variable otherwise leaves the default in force with nothing saying so. It is this web process's environment: not OpenCloud's, and not the worker's, which reads the same variables in its own container |
+| Rules | How a grade is decided and every rule enforced against a request, with the numbers this deployment runs with: the grade scale and the scanner's severity ceilings, the end-of-life and track overrides, whether extra checks count, how many waivers a visitor may choose and the reference data rated against; then the per-client, daily and per-target limits, the probe block with its strikes and escalation (1 h → 6 h → 24 h by default), the SSRF guard's refused ranges, names and wildcard DNS services, approval mode, the flags every scan is built with, and the credential and refresh-button limits. Each rule says **Enforced** or **Off** and names the `COS_WEB_*` variables behind it. Every number and list is read from the running settings and from the constants the enforcing code uses (`webapp/rules.py`), so the tab cannot describe a limit the service no longer has; `tests/test_webapp_admin_rules.py` changes settings and looks for the change on the page |
+| Architecture | `ARCHITECTURE.md` — how the repository is put together and why the seams are where they are |
+| Operations | This file — the data to keep current, what to rebuild, and where to look when something breaks |
+| Releases | The ten newest released sections of `CHANGELOG.md`, newest first — what this release and the ones before it changed. `[Unreleased]` is left out: it is what a deployment does not run yet |
+
+The three documents are generated into `frontend/templates/admin-docs/` at build time by
+`scripts/build_frontend_documentation.py`, from
+`OPERATOR_DOCUMENTATION_PAGES` rather than the public manifest, so no
+Markdown is parsed at runtime and neither document reaches `/documentation`,
+the sitemap or the search index. They are English only: a half-translated
+operations note is worse than an English one that says which file it came
+from, which the line above each of them does. The configuration tab's
+descriptions come from the same script, which extracts the `docs/webapp.md`
+table into `webapp/environment_reference.py`; its `--check` in CI fails when
+the two disagree, and `tests/test_webapp_admin_configuration.py` fails when
+a variable is read, listed or documented in one place and not the others.
+
+The Releases tab changes only when a release is published: the publish
+workflow renames `[Unreleased]` to the new version and, in the same commit,
+regenerates that page and the area's search index. An ordinary pull
+request's changelog entry does not touch it, so it never needs rebuilding by
+hand.
 
 What it deliberately cannot do: name a target, a uuid, a result or a client
 address. The statistics are counts and settings, and the audit view shows the
 pseudonymised records the log already wrote - a fingerprint is a truncated
-HMAC under a salt the process holds, and nothing maps one back.
+HMAC under a salt the process holds, and nothing maps one back. The exclusions
+card is the one place addresses appear, and they are the operator's own
+configuration rather than anybody's traffic; `/admin/state`, the document you
+copy into an issue report, carries only how many there are.
+
+**About the one control that writes.** Adding an exclusion is the only thing
+in the area that changes what the service does, and it is deliberately the
+safest possible shape of that:
+
+- it can only ever **refuse** a scan. Nothing here makes this service scan
+  something, reach a target, or widen a limit, so the worst a stolen operator
+  session achieves is a deployment that scans less than it could;
+- `COS_WEB_BLOCKED_TARGETS` is a **floor**. Those entries appear in the list
+  with no control beside them, and trying to withdraw one is refused with a
+  pointer to the environment rather than quietly doing nothing - so your
+  compose file stays the truth about what it declares;
+- **entries added here live in Redis**, which means they are exactly as
+  durable as your Redis. Anything that must outlive a flush belongs in
+  `COS_WEB_BLOCKED_TARGETS`; the card says so under the list;
+- **an entry is at most 253 characters**, the longest a hostname can be, in
+  this card and in `COS_WEB_BLOCKED_TARGETS` alike. Nothing longer could match
+  a target the service would accept, so it is refused rather than stored as an
+  exclusion that excludes nothing;
+- **the two halves are compared parsed, not as text.** `Example.COM` in your
+  compose file and `example.com` typed here are one exclusion, not two: the
+  card declines to store what the environment already holds, and refuses to
+  withdraw it whichever way you spell it;
+- **a store that cannot be read refuses the scan** rather than proceeding
+  without the list, because a missing exclusion is the failure that scans
+  somebody who asked not to be. A visitor gets `503` and a sentence in their
+  own language; the audit trail gets `exclusions_unreadable`, which is worth
+  grepping for - it means this deployment could not reach its own Redis.
+
+See [ADR 0044](adr/0044-the-operator-area-may-write-the-exclusions.md) for why
+the area is allowed to write this and nothing else.
 
 **The readings say how old they are.** They are polled every ten seconds, and
 a poll that stops answering would otherwise be indistinguishable from a
@@ -647,7 +751,7 @@ The optional audit log (`COS_WEB_AUDIT_LOG*`, salted via
 | Grades look generous | Advisory refresh rejected or stale — check `advisories` in `/healthz` |
 | An instance is graded unknown instead of EOL | Schedule refresh rejected or stale |
 | Agents can reach `/mcp` unauthenticated | `COS_WEB_MCP_AUTH_ENABLED` plus an issuer must both be set; a deployment that asked for a sign-in it cannot enforce refuses to start |
-| Rate limits hitting legitimate users | `COS_WEB_IP_RATE_LIMIT` / `COS_WEB_IP_RATE_WINDOW` / `COS_WEB_TARGET_COOLDOWN`; behind a proxy also `COS_WEB_TRUST_FORWARDED_FOR` and `COS_WEB_TRUSTED_PROXY_HOPS` |
+| Rate limits hitting legitimate users | `COS_WEB_IP_RATE_LIMIT` / `COS_WEB_IP_RATE_WINDOW` / `COS_WEB_TARGET_COOLDOWN`; an hour-or-longer 429 is the probe block (`COS_WEB_PROBE_*`, `rate_limit_probe` in the audit trail, counted on the **Abuse guard** tile) or the daily cap (`COS_WEB_DAILY_SCAN_LIMIT`, `rate_limit_daily`); a 403 is approval mode (`COS_WEB_REQUIRE_APPROVAL`); behind a proxy also `COS_WEB_TRUST_FORWARDED_FOR` and `COS_WEB_TRUSTED_PROXY_HOPS` |
 | Scans of internal hosts refused | That is the SSRF guard. `COS_WEB_ALLOW_PRIVATE_TARGETS` exists but think hard before a public deployment sets it |
 
 For the plugin rather than the service, `docs/troubleshooting.md` covers

@@ -121,7 +121,7 @@ def test_junit_format_is_valid_xml_with_one_testsuite_per_host():
     suites = root.findall("testsuite")
     assert len(suites) == 1
     assert suites[0].get("name") == instance.host
-    assert int(suites[0].get("failures")) >= 1
+    assert int(suites[0].get("failures", "0")) >= 1
     case_names = {case.get("name") for case in suites[0].findall("testcase")}
     assert "exposed:/opencloud.yaml" in case_names
     assert "rating" in case_names
@@ -133,6 +133,7 @@ def test_junit_format_a_healthy_host_still_reports_a_rating_testcase():
 
     root = ET.fromstring(result.stdout)
     suite = root.find("testsuite")
+    assert suite is not None
     assert suite.get("name") == instance.host
     rating_case = next(c for c in suite.findall("testcase") if c.get("name") == "rating")
     assert rating_case.find("failure") is None
@@ -149,9 +150,107 @@ def test_junit_format_combines_several_hosts():
 
 
 def test_exit_code_keeps_its_nagios_meaning_under_every_machine_format(healthy):  # noqa: F811
-    for fmt in ("json", "sarif", "junit"):
+    for fmt in ("json", "sarif", "junit", "checkmk", "summary"):
         result = run_plugin("-H", healthy.host, "--format", fmt)
         assert result.returncode == OK, (fmt, result.stdout)
+
+
+def _checkmk_fields(line: str) -> tuple[str, str, str, str]:
+    """Split one local check line the way the Checkmk agent's parser does."""
+    state, rest = line.split(" ", 1)
+    assert rest.startswith('"'), line
+    service, rest = rest[1:].split('"', 1)
+    metrics, text = rest.lstrip(" ").split(" ", 1)
+    return state, service, metrics, text
+
+
+def test_checkmk_format_is_one_local_check_line_per_host():
+    """The agent reads one line per service: several hosts must not share one."""
+    healthy_instance = InstanceBehaviour()
+    broken = InstanceBehaviour()
+    broken.status_payload["productversion"] = "2.0.0"
+    with FakeOpenCloud(healthy_instance) as good, FakeOpenCloud(broken) as bad:
+        result = run_plugin("-H", f"{good.host},{bad.host}", "--format", "checkmk")
+
+    assert result.returncode == CRITICAL, result.stdout
+    lines = result.stdout.strip().splitlines()
+    assert len(lines) == 2
+    states = {
+        _checkmk_fields(line)[1]: _checkmk_fields(line)[0] for line in lines
+    }
+    assert states[f"OpenCloud_Security_{good.host.replace(':', '_')}"] == "0"
+    assert states[f"OpenCloud_Security_{bad.host.replace(':', '_')}"] == "2"
+
+
+def test_checkmk_service_name_carries_the_scanned_target():
+    """The agent host is rarely the instance, so the target names the service."""
+    with FakeOpenCloud() as instance:
+        result = run_plugin("-H", instance.host, "--format", "checkmk")
+
+    _state, service, _metrics, _text = _checkmk_fields(result.stdout.strip())
+    assert service.startswith("OpenCloud_Security_")
+    # Every character a Nagios core rejects in a service name, plus the two
+    # that would break the line's own fields.
+    assert not set(service) & set(';~!$%^&*|\\\'"<>?,()= `')
+    assert service == f"OpenCloud_Security_{instance.host.replace(':', '_')}"
+
+
+def test_checkmk_metrics_are_plain_numbers_without_nagios_thresholds():
+    """Checkmk parses a local check metric as a float and its levels as upper bounds."""
+    with FakeOpenCloud() as instance:
+        result = run_plugin("-H", instance.host, "--format", "checkmk")
+
+    _status, _service, metrics, _text = _checkmk_fields(result.stdout.strip())
+    values = dict(metric.split("=", 1) for metric in metrics.split("|"))
+    assert "rating" in values and "execution_time" in values
+    for name, value in values.items():
+        # No ';' (levels), no unit suffix: both would make the value unparseable.
+        assert ";" not in value, name
+        float(value)
+
+
+def test_checkmk_counts_missing_hardenings_only_when_they_were_looked_for():
+    """A graph flat at zero must not mean '--check-hardening was off'."""
+    behaviour = InstanceBehaviour()
+    behaviour.headers["Content-Security-Policy"] = DEFAULT_CSP_UNSAFE
+    with FakeOpenCloud(behaviour) as instance:
+        checked = run_plugin("-H", instance.host, "--format", "checkmk", "--check-hardening")
+        unchecked = run_plugin("-H", instance.host, "--format", "checkmk")
+
+    checked_metrics = _checkmk_fields(checked.stdout.strip())[2]
+    unchecked_metrics = _checkmk_fields(unchecked.stdout.strip())[2]
+    assert "hardenings_missing=" in checked_metrics
+    assert int(dict(
+        metric.split("=", 1) for metric in checked_metrics.split("|")
+    )["hardenings_missing"]) > 0
+    assert "hardenings_missing=" not in unchecked_metrics
+
+
+def test_checkmk_details_stay_on_one_line_and_name_the_findings():
+    """A real newline in the text would start a second, nonsensical service."""
+    behaviour = InstanceBehaviour(exposed_paths={"/opencloud.yaml"})
+    with FakeOpenCloud(behaviour) as instance:
+        result = run_plugin("-H", instance.host, "--format", "checkmk")
+
+    assert result.returncode == WARNING, result.stdout
+    assert len(result.stdout.strip().splitlines()) == 1
+    _status, _service, _metrics, text = _checkmk_fields(result.stdout.strip())
+    assert "\\n" in text  # the escaped separator, not a real newline
+    assert "exposed:/opencloud.yaml" in text
+
+
+def test_checkmk_reports_a_scan_that_failed_as_unknown():
+    """A plugin that produced no result is state 3, not a missing service."""
+    with FakeOpenCloud() as instance:
+        port = instance.port
+    result = run_plugin("-H", f"127.0.0.1:{port}", "--format", "checkmk")
+
+    assert result.returncode == UNKNOWN, result.stdout
+    status, service, metrics, _text = _checkmk_fields(result.stdout.strip())
+    assert status == "3"
+    assert service == f"OpenCloud_Security_127.0.0.1_{port}"
+    # Nothing was measured, so nothing is claimed to have been.
+    assert metrics == "-"
 
 
 def test_webhook_still_fires_alongside_a_machine_format(monkeypatch):
@@ -197,3 +296,113 @@ def test_webhook_still_fires_alongside_a_machine_format(monkeypatch):
     assert len(received) == 1
     posted = json.loads(received[0])
     assert posted["host"] == instance.host
+
+
+# --------------------------------------------------------------------------
+# --format summary: the fleet table. Read by a person, so what is asserted
+# here is that every row says what the other formats said about that host,
+# and that the columns stay aligned.
+# --------------------------------------------------------------------------
+
+
+def _summary_table(stdout: str) -> tuple[list[str], dict[str, dict[str, str]]]:
+    """Split the table into its header cells and a row per host."""
+    lines = [line for line in stdout.strip().splitlines() if line.strip()]
+    headers = lines[0].split()
+    rows: dict[str, dict[str, str]] = {}
+    for line in lines[1:-1]:
+        cells = line.split()
+        rows[cells[0]] = dict(zip(headers[1:], cells[1:]))
+    return headers, rows
+
+
+def test_summary_format_is_one_row_per_host():
+    healthy_instance = InstanceBehaviour()
+    broken = InstanceBehaviour()
+    broken.status_payload["productversion"] = "2.0.0"
+    with FakeOpenCloud(healthy_instance) as good, FakeOpenCloud(broken) as bad:
+        result = run_plugin("-H", f"{good.host},{bad.host}", "--format", "summary")
+
+    assert result.returncode == CRITICAL, result.stdout
+    headers, rows = _summary_table(result.stdout)
+    assert headers == ["HOST", "GRADE", "VERSION", "EOL", "VULNS", "NEW"]
+    assert set(rows) == {good.host, bad.host}
+    assert rows[good.host]["GRADE"] == "A+"
+    assert rows[good.host]["EOL"] == "no"
+    assert rows[bad.host]["GRADE"] == "F"
+    assert rows[bad.host]["VERSION"] == "2.0.0"
+    assert rows[bad.host]["EOL"] == "YES"
+
+
+def test_summary_format_preserves_the_order_the_hosts_were_given():
+    """O-5: every format keeps the host order, the table included."""
+    with FakeOpenCloud() as first, FakeOpenCloud() as second:
+        forward = run_plugin("-H", f"{first.host},{second.host}", "--format", "summary")
+        reverse = run_plugin("-H", f"{second.host},{first.host}", "--format", "summary")
+
+    assert list(_summary_table(forward.stdout)[1]) == [first.host, second.host]
+    assert list(_summary_table(reverse.stdout)[1]) == [second.host, first.host]
+
+
+def test_summary_format_counts_the_run_in_its_last_line(healthy):  # noqa: F811
+    result = run_plugin("-H", healthy.host, "--format", "summary")
+
+    assert result.returncode == OK, result.stdout
+    assert result.stdout.strip().splitlines()[-1] == (
+        "Checked 1 host(s): overall OK (1 OK)"
+    )
+
+
+def test_summary_columns_stay_aligned_when_a_hostname_is_long(healthy):  # noqa: F811
+    """A long host widens the table; it is never truncated into a useless row."""
+    result = run_plugin("-H", healthy.host, "--format", "summary")
+
+    lines = result.stdout.strip().splitlines()
+    header, row = lines[0], lines[1]
+    assert header.index("GRADE") == row.index("A+")
+    assert healthy.host in row
+
+
+def test_summary_lines_carry_no_trailing_whitespace(healthy):  # noqa: F811
+    lines = run_plugin("-H", healthy.host, "--format", "summary").stdout.splitlines()
+
+    assert lines
+    for line in lines:
+        assert line == line.rstrip(), repr(line)
+
+
+def test_summary_new_column_is_a_dash_without_a_baseline(healthy):  # noqa: F811
+    """No baseline and no new findings are different answers, not both '0'."""
+    result = run_plugin("-H", healthy.host, "--format", "summary")
+
+    assert _summary_table(result.stdout)[1][healthy.host]["NEW"] == "-"
+
+
+def test_summary_new_column_reports_the_baseline_movement(tmp_path):
+    """First run records, the next one counts what appeared since."""
+    baseline = tmp_path / "baseline.json"
+    behaviour = InstanceBehaviour()
+    with FakeOpenCloud(behaviour) as instance:
+        first = run_plugin(
+            "-H", instance.host, "--format", "summary", "--baseline", str(baseline)
+        )
+        assert _summary_table(first.stdout)[1][instance.host]["NEW"] == "new"
+
+        behaviour.status_payload["productversion"] = "2.0.0"
+        second = run_plugin(
+            "-H", instance.host, "--format", "summary", "--baseline", str(baseline)
+        )
+
+    row = _summary_table(second.stdout)[1][instance.host]
+    assert row["NEW"].startswith("+")
+    assert row["GRADE"] == "F"
+
+
+def test_summary_shows_the_status_of_a_host_that_never_got_a_grade():
+    """A failed scan has no grade; the column carries its Nagios status."""
+    with FakeOpenCloud() as instance:
+        unreachable = instance.host
+    result = run_plugin("-H", unreachable, "--format", "summary")
+
+    assert result.returncode == UNKNOWN, result.stdout
+    assert _summary_table(result.stdout)[1][unreachable]["GRADE"] == "UNKNOWN"

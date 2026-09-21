@@ -154,3 +154,69 @@ def test_aggregate_exit_code_prefers_real_problems():
         is NagiosExitCode.UNKNOWN
     )
     assert plugin._aggregate_exit_code([NagiosExitCode.OK]) is NagiosExitCode.OK
+
+
+def test_end_of_life_names_the_release_line_and_the_upgrade():
+    """The operator reads which line is dead and where to go, not just that it is."""
+    lifecycle = {"releaseType": "rolling", "line": "2.x", "upgradeTo": "3.0.0"}
+    message, _ = plugin._evaluate_rating(make_context(), {"EOL": True, "lifecycle": lifecycle}, 5, 0)
+
+    assert message == (
+        "CRITICAL: The 2.x rolling release line is end-of-life and has no security fixes. "
+        "Upgrade to 3.0.0."
+    )
+
+
+def test_end_of_life_without_lifecycle_details_stays_generic():
+    """No line and no target must not leave placeholders or a dangling hint."""
+    message, _ = evaluate(5, eol=True)
+
+    assert message == "CRITICAL: This server version is end-of-life and has no security fixes."
+
+
+def test_threshold_messages_name_the_threshold_grade():
+    """'at or below the threshold' is only useful with the threshold in it."""
+    critical, _ = evaluate(2, critical_rating=2)
+    warning, _ = evaluate(3, warning_rating=4)
+
+    assert critical == "CRITICAL: Rating D is at or below the critical threshold D."
+    assert warning == (
+        "WARNING: Rating C is at or below the warning threshold A, but no known vulnerabilities."
+    )
+
+
+def test_ok_and_unknown_messages_are_exact():
+    """The first word of the alert line is what monitoring systems parse."""
+    assert evaluate(4)[0] == "OK: Update available, but no known vulnerabilities."
+    assert evaluate(-1)[0] == "UNKNOWN: Scan result unclear. Please verify manually."
+
+
+def test_end_of_life_without_a_release_type_names_only_the_line():
+    """A missing track must not leave a placeholder in the sentence."""
+    lifecycle = {"line": "2.x"}
+    message, _ = plugin._evaluate_rating(make_context(), {"EOL": True, "lifecycle": lifecycle}, 5, 0)
+
+    assert message == "CRITICAL: The 2.x release line is end-of-life and has no security fixes."
+
+
+def test_a_threshold_outside_the_scale_is_named_as_unknown():
+    """A caller that bypasses the argument checks gets '?', never 'None'."""
+    critical, _ = plugin._evaluate_rating(make_context(critical_rating=6), {}, 5, 0)
+    warning, _ = plugin._evaluate_rating(
+        make_context(critical_rating=-1, warning_rating=6), {}, 5, 0
+    )
+
+    assert critical == "CRITICAL: Rating A+ is at or below the critical threshold ?."
+    assert warning == (
+        "WARNING: Rating A+ is at or below the warning threshold ?, but no known vulnerabilities."
+    )
+
+
+@pytest.mark.parametrize("value", [None, "5", True, 4.0, [5]])
+def test_a_missing_or_non_numeric_rating_is_unknown(value):
+    """Only a real integer is a rating; anything else must not borrow a grade."""
+    document = {} if value is None else {"rating": value}
+
+    assert plugin._rating_of(document) == plugin.UNKNOWN_RATING
+    assert plugin.UNKNOWN_RATING not in plugin.RATE_MAP
+    assert plugin._rating_of({"rating": 4}) == 4

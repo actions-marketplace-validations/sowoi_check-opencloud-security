@@ -1,0 +1,65 @@
+# A security advisory record. See AGENTS.md, "Security advisories".
+#
+# One file per bullet under a `### Security` heading in CHANGELOG.md.
+# `state` is the decision; `verified` is the evidence it rests on.
+
+slug: compare-upload-blocks-truncated
+state: declined
+changelog_version: "1.25.0"
+changelog_entry: "An uploaded report that carries more findings than a report can is now refused rather than read in part."
+shipped: true
+severity: low
+package: web
+declined_because: |
+  Hardening, not a fixed vulnerability. The entry cap is one of the bounds
+  ADR 0057 puts on the one untrusted structure this service parses, and it
+  held: nothing crossed the boundary that was not allow-listed, and no
+  document not this service's own reached the comparison, the template or
+  Redis. What it got wrong is transparency - a file whose blocks were longer
+  than the cap produced a comparison with holes in it that the page could not
+  name - and the file is uploaded by the person who then reads the answer, so
+  there is no attacker separate from the victim. Nobody running 1.24.x needs
+  to be told to upgrade away from it.
+summary: >-
+  A report uploaded to /compare was read to its first 500 entries per block
+  and the remainder was silently left out of the comparison
+verified: |
+  git show v1.24.2:webapp/imports.py:509 - "items = value[:MAX_ENTRIES]" and
+  :521 "for name, enabled in list(value.items())[:MAX_ENTRIES]", neither
+  counted into ImportedReport.dropped. The feature first shipped in 1.24.0:
+  git ls-tree -r --name-only v1.23.3 | grep webapp/imports.py is empty, and
+  git show v1.24.2:webapp/app.py carries "async def compare_upload".
+description: |
+  ### Impact
+
+  `POST /compare` compares a scan this service holds against a report the
+  reader uploads. `webapp/imports.py` read at most 500 entries from each block
+  of that report - failed checks, advisories, hardenings, headers, waivers -
+  and passed over the rest without recording that it had. The comparison drawn
+  from such a file reads as complete: every finding past the cut appears as
+  resolved on the earlier side and as introduced on the later one, and the
+  count the page shows beside the comparison stayed at zero.
+
+  Only the uploaded side of the comparison is affected. The later side is a
+  scan this service ran, so no finding of the instance as it is now could be
+  hidden this way, and nothing outside the allow-listed rebuild ever reached
+  the comparison, the page or Redis.
+
+  ### Patches
+
+  Fixed in **1.25.0**. A block carrying more entries than the cap is refused
+  with 422 - the answer the CSV row limit already gave a file that was too
+  long - and entries that are read in part are counted into the number the
+  page reports.
+
+  ### Workarounds
+
+  Compare two scan uuids rather than an uploaded file, or check the finding
+  counts on the uploaded report against the comparison by hand.
+
+  ### Note on distribution
+
+  The web application is **not** published to PyPI - the wheel and the sdist
+  exclude `webapp/` and `frontend/`. It ships as
+  `check_opencloud_security_web.tar.gz`. Installations of the
+  `check-opencloud-security` PyPI package are unaffected.

@@ -134,3 +134,22 @@ def test_a_section_the_scan_did_not_produce_gets_no_contents_entry(pages):
     assert 'id="advisories"' not in report
     # The sections it did produce are named.
     assert "#findings" in contents.group(0)
+
+
+def test_the_report_contents_are_grouped_in_reading_order(pages):
+    """Twelve pills in a row were a wall; each group holds its sections in page order."""
+    report, _ = pages
+    toc = re.search(r'<nav class="docs-toc.*?</nav>', report, re.DOTALL)
+    assert toc is not None
+    contents = toc.group(0)
+    groups = re.findall(
+        r'<p class="docs-toc-label">([^<]+)</p>(.*?)</div>', contents, re.DOTALL
+    )
+
+    labels = [label for label, _ in groups]
+    assert labels[0] == "Fix"
+    assert labels[-1] == "Keep"
+    assert all(re.search(r'href="#', body) for _, body in groups), "no empty group"
+    grouped = [target for _, body in groups for target in re.findall(r'href="#([^"]+)"', body)]
+    assert grouped == re.findall(r'href="#([^"]+)"', contents), "every entry sits in a group"
+    assert grouped.index("findings") < grouped.index("scan-limits") < grouped.index("share")

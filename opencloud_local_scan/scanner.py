@@ -45,6 +45,7 @@ import fnmatch
 import ipaddress
 import logging
 import re
+import secrets
 import socket
 import threading
 from collections.abc import Callable, Iterable, Mapping, Sequence
@@ -58,8 +59,35 @@ from urllib.parse import urljoin, urlsplit
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3 import PoolManager
+from urllib3.exceptions import ConnectTimeoutError, NewConnectionError
 
 from .caa import check_caa_record
+from .fingerprint import build as build_fingerprint
+from .provenance import build as build_provenance
+
+
+def _scanner_version() -> str:
+    """
+    This package's version, read when a scan needs it.
+
+    Imported inside the call because the package root imports this module,
+    and a top-level import of it would be a cycle.
+    """
+    from . import __version__
+
+    return str(__version__)
+
+from .coverage import (
+    NO_ROUTE,
+    NOT_APPLICABLE,
+    PREREQUISITE_MISSING,
+    PROBE_DISABLED,
+    TIMEOUT,
+    UNREADABLE,
+    CoverageRecorder,
+)
+from .dnssec import check_dnssec
+from .rehearsal import rehearse as rehearse_upgrades
 from .releases import ReleaseSettings, UpdateInfo, fetch_update_info
 from .remediation import SEVERITY_RATING_CAP as _SEVERITY_RATING_CAP
 from .remediation import plan as remediation_plan
@@ -75,6 +103,17 @@ from .versions import (
     select_version,
 )
 from .vulndb import VulnerabilityDatabase, load_database
+from .waivers import (
+    Waiver,
+    WaiverDecision,
+    scan_clock,
+)
+from .waivers import (
+    report as waiver_report,
+)
+from .waivers import (
+    resolve as resolve_waiver,
+)
 
 LOGGER = logging.getLogger("check_opencloud.scanner")
 
@@ -130,10 +169,18 @@ ADVISORY_HEADER_REJECTED: dict[str, frozenset[str]] = {
 # 0028 set for the advisory headers - explained, published, never counted -
 # and are listed here rather than derived so that the catalogue entry and the
 # measurement cannot drift apart. See ADR 0034.
-ADVISORY_CHECK_IDS: tuple[str, ...] = ("securityTxtPublished",)
+ADVISORY_CHECK_IDS: tuple[str, ...] = (
+    "securityTxtPublished",
+    "hstsPreloadEligible",
+)
 
 # HSTS max-age considered long enough (one year). OpenCloud itself sends ten.
 HSTS_MIN_MAX_AGE = 31_536_000
+
+# The minimum max-age the browser preload list accepts on a submission. It is
+# the same year, but it is the list's requirement rather than this project's
+# opinion, and the two are free to move apart.
+HSTS_PRELOAD_MIN_MAX_AGE = 31_536_000
 
 # Endpoints that must not answer an unauthenticated request with content.
 PROTECTED_ENDPOINTS: tuple[tuple[str, str], ...] = (
@@ -180,6 +227,23 @@ OPENID_CONFIGURATION_PATH = "/.well-known/openid-configuration"
 SECURITY_TXT_PATH = "/.well-known/security.txt"
 APP_LIST_PATH = "/app/list"
 CALDAV_PATH = "/.well-known/caldav"
+
+# The collaboration backend, where a reverse proxy publishes it on the
+# instance's own origin. `/hosting/discovery` is the WOPI protocol's own
+# entry point and is the only thing probed unconditionally: the console below
+# is asked for only once that document has proved a backend is there.
+WOPI_DISCOVERY_PATH = "/hosting/discovery"
+COMPANION_ADMIN_PATH = "/browser/dist/admin/admin.html"
+
+# Enough of the discovery document to find the root element and the editor
+# addresses. It is served by a host this scan does not trust, so it is read
+# in bounded form rather than in full.
+WOPI_DISCOVERY_LIMIT = 200_000
+
+# `urlsrc` is named by the WOPI specification, and the scheme is all that is
+# read out of it. Deliberately a regular expression and not an XML parser:
+# see `_companion_editor_https_finding`.
+_WOPI_URLSRC = re.compile(r'urlsrc\s*=\s*"([^"]*)"', re.IGNORECASE)
 WEB_CONFIG_PATH = "/config.json"
 BACKEND_PORT = 9200
 
@@ -264,6 +328,8 @@ DEMO_USER_PATH = "/ocs/v1.php/cloud/user?format=json"
 # this scan gets: it is not a weakness that might be exploitable, it is an
 # open door with the key printed in the manual.
 DEMO_USER_SEVERITY = "critical"
+# The tail of a demoUsersDisabled detail that passed without asking anything.
+DEMO_USERS_UNTESTED = "so the demo accounts could not be tested"
 
 # Content types an OCS answer can have. A catch-all single page application
 # answers text/html, so anything else is the service itself replying.
@@ -371,6 +437,17 @@ class ScanError(RuntimeError):
     """Raised when the instance cannot be scanned at all."""
 
 
+class NotOpenCloud(ScanError):
+    """Something answered ``status.php``, and what it said is not OpenCloud.
+
+    Kept apart from a host that did not answer at all, because only silence
+    is worth asking again another way: an answer over HTTPS is the same
+    answer without certificate verification, and a caller that scans hosts
+    somebody else named has no business trying port 80 to see what else is
+    there.
+    """
+
+
 @dataclass(frozen=True)
 class ScannerSettings:
     """Tunables for a scan run."""
@@ -392,7 +469,34 @@ class ScannerSettings:
     cannot reach that address at all, and reporting the resulting timeout as
     a finding would penalise the rating for a limitation of the scanner
     rather than of the target. False skips the probe instead - the address
-    is still listed under ``addresses``, just not dialled a second time.
+    is still listed under ``addresses``, just not dialled a second time, and
+    :attr:`check_all_addresses` leaves the IPv6 addresses out for the same
+    reason.
+    """
+    check_login_throttling: bool = False
+    """Whether to send a handful of failed sign-ins and record any throttling.
+
+    Opt-in and never graded (ADR 0069): a few logins for an account that does
+    not exist, sent only to the built-in identity provider, the same one the
+    demo-account check already asks. Off, ``loginThrottling`` is ``None``.
+    """
+    check_all_addresses: bool = False
+    """Whether to dial every address the name resolves to, not just the first.
+
+    A name behind a pool answers from whichever node the resolver put first,
+    so a node that missed a configuration rollout is invisible to a scan that
+    dials the name once - and ``tlsAddressParity`` does not see it either,
+    because it compares only the TLS identity of the two DNS families. True
+    repeats the node-dependent part of the scan against each resolved address
+    - the version, the graded headers, the hardening measures and the demo
+    accounts - and reports ``addressParity`` when they disagree.
+
+    Off by default because it costs about a dozen requests per address,
+    including a sign-in attempt with each documented demo account, and a
+    single-address deployment - most of them - has nothing to compare. The
+    addresses come from the caller's pin when there is one, so a pinned scan
+    can never be widened past what was vetted; the web application leaves
+    this off regardless (ADR 0042).
     """
     tls_min_days: int = DEFAULT_TLS_MIN_DAYS
     check_debug_ports: bool = True
@@ -420,6 +524,10 @@ class ScannerSettings:
     behind, not current.
     """
     ignore_hardenings: tuple[str, ...] = ()
+    #: Waivers that carry a reason and a deadline. Additive: a pattern in
+    #: `ignore_hardenings` is still a permanent waiver and still means what
+    #: it always meant. See :mod:`opencloud_local_scan.waivers`.
+    waivers: tuple[Waiver, ...] = ()
     """Hardening measures and additional checks to disregard.
 
     Entries are matched against both namespaces, because they overlap
@@ -453,6 +561,15 @@ class ScannerSettings:
     """Validated addresses for the initial hostname, used by web scans."""
     redirect_pinner: Callable[[str], tuple[str, ...] | None] | None = None
     """Validate and return addresses for each redirect before it is followed."""
+    stop_when_not_opencloud: bool = False
+    """Give up at the first ``status.php`` answer that is not OpenCloud.
+
+    ``False`` keeps the plugin's behaviour: an HTTPS endpoint that answers
+    with something else is retried without verification and then over plain
+    HTTP, because an operator monitoring their own instance wants the one
+    that works found. The web service sets ``True``: a host a stranger named
+    that already answered "not OpenCloud" gets no second and third request.
+    """
 
     @property
     def proxies(self) -> dict[str, str] | None:
@@ -470,6 +587,39 @@ class ScannerSettings:
         return max(1, min(int(self.concurrency), MAX_CONCURRENCY))
 
 
+class _PinnedFallback:
+    """
+    Dial a pinned name's validated addresses in order until one accepts.
+
+    Mixed into the connection class of a pool whose name is pinned to more
+    than one address. Only a failure to *connect* moves on - a refused or
+    unreachable address, a connect timeout - because that is the one failure
+    where nothing was said yet; an address that accepted and then answered
+    badly is the answer. Nothing outside the pin is ever dialled, so the
+    fallback is as narrow as the guard that produced the list.
+    """
+
+    _pin_manager: _PinnedPoolManager
+    _pin_name: str
+    _dns_host: str
+
+    def _new_conn(self) -> socket.socket:
+        failure: Exception | None = None
+        for address in self._pin_manager.addresses(self._pin_name):
+            self._dns_host = address
+            try:
+                sock: socket.socket = super()._new_conn()  # type: ignore[misc]
+            except (NewConnectionError, ConnectTimeoutError) as exc:
+                LOGGER.debug("Pinned address %s did not accept: %s", address, exc)
+                failure = exc
+                continue
+            self._pin_manager.prefer(self._pin_name, address)
+            return sock
+        if failure is None:
+            raise NewConnectionError(self, f"No address pinned for {self._pin_name}")  # type: ignore[arg-type]
+        raise failure
+
+
 class _PinnedPoolManager(PoolManager):
     """Route validated hostnames to their already-checked IP addresses."""
 
@@ -482,6 +632,24 @@ class _PinnedPoolManager(PoolManager):
         self._pins[hostname.lower().rstrip(".")] = addresses
         self.clear()
 
+    def addresses(self, name: str) -> tuple[str, ...]:
+        """A pinned name's addresses, the one that last accepted first."""
+        return self._pins.get(name, ())
+
+    def prefer(self, name: str, address: str) -> None:
+        """
+        Put the address that accepted a connection first for the next one.
+
+        A name whose first address is dead - an AAAA record nothing listens
+        on, a scanner without an IPv6 route - would otherwise pay a failed
+        connect, possibly a whole timeout, on every new connection. The pools
+        already open are left alone: the next request asks for the new first
+        address and gets a pool of its own.
+        """
+        addresses = self._pins.get(name, ())
+        if addresses and addresses[0] != address and address in addresses:
+            self._pins[name] = (address, *(entry for entry in addresses if entry != address))
+
     def connection_from_host(
         self,
         host: str | None,
@@ -490,14 +658,28 @@ class _PinnedPoolManager(PoolManager):
         pool_kwargs: dict[str, Any] | None = None,
     ):
         original = host or ""
-        addresses = self._pins.get(original.lower().rstrip("."))
+        name = original.lower().rstrip(".")
+        addresses = self._pins.get(name)
         if addresses:
             host = addresses[0]
             pool_kwargs = dict(pool_kwargs or {})
             if scheme == "https":
                 pool_kwargs.setdefault("assert_hostname", original)
                 pool_kwargs.setdefault("server_hostname", original)
-        return super().connection_from_host(host, port, scheme, pool_kwargs)
+        pool = super().connection_from_host(host, port, scheme, pool_kwargs)
+        # The pool still dials addresses[0] first, but a name with several
+        # validated addresses must not fail on the first one alone: the guard
+        # vetted all of them, and a visitor's browser would try the next.
+        # Exactly one pinned address - the per-address comparison - stays
+        # exactly that one.
+        if addresses and len(addresses) > 1 and getattr(pool, "_pin_name", None) != name:
+            pool.ConnectionCls = type(  # type: ignore[misc]
+                f"Pinned{pool.ConnectionCls.__name__}",
+                (_PinnedFallback, pool.ConnectionCls),
+                {"_pin_manager": self, "_pin_name": name},
+            )
+            pool._pin_name = name  # type: ignore[attr-defined]
+        return pool
 
 
 class _PinnedHTTPAdapter(HTTPAdapter):
@@ -513,6 +695,17 @@ class _PinnedHTTPAdapter(HTTPAdapter):
     def pin(self, hostname: str, addresses: tuple[str, ...]) -> None:
         """Update the pool used by this session."""
         self._pinned_pool.pin(hostname, addresses)
+
+
+class _NoRedirectSession(requests.Session):
+    """Leave redirect handling to the caller, including reading its body.
+
+    Even with allow_redirects=False, requests consumes the entire redirect
+    body to prepare Response.next. That happens before our response cap.
+    """
+
+    def resolve_redirects(self, *args: Any, **kwargs: Any):
+        return iter(())
 
 
 _T = TypeVar("_T")
@@ -571,7 +764,7 @@ class _Probe:
 
     base_url: str
     settings: ScannerSettings
-    session: requests.Session = field(default_factory=requests.Session)
+    session: requests.Session = field(default_factory=_NoRedirectSession)
     _sessions: threading.local = field(default_factory=threading.local, repr=False)
     _owner: int = field(default_factory=threading.get_ident, repr=False)
     # Every session opened for this probe, so that :meth:`close` can reach the
@@ -579,6 +772,10 @@ class _Probe:
     # the thread that did not create the entry.
     _opened: list[requests.Session] = field(default_factory=list, repr=False)
     _opened_lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
+    # One pin mapping for every session this probe (and its derivations)
+    # opens, so the address that accepted in one worker is the one the next
+    # worker dials first rather than something each thread relearns.
+    _pins: dict[str, tuple[str, ...]] = field(default_factory=dict, repr=False)
 
     def __post_init__(self) -> None:
         """Mount the pinning adapter before the first request is made."""
@@ -612,11 +809,29 @@ class _Probe:
             session.close()
 
     def _mount(self, session: requests.Session) -> None:
-        pins = dict(self.settings.pinned_addresses)
-        if pins:
-            adapter = _PinnedHTTPAdapter(pins)
-            session.mount("http://", adapter)
-            session.mount("https://", adapter)
+        """Give a session the pinning adapter, unless it already has one.
+
+        :meth:`derive` re-runs ``__post_init__`` on a probe that *shares* this
+        session, so mounting unconditionally would replace an adapter already
+        in use: the redirect pins added to it would be silently discarded, and
+        the pool still holding its open connections would no longer be
+        reachable from ``session.adapters`` for :meth:`close` to shut down.
+        """
+        # Probes are anonymous. requests otherwise loads .netrc credentials
+        # and environment proxies, which also bypass the address-pinning pool.
+        session.trust_env = False
+        if self.settings.pinned_addresses and self.settings.proxy:
+            raise ValueError("A pinned scan cannot use a proxy that resolves its target.")
+        if not self._pins:
+            self._pins.update(
+                (name.lower().rstrip("."), addresses)
+                for name, addresses in self.settings.pinned_addresses
+            )
+        if not self._pins or isinstance(session.get_adapter("https://"), _PinnedHTTPAdapter):
+            return
+        adapter = _PinnedHTTPAdapter(self._pins)
+        session.mount("http://", adapter)
+        session.mount("https://", adapter)
 
     def _pin_redirect(self, url: str, addresses: tuple[str, ...]) -> None:
         """Pin a validated redirect on the session making this request."""
@@ -641,6 +856,11 @@ class _Probe:
         return replace(self, base_url=base_url)
 
     @property
+    def pinned_addresses(self) -> tuple[tuple[str, tuple[str, ...]], ...]:
+        """The pins as this probe now dials them, the address that accepted first."""
+        return tuple(self._pins.items())
+
+    @property
     def _session(self) -> requests.Session:
         """
         The session belonging to the calling thread.
@@ -653,7 +873,7 @@ class _Probe:
             return self.session
         session = getattr(self._sessions, "session", None)
         if session is None:
-            session = requests.Session()
+            session = _NoRedirectSession()
             self._mount(session)
             self._sessions.session = session
             self._remember(session)
@@ -678,7 +898,6 @@ class _Probe:
         """
         url = f"{base_url or self.base_url}{path}"
         guard = self.settings.redirect_guard
-        follow = allow_redirects and guard is None
         try:
             response = self._capped(
                 self._session.request(
@@ -687,7 +906,7 @@ class _Probe:
                     timeout=self.settings.timeout,
                     verify=self.settings.tls_verify,
                     proxies=self.settings.proxies,
-                    allow_redirects=follow,
+                    allow_redirects=False,
                     headers={
                         **self._headers(url),
                         "User-Agent": self.settings.user_agent,
@@ -699,7 +918,7 @@ class _Probe:
         except REQUEST_ERRORS as exc:
             LOGGER.debug("Request to %s failed: %s", url, exc)
             return None
-        if follow or not allow_redirects or guard is None:
+        if not allow_redirects:
             return response
         return self._follow(response, method=method, guard=guard)
 
@@ -726,7 +945,7 @@ class _Probe:
         response: requests.Response,
         *,
         method: str,
-        guard: Callable[[str], bool],
+        guard: Callable[[str], bool] | None,
     ) -> requests.Response | None:
         """
         Walk the redirect chain by hand, asking ``guard`` about every hop.
@@ -741,7 +960,7 @@ class _Probe:
                 return response
             location = response.headers.get("Location") or ""
             target = urljoin(response.url, location)
-            if not guard(target):
+            if guard is not None and not guard(target):
                 LOGGER.debug("Refusing to follow redirect to %s", target)
                 return response
             if self.settings.redirect_pinner is not None:
@@ -874,17 +1093,285 @@ def _address_parity_finding(inspections: Mapping[str, TlsInspection]) -> Finding
     )
 
 
+# ---------------------------------------------------------------------------
+# Every address the name resolves to, not just the one that answered.
+#
+# A scan dials a name once, and whichever address the resolver put first is
+# the whole of what it saw. Behind a pool of four nodes that is a quarter of
+# the deployment: the node that missed a configuration rollout - no HSTS
+# still, demo accounts still signing in, an older release - serves every
+# fourth visitor and no scan at all. tlsAddressParity does not see it either:
+# it compares the TLS identity of the two DNS families, and four nodes behind
+# one certificate present the same identity whatever they serve.
+#
+# This stays inside the rule that a probe is only ever aimed where the scan
+# was pointed (ADR 0036, ADR 0042): the addresses come from the resolver's
+# answer for that one name - or from the caller's pin, when there is one -
+# never from anything the instance said, and every request still carries the
+# same name in Host and SNI. What changes is which of the name's own
+# addresses the connection goes to.
+#
+# Off unless asked for: it repeats the part of the scan that can differ
+# between nodes - a dozen requests per address, a demo sign-in among them -
+# against somebody's production instance, to answer a question most
+# deployments do not have. The web application never asks for it (ADR 0042).
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class AddressObservation:
+    """What one resolved address served when it was dialled by itself."""
+
+    address: str
+    reachable: bool
+    version: str = ""
+    headers: Mapping[str, bool] = field(default_factory=dict)
+    """The graded security headers as pass/fail, which is what the comparison
+    is about - two nodes whose CSP differs only in a nonce are configured the
+    same, and reporting them as a difference would train people to ignore the
+    finding."""
+    hardenings: Mapping[str, bool] = field(default_factory=dict)
+    """:func:`derive_hardenings` for this address alone."""
+    demo_users_disabled: bool | None = None
+    """Whether no documented demo account signed in here; ``None`` where the
+    question was not asked - an external identity provider, or a sign-in
+    endpoint that answers without credentials."""
+    error: str = ""
+
+    def as_dict(self) -> dict[str, Any]:
+        """Render the observation for the result document."""
+        return {
+            "address": self.address,
+            "reachable": self.reachable,
+            "version": self.version,
+            "headers": dict(self.headers),
+            "hardenings": dict(self.hardenings),
+            "demoUsersDisabled": self.demo_users_disabled,
+            "error": self.error,
+        }
+
+
+def _addresses_to_compare(
+    settings: ScannerSettings, addresses: Mapping[str, list[str]]
+) -> list[str]:
+    """
+    The addresses this scan may dial, in resolution order.
+
+    IPv6 is left out entirely when the scanner has no route of its own, for
+    the reason :attr:`ScannerSettings.ipv6_enabled` gives: a timeout that
+    belongs to the machine running the scan must not be reported as a fault
+    of the instance.
+    """
+    families = ("ipv4", "ipv6") if settings.ipv6_enabled else ("ipv4",)
+    return [address for family in families for address in addresses.get(family) or []]
+
+
+def _content_parity_may_run(
+    settings: ScannerSettings, addresses: Mapping[str, list[str]]
+) -> bool:
+    """Whether there is more than one address to compare, and consent to do it."""
+    return settings.check_all_addresses and len(_addresses_to_compare(settings, addresses)) > 1
+
+
+def _observe_address(
+    base_url: str, hostname: str, address: str, settings: ScannerSettings
+) -> AddressObservation:
+    """
+    Repeat the node-dependent part of the scan against one address only.
+
+    That part is what a configuration rollout changes: the release in
+    ``status.php``, the headers the proxy adds, the measures
+    :func:`derive_hardenings` reads from the root page, the capabilities, the
+    authentication challenge and the identity provider, and whether the demo
+    accounts still sign in. What every node shares - the certificate, the DNS
+    records, the debug ports of an address the scan does not choose - is not
+    asked again.
+
+    The probe gets its own settings and therefore its own pinned session: the
+    pin is what makes the connection go to this address while the request
+    still names the host, and a shared session would carry one address's pin
+    into the next address's request.
+    """
+    pinned = replace(
+        settings,
+        pinned_addresses=((hostname.strip("[]").lower().rstrip("."), (address,)),),
+    )
+    probe = _Probe(base_url=base_url, settings=pinned)
+    try:
+        try:
+            status = _fetch_status(probe)
+        except ScanError as exc:
+            return AddressObservation(address=address, reachable=False, error=str(exc))
+        opening: list[Callable[[], Any]] = [
+            partial(probe.get, "/", allow_redirects=True),
+            partial(_fetch_capabilities, probe),
+            partial(_authentication_challenge, probe),
+            partial(_identity_provider, probe, hostname),
+        ]
+        root_response, capabilities, challenge, identity_provider = _run_all(
+            pinned, opening
+        )
+        demo_users = _demo_user_finding(probe, identity_provider)
+        return AddressObservation(
+            address=address,
+            reachable=True,
+            version=select_version(status)
+            or select_version(_dig(capabilities, "version") or {})
+            or "",
+            headers=_check_headers(root_response),
+            hardenings=derive_hardenings(
+                root_response, capabilities, challenge, identity_provider
+            ),
+            # A finding that passed because the endpoint answers anybody says
+            # nothing about the accounts, so it is not an observation either.
+            demo_users_disabled=(
+                None
+                if demo_users is None or demo_users.detail.endswith(DEMO_USERS_UNTESTED)
+                else demo_users.passed
+            ),
+        )
+    finally:
+        probe.close()
+
+
+def _address_observations(
+    base_url: str,
+    hostname: str,
+    settings: ScannerSettings,
+    addresses: Mapping[str, list[str]],
+) -> list[AddressObservation]:
+    """
+    Observe every resolved address, in the order the resolver gave them.
+
+    One address after another rather than a pool of them: each observation
+    opens a pool of its own for the requests it makes, and call sites must
+    never nest.
+    """
+    return [
+        _observe_address(base_url, hostname, address, settings)
+        for address in _addresses_to_compare(settings, addresses)
+    ]
+
+
+def _content_parity_finding(
+    observations: Sequence[AddressObservation],
+    patterns: Sequence[str] = (),
+) -> Finding | None:
+    """
+    Every address a name answers on must serve the same instance.
+
+    The first address is the reference rather than a majority vote: with two
+    addresses there is no majority, and "these two disagree" is the finding
+    either way. Which of them is wrong is a question for whoever runs them.
+
+    A header or measure the operator waived is left out of the comparison:
+    they have said they will not act on it, and a node that differs only there
+    differs in nothing they want to hear about.
+
+    The severity follows the worst difference, because the scan's own rating
+    was built from whichever node answered first and may be the healthy one.
+    A node where the documented demo accounts still sign in is as serious as
+    that finding is on its own; a node on a different release may be the one
+    the advisories apply to; anything else is a configuration that drifted.
+    """
+    if len(observations) < 2:
+        return None
+    unreachable = [entry.address for entry in observations if not entry.reachable]
+    if unreachable:
+        return Finding(
+            "addressParity",
+            "medium",
+            False,
+            "Resolved but unreachable: " + ", ".join(unreachable),
+        )
+
+    def compared(name: str) -> bool:
+        return not _is_ignored(name, patterns)
+
+    reference, rest = observations[0], observations[1:]
+    severity = "medium"
+    differences: list[str] = []
+    for other in rest:
+        fields: list[str] = []
+        if other.version != reference.version and compared("version"):
+            fields.append(
+                f"version {other.version or 'unknown'} "
+                f"(expected {reference.version or 'unknown'})"
+            )
+            severity = _worse_severity(severity, "high")
+        for label, left, right in (
+            ("headers", reference.headers, other.headers),
+            ("hardenings", reference.hardenings, other.hardenings),
+        ):
+            # Only what both nodes measured: a hardening flag is absent where
+            # its header is, and the header difference already says so.
+            names = sorted(
+                name
+                for name in set(left) & set(right)
+                if left[name] != right[name] and compared(name)
+            )
+            if names:
+                fields.append(
+                    f"{label} "
+                    + ", ".join(
+                        f"{name} {'passes' if right[name] else 'fails'}" for name in names
+                    )
+                )
+        if (
+            reference.demo_users_disabled is not None
+            and other.demo_users_disabled is not None
+            and reference.demo_users_disabled != other.demo_users_disabled
+            and compared("demoUsersDisabled")
+        ):
+            fields.append(
+                "demo accounts "
+                + ("rejected" if other.demo_users_disabled else "still sign in")
+            )
+            severity = _worse_severity(severity, DEMO_USER_SEVERITY)
+        if fields:
+            differences.append(f"{other.address}: " + "; ".join(fields))
+    if not differences:
+        return Finding(
+            "addressParity",
+            "medium",
+            True,
+            f"All {len(observations)} addresses serve the same version, "
+            "headers and hardening",
+        )
+    return Finding(
+        "addressParity",
+        severity,
+        False,
+        f"Differs from {reference.address} - " + " | ".join(differences),
+    )
+
+
+def _worse_severity(current: str, candidate: str) -> str:
+    """The stricter of two severities, by the rating cap each one carries."""
+    return (
+        candidate
+        if SEVERITY_RATING_CAP.get(candidate, 5) < SEVERITY_RATING_CAP.get(current, 5)
+        else current
+    )
+
+
 def _host_and_port(host: str, settings: ScannerSettings) -> tuple[str, int, str]:
     """Split the host, optional port and installation base path."""
     candidate = host.strip().rstrip("/")
-    parsed = urlsplit(
-        candidate if "://" in candidate else f"//{candidate}",
-        scheme=settings.scheme,
-    )
+    # An unclosed IPv6 bracket or a port outside 0-65535 makes urlsplit and
+    # .port raise ValueError; a caller of scan() is promised ScanError for
+    # an address that cannot be scanned, whatever is wrong with it.
+    try:
+        parsed = urlsplit(
+            candidate if "://" in candidate else f"//{candidate}",
+            scheme=settings.scheme,
+        )
+        port = settings.port or parsed.port
+    except ValueError as exc:
+        raise ScanError(f"{host!r} is not a valid address: {exc}") from exc
     hostname = parsed.hostname or ""
     if ":" in hostname:
         hostname = f"[{hostname}]"
-    port = settings.port or parsed.port
     base_path = parsed.path.rstrip("/")
 
     if port is None:
@@ -916,20 +1403,20 @@ def _fetch_status(probe: _Probe) -> dict[str, Any]:
     if response is None:
         raise ScanError(f"{probe.base_url}{STATUS_PATH} is unreachable")
     if response.status_code >= 400:
-        raise ScanError(
+        raise NotOpenCloud(
             f"{probe.base_url}{STATUS_PATH} returned HTTP {response.status_code}"
         )
     try:
         payload = response.json()
     except ValueError as exc:
-        raise ScanError(f"{probe.base_url}{STATUS_PATH} did not return JSON: {exc}") from exc
+        raise NotOpenCloud(f"{probe.base_url}{STATUS_PATH} did not return JSON: {exc}") from exc
     if not isinstance(payload, dict) or not any(
         key in payload for key in ("version", "productversion", "productname")
     ):
-        raise ScanError(f"No OpenCloud instance found at {probe.base_url}")
+        raise NotOpenCloud(f"No OpenCloud instance found at {probe.base_url}")
     foreign = _foreign_product(payload)
     if foreign:
-        raise ScanError(
+        raise NotOpenCloud(
             f"{probe.base_url} is not an OpenCloud instance: "
             f"{STATUS_PATH} reports {foreign}"
         )
@@ -1058,12 +1545,50 @@ def _security_txt_published(response: requests.Response | None) -> bool:
     )
 
 
-def _check_advisory_checks(probe: _Probe) -> dict[str, bool]:
+def _hsts_preload_eligible(hsts: str | None) -> bool:
+    """
+    Whether this Strict-Transport-Security header would be accepted for preloading.
+
+    ``hstsPreload`` already answers "does the header ask?". This answers
+    whether the request would be granted, which is a different question with a
+    different answer on every stock instance: OpenCloud's proxy sends
+    ``preload`` and a ten-year max-age but no ``includeSubDomains``, and the
+    list requires all three.
+
+    That is why this is an advisory observation rather than a hardening flag.
+    The shortfall is in what OpenCloud ships, not in what the operator did,
+    and a finding every instance in existence fails is the kind that teaches
+    people to stop reading the hardening line. See ADR 0037.
+    """
+    if not hsts:
+        return False
+    directives = hsts.lower()
+    max_age = _hsts_max_age(hsts)
+    return bool(
+        "preload" in directives
+        and "includesubdomains" in directives
+        and max_age
+        and max_age >= HSTS_PRELOAD_MIN_MAX_AGE
+    )
+
+
+#: The advisory observations, named here so a scan with the extra checks
+#: turned off can still say which checks it did not make.
+ADVISORY_CHECK_NAMES: tuple[str, ...] = ("securityTxtPublished", "hstsPreloadEligible")
+
+
+def _check_advisory_checks(
+    probe: _Probe, root_response: requests.Response | None = None
+) -> dict[str, bool]:
     """Measure the advisory observations that are not response headers."""
+    headers = root_response.headers if root_response is not None else {}
     return {
         "securityTxtPublished": _security_txt_published(
             probe.get(SECURITY_TXT_PATH, allow_redirects=True)
-        )
+        ),
+        "hstsPreloadEligible": _hsts_preload_eligible(
+            headers.get("Strict-Transport-Security")
+        ),
     }
 
 
@@ -1572,6 +2097,49 @@ def _reverse_proxy(root_response: requests.Response | None) -> dict[str, Any]:
     return proxy
 
 
+# One alternative in an Alt-Svc value: protocol-id="[host]:port", parameters.
+_ALT_SVC_ENTRY = re.compile(r'^\s*([!#$%&\'*+.^_`|~0-9A-Za-z-]+)\s*=\s*"([^"]*)"')
+# Protocol identifiers that run over UDP rather than the scanned TCP port.
+_ALT_SVC_UDP = ("h3", "hq")
+
+
+def _alternative_services(root_response: requests.Response | None) -> dict[str, Any] | None:
+    """
+    Record the alternative services the instance advertises in ``Alt-Svc``.
+
+    An ``h3`` entry tells every browser to try HTTP/3 over UDP on that port,
+    a listener a firewall written for TCP 443 may not cover. Observed, never
+    graded, and never probed: the advertised address is the target's word,
+    not an origin the scan was pointed at (ADR 0036). None when there was no
+    response to read the header from.
+    """
+    if root_response is None:
+        return None
+    raw = str(root_response.headers.get("Alt-Svc") or "").strip()
+    entries: list[dict[str, Any]] = []
+    if raw and raw.lower() != "clear":
+        for part in raw.split(","):
+            match = _ALT_SVC_ENTRY.match(part)
+            if not match:
+                continue
+            protocol, authority = match.group(1), match.group(2)
+            host, _, port = authority.rpartition(":")
+            entries.append(
+                {
+                    "protocol": protocol,
+                    "host": host,
+                    "port": int(port) if port.isdigit() else None,
+                    "udp": protocol.lower().startswith(_ALT_SVC_UDP),
+                }
+            )
+    return {
+        "advertised": bool(entries),
+        "http3": any(entry["udp"] for entry in entries),
+        "entries": entries,
+        "header": raw[:512],
+    }
+
+
 def _reverse_proxy_finding(proxy: Mapping[str, Any]) -> Finding:
     """Record whether anything sits in front of the instance."""
     if proxy.get("detected"):
@@ -1647,6 +2215,50 @@ def _demo_login_succeeded(response: requests.Response | None) -> bool:
     return content_type in DEMO_USER_CONTENT_TYPES and bool(response.content.strip())
 
 
+# How many failed sign-ins the throttling observation sends. Few enough that
+# no sane lockout policy trips on an account that does not exist anyway.
+LOGIN_THROTTLING_ATTEMPTS = 6
+
+
+def _login_throttling(
+    probe: _Probe, identity_provider: Mapping[str, Any] | None
+) -> dict[str, Any] | None:
+    """
+    Send a few failed sign-ins and record whether the instance slows them down.
+
+    The account name is random and cannot exist, so no real account can be
+    locked out. Attempts are sequential - a burst sent in parallel would
+    measure the scanner, not the policy. Only the built-in provider is asked,
+    for the reason the demo-account check gives. Returns None when it is not
+    asked at all, and records ``tested: False`` when no attempt got an answer.
+    """
+    provider = identity_provider or {}
+    if not provider.get("detected") or provider.get("external"):
+        return None
+    username = f"cos-throttle-probe-{secrets.token_hex(6)}"
+    password = secrets.token_urlsafe(18)
+    statuses: list[int] = []
+    evidence = ""
+    for _ in range(LOGIN_THROTTLING_ATTEMPTS):
+        response = _demo_user_probe(probe, username, password)
+        if response is None:
+            continue
+        statuses.append(response.status_code)
+        retry_after = response.headers.get("Retry-After")
+        if response.status_code == 429 or retry_after:
+            evidence = f"HTTP {response.status_code}" + (
+                f", Retry-After: {retry_after}" if retry_after else ""
+            )
+            break
+    return {
+        "tested": bool(statuses),
+        "attempts": len(statuses),
+        "throttled": bool(evidence),
+        "evidence": evidence,
+        "statuses": statuses,
+    }
+
+
 def _demo_user_finding(
     probe: _Probe, identity_provider: Mapping[str, Any] | None
 ) -> Finding | None:
@@ -1688,7 +2300,7 @@ def _demo_user_finding(
             DEMO_USER_SEVERITY,
             True,
             f"{DEMO_USER_PATH.split('?')[0]} answers without authentication, "
-            "so the demo accounts could not be tested",
+            + DEMO_USERS_UNTESTED,
         )
 
     accepted = [
@@ -1765,6 +2377,125 @@ def _exposed_path_findings(probe: _Probe) -> list[Finding]:
 
         findings.append(Finding(f"exposed:{path}", severity, not exposed, detail))
     return findings
+
+
+def _wopi_discovery_document(response: requests.Response | None) -> str | None:
+    """
+    The WOPI discovery document served on this origin, if that is what answered.
+
+    A 200 is not the question, for the same reason it is not for security.txt:
+    OpenCloud's frontend answers unknown paths with its own single-page shell,
+    so a scan that trusted the status code would find a collaboration backend
+    on every instance in existence. What is asked instead is whether the body
+    is the document the WOPI protocol specifies - an XML root element named
+    ``wopi-discovery`` - which an application shell is not.
+    """
+    if response is None or response.status_code != 200:
+        return None
+    body = response.text[:WOPI_DISCOVERY_LIMIT]
+    return body if "<wopi-discovery" in body.lower() else None
+
+
+def _companion_editor_https_finding(document: str) -> Finding:
+    """
+    Whether every editor address the backend advertises is HTTPS.
+
+    Read with a regular expression rather than an XML parser on purpose. The
+    document comes from a host this scan has no reason to trust, the
+    attribute name is fixed by the WOPI specification, and all that is wanted
+    from it is a scheme - none of which justifies handing an untrusted
+    document to a parser that has to be talked out of resolving what it finds
+    inside.
+    """
+    insecure = sorted(
+        {
+            urlsplit(address).netloc or address
+            for address in (value.strip() for value in _WOPI_URLSRC.findall(document))
+            if address.lower().startswith("http://")
+        }
+    )
+    if insecure:
+        return Finding(
+            "companionEditorHttps",
+            "high",
+            False,
+            "Editor addresses advertised over plain HTTP: " + ", ".join(insecure),
+        )
+    return Finding(
+        "companionEditorHttps",
+        "high",
+        True,
+        "Every editor address the discovery document advertises uses HTTPS",
+    )
+
+
+def _companion_admin_console_finding(
+    response: requests.Response | None, control: requests.Response | None
+) -> Finding:
+    """
+    Whether the collaboration backend's administration console answers.
+
+    The catch-all comparison here is length alone, deliberately. The second
+    rule :func:`_looks_like_catch_all` applies - that an HTML answer is the
+    frontend rather than the file asked for - is right for the deployment
+    files it guards and wrong here, where the console *is* an HTML document.
+    """
+    if response is None:
+        return Finding(
+            "companionAdminConsole", "high", True, "Console path not reachable"
+        )
+    detail = f"HTTP {response.status_code}"
+    if response.status_code != 200 or not response.content.strip():
+        return Finding("companionAdminConsole", "high", True, detail)
+    if control is not None and len(response.content) == len(control.content):
+        return Finding(
+            "companionAdminConsole",
+            "high",
+            True,
+            f"{detail} - catch-all response, console not served",
+        )
+    return Finding(
+        "companionAdminConsole", "high", False, f"{detail} - publicly readable"
+    )
+
+
+def _companion_findings(probe: _Probe) -> list[Finding]:
+    """
+    Probe the collaboration backend, where one is published on this origin.
+
+    :func:`_integrations` already reports *that* an office integration exists,
+    because the instance says so in its own capabilities. What it cannot say
+    is what that second service publishes, and a document editor is a second
+    HTTP server with an administration console and a transport of its own.
+
+    This asks the instance's own origin and nothing else. An address read out
+    of the target's answers - the editor host the discovery document names,
+    say - would have the scanner follow wherever a scanned host pointed it,
+    which is the one thing the web application's guard exists to prevent. See
+    ADR 0036.
+
+    A backend that is not published here is left unmeasured rather than
+    passed: an observation nobody made is not an observation that succeeded.
+    The discovery document is fetched on its own first, so the common case -
+    no collaboration backend on this origin - costs one request rather than
+    three.
+    """
+    document = _wopi_discovery_document(
+        probe.get(WOPI_DISCOVERY_PATH, allow_redirects=True)
+    )
+    if document is None:
+        return []
+    control, admin = _run_all(
+        probe.settings,
+        [
+            partial(_catch_all_probe, probe),
+            partial(probe.get, COMPANION_ADMIN_PATH, allow_redirects=False),
+        ],
+    )
+    return [
+        _companion_editor_https_finding(document),
+        _companion_admin_console_finding(admin, control),
+    ]
 
 
 def _authentication_findings(probe: _Probe) -> list[Finding]:
@@ -2392,6 +3123,97 @@ def derive_hardenings(
     return dict(sorted(hardenings.items()))
 
 
+#: Every hardening :func:`derive_hardenings` can produce, and what the
+#: instance has to publish before it can be rated. The two are kept beside
+#: one another on purpose: a hardening added there without an entry here is
+#: one the coverage block cannot explain, and
+#: ``tests/test_coverage.py`` fails on exactly that.
+HARDENING_PREREQUISITES: dict[str, str] = {
+    "hstsLongMaxAge": "a Strict-Transport-Security header",
+    "hstsPreload": "a Strict-Transport-Security header",
+    "cspWithoutUnsafeInline": "a readable Content-Security-Policy header",
+    "basicAuthDisabled": "an authentication challenge",
+    "publicLinkPasswordEnforced": "a public-link password policy in its capabilities",
+    "publicLinkExpirationEnforced": "a public-link expiry setting in its capabilities",
+    "userEnumerationRestricted": "a user-enumeration setting in its capabilities",
+    "passwordPolicyEnforced": "a password policy in its capabilities",
+    "passwordPolicyComplexity": "password complexity rules in its capabilities",
+    "oidcPkceSupported": "the code challenge methods it accepts",
+    "oidcImplicitFlowDisabled": "the response types it offers",
+    "oidcSigningAlgorithmStrong": "the token signing algorithms it accepts",
+    "oidcEndpointsUseHttps": "its endpoint addresses",
+}
+
+#: The hardenings read out of the identity provider's discovery document.
+OPENID_HARDENINGS: frozenset[str] = frozenset(
+    {
+        "oidcPkceSupported",
+        "oidcImplicitFlowDisabled",
+        "oidcSigningAlgorithmStrong",
+        "oidcEndpointsUseHttps",
+    }
+)
+
+
+def record_hardening_coverage(
+    recorder: CoverageRecorder,
+    hardenings: Mapping[str, bool],
+    root_response: requests.Response | None,
+    identity_provider: Mapping[str, Any] | None,
+) -> None:
+    """
+    Say, for every hardening, whether it was rated and why it was not.
+
+    :func:`derive_hardenings` leaves a measure out when the instance did not
+    publish what it would have rated - which is right, and is what ADR 0013
+    asks for, and is indistinguishable from a pass to anybody reading the
+    block. This is where that difference gets written down.
+    """
+    detected = bool(
+        isinstance(identity_provider, Mapping) and identity_provider.get("detected")
+    )
+    external = bool(
+        isinstance(identity_provider, Mapping) and identity_provider.get("external")
+    )
+    for name, prerequisite in HARDENING_PREREQUISITES.items():
+        if name in hardenings:
+            recorder.measured(name, "hardening", hardenings[name])
+            continue
+        if name in OPENID_HARDENINGS and not detected:
+            recorder.skipped(
+                name,
+                "hardening",
+                NOT_APPLICABLE,
+                "No identity provider was detected in front of this instance.",
+            )
+            continue
+        if name == "oidcImplicitFlowDisabled" and detected and not external:
+            # The built-in provider offers the implicit response types and
+            # cannot be reconfigured, so this is not a gap in the scan - it
+            # is a check with nothing to say about this deployment.
+            recorder.skipped(
+                name,
+                "hardening",
+                NOT_APPLICABLE,
+                "The built-in identity provider cannot be reconfigured.",
+            )
+            continue
+        if root_response is None:
+            recorder.inconclusive(
+                name,
+                "hardening",
+                UNREADABLE,
+                "The instance did not return a page to read this from.",
+            )
+            continue
+        recorder.skipped(
+            name,
+            "hardening",
+            PREREQUISITE_MISSING,
+            f"The instance did not publish {prerequisite}.",
+        )
+
+
 @dataclass(frozen=True)
 class RatingCap:
     """One failed extra check that held the rating down."""
@@ -2476,7 +3298,8 @@ def _apply_waivers(
     hardenings: Mapping[str, bool],
     headers: Mapping[str, bool],
     https: Mapping[str, Any],
-) -> list[str]:
+    now: datetime,
+) -> tuple[list[str], list[dict[str, Any]]]:
     """
     Mark everything the operator has chosen to accept, and report what matched.
 
@@ -2484,29 +3307,68 @@ def _apply_waivers(
     would quietly turn into a blind spot the day it starts failing. Findings
     are flagged in place rather than deleted, so the result document still
     shows what was observed - a waiver hides an alert, not the evidence.
+
+    ``now`` is the scan's own clock, read once at the start, and every expiry
+    is decided against it. Returns the waived identifiers and the record of
+    every configured waiver - including the ones that matched nothing and the
+    ones that have run out, because those are the two a reader needs to see.
     """
-    patterns = settings.ignore_hardenings
-    if not patterns:
-        return []
+    records = _configured_waivers(settings)
+    if not records:
+        return [], []
 
     ignored: list[str] = []
+    decisions: list[WaiverDecision] = []
+
+    def decide(check: str) -> bool:
+        """Ask the records about one *failing* check, once."""
+        decision = resolve_waiver(records, check, now)
+        if not decision.applicable:
+            return False
+        decisions.append(decision)
+        if decision.only_covered_by_a_wildcard:
+            # The specific permission ran out and a broader one is still
+            # carrying it. Correct, and quiet, and worth a line in the log
+            # so that an expiry does not pass entirely unremarked.
+            LOGGER.debug(
+                "%s is waived by a broader record; %d specific waiver(s) expired",
+                check,
+                len(decision.expired),
+            )
+        return decision.waived
+
     for finding in findings:
-        if not finding.passed and _is_ignored(finding.id, patterns):
+        if not finding.passed and decide(finding.id):
             finding.ignored = True
             ignored.append(finding.id)
 
     ignored.extend(
-        name for name, enabled in hardenings.items() if not enabled and _is_ignored(name, patterns)
+        name for name, enabled in hardenings.items() if not enabled and decide(name)
     )
     ignored.extend(
-        name for name, present in headers.items() if not present and _is_ignored(name, patterns)
+        name for name, present in headers.items() if not present and decide(name)
     )
-    if not https.get("enforced", True) and _is_ignored("httpsEnforced", patterns):
+    if not https.get("enforced", True) and decide("httpsEnforced"):
         ignored.append("httpsEnforced")
 
     unique = sorted(set(ignored))
     LOGGER.debug("Waived %d finding(s) by configuration: %s", len(unique), unique)
-    return unique
+    return unique, waiver_report(records, decisions, now)
+
+
+def _configured_waivers(settings: ScannerSettings) -> tuple[Waiver, ...]:
+    """
+    Every waiver this scan was given, in one list.
+
+    The two forms are one mechanism: a bare pattern from `--ignore-hardening`
+    is a waiver with no deadline and no reason, which is exactly what it has
+    always been. Structured records are appended, so a permanent pattern
+    keeps working unchanged next to a temporary one.
+    """
+    permanent = tuple(
+        Waiver(pattern) for pattern in settings.ignore_hardenings if pattern
+    )
+    return permanent + tuple(settings.waivers)
 
 
 def _rating_caps(rating: int, findings: Iterable[Finding]) -> tuple[int, list[RatingCap]]:
@@ -2533,9 +3395,13 @@ def _rating_caps(rating: int, findings: Iterable[Finding]) -> tuple[int, list[Ra
             cap=SEVERITY_RATING_CAP.get(finding.severity, MAX_RATING),
             detail=finding.detail,
             # Order-independent: a cap is a reason for the outcome when it is
-            # as strict as the outcome, whatever order the checks ran in.
-            applied=SEVERITY_RATING_CAP.get(finding.severity, MAX_RATING) == capped
-            and capped < rating,
+            # as strict as the outcome, whatever order the checks ran in. It is
+            # deliberately not also required to have *lowered* the rating - a
+            # critical finding capping at 2 on an instance the advisories had
+            # already put at 2 is still a reason that instance is a 2, and
+            # reporting it as "the rating was already lower" says something
+            # untrue about the only critical finding in the report.
+            applied=SEVERITY_RATING_CAP.get(finding.severity, MAX_RATING) == capped,
         )
         for finding in failed
     ]
@@ -2594,7 +3460,10 @@ def _compute_rating(
     base_rating = rating
     if settings.extra_checks and settings.extra_checks_affect_rating:
         rating, caps = _rating_caps(rating, findings)
-    elif findings and not settings.extra_checks_affect_rating:
+    elif any(finding.counts for finding in findings) and not settings.extra_checks_affect_rating:
+        # Only when something actually failed. `findings` holds the passes too,
+        # so testing the list itself told a clean instance that its failed
+        # checks were being disregarded when it had none.
         base_reason += "; failed extra checks are reported but do not affect the rating"
 
     return RatingExplanation(
@@ -2618,7 +3487,8 @@ def _collect_extra_findings(
     reverse_proxy: Mapping[str, Any] | None = None,
     tls_inspection: TlsInspection | None = None,
     address_parity: Finding | None = None,
-    caa_finding: Finding | None = None,
+    dns_findings: Sequence[Finding] = (),
+    content_parity: Finding | None = None,
     *,
     verification_required: bool = True,
 ) -> list[Finding]:
@@ -2632,10 +3502,11 @@ def _collect_extra_findings(
                 verification_required=verification_required,
             )
         )
-    if caa_finding is not None:
-        findings.append(caa_finding)
+    findings.extend(dns_findings)
     if address_parity is not None:
         findings.append(address_parity)
+    if content_parity is not None:
+        findings.append(content_parity)
     findings.extend(_cookie_findings(root_response))
     findings.extend(_authentication_findings(probe))
     findings.append(_basic_auth_finding(challenge, identity_provider))
@@ -2649,6 +3520,7 @@ def _collect_extra_findings(
         )
     )
     findings.extend(_exposed_path_findings(probe))
+    findings.extend(_companion_findings(probe))
     findings.append(_directory_listing_finding(probe, root_response))
     findings.extend(_debug_endpoint_findings(probe))
     findings.extend(_web_embed_findings(probe))
@@ -2696,7 +3568,14 @@ def _open_instance(host: str, settings: ScannerSettings) -> tuple[
     try:
         return probe, _fetch_status(probe), hostname, port, settings, None, None
     except ScanError as exc:
+        # Only the probe this function *returns* is closed by the caller, and
+        # each attempt below opens a new one. An abandoned probe still owns the
+        # sockets its session pooled, so it is closed here rather than left for
+        # the collector - which is the whole reason `_Probe.close` exists.
+        probe.close()
         if settings.scheme != "https":
+            raise
+        if settings.stop_when_not_opencloud and isinstance(exc, NotOpenCloud):
             raise
         https_error = exc
 
@@ -2707,7 +3586,10 @@ def _open_instance(host: str, settings: ScannerSettings) -> tuple[
         insecure_probe = _Probe(base_url=base_url, settings=insecure)
         try:
             status = _fetch_status(insecure_probe)
-        except ScanError:
+        except ScanError as exc:
+            insecure_probe.close()
+            if settings.stop_when_not_opencloud and isinstance(exc, NotOpenCloud):
+                raise
             LOGGER.debug("Instance is unreachable over HTTPS even without verification")
         else:
             LOGGER.debug("HTTPS scan needed to skip certificate verification")
@@ -2731,6 +3613,7 @@ def _open_instance(host: str, settings: ScannerSettings) -> tuple[
     try:
         status = _fetch_status(plain_probe)
     except ScanError:
+        plain_probe.close()
         raise https_error from None
     return plain_probe, status, hostname, fallback_port, settings, None, str(https_error)
 
@@ -2758,6 +3641,14 @@ def scan(
         tls_untrusted,
         https_unavailable,
     ) = _open_instance(host, settings)
+    # What the name resolved to is reported in the order it was given; what
+    # the TLS inspection and the debug ports dial is the order the HTTP layer
+    # learned. A name pinned to several addresses whose first does not accept
+    # has just been reached on another one, and inspecting the dead one would
+    # report a handshake failure the instance does not have.
+    resolution_settings = settings
+    if probe.pinned_addresses != settings.pinned_addresses:
+        settings = replace(settings, pinned_addresses=probe.pinned_addresses)
 
     # The probe pools its connections; the scan owns them and closes them
     # on the way out, however it leaves.
@@ -2784,6 +3675,7 @@ def scan(
             root_response, capabilities, challenge, identity_provider
         )
         reverse_proxy = _reverse_proxy(root_response)
+        alternative_services = _alternative_services(root_response)
         integrations = (
             _integrations(probe, capabilities)
             if settings.extra_checks
@@ -2792,7 +3684,53 @@ def scan(
         # Left empty rather than false when the extra checks are off: an
         # observation nobody made is not an observation that failed, and a
         # reader of the document cannot tell the two apart from a bool.
-        advisory_checks = _check_advisory_checks(probe) if settings.extra_checks else {}
+        advisory_checks = (
+            _check_advisory_checks(probe, root_response) if settings.extra_checks else {}
+        )
+
+        # Coverage is recorded here, beside each decision, rather than derived
+        # afterwards from which keys are absent: absence is what it exists to
+        # explain, so reading it back would answer the question with itself.
+        coverage = CoverageRecorder()
+        record_hardening_coverage(coverage, hardenings, root_response, identity_provider)
+        for group, measured in (
+            ("header", headers),
+            ("advisoryHeader", advisory_headers),
+        ):
+            for name, present in measured.items():
+                if root_response is None:
+                    # `_check_headers` reports False for a page it never read,
+                    # because the rating has always counted it that way and a
+                    # scan must grade identical evidence identically. Coverage
+                    # is where the difference gets said out loud.
+                    coverage.inconclusive(
+                        name,
+                        group,
+                        UNREADABLE,
+                        "The instance did not return a page to read headers from.",
+                    )
+                else:
+                    coverage.measured(name, group, present)
+        if settings.extra_checks:
+            for name, satisfied in advisory_checks.items():
+                coverage.measured(name, "advisoryCheck", satisfied)
+        else:
+            for name in ADVISORY_CHECK_NAMES:
+                coverage.skipped(
+                    name,
+                    "advisoryCheck",
+                    PROBE_DISABLED,
+                    "The extra checks are turned off for this scan.",
+                )
+        if capabilities is None:
+            coverage.skipped(
+                "capabilities",
+                "capabilities",
+                PREREQUISITE_MISSING,
+                "The instance did not publish a capabilities document.",
+            )
+        else:
+            coverage.measured("capabilities", "capabilities", True)
 
         schedule = settings.release_schedule
         if schedule is None:
@@ -2824,11 +3762,14 @@ def scan(
             proxies=settings.proxies,
         )
         vulnerabilities = [advisory.as_dict() for advisory in database.matches(version)]
+        upgrade_path = database.upgrade_path(
+            version, update_info.available_version or lifecycle.upgrade_to
+        )
 
         # The TLS layer is inspected once, before the findings are assembled, so
         # that the full detail can be published beside them: the findings say what
         # is wrong, the `tls` block says what was actually observed.
-        addresses = _resolved_addresses(hostname, settings)
+        addresses = _resolved_addresses(hostname, resolution_settings)
         tls_inspection = (
             inspect_tls(
                 hostname,
@@ -2854,15 +3795,161 @@ def scan(
             and _address_parity_may_run(settings, addresses)
             else {}
         )
-        # CAA is a DNS record, not a TLS handshake property, but it answers the
-        # same "who may issue this instance a certificate" question the TLS
-        # findings above do, so it is gated and reported alongside them.
-        caa_check = (
-            check_caa_record(hostname, settings.timeout)
-            if settings.extra_checks and probe.base_url.startswith("https://")
-            else None
+        # The same idea one layer up, and not gated on HTTPS: a version and a
+        # set of headers are answers to an HTTP request, so a plain-HTTP
+        # deployment behind a pool can disagree with itself just as well.
+        address_observations = (
+            _address_observations(probe.base_url, hostname, settings, addresses)
+            if settings.extra_checks and _content_parity_may_run(settings, addresses)
+            else []
         )
-        caa_finding = Finding(*caa_check) if caa_check is not None else None
+        # Neither of these is a TLS handshake property, but both answer
+        # questions the findings above rest on - who may issue this instance a
+        # certificate, and whether the address the certificate was checked
+        # against can be trusted at all - so they are gated and reported
+        # alongside them. Two UDP queries, sequential rather than pooled: a
+        # pool started here would nest inside the one the findings open later.
+        dns_findings: list[Finding] = []
+        # Both return None for an unknown rather than for a pass - a bare IP,
+        # no resolver, or a query nothing answered - so whether an answer came
+        # back at all is what coverage has to record.
+        caa_answered = dnssec_answered = False
+        if settings.extra_checks and probe.base_url.startswith("https://"):
+            caa_check = check_caa_record(hostname, settings.timeout)
+            dnssec_check = check_dnssec(hostname, settings.timeout)
+            caa_answered = caa_check is not None
+            dnssec_answered = dnssec_check is not None
+            for dns_check in (caa_check, dnssec_check):
+                if dns_check is not None:
+                    dns_findings.append(Finding(*dns_check))
+        https_used = probe.base_url.startswith("https://")
+        if not settings.extra_checks:
+            for check, group in (
+                ("tlsInspection", "tls"),
+                ("tlsByAddress", "addressParity"),
+                ("addressObservations", "addressParity"),
+                ("caaRecord", "dns"),
+                ("dnssec", "dns"),
+                ("office", "integrations"),
+                ("calendar", "integrations"),
+            ):
+                coverage.skipped(
+                    check,
+                    group,
+                    PROBE_DISABLED,
+                    "The extra checks are turned off for this scan.",
+                )
+        else:
+            for check in ("office", "calendar"):
+                coverage.measured(
+                    check, "integrations", bool(integrations[check].get("detected"))
+                )
+            if not https_used:
+                # There is no handshake to inspect and no certificate to ask
+                # who may issue one. That is a property of the deployment,
+                # not a gap in the scan.
+                for check, group in (
+                    ("tlsInspection", "tls"),
+                    ("caaRecord", "dns"),
+                    ("dnssec", "dns"),
+                ):
+                    coverage.skipped(
+                        check,
+                        group,
+                        NOT_APPLICABLE,
+                        "The instance answered over plain HTTP.",
+                    )
+            else:
+                if tls_inspection is None:
+                    coverage.inconclusive(
+                        "tlsInspection",
+                        "tls",
+                        UNREADABLE,
+                        "The TLS handshake produced nothing to inspect.",
+                    )
+                else:
+                    coverage.measured("tlsInspection", "tls", True)
+                for check, produced in (
+                    ("caaRecord", caa_answered),
+                    ("dnssec", dnssec_answered),
+                ):
+                    if produced:
+                        coverage.measured(check, "dns", True)
+                    else:
+                        coverage.inconclusive(
+                            check,
+                            "dns",
+                            TIMEOUT,
+                            "The DNS query returned no answer in time.",
+                        )
+            for check, ran, observed in (
+                ("tlsByAddress", https_used, bool(address_tls)),
+                ("addressObservations", True, bool(address_observations)),
+            ):
+                if not ran:
+                    coverage.skipped(
+                        check,
+                        "addressParity",
+                        NOT_APPLICABLE,
+                        "The instance answered over plain HTTP.",
+                    )
+                elif observed:
+                    coverage.measured(check, "addressParity", True)
+                elif not settings.check_all_addresses:
+                    coverage.skipped(
+                        check,
+                        "addressParity",
+                        PROBE_DISABLED,
+                        "Address comparison was not asked for.",
+                    )
+                elif len(_addresses_to_compare(settings, addresses)) < 2:
+                    coverage.skipped(
+                        check,
+                        "addressParity",
+                        NOT_APPLICABLE,
+                        "The name resolved to one address, which cannot "
+                        "disagree with itself.",
+                    )
+                else:
+                    coverage.inconclusive(
+                        check,
+                        "addressParity",
+                        UNREADABLE,
+                        "No address answered well enough to compare.",
+                    )
+        if not settings.ipv6_enabled:
+            coverage.skipped(
+                "ipv6Reachability",
+                "addressParity",
+                NO_ROUTE,
+                "This scanner has no IPv6 route, so IPv6 addresses were "
+                "not dialled.",
+            )
+        elif not addresses.get("ipv6"):
+            # The name publishes no IPv6 address. Nothing was missed, and
+            # calling that a failed reachability check would invent one.
+            coverage.skipped(
+                "ipv6Reachability",
+                "addressParity",
+                NOT_APPLICABLE,
+                "The name publishes no IPv6 address.",
+            )
+        else:
+            coverage.measured("ipv6Reachability", "addressParity", True)
+        if update_info.source == "disabled":
+            coverage.skipped(
+                "updateCheck",
+                "updates",
+                PROBE_DISABLED,
+                "The update check is turned off for this scan.",
+            )
+        elif update_info.error:
+            coverage.inconclusive(
+                "updateCheck", "updates", UNREADABLE, str(update_info.error)
+            )
+        else:
+            coverage.measured("updateCheck", "updates", update_info.available is not True)
+
         findings = (
             _collect_extra_findings(
                 probe,
@@ -2877,7 +3964,8 @@ def scan(
                 reverse_proxy,
                 tls_inspection,
                 _address_parity_finding(address_tls),
-                caa_finding,
+                dns_findings,
+                _content_parity_finding(address_observations, settings.ignore_hardenings),
                 verification_required=verification_required,
             )
             if settings.extra_checks
@@ -2893,10 +3981,40 @@ def scan(
         if tls_untrusted:
             LOGGER.debug("Scanned with certificate verification disabled: %s", tls_untrusted)
 
+        # Last of all the probes: once throttled, an instance answers 429 to
+        # everything after, and the demo-account check above must have been
+        # asked before that - a throttled demo login is not a rejected one.
+        login_throttling = (
+            _login_throttling(probe, identity_provider)
+            if settings.check_login_throttling and settings.extra_checks
+            else None
+        )
+
         # Waivers are applied last, so that every finding - including the ones
         # added above - can be waived, and so that the rating below is computed
         # from what the operator actually wants to be alerted about.
-        ignored_names = _apply_waivers(settings, findings, hardenings, headers, https)
+        # One clock for the whole scan. Re-reading it would let a check be
+        # waived at the top of a long scan and alert at the bottom.
+        waived_at = scan_clock()
+        ignored_names, waiver_records = _apply_waivers(
+            settings, findings, hardenings, headers, https, waived_at
+        )
+
+        # After the waivers, and unchanged by them. A waived check is a check
+        # that failed and that somebody accepted; recording it as anything
+        # else would let a waiver quietly improve the coverage figure, which
+        # is the one number that is supposed to describe the evidence rather
+        # than the policy. The acceptance is in `extraChecks[].ignored`.
+        if settings.extra_checks:
+            for finding in findings:
+                coverage.measured(finding.id, "extraCheck", finding.passed)
+        else:
+            coverage.skipped(
+                "extraChecks",
+                "extraCheck",
+                PROBE_DISABLED,
+                "The extra checks are turned off for this scan.",
+            )
 
         explanation = _compute_rating(
             eol=eol,
@@ -2907,6 +4025,24 @@ def scan(
             settings=settings,
         )
         rating = explanation.rating
+
+        # Every release worth moving to, replayed through the same version
+        # rules and held under the same finding caps as the rating above: an
+        # upgrade changes the version, never the proxy in front of it.
+        findings_ceiling = (
+            _rating_caps(MAX_RATING, findings)[0]
+            if settings.extra_checks and settings.extra_checks_affect_rating
+            else MAX_RATING
+        )
+        upgrade_rehearsal = rehearse_upgrades(
+            version=version,
+            database=database,
+            schedule=schedule,
+            findings_ceiling=findings_ceiling,
+            recommended=update_info.available_version or lifecycle.upgrade_to,
+            track=settings.release_track,
+            use_release_schedule=settings.use_release_schedule,
+        )
 
         scanned_at = datetime.now(timezone.utc)
         result: dict[str, Any] = {
@@ -2932,8 +4068,18 @@ def scan(
             "releaseType": lifecycle.release_type,
             "lifecycle": lifecycle.as_dict(),
             "ignored": ignored_names,
+            # Every configured waiver, active or expired, with what it
+            # matched. `ignored` stays a flat list of identifiers, so an
+            # existing reader is unaffected.
+            "waivers": waiver_records,
             "latestVersionInBranch": latest_in_branch,
             "vulnerabilities": vulnerabilities,
+            # What the recommended upgrade does about those advisories, and
+            # the lowest release that clears them all. None when there is
+            # nothing to clear or no release to move to.
+            "upgradePath": upgrade_path,
+            # What each candidate release would fix, leave and rate.
+            "upgradeRehearsal": upgrade_rehearsal,
             "hardenings": hardenings,
             "setup": {
                 "https": https,
@@ -2943,15 +4089,45 @@ def scan(
             },
             "tls": tls_inspection.as_dict() if tls_inspection is not None else None,
             "tlsByAddress": {family: item.as_dict() for family, item in address_tls.items()},
+            "addressObservations": [entry.as_dict() for entry in address_observations],
             "identityProvider": identity_provider,
             "reverseProxy": reverse_proxy,
+            "alternativeServices": alternative_services,
+            # Opt-in, never graded: whether failed sign-ins were slowed down.
+            "loginThrottling": login_throttling,
             "integrations": integrations,
             "scanner": "check-opencloud-security built-in scanner",
             "updates": update_info.as_dict(),
             "extraChecks": [finding.as_dict() for finding in findings],
             "advisorySources": database.sources,
             "capabilitiesAvailable": capabilities is not None,
+            # Additive, and read through `coverage.coverage_of`: a report
+            # written before this block existed is a report that does not
+            # say what it covered, not one that covered everything.
+            "coverage": coverage.as_dict(),
         }
+        # Digests of how this deployment is configured, so that a change an
+        # operator made shows up even when it moved no grade. Built from the
+        # document above plus the two things it keeps only the verdicts of:
+        # the response headers and the capabilities document. See
+        # `fingerprint.py` for what is hashed and what deliberately is not.
+        result["configuration"] = build_fingerprint(
+            result,
+            headers=dict(root_response.headers) if root_response is not None else None,
+            capabilities=capabilities,
+        )
+        # Built from the objects this scan was handed, at the moment it ran.
+        # A worker that refreshes its advisory database between the scan and
+        # the report would otherwise describe the scan with data it never saw.
+        result["provenance"] = build_provenance(
+            scanner_version=_scanner_version(),
+            scanned_at=scanned_at.isoformat(),
+            release_track=str(settings.release_track or ""),
+            advisories=database.advisories,
+            schedule=schedule,
+            waivers=waiver_records,
+            coverage=result["coverage"],
+        )
         # Derived from the document above and stored nowhere else: the plan is
         # the rating's own arithmetic replayed with one finding removed at a time.
         result["remediationPlan"] = remediation_plan(result)

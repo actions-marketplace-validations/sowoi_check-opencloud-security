@@ -101,7 +101,6 @@ PUBLIC_PAGES: tuple[PublicPage, ...] = (
         for document in DOCUMENTATION_PAGES
     ),
     PublicPage("/api", "api.html", "monthly", "0.7"),
-    PublicPage("/ai", "ai.html", "monthly", "0.6"),
     PublicPage("/about", "about.html", "yearly", "0.5"),
     PublicPage("/privacy", "privacy.html", "yearly", "0.4"),
 )

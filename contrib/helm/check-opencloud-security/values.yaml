@@ -1,0 +1,172 @@
+# Default values for check-opencloud-security.
+#
+# Two independent things live in this chart, and most people want only the
+# first: a CronJob that scans instances on a schedule, and the shared scan
+# service several consumers can query. See docs/kubernetes.md.
+#
+# No credential belongs in this file. Everything secret is read from a Secret
+# you created yourself, named under `existingSecret` - a values file is
+# committed, copied and templated by whatever deploys it, and a token in it
+# outlives every place you remember putting it.
+
+image:
+  repository: registry.example.com/check-opencloud-security
+  # Required, and deliberately without a default. The release schedule and the
+  # newest known OpenCloud version ship inside the image, so which tag you run
+  # is part of the verdict; `latest` would let that change under a scan whose
+  # result you are alerting on.
+  tag: ""
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+nameOverride: ""
+fullnameOverride: ""
+
+commonLabels: {}
+commonAnnotations: {}
+
+# A scan needs no access to the Kubernetes API, so it is never given a token.
+serviceAccount:
+  create: false
+  name: ""
+  annotations: {}
+
+# The scheduled scan: the closest thing to the systemd timer in
+# docs/scheduling.md. The exit code decides whether the Job failed, so a
+# WARNING or CRITICAL result surfaces as a failed Job without any extra glue.
+cronJob:
+  enabled: true
+
+  # Daily is right. Each run is a real scan of a real instance, not a lookup.
+  schedule: "17 6 * * *"
+  timeZone: ""
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 7
+  suspend: false
+  # The plugin never retries the whole check itself; a rerun would only scan
+  # the instance again a second later.
+  backoffLimit: 0
+  activeDeadlineSeconds: 900
+
+  # Required: the instances to scan. Several hosts are one Job, scanned in
+  # parallel, with the worst result deciding the exit code.
+  hosts: []
+  # - opencloud.example.com
+
+  port: null
+  checkHardening: true
+  updateWarning: false
+  # auto, rolling, production or lts. Empty means auto.
+  releaseTrack: ""
+  # Findings you have accepted, by identifier - see docs/hardening.md.
+  ignoreHardenings: []
+  warning: null
+  critical: null
+  # nagios, prometheus, otlp, checkmk, json, sarif or junit. The metric
+  # formats exit 0 whatever the instance scored, which makes a Job that
+  # reports a finding indistinguishable from a healthy one - use the default
+  # unless something downstream reads the output.
+  format: ""
+  extraArgs: []
+
+  # A Secret you created; nothing here writes one.
+  #   kubectl create secret generic opencloud-security \
+  #     --from-literal=releases-token='<github-token>' \
+  #     --from-literal=webhook-url='https://…'
+  existingSecret: ""
+  # Optional. Without it the update check queries GitHub anonymously, sharing
+  # sixty requests an hour with everything else leaving that address.
+  releasesTokenKey: ""
+
+  # A failed Job is a blunt signal; the webhook arrives with the reason
+  # attached. `on: always` matters for a push-style receiver: with `critical`
+  # it only ever hears from the check when something is wrong, and cannot tell
+  # a healthy instance from a Job that never ran.
+  webhook:
+    enabled: false
+    urlKey: webhook-url
+    on: always
+    format: generic
+    secretKey: ""
+
+  env: []
+  envFrom: []
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
+
+  podAnnotations: {}
+  podLabels: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# The shared scan service. Run this only if several consumers need the same
+# result: the plugin does not talk to it - it always scans in process - so
+# this is for dashboards, scripts and second monitoring systems.
+scanService:
+  enabled: false
+
+  replicas: 1
+  port: 8811
+  cacheTtl: 900
+  extraArgs: []
+
+  # Without a token every endpoint is open to anyone who can reach the pod,
+  # and the scanner will scan any host they name. The chart refuses to render
+  # the service without one.
+  existingSecret: ""
+  tokenKey: service-token
+
+  env: []
+  envFrom: []
+
+  service:
+    type: ClusterIP
+    port: 8811
+    annotations: {}
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+
+  podAnnotations: {}
+  podLabels: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+  # A scan service that can reach the whole cluster is a request forgery
+  # engine with a REST API. Switch this on and name the instances it may
+  # reach; an empty allowlist is refused rather than rendered as a policy
+  # that allows everything.
+  networkPolicy:
+    enabled: false
+    # allowedTargets:
+    #   - cidr: 192.0.2.10/32
+    #     ports: [9200]
+    allowedTargets: []
+    # DNS resolution inside the cluster, which every scan needs first.
+    allowDns: true
+
+# Applied to both workloads. The image already runs as an unprivileged user
+# and writes nothing, so a read-only root filesystem costs nothing.
+podSecurityContext:
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL

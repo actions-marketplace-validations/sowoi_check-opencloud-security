@@ -1,9 +1,8 @@
 # Documentation
 
-The [main README](../README.md) is the reference: every option, every setting
-and what the scanner actually checks. These pages are the longer material that
-was crowding it out - the deployment guides, and worked examples for the
-places this check tends to end up.
+Start with the [main README](../README.md) for installation, common commands and an
+overview of the checks. The guides below cover deployment, integrations and individual
+findings. [German](de/), [French](fr/) and [Spanish](es/) guides are also available in the web frontend.
 
 > **Just want a scan?** [scan.okxo.de](https://scan.okxo.de) runs the web
 > application from this repository - paste an address and read the result, no
@@ -28,7 +27,7 @@ places this check tends to end up.
 
 | Page | What it covers |
 |:-----|:---------------|
-| [What OpenCloud is, and how it differs from ownCloud and Nextcloud](what-is-opencloud.md) | The fork history behind all three projects, and the architecture, storage and release differences that follow from it |
+| [What OpenCloud is](what-is-opencloud.md) | OpenCloud’s architecture, release tracks and the limits of an external scan |
 
 ## Using the plugin
 
@@ -40,22 +39,26 @@ places this check tends to end up.
 | [Hardening measures, one by one](hardening.md) | What each hardening identifier means, what a failure indicates and which OpenCloud setting changes it - plus the two nobody can influence, and how to waive a finding |
 | [Reporting only what changed](baseline.md) | `--baseline` and `--warn-on-new`: the diff formats, what counts as a regression, and the rules that keep a baseline from hiding anything |
 | [Release tracks, end of life and the update recommendation](release-lifecycle.md) | Why the same version can be current on one track and dead on another, what the bundled schedule knows, and what `--release-track` changes |
+| [Keeping the release schedule and advisories current](reference-data.md) | `check-opencloud-scanner refresh-data`: the reviewed, Sigstore-verified data it fetches, the checks it applies either way, pointing the check at the files, a daily systemd timer, mirrors for hosts without internet access - and the unreadable-file pitfall that turns the end-of-life check off |
 
 ## Securing the instance itself
 
-Everything a scan cannot see. This scanner grades what an instance shows the
-internet; the page below is the rest of the job.
+An external scan cannot verify audit logging, firewall policy, backups or the full
+sign-in configuration. These guides cover those parts of operating OpenCloud.
 
 | Page | What it covers |
 |:-----|:---------------|
 | [Running OpenCloud in a secure infrastructure](secure-deployment.md) | Putting Keycloak, Authentik or Authelia in front of it; turning the audit log on and getting it off the host; firewalling the ports Docker publishes behind your back; what the people using the instance should know; and where continuous monitoring with this check fits |
+| [Putting an identity provider in front of OpenCloud, step by step](identity-providers.md) | The long version of the section above: three complete tutorials - Keycloak, Authentik, Authelia - the four OpenCloud clients all of them need, verifying it worked, and moving an instance that already has accounts |
 
 ## Deploying it
 
 | Page | What it covers |
 |:-----|:---------------|
 | [CLI option reference](cli-reference.md) | Every flag, its default and the environment variable that sets the same thing |
+| [The `check-opencloud-scanner` command](scanner-cli.md) | The second command the package installs: `scan` for the raw result document, `diff` between two saved results, `explain` for any finding identifier, `refresh-data`, `serve` and `configure` - with their options and exit codes |
 | [Icinga Director](icinga-director.md) | Creating the `CheckCommand`, data fields, service template and apply rule through the web UI |
+| [Checkmk](checkmk.md) | Both routes: an active check on the Checkmk server, or `--format checkmk` as a local check on an agent host that can reach an instance the server cannot |
 | [Automated deployment with Ansible](ansible.md) | The native and Docker roles, the variables, and deploying the Icinga2 objects without clicking |
 | [Scanning from the command line, in one line](docker-oneliner.md) | The published image as a single `docker run`, for whoever would rather not use the website: JSON output, private networks, waivers and a shell function |
 | [Scheduling](scheduling.md) | systemd timer and cron, for hosts with no Icinga2 or Nagios |
@@ -105,6 +108,11 @@ internet; the page below is the rest of the job.
   the three layers, how settings reach the scanner, how OpenAPI, Arazzo and
   MCP describe one workflow layer between them, what ships where, and where a
   new check, setting, endpoint or MCP tool belongs.
+- [`specs.md`](../specs.md) - the normative contract: numbered MUST/MUST NOT
+  clauses for the rating, the lifecycle, exit codes, waivers, configuration,
+  how a scan behaves towards the instance it is pointed at, and the web
+  application. The one file written to be checked clause by clause rather
+  than read for explanation.
 - [`adr/README.md`](../adr/README.md) - the architectural decision records,
   and the format a new one follows.
 - [`opencloud_local_scan/README.md`](../opencloud_local_scan/README.md) - the

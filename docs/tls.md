@@ -1,10 +1,8 @@
 # TLS and certificates: what this scanner checks, and why
 
-Everything on this page happens before a single byte of HTTP is exchanged.
-OpenCloud's proxy terminates TLS itself on port 9200 (or whatever sits in
-front of it does), and this scanner reads what that transport actually
-negotiated - protocol version, certificate, chain, cipher suite - the same
-way a browser or a sync client would, without any special access.
+The scanner examines the TLS connection, the certificate presented by the server and
+related DNS records. These checks describe the connection from the scanner’s network
+position; they do not enumerate every configuration a different client might encounter.
 
 <!-- TOC -->
 * [TLS and certificates: what this scanner checks, and why](#tls-and-certificates-what-this-scanner-checks-and-why)
@@ -17,6 +15,7 @@ way a browser or a sync client would, without any special access.
   * [7. Is the negotiated cipher suite and certificate policy sound](#7-is-the-negotiated-cipher-suite-and-certificate-policy-sound)
   * [8. Do IPv4 and IPv6 present the same service: `tlsAddressParity`](#8-do-ipv4-and-ipv6-present-the-same-service-tlsaddressparity)
   * [9. Is certificate issuance restricted: `tlsCaaRecord`](#9-is-certificate-issuance-restricted-tlscaarecord)
+  * [9a. Can the address itself be trusted: `tlsDnssec`](#9a-can-the-address-itself-be-trusted-tlsdnssec)
   * [10. Is revocation actually checkable: `tlsOcspStapling`](#10-is-revocation-actually-checkable-tlsocspstapling)
   * [11. Was the certificate published to a log: `tlsCertificateTransparency`](#11-was-the-certificate-published-to-a-log-tlscertificatetransparency)
   * [12. Is a replayable 0-RTT flight invited: `tlsEarlyData`](#12-is-a-replayable-0-rtt-flight-invited-tlsearlydata)
@@ -93,14 +92,13 @@ intermediate, without the root - which is what most issuers publish as a
 
 Two independent checks, both about time, in opposite directions:
 
-- **`tlsCertificate`** - remaining validity is below `--tls-min-days` (14 by
+- **`tlsCertificate`** - remaining validity is below `scanner.tls_min_days` (14 by
   default). Unlike most findings, this one has a date on it: it will fail
   whether or not anybody acts, so the usual cause is worth checking directly
   - an automated issuer that stopped renewing, or a reload that never reaches
   the process actually serving TLS.
 - **`tlsCertificateLifetime`** (low) - the certificate's validity period is
-  *longer* than the 398 days the CA/Browser Forum caps publicly trusted
-  certificates at. That points at a private authority or a hand-issued
+  *longer* than the scanner’s 398-day lifetime threshold. That points at a private authority or a hand-issued
   certificate, and the risk is the key: a certificate valid for years stays
   valid for years after the key behind it leaks, with nothing forcing the
   rotation that a short-lived certificate does on its own.
@@ -124,6 +122,12 @@ listener - an old certificate, a forgotten reverse-proxy config, or nothing
 answering at all - can bypass whatever TLS configuration is actually
 maintained on IPv4.
 
+It compares one address per family, and only the TLS identity. Several nodes
+behind one certificate present the same identity whatever they serve, so a
+node that missed a configuration rollout is caught by `addressParity` with
+`--all-addresses` instead - see
+[Every resolved address](scanner-checks.md#every-resolved-address).
+
 ## 9. Is certificate issuance restricted: `tlsCaaRecord`
 
 A DNS **CAA** (Certification Authority Authorization) record names which
@@ -136,6 +140,38 @@ is a DNS change at the zone, never an OpenCloud setting:
 ```
 example.com. CAA 0 issue "letsencrypt.org"
 ```
+
+## 9a. Can the address itself be trusted: `tlsDnssec`
+
+Everything above starts from an address a resolver handed over. Without
+**DNSSEC** that answer carries no signature, so one forged on the way to the
+resolver cannot be told apart from the real one - and the CAA record above,
+which restricts who may issue a certificate for the name, arrives over the
+same unauthenticated channel and can be forged along with it.
+
+The check asks the resolver this machine already uses - the one in
+`/etc/resolv.conf`, never a public one - for the scanned name with the DNSSEC
+bit set, and reads whether the resolver validated the answer, whether the
+answer carried signatures, and whether the resolver understood the question
+at all.
+
+That last part is why the finding is sometimes simply absent. A resolver that
+does not speak DNSSEC produces exactly the same silence an unsigned zone
+does, and reporting it would fail every scan run from behind such a resolver
+for a reason that has nothing to do with the instance. So:
+
+| What the resolver answered | `tlsDnssec` |
+|:---------------------------|:------------|
+| It validated the answer itself | passes |
+| It forwarded signatures without validating | passes - the zone is signed, which is the part the operator controls |
+| Neither, but it understood the question | **fails** - the zone is not signed |
+| It does not speak DNSSEC, or never answered | absent from the result entirely |
+
+This is a low finding, and the fix is at the domain's own zone rather than in
+OpenCloud: sign the zone at the DNS provider, then publish the resulting DS
+record at the *parent* zone - an unsigned delegation leaves a signed zone
+unprotected. See
+[ADR 0038](../adr/0038-a-dnssec-answer-nobody-could-have-given-is-not-a-finding.md).
 
 ## 10. Is revocation actually checkable: `tlsOcspStapling`
 
@@ -160,17 +196,14 @@ certificate it already fetched, using the same `openssl x509 -text` call that
 reads the key and signature algorithm - no extra connection and no extra
 process.
 
-Chrome and Safari refuse a publicly trusted certificate without SCTs
-outright, so this is an outage waiting for the next browser release rather
-than only a transparency gap, which is why it is a `medium` finding.
+The check looks specifically for SCTs embedded in the certificate. Missing embedded SCTs
+produce a `medium` finding, but do not by themselves prove a browser will reject the
+connection: Certificate Transparency evidence can also be delivered through other
+mechanisms.
 
-**The check only runs where the question is fair.** A private or self-signed
-authority cannot publish to a log, and OpenCloud generates a self-signed
-certificate during `opencloud init` - so on a large share of instances the
-honest answer is that the question does not apply. `tlsCertificateTransparency`
-is therefore withheld entirely unless the chain reaches a public root. It is
-also withheld when the local OpenSSL does not decode the extension at all:
-an absent finding is an unknown, never a pass.
+`tlsCertificateTransparency` is evaluated only when the chain reaches a public root.
+Private or self-signed certificates are outside this check’s scope. If the local OpenSSL
+cannot decode the extension, the finding is omitted rather than recorded as a pass.
 
 **Fix:** reissue through a certificate authority that embeds SCTs. Every
 public one has done so for years, Let's Encrypt included; a trusted
@@ -203,12 +236,10 @@ application is known to reject replayed non-idempotent requests.
 
 ## What is deliberately left unmeasured
 
-**Nothing here reports a pass it did not measure.** A build of OpenSSL that
-refuses to speak TLS 1.0 at all cannot tell the scanner whether the *server*
-would have accepted it, and a missing `openssl` binary means OCSP stapling
-cannot be probed. In both cases the check is left out of the result entirely
-rather than recorded as passed - a gap in the output is honest; a green tick
-for something nobody looked at is not.
+**Checks that cannot run are omitted from the result.** If the local OpenSSL
+build does not support TLS 1.0, the scanner cannot test whether the server
+accepts it. Without an `openssl` binary, it cannot probe OCSP stapling.
+Neither case is reported as a pass.
 
 **A certificate that fails verification is still read.** `getpeercert()`
 returns nothing for an unverified peer, so on the self-signed instances this
@@ -230,9 +261,8 @@ needing to be told which case it is looking at:
 
 `--insecure` (`COS_INSECURE`) skips step 1's verification requirement. The
 untrusted chain is still listed in the output; it simply stops counting
-against the rating. Use it for an instance you know is self-signed, so that a
-*genuinely* broken certificate elsewhere still stands out rather than being
-lost in an expected finding.
+against the rating. Use it only when you intentionally accept an untrusted
+certificate for that instance.
 
 ## Severity and rating impact
 

@@ -1,0 +1,1310 @@
+# Référence de la CLI du scanner
+## Quick start {#quick-start}
+Installez le plugin et lancez un check - une commande chacun : {#quick-start}
+
+```shell
+pipx install check-opencloud-security     # or: uv tool install / pip install
+check-opencloud-security --host opencloud.example.com
+```
+
+A fresh OpenCloud created with `opencloud init` serves TLS on port 9200 with a
+self-signed certificate. Point the check at it and tell it not to hold the
+certificate against the instance:
+
+```shell
+check-opencloud-security --host opencloud.example.com:9200 --insecure
+```
+
+For a permanent setup (Icinga2, systemd timer, cron, Docker, ...) see
+[Installation](#installation) below.
+
+# Features
+- **No API, no third party.** Every check runs in the plugin process, against
+  your instance. IP addresses, custom ports and internal hostnames all work,
+  and there are no rate limits
+- **Pending-update and end-of-life detection** against the [OpenCloud release
+  feed](#update-check): whether a newer release is out on your track, and
+  whether the running one still receives security fixes - with offline
+  `pinned` and `bundled` modes for air-gapped monitoring
+- **OpenCloud-specific checks**: unauthenticated Graph/WebDAV/OCS endpoints,
+  exposed `opencloud.yaml`, `proxy/server.key` and boltdb files, reachable
+  service debug ports (`/metrics`, `/config`, `/debug/pprof`), enabled basic
+  auth and version disclosure
+- **TLS inspection**: handshake, protocol version, certificate expiry and
+  trust, plus an automatic HTTPS -> HTTP fallback that reports the downgrade
+  instead of hiding it - see [TLS and certificates](tls.md)
+- **Hardening derived from what the instance actually reports**, not guessed
+  from its version number: HSTS strength, CSP quality, public-link password
+  and expiry enforcement, user-enumeration and password-policy settings
+- Configuration from a YAML file, environment variables or a secret provider
+  (Docker/Kubernetes secrets, files, environment, commands)
+- Standard Nagios/Icinga exit codes (OK, WARNING, CRITICAL, UNKNOWN) and
+  performance data (rating, vulnerability count, scan duration)
+- Configurable rating thresholds for WARNING and CRITICAL
+- Optional hardening and security-header checks (`--check-hardening`)
+- Optional webhook notification when a check turns critical
+- Automatic retry with exponential backoff on transient network errors
+- Web proxy support, debugging, multi-host runs
+- Installable with pipx/uv/pip - or as a ready-to-use Docker image
+
+# Prerequisites
+- Python 3.10 or newer - or Docker, if you prefer the containerised route.
+- `requests` and `PyYAML`, installed automatically by pipx/uv/pip.
+- Network access from the monitoring host to the OpenCloud instance. Unlike a
+  hosted scanner, this plugin needs to reach the instance itself - which is
+  exactly what makes it work for instances that are not on the internet.
+
+# Installation
+Two commands cover the common case. Everything else - keeping the package
+current, shell completion, installing from a checkout, building the image
+yourself and the Icinga2/Nagios object definitions - is in
+**[Installing the plugin](installation.md)**.
+
+```shell
+pipx install check-opencloud-security          # or: uv tool install / pip install
+check-opencloud-security --host opencloud.example.com
+```
+
+On a monitoring host, where software is expected to arrive through the package
+manager and show up in the inventory, every release also carries a `.deb` and
+an `.rpm`:
+
+```shell
+sudo apt install ./check-opencloud-security_<version>_all.deb       # Debian, Ubuntu
+sudo dnf install ./check-opencloud-security-<version>-1.noarch.rpm  # RHEL, Fedora
+```
+
+Both install the check in `/usr/lib/nagios/plugins/`. Monitoring configuration is a
+separate step; see [Installing the
+plugin](installation.md#debian-ubuntu-rhel-fedora-deb-and-rpm).
+
+Prefer not to put Python on the host? The published image carries both entry
+points:
+
+```shell
+docker run --rm --entrypoint check-opencloud-security \
+  okxo/opencloud-scanner:latest --host opencloud.example.com
+```
+
+That one line, its JSON variant and the useful flags around it are collected in
+[Scanning from the command line, in one line](../docker-oneliner.md). The
+image's default command starts the web application, which is why the plugin is
+selected with `--entrypoint`.
+
+| Route | Where it is written up |
+|:------|:-----------------------|
+| pipx / uv / pip, and `--upgrade-self` | [Installing the plugin](installation.md#using-pipx--uv--pip-recommended) |
+| `.deb` and `.rpm`, for a monitoring host | [Installing the plugin](installation.md#debian-ubuntu-rhel-fedora-deb-and-rpm) |
+| Shell completion | [Installing the plugin](installation.md#shell-completion) |
+| Docker, and building the image | [Installing the plugin](installation.md#docker) |
+| Icinga2 and Nagios objects | [Installing the plugin](installation.md#icinga2--nagios) |
+| Icinga Director, through the web UI | [Icinga Director](icinga-director.md) |
+| Ansible, systemd, cron, Kubernetes | [Deployment guides](../../README.md#deploying-it) |
+
+Every release ships a CycloneDX SBOM and a Sigstore provenance attestation;
+see [Verifying what you downloaded](../../SECURITY.md#verifying-what-you-downloaded)
+if you would rather not take the artifact on trust.
+
+Keeping the package current matters more here than for a plugin that asks a
+hosted service: the OpenCloud release schedule and the newest known release
+ship *inside* the package (see
+[End-of-life detection](#end-of-life-detection)).
+
+# CLI Usage
+- `check-opencloud-security -h` will show you a manual.
+
+## Command
+```shell
+check-opencloud-security --host <Hostname> --check-hardening
+```
+
+## Options
+
+The [CLI option reference](cli-reference.md) lists every flag, default and
+corresponding environment variable. Use `--help` for the same options grouped by task.
+
+The main groups cover targets, probes, rating thresholds, release information,
+comparisons, execution, output and notifications.
+
+The handful you will actually type most days:
+
+| Option | Description |
+|:-------|:------------|
+| `-H, --host` | The instance to check. Hostname, IP or URL, optionally with a port; comma-separated for several |
+| `-d, --debug` | Explain the rating and every finding, at length |
+| `--check-hardening` | Also report missing hardening measures and security headers |
+| `-w, --warning` / `-c, --critical` | The ratings (0-5) at or below which the check warns or goes critical |
+| `--format` | `nagios`, `prometheus`, `otlp`, `checkmk`, `json`, `sarif` or `junit` |
+| `--ignore-hardening` | Accept a finding you are not going to fix, by name |
+| `--baseline` / `--warn-on-new` | Alert only on findings that are new or worse than last run |
+| `--verify-remediation` | Re-measure only the named findings after a fix, instead of a full scan |
+
+Precedence is always **command-line flag > environment variable >
+[configuration file](#configuration-file-and-secrets) > default**.
+
+# Vérifier une correction {#verifying-a-fix}
+Après avoir modifié un seul réglage - un en-tête dans le reverse proxy, un
+chemin qu'il ne doit plus servir - inutile d'attendre un scan complet.
+`--verify-remediation` prend les identifiants de constat de la sortie normale
+et n'exécute que les sondes qui les mesurent :
+
+```shell
+check-opencloud-security --host opencloud.example.com \
+  --verify-remediation Strict-Transport-Security,corsOriginRestricted
+```
+
+L'option est répétable et accepte des identifiants séparés par des virgules.
+Une famille comme `exposed`, `authentication`, `debugEndpoint` ou
+`versionDisclosure` vérifie tous ses membres. `OK` signifie que tout passe
+désormais ; `WARNING` ou `CRITICAL` (gravité élevée ou critique), qu'un
+constat échoue encore ; `UNKNOWN`, que seul un scan complet peut trancher
+(`eol`, `vulnerability:...`, `httpsAvailable`, parité d'adresses). Ni note, ni
+baseline, ni webhook, ni dérogation. `--format json` affiche le document de
+mesure.
+
+# Checking multiple hosts
+`--host` (and `COS_HOST`) accepts a comma-separated list of hostnames, e.g.:
+
+```shell
+check-opencloud-security --host opencloud1.example.com,opencloud2.example.com
+```
+
+Hosts run concurrently: the plugin creates one worker per host, up to the
+default ceiling of five. A single-host check remains strictly single-threaded,
+with no host worker pool. Set `--concurrency` or `COS_CONCURRENCY` to lower or
+raise the ceiling (up to 32), for example `--concurrency 2` for at most two
+hosts at a time. Each worker keeps its result and Nagios perfdata separate;
+the output starts with a one-line summary
+(e.g. `Checked 2 host(s): overall CRITICAL (1 CRITICAL, 1 OK)`), followed by
+one result block per host in the same order as the input. The plugin exits with the worst status found
+across all hosts, using the usual Nagios/Icinga priority: `CRITICAL` >
+`WARNING` > `UNKNOWN` > `OK`. A single host still produces the original,
+single-block output and exit code, so existing single-host setups are
+unaffected. Once the instances stop resembling each other, one configuration
+file per instance scales better - see
+[Checking a fleet of instances](many-instances.md).
+
+Whitespace around each hostname is ignored, and empty entries (e.g. from a
+trailing comma) are dropped. Because there is no hosted API involved, each
+entry may be a hostname, an IPv4 address, a bracketed IPv6 address or a full
+URL, with or without a port:
+`--host 10.0.0.5:9200,[2001:db8::1],https://cloud.example.com/`.
+
+## Toute une flotte dans un seul tableau {#reading-a-fleet-in-one-table}
+
+Les blocs de résultats par hôte sont écrits pour un système de supervision, et
+une douzaine d'entre eux font beaucoup à lire. `--format summary` imprime la
+même exécution sous la forme d'une ligne alignée par hôte :
+
+```shell
+check-opencloud-security \
+  --host opencloud1.example.com,opencloud2.example.com \
+  --format summary
+```
+
+```text
+HOST                    GRADE  VERSION  EOL   VULNS  NEW
+opencloud1.example.com  A+     7.2.4    no    0      -
+opencloud2.example.com  F      6.9.1    YES   3      -
+
+Checked 2 host(s): overall CRITICAL (1 CRITICAL, 1 OK)
+```
+
+Les colonnes sont la note décidée par ce greffon, la version mesurée par
+l'analyse, l'état du cycle de vie, le nombre d'avis qui s'appliquent et ce qui
+a bougé depuis la référence. Les lignes conservent l'ordre dans lequel les
+hôtes ont été donnés, et la dernière ligne est le même décompte que celui qui
+ouvre la sortie Nagios. Le code de sortie ne change pas - le pire statut de la
+flotte - : cela reste utilisable depuis une tâche cron qui envoie sa sortie.
+
+`EOL` vaut `YES` après la fin de vie, `soon` dans la fenêtre
+[`--eol-warning-days`](#options), et `no` sinon. `NEW` a besoin de
+[`--baseline`](#options) : sans référence, c'est `-`, car « rien de nouveau »
+et « aucun moyen de le savoir » sont deux réponses différentes. Avec une
+référence, c'est `new` lors de l'exécution qui l'enregistre, puis `+n` pour les
+constats qui n'étaient pas là avant. Un hôte dont l'analyse a échoué n'a pas de
+note : sa cellule `GRADE` porte le statut Nagios (`UNKNOWN`).
+
+Ce format est fait pour des personnes. Pour une machine, utilisez
+[`json`, `sarif` ou `junit`](#machine-readable-output-for-ci-jsonsarifjunit),
+qui portent les mêmes constats sous une forme analysable.
+
+## Mode politique CI {#ci-policy-mode}
+
+`-w`/`-c` et `--profile` jugent une instance sur sa **note**, un seul nombre
+qui tient lieu de tout ce que le scan a mesuré. C'est la bonne forme pour un
+système de supervision et la mauvaise pour une barrière de déploiement : une
+équipe qui exige HTTPS imposé et aucun compte de démonstration ne peut pas
+exprimer cela sous forme de note.
+
+`--policy` désigne un fichier qui l'énonce explicitement :
+
+```yaml
+minimum_rating: 4
+required_hardenings:
+  - httpsEnforced
+  - corsOriginRestricted
+forbidden:
+  - demoUsersDisabled
+```
+
+```shell
+check-opencloud-security --host opencloud.example.com --policy policy.yml
+```
+
+```text
+CRITICAL: 2 policy violation(s) - required hardening 'httpsEnforced' is not in place (+1 more)
+OpenCloud 7.2.4 on opencloud.example.com, rating: A, last scanned: ...
+Policy violations (2):
+  - required hardening 'httpsEnforced' is not in place
+  - forbidden finding 'demoUsersDisabled' is present
+```
+
+Les trois clés sont facultatives : `minimum_rating` est un plancher sous la
+note, de `0` (F) à `5` (A+), `required_hardenings` nomme les mesures qui
+doivent être en place, et `forbidden` nomme les identifiants de constats qui
+ne doivent pas être présents - une protection manquante, une vérification en
+échec ou un identifiant de vulnérabilité.
+
+Les identifiants sont ceux que le scan lui-même rapporte ; `--format json` les
+liste pour une instance et `--debug` explique chacun d'eux. Un fichier `.json`
+est lu comme du JSON, tout le reste comme du YAML, et
+[`config/policy.example.yml`](../../config/policy.example.yml) est un point de
+départ commenté.
+
+Une violation est **CRITICAL**, car il ne sert pas à grand-chose de faire
+échouer un pipeline avec un état qu'il est peut-être configuré pour tolérer.
+Une politique ne fait jamais qu'aggraver un verdict : une instance qui
+satisfait toutes les exigences conserve celui que les seuils, la protection,
+le cycle de vie et la référence ont déjà rendu, et la sortie indique
+`Policy: every requirement met`. La charge utile du webhook et `--format json`
+portent le même verdict sous `policy`.
+
+Deux règles méritent d'être connues avant d'en écrire une :
+
+* **Une dérogation n'excuse pas une exigence.** `--ignore-hardening` et
+  `--waive-until` sont l'exploitant local qui accepte un constat ; une
+  politique est l'organisation qui dit qu'il ne peut pas être accepté. Si une
+  dérogation pouvait faire taire une mesure exigée, une politique ne
+  décrirait rien d'applicable.
+* **Une faute de frappe est une erreur d'utilisation, pas un succès
+  silencieux.** Une clé inconnue, une note hors de `0`-`5` ou une mesure que
+  le catalogue ignore terminent l'exécution en `UNKNOWN` avec la raison. Une
+  politique existe pour faire échouer des déploiements : une règle qui
+  n'exige silencieusement rien serait le pire résultat possible.
+
+# Prometheus & Kubernetes integration
+
+`--format=prometheus` produces a one-shot text payload; the built-in exporter
+serves `/metrics` for pull-based monitoring, refreshing each configured target
+on the first scrape and then at the `--scrape-interval` (60 seconds by
+default):
+
+```shell
+check-opencloud-security --host opencloud.example.com --format=prometheus
+
+check-opencloud-security --host opencloud.example.com \
+  --prometheus-listen-port 9102
+```
+
+The exporter binds only to `127.0.0.1` by default. Set
+`--prometheus-listen-addr 0.0.0.0` only when a firewall or network policy
+limits who can scrape it - that is also what a container or a Kubernetes
+Deployment needs, alongside publishing port `9102`.
+
+It publishes `opencloud_security_rating_score`,
+`opencloud_security_vulnerabilities_total`,
+`opencloud_security_hardenings_missing_total`,
+`opencloud_security_failed_extra_checks_total`,
+`opencloud_security_support_days_remaining`,
+`opencloud_security_update_available`,
+`opencloud_security_scan_duration_seconds` and
+`opencloud_security_scrape_success`. The `host` label identifies the configured
+target; rating also carries `domain`, `product` and `version`.
+
+`--format=otlp` reports those same metrics as OTLP/JSON - one
+`ExportMetricsServiceRequest` for however many hosts were scanned, which is
+what an OpenTelemetry collector accepts at `/v1/metrics`:
+
+```shell
+check-opencloud-security --host opencloud.example.com --format=otlp \
+  | curl -sf -X POST http://collector.example.com:4318/v1/metrics \
+      -H 'Content-Type: application/json' --data-binary @-
+```
+
+Both metric formats report a failed scan as
+`opencloud_security_scrape_success 0` and exit `0`, because a collector that
+stopped receiving samples cannot tell an unreachable instance from a cron job
+nobody noticed had stopped. Use `--format nagios` where the exit code is the
+point.
+
+The [Prometheus and Grafana guide](prometheus.md) has the ServiceMonitor,
+the alerting rules, what to graph, the OTLP recipe and the legacy
+textfile/Pushgateway patterns; [Kubernetes](kubernetes.md) has the
+manifests and the Helm chart.
+
+# Machine-readable output for CI (json/sarif/junit)
+
+`--format json`, `--format sarif` or `--format junit` print one combined
+document for every scanned host - never one per host, even for a single one, so
+the output is always valid JSON/SARIF/XML. **The exit code keeps its Nagios
+meaning under every format** (`0`/`1`/`2`/`3`), so a CI step can gate on it
+exactly the way an Icinga check does; the document is a separate, additional
+artifact.
+
+- `json` is a JSON array of the same document described in
+  [Webhook notifications](#webhook-notifications), one object per host.
+- `sarif` is SARIF 2.1.0, for a code-scanning dashboard. Its findings come from
+  the same facts as the plugin's own text output, so a SARIF result never says
+  anything the Nagios line would not.
+- `junit` is JUnit XML with one `<testsuite>` per host and one `<testcase>` per
+  finding, plus an always-present `rating` case so a clean host still shows up.
+
+```shell
+check-opencloud-security --host opencloud.example.com --format sarif \
+  > opencloud-security.sarif
+```
+
+[`docs/output-formats.md`](output-formats.md) compares every `--format`
+value, including `nagios` and `prometheus`, and
+[Running the check from CI](ci.md) has the GitHub Actions and GitLab CI
+steps that upload the file.
+
+# Checkmk
+
+Checkmk runs this plugin either way round, and which one you want depends on
+where it should run from:
+
+- **As an active check on the Checkmk server.** Nothing here is needed:
+  Checkmk reads the Nagios line and its performance data natively. Add the
+  command line under *Setup > Services > Other services > Integrate Nagios
+  plugins*.
+- **As a local check on an agent host**, which is what you want when the
+  instance is only reachable from inside a network the Checkmk server is not
+  on. `--format checkmk` writes the agent's own line - state, service name,
+  metrics, detail - one per host in `--host`:
+
+  ```shell
+  check-opencloud-security --host opencloud.example.com --format checkmk
+  ```
+
+  ```text
+  0 "OpenCloud_Security_opencloud.example.com" rating=5|vulnerabilities=0|… OK: Server is up to date…
+  ```
+
+  [`contrib/checkmk/opencloud_security`](../../contrib/checkmk/opencloud_security) is
+  that call as a ready-to-install script.
+
+The scanned instance names the service, because the host running the agent is
+rarely the instance being scanned. **Install the local check in a numeric
+subdirectory** - `local/3600/` - or it runs on every agent call, once a
+minute, against somebody's production instance.
+[`docs/checkmk.md`](checkmk.md) has both routes in full, the metrics and
+what the states mean.
+
+# GitHub Action
+
+[`action.yml`](../../action.yml) runs the same check as a step, so a workflow can
+scan an instance on a schedule without installing anything itself. **The
+runner has to be able to reach the instance** - a hosted runner cannot see
+anything behind your firewall, which is what a self-hosted runner is for, and
+what the scan measures about TLS, enforced HTTPS and reachable debug ports is
+what an outsider on the runner's network sees.
+
+```yaml
+name: OpenCloud security check
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: sowoi/check-opencloud-security@v1.18.2
+        with:
+          target: opencloud.example.com
+          # Raises GitHub's anonymous rate limit for the release feed. The
+          # token the job already has is enough; it needs no scopes.
+          releases-token: ${{ github.token }}
+```
+
+**Pin the tag.** The release schedule and the newest known OpenCloud version
+ship *inside* the package, so which version runs is part of the verdict:
+`@v1.18.2` installs 1.18.2, while a branch or a commit SHA installs whatever
+the newest release happens to be on the day the workflow runs, and says so in
+a warning annotation.
+
+| Input | Default | What it does |
+| --- | --- | --- |
+| `target` | *required* | The instance to scan, as a hostname or a URL. |
+| `version` | the pinned tag | The release of the check to install. |
+| `format` | `json` | `json`, `sarif`, `junit` or `nagios`. |
+| `output-file` | `opencloud-security.json` | Where the output is written. |
+| `fail-on` | `warning` | `warning`, `critical` or `never`. |
+| `warning` | plugin default | Rating at or below which the result is a WARNING. |
+| `critical` | plugin default | Rating at or below which the result is CRITICAL. |
+| `check-hardening` | `true` | Count hardening measures towards the result. |
+| `ignore-hardening` | none | Hardening identifiers to waive, comma-separated. |
+| `release-track` | `auto` | `auto`, `rolling`, `production` or `lts`. |
+| `releases-token` | none | A token for the release feed's rate limit; needs no scopes. |
+| `summary` | `true` | Write the result to the job summary. |
+| `extra-args` | none | Further plugin flags, passed verbatim. |
+
+The step fails on anything worse than OK by default. `fail-on: critical`
+tolerates a WARNING but still fails on CRITICAL and on UNKNOWN, because a scan
+that did not run is not a pass; `fail-on: never` always succeeds and leaves the
+decision to a later step reading the outputs:
+
+| Output | What it holds |
+| --- | --- |
+| `exit-code` | The Nagios exit code: `0` OK, `1` WARNING, `2` CRITICAL, `3` UNKNOWN. |
+| `status` | `OK`, `WARNING`, `CRITICAL` or `UNKNOWN`. Only for `format: json`. |
+| `rating` | The rating, 0-5. Only for `format: json`. |
+| `rating-label` | The letter grade: `A+`, `A`, `C`, `D`, `E` or `F`. Only for `format: json`. |
+| `message` | The one-line summary. Only for `format: json`. |
+| `result-file` | The file the output was written to. |
+
+Configuration travels to the plugin as `COS_*` environment variables rather
+than on the command line, so a target does not end up in a public log.
+
+[Running the check from CI](ci.md) has the rest: feeding `format: sarif`
+to the code-scanning dashboard, reporting without failing the job, and the
+GitLab CI equivalent.
+
+# Environment variables
+Every option has a `COS_`-prefixed environment variable equivalent (see the
+table above). This is especially useful for Docker, systemd, and cron, where
+setting environment variables is often more convenient than editing a command
+line. **An explicit command-line flag always takes precedence over its
+environment variable.**
+
+```shell
+export COS_HOST=opencloud.example.com
+export COS_PROXY=http://proxy.example.com:3128
+check-opencloud-security
+```
+
+Scans do not read `.netrc`, `HTTP_PROXY`, `HTTPS_PROXY` or Requests' CA-bundle
+environment variables. Configure a proxy explicitly with `--proxy`/`COS_PROXY`
+and a private CA with `--ca-file`/`COS_SCANNER_TLS_CA_FILE`. Restricted webhook delivery
+pins its validated addresses and cannot use a resolving proxy; proxying a
+webhook requires the explicit `--allow-private-webhooks` opt-out.
+
+Boolean variables (`COS_DEBUG`, `COS_CHECK_HARDENING`, `COS_INSECURE`, ...)
+accept `1`, `true`, `yes`, or `on` (case-insensitive) to enable the
+corresponding flag; any other value (including unset/empty) is treated as
+disabled.
+
+The same values can also come from a YAML file or a secret provider - see
+[Configuration file and secrets](#configuration-file-and-secrets).
+
+# The built-in scanner
+The plugin has **one** backend: the scanner in
+[`opencloud_local_scan/`](../../opencloud_local_scan/README.md), which runs in the
+plugin process and works the verdict out itself.
+
+The scanner connects from the host where you run the plugin. It can therefore check
+private addresses and internal hostnames without sending the target or its results to a
+hosted scanning service.
+
+There is nothing to enable and no `--scan-backend` flag to pass. Everything
+below describes what the built-in scanner does and how to tune it.
+
+## What the scanner checks
+
+The scanner reads `/status.php`, capabilities, security headers and OIDC discovery, then
+probes paths and ports that should require authentication or remain private. Additional
+checks cover TLS, DNS, cookies, CORS, TRACE, exposed files, debug services and iframe
+settings. It also tests the published demo credentials against the instance’s own
+identity provider. Use `--no-extra-checks` to disable the additional probes.
+
+A failed additional check caps the rating (critical -> `D`, high -> `C`, medium
+-> `A`, low -> `A+`); set `scanner.extra_checks_rating: false` to report them
+without touching the rating.
+
+**[What the scanner reads, and what it deliberately does not](scanner-checks.md)**
+is the full inventory: every endpoint, every check and its severity, the
+observations that are recorded but never graded - who signs users in, what is
+in front of the instance, which office and calendar integrations are visible -
+how the version is read correctly, which debug ports are probed, and the
+questions a scan from outside cannot answer at all.
+
+The reasoning behind each group of checks has a page of its own:
+[`docs/csp.md`](csp.md), [`docs/tls.md`](tls.md),
+[`docs/cookies.md`](cookies.md),
+[`docs/authentication.md`](authentication.md),
+[`docs/sharing.md`](sharing.md), [`docs/exposure.md`](exposure.md),
+[`docs/embedding.md`](embedding.md),
+[`docs/lifecycle.md`](lifecycle.md) and
+[`docs/status-php.md`](status-php.md).
+
+Everything a scan cannot see - the audit log, the firewall, your identity
+provider's policy, your backups - is
+**[Running OpenCloud in a secure infrastructure](secure-deployment.md)**.
+
+## TLS and self-signed certificates
+
+OpenCloud's proxy terminates TLS itself on port 9200, and `opencloud init`
+generates a self-signed certificate for it. Many deployments then put a reverse
+proxy with a real certificate in front; many others do not. See
+[`docs/tls.md`](tls.md) for every TLS and certificate check this scanner
+runs and why each one matters.
+
+The scanner handles both without needing to be told which one it is looking at:
+
+1. HTTPS with certificate verification. If that works, everything is fine.
+2. HTTPS without verification. The scan continues and reports `tlsTrusted` as
+   a failed check - you still get the full result, plus the fact that the chain
+   is not trusted.
+3. Plain HTTP, reported as `httpsAvailable` (critical).
+
+`--insecure` (`COS_INSECURE`) skips step 1. The untrusted chain is still
+listed in the output; it just stops counting against the rating. Use it for an
+instance you know is self-signed, so that a genuinely broken certificate
+elsewhere still stands out.
+
+## Debug ports
+
+Every OpenCloud service has a debug listener that serves `/healthz`,
+`/readyz`, `/metrics`, `/config` and `/debug/pprof`. They bind to loopback by
+default, so a debug port that answers from your monitoring host is a genuine
+finding - usually a container that published the whole port range. The scanner
+probes the five most informative ones (9205, 9141, 9124, 9134, 9239), each a
+single TCP connect with a three second timeout, so a firewalled host costs up
+to 15 seconds.
+
+```yaml
+scanner:
+  check_debug_ports: true
+  debug_ports: [9205, 9141]
+  debug_port_timeout: 1
+  concurrency: 8            # run the probes in parallel instead
+```
+
+Turn them off entirely with `--no-debug-ports`. Which port belongs to which
+service, and how `scanner.concurrency` shortens a run without changing a
+verdict, is in
+[Debug ports](scanner-checks.md#debug-ports).
+
+## Every resolved address
+
+A scan dials the name once and sees whichever address the resolver put first.
+Behind a pool of nodes that is one node: the one that missed a configuration
+rollout - no HSTS, demo accounts still signing in, an older release - serves
+some of your visitors and none of your scans. `tlsAddressParity` does not see
+it either, because it only compares the TLS identity of the IPv4 and IPv6
+endpoints.
+
+`--all-addresses` (`COS_ALL_ADDRESSES`, `scanner.check_all_addresses`) repeats
+the version, header, hardening and demo-account checks against every address
+the name resolves to, and reports `addressParity` when they disagree:
+
+```
+addressParity (high): Differs from 198.51.100.1 - 198.51.100.4: version 7.1.0 (expected 7.2.3); headers Strict-Transport-Security fails
+```
+
+Every request still carries your hostname in `Host` and SNI; only the address
+the connection goes to changes, and the addresses come from the resolver's
+answer for that name and nothing else. The first address is the reference. The
+finding is as severe as the worst difference - demo accounts signing in on one
+node carry that finding's severity, another release is `high`, other drift is
+`medium` - and an address that resolves but does not answer fails it too.
+Waived headers and checks are left out of the comparison.
+
+It is off by default: it costs about a dozen requests per address, a demo
+sign-in among them, and a name with a single address - most deployments - has
+nothing to compare and gets no finding at all. It sees what DNS sees: nodes
+behind one load-balancer address, or a resolver that hands out a rotating
+subset of the pool, stay out of reach. IPv6 addresses are skipped when
+`scanner.ipv6_enabled` is off. The public web service never offers it; see
+[ADR 0042](../../adr/0042-every-resolved-address-is-compared-only-when-the-operator-asks.md).
+
+## End-of-life detection
+
+A version number on its own does not tell you whether an OpenCloud instance is
+still receiving security fixes, because OpenCloud maintains three kinds of
+releases at the same time:
+
+| Track          | Cadence              | Supported until               | Support      |
+|:---------------|:---------------------|:------------------------------|:-------------|
+| **Rolling**    | about every 3 weeks  | its successor is released     | community    |
+| **Production** | about every 6 months | the next production release   | professional |
+| **LTS**        | a production line    | 2 years after the line opened | professional |
+
+See the [OpenCloud release lifecycle][lifecycle] for the authoritative
+description.
+
+[lifecycle]: https://docs.opencloud.eu/docs/admin/resources/lifecycle/
+
+Where the tracks stand today, straight from the bundled schedule:
+
+<!-- release-schedule:start -->
+<!-- Generated by scripts/update_release_schedule.py. Do not edit by hand: the release workflow rewrites this block. -->
+
+| Track | Current release | Line | Line opened | Supported until |
+|:------|:----------------|:-----|:------------|:----------------|
+| **Rolling** | `8.0.0` | `8.0` | 2026-09-15 | the next rolling release |
+| **Production** | `7.2.4` | `7.2` | 2026-06-25 | the next production release |
+| **LTS** | `4.0.8` | `4.0` | 2025-12-01 | 2027-12-01 |
+
+Read from the [OpenCloud release lifecycle][lifecycle] on 2026-09-15.
+<!-- release-schedule:end -->
+
+A line that is out of support is rated `F` and reported as `CRITICAL`:
+
+```
+CRITICAL: The 7.3 rolling release line is end-of-life and has no security fixes. Upgrade to 7.4.0.
+OpenCloud 7.3.0 on cloud.example.com, rating: F, last scanned: 2026-08-12 15:18:08.839323
+Release lifecycle: 7.3 (rolling), out of support since 2026-08-03, upgrade to 7.4.0
+```
+
+A supported line reports how much time is left, which is what makes an LTS
+instance worth monitoring at all:
+
+```
+Release lifecycle: 4.0 (lts), supported until 2027-12-01 (476 days left)
+```
+
+The remaining window is also published as the `support_days_left` performance
+value, so a graph shows it shrinking - and going negative once the line is
+overdue.
+
+```yaml
+scanner:
+  use_release_schedule: true      # false disables the EOL check entirely
+  # release_schedule: /etc/check-opencloud-security/schedule.json
+```
+
+Or via the environment: `COS_SCANNER_USE_RELEASE_SCHEDULE`,
+`COS_SCANNER_RELEASE_SCHEDULE`.
+
+Why the *same* version can be current on one track and long dead on another,
+how the schedule is built and refreshed, and what happens when an instance is
+newer than the file it is judged against, is in
+**[Release tracks, end of life and the update recommendation](release-lifecycle.md)**.
+
+## Advisory database
+Known vulnerabilities are matched against the version range
+`[introduced, fixed)` of a local advisory database. Sources are merged in this
+order and de-duplicated by id:
+
+1. the file bundled with the package,
+2. every file in `scanner.vulnerability_db`,
+3. the JSON feed in `scanner.vulnerability_feed`.
+
+The native format (`{"advisories": [{"id": ..., "introduced": ...,
+"fixed": ...}]}`), the GitHub Advisory API format and OSV documents are all
+understood, so an air-gapped setup can mirror a feed to a file without
+conversion. A feed that is unreachable is logged and ignored - it never turns a
+healthy instance into `UNKNOWN`.
+
+> **The bundled database is only as complete as the published advisories.**
+> Few have been published for OpenCloud so far. `GHSA-vf5j-r2hw-2hrw` (fixed
+> in 4.0.3 and 5.0.2) is one of them, and the database is regenerated from OSV
+> as new ones appear. So `vulnerabilities: []` means "nothing in the database
+> you configured matched", not "this version is known to be safe". Most of the
+> rating comes from the configuration checks above. To pick up advisories
+> published after your package was built, see
+> [Keeping the release schedule and advisories current](reference-data.md),
+> or point `scanner.vulnerability_feed` at OSV or your own advisory mirror.
+
+## Running the scanner as a service
+
+The package ships a second entry point, `check-opencloud-scanner`. It runs
+exactement le même scanner, une fois ou comme service :
+
+```shell
+# one-shot: print the full result document as JSON
+check-opencloud-scanner scan opencloud.example.com
+
+# as a service, on this machine only
+check-opencloud-scanner serve --port 8811
+```
+
+| Endpoint                           | Behaviour                                 |
+|:-----------------------------------|:------------------------------------------|
+| `POST /api/queue` (`url=<host>`)   | Scan the host, return `{"uuid": ...}`     |
+| `GET /api/result/<uuid>`           | Return the stored result                  |
+| `POST /api/requeue` (`url=<host>`) | Discard the cache and scan again          |
+| `GET /api/scan?url=<host>`         | Convenience: scan and return the document |
+| `GET /healthz`                     | Liveness probe                            |
+
+The plugin does **not** talk to this service - it has no remote backend and
+always scans in process. The service exists so that several consumers (a
+dashboard, a script, a second monitoring system) can share one cached result,
+and so that scans can run from a host closer to the instance than the
+monitoring server is. Results are cached per host for `service.cache_ttl`
+seconds, 15 minutes by default.
+
+**It listens on `127.0.0.1` unless you say otherwise, and any other address
+requires a token.** The service scans whatever host a request names, and it
+does not validate that host against anything - that is the plugin's trust
+model, where an operator names their own instances. Reachable by strangers and
+unauthenticated, the same property makes it a way to read the inside of the
+network it runs on. So `--listen`/`COS_SERVICE_LISTEN` anywhere but loopback
+without `--token`/`COS_SERVICE_TOKEN` refuses to start rather than serving
+open. See [ADR 0030](../../adr/0030-a-listener-binds-loopback-and-a-wide-bind-needs-a-credential.md).
+
+Running it in a container, and the ready-made
+[`docker/docker-compose.monitoring.yml`](../../docker/docker-compose.monitoring.yml)
+that starts the scanner plus a check container with Docker secrets, are in
+**[Running the scanner as a service](scan-service.md)**.
+
+The plain `docker compose up` in that directory is the public web application
+instead - see [the web application](../webapp.md).
+
+# Update check
+There is no update endpoint on an OpenCloud instance, so "is this the newest
+release?" is answered by comparing the `productversion` the instance reports
+against the OpenCloud release feed on GitHub. `--update-source` selects where
+that number comes from:
+
+| Mode             | Behaviour                                                                      |
+|:-----------------|:-------------------------------------------------------------------------------|
+| `auto` (default) | Try the feed; on any failure fall back to the release bundled with the package |
+| `feed`           | Only the feed. A failure is reported as unknown rather than silently ignored   |
+| `pinned`         | Use `--latest-version`. No network access                                      |
+| `bundled`        | Use the release recorded in the shipped data file. No network access           |
+| `off`            | Skip the update check entirely (same as `--no-update-check`)                   |
+
+```shell
+# ask GitHub, with a token to stay clear of the anonymous rate limit
+check-opencloud-security --host opencloud.example.com \
+  --release-token 'secret://releases_token'
+
+# fully offline: compare against a version you control
+check-opencloud-security --host opencloud.example.com --latest-version 7.4.0
+```
+
+The anonymous GitHub API allows sixty requests per hour and IP address, shared
+with everything else on that address. A token - a fine-grained one without any
+permission is enough - raises that considerably. In `auto` mode a rate-limited
+lookup is not an error: the check falls back to the bundled release, which is
+as new as the installed package.
+
+The result is reported as an extra output line and as the `update_available`
+performance metric; with `--update-warning` a pending update turns an otherwise
+`OK` result into `WARNING`. A failing update check never aborts the security
+check.
+
+**Update recommendations stay on your release track.** Production and LTS installations
+are offered a release from their own track, while the newest overall release is reported
+separately. Set `--release-track` to override automatic detection. See [Release tracks,
+end of life and the update recommendation](release-lifecycle.md).
+
+# Configuration file and secrets
+All settings can live in a file instead of the command line, and the quickest
+way to write one is to let the plugin ask:
+
+```shell
+check-opencloud-security --configure
+```
+
+The wizard asks for the one required setting - the host - explains what it is
+for, and shows an example. Everything else has a working default, so the
+optional settings are offered group by group and only asked for if you say
+yes. The result is written as JSON with mode `0600`, and found automatically
+from then on:
+
+```shell
+check-opencloud-security          # no arguments needed any more
+```
+
+Use `--config` to say where it should go, e.g.
+`--configure --config /etc/check-opencloud-security/.env.json`. An existing
+file is shown and confirmed before it is replaced. The equivalent for the
+scanner on its own is `check-opencloud-scanner configure`.
+
+The file is read from `--config`, `COS_CONFIG_FILE`, `./.env.json`,
+`./check-opencloud-security.yml`, `~/.config/check-opencloud-security/.env.json`
+or `/etc/check-opencloud-security/` (first match wins). A `.json` suffix is
+read as JSON, anything else as YAML - the two are interchangeable. See
+[`config/check-opencloud-security.example.yml`](../../config/check-opencloud-security.example.yml)
+for a fully commented example.
+
+```yaml
+host: opencloud.example.com
+check_hardening: true
+
+scanner:
+  verify_tls: false        # self-signed instance
+  target_port: 9200
+  tls_min_days: 21
+  check_debug_ports: true
+
+releases:
+  mode: auto
+  token: secret://releases_token
+```
+
+Nested keys map one to one onto the environment variables: `scanner.target_port`
+is `COS_SCANNER_TARGET_PORT`, `releases.token` is `COS_RELEASES_TOKEN`,
+`scanner.tls_min_days` is `COS_SCANNER_TLS_MIN_DAYS`. Precedence is
+**command line > environment variable > configuration file > default**.
+
+**Secrets never have to be written into the file or the process environment.**
+Any value may instead be a `secret://`, `file://`, `env://` or `exec://`
+reference, or be named with a `_file` suffix pointing at a file - see
+**[Secrets in the configuration](configuration.md)**.
+
+# Rating thresholds
+The scanner grades an instance from `A+` (best) down to `F`. The plugin maps
+that grade to a numeric rating and compares it against two inclusive
+thresholds:
+
+| Rating | 5    | 4   | 3   | 2   | 1   | 0   |
+|:-------|:-----|:----|:----|:----|:----|:----|
+| Grade  | `A+` | `A` | `C` | `D` | `E` | `F` |
+
+- `-c, --critical` / `COS_CRITICAL` (default `1`, i.e. `E`) - a rating at or
+  below this value is `CRITICAL`.
+- `-w, --warning` / `COS_WARNING` (default `3`, i.e. `C`) - a rating at or
+  below this value is `WARNING`.
+
+Two rules always apply on top of the thresholds:
+
+- **Known vulnerabilities raise the state to at least `WARNING`**, even when
+  the overall rating still looks acceptable. The reported identifiers are
+  listed in the output.
+- **An end-of-life version is always `CRITICAL`**, because it receives no
+  security fixes at all.
+
+> **A single critical finding does not page by default.** The worst finding
+> caps the rating rather than setting it: critical caps at `2` (`D`), which the
+> default `--critical 1` still reports as `WARNING`. That is deliberate - it
+> keeps one exposed path from being indistinguishable from an end-of-life
+> instance. If a critical finding should wake somebody up, run with
+> `--critical 2`.
+
+A rating outside the documented `0-5` range yields `UNKNOWN`. `--critical`
+must not be higher than `--warning`, and both must be within `0-5`; otherwise
+the plugin refuses to run.
+
+```shell
+# Only alert once the instance is actually end-of-life
+check-opencloud-security --host opencloud.example.com --warning 1 --critical 0
+
+# Page on any critical finding
+check-opencloud-security --host opencloud.example.com --warning 4 --critical 2
+```
+
+## Threshold profiles
+`--profile` / `COS_PROFILE` names a ready-made set instead of spelling out
+the same five flags every time:
+
+| Profile | `--warning` | `--critical` | `--check-hardening` | `--update-warning` | `--eol-warning` |
+|:--|:--|:--|:--|:--|:--|
+| `strict` | `4` (`A`) | `2` (`D`) | on | on | `90` |
+| `ops` | `3` (`C`) | `1` (`E`) | on | off | `30` |
+| `lenient` | `2` (`D`) | `0` (`F`) | off | off | `0` |
+
+A profile decides **how the same measurements are judged, never how hard the
+instance is probed**. Leaving it unset changes nothing, and anything you set
+yourself - a flag, an environment variable or a file - still wins.
+
+# Hardening checks
+Besides the pass/fail checks above, the scanner reports which hardening
+measures the instance has in place. With `--check-hardening` /
+`COS_CHECK_HARDENING` these are evaluated as well.
+
+The names are terse because they end up in alert text. Run the plugin with
+`--debug` to get the explanation printed next to the finding, or read them all
+at once: **[Hardening measures, one by one](hardening.md)** says what each
+identifier means, what a failure actually indicates and which OpenCloud
+environment variable changes it - along with the two measures nobody can
+influence, and how to accept a finding you are not going to fix with
+`--ignore-hardening`.
+
+Two further entries can show up in the "Missing hardening" line: `httpsEnforced`
+when the instance does not enforce HTTPS, and the name of any security header
+from `setup.headers` that is absent or too weak (e.g.
+`Strict-Transport-Security`). `--debug` explains those too.
+
+Anything reported as missing is listed in the output and exported as the
+`hardenings_missing` performance metric. A result that would otherwise be `OK`
+is raised to `WARNING`; an existing `WARNING`/`CRITICAL` is never downgraded.
+
+```shell
+check-opencloud-security --host opencloud.example.com --check-hardening
+```
+
+Some findings are real but not actionable in your environment: a CSP you cannot
+tighten without breaking the web UI, an HSTS header your reverse proxy owns.
+`--ignore-hardening` accepts one by name, and the rating is recalculated
+without it - but the finding stays in the JSON result, flagged `"ignored":
+true`, because a waiver suppresses an alert and not the evidence:
+
+```bash
+check-opencloud-security --host opencloud.example.com --check-hardening \
+    --ignore-hardening 'cspWithoutUnsafeInline,hstsPreload'
+```
+
+See
+[Accepting a finding you are not going to fix](hardening.md#accepting-a-finding-you-are-not-going-to-fix)
+for the wildcards, what a waiver will not do, and why a configuration file is
+the better home for one.
+
+# Explaining a rating
+Use `--debug` (`COS_DEBUG=1`) to see how the rating was calculated and what each finding
+means. The explanation includes the starting score and every check that limits it.
+
+```shell
+check-opencloud-security --host opencloud.example.com --check-hardening --debug
+```
+
+```text
+--- Why this rating ---
+Starting point: 5/5 - the installed release is current and no advisory matches this version
+Failed check basicAuthDisabled [medium] caps the rating at 4/5 - WWW-Authenticate: Basic realm="..."
+Final rating: 4/5 (B). WARNING at or below C, CRITICAL at or below E.
+
+--- Missing hardening measures ---
+basicAuthDisabled: HTTP Basic authentication is enabled
+    The instance answers with a 'WWW-Authenticate: Basic' challenge, so usernames
+    and passwords can be replayed on every request without going through the
+    identity provider ... It is often deliberate: CalDAV, CardDAV and WebDAV
+    clients cannot speak OpenID Connect and have nothing else to authenticate
+    with, which is why this counts as a medium finding rather than a serious one.
+    Setting: PROXY_ENABLE_BASIC_AUTH
+    Fix: Set PROXY_ENABLE_BASIC_AUTH=false (the default) if nothing needs it. If
+    calendar, contact or WebDAV clients do, keep it on and give them app tokens
+    rather than account passwords.
+    Docs: https://docs.opencloud.eu/docs/dev/server/services/proxy/environment-variables
+--- end of explanation ---
+```
+
+The starting point is what the version and the advisory database alone would
+give: `5` up to date, `4` a patch update pending, `3` a whole release line
+behind, `2` known vulnerabilities, `1` critical or high ones, `0` end of life.
+Failed additional checks then cap it by severity - `critical` to `2`, `high` to
+`3`, `medium` to `4`, `low` to `5`. A check that failed but did not decide the
+outcome is still listed, marked as such, so no result disappears silently.
+
+Without `--debug` the output stays the size a monitoring system wants. The
+same breakdown is always present in the scan result as `ratingExplanation`, so
+it can be read without rerunning the check:
+
+```shell
+python -m opencloud_local_scan.cli scan opencloud.example.com | jq .ratingExplanation
+```
+
+Note that `--debug` also switches logging to `DEBUG`, so HTTP-level detail
+goes to stderr while the explanation goes to stdout with the rest of the
+plugin output.
+
+# What would raise the rating
+
+The remediation plan lists the changes that would improve the rating, in the order the
+scanner calculates their effect.
+
+Every result includes `remediationPlan`, calculated with the same rating function after
+removing findings one step at a time. The plan is derived from the result and needs no
+separate storage.
+
+```shell
+python -m opencloud_local_scan.cli scan opencloud.example.com | jq .remediationPlan
+```
+
+`--debug` prints the same list under the explanation:
+
+```text
+--- What would raise the rating ---
+Two fixes would raise this instance from 3/5 to 5/5.
+1. exposed:/opencloud.yaml [high] - then 4/5 (B)
+    A deployment file is publicly readable (/opencloud.yaml)
+    Observed: HTTP 200 with 4.1 kB of YAML
+    Fix: Stop serving the deployment directory. Proxy to OpenCloud's own
+    address rather than exposing the filesystem ...
+2. basicAuthDisabled [medium] - then 5/5 (A+)
+    HTTP Basic authentication is enabled
+    Fix: Set PROXY_ENABLE_BASIC_AUTH=false (the default) if nothing needs it ...
+```
+
+Three things about that list are worth knowing before acting on it:
+
+- **The order is not arbitrary.** Findings of the same severity share one
+  ceiling, so fixing the first of three medium findings changes nothing at
+  all. Steps that gain nothing on their own are still listed - with `still
+  4/5` rather than `then 5/5` - because leaving them out would suggest they
+  can be skipped.
+- **An update can be one of the steps.** Fixing findings can never lift a
+  rating above what the installed version allows, so the plan inserts the
+  upgrade at the point where it actually starts to gain something.
+- **Some findings can never be fixed.** Flags OpenCloud hardcodes are listed
+  separately as blocked, and they bound how far the plan can reach. See
+  [Measures that are not settings](hardening.md#measures-that-are-not-settings).
+
+Waived findings are listed too, marked as waived: a waiver silences an alert,
+it does not fix anything, and the plan says so.
+
+The same plan appears on the web dashboard, in the JSON, CSV, SARIF and PDF
+exports, and as the `plan_remediation` MCP tool.
+
+# Webhook notifications
+The plugin can post a JSON notification to an HTTP(S) endpoint when a check
+reaches a critical level. The feature is **optional and disabled by default** -
+it activates only once `--webhook-url` (or `COS_WEBHOOK_URL`) is set.
+
+```shell
+check-opencloud-security --host opencloud.example.com \
+  --webhook-url https://hooks.example.com/opencloud
+```
+
+- `--webhook-on` / `COS_WEBHOOK_ON` (default `critical`) selects the lowest
+  state that triggers a notification. Each level includes the more severe ones:
+  `critical`, `warning` (WARNING + CRITICAL), `unknown` (UNKNOWN + WARNING +
+  CRITICAL) and `always`.
+- `--webhook-format` / `COS_WEBHOOK_FORMAT` (default `generic`) posts the
+  body as a Slack Block Kit attachment (`slack`, also accepted by Mattermost
+  and the common Matrix webhook bridges), a Discord embed (`discord`), or a
+  push notification for an [ntfy](https://ntfy.sh) (`ntfy`) or
+  [Gotify](https://gotify.net) (`gotify`) server, instead of the plugin's own
+  flat document. The default is unchanged, so this is entirely opt-in:
+  ```shell
+  check-opencloud-security --host opencloud.example.com \
+    --webhook-url https://hooks.slack.com/services/... \
+    --webhook-format slack
+
+  check-opencloud-security --host opencloud.example.com \
+    --webhook-url https://ntfy.example.com/opencloud \
+    --webhook-format ntfy
+  ```
+  With `ntfy`, point `--webhook-url` at the **topic** URL: the topic is read
+  from it and the publication itself goes to the server root, which is the
+  only place ntfy reads JSON. A URL naming no topic is refused at startup
+  rather than failing on every notification.
+  Anything else - Alertmanager, a custom receiver - still wants the `generic`
+  document; [Webhook recipes](../webhook-recipes.md) has one for each.
+- `--webhook-header` / `COS_WEBHOOK_HEADERS` adds request headers, e.g. for
+  authentication. Repeat the flag, or separate entries with `;` in the
+  environment variable: `COS_WEBHOOK_HEADERS="X-Auth-Token: abc; X-Env: prod"`.
+- `--webhook-timeout` / `COS_WEBHOOK_TIMEOUT` (default `10`) limits the
+  webhook call; it is independent of the scan `--timeout`.
+- Webhook destinations that resolve to private, loopback, or link-local
+  addresses are blocked to prevent server-side request forgery. Set
+  `--allow-private-webhooks` or `COS_ALLOW_PRIVATE_WEBHOOKS=true` only for an
+  intentional internal receiver.
+
+Delivery reuses `--retries` / `--backoff-factor`. **A failing webhook never
+changes the check result** - the plugin appends `Webhook delivery failed` to
+its output and still exits with the state it measured, so a broken
+notification channel cannot hide (or fake) a vulnerable instance.
+
+When several hosts are checked in one run, each host that reaches the
+configured state produces its own notification. Scans that fail outright
+(unreachable host, broken TLS) notify as well when `--webhook-on` is set to
+`unknown` or `always`.
+
+> **Note:** treat the webhook as a supplement to your monitoring system, not a
+> replacement. It is fire-and-forget and is not retried beyond the configured
+> retry budget.
+
+**[Webhook recipes](../webhook-recipes.md)** has the full payload field by
+field, how to verify its signature, and an adapter for each receiver that wants
+its own JSON - Slack, Discord, ntfy, Alertmanager - along with
+[Uptime Kuma](../webhook-recipes.md#uptime-kuma), whose Push monitor takes
+the document as it is and treats silence as a failure, so a check that stopped
+running shows up too.
+
+# Reporting only what changed
+Use `--baseline` to save each run’s findings and compare the next run with them. With
+`--warn-on-new`, an unchanged result reports OK; a new finding or a lower rating
+restores the normal alert state.
+
+```bash
+check-opencloud-security -H opencloud.example.com \
+    --check-hardening \
+    --baseline /var/lib/check_opencloud/baseline.json \
+    --warn-on-new
+```
+
+The full state is still printed either way - only the alert is suppressed,
+never the evidence. **An end-of-life release always alerts**, however long it
+has been in the baseline.
+
+**[Reporting only what changed](baseline.md)** has the diff formats
+(`text`, `markdown`, `slack`, `json`), what counts as a regression, and the
+rules that keep a baseline from hiding anything.
+
+# Is the plugin itself up to date?
+`--self-update-check` checks PyPI at most once a day and adds a note when a newer plugin
+is available. Updating the plugin also refreshes its bundled release and advisory data.
+
+```
+Plugin update available: check-opencloud-security 1.2.0 is published, this is 1.1.0 (upgrade with --upgrade-self)
+```
+
+It is off by default, cached under `${XDG_CACHE_HOME:-~/.cache}/check-opencloud-security/`,
+and **never changes the exit code**: whether PyPI answered says nothing about
+the health of the instance being monitored. Every failure - no network, a
+proxy in the way, PyPI down - is silent.
+
+Upgrade with [`--upgrade-self`](installation.md#updating), or look at what it would do first
+with `--upgrade-self check` (`--upgrade-self --check-only` is the same thing).
+
+# Retries and backoff
+Transient network errors (timeouts, connection resets, `5xx` responses from the
+instance) are retried automatically with exponential backoff before the check
+gives up and reports `UNKNOWN`.
+
+- `--retries` / `COS_RETRIES` (default `2`) - number of retry attempts after
+  the initial try (so the default performs up to 3 attempts total).
+- `--backoff-factor` / `COS_BACKOFF_FACTOR` (default `0.5`) - base delay in
+  seconds; the wait before each retry doubles (`backoff_factor * 2^attempt`),
+  e.g. `0.5s`, `1s`, `2s`, ...
+- `--timeout` / `COS_TIMEOUT` (default `10`) - how long a single request may
+  take before it counts as a failure. Raise it on slow links or when scanning
+  through a proxy.
+
+Set `--retries 0` to disable retries entirely and fail fast. A retry re-runs
+the whole scan, so a high retry count on an unreachable host makes the check
+take noticeably longer than the timeout alone suggests.
+
+# Performance data
+Output includes standard Nagios/Icinga performance data after a `|`
+character, so Icinga2/Grafana/etc. can graph results over time:
+
+```
+rating=5;@0:3;@0:1;0;5 vulnerabilities=0;;;0; time=1.234s;;;0;
+```
+
+The `rating` metric carries the configured WARNING and CRITICAL thresholds in
+Nagios range syntax (`@0:3` means "warn inside 0-3"), so Icinga2 draws them on
+the graph without extra configuration.
+
+| Metric                | Meaning                                                           |
+|:----------------------|:------------------------------------------------------------------|
+| `rating`              | Numeric scan rating, `0`-`5` (`5`=A+ ... `0`=F), `U` if unknown   |
+| `vulnerabilities`     | Number of known vulnerabilities reported for the scanned version  |
+| `time`                | Time spent on the scan, in seconds                                |
+| `hardenings_missing`  | Missing hardening measures (only with `--check-hardening`)        |
+| `extra_checks_failed` | Number of failed additional checks                                |
+| `update_available`    | `1` when a newer OpenCloud release exists                         |
+| `support_days_left`   | Days until the release line loses support (negative when overdue) |
+| `cert_days_left`      | Days until the TLS certificate expires (negative once expired)    |
+
+`cert_days_left` is absent rather than zero when nothing was measured - a scan
+over plain HTTP, a host that refused the handshake, or a certificate whose
+dates would not parse. It carries the scan's own thresholds rather than a
+second opinion invented for the graph: warning at or below
+`scanner.tls_min_days`, the same margin the `tlsCertificate` finding fires at,
+and critical once the certificate has actually expired.
+
+Outside Icinga2, the same numbers reach Prometheus through the node_exporter
+textfile collector or a Pushgateway - see
+[Prometheus and Grafana](prometheus.md).
+
+# Caching
+The plugin holds no cache: every run scans the instance afresh, so there is
+nothing to invalidate and no flag to force a fresh scan.
+
+The one place caching does happen is the optional
+[scan service](#running-the-scanner-as-a-service), which reuses a result for
+`service.cache_ttl` seconds. `POST /api/requeue` discards it and scans again.
+
+# Example output
+
+A healthy instance:
+
+```Shell
+$ check-opencloud-security -H opencloud.example.com
+OK: Server is up to date. No known vulnerabilities.
+OpenCloud 7.4.0 on opencloud.example.com, rating: A+, last scanned: 2026-05-29 08:50:58.000000
+Additional checks: all passed
+Coverage: 84 checks evaluated, 6 skipped, 2 indeterminate, 1 network-limited | rating=5;@0:3;@0:1;0;5 vulnerabilities=0;;;0; time=0.731s;;;0; extra_checks_failed=0;;;0;
+```
+
+Entre les lignes de détail et les données de performance, une ligne
+`Coverage:` dit quelle part de la vérification a réellement abouti - `84
+checks evaluated, 6 skipped, 2 indeterminate, 1 network-limited`. Une
+vérification réussie et une qui n'a jamais eu lieu laissent sinon la même
+trace : la ligne nomme donc les lacunes. `skipped` est une sonde que l'analyse
+n'a pas lancée, `indeterminate` une qui s'est exécutée sans trancher, et
+`network-limited` une qui a dépassé le délai ou n'avait pas de route - DNSSEC,
+un fournisseur d'identité externe, un point d'accès facultatif -, ce qu'un
+autre point d'observation pourrait résoudre. Elle ne change ni la note ni le
+code de sortie, et un document antérieur au bloc de couverture n'imprime
+aucune ligne, car « ce rapport ne le dit pas » n'est pas « rien n'a été
+manqué ».
+
+A major release that no longer receives fixes - always CRITICAL, regardless of
+the thresholds:
+
+```Shell
+$ check-opencloud-security -H opencloud.example.com
+CRITICAL: The 7.3 rolling release line is end-of-life and has no security fixes. Upgrade to 7.4.0.
+OpenCloud 1.0.0 on opencloud.example.com, rating: F, last scanned: 2026-05-30 07:48:58.000000
+Additional checks: all passed | rating=0;@0:3;@0:1;0;5 vulnerabilities=0;;;0; time=0.842s;;;0; extra_checks_failed=0;;;0;
+```
+
+A single critical finding caps the rating at `D`, which the default thresholds
+report as WARNING - see [Rating thresholds](#rating-thresholds):
+
+```Shell
+$ check-opencloud-security -H opencloud.example.com
+WARNING: Rating D is at or below the warning threshold C, but no known vulnerabilities.
+OpenCloud 7.4.0 on opencloud.example.com, rating: D, last scanned: 2026-05-29 08:51:33.000000
+Additional checks failed (1): exposed:/opencloud.yaml | rating=2;@0:3;@0:1;0;5 vulnerabilities=0;;;0; time=0.860s;;;0; extra_checks_failed=1;;;0;
+```
+
+With `--check-hardening` on a production instance whose proxy still offers
+HTTP Basic authentication:
+
+```Shell
+$ check-opencloud-security -H opencloud.example.com --check-hardening
+WARNING: 3 hardening measure(s) missing, but no known vulnerabilities.
+OpenCloud 7.2.3 on opencloud.example.com, rating: B, last scanned: 2026-08-12 15:58:04.138671
+Release lifecycle: 7.2 (production), current release
+Missing hardening: basicAuthDisabled, cspWithoutUnsafeInline, publicLinkPasswordEnforced (run with --debug for what each means and how to fix it)
+Additional checks failed (1): basicAuthDisabled
+Update check (feed, installed 7.2.3): up to date | rating=4;@0:3;@0:1;0;5 vulnerabilities=0;;;0; time=1.835s;;;0; hardenings_missing=3;;;0; extra_checks_failed=1;;;0; update_available=0;;;0;1
+```
+
+The failed `medium` check limits the rating to `4` (`A`). A measure that is only
+evaluated by `--check-hardening` can raise the monitoring state to WARNING without
+changing the grade. Use `--debug` to see which rule applies; see [Explaining a
+rating](#explaining-a-rating).
+
+# Deployment guides
+The [documentation index](../../README.md) groups deployment instructions and worked
+examples by task. These are the most common starting points:
+
+| Guide | What it covers |
+|:------|:---------------|
+| [Running OpenCloud in a secure infrastructure](secure-deployment.md) | Everything a scan cannot see: an external identity provider, the audit log, the firewall, and where continuous monitoring fits |
+| [Installing the plugin](installation.md) | pipx/uv/pip, updating, shell completion, Docker, and the Icinga2 and Nagios objects |
+| [CLI option reference](cli-reference.md) | Every flag, its default, and the environment variable that sets the same thing |
+| [Worked examples](examples.md) | Complete invocations for the situations that come up most often |
+| [The public scan service](../webapp.md) | The web application: FastAPI, an ARQ worker and Redis, with queueing, SSRF protection and rate limits |
+| [Using the scanner from an AI agent](mcp.md) | The MCP endpoint, configured for Claude Code, Claude Desktop, Copilot, Cursor, Zed and Windsurf |
+| [Troubleshooting](troubleshooting.md) | The errors people actually hit, and the exit code reference |
+
+Something not working? Start with
+[Troubleshooting](troubleshooting.md), which also carries the exit code
+reference.
+
+# Examples
+Complete, copy-and-paste invocations for the situations that come up most
+often - the basics, release tracks, waivers, instances that are not on the
+public internet, thresholds and notifications, an Icinga2 apply rule and the
+scanner on its own - are collected in
+**[Worked examples](examples.md)**.
+
+```bash
+# A production instance, hardening reported, two findings accepted,
+# notified on anything worse than OK - a realistic complete invocation
+check-opencloud-security --host opencloud.example.com \
+    --release-track production \
+    --check-hardening \
+    --ignore-hardening 'cspWithoutUnsafeInline,hstsPreload' \
+    --update-warning \
+    --warning 4 --critical 2 \
+    --webhook-url https://hooks.example.com/opencloud \
+    --webhook-on warning
+```

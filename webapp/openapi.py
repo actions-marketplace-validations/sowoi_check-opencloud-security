@@ -36,6 +36,7 @@ OPERATION_IDS = (
     "createScanBatch",
     "getScan",
     "exportScan",
+    "scanBadge",
     "eraseInstanceData",
     "healthCheck",
 )
@@ -62,7 +63,10 @@ def _rate_limited() -> dict[str, Any]:
             "too many scans, or this target was scanned very recently and is "
             "in its cooldown. Read Retry-After, wait that many seconds and "
             f"try the same call again - at most {wf.SUBMIT_MAX_ATTEMPTS} "
-            "times. The whole scanner is open source and runs locally with "
+            f"times. A Retry-After above {wf.SUBMIT_MAX_WAIT_SECONDS} seconds "
+            "is a daily cap or a block for scanning hosts that were not "
+            "OpenCloud: stop and tell the user rather than wait it out. "
+            "The whole scanner is open source and runs locally with "
             f"no limits: {wf.SELF_HOST_URL}"
         ),
         "headers": {
@@ -118,7 +122,8 @@ def _schemas() -> dict[str, Any]:
                         "The OpenCloud instance to scan, as a URL or a bare "
                         "hostname. Must be publicly resolvable: private, "
                         "loopback and link-local addresses are refused with "
-                        "400."
+                        "400, as are any addresses this deployment has been "
+                        "asked not to scan."
                     ),
                     "examples": ["https://opencloud.example.com"],
                 },
@@ -764,6 +769,10 @@ def _paths() -> dict[str, Any]:
                         "The target was refused: not resolvable, or an "
                         "address this service will not probe. Do not retry."
                     ),
+                    "403": _problem(
+                        "This deployment scans approved instances only, and "
+                        "this one is not approved. Do not retry."
+                    ),
                     "422": _problem(
                         "The body carried a field this service does not "
                         "accept. The message names it. Do not retry."
@@ -951,6 +960,51 @@ def _paths() -> dict[str, Any]:
                     "404": _problem(
                         "Unknown or expired uuid, or a format this service "
                         "does not render. Final: do not retry."
+                    ),
+                    "409": {
+                        "description": (
+                            "The scan exists but has not finished. Wait "
+                            f"{wf.EXPORT_RETRY_SECONDS} seconds and ask again."
+                        ),
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ExportConflict"
+                                }
+                            }
+                        },
+                    },
+                },
+            }
+        },
+        "/api/scans/{identifier}/badge.svg": {
+            "get": {
+                "operationId": "scanBadge",
+                "tags": ["scans"],
+                "summary": "One finished scan as an SVG grade badge.",
+                "description": (
+                    "The grade, drawn as a small self-contained SVG with no "
+                    "script, no external font and no request to anywhere "
+                    "else. It carries the letter and nothing the scanned "
+                    "instance chose - no hostname, product or version.\n\n"
+                    "The badge lives exactly as long as the result it draws: "
+                    "when the scan's uuid expires this answers 404 like any "
+                    "other unknown one, so an image embedded somewhere "
+                    "permanent will stop resolving. Anywhere that URL is "
+                    "published, the uuid is published with it, and the uuid "
+                    "is the whole of the authorisation for the full "
+                    "result.\n\n" + wf.CONFLICT_NOTE
+                ),
+                "parameters": [identifier_param],
+                "responses": {
+                    "200": {
+                        "description": "The badge.",
+                        "content": {
+                            "image/svg+xml": {"schema": {"type": "string"}}
+                        },
+                    },
+                    "404": _problem(
+                        "Unknown or expired uuid. Final: do not retry."
                     ),
                     "409": {
                         "description": (

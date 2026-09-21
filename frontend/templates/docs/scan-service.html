@@ -11,20 +11,17 @@
   <p class="lede">{{ t('docs.scan-service.description') }}</p>
 </section>
 
-{% if locale != 'en' %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
 <article class="docs-article card section-gap" data-reveal lang="en">
-<p>The package ships a second entry point, <code>check-opencloud-scanner</code>, which runs
-the very same scanner as a long-lived HTTP service so that several consumers
-can share one cached result. The
-<a href="/documentation/reference#running-the-scanner-as-a-service">main README</a> describes the
-endpoints and the rule that a wide bind needs a credential; this page is the
-deployment detail.</p>
-<p>This is <strong>not</strong> the public web application - that is
-<a href="/documentation/web-service">the scan service</a>, which takes a URL from a stranger, queues it
-and renders the answer.</p>
+<p>Run <code>check-opencloud-scanner serve</code> to make the built-in scanner available as a
+persistent HTTP service. Several consumers can then share a cached result for each
+instance. The <a href="/documentation/reference#running-the-scanner-as-a-service">main README</a> lists the
+endpoints and token requirements; this guide covers deployment.</p>
+<p>For a browser interface with a scan queue, use the separate
+<a href="/documentation/web-service">public web application</a>.</p>
 <!-- TOC -->
 <ul>
 <li><a href="#running-the-scanner-as-a-service">Running the scanner as a service</a></li>
@@ -35,9 +32,8 @@ and renders the answer.</p>
 
 <h2 id="in-a-container">In a container</h2>
 <p>The service refuses to bind anything but loopback without a token. In a
-container that means two settings: bind the container's interfaces so the
-published port reaches the process, and set the token that makes doing so
-allowed.</p>
+container, bind to the container's interfaces so the published port reaches
+the process, and set a token to authenticate requests.</p>
 <pre><code class="language-shell">docker run -d --name opencloud-scanner -p 127.0.0.1:8811:8811 \
   -e COS_SERVICE_LISTEN=0.0.0.0 \
   -e COS_SERVICE_TOKEN=&quot;$(openssl rand -hex 32)&quot; \
@@ -68,10 +64,12 @@ docker compose -f docker-compose.monitoring.yml run --rm check
 <p>The plain <code>docker compose up</code> in that directory is the public web application
 instead - see <a href="/documentation/web-service">the web application</a>. Set that one up with
 <strong><code>docker/setup-wizard.py</code></strong> rather than by editing a compose file: it asks
-what the service should be reachable at, how hard it may scan and who may
-erase a result, then writes a commented compose file and a <code>.env</code> holding the
-Redis password and every other credential that file refers to. It is one
-stdlib-only Python file, so it runs on a host with Docker and nothing else -
+what the service should be reachable at, how hard it may scan, who may erase
+a result and what terminates TLS in front, then writes a commented compose
+file, a <code>.env</code> holding the Redis password and every other credential that file
+refers to, and - when you name one - the nginx, Apache, Caddy or Traefik
+configuration to go with it. It is one stdlib-only Python file, so it runs on
+a host with Docker and nothing else -
 see <a href="https://github.com/sowoi/check-opencloud-security/blob/main/docker/README.md#setting-up-the-whole-stack"><code>docker/README.md</code></a>.</p>
 <p>Everything in <code>secrets/</code> except the <code>*.example</code> templates is git-ignored - see
 <a href="https://github.com/sowoi/check-opencloud-security/blob/main/secrets/README.md"><code>secrets/README.md</code></a>.</p>

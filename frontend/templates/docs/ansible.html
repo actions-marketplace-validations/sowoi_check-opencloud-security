@@ -11,17 +11,15 @@
   <p class="lede">{{ t('docs.ansible.description') }}</p>
 </section>
 
-{% if locale != 'en' %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
 <article class="docs-article card section-gap" data-reveal lang="en">
-<p>Prefer not to click through Icinga Director or configure hosts by hand?
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/ansible/README.md"><code>ansible/</code></a> contains ready-to-use playbooks that install
-and configure check-opencloud-security - native or Docker - on one or more
-Icinga2 hosts, including the <code>CheckCommand</code> and <code>Service</code> objects described in
-<a href="/documentation/icinga-director">Icinga Director</a> and
-<a href="/documentation/installation#icinga2--nagios">Icinga2 / Nagios</a>.</p>
+<p>The playbooks in <a href="https://github.com/sowoi/check-opencloud-security/blob/main/ansible/README.md"><code>ansible/</code></a> install and configure the plugin on
+one or more Icinga2 hosts, using either a native installation or Docker. They also
+create the <code>CheckCommand</code> and <code>Service</code> objects described in <a href="/documentation/icinga-director">Icinga
+Director</a> and <a href="/documentation/installation#icinga2--nagios">Icinga2 / Nagios</a>.</p>
 <p>This page is the short version. <a href="https://github.com/sowoi/check-opencloud-security/blob/main/ansible/README.md"><code>ansible/README.md</code></a> is
 the reference, and it is the file kept in step with the roles themselves.</p>
 <!-- TOC -->
@@ -92,6 +90,9 @@ cases - set it explicitly.</p>
 <p>Leave <code>opencloud_check_interval</code> at <code>24h</code> or higher. Each run is a real scan
 against a real instance rather than a cached lookup, and nothing about an
 instance's rating changes from minute to minute.</p>
+<p>Every other option of the <code>CheckCommand</code> - <code>--eol-warning</code>, <code>--release-track</code>, <code>--ignore-hardening</code> and the rest - is set through <code>opencloud_check_extra_vars</code>, a map from the custom variable name without its <code>opencloud_</code> prefix to its value; a list repeats the flag once per element.</p>
+<pre><code class="language-ini">opencloud_check_extra_vars={&quot;eol_warning&quot;: 30, &quot;ignore_hardening&quot;: [&quot;hstsPreload&quot;]}
+</code></pre>
 <p>The full variable table, including the ones specific to each role, is in
 <a href="https://github.com/sowoi/check-opencloud-security/blob/main/ansible/README.md#variable-reference"><code>ansible/README.md</code></a>.</p>
 <h2 id="before-you-commit-a-change-to-the-role">Before you commit a change to the role</h2>

@@ -1,11 +1,9 @@
 # Release tracks, end of life and the update recommendation
 
-OpenCloud maintains a rolling, a production and an LTS track at the same
-time, so the *same* version can be current on one and long dead on another.
-This page explains how the plugin resolves that: how it reasons in release
-lines rather than version numbers, what the bundled schedule knows, why the
-update recommendation follows your track rather than the newest release, and
-what `--release-track` changes.
+OpenCloud maintains rolling, production and LTS tracks in parallel. A version’s support
+status therefore depends on its track as well as its number. This guide explains how the
+scanner uses release lines and the bundled schedule, chooses an update and applies
+`--release-track`.
 
 The [main README](../README.md#end-of-life-detection) carries the current
 state of each track and the settings that switch the check off.
@@ -158,3 +156,72 @@ Release lifecycle: 7.2 (rolling track declared), out of support since 2026-07-14
 
 An unknown value is ignored rather than treated as an error, so a typo in a
 config file degrades to the default behaviour instead of taking the check down.
+
+## Warning before the end of life
+
+End of life is `CRITICAL` on the day it arrives, which is too late to plan an
+upgrade. `--eol-warning DAYS` (`COS_EOL_WARNING`, YAML `eol_warning`) turns an
+otherwise `OK` result into `WARNING` once the running line has `DAYS` or fewer
+days of support left:
+
+```text
+WARNING: The 7.2 release line reaches end of life on 2026-10-14 (20 days left). Upgrade to 7.4.0.
+```
+
+It only ever raises `OK`; a result that is already `WARNING` or `CRITICAL`
+keeps its own line. A line without a published end-of-life date has nothing to
+count down and never warns. `0`, the default, turns it off.
+
+## Does the upgrade clear the advisories?
+
+When the installed release carries known advisories, the scan records
+`upgradePath`: what moving to the recommended release does about each one.
+
+```json
+{"upgradePath": {"target": "7.2.4", "fixes": ["GHSA-aaaa"],
+  "stillAffected": ["GHSA-bbbb"], "safeVersion": "7.3.0"}}
+```
+
+Every range of an advisory is checked against the target, so a fix backported
+to another line counts. `safeVersion` is the lowest release past every fix the
+target still lacks, or `null` when one of them has no fix yet. The plugin
+prints it as a detail line:
+
+```text
+Upgrade path: 7.2.4 fixes GHSA-aaaa but is still affected by GHSA-bbbb; 7.3.0 is the first release that clears them all.
+```
+
+## Rehearse every upgrade
+
+`upgradePath` covers the one release the scan recommends. `upgradeRehearsal`
+covers every release worth moving to: the newest patch of the installed line
+and the newest release of each later line (only lines on the declared release
+track, when the instance declares one). For each one it lists the advisories
+the release `fixes`, those it is `stillAffected` by, any it `introduces`,
+whether it is `endOfLife`, and the `rating` the scan would give it.
+
+```json
+{"upgradeRehearsal": [
+  {"version": "7.2.4", "line": "7.2", "recommended": false,
+   "fixes": ["GHSA-aaaa"], "stillAffected": ["GHSA-bbbb"], "introduces": [],
+   "endOfLife": false, "versionRating": 2, "rating": 2}
+]}
+```
+
+The rating uses the same version rules as the scan. The instance's failed
+checks still cap it (`versionRating` is what the version alone would allow),
+because an upgrade changes the release, not the proxy in front of it. The
+plugin prints one detail line, graded with its own rating letters:
+
+```text
+Upgrade rehearsal: 7.2.4 fixes 1 finding, leaves 1, reaches rating D; 7.3.0 fixes 2 findings, leaves 0, reaches rating A+.
+```
+
+The rehearsal knows only the bundled or refreshed schedule and advisory
+database. A release or advisory published later can change the answer.
+
+The web application renders the same entries as **What upgrading would buy
+you**, one row per candidate with the advisories it clears, the ones it
+leaves and the grade it would reach. Where the version alone would rate
+better than the row shows, the difference is this instance's own findings,
+which an upgrade does not touch.

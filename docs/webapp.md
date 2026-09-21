@@ -1,18 +1,16 @@
 # The public scan service
 
-A web application that runs the built-in scanner for anyone who visits it,
-grades the instance from **A+** to **F**, and forgets the whole thing an hour
-later. It is the same scanner the plugin uses; the web layer only serves.
+The web application runs the built-in scanner and presents its findings with a grade
+from **A+** to **F**. Results remain available in Redis for one hour by default. The web
+layer presents the scanner’s result without defining a separate rating.
 
-**A running instance is at [scan.okxo.de](https://scan.okxo.de)** - try it
-there before deploying one, or use it for a one-off scan. Everything below
-describes how to run your own, which has no rate limit and can reach instances
-a public service cannot.
+Try the public service at [scan.okxo.de](https://scan.okxo.de) for a one-off scan. The
+instructions below cover hosting your own service, including network access, retention
+and usage limits.
 
-It is **not** on PyPI. `pip install check-opencloud-security` gets the plugin
-and the scanner library, deliberately without FastAPI, Redis or a single
-template. The web application ships as a GitHub release asset,
-`check_opencloud_security_web.tar.gz`, or you build it from a checkout.
+The PyPI package contains only the plugin and scanner library. The web
+application is distributed separately as the GitHub release asset
+`check_opencloud_security_web.tar.gz`, or you can build it from a checkout.
 
 | | |
 |:--|:--|
@@ -21,13 +19,11 @@ template. The web application ships as a GitHub release asset,
 | **Needs** | No database, no account, no API key |
 | **Concurrency** | Fixed by the operator, never by a request |
 
-The HTML interface is available in English, German, Spanish and French. It
-uses the browser's weighted language preference on a first visit and provides
-an accessible switcher on every page; a chosen language is remembered in an
-`HttpOnly`, `SameSite=Lax` cookie. Generated operator-guide bodies remain
-English and are labelled as such, while their navigation and page chrome are
-translated. JSON APIs, agent contracts, exports and scan evidence are never
-translated.
+The interface supports English, German, French and Spanish. It initially follows the
+browser’s language preference; a choice made with the language switcher is remembered in
+an `HttpOnly`, `SameSite=Lax` cookie. Guide bodies are available in all four
+languages. API contracts, exports and measured evidence retain their original technical
+values.
 
 ## Contents
 
@@ -37,6 +33,7 @@ translated.
 - [How a scan flows through it](#how-a-scan-flows-through-it)
 - [Queueing rather than refusing](#queueing-rather-than-refusing)
 - [Isolation between scans](#isolation-between-scans)
+- [Comparing two scans](#comparing-two-scans)
 - [The SSRF guard](#the-ssrf-guard)
 - [Rate limiting](#rate-limiting)
 - [What gets logged](#what-gets-logged)
@@ -47,16 +44,18 @@ translated.
 
 ## Starting it
 
-The service is three containers - the pages, the worker that runs the scans,
-and the Redis between them - and the shortest honest way to get all three is
-to let the setup wizard write them. It is one Python file, uses the standard
-library alone, and needs no checkout:
+The setup wizard creates the three required services: the web application, the scan
+worker and Redis. It is a standalone Python script using the standard library and needs
+no repository checkout:
 
 ```bash
 mkdir opencloud-scanner && cd opencloud-scanner
 
-curl -fsSLO https://raw.githubusercontent.com/sowoi/check-opencloud-security/main/docker/setup-wizard.py
+base=https://github.com/sowoi/check-opencloud-security/releases/latest/download
+curl -fsSLO "$base/setup-wizard.py" -O "$base/setup-wizard.py.sha256"
+sha256sum --check setup-wizard.py.sha256    # macOS: shasum -a 256 --check
 chmod +x setup-wizard.py
+./setup-wizard.py --version
 ./setup-wizard.py
 
 docker compose up -d
@@ -71,7 +70,7 @@ erasure token, the signing key, the audit salt and the encryption key.
 
 ### Or the compose files this project ships
 
-Two shapes, both ready to `up`. The published image:
+To use the published image:
 
 ```bash
 git clone https://github.com/sowoi/check-opencloud-security.git
@@ -87,8 +86,8 @@ docker compose -f docker-compose.dockerhub.yml up -d
 Or the same stack built from the checkout, with `docker compose up --build -d`
 and no `-f`.
 
-Three settings decide whether that stack is fit to be reached by anybody else,
-and all three live in `.env` beside the compose file:
+Before making the stack publicly accessible, review these three settings in
+the `.env` file beside the compose file:
 
 | Setting | Why it matters |
 |:--------|:---------------|
@@ -139,11 +138,8 @@ python scripts/build_web_bundle.py
 
 ### A deployment of your own
 
-The two compose files are the two usual shapes. For anything else - a
-different port, an on-premise instance the SSRF guard would otherwise refuse,
-encryption at rest, a sign-in on `/mcp` - the wizard is the answer rather than
-editing one of them into place, either from a checkout or downloaded on its
-own:
+Use the wizard to configure a different port, internal targets, result encryption or MCP
+authentication. It can run from a checkout or as a standalone download:
 
 ```bash
 cd docker
@@ -165,8 +161,11 @@ values are derived from the answers, and the blueprint is written beside the
 compose file that mounts it. The two are independent: provisioning a provider
 does not close the endpoint, so the ordinary way in is to bring Authentik up
 with `/mcp` still open, get a token, and turn the guard on once it works.
-Neither is a default, and nothing of Authentik is written into a deployment
-that did not ask for it. When it is asked for, so are its mail settings
+Neither flag implies the other, and nothing of Authentik is written into a
+deployment that did not ask for it. Asked interactively, though, switching on
+`/admin` or the sign-in on `/mcp` makes *yes* the default at the provider
+question that follows, since most deployments asking for either have no
+provider yet. When it is asked for, so are its mail settings
 (`--smtp-host`, `--smtp-from`, `--smtp-security` and the rest), since an
 identity provider that cannot send a password recovery locks out the one
 account it starts with; the password comes from `AUTHENTIK_EMAIL_PASSWORD` in
@@ -220,6 +219,7 @@ Every setting is an environment variable, read once at startup.
 |:---------|:--------|:-------------|
 | `COS_WEB_REDIS_URL` | `redis://127.0.0.1:6379/0` | Where ephemeral state lives. `memory://` runs without Redis, for a single-process evaluation. Include the password when Redis requires one: `redis://:PASSWORD@redis:6379/0` |
 | `COS_WEB_RESULT_TTL` | `3600` | Seconds a scan stays readable. Also the TTL on every key |
+| `COS_WEB_COMPARISON_TTL` | `300` | Seconds a comparison against an uploaded report stays readable. Clamped to 300; shorter is honoured |
 | `COS_WEB_MAX_WORKERS` | `5` | Scans running at once |
 | `COS_WEB_SCAN_CONCURRENCY` | `4` | Probes in flight within one scan |
 | `COS_WEB_SCAN_TIMEOUT` | `15` | Seconds one HTTP probe may take |
@@ -227,10 +227,24 @@ Every setting is an environment variable, read once at startup.
 | `COS_WEB_VERIFY_TLS` | `true` | Verify the target's certificate. An untrusted chain becomes a finding either way |
 | `COS_WEB_ALLOW_PRIVATE_TARGETS` | `false` | Allow private, loopback and link-local targets. On-premise deployments only |
 | `COS_WEB_ALLOWED_HOSTS` | *(empty)* | Hostnames exempt from the SSRF guard, separated by `;` |
+| `COS_WEB_BLOCKED_TARGETS` | *(empty)* | Addresses this deployment will not scan, separated by `;`. Hostnames, `.suffix` domains and CIDR ranges. Outranks both settings above; an entry that does not parse refuses startup |
 | `COS_WEB_CHECK_DEBUG_PORTS` | `false` | Probe extra ports. Off in public: it is a port scan of somebody else's host |
+| `COS_WEB_IPV6_ENABLED` | `false` | Whether this service has outbound IPv6 of its own. Off, IPv6 addresses are never dialled and the IPv4/IPv6 TLS comparison is skipped, so a missing route on the scanning host is not reported as a fault of the instance |
 | `COS_WEB_IP_RATE_LIMIT` | `10` | Scans per client address per window. `0` disables |
 | `COS_WEB_IP_RATE_WINDOW` | `60` | The window, in seconds |
 | `COS_WEB_TARGET_COOLDOWN` | `300` | Seconds before the same instance may be scanned again. `0` disables |
+| `COS_WEB_PROBE_LIMIT` | `5` | Scans from one client address that may find no OpenCloud within `COS_WEB_PROBE_WINDOW` before that address is blocked. The same host scanned again counts again. Set on the web service **and** the worker. `0` disables |
+| `COS_WEB_PROBE_WINDOW` | `300` | The window those scans are counted in, in seconds |
+| `COS_WEB_PROBE_BLOCK` | `3600` | How long the first block lasts, in seconds |
+| `COS_WEB_PROBE_BLOCK_MAX` | `86400` | The longest a repeated block grows to; each block inside the repeat window lasts six times the one before |
+| `COS_WEB_PROBE_REPEAT_WINDOW` | `86400` | How long after a block ends the next one escalates, in seconds. `0` never escalates |
+| `COS_WEB_PROBE_IPV4_PREFIX` | `24` | The IPv4 network the probe block counts as one client. `32` counts single addresses |
+| `COS_WEB_CLIENT_IPV6_PREFIX` | `64` | The IPv6 network every client limit counts as one client |
+| `COS_WEB_DAILY_SCAN_LIMIT` | `50` | Scans per client per day, on top of the per-minute limit. `0` disables |
+| `COS_WEB_DNS_CONSISTENCY_CHECK` | `true` | Resolve a submitted name twice and refuse it when the answers share no address |
+| `COS_WEB_REQUIRE_APPROVAL` | `false` | Scan approved instances only; see [Approval mode](#approval-mode) |
+| `COS_WEB_APPROVED_TARGETS` | *(empty)* | Approved hostnames, `.suffix` domains, addresses and CIDR ranges, separated by `;`. An entry that does not parse refuses startup |
+| `COS_WEB_APPROVAL_DNS` | `true` | In approval mode, accept a `_check-opencloud-security` TXT record naming this service's hostname |
 | `COS_WEB_MAX_BATCH_TARGETS` | `10` | Targets one `POST /api/scans/batch` may carry. Each still counts against every limit |
 | `COS_WEB_TRUST_FORWARDED_FOR` | `false` | Read the client address from `X-Forwarded-For` |
 | `COS_WEB_TRUSTED_PROXY_HOPS` | `1` | How many proxies of your own sit in front. The header is read from the **right**, this many entries in, because that end is the only part a proxy writes |
@@ -245,6 +259,7 @@ Every setting is an environment variable, read once at startup.
 | `COS_WEB_SCHEDULE_REFRESH_HOUR` | `4` | The hour (UTC) of the daily read. Worth varying between deployments so they do not all arrive at once |
 | `COS_WEB_ADVISORY_REFRESH` | `true` | Ask the advisory feed once a day which vulnerabilities affect OpenCloud and rate scans against the answer. A refresh only ever adds an advisory, and never believes one with no version bounds |
 | `COS_WEB_ADVISORY_REFRESH_URL` | `https://api.osv.dev/v1/query` | Where the advisories are read from. Operator configuration, so it may point at a mirror; never a request field |
+| `COS_WEB_ADVISORY_REPOSITORY_URL` | `https://api.github.com/repos/opencloud-eu/opencloud/security-advisories` | OpenCloud's repository advisories, read with every refresh to add the ones OSV never received ([ADR 0071](../adr/0071-repository-advisories-are-a-second-advisory-source.md)). `off` skips them; a failure to read them keeps OSV's answer |
 | `COS_WEB_FRONTEND_DIR` | *next to `webapp/`* | Where templates and static assets live |
 | `COS_WEB_ENABLE_DOCS` | `false` | Serve the browsable `/docs` and `/redoc` pages. The machine-readable documents are public whatever this says |
 | `COS_WEB_ENABLE_MCP` | `true` | Serve the MCP endpoint at `/mcp` and register browser WebMCP tools. Ignored when the optional `mcp` extra is not installed |
@@ -262,6 +277,8 @@ Every setting is an environment variable, read once at startup.
 | `COS_WEB_ADMIN_SIGN_OUT_URL` | *(unset)* | Where the area's sign-out link goes. This service holds no session to end, so the exit belongs to the provider in front - for the bundled stack, `/outpost.goauthentik.io/sign_out`. Unset, the band names the operator and offers no way out. Only a local path or an `http(s)` URL is accepted; anything else refuses to start, because the value is rendered as an `href` on a page whose content policy forbids script |
 | `COS_WEB_ADMIN_AUDIT_BUFFER` | `200` | Recent audit records kept in memory for the live view, for a deployment that logs to stdout. `0` keeps none |
 | `COS_WEB_ADMIN_REFRESH_COOLDOWN` | `60` | Shortest gap between two operator-triggered refreshes of the same reference data. The area's dry run - which reads both sources and applies nothing - is held back for the same interval under a key of its own, so it stays available in the moment after a refresh reported a failure |
+| `COS_WEB_UPDATE_CHECK` | `true` | Ask GitHub whether a newer release of this service exists, for the operator's area only and at most every six hours. Set `false` with no outbound access |
+| `COS_WEB_ADMIN_UPDATE_DIR` | *(unset)* | A writable tmpfs (the compose files mount one at `/var/lib/opencloud-scan/update`). Set, the operator's area can install a newer release: the web bundle is downloaded from GitHub, verified against its build attestation, unpacked here, and the web and worker processes restart on it - a short downtime, lasting until the containers restart. Unset, the area only says an update exists |
 | `COS_WEB_AUDIT_LOG` | `false` | Write an audit record for every scan request, rejection and triggered limit |
 | `COS_WEB_AUDIT_LOG_TARGETS` | `false` | Record the target hostname in the clear instead of as a fingerprint. On-premise deployments only |
 | `COS_WEB_AUDIT_SALT` | *(random per process)* | Salt for the audit fingerprints. Setting one lets records correlate across a restart; rotating it ends that |
@@ -273,6 +290,7 @@ Every setting is an environment variable, read once at startup.
 | `COS_WEB_PURGE_SIGNING_KEY` | *(none)* | Signs the proof of deletion. Unset still erases, but the receipt cannot be verified afterwards |
 | `COS_WEB_EXPORT_SIGNING_KEY` | *(none)* | Adds an `X-COS-Signature` HMAC-SHA256 header to every JSON, CSV, SARIF and PDF export |
 | `COS_WEB_ENCRYPT_RESULTS` | `false` | Encrypt the stored result document with AES-256-GCM. Requires a key; a process asked to encrypt without one refuses to start |
+| `COS_WEB_WEBHOOK_SECRET` | *(none)* | Read at startup but not used by the web service, which sends no webhooks; signed webhooks are the plugin's `--webhook-secret`. Listed so that setting it is not mistaken for a typo |
 | `COS_WEB_ENCRYPTION_KEY_<n>` | *(none)* | A 32-byte key as 64 hex characters. The highest `<n>` encrypts, lower ones still decrypt, which is how a key is rotated |
 
 `COS_WEB_RELEASES_MODE` is `off` by default on purpose: a public deployment
@@ -375,6 +393,118 @@ The uuid is a capability: knowing it is the only way to reach the scan.
 - every key carries the TTL, including the one written while the scan is still
   queued. Nothing outlives the promise on the landing page.
 
+## Comparing two scans
+
+`GET /compare` answers the question that follows a remediation plan: *did it
+help?* It takes two uuids the reader already has - `?baseline=` for the
+earlier scan, `?current=` for the later one - and shows what was resolved,
+what is new, what is still open, and how the grade moved. A finished result
+page links to it with its own uuid already filled in, so only the earlier one
+has to be pasted.
+
+Comparisons use `opencloud_local_scan.baseline` through `workflows.compare_documents`,
+the same calculation used by the CLI and the `compare_scans` MCP tool. See [ADR
+0029](../adr/0029-a-comparison-is-two-live-results-and-one-arithmetic.md).
+
+**Nothing is stored.** The comparison is worked out from two results that both
+still exist and is written nowhere: this service keeps no scan history
+([ADR 0002](../adr/0002-no-scan-result-caching.md)) and a uuid is a capability
+with a TTL ([ADR 0007](../adr/0007-erasure-on-request.md)). A stored
+comparison would be a scan result under another name, outliving the results it
+describes and exempt from their erasure. The one case where a comparison *is*
+held - because the file it was drawn from is gone and nothing could recompute
+it - is [below](#comparing-against-a-report-you-uploaded), and it is held for
+five minutes, under a capability, and inside the erasure it would otherwise be
+exempt from.
+
+The answers it can give:
+
+| Situation | Answer |
+|:----------|:-------|
+| Both uuids resolve to finished scans | **200**, the comparison |
+| Either uuid is unknown or expired | **404**, naming *which* of the two is gone - "one of them has expired" sends somebody looking through both |
+| Either scan has not finished | **409**: there is nothing to compare yet, and 404 would send a reader to scan again while their scan is still running |
+| The same uuid twice | **422**. An empty diff of a scan against itself reads as "nothing is wrong" |
+| The two scans describe different instances | **422**, not compared. "Did the fix work" is a question about one instance, and two hosts compared by accident is a wrong answer nobody notices - `check-opencloud-scanner diff` refuses them too. See [ADR 0059](../adr/0059-a-comparison-refuses-two-different-instances.md) |
+
+Like `/scan/{uuid}` and for the same reason, the page renders results and is
+therefore never indexed and never in the OpenAPI schema, and each uuid remains
+the whole of the authorisation for the result behind it.
+
+## Comparing against a report you uploaded
+
+The comparison above needs both scans to still exist, and the interesting
+baseline is usually older than the hour a result lives. `POST /compare` takes
+the earlier side as a **file** instead: the JSON or the CSV from the downloads
+on a result page, uploaded from the reader's own disk, compared against a scan
+of this service that has not expired. Same page, same arithmetic, same
+verdicts - only where the earlier document came from changes. See
+[ADR 0057](../adr/0057-an-uploaded-report-is-evidence-not-a-scan.md).
+A report of a different instance than the scan it is compared with, or one
+that names no instance, is refused with 422 the same way.
+
+It is a browser feature and stays one: HTML only, never in the OpenAPI schema,
+and there is no MCP tool for it. An agent already has `compare_scans`, which
+takes two uuids - the shape an agent is in a position to supply.
+
+**The file is the only untrusted structure this service parses.** Everything
+else it compares came out of its own scanner minutes earlier, where the
+untrusted part is a *string inside* a document this service built. So an
+upload crosses one boundary, `webapp/imports.py`, and what comes out of it is
+not what went in: a result document rebuilt key by key from an allow-list -
+the fields `baseline.snapshot_of` reads, each type-checked, length-capped and
+shape-checked. A key nobody named there reaches nothing downstream.
+
+| Guard | Value |
+|:------|:------|
+| Largest file read | 256 KB, well below the 1 MB body limit that has already refused anything bigger |
+| Encoding | strict UTF-8; a NUL byte or an invalid sequence is refused rather than repaired |
+| Format | decided by looking at the bytes, never at the file name - which is read by nothing and never reflected into a page |
+| CSV rows | 2 000 |
+| JSON nesting | 20 levels |
+| Entries per block, characters per string | 500 and 300; a block carrying more entries than that is refused rather than read in part |
+| Finding identifiers | dropped unless spelled the way this scanner spells its own, and the count of everything that could not be read is shown |
+| Rate limit | its own bucket, with the client limit's numbers - a parse costs this service work and costs nobody else's instance anything |
+| Cross-site POST | refused before the limiter and before the parse |
+| A network serving a probe block | refused before both, and before the file is read: the block is a judgement about the client, not about one endpoint |
+
+**A fact the format never recorded is removed from both sides rather than
+guessed at.** The CSV is a flat table of findings; whether an update was
+pending and whether HTTPS was enforced live outside that table. Both are
+written as rows now, but a file downloaded before that was true is silent
+about them - and silence is not the answer "no". Those measurements are
+neutralised on *both* documents before the comparison, and the page names what
+it left out. JSON is the lossless round trip; CSV is a spreadsheet that
+happens to be readable back.
+
+**The file is never stored. The comparison is, for five minutes.** The upload
+is read once into memory and written nowhere. What survives is the comparison
+drawn from it, held under a fresh uuid4 in its own `compare:{token}:*`
+namespace so a reload and a shared link keep working - the one thing here that
+cannot be recomputed, because the file it came from is gone. The token behaves
+like a scan uuid: unknown, malformed and expired are one 404, nothing lists
+them, and results encryption applies where it is configured.
+`COS_WEB_COMPARISON_TTL` can shorten that window and cannot widen it.
+
+**An erasure request reaches it.** `DELETE /api/purge` walks the comparison
+namespace as well as the scan one and deletes every cached comparison naming
+that instance on either side, counting the keys into the same receipt so
+`remaining: 0` keeps meaning what it says. A five-minute TTL is not a reason to
+leave something out of an erasure - that is the argument
+[ADR 0007](../adr/0007-erasure-on-request.md) refuses for the result itself.
+
+| Situation | Answer |
+|:----------|:-------|
+| A readable report and a finished scan | **303** to `/compare/{token}` |
+| No file, or no uuid | **422**, saying which half is missing |
+| The later uuid is unknown or expired | **404** |
+| The later scan has not finished | **409** |
+| The file is empty, too large, not UTF-8, or not JSON or CSV | **422**, or **413** for size, in this service's own words - a rejected upload is never quoted back |
+| The file parses but is not a scan report | **422** |
+| Too many uploads from one network | **429** with `Retry-After` |
+| The network is serving a probe block | **429** with `Retry-After`, for as long as the block has left to run |
+| `GET /compare/{token}` after five minutes | **404**, exactly as for a token that never existed |
+
 ## The SSRF guard
 
 A public scan service forwards requests by definition, so the target is
@@ -393,7 +523,15 @@ checked before anything connects:
   address is either broken or lying;
 - `169.254.169.254`, `100.100.100.200` and `fd00:ec2::254` are refused
   explicitly. Link-local already covers the first, but naming them keeps the
-  refusal readable and survives a future carve-out.
+  refusal readable and survives a future carve-out;
+- names under wildcard and rebinding DNS services - `nip.io`, `sslip.io`,
+  `xip.io`, `traefik.me`, `localtest.me`, `lvh.me`, `vcap.me`,
+  `lacolhost.com`, `localhost.direct`, `local.gd`, `rbndr.us`, `1u.ms` - are
+  refused by name. They exist to point a name somewhere its reader did not
+  expect; the public address behind one can still be scanned by typing it;
+- a submitted name is resolved twice at once, and refused when the two answers
+  share no address (`COS_WEB_DNS_CONSISTENCY_CHECK`). Every address from both
+  answers is held to the rules above.
 
 **DNS rebinding** is answered by resolving twice: once when the request is
 accepted and again in the worker immediately before the scan. The window an
@@ -405,26 +543,172 @@ free.
 on-premise deployment scanning its own estate. Do not set it on anything a
 stranger can reach.
 
+### Addresses this deployment will not scan
+
+Everything above is a property of the address. `COS_WEB_BLOCKED_TARGETS` is a
+decision somebody made - an instance owner who asked to be left alone, a host
+somebody keeps submitting so the service hammers it, a range that is not a
+scanning target here however public it looks:
+
+```bash
+COS_WEB_BLOCKED_TARGETS="opencloud.example.com;.example.org;203.0.113.0/24"
+```
+
+- an entry is a **hostname**, a **domain suffix** written with a leading dot
+  (`.example.org`, or `*.example.org` - both mean the domain *and* everything
+  under it, and neither matches `notexample.org`), an **address**, or a
+  **CIDR range**;
+- hostnames are matched on the name, ranges on **every address the name
+  resolves to**. A hostname entry therefore refuses that name and not a second
+  name pointing at the same machine - exclude the range when the promise has
+  to hold whatever the instance is called;
+- it is checked at submission, again in the worker before the scan, and on
+  every redirect hop, so a target excluded while its job sat in the queue is
+  refused rather than scanned;
+- it **outranks `COS_WEB_ALLOWED_HOSTS` and `COS_WEB_ALLOW_PRIVATE_TARGETS`**.
+  Those exist to loosen the guard; this one answers whether the service scans
+  that address at all, and loosening must not reopen it. See
+  [ADR 0043](../adr/0043-an-operators-exclusion-outranks-every-allowance.md);
+- an entry that is none of those four shapes **refuses startup**, in the web
+  process and in the worker alike. A typo here is otherwise invisible: the
+  service comes up, answers normally, and scans exactly what it was told not
+  to.
+
+The refusal a visitor sees says only that the service has been asked not to
+scan that address. Which entry matched is operator configuration, and echoing
+it would make every refusal a read of the list.
+
+**The list has a second half that can be changed while the service runs.** The
+request that produces most exclusions - somebody writing to ask not to be
+scanned - rarely arrives at a convenient moment, and "after the next
+deployment window" is not an answer to it. So the operator's area at `/admin`
+has an *Exclusions* card that adds and withdraws entries, and:
+
+- an entry takes effect **from the next request, in every process**, with
+  nothing restarted: the API reads the list on each submission and the worker
+  when each job starts, so a scan already waiting in the queue is refused
+  rather than run;
+- what `COS_WEB_BLOCKED_TARGETS` declares **cannot be withdrawn there**. Those
+  entries are shown with no control beside them, and an attempt to remove one
+  is refused with a pointer to the environment - your compose file stays the
+  truth about what it declares;
+- entries added in the area live in **Redis**, so they are as durable as your
+  Redis is. Anything that must outlive a flush belongs in the environment
+  variable;
+- an entry is at most **253 characters**, the longest a hostname can be, here
+  and in `COS_WEB_BLOCKED_TARGETS` alike. Anything longer could never match a
+  target the service accepts, so it is refused as the typo it is;
+- the two halves are compared **parsed, not as text**, so `Example.COM` in the
+  environment and `example.com` in the area are one exclusion rather than two:
+  the area declines to store what the environment already holds, and refuses
+  to withdraw it under any spelling;
+- if the store cannot be read, a submission is **refused rather than scanned**
+  without the list - `503`, with the reason in the visitor's language and the
+  pointer at self-hosting, and an `exclusions_unreadable` line in the audit
+  trail rather than a rejected target.
+
+The card is the one thing in that area that writes; see
+[ADR 0044](../adr/0044-the-operator-area-may-write-the-exclusions.md) for the
+four properties that made it acceptable there, and
+[ADMIN.md](../ADMIN.md#the-operators-area-at-admin) for the area itself.
+
 ## Rate limiting
 
-Two independent limits, both in Redis, both expiring on their own:
+Every limit lives in Redis and expires on its own:
 
-- **per client address** - `COS_WEB_IP_RATE_LIMIT` scans per
-  `COS_WEB_IP_RATE_WINDOW`. Protects the service from one visitor;
+- **per client** - `COS_WEB_IP_RATE_LIMIT` scans per `COS_WEB_IP_RATE_WINDOW`,
+  and at most `COS_WEB_DAILY_SCAN_LIMIT` a day. Protects the service from one
+  visitor, and the daily cap from the patient version of a burst that stays
+  just under the per-minute limit all night;
 - **per target** - one scan per `COS_WEB_TARGET_COOLDOWN`. Protects an
   OpenCloud instance from the service. Claimed with `SET NX`, so two
-  simultaneous requests for the same instance cannot both win.
+  simultaneous requests for the same instance cannot both win;
+- **the probe block** - `COS_WEB_PROBE_LIMIT` strikes within
+  `COS_WEB_PROBE_WINDOW` block the client's network for `COS_WEB_PROBE_BLOCK`.
+  Protects everybody else's hosts from this service being used to find out
+  what answers where.
 
-Both answer **429** with a `Retry-After`. The client address is never stored:
-the key holds a truncated HMAC under a pepper generated at startup, which is
-enough to count and useless afterwards.
+All of them answer **429** with a `Retry-After`. The client address is never
+stored: a key holds a truncated HMAC under a pepper, which is enough to count
+and useless afterwards.
+
+**What counts as one client.** A single IPv4 address for the per-minute and
+daily limits, because strangers behind one /24 should not share an allowance;
+an IPv6 /64 (`COS_WEB_CLIENT_IPV6_PREFIX`) for every limit, because one
+subscriber is handed a whole /64 and could otherwise rotate through it for
+free. The probe block counts the IPv4 network `COS_WEB_PROBE_IPV4_PREFIX`
+(`/24` by default) too, so a block cannot be stepped around by moving to the
+next address along.
+
+**What is a strike.** A scan that ends with the scanner's own verdict of *no
+OpenCloud here* - `status.php` unreachable, not JSON, or another product - or
+that runs out of time; and a submission the guard refuses for what it points
+at: a private or internal address, an operator's exclusion, a wildcard or
+rebinding DNS name, a name whose lookups disagree, or - in approval mode - an
+instance nobody approved. The same host again is another strike, because
+asking one address over and over whether it answers yet is probing too. A
+finished scan never counts, whatever its grade, and neither does a typo, a
+name that does not resolve or an unsupported scheme.
+
+**Blocks grow when they are earned again.** A network blocked again within
+`COS_WEB_PROBE_REPEAT_WINDOW` after its last block ended waits six times
+longer - an hour, six hours, a day - up to `COS_WEB_PROBE_BLOCK_MAX`. Strikes
+from scans that finish during a block change nothing, and a network that
+stays away for the repeat window starts again at an hour.
+
+**The block is decided after the fact.** Only the worker learns whether a host
+was OpenCloud, so the submission hands it the network's fingerprint - never
+the address - under `scan:{uuid}:prober`, which the worker reads and deletes
+the moment the scan starts. The worker counts those strikes, the API counts
+refused targets, and both impose the block through the same keys; the API
+reads it before the client limit, so refusals during a block do not also spend
+the allowance the visitor comes back to. MCP and the workflows wait out a
+`Retry-After` of up to five minutes by themselves and hand anything longer - a
+block or a spent daily cap - back to the caller.
+
+**A host that is not OpenCloud is asked once.** The scanner reads `status.php`
+before anything else, and the web service sets
+`ScannerSettings.stop_when_not_opencloud`: an HTTPS answer that is not
+OpenCloud ends the scan there, instead of being asked again without
+certificate verification and then on port 80 as the plugin does for an
+operator looking for the endpoint that works. Silence is still retried, since
+that may only be an untrusted certificate.
+
+A legitimate operator whose own instance is down can meet the block too,
+after five attempts. That is the trade: the message says why, and points at
+running the scanner locally, which has no such limit.
+
+**The operator's area shows the guard working** - networks blocked right now,
+and blocks, strikes and spent daily caps today and over seven days - as
+counts. The block keys are counted, never read or listed.
+
+### Approval mode
+
+`COS_WEB_REQUIRE_APPROVAL=true` turns the public scanner into one that scans
+approved instances only, and refuses the rest with **403**. An instance is
+approved when it matches `COS_WEB_APPROVED_TARGETS` - hostnames, `.suffix`
+domains, addresses and CIDR ranges, the same shapes as the exclusions - or,
+with `COS_WEB_APPROVAL_DNS` (on by default), when its own zone publishes
+
+```text
+_check-opencloud-security.opencloud.example.com. TXT "check-opencloud-security=scan.example.net"
+```
+
+naming this service's hostname from `COS_WEB_PUBLIC_BASE_URL`. The record
+approves one deployment, not every copy of the project, and needs no secret:
+whoever can publish a TXT record under a name controls the name, which is the
+claim approval asks for. The lookup goes to the system resolver only, like the
+scanner's CAA check (ADR 0024), and a lookup that fails is a refusal. Approval
+is checked at submission. A deployment that requires approval with an empty
+list and the DNS proof off, or with an entry that does not parse, refuses to
+start.
 
 **A report page counts the wait down.** A finished report carries a **Scan
-again** button, and beside it the time before that is allowed. Both limits are
-read - `RateLimiter.peek_client` and `RateLimiter.peek_target`, which are the
-ordinary checks with the counting left out - and the longer of the two is what
-is shown, because a countdown that expired into a refusal from the *other*
-limit would be worse than none at all. Reading a limit must never spend it, or
+again** button, and beside it the time before that is allowed. Every limit in
+the way is read - `RateLimiter.peek_client`, `peek_daily`, `peek_target` and
+the probe block, which are the ordinary checks with the counting left out - and
+the longest is what is shown, because a countdown that expired into a refusal
+from *another* limit would be worse than none at all. Reading a limit must never spend it, or
 showing somebody their wait would be the request that caused it.
 
 The hostname comes from the record the uuid already unlocked, so this asks
@@ -475,9 +759,12 @@ routed and retained on its own:
 ```
 
 Three events: `scan_requested` for an accepted submission, `rate_limited` for
-a client limit or target cooldown that actually triggered, and
-`submission_rejected` for one that never became a scan - `unsupported_fields`,
-`target_rejected`.
+a client limit, target cooldown, daily cap (`rate_limit_daily`), probe block
+(`rate_limit_probe`) or report upload (`rate_limit_upload`) that actually
+triggered, and `submission_rejected` for one that never became a scan -
+`unsupported_fields`, `target_rejected`, `target_not_approved` - or for an
+uploaded report the parser would not read (`report_rejected`, carrying the key
+of this service's own refusal in `fields` and no part of the file).
 
 The point of the design is what it still does not write down:
 
@@ -549,6 +836,18 @@ mkdir -p /srv/opencloud-scan/audit
 sudo chown 10001 /srv/opencloud-scan/audit
 ```
 
+On a **rootless** Docker, uid 10001 in the container is a subordinate uid on the
+host, so run the `chown` inside a container instead - as the user namespace's
+root, which is you, and without sudo:
+
+```bash
+docker run --rm --user 0 --entrypoint chown \
+  -v /srv/opencloud-scan/audit:/target redis:8.10-alpine 10001 /target
+```
+
+Keep it apart from a Redis data directory: Redis writes as uid 999, and one
+directory can only belong to one of them.
+
 #### Letting the host's logrotate keep it
 
 A file on the host's filesystem is something the host already knows how to
@@ -597,11 +896,32 @@ and installing nothing gives you none, and the file grows until the disk is
 full. An unrecognised value refuses to start rather than guessing which you
 meant.
 
+Request bodies are limited to **1 MiB** and **30 seconds** before form, JSON
+or MCP parsing. Oversized bodies return 413; incomplete bodies time out with
+408. These fixed service-side limits do not change the scan queue or its
+overload behaviour. Apply connection and bandwidth limits at the reverse
+proxy too.
+
+Each running scan uses a child process. A job timeout or cancellation stops
+and reaps that process and its probe threads before the worker takes another
+job. The worker therefore needs permission to spawn processes; allow for one
+additional Python process per active scan when sizing memory and PID limits.
+See [ADR 0053](../adr/0053-a-scan-timeout-ends-its-process.md).
+
 ## Putting it behind a reverse proxy
 
 Worked configuration for nginx, Apache httpd, Caddy, Traefik and HAProxy -
 including the streaming the MCP endpoint needs and the paths a proxy must not
-rewrite - is in [Reverse proxies](reverse-proxy.md). The short version:
+rewrite - is in [Reverse proxies](reverse-proxy.md).
+
+[`docker/setup-wizard.py`](../docker/setup-wizard.py) will write that file for
+you for the first four: answer its reverse proxy question and the
+configuration lands beside the generated compose file, with TLS, the
+unbuffered `/mcp` stream, an `X-Forwarded-For` a client cannot choose, and -
+where this stack provides the outpost - the forward auth in front of `/admin`.
+See [the wizard's own notes](../docker/README.md#the-reverse-proxy).
+
+The short version:
 
 Terminate TLS in front, pass `X-Forwarded-For`, and only then set
 `COS_WEB_TRUST_FORWARDED_FOR=true`.
@@ -646,8 +966,10 @@ curl -sS -X POST http://127.0.0.1:8811/api/scans \
 `target_url` may be a bare hostname; `https://` is assumed when no scheme is
 given.
 
-**202** on success, **400** for a target that cannot be scanned, **422** for a
-field the service does not accept, **429** when a rate limit applies.
+**202** on success, **400** for a target that cannot be scanned, **403** for an
+instance a deployment in approval mode has not approved, **422** for a field
+the service does not accept, **429** when a rate limit or the probe block
+applies.
 
 The browser form posts to `/` rather than here, and gets **303** to
 `/scan/{uuid}`. Both paths are the same handler: a rejected submission is
@@ -694,12 +1016,10 @@ curl -sS -X POST http://127.0.0.1:8811/api/scans/batch \
 }
 ```
 
-**A batch is a convenience, never a discount.** Every target is put through
-exactly the pipeline a single submission goes through, in the order it was
-written: it counts against the client rate limit, it claims its own target
-cooldown, and it is validated by the same SSRF guard. Ten targets spend ten
-scans from the window, which is why the answer is two lists rather than one
-status - some can start while others wait.
+Each target in a batch passes through the same validation, client limit and target
+cooldown as a single submission, in input order. Ten targets consume ten scan
+allowances. The response separates accepted and rejected targets because some may be
+queued while others are refused.
 
 The same four fields are accepted, with `targets` in place of `target_url`,
 and anything else is a **422** naming it. `COS_WEB_MAX_BATCH_TARGETS` caps the
@@ -712,13 +1032,27 @@ self-hosting hint if it was a limit, **400** or **422** otherwise.
 
 ### `GET /api/scans/{uuid}/export/{format}`
 
-A finished scan as a file: `json`, `csv`, `sarif` or `pdf`.
+A finished scan as a file: `json`, `csv`, `sarif`, `pdf` or `html`.
 
 ```bash
 curl -sS -OJ http://127.0.0.1:8811/api/scans/0f4a1f22-.../export/pdf
 ```
 
-All four carry the remediation plan - the ordered fix list with the grade each
+`html` is the report as **one standalone file**. A result link is a capability
+with a time limit, which is right for a page a stranger can reach and wrong
+for the evidence somebody needs at the end of the quarter, so this is the same
+report without the service under it: the styling is inside the document, there
+is no script, no image, no font service and no stylesheet to fetch, and
+opening it makes no network request at all. The documentation links are the
+only addresses in it and are followed only if the reader chooses to. It
+carries the findings, the ignored ones with their waiver reasons, the
+remediation plan, the coverage gaps and the reference data the scan was judged
+against, and it says plainly that it is a copy: it keeps working after the
+link expires, it does not update, and erasing the scan does not erase it.
+There is nothing to operate in it - no form, no rescan control, no polling and
+no erasure token.
+
+All five carry the remediation plan - the ordered fix list with the grade each
 step reaches - as summary and step rows in the CSV,
 `runs[0].properties.remediation` in the SARIF, a "What gets you to A+" section
 in the PDF and `remediationPlan` in the JSON.
@@ -736,10 +1070,107 @@ a reporting library, for the same reason the frontend loads nothing from a
 CDN. The finished `GET /api/scans/{uuid}` response advertises the four URLs
 under `exports`, and the result page offers them as download buttons.
 
+#### Signed exports
+
+With `COS_WEB_EXPORT_SIGNING_KEY` set, every export response carries a
+signature of its exact bytes:
+
+```text
+X-COS-Signature: HMAC-SHA256=d68d9da7f04a4dcf38de5c64545141dc02c50c7476e76687e74c015383f34258
+```
+
+It is an HMAC-SHA256 over the body as sent, computed with the key's text as
+UTF-8. PDF and CSV are covered the same way as JSON and SARIF. It lets a CI
+job or an archive show later that a file is the one this service produced,
+and that nobody edited it since.
+
+**It is a shared secret, not a public signature.** Verifying needs the same
+key, so only someone who holds it can check a file: the operator, or a
+pipeline given the key through its secret store. A visitor cannot verify a
+download on their own, and must never be sent the key to do so. Treat it like
+a password, and generate a long random one:
+
+```bash
+openssl rand -hex 32
+```
+
+Save the header together with the file, because the signature is not
+embedded in the file itself:
+
+```bash
+curl -sS -D headers.txt -o result.pdf \
+  http://127.0.0.1:8811/api/scans/0f4a1f22-.../export/pdf
+grep -i '^x-cos-signature' headers.txt
+```
+
+Verify the **downloaded bytes**, never a parsed or re-serialised copy.
+Reformatting the JSON changes the bytes and breaks the signature. From a
+checkout of this repository:
+
+```bash
+COS_WEB_EXPORT_SIGNING_KEY='<key-from-secret-store>' \
+  uv run python scripts/verify_export.py result.pdf 'HMAC-SHA256=<hex-from-header>'
+```
+
+It prints `signature verified` and exits `0`, or prints `signature
+verification failed` and exits `1`. `--key-env NAME` reads the key from a
+different environment variable. Without a checkout, `openssl` computes the
+same digest, to compare with the hex after `HMAC-SHA256=`:
+
+```bash
+openssl dgst -sha256 -hmac "$COS_WEB_EXPORT_SIGNING_KEY" -r result.pdf
+```
+
+Rotating the key invalidates every signature made with the old one, since
+there is no key versioning as there is for
+`COS_WEB_ENCRYPTION_KEY_<n>`. Keep the old key wherever old files may still
+need checking. Without the variable, exports are sent unsigned and carry no
+header.
+
 **200** with a `Content-Disposition` naming the uuid, **409** while the scan
 has not finished - it exists, so 404 would send a caller into a retry loop
 against the wrong endpoint - and **404** for an unknown uuid or an unknown
 format.
+
+### `GET /api/scans/{uuid}/badge.svg`
+
+The grade as a small SVG, for pasting somewhere a picture says it faster than
+a link.
+
+```bash
+curl -sS http://127.0.0.1:8811/api/scans/0f4a1f22-.../badge.svg
+```
+
+```markdown
+![OpenCloud security](https://scan.example.com/api/scans/0f4a1f22-.../badge.svg)
+```
+
+It is written by `webapp/badge.py` the way the PDF is written by
+`reports.py` - no badge service, no external font, no script. An `<img>`
+pointing at somebody else's server would hand them the result URL in a
+referrer on every view, and that URL's uuid is the whole of the authorisation
+for the full result.
+
+The badge carries the letter and nothing the scanned instance chose: no
+hostname, no product string, no version. The colour is the dashboard's own
+tone for that rating, so a badge and the page it links to cannot disagree.
+
+**It lasts exactly as long as the scan does.** With the default
+`COS_WEB_RESULT_TTL` of one hour, an image embedded somewhere permanent stops
+resolving within the hour and answers **404** like any other expired uuid.
+That makes it right for a ticket, a chat message or a status dashboard while a
+result is current, and wrong for a README - unless the deployment serving it
+keeps results far longer, which is a decision with its own consequences for
+everybody whose scans it stores. There is deliberately no endpoint that
+renders a badge for a *hostname*: that would be a permanent, guessable handle
+on somebody's instance, and this service has none of those.
+
+**200** with `image/svg+xml` and `Cache-Control: no-store`, **409** while the
+scan has not finished, **404** for an unknown or expired uuid. The `no-store`
+is the service-wide default it never opts out of: every route that is publicly
+cacheable publishes metadata about *this service*
+([ADR 0031](../adr/0031-a-response-is-uncacheable-until-a-route-opts-in.md)),
+and a badge is a statement about somebody's instance.
 
 ### `DELETE /api/purge`
 
@@ -776,12 +1207,10 @@ without a port.
 and is `null` otherwise: an unkeyed hash of a hostname is not a pseudonym,
 because the space of hostnames is small enough to enumerate.
 
-**The receipt is the compliance artefact**, because by the time it is written
-the data it describes is gone. `deleted` counts what was removed, and
-`remaining` is a **second walk over the store after the deletion** - the only
-honest evidence available, and `complete` is simply `remaining == 0`. `notes`
-names what the service cannot reach: a result somebody already downloaded, and
-the audit trail if one is being kept. Verify a receipt months later with
+The receipt records what the deletion found and removed. `deleted` counts removed keys;
+`remaining` comes from a second inspection afterward, and `complete` means `remaining ==
+0`. `notes` identifies data outside the operation’s reach, including downloaded reports
+and any retained audit trail. Verify a signed receipt with:
 
 ```python
 from webapp.purge import verify
@@ -796,15 +1225,13 @@ controller - runs the purge and passes the receipt back. **200** with the
 receipt, **401** for a wrong secret, **422** for a target that is not a
 hostname, and **404** whenever `COS_WEB_PURGE_TOKEN` is unset.
 
-An instance with nothing stored answers 200 with zero counts, which is a proof
-in its own right: no data was held.
+If no matching data is found, the endpoint returns 200 with zero counts. The receipt
+describes the store at the time of that inspection.
 
 ### `GET /llms.txt`, `GET /openapi.json`, `GET /arazzo.json`, `GET /.well-known/ai.json`
 
-**Always public, and never behind a switch.** A description nobody can fetch
-describes nothing, and an agent that must be told to turn a document on has
-already failed to discover it. `COS_WEB_ENABLE_DOCS` now governs only the
-browsable `/docs` and `/redoc` pages.
+These discovery and contract documents are always public. `COS_WEB_ENABLE_DOCS` controls
+only the interactive `/docs` and `/redoc` views.
 
 The [OpenAPI](https://spec.openapis.org/oas/latest.html) document says what
 each endpoint accepts and returns, down to the shape of every response; the
@@ -896,8 +1323,10 @@ four dead buttons. Nothing is generated in the browser: the fragments come
 from the module the library tests cover, and a second implementation of that
 in JavaScript is the one thing on the page that must not exist. The explanations the landing page used to carry sit on
 their own pages - `GET /how-it-works`, `GET /grades`, `GET /documentation`,
-`GET /search`, `GET /api`, `GET /ai`, `GET /privacy` and `GET /about` - which
-are HTML only and stay out of the OpenAPI schema. `/grades` explains the
+`GET /search`, `GET /api`, `GET /privacy` and `GET /about` - which
+are HTML only and stay out of the OpenAPI schema. So does `GET /compare`,
+for a second reason: it renders two results and is therefore never
+indexable, exactly as `/scan/{uuid}` is not. `/grades` explains the
 plugin's real 0-5 map and its remediation ceilings; `/documentation` is the
 local CLI quick reference and guide index, and it is also the page that points
 away from this service: the Docker one-liners that run the same scan on the
@@ -917,10 +1346,11 @@ source files. ADR 0018 records the boundary.
 
 `/search` filters a checked-in, same-origin JSON index in the browser. Its
 manifest names public templates explicitly and cannot see Redis, the API,
-result pages, exports, UUIDs or submitted addresses. The release workflow
-rebuilds that file when a new version is published; ordinary CI deliberately
-does not, so one deployed release has one immutable search index. ADR 0019
-records the boundary.
+result pages, exports, UUIDs or submitted addresses. Every pull request to
+`main` rebuilds that file and commits it to the branch, and the release
+workflow rebuilds it again before building artefacts, so one deployed release
+has one immutable search index. ADR 0019 records the boundary and ADR 0050
+when it is rebuilt.
 
 When `COS_WEB_ENABLE_MCP` is on, the landing and result pages also expose
 their existing actions to supporting browsers through the
@@ -930,6 +1360,13 @@ page registers `scan_opencloud_security`; a result page registers
 schemas are rendered from the same catalogues as the page controls. Execution
 uses the public API with `Accept: application/json`, so WebMCP does not bypass
 the SSRF guard, rate limits, cooldown, queue, or capability checks.
+
+A browser tool answers a failure rather than throwing one: `ok: false` with
+`status`, `error` and `retryable`, plus `retryAfter` in seconds where the
+service sent one. This is the contract the `/mcp` tools already used, and the
+statuses behind it are rendered into the page from `webapp/workflows.py`
+rather than written into the script. See
+[ADR 0041](../adr/0041-a-browser-tool-answers-a-failure-rather-than-throwing.md).
 
 `POST /` and `GET /scan/{uuid}` negotiate JSON for browser-side tools and
 other clients. `Accept: application/json` requests a structured response, and
@@ -942,6 +1379,39 @@ Docker Compose passes it from the deployment environment. The application
 parses and escapes every pair instead of accepting raw HTML, and refuses
 duplicate names, names already owned by the page, or prohibited platform
 metadata. A literal semicolon is not supported in a value.
+
+### `GET /advisories.atom`, `GET /release-schedule.atom`
+
+The two documents that refresh themselves daily, as Atom 1.0 feeds.
+
+```bash
+curl -sS http://127.0.0.1:8811/advisories.atom
+```
+
+`/advisories.atom` is the advisory database a scan is rated against - one
+entry per advisory, with its severity, the affected version ranges in the
+half-open form the scanner matches on, and a link to the published advisory.
+`/release-schedule.atom` is one entry per OpenCloud release line, dated by its
+release date, saying which tracks it was published on and when it stops
+receiving fixes.
+
+Both are built from the same functions the pages use, so a feed cannot
+describe an advisory differently from `/catalogue`. They are the reason a scan
+run today can grade an instance more harshly than the same scan last month,
+which is worth being told about: a subscriber hears that the database changed
+without re-scanning to find out.
+
+Advisory titles and descriptions come from a public feed this project does not
+control. They are carried as escaped `type="text"`, never as markup, so a
+reader cannot be made to render somebody else's HTML.
+
+These are the only reference-data routes that opt into a public cache
+(`max-age=3600`). They name no instance, carry no uuid and take no parameter -
+the test [ADR 0031](../adr/0031-a-response-is-uncacheable-until-a-route-opts-in.md)
+sets for being cacheable at all - and they must never learn to take one: a
+feed filtered by hostname would be a question about somebody's instance.
+Entry ids are URNs of the advisory or release line rather than URLs of this
+deployment, so a reader's history survives the service moving host.
 
 ### `GET /robots.txt`, `GET /agents.txt`, `GET /sitemap.xml`
 

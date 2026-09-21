@@ -1,10 +1,8 @@
 # CLI option reference
 
-Every command-line option the plugin accepts, what it defaults to, and the
-environment variable that sets the same thing. This lives on its own page
-because it is a lookup table rather than something to read: the
-[main README](../README.md) is the guided tour, and this is the index at the
-back.
+This page lists every plugin option, its default and the corresponding environment
+variable. Use it to look up a setting; the [main README](../README.md) explains the
+workflows and provides examples.
 
 Precedence between the three ways of setting anything is always the same:
 **command-line flag > environment variable > configuration file > default.**
@@ -34,6 +32,8 @@ check-opencloud-security --host <Hostname> --check-hardening
 | `-H, --host`                  | OpenCloud server address(es): hostname, IP or URL, optionally with a port. Accepts a comma-separated list to check multiple hosts in one run | **required**                                    | `COS_HOST`                      |
 | `-P, --proxy`                 | Proxy server address                                                                                                                         | *None*                                          | `COS_PROXY`                     |
 | `-d, --debug`                 | Explain the rating and every finding; verbose logging                                                                                        | *False*                                         | `COS_DEBUG`                     |
+| `--profile`                   | Named threshold set: `strict`, `ops` or `lenient`. Decides the judgement settings you did not set yourself                                    | *None*                                          | `COS_PROFILE`                   |
+| `--policy`                    | Policy file of organization requirements: `minimum_rating`, `required_hardenings`, `forbidden`. A requirement not met is CRITICAL            | *None*                                          | `COS_POLICY`                    |
 | `-w, --warning`               | Rating (0-5) at or below which the check warns                                                                                               | `3` (`C`)                                       | `COS_WARNING`                   |
 | `-c, --critical`              | Rating (0-5) at or below which the check is critical                                                                                         | `1` (`E`)                                       | `COS_CRITICAL`                  |
 | `--check-hardening`           | Also report missing hardening measures and security headers                                                                                  | *False*                                         | `COS_CHECK_HARDENING`           |
@@ -44,12 +44,15 @@ check-opencloud-security --host <Hostname> --check-hardening
 | `--ca-file`                   | PEM CA bundle used to verify an internal TLS certificate                                                                                     | *None* (system trust store)                     | `COS_SCANNER_TLS_CA_FILE`       |
 | `--no-extra-checks`           | Only check product, version and security headers                                                                                             | *False*                                         | `COS_NO_EXTRA_CHECKS`           |
 | `--no-debug-ports`            | Skip probing the OpenCloud debug ports                                                                                                       | *False*                                         | `COS_NO_DEBUG_PORTS`            |
+| `--all-addresses`             | Also check version, headers, hardening and demo accounts on every resolved address                                                           | *False*                                         | `COS_ALL_ADDRESSES`             |
+| `--login-throttling`          | Send six failed sign-ins for a non-existent account and report whether they were throttled (never rated)                                     | *False*                                         | `COS_LOGIN_THROTTLING`          |
 | `--concurrency`               | Maximum parallel host workers; one is used per host up to this ceiling                                                                       | `5`                                             | `COS_CONCURRENCY`               |
-| `--format`                    | One-shot output format: `nagios`, `prometheus`, `json`, `sarif` or `junit`                                                                   | `nagios`                                        | `COS_FORMAT`                    |
+| `--format`                    | One-shot output format: `nagios`, `prometheus`, `otlp`, `checkmk`, `summary`, `json`, `sarif` or `junit`                                                        | `nagios`                                        | `COS_FORMAT`                    |
 | `--prometheus-listen-port`    | Serve native `/metrics` on this port until stopped                                                                                           | disabled                                        | `COS_PROMETHEUS_LISTEN_PORT`    |
 | `--prometheus-listen-addr`    | Bind address for the native Prometheus exporter                                                                                              | `127.0.0.1`                                     | `COS_PROMETHEUS_LISTEN_ADDR`    |
 | `--scrape-interval`           | Seconds to cache exporter scan results (`0` scans on every scrape)                                                                           | `60`                                            | `COS_SCRAPE_INTERVAL`           |
 | `--ignore-hardening`          | Hardening measure or check to accept, repeatable, comma-separated and wildcard capable                                                       | *None*                                          | `COS_SCANNER_IGNORE_HARDENINGS` |
+| `--waive-until`               | Accept a check until a deadline, `PATTERN|EXPIRES|REASON`, repeatable                                                           | *None*                                          | `COS_SCANNER_TEMPORARY_WAIVERS` |
 | `--release-track`             | Release track this instance follows: `rolling`, `production`, `lts` or `auto`                                                                | `auto`                                          | `COS_SCANNER_RELEASE_TRACK`     |
 | `--update-source`             | Where the newest release comes from: `auto`, `feed`, `pinned`, `bundled`, `off`                                                              | `auto`                                          | `COS_UPDATE_SOURCE`             |
 | `--release-feed`              | URL of the release feed                                                                                                                      | GitHub releases API of `opencloud-eu/opencloud` | `COS_RELEASES_FEED_URL`         |
@@ -57,13 +60,15 @@ check-opencloud-security --host <Hostname> --check-hardening
 | `--latest-version`            | Newest release, given explicitly; implies `--update-source pinned`                                                                           | *None*                                          | `COS_RELEASES_LATEST_VERSION`   |
 | `--no-update-check`           | Disable the update check (same as `--update-source off`)                                                                                     | *False*                                         | `COS_NO_UPDATE_CHECK`           |
 | `--update-warning`            | Report WARNING when a newer release is available                                                                                             | *False*                                         | `COS_UPDATE_WARNING`            |
+| `--eol-warning DAYS`          | Report WARNING when the release line reaches end of life within DAYS days (`0` is off)                                                       | `0`                                             | `COS_EOL_WARNING`               |
 | `--baseline`                  | File that remembers the findings of the last run, one entry per host                                                                         | *None*                                          | `COS_BASELINE`                  |
 | `--warn-on-new`               | Only alert on findings that are new or worse than the baseline; needs `--baseline`                                                           | *False*                                         | `COS_WARN_ON_NEW`               |
+| `--verify-remediation`        | Re-measure only the named finding ids (repeatable, comma-separated) instead of a full scan; see [Verifying a fix](../README.md#verifying-a-fix) | *None* | - |
 | `--diff-format`               | Render baseline changes as `text`, `markdown`, or Slack Block Kit `slack`/`json`                                                             | `text`                                          | `COS_DIFF_FORMAT`               |
 | `--self-update-check`         | Note when a newer version of the plugin is published on PyPI; never changes the exit code                                                    | *False*                                         | `COS_SELF_UPDATE_CHECK`         |
 | `--webhook-url`               | Optional endpoint notified when the check reaches the configured state                                                                       | *None* (disabled)                               | `COS_WEBHOOK_URL`               |
 | `--webhook-on`                | Lowest state that triggers the webhook (`critical`, `warning`, `unknown`, `always`)                                                          | `critical`                                      | `COS_WEBHOOK_ON`                |
-| `--webhook-format`            | Webhook body shape: `generic` (the plugin's own JSON), `slack`, or `discord`                                                                 | `generic`                                       | `COS_WEBHOOK_FORMAT`            |
+| `--webhook-format`            | Webhook body shape: `generic` (the plugin's own JSON), `slack`, `discord`, `ntfy`, or `gotify`                                                | `generic`                                       | `COS_WEBHOOK_FORMAT`            |
 | `--webhook-header`            | Extra header for the webhook request, repeatable                                                                                             | *None*                                          | `COS_WEBHOOK_HEADERS`           |
 | `--webhook-secret`            | Shared secret; signs each webhook body with HMAC-SHA256 in `X-COS-Signature`                                                                  | *None* (unsigned)                               | `COS_WEBHOOK_SECRET`            |
 | `--webhook-timeout`           | HTTP timeout in seconds for the webhook call                                                                                                 | `10`                                            | `COS_WEBHOOK_TIMEOUT`           |
@@ -94,5 +99,6 @@ lists every one of them with a comment.
 | [Main README](../README.md) | What each of these options is for, with worked examples |
 | [Configuration file and secrets](../README.md#configuration-file-and-secrets) | Setting the same things in a file instead |
 | [Machine-readable output](output-formats.md) | `--format json`, `sarif` and `junit` in depth |
+| [Checkmk](checkmk.md) | `--format checkmk`, and running the plugin from a Checkmk server instead |
 | [Checking a fleet of instances](many-instances.md) | `--host` with many targets, and one config file per instance |
 | [Troubleshooting](troubleshooting.md) | The exit-code reference |

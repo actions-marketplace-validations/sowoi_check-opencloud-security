@@ -1,8 +1,8 @@
 # Checking a fleet of instances
 
-One check per instance is simple until there are twenty of them, each with its
-own port, its own release track and its own list of accepted findings. This
-page covers the three shapes that scale, from smallest to largest.
+Multiple instances often need different ports, release tracks and waivers. This guide
+shows when to use a shared command, how to keep a configuration file per instance and
+how to schedule the resulting checks.
 
 <!-- TOC -->
 * [Checking a fleet of instances](#checking-a-fleet-of-instances)
@@ -130,8 +130,8 @@ it always scans in process - so the service is for dashboards and scripts.
 
 ## Keeping the waivers honest
 
-A fleet accumulates `ignore_hardenings` entries, and a waiver that is never
-revisited is how a regression becomes invisible. Two things keep them honest:
+Review `ignore_hardenings` entries regularly so accepted findings do not hide
+new problems. Waivers have two safeguards:
 
 - A waiver only ever suppresses the alert. The finding stays in the result
   document with `"ignored": true`, and `--debug` still explains it - see
@@ -151,16 +151,15 @@ done
 
 One identifier will never appear in that list, however many instances you
 run: `publicLinkExpirationEnforced` is hardcoded by OpenCloud and fails on
-every instance in existence, so it is recorded but deliberately kept out of
-the alert, the `hardenings_missing` metric and the webhook. Waiving it would
-be waiving nothing - see
+every instance, so it is recorded but excluded from
+the alert, the `hardenings_missing` metric and the webhook. It does not need
+a waiver; see
 [Measures that are not settings](hardening.md#measures-that-are-not-settings).
 
 ## Only alerting on what changed
 
-Twenty instances producing the same twenty findings every five minutes is how
-a fleet trains its operators to stop reading the output. Give each host a
-baseline and the check reports only regressions:
+Repeated alerts for unchanged findings can make new problems easy to miss.
+Give each host a baseline to report regressions:
 
 ```shell
 for config in /etc/check-opencloud-security/*.yml; do

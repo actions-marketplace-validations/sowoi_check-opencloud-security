@@ -1,10 +1,8 @@
 # Scanning from the command line, in one line
 
-If you would rather not paste your address into a website, you do not have to.
-The same check the [public scan service](webapp.md) runs is in a published
-container image, and one command runs it against your own instance - nothing
-installed, nothing signed up for, no rate limit, and no third party learning
-which instance you are responsible for.
+Run the scanner on your own machine with the published Docker image. It uses the same
+scanner as the [web service](webapp.md), connects directly to your instance and has no
+website rate limit. You need Docker, but no account with the scan service.
 
 ```shell
 docker run --rm --entrypoint check-opencloud-security \

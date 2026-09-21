@@ -1,11 +1,8 @@
 # Exposed paths and debug endpoints: what this scanner checks, and why
 
-OpenCloud is a single Go binary that serves its web frontend from assets
-embedded in that binary. It never generates a directory listing and it never
-serves its own configuration files, key material or database over HTTP - so
-every check in this group is really the same question asked of a different
-path: **is something in front of OpenCloud publishing more of the filesystem
-than the reverse proxy was supposed to?**
+OpenCloud does not normally publish directory indexes, deployment files, private keys or
+its identity database over HTTP. These checks look for a web server or reverse proxy
+that exposes those files, and for debug interfaces that should remain private.
 
 Before any of these run, the scan first requests a path that cannot possibly
 exist and remembers what comes back. OpenCloud's web frontend is a
@@ -23,6 +20,7 @@ that catch-all baseline counts as a hit, on every check below.
   * [5. Is the backend reachable directly, bypassing the proxy: `backendPortClosed`](#5-is-the-backend-reachable-directly-bypassing-the-proxy-backendportclosed)
   * [6. Who may read a response cross-origin: `corsOriginRestricted`](#6-who-may-read-a-response-cross-origin-corsoriginrestricted)
   * [7. Is the request echoed back: `traceMethodDisabled`](#7-is-the-request-echoed-back-tracemethoddisabled)
+  * [8. Is a second service's console published beside the instance: `companionAdminConsole`](#8-is-a-second-services-console-published-beside-the-instance-companionadminconsole)
   * [Severity and rating impact](#severity-and-rating-impact)
 <!-- TOC -->
 
@@ -170,6 +168,38 @@ plugin that may run every minute can ask.
 `TraceEnable off`; nginx already returns `405` unless a location was written
 to pass every method upstream; Traefik and Caddy need a rule limiting the
 methods forwarded.
+
+## 8. Is a second service's console published beside the instance: `companionAdminConsole`
+
+A document editor speaking WOPI - Collabora Online, OnlyOffice - is the usual
+second service in an OpenCloud deployment, and a reverse proxy that forwards
+`/hosting` and `/browser` to it publishes that editor on the instance's own
+origin. It is a second HTTP server, and its administration console lists every
+open document session and the users in them, reports the server's own
+configuration, and can terminate sessions. It is guarded by one shared
+password with no rate limiting in front of it.
+
+The scan detects the backend by asking for `/hosting/discovery` and requiring
+the `wopi-discovery` root element the WOPI protocol specifies - a status code
+alone would find an editor on every instance, since OpenCloud answers unknown
+paths with its own HTML shell. Only once that document has answered does it
+ask for the console path, and only then can the finding be reported. A second
+finding, `companionEditorHttps`, reads the editor addresses that document
+advertises: an `http://` one means the document and the token authorising the
+session travel unencrypted, and a browser on an HTTPS page blocks the frame
+outright.
+
+**Where no backend is published on this origin, neither finding appears at
+all** - not as a pass. Most deployments serve the editor from a host of its
+own, and the scan deliberately does not follow the host named inside the
+discovery document, because that would let a scanned instance choose the next
+address the scanner connects to. Point a second scan at that host instead. See
+[ADR 0036](../adr/0036-a-companion-service-is-probed-only-where-the-scan-was-pointed.md).
+
+**Fix:** block the console path at the reverse proxy that publishes the
+backend, so only the editor's own paths reach the internet. Setting a console
+password instead is the weaker of the two, because that one credential
+protects every document session on the server.
 
 ## Severity and rating impact
 

@@ -28,6 +28,10 @@ from opencloud_local_scan import (
     describe_hardening,
     failed_extra_checks,
 )
+from opencloud_local_scan.coverage import coverage_of, gaps
+from opencloud_local_scan.coverage import summary as coverage_summary
+from opencloud_local_scan.fingerprint import GROUPS as CONFIGURATION_GROUPS
+from opencloud_local_scan.fingerprint import NOT_MEASURED, fingerprint_of
 from opencloud_local_scan.hardening import catalogue_id, is_actionable
 from opencloud_local_scan.remediation import SEVERITY_RATING_CAP
 from opencloud_local_scan.versions import RELEASE_TRACK_CHOICES, TRACK_AUTO
@@ -251,6 +255,28 @@ def catalogue_link(name: object) -> str | None:
     """Where a result page sends a reader who clicks a finding, or ``None``."""
     anchor = catalogue_anchor(name)
     return None if anchor is None else f"{CATALOGUE_PATH}#{anchor}"
+
+
+#: How the plugin's baseline names a finding in a snapshot: the family, then
+#: the identifier. It is written that way so that a hardening and a check of
+#: the same name cannot collide in one set.
+_FINDING_FAMILIES = ("check:", "hardening:")
+
+
+def finding_id(name: object) -> str:
+    """
+    The bare identifier inside a baseline finding name.
+
+    A comparison works on ``check:exposed:/opencloud.yaml``; the catalogue,
+    the result page and the reader all know it as ``exposed:/opencloud.yaml``.
+    Only the leading family is removed, because the rest of a path-shaped
+    identifier has colons of its own.
+    """
+    text = str(name)
+    for family in _FINDING_FAMILIES:
+        if text.startswith(family):
+            return text[len(family) :]
+    return text
 
 
 # Working the track out from the release the instance reports is right more
@@ -527,13 +553,191 @@ def summarise(
         "tlsOverview": _tls_overview(result, translate),
         "identityProvider": result.get("identityProvider") or {},
         "reverseProxy": result.get("reverseProxy") or {},
+        "alternativeServices": _alternative_services(result),
+        "upgradePath": _upgrade_path(result),
+        "upgradeRehearsal": _upgrade_rehearsal(result),
         "integrations": result.get("integrations") or {},
+        "coverage": _coverage(result, translate),
+        "fingerprint": _fingerprint(result, translate),
         "counts": {
             "critical": sum(1 for item in issues if item["tag"] == "critical"),
             "warning": sum(1 for item in issues if item["tag"] == "warning"),
             "info": sum(1 for item in issues if item["tag"] == "info"),
             "vulnerabilities": len(result.get("vulnerabilities") or []),
         },
+    }
+
+
+def _alternative_services(result: Mapping[str, Any]) -> dict[str, Any]:
+    """The Alt-Svc observation, with the UDP ports it names listed once, in order."""
+    services = result.get("alternativeServices")
+    if not isinstance(services, Mapping) or not services.get("http3"):
+        return {}
+    ports = sorted(
+        {
+            entry["port"]
+            for entry in services.get("entries") or ()
+            if isinstance(entry, Mapping)
+            and entry.get("udp")
+            and isinstance(entry.get("port"), int)
+        }
+    )
+    return {"http3": True, "ports": ", ".join(str(port) for port in ports)}
+
+
+def _upgrade_path(result: Mapping[str, Any]) -> dict[str, Any]:
+    """The scanner's upgrade path as the report states it; empty without one."""
+    path = result.get("upgradePath")
+    if not isinstance(path, Mapping) or not path.get("target"):
+        return {}
+    still = [str(item) for item in path.get("stillAffected") or ()]
+    return {
+        "target": str(path["target"]),
+        "open": ", ".join(still),
+        "safe": str(path.get("safeVersion") or ""),
+    }
+
+
+def _upgrade_rehearsal(result: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """
+    Every candidate release the scanner rehearsed, oldest first.
+
+    The scanner decided all of it - which releases are worth moving to, what
+    each one fixes and leaves, and the rating it would reach. This adds the
+    letter and the tone the page renders that rating with, which is the same
+    pair every other grade on the page goes through, and nothing else.
+    """
+    entries = result.get("upgradeRehearsal")
+    if not isinstance(entries, list):
+        return []
+    rehearsed: list[dict[str, Any]] = []
+    for entry in entries:
+        if not isinstance(entry, Mapping) or not entry.get("version"):
+            continue
+        rating = entry.get("rating")
+        rehearsed.append(
+            {
+                "version": str(entry["version"]),
+                "line": str(entry.get("line") or ""),
+                "recommended": bool(entry.get("recommended")),
+                "endOfLife": bool(entry.get("endOfLife")),
+                "fixes": [str(item) for item in entry.get("fixes") or ()],
+                "stillAffected": [str(item) for item in entry.get("stillAffected") or ()],
+                "introduces": [str(item) for item in entry.get("introduces") or ()],
+                "rating": rating,
+                "label": rating_label(rating),
+                "tone": rating_tone(rating),
+                # What the version alone would allow. Where it is better than
+                # the rating, the difference is the instance's own findings,
+                # which an upgrade does not touch - and saying so is the
+                # difference between "upgrading is not worth it" and
+                # "upgrading is not enough on its own".
+                "versionRating": entry.get("versionRating"),
+                "versionLabel": rating_label(entry.get("versionRating")),
+                "cappedByFindings": (
+                    isinstance(rating, int)
+                    and isinstance(entry.get("versionRating"), int)
+                    and rating < entry["versionRating"]
+                ),
+            }
+        )
+    return rehearsed
+
+
+def _coverage(
+    result: Mapping[str, Any], translate: Translator | None = None
+) -> dict[str, Any]:
+    """
+    What the scan could not look at, grouped for a reader.
+
+    The scanner decided every state and reason; nothing is decided here. Two
+    things are added: the reason token becomes a sentence in the reader's
+    language, and a report written before the block existed is reported as
+    "not stated" rather than as a scan with no gaps at all.
+    """
+    translate = translate or Translator()
+    coverage = coverage_of(result)
+    if coverage is None:
+        return {
+            "available": False,
+            "counts": {},
+            "summary": {},
+            "gaps": [],
+            "groups": [],
+        }
+
+    listed = [
+        {
+            "id": entry.get("id"),
+            "group": entry.get("group"),
+            "state": entry.get("state"),
+            "reason": entry.get("reason"),
+            "detail": entry.get("detail") or "",
+            "title": describe_hardening(str(entry.get("id"))).title
+            or str(entry.get("id")),
+            "reasonLabel": translate(f"coverage.reason.{entry.get('reason')}"),
+            "groupLabel": translate(f"coverage.group.{entry.get('group')}"),
+        }
+        for entry in gaps(result)
+    ]
+    listed.sort(key=lambda item: (str(item["groupLabel"]), str(item["id"])))
+
+    groups: list[dict[str, Any]] = []
+    for entry in listed:
+        if not groups or groups[-1]["group"] != entry["group"]:
+            groups.append(
+                {
+                    "group": entry["group"],
+                    "label": entry["groupLabel"],
+                    "checks": [],
+                }
+            )
+        groups[-1]["checks"].append(entry)
+
+    counts = dict(coverage.get("counts") or {})
+    totals = coverage_summary(result) or {}
+    return {
+        "available": True,
+        "counts": counts,
+        "summary": totals,
+        "measured": int(counts.get("passed", 0)) + int(counts.get("failed", 0)),
+        "gaps": listed,
+        "groups": groups,
+    }
+
+
+def _fingerprint(
+    result: Mapping[str, Any], translate: Translator | None = None
+) -> dict[str, Any]:
+    """
+    The configuration fingerprint, shortened for a page rather than a diff.
+
+    Nothing is decided here either: the scanner hashed the configuration
+    while it ran, and this only shortens each digest to the first eight
+    characters - enough to compare two scans by eye, and still only a digest.
+    """
+    translate = translate or Translator()
+    block = fingerprint_of(result)
+    if block is None:
+        return {"available": False, "digest": "", "groups": []}
+    groups = block["groups"]
+    listed = []
+    for group in CONFIGURATION_GROUPS:
+        entry = groups.get(group) if isinstance(groups, Mapping) else None
+        digest = str(entry.get("digest")) if isinstance(entry, Mapping) else NOT_MEASURED
+        listed.append(
+            {
+                "group": group,
+                "label": translate(f"fingerprint.group.{group}"),
+                "digest": digest[:8] if digest != NOT_MEASURED else "",
+                "measured": digest != NOT_MEASURED,
+                "facts": int(entry.get("facts", 0)) if isinstance(entry, Mapping) else 0,
+            }
+        )
+    return {
+        "available": True,
+        "digest": str(block.get("digest"))[:8],
+        "groups": listed,
     }
 
 

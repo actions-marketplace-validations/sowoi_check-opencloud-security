@@ -1,10 +1,9 @@
 # The web application and its frontend
 
-This directory is the public scan service: a small FastAPI application, an ARQ
-worker, and Redis holding nothing for longer than an hour. The pages it serves
-live one directory up in [`frontend/`](../frontend). Neither is on PyPI - the
-wheel is the plugin and the scanner, and a monitoring host has no use for
-FastAPI.
+This directory contains the public scan service: a FastAPI application, an ARQ
+worker and Redis. Scan results expire after one hour by default. Templates and
+assets live in [`frontend/`](../frontend). The service and frontend are
+distributed separately from the PyPI package, which contains the plugin and scanner.
 
 - **Operators** want [`docs/webapp.md`](../docs/webapp.md): deployment, the
   reverse proxy, every setting and the threat model behind it.
@@ -36,6 +35,8 @@ webapp/
 ├── ratelimit.py      the client limit and the per-target cooldown
 ├── audit.py          the optional audit trail, pseudonymised
 ├── store.py          one Redis namespace per scan, TTL on every key
+├── comparisons.py    the five minutes a comparison against an upload lives
+├── imports.py        an uploaded report, rebuilt from an allow-list
 ├── queue.py          handing a scan to the worker pool
 ├── tasks.py          the ARQ worker; `python -m webapp.tasks`
 ├── runner.py         where a request becomes ScannerSettings
@@ -61,7 +62,7 @@ webapp/
 frontend/
 ├── templates/        base.html, index.html, scan.html, 404.html,
 │                     how-it-works.html, grades.html, documentation.html,
-│                     api.html, ai.html, privacy.html, about.html,
+│                     api.html, privacy.html, about.html,
 │                     docs/*.html (generated from the Markdown guides),
 │                     _page-nav.html (the cross-links between them),
 │                     _toc.html (the contents list a page carries)
@@ -73,21 +74,24 @@ frontend/
     ├── js/scan.js    polls /api/scans/{uuid} until the scan settles
     ├── js/rescan.js  counts down the wait before the same instance may be scanned again
     ├── js/fragment.js the picker over the rendered configuration fragments
+    ├── js/compare-offer.js offers the comparison with this tab's earlier scan of the same target
+    ├── js/cooldown-offer.js opens this tab's earlier result when the target cooldown refuses a scan
+    ├── js/expiry.js  keeps the expiry line current and warns before a report disappears
+    ├── js/remember.js offers back the last settings the form was submitted with
     └── img/*.svg     drawn for this project
 ```
 
-Three layers, and the boundary between them is the point:
-`opencloud_local_scan` **measures**, the plugin **judges**, and `webapp`
-**serves**. If a change here starts deciding whether a finding is acceptable,
-it belongs in the scanner or the plugin instead.
+The three layers have separate responsibilities: `opencloud_local_scan`
+collects and rates findings, the plugin determines the monitoring status,
+and `webapp` serves the results. Keep rating and alert decisions in the
+scanner or plugin.
 
-The HTML frontend is translated from stable string catalogues. An explicit
-language cookie wins over the browser's weighted `Accept-Language` list, with
-English as the fallback; every HTML response varies on both inputs. The
-accessible switcher is a POST that stores only a validated locale and returns
-only to a validated local path. OpenAPI, Arazzo, discovery, MCP and exports
-remain English contracts, while scan evidence remains exactly as measured.
-See ADR 0020.
+The HTML interface uses English, German, French and Spanish string catalogues. A
+language cookie takes precedence over `Accept-Language`, with English as fallback;
+responses vary on both. The switcher validates the language and local return path.
+Public guides have English and German bodies; French and Spanish currently use the
+English body. API contracts and measured evidence retain their original technical
+values. See ADR 0020 and ADR 0058.
 
 ## Running it
 
@@ -145,6 +149,9 @@ A small surface, and this is all of it.
 |:-------|:-----|:-------------|
 | `GET` | `/` | The landing page and the form |
 | `GET` | `/how-it-works`, `/grades`, `/documentation`, `/search`, `/api`, `/ai`, `/privacy`, `/about` | The content pages the landing page links to; HTML only, never in the schema |
+| `GET` | `/compare` | Two finished scans compared, from `?baseline=` and `?current=`; HTML only, and never in the schema because it renders results |
+| `POST` | `/compare` | The earlier side as an uploaded JSON or CSV report instead of a uuid; **303** to `/compare/{token}`. HTML only, and no MCP tool - an agent has `compare_scans` |
+| `GET` | `/compare/{token}` | One comparison drawn from an uploaded report, for the five minutes it is cached |
 | `GET` | `/cli` | **301** to `/documentation#oneliner`; the Docker one-liners moved onto that page |
 | `POST` | `/` | The form submission; **303** to `/scan/{uuid}` |
 | `POST` | `/api/scans` | The same handler for API clients; **202** with the uuid |
@@ -153,9 +160,12 @@ A small surface, and this is all of it.
 | `GET` | `/scan/{uuid}` | The progress and result page |
 | `GET` | `/api/scans/{uuid}` | The state, and the result once there is one |
 | `GET` | `/api/scans/{uuid}/export/{format}` | The finished scan as `json`, `csv`, `sarif` or `pdf` |
+| `GET` | `/api/scans/{uuid}/badge.svg` | The grade as a small SVG, for as long as that scan exists |
 | `DELETE` | `/api/purge` | Erases everything held for one instance and returns a signed receipt; **404** until a token is configured |
 | `GET` | `/arazzo.json` | The API as Arazzo workflows, beside the schema and behind the same switch |
 | `GET` | `/healthz` | Pings Redis, reads queue depth, and requires a live worker heartbeat; returns the aggregate depth or a 503 when unavailable |
+| `GET` | `/advisories.atom` | The advisory database as an Atom feed - what a scan is rated against, subscribable |
+| `GET` | `/release-schedule.atom` | The OpenCloud release lines and when each stops receiving fixes, as Atom |
 | `GET` | `/robots.txt` | Generated. Points at the sitemap and keeps crawlers out of `/scan/` and `/api/` |
 | `GET` | `/agents.txt` | Generated. Capability declaration in the [agents-txt.com](https://agents-txt.com) format: discovery document, contracts, MCP and WebMCP endpoints |
 | `GET` | `/agents.json` | The structured sibling `agents.txt` names - the same document `/.well-known/ai.json` serves |
@@ -183,13 +193,17 @@ given, which is why the form's input field is not `type="url"`.
 |:-------|:-----|
 | **202** | Accepted and queued, even when every worker is busy |
 | **303** | The same, for a browser: `Location: /scan/{uuid}` |
-| **400** | A target that cannot be scanned: private, loopback, unresolvable, malformed |
+| **400** | A target that cannot be scanned: private, loopback, unresolvable, malformed, or excluded by `COS_WEB_BLOCKED_TARGETS` |
 | **422** | A field the service does not accept, named in the message |
 | **429** | A rate limit, with `Retry-After` and a pointer to running it yourself |
+| **503** | This deployment could not read its own exclusions, so it will not scan. Never a busy service |
 
 An overloaded service still answers **202**. Submissions past the worker count
-wait in FIFO order and the position is shown on the page; a valid submission
-never gets a **503**.
+wait in FIFO order and the position is shown on the page; **load is never a
+503**. The one submission that gets one is the deployment saying something
+about itself rather than about the request: it could not reach the store
+holding the exclusions, and scanning without knowing what it was asked to
+leave alone is the one failure worth refusing a valid target over.
 
 ### Polling a scan
 
@@ -275,6 +289,23 @@ Each carries the remediation plan the scanner produced: a summary line and one
 entry per fix in the CSV, `runs[0].properties.remediation` in the SARIF, a
 "What gets you to A+" section in the PDF, and `remediationPlan` in the JSON,
 which is the scanner's own document.
+
+`GET /api/scans/{uuid}/badge.svg` is the fifth rendering and the smallest: the
+grade, drawn by `badge.py` as a self-contained SVG with no script, no external
+font and no request anywhere else - an embedded image that fetched a badge
+service would hand it the result URL in a referrer on every view. It carries
+the letter and nothing the scanned instance chose: no hostname, no product, no
+version. Like every other reading of a uuid it answers **404** for an unknown
+or expired one and **409** while a scan is still running, and it keeps the
+service-wide `no-store`, because ADR 0031's cacheable routes describe this
+service and this one describes somebody's instance.
+
+**A badge lives as long as its scan does** - one hour by default
+(`COS_WEB_RESULT_TTL`), after which the image stops resolving. It is for a
+ticket, a chat message or a dashboard while the result is current, not for a
+README on a deployment with this service's default lifetime. Publishing the
+URL also publishes the uuid, which is the whole of the authorisation for the
+full result.
 
 When `COS_WEB_EXPORT_SIGNING_KEY` is set, the response also carries
 `X-COS-Signature: HMAC-SHA256=<hex>`. The signature covers the exact response
@@ -550,8 +581,21 @@ export catalogues as the page controls.
 ordinary API with `Accept: application/json`, so it meets the same SSRF guard,
 rate limits, cooldown, queue, and capability checks. The script supports both
 the earlier `navigator.modelContext` implementation and the current
-`document.modelContext` draft. Browsers without either API ignore the
+`document.modelContext` draft, preferring the declarative `provideContext`
+where a browser offers it. Browsers without either API ignore the
 integration. Turning MCP off removes these registrations along with `/mcp`.
+
+A browser tool does not throw. A failure comes back as `ok: false` with
+`status`, `error` and `retryable`, plus `retryAfter` in seconds where the
+service sent one — the same contract the `/mcp` tools use, so an agent meeting
+a per-target cooldown in a browser waits rather than retrying immediately.
+Which statuses may be repeated is rendered into the page from
+`webapp/workflows.py`, not written into the script, and the tool descriptions
+are composed from the same notes the `/mcp` tools carry — including the
+warning that a scan result contains the scanned host's own words. An export
+returns its content for the formats a model can read, bounded by the same
+limit the server-side export applies; a PDF is reported as its size. See
+[ADR 0041](../adr/0041-a-browser-tool-answers-a-failure-rather-than-throwing.md).
 
 ### Discovery, for an agent that knows only the origin
 
@@ -599,12 +643,28 @@ The other standing restrictions:
   addresses are refused, hostnames are resolved and every address checked, and
   the target is validated again in the worker so a DNS answer that changed in
   between is caught rather than trusted.
+- **Whatever the operator excluded, on top.** `COS_WEB_BLOCKED_TARGETS` names
+  hostnames, `.suffix` domains and CIDR ranges this deployment will not scan
+  for anybody - the answer to an instance owner who asks to be left alone. It
+  is checked at submission, again in the worker and on every redirect hop, and
+  it outranks both `COS_WEB_ALLOWED_HOSTS` and `COS_WEB_ALLOW_PRIVATE_TARGETS`
+  ([ADR 0043](../adr/0043-an-operators-exclusion-outranks-every-allowance.md)).
+  The operator's area adds to the same list at runtime, in force from the next
+  request in every process and refusing a scan that is already queued; the
+  environment's own entries cannot be withdrawn from a browser, and the two
+  halves are compared parsed rather than as text, so one exclusion spelled two
+  ways is still one exclusion
+  ([ADR 0044](../adr/0044-the-operator-area-may-write-the-exclusions.md)).
+  A store that will not answer refuses the submission with **503** rather than
+  scanning without the list.
 - **One scan per target per cooldown**, and a per-client limit on top.
 - **No port scanning.** `COS_WEB_CHECK_DEBUG_PORTS` is off; connecting to
   extra ports on a host a stranger named is not something to do uninvited.
 - **Nothing is stored.** Every key has a TTL, Redis persists nothing, and the
   log carries lifecycle markers and uuids - never a target, a client address
-  or a result. An operator who needs an audit trail can turn one on with
+  or a result. An uploaded report is not written anywhere at all; only the
+  comparison drawn from it is, for five minutes, under a capability and inside
+  the erasure endpoint's reach. An operator who needs an audit trail can turn one on with
   `COS_WEB_AUDIT_LOG`, and keep it past the container with
   `COS_WEB_AUDIT_LOG_FILE`; addresses stay fingerprints either way. See
   [What gets logged](../docs/webapp.md#what-gets-logged).
@@ -622,21 +682,30 @@ before the first deployment:
 |:---------|:--------|:---------------|
 | `COS_WEB_REDIS_URL` | `redis://127.0.0.1:6379/0` | `memory://` runs without Redis, for a single process |
 | `COS_WEB_RESULT_TTL` | `3600` | How long a result lives, and the TTL on every key |
+| `COS_WEB_COMPARISON_TTL` | `300` | How long a comparison against an uploaded report lives. Clamped to 300; shorter is honoured |
 | `COS_WEB_MAX_WORKERS` | `5` | Scans at once. The whole of this service's load on the outside world |
 | `COS_WEB_SCAN_CONCURRENCY` | `4` | Probes in flight within one scan |
 | `COS_WEB_IP_RATE_LIMIT` / `_WINDOW` | `10` / `60` | The client limit. `0` disables |
 | `COS_WEB_TARGET_COOLDOWN` | `300` | Seconds before the same instance may be scanned again |
+| `COS_WEB_PROBE_LIMIT` / `_WINDOW` / `_BLOCK` | `5` / `300` / `3600` | Strikes - scans that found no OpenCloud, targets the guard refused - before a client network is blocked, the window, and the first block. Web service and worker alike. `0` disables |
+| `COS_WEB_PROBE_BLOCK_MAX` / `_REPEAT_WINDOW` | `86400` / `86400` | A block earned again soon lasts six times longer, up to the ceiling |
+| `COS_WEB_PROBE_IPV4_PREFIX` / `COS_WEB_CLIENT_IPV6_PREFIX` | `24` / `64` | How much of an address counts as one client |
+| `COS_WEB_DAILY_SCAN_LIMIT` | `50` | Scans per client per day. `0` disables |
+| `COS_WEB_DNS_CONSISTENCY_CHECK` | `true` | Refuse a name whose two lookups share no address |
+| `COS_WEB_REQUIRE_APPROVAL` / `_APPROVED_TARGETS` / `COS_WEB_APPROVAL_DNS` | `false` / *(empty)* / `true` | Scan listed or DNS-approved instances only |
 | `COS_WEB_MAX_BATCH_TARGETS` | `10` | Targets one batch may carry; each still spends a scan from every limit |
 | `COS_WEB_TRUST_FORWARDED_FOR` | `false` | Only behind a proxy that **overwrites** the header, or the limit is decorative |
 | `COS_WEB_PUBLIC_BASE_URL` | *(required)* | The stable origin in canonical links, `sitemap.xml`, and agent discovery. Startup refuses an unset value rather than trusting an incoming `Host` header |
 | `COS_WEB_INDEX_META_TAG` | *(empty)* | Up to 10 `name=content` metadata tags on the landing page, separated by `;`. Rendered as escaped attributes; raw HTML, duplicate, and reserved metadata are refused |
 | `COS_WEB_ALLOW_INDEXING` | `true` | Index the six public pages. A result page is `noindex` either way |
 | `COS_WEB_ALLOW_PRIVATE_TARGETS` | `false` | On-premise deployments scanning their own network |
+| `COS_WEB_BLOCKED_TARGETS` | *(empty)* | Addresses this deployment will not scan: hostnames, `.suffix` domains and CIDR ranges, separated by `;`. Outranks the allowlist and the private-target setting; an unparseable entry refuses startup |
 | `COS_WEB_ENABLE_DOCS` | `false` | The browsable Swagger UI and ReDoc pages. The schema itself is public regardless |
 | `COS_WEB_ENABLE_MCP` | `true` | The MCP endpoint at `/mcp` and browser WebMCP tools, when the optional `mcp` extra is installed |
 | `COS_WEB_SCHEDULE_REFRESH` | `true` | Re-read the OpenCloud release lifecycle page once a day, so a long-running deployment does not rate against the schedule its image shipped with |
 | `COS_WEB_ADVISORY_REFRESH` | `true` | Ask the advisory feed once a day, so an advisory published after this image was built still reaches the people scanning with it. Only ever adds; never believes an advisory with no version bounds |
 | `COS_WEB_ADVISORY_REFRESH_URL` | `https://api.osv.dev/v1/query` | Where the advisories are read from. May point at a mirror; never a request field |
+| `COS_WEB_ADVISORY_REPOSITORY_URL` | `https://api.github.com/repos/opencloud-eu/opencloud/security-advisories` | OpenCloud's repository advisories, added to OSV's answer (ADR 0071). `off` skips them |
 | `COS_WEB_MCP_ALLOWED_HOSTS` | *(empty)* | `Host` values `/mcp` accepts. Empty turns the DNS-rebinding check off |
 | `COS_WEB_MCP_MAX_CONCURRENT_WAITS` | `8` | How many tool calls may wait on a scan at once; past that the uuid comes back to be polled |
 | `COS_WEB_MCP_AUTH_ENABLED` | `false` | Require a bearer token on `/mcp`. Needs an issuer, and a public base URL to check an audience against |
@@ -705,8 +774,9 @@ door.
 The small header search opens `/search`, where `search.js` filters
 `/static/search-index.json` locally. `webapp/search.py` is the explicit
 public-page manifest and `scripts/build_search_index.py` reads only those
-templates. The release workflow is the only automation that rebuilds the
-checked-in index. It has no store, API, result-template or network input, so
+templates. Every pull request to `main` rebuilds the checked-in index and
+commits it to the branch, and the release workflow rebuilds it once more
+(ADR 0050). It has no store, API, result-template or network input, so
 scan UUIDs, submitted addresses and result documents cannot enter it.
 
 ## Tests

@@ -41,6 +41,7 @@ from pathlib import Path
 from typing import Any
 
 from .baseline import Baseline, Comparison, Snapshot, snapshot_of
+from .changes import explain
 from .completion import enable as enable_completion
 from .config import ConfigurationError, load_configuration
 from .factory import release_settings_from_config, scanner_settings_from_config
@@ -112,6 +113,28 @@ def build_arg_parser() -> argparse.ArgumentParser:
         action="store_false",
         default=None,
         help="Skip probing the OpenCloud debug ports.",
+    )
+    scan_parser.add_argument(
+        "--login-throttling",
+        dest="check_login_throttling",
+        action="store_true",
+        default=None,
+        help=(
+            "Send a few failed sign-ins for an account that cannot exist to the "
+            "built-in identity provider and record whether they were throttled. "
+            "Never graded."
+        ),
+    )
+    scan_parser.add_argument(
+        "--all-addresses",
+        dest="check_all_addresses",
+        action="store_true",
+        default=None,
+        help=(
+            "Repeat the version, header, hardening and demo-account checks "
+            "against every address the name resolves to, and report when "
+            "they disagree."
+        ),
     )
     scan_parser.add_argument("--port", type=int, help="Override the target port.")
     scan_parser.add_argument(
@@ -429,9 +452,17 @@ def _run_diff(args: argparse.Namespace) -> int:
         return 2
 
     comparison = _compare_documents(before, after)
+    # Why it differs, not only that it differs. The same model the web
+    # comparison uses, so an operator's own monitoring and the service cannot
+    # explain the same two documents differently.
+    reasons = explain(before, after)
 
     if args.diff_format == "json":
-        print(json.dumps(comparison.as_dict(), indent=2))
+        print(
+            json.dumps(
+                {**comparison.as_dict(), "explanation": reasons.as_dict()}, indent=2
+            )
+        )
     elif args.diff_format == "slack":
         print(json.dumps(comparison.slack_blocks(), indent=2))
     else:
@@ -445,6 +476,11 @@ def _run_diff(args: argparse.Namespace) -> int:
         changes = comparison.render(args.diff_format)
         if changes:
             print(changes)
+        for change in reasons.changes:
+            if change.code != "ratingChanged":
+                print(f"  [{change.category}] {change.summary}")
+        for limitation in reasons.limitations:
+            print(f"  [limitation] {limitation}")
 
     if args.exit_zero:
         return 0
@@ -563,18 +599,24 @@ def main(argv: Sequence[str] | None = None) -> int:
         parser.error(str(exc))
         return 2
 
-    scanner_settings = scanner_settings_from_config(
-        config,
-        timeout=getattr(args, "timeout", None),
-        verify_tls=getattr(args, "verify_tls", None),
-        tls_ca_file=getattr(args, "ca_file", None),
-        extra_checks=getattr(args, "extra_checks", None),
-        check_debug_ports=getattr(args, "check_debug_ports", None),
-        port=getattr(args, "port", None) if args.command == "scan" else None,
-        scheme=getattr(args, "scheme", None),
-        concurrency=getattr(args, "concurrency", None),
-    )
-    release_settings = release_settings_from_config(config)
+    try:
+        scanner_settings = scanner_settings_from_config(
+            config,
+            timeout=getattr(args, "timeout", None),
+            verify_tls=getattr(args, "verify_tls", None),
+            tls_ca_file=getattr(args, "ca_file", None),
+            extra_checks=getattr(args, "extra_checks", None),
+            check_debug_ports=getattr(args, "check_debug_ports", None),
+            check_all_addresses=getattr(args, "check_all_addresses", None),
+            check_login_throttling=getattr(args, "check_login_throttling", None),
+            port=getattr(args, "port", None) if args.command == "scan" else None,
+            scheme=getattr(args, "scheme", None),
+            concurrency=getattr(args, "concurrency", None),
+        )
+        release_settings = release_settings_from_config(config)
+    except ConfigurationError as exc:
+        parser.error(str(exc))
+        return 2
     if getattr(args, "no_update_check", False):
         release_settings = release_settings.__class__(
             **{**release_settings.__dict__, "mode": "off"}

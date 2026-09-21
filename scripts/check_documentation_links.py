@@ -23,8 +23,9 @@ So the links are checked on every merge into ``main``:
 Only OpenCloud's own hosts are checked (see :data:`OPENCLOUD_HOSTS`), because
 those are the ones whose accuracy this project is responsible for. A link is
 out of date when it is broken: a 4xx, a 5xx or a transport error that
-survives the retries. A
-temporary redirect is normal and passes.
+survives the retries - except for the gateway answers in
+:data:`GATEWAY_STATUS`, which say the site is having a bad minute rather than
+that the page moved. A temporary redirect is normal and passes.
 
 **A status code is not enough for the documentation site.**
 ``docs.opencloud.eu`` is a single-page application: it answers an address
@@ -119,6 +120,13 @@ SITEMAP_PREFIXES: tuple[str, ...] = ("/docs/",)
 # anything without a browser. Neither means the link rotted, and failing a
 # merge over one would teach everybody to ignore this check.
 INCONCLUSIVE_STATUS: frozenset[int] = frozenset({401, 403, 429})
+
+# Answers from the machinery in front of the site rather than from the site:
+# a gateway that timed out, a backend briefly out of capacity. GitHub serves
+# these for a few seconds at a time. A link that rotted answers 404 - it never
+# answers 504 - so these are retried like a transport error, and when they
+# survive the retries they are reported without failing the run.
+GATEWAY_STATUS: frozenset[int] = frozenset({408, 502, 503, 504})
 
 _URL = re.compile(r"https?://[^\s\"'`<>)\]}\\]+")
 
@@ -309,14 +317,34 @@ def check(
     if missing is not None:
         return Problem(link=link, detail=missing, broken=True)
 
+    total = max(attempts, 1)
     detail: str | None = None
-    for attempt in range(max(attempts, 1)):
+    for attempt in range(total):
         detail, broken = _check_once(link.url, timeout=timeout)
         if detail is None:
             return None
-        if not broken or detail.startswith("HTTP ") or attempt + 1 == max(attempts, 1):
-            return Problem(link=link, detail=detail, broken=broken)
+        if not broken:
+            return Problem(link=link, detail=detail, broken=False)
+        last = attempt + 1 == total
+        if _is_gateway(detail):
+            # Retried like a transport error, and still not held against the
+            # link when the whole run is unlucky: the site was in the way of
+            # its own page, which says nothing about where the page lives.
+            if last:
+                return Problem(
+                    link=link,
+                    detail=f"{detail} from the site's gateway, which says nothing about the link",
+                    broken=False,
+                )
+            continue
+        if detail.startswith("HTTP ") or last:
+            return Problem(link=link, detail=detail, broken=True)
     return Problem(link=link, detail=detail or "unknown", broken=True)
+
+
+def _is_gateway(detail: str) -> bool:
+    """Whether a failure is the site's plumbing rather than a missing page."""
+    return any(detail.startswith(f"HTTP {status}") for status in GATEWAY_STATUS)
 
 
 def _check_once(url: str, *, timeout: int) -> tuple[str | None, bool]:

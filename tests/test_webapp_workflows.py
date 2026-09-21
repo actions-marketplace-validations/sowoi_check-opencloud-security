@@ -133,6 +133,32 @@ def test_a_rate_limited_submission_waits_and_tries_again():
     assert waited == [7]
 
 
+def test_a_probe_block_is_handed_back_rather_than_slept_through():
+    """
+    An hour-long Retry-After is a block, and an agent waiting it out looks hung.
+
+    The short wait above must still be taken, or this would pass for a
+    workflow that never waits at all.
+    """
+    long_wait = str(wf.SUBMIT_MAX_WAIT_SECONDS + 1)
+    api = ScriptedApi(
+        wf.ApiResponse(status=429, headers={"retry-after": long_wait}, body={"detail": "no"}),
+        _accepted(),
+    )
+    waited: list[float] = []
+
+    async def record(seconds: float) -> None:
+        waited.append(seconds)
+
+    with pytest.raises(wf.WorkflowError) as caught:
+        asyncio.run(wf.submit_scan(api, target_url="opencloud.example.com", sleep=record))
+
+    assert caught.value.status == 429
+    assert caught.value.retryable is False
+    assert waited == []
+    assert len(api.calls) == 1
+
+
 def test_a_refused_target_is_not_submitted_a_second_time():
     """400 will not become 202 by asking again, and a public service notices."""
     api = ScriptedApi(wf.ApiResponse(status=400, body={"detail": "That is private."}))
@@ -569,22 +595,47 @@ def test_a_finding_that_appeared_between_the_two_scans_is_a_regression():
     assert answer["ratingChange"] == 0
 
 
-def test_two_documents_from_different_instances_are_answered_but_flagged():
+@pytest.mark.parametrize(
+    ("earlier", "later"),
+    [
+        ("staging.example.com", "opencloud.example.com"),
+        ("", "opencloud.example.com"),
+        ("opencloud.example.com", ""),
+        ("", ""),
+    ],
+)
+def test_two_documents_from_different_instances_are_refused(earlier, later):
     """
-    Comparing staging with production is a fair question and a different one.
+    "Did the fix work" is a question about one instance.
 
-    Refusing it would be wrong; answering it silently would be worse, because
-    every number in the answer then means something else.
+    Two hosts compared by accident is a wrong answer nobody notices, and a
+    document naming no instance cannot be shown to be the same one
+    (ADR 0059). The CLI's `diff` refuses the same pair.
     """
     api = ScriptedApi(
-        _document(rating=4, domain="staging.example.com"),
+        _document(rating=4, domain=earlier),
+        _document(rating=4, domain=later),
+    )
+
+    with pytest.raises(wf.WorkflowError) as raised:
+        asyncio.run(wf.compare_scans(api, UUID, OTHER_UUID, sleep=_instant))
+
+    assert raised.value.status == 422
+    assert raised.value.retryable is False
+    assert "different instances" in str(raised.value)
+
+
+def test_the_same_instance_is_matched_regardless_of_case_or_trailing_dot():
+    """A hostname is case-insensitive; refusing its capitals would be a bug."""
+    api = ScriptedApi(
+        _document(rating=4, domain="OpenCloud.Example.com."),
         _document(rating=4, domain="opencloud.example.com"),
     )
 
     answer = asyncio.run(wf.compare_scans(api, UUID, OTHER_UUID, sleep=_instant))
 
     assert answer["ok"] is True
-    assert answer["sameTarget"] is False
+    assert answer["sameTarget"] is True
 
 
 def test_comparing_a_scan_with_itself_is_refused_rather_than_answered():

@@ -8,6 +8,13 @@ a TTL::
     scan:{uuid}:result      the result document produced by the scanner
     scan:{uuid}:metadata    what was asked for, and when
 
+and a fourth while the scan waits, when the probe guard is on::
+
+    scan:{uuid}:prober      the client's rate-limit fingerprint, never its address
+
+The worker takes that one and deletes it the moment the scan starts, so it
+lives no longer than the scan waits in the queue.
+
 The uuid is a capability: knowing it is the only way to reach the scan, and
 there is deliberately no way to enumerate the namespace. Nothing outside this
 module builds a key, so the isolation is one function wide and can be tested
@@ -46,14 +53,22 @@ TERMINAL_STATES = frozenset({STATE_COMPLETED, STATE_FAILED})
 def is_scan_uuid(candidate: str) -> bool:
     """Whether a path segment is one of our identifiers.
 
-    Nothing this service issues is anything but a uuid4, so a lookup for
-    something else is a probe. Refusing it before it reaches Redis keeps
-    caller-controlled text out of a key name entirely.
+    Nothing this service issues is anything but a uuid4 in its canonical
+    spelling, so a lookup for something else is a probe. Refusing it before it
+    reaches Redis keeps caller-controlled text out of a key name entirely.
+
+    The canonical form is checked, not merely that ``UUID`` accepts the string:
+    it also takes braces, a ``urn:uuid:`` prefix, upper case and no hyphens at
+    all. Each of those is a *different* key for the same scan - and the urn
+    form would put colons into a key name this module promises to keep clean,
+    where :meth:`ScanStore._identifiers_for` splits on them and would no
+    longer recognise the scan as one of its own to erase.
     """
     try:
-        return uuid_module.UUID(candidate).version == 4
+        parsed = uuid_module.UUID(candidate)
     except (ValueError, AttributeError, TypeError):
         return False
+    return parsed.version == 4 and str(parsed) == candidate
 
 
 def status_key(uuid: str) -> str:
@@ -69,6 +84,11 @@ def result_key(uuid: str) -> str:
 def metadata_key(uuid: str) -> str:
     """Redis key holding what the visitor asked for."""
     return f"scan:{uuid}:metadata"
+
+
+def prober_key(uuid: str) -> str:
+    """Redis key holding whom a non-OpenCloud answer counts against."""
+    return f"scan:{uuid}:prober"
 
 
 @dataclass(frozen=True)
@@ -146,8 +166,14 @@ class ScanStore:
         ignore_hardenings: tuple[str, ...],
         output_format: str,
         release_track: str = DEFAULT_RELEASE_TRACK,
+        prober: str | None = None,
     ) -> None:
-        """Register a new scan as ``queued`` and put it at the back of the line."""
+        """Register a new scan as ``queued`` and put it at the back of the line.
+
+        ``prober`` is kept apart from the metadata on purpose: the metadata is
+        what the holder of the uuid reads back, and a fingerprint of their
+        own address is nothing they need to be handed.
+        """
         metadata = {
             "target": target,
             "ignoreHardenings": list(ignore_hardenings),
@@ -158,17 +184,24 @@ class ScanStore:
             "finishedAt": None,
         }
         await self.backend.set(metadata_key(uuid), _dump(metadata), ex=self.ttl)
+        if prober:
+            await self.backend.set(prober_key(uuid), prober, ex=self.ttl)
         await self.backend.set(status_key(uuid), _dump({"state": STATE_QUEUED}), ex=self.ttl)
         await self.backend.rpush(QUEUE_KEY, uuid)
         # The queue is a display aid, not a job store; it must not outlive the
         # scans it refers to if a worker dies.
         await self.backend.expire(QUEUE_KEY, max(self.ttl, 3600))
 
+    async def take_prober(self, uuid: str) -> str | None:
+        """Read and forget who asked for this scan, for the probe guard."""
+        prober = await self.backend.get(prober_key(uuid))
+        await self.backend.delete(prober_key(uuid))
+        return prober
+
     async def mark_running(self, uuid: str) -> None:
         """A worker picked this scan up."""
         await self.backend.lrem(QUEUE_KEY, 1, uuid)
-        await self._patch_metadata(uuid, {"startedAt": _now()})
-        await self.backend.set(status_key(uuid), _dump({"state": STATE_RUNNING}), ex=self.ttl)
+        await self._transition(uuid, {"startedAt": _now()}, {"state": STATE_RUNNING})
 
     async def mark_completed(self, uuid: str, result: dict[str, Any]) -> None:
         """Store the result document and stop the clock."""
@@ -176,20 +209,16 @@ class ScanStore:
         result_str = _dump(result)
         if self.encryption_config:
             result_str = encrypt_value(result_str, self.encryption_config)
-        await self.backend.set(result_key(uuid), result_str, ex=self.ttl)
-        await self._patch_metadata(uuid, {"finishedAt": _now()})
-        await self.backend.set(
-            status_key(uuid), _dump({"state": STATE_COMPLETED}), ex=self.ttl
+        await self._transition(
+            uuid, {"finishedAt": _now()}, {"state": STATE_COMPLETED},
+            result=result_str,
         )
 
     async def mark_failed(self, uuid: str, error: str) -> None:
         """Record why the scan could not produce a result."""
         await self.backend.lrem(QUEUE_KEY, 1, uuid)
-        await self._patch_metadata(uuid, {"finishedAt": _now()})
-        await self.backend.set(
-            status_key(uuid),
-            _dump({"state": STATE_FAILED, "error": error}),
-            ex=self.ttl,
+        await self._transition(
+            uuid, {"finishedAt": _now()}, {"state": STATE_FAILED, "error": error},
         )
 
     async def get(self, uuid: str) -> ScanRecord | None:
@@ -259,7 +288,10 @@ class ScanStore:
         queue_entries = 0
         for identifier in identifiers:
             keys_deleted += await self.backend.delete(
-                status_key(identifier), result_key(identifier), metadata_key(identifier)
+                status_key(identifier),
+                result_key(identifier),
+                metadata_key(identifier),
+                prober_key(identifier),
             )
             queue_entries += await self.backend.lrem(QUEUE_KEY, 0, identifier)
         remaining = len(await self._identifiers_for(wanted))
@@ -282,10 +314,22 @@ class ScanStore:
                 found.append(parts[1])
         return found
 
-    async def _patch_metadata(self, uuid: str, changes: dict[str, Any]) -> None:
-        metadata = _load(await self.backend.get(metadata_key(uuid))) or {}
+    async def _transition(
+        self, uuid: str, changes: dict[str, Any], status: dict[str, Any],
+        *, result: str | None = None,
+    ) -> None:
+        metadata = _load(await self.backend.get(metadata_key(uuid)))
+        if metadata is None:
+            return
         metadata.update(changes)
-        await self.backend.set(metadata_key(uuid), _dump(metadata), ex=self.ttl)
+        values = {metadata_key(uuid): _dump(metadata), status_key(uuid): _dump(status)}
+        if result is not None:
+            values[result_key(uuid)] = result
+        # A purge or expiry can happen after the read above. Checking and
+        # writing atomically prevents an in-flight worker reviving that UUID.
+        await self.backend.set_if_exists(
+            (metadata_key(uuid), status_key(uuid)), values, ex=self.ttl,
+        )
 
 
 def _now() -> float:

@@ -11,16 +11,14 @@
   <p class="lede">{{ t('docs.cli-reference.description') }}</p>
 </section>
 
-{% if locale != 'en' %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
 <article class="docs-article card section-gap" data-reveal lang="en">
-<p>Every command-line option the plugin accepts, what it defaults to, and the
-environment variable that sets the same thing. This lives on its own page
-because it is a lookup table rather than something to read: the
-<a href="/documentation/reference">main README</a> is the guided tour, and this is the index at the
-back.</p>
+<p>This page lists every plugin option, its default and the corresponding environment
+variable. Use it to look up a setting; the <a href="/documentation/reference">main README</a> explains the
+workflows and provides examples.</p>
 <p>Precedence between the three ways of setting anything is always the same:
 <strong>command-line flag &gt; environment variable &gt; configuration file &gt; default.</strong>
 See <a href="/documentation/reference#configuration-file-and-secrets">Configuration file and secrets</a>
@@ -68,6 +66,18 @@ for the naming rules.</p>
 <td>Explain the rating and every finding; verbose logging</td>
 <td><em>False</em></td>
 <td><code>COS_DEBUG</code></td>
+</tr>
+<tr>
+<td><code>--profile</code></td>
+<td>Named threshold set: <code>strict</code>, <code>ops</code> or <code>lenient</code>. Decides the judgement settings you did not set yourself</td>
+<td><em>None</em></td>
+<td><code>COS_PROFILE</code></td>
+</tr>
+<tr>
+<td><code>--policy</code></td>
+<td>Policy file of organization requirements: <code>minimum_rating</code>, <code>required_hardenings</code>, <code>forbidden</code>. A requirement not met is CRITICAL</td>
+<td><em>None</em></td>
+<td><code>COS_POLICY</code></td>
 </tr>
 <tr>
 <td><code>-w, --warning</code></td>
@@ -130,6 +140,18 @@ for the naming rules.</p>
 <td><code>COS_NO_DEBUG_PORTS</code></td>
 </tr>
 <tr>
+<td><code>--all-addresses</code></td>
+<td>Also check version, headers, hardening and demo accounts on every resolved address</td>
+<td><em>False</em></td>
+<td><code>COS_ALL_ADDRESSES</code></td>
+</tr>
+<tr>
+<td><code>--login-throttling</code></td>
+<td>Send six failed sign-ins for a non-existent account and report whether they were throttled (never rated)</td>
+<td><em>False</em></td>
+<td><code>COS_LOGIN_THROTTLING</code></td>
+</tr>
+<tr>
 <td><code>--concurrency</code></td>
 <td>Maximum parallel host workers; one is used per host up to this ceiling</td>
 <td><code>5</code></td>
@@ -137,7 +159,7 @@ for the naming rules.</p>
 </tr>
 <tr>
 <td><code>--format</code></td>
-<td>One-shot output format: <code>nagios</code>, <code>prometheus</code>, <code>json</code>, <code>sarif</code> or <code>junit</code></td>
+<td>One-shot output format: <code>nagios</code>, <code>prometheus</code>, <code>otlp</code>, <code>checkmk</code>, <code>summary</code>, <code>json</code>, <code>sarif</code> or <code>junit</code></td>
 <td><code>nagios</code></td>
 <td><code>COS_FORMAT</code></td>
 </tr>
@@ -164,6 +186,12 @@ for the naming rules.</p>
 <td>Hardening measure or check to accept, repeatable, comma-separated and wildcard capable</td>
 <td><em>None</em></td>
 <td><code>COS_SCANNER_IGNORE_HARDENINGS</code></td>
+</tr>
+<tr>
+<td><code>--waive-until</code></td>
+<td>Accept a check until a deadline, <code>PATTERN|EXPIRES|REASON</code>, repeatable</td>
+<td><em>None</em></td>
+<td><code>COS_SCANNER_TEMPORARY_WAIVERS</code></td>
 </tr>
 <tr>
 <td><code>--release-track</code></td>
@@ -208,6 +236,12 @@ for the naming rules.</p>
 <td><code>COS_UPDATE_WARNING</code></td>
 </tr>
 <tr>
+<td><code>--eol-warning DAYS</code></td>
+<td>Report WARNING when the release line reaches end of life within DAYS days (<code>0</code> is off)</td>
+<td><code>0</code></td>
+<td><code>COS_EOL_WARNING</code></td>
+</tr>
+<tr>
 <td><code>--baseline</code></td>
 <td>File that remembers the findings of the last run, one entry per host</td>
 <td><em>None</em></td>
@@ -218,6 +252,12 @@ for the naming rules.</p>
 <td>Only alert on findings that are new or worse than the baseline; needs <code>--baseline</code></td>
 <td><em>False</em></td>
 <td><code>COS_WARN_ON_NEW</code></td>
+</tr>
+<tr>
+<td><code>--verify-remediation</code></td>
+<td>Re-measure only the named finding ids (repeatable, comma-separated) instead of a full scan; see <a href="/documentation/reference#verifying-a-fix">Verifying a fix</a></td>
+<td><em>None</em></td>
+<td>-</td>
 </tr>
 <tr>
 <td><code>--diff-format</code></td>
@@ -245,7 +285,7 @@ for the naming rules.</p>
 </tr>
 <tr>
 <td><code>--webhook-format</code></td>
-<td>Webhook body shape: <code>generic</code> (the plugin's own JSON), <code>slack</code>, or <code>discord</code></td>
+<td>Webhook body shape: <code>generic</code> (the plugin's own JSON), <code>slack</code>, <code>discord</code>, <code>ntfy</code>, or <code>gotify</code></td>
 <td><code>generic</code></td>
 <td><code>COS_WEBHOOK_FORMAT</code></td>
 </tr>
@@ -356,6 +396,10 @@ lists every one of them with a comment.</p>
 <tr>
 <td><a href="/documentation/output-formats">Machine-readable output</a></td>
 <td><code>--format json</code>, <code>sarif</code> and <code>junit</code> in depth</td>
+</tr>
+<tr>
+<td><a href="/documentation/checkmk">Checkmk</a></td>
+<td><code>--format checkmk</code>, and running the plugin from a Checkmk server instead</td>
 </tr>
 <tr>
 <td><a href="/documentation/many-instances">Checking a fleet of instances</a></td>

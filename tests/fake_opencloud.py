@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import base64
 import json
+import socket
 import threading
 from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -128,6 +129,11 @@ class InstanceBehaviour:
     # Accept the documented demo credentials on the protected endpoints, the
     # way an instance left with IDM_CREATE_DEMO_USERS=true does.
     demo_users: bool = False
+    # Answer 429 with Retry-After once this many Basic sign-ins have been
+    # tried, before the credentials are even looked at - the way a proxy rate
+    # limit on the login path does. None never throttles.
+    throttle_after: int | None = None
+    basic_logins: list[int] = field(default_factory=lambda: [0])
     # Publish the version through webfinger.
     webfinger_version: bool = False
     # Serve a debug endpoint (/metrics, /config) on the main port.
@@ -173,6 +179,14 @@ class InstanceBehaviour:
     security_txt: tuple[str, str] | None = None
     # Something answers /.well-known/caldav, the way a proxied Radicale does.
     caldav: bool = False
+    # A document collaboration backend published on this instance's own
+    # origin, as a reverse proxy that forwards /hosting and /browser to it
+    # does. None serves nothing there, which is the common deployment: the
+    # editor lives on a host of its own.
+    wopi_urlsrc: str | None = None
+    # The editor's administration console answers instead of being blocked at
+    # the proxy. Only reachable when a backend is published at all.
+    wopi_admin_console: bool = False
     # What the CORS middleware grants a request that carries an Origin.
     # 'reflect' echoes it back the way a middleware configured with '*' and
     # credentials does; 'wildcard' answers a literal '*'; None sends no
@@ -306,7 +320,9 @@ def _make_handler(behaviour: InstanceBehaviour):
                 claimed = self.headers.get("X-Forwarded-Host") or self.headers.get("Host")
                 if claimed:
                     return claimed
-            address, port = self.server.server_address[:2]
+            bound = self.server.server_address
+            assert isinstance(bound, tuple)  # a TCP server, never a Unix socket
+            address, port = bound[:2]
             return f"{address}:{port}"
 
         def _route_path(self):
@@ -349,8 +365,35 @@ def _make_handler(behaviour: InstanceBehaviour):
             # can answer it with the SPA shell - which is exactly the response
             # the scanner must not read as a published policy.
             if path == "/.well-known/security.txt" and behaviour.security_txt is not None:
-                body, content_type = behaviour.security_txt
-                self._respond(200, body.encode("utf-8"), {"Content-Type": content_type})
+                text, content_type = behaviour.security_txt
+                self._respond(200, text.encode("utf-8"), {"Content-Type": content_type})
+                return
+
+            # The WOPI discovery document, in the shape the protocol
+            # specifies. Falls through to `catch_all` when no backend is
+            # configured, which is what the scanner must not read as one.
+            if path == "/hosting/discovery" and behaviour.wopi_urlsrc is not None:
+                discovery = (
+                    '<?xml version="1.0" encoding="utf-8"?>\n'
+                    "<wopi-discovery><net-zone name=\"external-https\">"
+                    '<app name="writer">'
+                    f'<action ext="odt" name="edit" urlsrc="{behaviour.wopi_urlsrc}"/>'
+                    "</app></net-zone></wopi-discovery>"
+                )
+                self._respond(
+                    200, discovery.encode("utf-8"), {"Content-Type": "text/xml"}
+                )
+                return
+
+            # Falls through when the console is not published, so that
+            # `catch_all` answers it with the SPA shell - the response the
+            # scanner must not read as a reachable console.
+            if path == "/browser/dist/admin/admin.html" and behaviour.wopi_admin_console:
+                self._respond(
+                    200,
+                    b"<html><body><div id='admin-console'>sessions</div></body></html>",
+                    {"Content-Type": "text/html"},
+                )
                 return
 
             if path in ("/.well-known/caldav", "/.well-known/carddav"):
@@ -375,7 +418,7 @@ def _make_handler(behaviour: InstanceBehaviour):
                 endpoint_base = issuer
                 if behaviour.openid_insecure_endpoints:
                     endpoint_base = "http://" + issuer.split("://", 1)[-1]
-                document = {
+                document: dict[str, Any] = {
                     "issuer": endpoint_base,
                     "authorization_endpoint": f"{endpoint_base}/authorize",
                     "token_endpoint": f"{endpoint_base}/token",
@@ -424,7 +467,7 @@ def _make_handler(behaviour: InstanceBehaviour):
                 return
 
             if path == "/.well-known/webfinger":
-                payload = {
+                payload: dict[str, Any] = {
                     "subject": "acct:me@example.com",
                     "links": [
                         {
@@ -459,6 +502,14 @@ def _make_handler(behaviour: InstanceBehaviour):
                 if behaviour.unprotected:
                     self._json({"value": [{"id": "1", "onPremisesSamAccountName": "admin"}]})
                     return
+                if self.headers.get("Authorization", "").startswith("Basic "):
+                    behaviour.basic_logins[0] += 1
+                    if (
+                        behaviour.throttle_after is not None
+                        and behaviour.basic_logins[0] > behaviour.throttle_after
+                    ):
+                        self._respond(429, b"", {"Retry-After": "30"})
+                        return
                 if behaviour.demo_users and self._demo_user():
                     self._json({"ocs": {"data": {"id": self._demo_user()}}})
                     return
@@ -498,12 +549,32 @@ def _make_handler(behaviour: InstanceBehaviour):
     return _Handler
 
 
+class _Server(ThreadingHTTPServer):
+    # The default backlog of five can drop bursts from the 32-worker scanner,
+    # making a test of identical findings depend on TCP retransmission timing.
+    request_queue_size = 64
+
+
+class _IPv6Server(_Server):
+    address_family = socket.AF_INET6
+
+
 class FakeOpenCloud:
     """A fake OpenCloud instance listening on localhost."""
 
-    def __init__(self, behaviour: InstanceBehaviour | None = None) -> None:
+    def __init__(
+        self,
+        behaviour: InstanceBehaviour | None = None,
+        *,
+        address: str = "127.0.0.1",
+        port: int = 0,
+    ) -> None:
+        # ``address`` and ``port`` exist for a pool: two instances on one port,
+        # one on 127.0.0.1 and one on ::1, are two nodes behind one name.
         self.behaviour = behaviour or InstanceBehaviour()
-        self._server = ThreadingHTTPServer(("127.0.0.1", 0), _make_handler(self.behaviour))
+        self.address = address
+        server_class = _IPv6Server if ":" in address else _Server
+        self._server = server_class((address, port), _make_handler(self.behaviour))
         self._thread = threading.Thread(target=self._server.serve_forever, daemon=True)
 
     @property
@@ -514,7 +585,9 @@ class FakeOpenCloud:
     @property
     def host(self) -> str:
         """'host:port' string that can be handed to the scanner."""
-        return f"127.0.0.1:{self.port}"
+        if ":" in self.address:
+            return f"[{self.address}]:{self.port}"
+        return f"{self.address}:{self.port}"
 
     def __enter__(self) -> FakeOpenCloud:  # noqa: PYI034 - Self needs 3.11
         self._thread.start()

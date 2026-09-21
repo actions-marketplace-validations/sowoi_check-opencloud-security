@@ -11,9 +11,14 @@ is written out by hand rather than discovered.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
+from functools import lru_cache
+from pathlib import Path
+from typing import Any
 
-from .documentation import DOCUMENTATION_PAGES
+from .documentation import DOCUMENTATION_PAGES, OPERATOR_DOCUMENTATION_PAGES
+from .i18n import DEFAULT_LOCALE, SUPPORTED_LOCALES
 
 
 @dataclass(frozen=True)
@@ -85,18 +90,10 @@ SEARCH_PAGES: tuple[SearchPage, ...] = (
     SearchPage(
         "/api",
         "API",
-        "Submit scans, poll results, export reports, and erase retained data.",
+        "Submit scans, poll results, export reports, and drive the service from an agent over OpenAPI, Arazzo or MCP.",
         "api.html",
         "search.page.api.title",
         "search.page.api.summary",
-    ),
-    SearchPage(
-        "/ai",
-        "AI and MCP",
-        "Machine-readable OpenAPI, Arazzo, discovery, MCP tools, and prompts.",
-        "ai.html",
-        "search.page.ai.title",
-        "search.page.ai.summary",
     ),
     SearchPage(
         "/privacy",
@@ -115,3 +112,87 @@ SEARCH_PAGES: tuple[SearchPage, ...] = (
         "search.page.about.summary",
     ),
 )
+
+
+#: The operator area's own pages, indexed separately from everything above.
+#:
+#: These are *not* public pages, so they are never written into
+#: ``frontend/static``: the built index for them lands in ``webapp/data``,
+#: which nothing mounts, and it is served only by the authorised route in the
+#: area itself. An operator searching should find the configuration tab and
+#: the operations notes; a stranger doing the same must not learn that either
+#: exists. That separation is the whole reason this is a second manifest
+#: rather than a flag on the entries above - a page in ``SEARCH_PAGES`` is
+#: public by construction, and nothing can put an operator page there by
+#: accident.
+ADMIN_SEARCH_PAGES: tuple[SearchPage, ...] = (
+    SearchPage(
+        "/admin",
+        "Operator area",
+        "What this deployment is doing, what it knows, and the refreshes the worker runs.",
+        "admin.html",
+        "admin.title",
+        "admin.lede",
+    ),
+    SearchPage(
+        "/admin/configuration",
+        "Configuration",
+        "Every COS_WEB_* variable this service reads, and the value it is running with.",
+        "admin-configuration.html",
+        "admin.config.title",
+        "admin.config.lede",
+    ),
+    SearchPage(
+        "/admin/rules",
+        "Rules in force",
+        "How a grade is decided, and every rule this deployment enforces against a request.",
+        "admin-rules.html",
+        "admin.rules.title",
+        "admin.rules.lede",
+    ),
+    *(
+        # English only and no catalogue keys, exactly as the tab strip renders
+        # them: these two are the repository's own documents.
+        SearchPage(
+            f"/admin/docs/{document.slug}",
+            document.title,
+            document.description,
+            f"admin-docs/{document.slug}.html",
+        )
+        for document in OPERATOR_DOCUMENTATION_PAGES
+    ),
+)
+
+
+#: Where the built operator indexes live, inside the package and outside
+#: anything the application mounts.
+ADMIN_INDEX_DIR = Path(__file__).resolve().parent / "data"
+
+#: The one file each language's operator index is written to and read from.
+#: A request *selects* an entry from this table and can never contribute a
+#: character to a file name, which is what keeps a hand-written language
+#: cookie a missing key rather than a path this process would go and read.
+ADMIN_INDEX_FILES: dict[str, str] = {
+    locale: (
+        "admin-search-index.json"
+        if locale == DEFAULT_LOCALE
+        else f"admin-search-index.{locale}.json"
+    )
+    for locale in SUPPORTED_LOCALES
+}
+
+
+@lru_cache(maxsize=len(SUPPORTED_LOCALES))
+def admin_search_document(locale: str) -> dict[str, Any] | None:
+    """The operator index for one language, or ``None`` when it was not built.
+
+    Cached because the file is written at release time and cannot change while
+    the process runs. ``None`` rather than an exception: a deployment whose
+    bundle predates this index should still answer search with the public
+    pages instead of failing the request.
+    """
+    name = ADMIN_INDEX_FILES.get(locale) or ADMIN_INDEX_FILES[DEFAULT_LOCALE]
+    try:
+        return json.loads((ADMIN_INDEX_DIR / name).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None

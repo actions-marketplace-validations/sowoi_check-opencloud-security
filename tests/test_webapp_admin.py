@@ -20,6 +20,8 @@ import asyncio
 import json
 import re
 from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -31,8 +33,11 @@ from tests.webapp_support import (  # noqa: F401 - the fixtures are autouse
     settings,
 )
 from webapp.app import create_app
+from webapp.i18n import LANGUAGE_COOKIE, SUPPORTED_LOCALES
+from webapp.search import ADMIN_INDEX_FILES, admin_search_document
 from webapp.settings import ADMIN_PROXY_SECRET_MINIMUM
 
+REPO_ROOT = Path(__file__).resolve().parent.parent
 SECRET = "b" * 48
 OPERATOR = "okko"
 
@@ -67,7 +72,7 @@ def test_the_area_is_absent_rather_than_protected_when_nobody_asked_for_it():
     with TestClient(create_app(settings())) as client:
         assert client.get("/admin").status_code == 404
         assert client.get("/admin/state").status_code == 404
-        assert client.post("/admin/refresh", data={"action": "schedule"}).status_code == 404
+        assert client.post("/admin/refresh", data={"source": "schedule"}).status_code == 404
         assert client.get("/admin/audit/stream").status_code == 404
 
 
@@ -133,6 +138,25 @@ def test_the_identity_headers_are_worthless_without_the_outpost_secret():
 
     assert forged.status_code == 404
     assert wrong.status_code == 404
+
+
+def test_a_secret_that_is_not_ascii_is_a_wrong_secret_rather_than_an_error():
+    """
+    Comparing non-ASCII ``str`` values raises, which answered 500.
+
+    An area that is off answers 404 to the same request, so the difference
+    told a prober from outside that the area was switched on.
+    """
+    presented: dict[str, Any] = {
+        "x-cos-admin-proxy": "é".encode("latin-1"),
+        "x-authentik-username": OPERATOR,
+    }
+    with TestClient(create_app(_admin_settings()), raise_server_exceptions=False) as client:
+        refused = client.get("/admin", headers=presented)
+        admitted = client.get("/admin", headers=FORWARDED)
+
+    assert refused.status_code == 404
+    assert admitted.status_code == 200
 
 
 def test_signing_in_is_not_the_same_as_being_on_the_guest_list():
@@ -459,7 +483,7 @@ def test_an_action_nobody_offers_is_refused_rather_than_attempted():
     with TestClient(create_app(_admin_settings())) as client:
         answer = client.post(
             "/admin/refresh",
-            data={"action": "rm -rf"},
+            data={"source": "rm -rf"},
             headers={**FORWARDED, "Accept": "application/json"},
         )
 
@@ -476,7 +500,7 @@ def test_a_refresh_meets_the_cross_site_check_every_other_post_does():
     with TestClient(create_app(_admin_settings())) as client:
         answer = client.post(
             "/admin/refresh",
-            data={"action": "schedule"},
+            data={"source": "schedule"},
             headers={**FORWARDED, "sec-fetch-site": "cross-site"},
         )
 
@@ -488,12 +512,12 @@ def test_a_refresh_cannot_be_held_down_against_somebody_elses_server():
     with TestClient(create_app(_admin_settings())) as client:
         first = client.post(
             "/admin/refresh",
-            data={"action": "schedule"},
+            data={"source": "schedule"},
             headers={**FORWARDED, "Accept": "application/json"},
         ).json()
         second = client.post(
             "/admin/refresh",
-            data={"action": "schedule"},
+            data={"source": "schedule"},
             headers={**FORWARDED, "Accept": "application/json"},
         ).json()
 
@@ -507,12 +531,12 @@ def test_the_two_refreshes_do_not_hold_each_other_up():
     with TestClient(create_app(_admin_settings())) as client:
         client.post(
             "/admin/refresh",
-            data={"action": "schedule"},
+            data={"source": "schedule"},
             headers={**FORWARDED, "Accept": "application/json"},
         )
         other = client.post(
             "/admin/refresh",
-            data={"action": "advisories"},
+            data={"source": "advisories"},
             headers={**FORWARDED, "Accept": "application/json"},
         ).json()
 
@@ -549,6 +573,37 @@ def test_the_statistics_name_nothing_anybody_scanned():
     # And the readings it does carry are there.
     assert "queueDepth" in body
     assert "ipRateLimit" in body
+
+
+def test_the_guard_tile_counts_blocks_without_naming_who_was_blocked():
+    """
+    An operator should see the guard working, and never whom it caught.
+
+    The counts move when a network is blocked; the fingerprint the block is
+    keyed on - the closest thing the store has to a client - is not in the
+    document the tile reads.
+    """
+    configured = _admin_settings(trust_forwarded_for=True, probe_limit=2)
+    app = create_app(configured)
+    with TestClient(app) as client:
+        before = client.get("/admin/state", headers=FORWARDED).json()["guard"]
+        for _ in range(2):
+            client.post(
+                "/api/scans",
+                json={"target_url": "http://10.0.0.1"},
+                headers={"X-Forwarded-For": "203.0.113.5"},
+            )
+        body = client.get("/admin/state", headers=FORWARDED).text
+
+    guard = json.loads(body)["guard"]
+    keys = asyncio.run(backend().keys_matching("cos:web:rl:blocked:*"))
+    assert before["activeBlocks"] == 0
+    assert guard["activeBlocks"] == 1
+    assert guard["blocksWeek"] == 1
+    assert guard["strikesToday"] == 2
+    assert keys
+    assert all(key.rsplit(":", 1)[1] not in body for key in keys)
+    assert "203.0.113" not in body
 
 
 def test_a_store_that_is_gone_is_not_reported_as_a_worker_that_died(monkeypatch):
@@ -653,7 +708,7 @@ def test_a_refresh_that_has_stopped_landing_says_which_failure_it_was(monkeypatc
     def _refresh(client):
         client.post(
             "/admin/refresh",
-            data={"action": "schedule"},
+            data={"source": "schedule"},
             headers={**FORWARDED, "Accept": "application/json"},
         )
         return client.get("/admin/state", headers=FORWARDED).json()["referenceData"]
@@ -786,12 +841,52 @@ def test_the_search_index_is_reported_and_never_rebuilt():
     assert "searchIndex" in state
     assert set(state["searchIndex"]) >= {"fresh", "builtFor", "running"}
 
-    # And no control offers to write one: the only actions the page submits
-    # are the two refreshes, which is asserted against the actual form fields
-    # rather than the prose, since the prose says the word "rebuild" in the
-    # course of explaining that it does not do it.
-    offered = set(re.findall(r'name="action" value="(\w+)"', page))
-    assert offered == {"schedule", "advisories"}
+    # And no control offers to write one. Asserted against the actual form
+    # fields rather than the prose, since the prose says the word "rebuild" in
+    # the course of explaining that it does not do it.
+    #
+    # The set is exhaustive on purpose: the area's actions are the two
+    # refreshes and the exclusions (ADR 0044, the one thing here that writes),
+    # and a third kind of write should have to come past this line. "remove"
+    # is absent only because this deployment has excluded nothing yet.
+    offered = set(re.findall(r'name="(?:source|operation)" value="(\w+)"', page))
+    assert offered == {"schedule", "advisories", "add"}
+
+
+def test_a_stale_index_says_how_to_fix_it_and_a_current_one_does_not():
+    """The card named who fixes a stale index, never what an operator can do.
+
+    The remedy is rendered by the server, so it is in the page's language
+    and on the page without scripting, and hidden until the script has a
+    verdict - a current index with instructions under it reads as a broken one.
+    """
+    with TestClient(create_app(_admin_settings())) as client:
+        page = client.get("/admin", headers=FORWARDED).text
+        script = client.get("/static/js/admin.js").text
+
+    remedy = re.search(r"<div[^>]*data-admin-index-remedy[^>]*>(.*?)</div>", page, re.DOTALL)
+    assert remedy is not None
+    assert " hidden" in remedy.group(0).split(">", 1)[0]
+    assert "python scripts/build_search_index.py" in remedy.group(1)
+    # Revealed for every verdict but "current", and never for that one.
+    assert 'remedy.hidden = state === "fresh";' in script
+    # And still nothing to press: the remedy is a command, not a form.
+    assert "<form" not in remedy.group(1)
+
+
+def test_the_index_detail_names_every_reason_rather_than_the_first():
+    """A stamp mismatch hid a missing language behind it: two deployments where one would do."""
+    with TestClient(create_app(_admin_settings())) as client:
+        script = client.get("/static/js/admin.js").text
+
+    describe = script[script.index("function describeIndex"):]
+    describe = describe[: describe.index("\n    }\n")]
+    assert 'reasons.join(" ")' in describe
+    for reason in ("index-release", "index-missing", "index-extra", "index-changed"):
+        assert f'reasons.push(fill(text("{reason}")' in describe
+    # Only the unreadable index still answers early, since nothing else can
+    # be said about a file that did not parse.
+    assert describe.count("return ") == 4
 
 
 def _shipped_index(root, *, built_for, extra=()):
@@ -936,6 +1031,46 @@ def _usable_sources(monkeypatch):
     )
 
 
+def test_the_action_buttons_post_to_the_path_the_form_names(monkeypatch):
+    """Every scripted button reaches the route its form names, with its own fields.
+
+    The script once read `form.action`, which a hidden control named `action`
+    had shadowed, and posted to `/[object HTMLInputElement]` - a 404 that left
+    the page saying nothing. Checking the script's text could not catch a
+    rewrite of the same mistake, so this posts what each form would post.
+    """
+    _usable_sources(monkeypatch)
+    json_headers = {**FORWARDED, "Accept": "application/json"}
+    with TestClient(create_app(_admin_settings())) as client:
+        page = client.get("/admin", headers=FORWARDED).text
+        forms = re.findall(
+            r'<form method="post" action="([^"]+)" data-admin-(?:action|probe)>(.*?)</form>',
+            page,
+            re.DOTALL,
+        )
+        answers = [
+            client.post(
+                path,
+                data=dict(re.findall(r'name="(\w+)" value="([^"]*)"', body)),
+                headers=json_headers,
+            )
+            for path, body in forms
+        ]
+
+    # Both refreshes and the dry run: a form the pattern stopped matching
+    # would otherwise pass by posting nothing.
+    assert len(forms) == 3
+    for answer in answers:
+        assert answer.status_code == 200, answer.text
+        assert answer.json()["state"] not in {"failed", "cooldown"}
+    # And a request still naming the old field is refused, not quietly obeyed.
+    with TestClient(create_app(_admin_settings())) as client:
+        stale = client.post(
+            "/admin/refresh", data={"action": "schedule"}, headers=json_headers
+        )
+    assert stale.status_code == 422
+
+
 def test_the_dry_run_reads_both_sources_and_stores_none_of_it(monkeypatch):
     """The whole difference between the probe and the button beside it.
 
@@ -999,7 +1134,7 @@ def test_the_dry_run_is_held_back_on_a_key_of_its_own(monkeypatch):
         first = client.post("/admin/probe", headers=json_headers).json()
         again = client.post("/admin/probe", headers=json_headers).json()
         refresh = client.post(
-            "/admin/refresh", data={"action": "schedule"}, headers=json_headers
+            "/admin/refresh", data={"source": "schedule"}, headers=json_headers
         ).json()
 
     assert first["state"] == "probed"
@@ -1135,3 +1270,452 @@ def test_the_live_window_is_bounded_and_keeps_what_the_log_wrote():
     assert '"n": 9' in pending[-1]
     # Asking again with the cursor it just gave returns nothing new.
     assert window.since(cursor)[1] == []
+
+
+# ------------------------------------------------ the stream itself, driven
+
+
+class _Watcher:
+    """A reader of the stream that hangs up after so many frames.
+
+    ``audit_events`` runs until the client goes away or the cap is reached,
+    so a test that only iterated it would never return. This stands in for
+    the request and reports itself disconnected once the test has seen what
+    it came for.
+    """
+
+    def __init__(self, frames: int) -> None:
+        self._remaining = frames
+
+    async def is_disconnected(self) -> bool:
+        if self._remaining <= 0:
+            return True
+        self._remaining -= 1
+        return False
+
+
+async def _collect(recent, settings_, frames=4):
+    from webapp.admin import audit_events
+
+    return [
+        frame
+        async for frame in audit_events(_Watcher(frames), recent, settings_)
+    ]
+
+
+@pytest.fixture
+def _instant_stream(monkeypatch):
+    """The stream polls once a second; nothing here is worth a second of it."""
+    monkeypatch.setattr("webapp.admin._STREAM_INTERVAL_SECONDS", 0)
+
+
+def test_a_record_arriving_after_somebody_started_watching_reaches_them(_instant_stream):
+    """The view exists to show what happens next; a stream that shows nothing is decoration."""
+    from webapp.audit import RecentAuditRecords
+
+    window = RecentAuditRecords(16)
+    window.add('{"event": "scan_requested"}')  # before the reader arrived
+
+    async def watch():
+        from webapp.admin import audit_events
+
+        request = _Watcher(6)
+        frames = []
+        stream = audit_events(request, window, _admin_settings(audit_log=True))
+        async for frame in stream:
+            frames.append(frame)
+            if frame == 'event: state\ndata: live\n\n':
+                window.add('{"event": "scan_completed"}')
+        return frames
+
+    frames = asyncio.run(watch())
+
+    assert frames[0] == "event: state\ndata: live\n\n"
+    records = [f for f in frames if f.startswith("event: record")]
+    assert any("scan_completed" in frame for frame in records)
+    # The negative half: the window is not replayed into the browser.
+    assert not any("scan_requested" in frame for frame in records)
+
+
+def test_a_quiet_trail_still_sends_something_down_the_connection(_instant_stream):
+    """A proxy in front of an idle stream will close it; the keep-alive is why it does not."""
+    from webapp.audit import RecentAuditRecords
+
+    frames = asyncio.run(_collect(RecentAuditRecords(16), _admin_settings(audit_log=True)))
+
+    assert frames[0] == "event: state\ndata: live\n\n"
+    assert frames[1:] == [": keep-alive\n\n"] * (len(frames) - 1)
+
+
+def test_the_stream_says_it_is_disabled_and_stops_where_no_trail_is_kept(_instant_stream):
+    """Nothing to follow, said once - not an open connection that never sends anything."""
+    frames = asyncio.run(_collect(None, _admin_settings(audit_log=False)))
+
+    assert frames == ["event: state\ndata: disabled\n\n"]
+
+
+def test_the_stream_ends_itself_at_the_cap_and_says_so(monkeypatch, _instant_stream):
+    """An operator who left the page open overnight gets a closed stream, not a held one."""
+    from webapp.audit import RecentAuditRecords
+
+    monkeypatch.setattr("webapp.admin._STREAM_MAX_SECONDS", -1)
+
+    frames = asyncio.run(_collect(RecentAuditRecords(16), _admin_settings(audit_log=True)))
+
+    assert frames == ["event: state\ndata: live\n\n", "event: state\ndata: closed\n\n"]
+
+
+def test_a_reader_who_hung_up_ends_the_stream_without_a_closing_state(_instant_stream):
+    """Nobody is listening: there is no state to send and no loop worth running."""
+    from webapp.audit import RecentAuditRecords
+
+    frames = asyncio.run(
+        _collect(RecentAuditRecords(16), _admin_settings(audit_log=True), frames=0)
+    )
+
+    assert frames == ["event: state\ndata: live\n\n"]
+
+
+def test_a_file_trail_is_followed_from_its_end_rather_than_replayed(tmp_path, _instant_stream):
+    """
+    Retention is the file's business, not the browser's.
+
+    A deployment that keeps months of audit records in a file must not have
+    them read into a page because somebody opened the view - the point is
+    what happens next, and the whole file is a copy nobody asked for.
+    """
+    log = tmp_path / "audit.log"
+    log.write_text('{"event": "scan_requested", "when": "yesterday"}\n', encoding="utf-8")
+
+    configured = _admin_settings(audit_log=True, audit_log_file=str(log))
+
+    async def watch():
+        from webapp.admin import audit_events
+
+        frames = []
+        async for frame in audit_events(_Watcher(6), None, configured):
+            frames.append(frame)
+            if frame == "event: state\ndata: live\n\n":
+                with log.open("a", encoding="utf-8") as handle:
+                    handle.write('{"event": "scan_completed", "when": "now"}\n')
+        return frames
+
+    frames = asyncio.run(watch())
+
+    assert any('"when": "now"' in frame for frame in frames)
+    assert not any("yesterday" in frame for frame in frames)
+
+
+def test_a_trail_in_a_file_that_is_not_there_is_not_a_broken_page(_instant_stream):
+    """The view still has to answer; a missing file is a quiet stream, not a 500."""
+    configured = _admin_settings(audit_log=True, audit_log_file="/nonexistent/audit.log")
+
+    frames = asyncio.run(_collect(None, configured))
+
+    assert frames[0] == "event: state\ndata: live\n\n"
+    assert frames[1:] == [": keep-alive\n\n"] * (len(frames) - 1)
+
+
+def test_a_newline_inside_a_record_cannot_forge_a_second_event():
+    """
+    The one place a record's content decides how the connection is framed.
+
+    An event ends at a blank line, so an unescaped newline in a record does
+    not merely render oddly - it lets whatever produced that record inject a
+    frame of its own choosing into an operator's live view. The audit log
+    JSON-encodes what it writes, which is a reason this has not happened and
+    not a reason it cannot.
+    """
+    from webapp.admin import _sse
+
+    frame = _sse("record", 'first\n\nevent: state\ndata: closed\r\nrest')
+
+    assert frame.count("\n\n") == 1
+    assert frame.endswith("\n\n")
+    assert frame.startswith("event: record\ndata: ")
+    assert "\r" not in frame
+    assert frame.splitlines()[1].startswith("data: ")
+    assert len([line for line in frame.split("\n") if line.startswith("event:")]) == 1
+
+
+# ------------------------------------------------- the operator documentation
+
+
+def test_both_repository_documents_are_readable_from_the_area():
+    """
+    An operator working out why the service misbehaves should not have to
+    leave the area to find the document that explains it.
+    """
+    with TestClient(create_app(_admin_settings())) as client:
+        architecture = client.get("/admin/docs/architecture", headers=FORWARDED)
+        operations = client.get("/admin/docs/operations", headers=FORWARDED)
+
+    assert architecture.status_code == 200
+    assert "Architecture" in architecture.text
+    assert "ARCHITECTURE.md" in architecture.text
+
+    assert operations.status_code == 200
+    assert "Operations" in operations.text
+    assert "ADMIN.md" in operations.text
+
+
+def test_the_release_notes_are_readable_from_the_area():
+    """
+    What the running release changed, without leaving the area for GitHub.
+
+    The newest released section leads, and nothing unreleased appears: that
+    is what a deployment does not run yet.
+    """
+    from webapp import __version__
+
+    changelog = (REPO_ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    released = re.search(r"^## \[(\d+\.\d+\.\d+)\]", changelog, re.MULTILINE)
+    assert released is not None
+    newest = released.group(1)
+    # A version bump is built before the workflow names its section: the
+    # running release then leads, from what [Unreleased] collected.
+    if f"## [{__version__}]" not in changelog:
+        newest = __version__
+
+    with TestClient(create_app(_admin_settings())) as client:
+        response = client.get("/admin/docs/releases", headers=FORWARDED)
+
+    assert response.status_code == 200
+    assert "CHANGELOG.md" in response.text
+    headings = re.findall(r"<h2 id=\"[^\"]+\">\[([^\]]+)\]", response.text)
+    assert headings[0] == newest
+    assert "Unreleased" not in headings
+    assert len(headings) == 10
+
+
+def test_the_documents_are_gated_exactly_like_the_rest_of_the_area():
+    """
+    The negative case, and the one that matters: a document reachable without
+    the outpost's secret would be the whole area's guard undone by a page
+    that forgot to ask.
+    """
+    with TestClient(create_app(_admin_settings())) as client:
+        for slug in ("architecture", "operations", "releases"):
+            assert client.get(f"/admin/docs/{slug}").status_code == 404
+            assert client.get(
+                f"/admin/docs/{slug}",
+                headers={**FORWARDED, "x-cos-admin-proxy": "wrong"},
+            ).status_code == 404
+
+
+def test_the_documents_do_not_exist_when_the_area_is_off():
+    """Off means absent here too, or the area's absence is a lie."""
+    with TestClient(create_app(settings())) as client:
+        assert client.get("/admin/docs/architecture").status_code == 404
+        assert client.get("/admin/docs/operations").status_code == 404
+        assert client.get("/admin/docs/releases").status_code == 404
+
+
+def test_an_unknown_document_is_a_404_rather_than_a_guess():
+    """A slug is not a path into the templates directory."""
+    with TestClient(create_app(_admin_settings())) as client:
+        for slug in ("nonsense", "../base", "index"):
+            assert client.get(f"/admin/docs/{slug}", headers=FORWARDED).status_code == 404
+
+
+def test_every_page_in_the_area_carries_the_same_tab_strip():
+    """One strip, or the area reads as a page with two attachments."""
+    with TestClient(create_app(_admin_settings())) as client:
+        pages = [
+            client.get("/admin", headers=FORWARDED),
+            client.get("/admin/docs/architecture", headers=FORWARDED),
+            client.get("/admin/docs/operations", headers=FORWARDED),
+            client.get("/admin/docs/releases", headers=FORWARDED),
+        ]
+
+    for response in pages:
+        assert response.status_code == 200
+        assert 'class="admin-tabs"' in response.text
+        assert '/admin/docs/architecture' in response.text
+        assert '/admin/docs/operations' in response.text
+        assert '/admin/docs/releases' in response.text
+        # Exactly one tab is the current one, on every page.
+        assert response.text.count('aria-current="page"') == 1
+
+
+def test_the_operator_documents_are_never_indexed():
+    """
+    They are inside the area, so they inherit its refusal - but this is the
+    page where a future edit to the public page list must not be able to turn
+    indexing on by accident.
+    """
+    with TestClient(create_app(_admin_settings())) as client:
+        for slug in ("architecture", "operations", "releases"):
+            response = client.get(f"/admin/docs/{slug}", headers=FORWARDED)
+            assert "noindex" in response.headers.get("x-robots-tag", "")
+            assert 'content="noindex, nofollow, noarchive"' in response.text
+
+
+def test_the_operator_documents_stay_out_of_every_public_surface():
+    """
+    ADMIN.md says it is absent from `/documentation` and the site search, and
+    that has to stay true now that it is rendered somewhere.
+
+    The area authorises its own pages; this is about the four places that
+    list pages *without* authorising anybody. A guide added to the public
+    manifest appears in all of them, which is exactly why these two are in a
+    manifest of their own.
+    """
+    from webapp.documentation import DOCUMENTATION_PAGES, OPERATOR_DOCUMENTATION_PAGES
+    from webapp.search import SEARCH_PAGES
+    from webapp.seo import PUBLIC_PAGES
+
+    operator_slugs = {page.slug for page in OPERATOR_DOCUMENTATION_PAGES}
+    assert operator_slugs == {"architecture", "operations", "releases"}
+
+    # Not in the manifest that feeds /documentation, the sitemap and the nav.
+    assert operator_slugs.isdisjoint({page.slug for page in DOCUMENTATION_PAGES})
+
+    # Not in the search index, and not in the list of indexable public paths.
+    indexed = {page.path for page in SEARCH_PAGES}
+    for slug in operator_slugs:
+        assert f"/documentation/{slug}" not in indexed
+        assert f"/admin/docs/{slug}" not in indexed
+        assert f"/admin/docs/{slug}" not in set(PUBLIC_PAGES)
+
+    with TestClient(create_app(_admin_settings())) as client:
+        listing = client.get("/documentation")
+        sitemap = client.get("/sitemap.xml")
+        robots = client.get("/robots.txt")
+
+    for slug in operator_slugs:
+        assert f"/admin/docs/{slug}" not in listing.text
+        assert f"/admin/docs/{slug}" not in sitemap.text
+        # Not in robots either: a Disallow line is a public file naming the
+        # path, which advertises that this deployment has an operator's area.
+        assert slug not in robots.text
+
+
+# ----------------------------------------------- the area's own search index
+
+
+def test_the_operator_search_index_is_not_a_public_asset():
+    """The area's text must not be reachable the way the public index is.
+
+    The public index is a file under /static because every page in it is
+    public. This one carries the configuration tab, the rules tab and the
+    operations notes, so a deployment that served it the same way would
+    publish the area's contents to everybody who guessed the filename.
+    """
+    with TestClient(create_app(_admin_settings())) as client:
+        for path in (
+            "/static/admin-search-index.json",
+            "/static/search-index.admin.json",
+            "/webapp/data/admin-search-index.json",
+        ):
+            assert client.get(path).status_code == 404, path
+
+        public = client.get("/static/search-index.json").json()
+        assert all(
+            not entry["path"].startswith("/admin") for entry in public["pages"]
+        )
+
+
+def test_the_operator_search_index_answers_only_an_authorised_operator():
+    """An index of the area is a description of the area; it gets the area's guard."""
+    with TestClient(create_app(_admin_settings())) as client:
+        stranger = client.get("/admin/search-index.json")
+        assert stranger.status_code == 404
+
+        # Signed in at the proxy, but not on the guest list.
+        outsider = client.get(
+            "/admin/search-index.json",
+            headers={**FORWARDED, "x-authentik-username": "nobody"},
+        )
+        assert outsider.status_code == 404
+
+        operator = client.get("/admin/search-index.json", headers=FORWARDED)
+        assert operator.status_code == 200
+        paths = [entry["path"] for entry in operator.json()["pages"]]
+        assert "/admin/configuration" in paths
+        assert "/admin/docs/operations" in paths
+
+
+def test_the_operator_search_index_is_never_stored_by_a_cache():
+    """Signing out must not leave the area's text searchable in the browser."""
+    with TestClient(create_app(_admin_settings())) as client:
+        answer = client.get("/admin/search-index.json", headers=FORWARDED)
+
+    assert answer.headers["cache-control"] == "no-store"
+
+
+def test_the_search_page_offers_the_area_only_while_the_sign_in_lasts():
+    """The offer follows the proxy's header, so a sign-out removes it at once."""
+    with TestClient(create_app(_admin_settings())) as client:
+        signed_in = client.get("/search", headers=FORWARDED).text
+        assert "/admin/search-index.json" in signed_in
+
+        # The same page for the same person once the outpost stops
+        # authorising them: no attribute, so nothing to fetch.
+        signed_out = client.get("/search").text
+        assert "/admin/search-index.json" not in signed_out
+        assert "/admin" not in signed_out
+
+
+def test_the_operator_index_carries_the_areas_text_in_the_readers_language():
+    """An operator reading German searches the German area, not an English copy."""
+    with TestClient(create_app(_admin_settings())) as client:
+        german = client.get(
+            "/admin/search-index.json",
+            headers={**FORWARDED, "accept-language": "de"},
+        ).json()
+
+    assert german["locale"] == "de"
+    overview = next(page for page in german["pages"] if page["path"] == "/admin")
+    assert overview["title"] == "Betriebsbereich"
+
+
+def test_the_operator_index_is_chosen_from_a_table_not_built_from_a_cookie():
+    """A language cookie selects a file; it never spells one.
+
+    The cookie is a visitor's to write, so the file name must not be. Every
+    language this frontend has maps to one fixed name, and anything else -
+    a tag this frontend does not have, or a hand-written traversal - falls
+    back to the English index rather than sending this process off to read
+    whatever the cookie named.
+    """
+    assert set(ADMIN_INDEX_FILES) == set(SUPPORTED_LOCALES)
+    assert all(
+        "/" not in name and "\\" not in name and ".." not in name
+        for name in ADMIN_INDEX_FILES.values()
+    )
+
+    english = admin_search_document("en")
+    for cookie in ("../../../../etc/passwd", "klingon", "en/../de", ""):
+        assert admin_search_document(cookie) == english
+
+    with TestClient(create_app(_admin_settings())) as client:
+        client.cookies.set(LANGUAGE_COOKIE, "../../../../etc/passwd")
+        answer = client.get("/admin/search-index.json", headers=FORWARDED)
+
+    assert answer.status_code == 200
+    assert "locale" not in answer.json()
+
+
+def test_the_operator_documents_show_only_images_this_service_serves():
+    """A page under `img-src 'self'` must not point at an image it cannot show.
+
+    The repository's Markdown links images beside it, which resolve to
+    nothing once the page is served from `/admin/docs/`. The diagram is
+    copied into the frontend and served from this origin; the interface
+    screenshots are megabytes each, so they become links to the repository
+    rather than broken images or a heavier bundle.
+    """
+    with TestClient(create_app(_admin_settings())) as client:
+        architecture = client.get(
+            "/admin/docs/architecture", headers=FORWARDED
+        ).text
+        operations = client.get("/admin/docs/operations", headers=FORWARDED).text
+
+        assert 'src="/static/img/architecture-three-layers.png"' in architecture
+        assert client.get("/static/img/architecture-three-layers.png").status_code == 200
+
+        # Nothing anywhere still points at a path relative to the document.
+        for body in (architecture, operations):
+            assert 'src="img/' not in body
+        assert "blob/main/img/admin-area-dark.png" in operations

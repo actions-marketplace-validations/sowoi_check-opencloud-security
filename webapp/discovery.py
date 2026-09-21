@@ -31,8 +31,11 @@ OPENAPI_PATH = "/openapi.json"
 ARAZZO_PATH = "/arazzo.json"
 MCP_PATH = "/mcp"
 API_PAGE_PATH = "/api"
-#: The page written for agents rather than about the API in general.
-AGENT_PAGE_PATH = "/ai"
+#: What agents were pointed at while the agent guide was a page of its own at
+#: ``/ai``. That page is now a section of the API page, and the old path
+#: redirects there, but the key stays in the document: a client that read it
+#: once should not find it missing.
+AGENT_PAGE_PATH = API_PAGE_PATH
 
 #: The media type an OpenAPI document is served as, and the link relation a
 #: client that understands one looks for.

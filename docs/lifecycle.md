@@ -1,11 +1,9 @@
 # Version and lifecycle disclosure: what this scanner checks, and why
 
-Three checks are about the running version: whether one could be determined
-at all, and whether it leaks somewhere it does not need to. They are
-distinct from [end-of-life detection](../README.md#end-of-life-detection) and
-the update check, which decide whether a *known* version is still supported -
-these three exist upstream of that, because both depend on actually having a
-real version to reason about.
+These checks establish whether the scanner knows the running version and whether the
+instance publishes it in unnecessary places. They complement [end-of-life
+detection](../README.md#end-of-life-detection) and the update check, both of which need
+a reliable version number.
 
 <!-- TOC -->
 * [Version and lifecycle disclosure: what this scanner checks, and why](#version-and-lifecycle-disclosure-what-this-scanner-checks-and-why)
@@ -26,15 +24,13 @@ two are and why they exist, and [Why OpenCloud still answers
 fields come from. This check fails when `productversion` is missing and
 only the legacy compatibility `version`/`versionstring` fields came back.
 
-This matters beyond the finding itself: without a real version, no advisory
-can be matched and no end-of-life or update state can be worked out. A
-result missing this field is not merely incomplete - the checks that depend
-on the version did not run at all, and a report that read them as passing
-would be claiming to have verified something it never saw.
+Without the actual version, the scanner cannot match advisories or determine
+support status and available updates. These checks do not run when the version
+is missing, so their results remain unknown.
 
 **If this fails:** check whether something in front of the instance rewrites
 or strips fields from the `/status.php` response, and whether the release is
-old enough that it genuinely predates `productversion` being reported at
+old enough that it predates `productversion` being reported at
 all. Until a real version comes back, treat every version-dependent part of
 the result as unknown rather than as clean.
 
@@ -42,9 +38,8 @@ the result as unknown rather than as clean.
 
 The `Server` and `X-Powered-By` response headers are each checked for
 anything that looks like a version number (a digit, a dot, another digit).
-Neither is a vulnerability by itself - it tells whoever is looking which
-advisories to try first, nothing more - which is why both are rated `low`
-rather than anything higher.
+Publishing a version number is not a vulnerability by itself, but it helps
+attackers identify known vulnerabilities to target. Both findings are rated `low`.
 
 **Fix:** strip or flatten the header in the reverse proxy - `server_tokens
 off` in Nginx, `ServerTokens Prod` in Apache - or unset it outright. See

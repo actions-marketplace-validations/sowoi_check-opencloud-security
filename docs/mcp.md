@@ -236,7 +236,7 @@ transport, the answer is *streamable HTTP* (sometimes called "HTTP" or
 An agent that has never heard of this service can find the endpoint itself:
 `https://scan.okxo.de/.well-known/ai.json` names it, alongside the OpenAPI and
 Arazzo documents. That is the whole point of the discovery document - see
-[the page for agents](https://scan.okxo.de/ai). `https://scan.okxo.de/agents.txt`
+[the API page](https://scan.okxo.de/api#api-agents). `https://scan.okxo.de/agents.txt`
 and `https://scan.okxo.de/llms.txt` point at the same document for a fetcher
 that goes looking for one of those two filenames first, in the informal
 conventions some agent frameworks and crawlers already use - see [Working on

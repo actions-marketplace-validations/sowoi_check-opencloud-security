@@ -7,11 +7,16 @@ side, and the request never gets a vote.
 
 Requests are checked in this order:
 
-1. the client rate limit, because it is one Redis ``INCR`` and it protects
-   the resolver behind step 2 from being used as an amplifier;
-2. the target itself, against the SSRF guard;
-3. the waiver list, against the allow-list, dropping anything unknown;
-4. the target cooldown, claimed with ``SET NX`` so two simultaneous requests
+1. the probe block, a single read, because a client network that has been
+   scanning hosts that are not OpenCloud is refused before it spends anything;
+2. the client rate limit and the daily cap, because each is one Redis
+   ``INCR`` and they protect the resolver behind step 3 from being used as an
+   amplifier;
+3. the target itself, against the SSRF guard - and a refusal that says
+   something about the asker counts towards the probe block;
+4. approval, when the deployment requires it;
+5. the waiver list, against the allow-list, dropping anything unknown;
+6. the target cooldown, claimed with ``SET NX`` so two simultaneous requests
    for the same instance cannot both win.
 
 Only then does a uuid exist. Overload never changes any of this: when every
@@ -22,6 +27,7 @@ service that punishes people for being interested.
 
 from __future__ import annotations
 
+import asyncio
 import hmac
 import importlib.util
 import ipaddress
@@ -31,6 +37,7 @@ import os
 import uuid as uuid_module
 from collections.abc import AsyncIterator, Mapping
 from contextlib import asynccontextmanager
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
@@ -46,6 +53,8 @@ from fastapi.responses import (
 )
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.background import BackgroundTask
+from starlette.datastructures import UploadFile as StarletteUploadFile
 from starlette.responses import StreamingResponse
 
 from opencloud_local_scan import __version__
@@ -73,19 +82,39 @@ from .admin import (
     surfaces,
 )
 from .admin_auth import Operator, ensure_admin_ready, operator_for, sign_out_url
-from .advisories import advisory_catalogue, advisory_state, stored_database
+from .advisories import (
+    advisory_catalogue,
+    advisory_state,
+    database_updated,
+    stored_database,
+)
+from .approval import NOT_APPROVED, approved, ensure_approval_ready
 from .arazzo import arazzo_document
 from .audit import (
     REASON_BATCH_TOO_LARGE,
+    REASON_EXCLUSIONS_UNREADABLE,
     REASON_PURGE_UNAUTHORISED,
     REASON_RATE_LIMIT_CLIENT,
+    REASON_RATE_LIMIT_DAILY,
+    REASON_RATE_LIMIT_PROBE,
     REASON_RATE_LIMIT_PURGE,
     REASON_RATE_LIMIT_TARGET,
+    REASON_RATE_LIMIT_UPLOAD,
+    REASON_REPORT_REJECTED,
+    REASON_TARGET_NOT_APPROVED,
     REASON_TARGET_REJECTED,
     REASON_UNSUPPORTED_FIELDS,
     AuditLog,
     configure_audit_file,
     install_recent_audit,
+)
+from .badge import render as render_badge
+from .blocklist import (
+    EntryRejected,
+    add_exclusion,
+    effective_exclusions,
+    exclusions_or_none,
+    remove_exclusion,
 )
 from .catalog import (
     DEFAULT_RELEASE_TRACK,
@@ -93,8 +122,11 @@ from .catalog import (
     catalogue_anchor,
     catalogue_link,
     check_catalogue,
+    finding_id,
     grade_scale,
     open_findings,
+    rating_label,
+    rating_tone,
     release_track_options,
     sanitize_release_track,
     sanitize_waivers,
@@ -102,6 +134,9 @@ from .catalog import (
     summarise,
     waiver_options,
 )
+from .comparisons import ComparisonStore, new_token
+from .configuration import grouped_rows as configuration_groups
+from .configuration import unrecognised as configuration_unrecognised
 from .discovery import (
     ARAZZO_PATH,
     DISCOVERY_PATH,
@@ -110,9 +145,22 @@ from .discovery import (
     OPENAPI_PATH,
     discovery_document,
 )
-from .documentation import DOCUMENTATION_BY_SLUG, DOCUMENTATION_PAGES
+from .documentation import (
+    DOCUMENTATION_BY_SLUG,
+    DOCUMENTATION_PAGES,
+    GUIDE_LANGUAGES,
+    OPERATOR_DOCUMENTATION_BY_SLUG,
+    OPERATOR_DOCUMENTATION_PAGES,
+)
 from .encryption import ensure_encryption_ready
 from .export_signing import SIGNATURE_HEADER, sign_bytes
+from .feeds import (
+    ADVISORIES_PATH,
+    ATOM_MEDIA_TYPE,
+    SCHEDULE_PATH,
+    advisories_feed,
+    schedule_feed,
+)
 from .i18n import (
     DEFAULT_LOCALE,
     LANGUAGE_COOKIE,
@@ -123,6 +171,13 @@ from .i18n import (
     locale_options,
     normalise_locale,
     safe_next_path,
+)
+from .imports import (
+    MAX_UPLOAD_BYTES,
+    ImportedReport,
+    ReportRejected,
+    parse_report,
+    restrict_to,
 )
 from .mcp_auth import (
     PROTECTED_RESOURCE_PATH,
@@ -139,17 +194,20 @@ from .purge import (
     normalise_target,
 )
 from .queue import ScanQueue, create_queue
-from .ratelimit import RateLimiter
+from .ratelimit import RateLimiter, limiter_for
 from .redis_backend import RedisUnavailable, create_backend
 from .reports import (
     EXPORT_FORMATS,
     MEDIA_TYPES,
     csv_report,
     export_filename,
+    html_report,
     pdf_report,
     sarif_report,
 )
-from .schedule import schedule_state
+from .rules import enforcement_groups, rating_rules
+from .schedule import schedule_state, stored_schedule
+from .search import admin_search_document
 from .seo import (
     AGENTS_JSON_PATH,
     AGENTS_TXT_PATH,
@@ -172,7 +230,12 @@ from .seo import (
     wants_robots_tag,
 )
 from .settings import WebSettings
-from .ssrf import TargetRejected, validate_target
+from .ssrf import (
+    SUSPICIOUS_REJECTIONS,
+    TargetRejected,
+    ensure_blocklist_ready,
+    validate_target,
+)
 from .store import (
     QUEUE_KEY,
     STATE_COMPLETED,
@@ -182,13 +245,257 @@ from .store import (
     ScanStore,
     target_hostname,
 )
+from .updates import request_update, restart_into, update_state
+from .workflows import (
+    ASYNC_NOTE,
+    CONFLICT_NOTE,
+    EXPIRY_NOTE,
+    EXPORT_CONTENT_LIMIT,
+    EXPORT_NOTE,
+    EXPORT_RETRY_SECONDS,
+    INPUT_NOTE,
+    NO_PAGE,
+    NOT_FINISHED_STATUS,
+    RATE_LIMIT_FALLBACK_SECONDS,
+    RATE_LIMIT_NOTE,
+    REMOTE_NOTE,
+    RETRYABLE_STATUSES,
+    UUID_NOTE,
+    WorkflowError,
+    compare_documents,
+)
 
 LOGGER = logging.getLogger("check_opencloud.web")
+
+
+async def _restart_soon(tree: Path) -> None:  # pragma: no cover - replaces the process
+    """Restart into a verified, unpacked release once the answer has been sent."""
+    await asyncio.sleep(1)
+    restart_into(tree)
 
 
 def mcp_available() -> bool:
     """Whether the optional ``mcp`` extra is installed in this environment."""
     return importlib.util.find_spec("mcp") is not None
+
+
+#: What every browser tool says about how it fails.
+#:
+#: The server-side tools answer ``ok: false`` with a status and a retryable
+#: flag rather than raising, so that an agent meeting a cooldown waits instead
+#: of looping. A browser tool that threw a bare error would hand the agent the
+#: same situation with none of that information, so ``webmcp.js`` normalises
+#: failures into the same shape and this sentence is how the agent learns to
+#: expect it.
+_FAILURE_NOTE = (
+    "This tool does not throw. A failure comes back as ok: false with status, "
+    "error and retryable, plus retryAfter in seconds where the server sent "
+    "one. retryable false means stop and report the error; do not call the "
+    "tool again."
+)
+
+
+def _webmcp_retry() -> dict[str, Any]:
+    """
+    Which answers a browser tool may repeat, decided here rather than in JavaScript.
+
+    ``webmcp.js`` is transport and holds no policy: a copy of these numbers in
+    a script is a copy that drifts from ``workflows.py``, and the two would
+    disagree about whether to wait exactly where it matters - a 429 an agent
+    reads as fatal is a scan nobody runs, and a 404 it reads as retryable is a
+    loop against a scan that no longer exists.
+    """
+    return {
+        "retryableStatuses": list(RETRYABLE_STATUSES),
+        "fallbackRetrySeconds": RATE_LIMIT_FALLBACK_SECONDS,
+    }
+
+
+def _webmcp_scan_tool(tracks: Any, waivers: Any) -> dict[str, Any]:
+    """
+    The landing page's one tool: submit a scan.
+
+    The schema's enums are the same catalogue objects the form renders from,
+    so a track or a waiver added to the catalogue reaches the agent and the
+    visitor in the same deployment.
+    """
+    return {
+        "action": "scan",
+        "endpoint": "/api/scans",
+        "name": "scan_opencloud_security",
+        "title": "Scan OpenCloud security",
+        "description": (
+            "Queue a security scan for a publicly reachable OpenCloud "
+            "instance. Submitting is all this does: it answers with a uuid, "
+            "the state 'queued' and the url of the result page. The rating "
+            "does not exist yet.\n\n"
+            f"{ASYNC_NOTE}\n\n"
+            "This page registers no tool that reads a result - browser tools "
+            "belong to the page they are on. Open the returned url; the "
+            "result page registers get_scan_result and export_scan_report "
+            "for that scan.\n\n"
+            f"{INPUT_NOTE}\n\n"
+            f"{RATE_LIMIT_NOTE}\n\n"
+            f"{UUID_NOTE}\n\n"
+            f"{_FAILURE_NOTE}"
+        ),
+        "inputSchema": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["target_url"],
+            "properties": {
+                "target_url": {
+                    "type": "string",
+                    "description": (
+                        "Public OpenCloud base URL or hostname. It must "
+                        "resolve publicly; a private, loopback or link-local "
+                        "address is refused and retrying will not help."
+                    ),
+                },
+                "release_track": {
+                    "type": "string",
+                    "description": (
+                        "How the version is judged. Changes the rating's "
+                        "reasoning and nothing about the scan itself."
+                    ),
+                    "enum": [track.id for track in tracks],
+                    "default": DEFAULT_RELEASE_TRACK,
+                },
+                "output_format": {
+                    "type": "string",
+                    "description": "What the result page renders for the visitor.",
+                    "enum": list(OUTPUT_FORMATS),
+                    "default": "dashboard",
+                },
+                "ignore_hardenings": {
+                    "type": "array",
+                    "description": (
+                        "Hardening identifiers to waive. A waived finding is "
+                        "still reported; it just stops capping the rating."
+                    ),
+                    "items": {
+                        "type": "string",
+                        "enum": [option.id for option in waivers],
+                    },
+                    "uniqueItems": True,
+                    "default": [],
+                },
+            },
+        },
+        "retry": _webmcp_retry(),
+        "annotations": {
+            # Nothing on the scanned instance is modified - the scan only
+            # reads what it serves publicly - but a scan is created here, and
+            # submitting the same target twice is two scans and a cooldown.
+            "readOnlyHint": False,
+            "destructiveHint": False,
+            "idempotentHint": False,
+            # It reaches a host the caller names, which is the whole point.
+            "openWorldHint": True,
+            "untrustedContentHint": True,
+        },
+    }
+
+
+def _webmcp_result_tools(identifier: str) -> tuple[dict[str, Any], ...]:
+    """
+    A result page's tools, bound to the scan that page is showing.
+
+    Neither takes a uuid: the capability is the page, and a tool that accepted
+    one would be a way to reach scans this visitor was never given.
+    """
+    return (
+        {
+            "action": "status",
+            "endpoint": f"/scan/{identifier}?output_format=json",
+            "name": "get_scan_result",
+            "title": "Get scan result",
+            "description": (
+                "Read the scan shown on this page: its current state and, "
+                "once it is complete, the structured result - the rating and "
+                "its letter, the version and whether it is end of life, the "
+                "findings, and the remediation plan in the order the scanner "
+                "worked out.\n\n"
+                "Input: none. Which scan this reads is fixed by the page.\n\n"
+                f"{ASYNC_NOTE}\n\n"
+                f"{REMOTE_NOTE}\n\n"
+                f"{EXPIRY_NOTE}\n\n"
+                f"{_FAILURE_NOTE}"
+            ),
+            "inputSchema": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {},
+            },
+            "retry": _webmcp_retry(),
+            "annotations": {
+                "readOnlyHint": True,
+                "destructiveHint": False,
+                "idempotentHint": True,
+                "openWorldHint": False,
+                "untrustedContentHint": True,
+            },
+        },
+        {
+            "action": "export",
+            "endpoint": f"/api/scans/{identifier}/export/",
+            "name": "export_scan_report",
+            "title": "Export scan report",
+            "description": (
+                "Render the completed scan shown on this page as a file and "
+                "save it through the browser. json and sarif are the useful "
+                "ones for further processing; sarif is what a code-scanning "
+                "pipeline ingests.\n\n"
+                "Output: the download starts for the visitor, and the text "
+                "formats are also returned as content so that they can be "
+                "read here. pdf comes back as its size alone, because a model "
+                "cannot read one - report the download rather than the "
+                "bytes. An export too large to return inline arrives with "
+                "truncated: true and the url to fetch instead.\n\n"
+                f"{EXPORT_NOTE}\n\n"
+                f"{CONFLICT_NOTE}\n\n"
+                f"{_FAILURE_NOTE}"
+            ),
+            "inputSchema": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["format"],
+                "properties": {
+                    "format": {
+                        "type": "string",
+                        "description": "The file format to render.",
+                        "enum": list(EXPORT_FORMATS),
+                        "default": "json",
+                    }
+                },
+            },
+            "retry": {
+                **_webmcp_retry(),
+                # An export answers 409 while the scan is still running. That
+                # is the one status worth repeating that is *not* a failure of
+                # the service, and it must never be read as the 404 that means
+                # the scan is gone.
+                "notFinishedStatus": NOT_FINISHED_STATUS,
+                "notFinishedRetrySeconds": EXPORT_RETRY_SECONDS,
+            },
+            # How much of a rendered export comes back inline, past which the
+            # agent is pointed at the url. The same bound the server-side
+            # export applies, so neither surface returns more of a scanned
+            # host's own words into a reader's context than the other.
+            "contentLimit": EXPORT_CONTENT_LIMIT,
+            "annotations": {
+                # The server-side export_scan is read-only; this one is not.
+                # It writes a file into the visitor's downloads, which is a
+                # change to their machine even though the service is only
+                # read.
+                "readOnlyHint": False,
+                "destructiveHint": False,
+                "idempotentHint": True,
+                "openWorldHint": False,
+                "untrustedContentHint": True,
+            },
+        },
+    )
 
 OUTPUT_FORMATS = ("dashboard", "json", "csv", "sarif", "pdf")
 
@@ -242,6 +549,21 @@ SECURITY_HEADERS = {
     # Nothing here is worth a cache: a result page is somebody's scan.
     "Cache-Control": "no-store",
 }
+
+# Sent only over HTTPS, because that is the only transport a browser is
+# allowed to record it from (RFC 6797 section 7.2) and the only one where it
+# means anything. The generated reverse-proxy configuration deliberately adds
+# no security headers - "the application sends its own" - so this is where it
+# has to come from, and without it a service whose whole subject is HTTPS
+# enforcement did not enforce its own.
+#
+# Two years and `includeSubDomains`, which is what
+# `hardening.HARDENINGS["hstsLongMaxAge"]` and `hstsIncludeSubdomains` ask of
+# an instance this project scans; asking less of itself than of them is not a
+# defensible default. `preload` is *not* sent: it is a submission to a list
+# browsers ship, effectively irreversible, and it belongs to whoever owns the
+# domain rather than to the software running on it.
+HSTS_HEADER = "max-age=63072000; includeSubDomains"
 
 # Swagger UI and ReDoc load their bundle from jsDelivr. The relaxation is
 # scoped to those two pages, applies only when an operator asked for them, and
@@ -299,6 +621,7 @@ class _Rejected(Exception):
         self_host: bool = False,
         key: str = "",
         params: dict[str, Any] | None = None,
+        cooldown_target: str = "",
     ) -> None:
         super().__init__(message)
         self.message = message
@@ -309,12 +632,37 @@ class _Rejected(Exception):
         self.key = key
         """The catalogue identifier for the same sentence, for the page."""
         self.params = params or {}
+        self.cooldown_target = cooldown_target
+        """The target a cooldown refused, so the page can offer the
+        visitor's own earlier result for it. Never another visitor's."""
 
     def translated(self, translate: Translator) -> str:
         """The message for a browser. The API keeps the English one."""
         if self.key and translate.has(self.key):
             return translate(self.key, **self.params)
         return self.message
+
+
+#: How the earlier side is named when it arrived as a file. Not a uuid, and
+#: deliberately not shaped like one: nothing should be tempted to look it up.
+UPLOADED_BASELINE = "uploaded report"
+
+
+def _import_notes(imported: ImportedReport) -> dict[str, Any]:
+    """
+    What the page says about where the earlier side came from.
+
+    Three things a reader of this comparison is entitled to know and cannot
+    work out from the lists: which format was read, whether any of the file
+    was unreadable, and which facts it never recorded - because those were
+    neutralised on *both* sides and are therefore missing from an answer that
+    otherwise looks complete.
+    """
+    return {
+        "format": imported.source_format,
+        "dropped": imported.dropped,
+        "missingRecords": list(imported.missing_records),
+    }
 
 
 def client_address(request: Request, settings: WebSettings) -> str:
@@ -360,6 +708,35 @@ def client_address(request: Request, settings: WebSettings) -> str:
                 return candidate
             LOGGER.debug("forwarded_for_ignored reason=not_an_address")
     return request.client.host if request.client else "unknown"
+
+
+def _over_https(request: Request, settings: WebSettings) -> bool:
+    """
+    Whether this request reached the service over TLS.
+
+    The same trust decision `client_address` makes, for the same reason and
+    from the same setting. The container runs uvicorn *without*
+    ``--proxy-headers`` on purpose, so the scheme on the request object is
+    the scheme of the hop from the proxy - always ``http`` in the bundled
+    stack, whatever the visitor typed. ``X-Forwarded-Proto`` is the only
+    thing that knows, and it is believed exactly when the deployment has
+    said it sits behind a proxy that writes it.
+
+    Off by default is the safe direction here: a deployment that does not
+    set ``COS_WEB_TRUST_FORWARDED_FOR`` and is reached over plain HTTP sends
+    no HSTS, rather than one that is directly on TLS being taken for a
+    proxied one and told to send it over a cleartext hop.
+    """
+    if request.url.scheme == "https":
+        return True
+    if not settings.trust_forwarded_for:
+        return False
+    # Read from the left: unlike X-Forwarded-For, this header carries one
+    # value rather than a chain, and a proxy that appends still puts the
+    # scheme the *client* spoke first. A proxy that overwrites writes one
+    # entry, which is the same value either way.
+    forwarded = request.headers.get("x-forwarded-proto", "")
+    return forwarded.split(",")[0].strip().lower() == "https"
 
 
 def _canonical_address(value: str) -> str | None:
@@ -413,30 +790,66 @@ def cross_site_post(request: Request, settings: WebSettings) -> bool:
     if site:
         return site == "cross-site"
     origin = request.headers.get("origin", "").strip()
-    if not origin or origin.lower() == "null":
+    if not origin:
         return False
-    return _origin_host(origin) not in _own_hosts(request, settings)
+    parsed = _origin(origin)
+    return parsed is None or parsed not in _own_origins(request, settings)
 
 
-def _origin_host(value: str) -> str:
-    """The ``host:port`` an ``Origin`` names, lowercased."""
-    return urlsplit(value).netloc.lower()
-
-
-def _own_hosts(request: Request, settings: WebSettings) -> set[str]:
+def cross_origin_post(request: Request, settings: WebSettings) -> bool:
     """
-    Every ``host:port`` this deployment legitimately answers as.
+    Whether this POST came from anywhere but a page of this origin.
 
-    The configured public address is the authority - it is required at startup
-    precisely so the service does not have to trust a header for questions
-    like this one - and the address the request actually arrived on is
-    accepted alongside it, which is what keeps a local run working before
-    anybody has put a proxy in front.
+    Stricter than :func:`cross_site_post`, for the operator's area. That area
+    has what the public pages lack - a sign-in cookie - and a cookie is sent
+    on a ``same-site`` request: a page on any sibling subdomain, the
+    identity provider's or an OpenCloud instance's among them, could post
+    the operator's own session into it. ``same-site`` is refused here, and
+    so is an ``Origin`` naming another host.
     """
-    hosts = {urlsplit(str(request.base_url)).netloc.lower()}
-    if settings.public_base_url:
-        hosts.add(_origin_host(settings.public_base_url))
-    return {host for host in hosts if host}
+    site = request.headers.get("sec-fetch-site", "").strip().lower()
+    if site:
+        return site not in {"same-origin", "none"}
+    return cross_site_post(request, settings)
+
+
+def _origin(value: str) -> tuple[str, str, int] | None:
+    """Parse a browser origin, rejecting opaque and malformed values."""
+    try:
+        parts = urlsplit(value)
+        if (
+            parts.scheme not in {"http", "https"}
+            or not parts.hostname
+            or parts.username is not None
+            or parts.password is not None
+            or parts.path not in {"", "/"}
+            or parts.query
+            or parts.fragment
+        ):
+            return None
+        return (
+            parts.scheme,
+            parts.hostname.lower(),
+            parts.port or (443 if parts.scheme == "https" else 80),
+        )
+    except ValueError:
+        return None
+
+
+def _own_origins(request: Request, settings: WebSettings) -> set[tuple[str, str, int]]:
+    """
+    The configured public origin, or the request origin for local use.
+
+    Behind a proxy the internal HTTP origin is not an additional trusted
+    browser origin. The scheme and effective port are part of the boundary.
+    """
+    # A deployment URL may include a path prefix; browser origins never do.
+    try:
+        base = urlsplit(settings.public_base_url or str(request.base_url))
+    except ValueError:
+        return set()
+    origin = _origin(f"{base.scheme}://{base.netloc}")
+    return {origin} if origin is not None else set()
 
 
 def is_safe_link(value: Any) -> bool:
@@ -486,6 +899,15 @@ def build_templates(directory: Path | None = None) -> Jinja2Templates:
     # does not publish.
     templates.env.filters["catalogue_anchor"] = catalogue_anchor
     templates.env.filters["catalogue_link"] = catalogue_link
+    # A grade is the plugin's RATE_MAP, wherever it is drawn. The comparison
+    # page has two of them and no summary to read them from, so the same two
+    # functions the dashboard's summary already uses are available directly.
+    templates.env.filters["rating_label"] = rating_label
+    templates.env.filters["rating_tone"] = rating_tone
+    # A comparison names a finding by family - check:/hardening: - and the
+    # catalogue does not. Stripping it in one filter keeps the page's links
+    # pointing at entries that exist.
+    templates.env.filters["finding_id"] = finding_id
     # English is what a render falls back to when nobody negotiated a
     # language, so a template is never one missing context variable away from
     # an exception.
@@ -623,6 +1045,9 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
 
     app.mount("/static", StaticFiles(directory=str(root / "static")), name="static")
 
+    from .request_limits import RequestBodyLimit
+
+    app.add_middleware(RequestBodyLimit)
     app.state.settings = settings
     app.state.backend = create_backend(settings.redis_url)
     # Before anything can be written: a deployment that asked for encryption
@@ -637,6 +1062,11 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
     # And before /admin is registered: an area whose sign-in cannot be
     # enforced must not be served at all.
     ensure_admin_ready(settings)
+    # And before a single submission is accepted: an exclusion nobody could
+    # parse would let this service scan exactly what it was told not to.
+    ensure_blocklist_ready(settings.blocked_targets)
+    # And an approval mode that could approve nothing, or names a typo.
+    ensure_approval_ready(settings)
     # The window the live audit view reads on a deployment that logs to
     # stdout. Attached only when both the trail and the area are on.
     app.state.recent_audit = install_recent_audit(settings)
@@ -645,16 +1075,15 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
         ttl=settings.result_ttl,
         encryption_config=settings if settings.encrypt_results else None,
     )
-    app.state.limiter = RateLimiter(
+    # The one thing this service holds that is not a scan: see ADR 0057. Its
+    # own namespace, its own much shorter clock, and the same encryption at
+    # rest a result gets where a deployment asked for it.
+    app.state.comparisons = ComparisonStore(
         backend=app.state.backend,
-        client_limit=settings.ip_rate_limit,
-        client_window=settings.ip_rate_window,
-        target_cooldown=settings.target_cooldown,
-        # Unset is a random pepper per process, which counts correctly only
-        # while there is one. A deployment behind several web processes sets
-        # the same value in each, or every client gets one allowance apiece.
-        salt=settings.rate_limit_salt,
+        ttl=settings.comparison_ttl,
+        encryption_config=settings if settings.encrypt_results else None,
     )
+    app.state.limiter = limiter_for(app.state.backend, settings)
     app.state.queue = None
     app.state.audit = AuditLog.from_settings(settings)
     # And before the first record: a deployment that asked for the trail to
@@ -678,6 +1107,8 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
         response = await call_next(request)
         for name, value in SECURITY_HEADERS.items():
             response.headers.setdefault(name, value)
+        if _over_https(request, settings):
+            response.headers.setdefault("Strict-Transport-Security", HSTS_HEADER)
         # The meta tag only covers a rendered page. A result export, a JSON
         # body or a redirect needs saying in the header, or a crawler that
         # reached a uuid would keep it.
@@ -685,6 +1116,19 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
             response.headers.setdefault("X-Robots-Tag", "noindex, nofollow")
         if settings.enable_docs and request.url.path in DOCS_PATHS:
             response.headers["Content-Security-Policy"] = DOCS_CSP
+        return response
+
+    @app.middleware("http")
+    async def _permanent_slash_redirects(request: Request, call_next: Any) -> Response:
+        # The router answers `/about/` with a 307 to `/about`, and a crawler
+        # reads a 307 as "for now" - it keeps both addresses and splits what
+        # links to the page between them. The slash is never coming back, so
+        # say so. 308 rather than 301, so a POST is still repeated as a POST.
+        response = await call_next(request)
+        if response.status_code == 307:
+            location = urlsplit(response.headers.get("location", "")).path
+            if location and location.rstrip("/") == request.url.path.rstrip("/"):
+                response.status_code = 308
         return response
 
     def translator_for(request: Request) -> Translator:
@@ -703,6 +1147,10 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
             "version": __version__,
             "project_url": PROJECT_URL,
             "result_ttl_minutes": max(1, settings.result_ttl // 60),
+            # The two numbers the upload form promises, from the settings that
+            # actually enforce them rather than from a sentence.
+            "comparison_minutes": max(1, app.state.comparisons.ttl // 60),
+            "upload_kilobytes": MAX_UPLOAD_BYTES // 1024,
             "docs_enabled": settings.enable_docs,
             "mcp_enabled": mcp_enabled,
             "mcp_url": f"{origin}{MCP_PATH}" if origin else MCP_PATH,
@@ -733,6 +1181,8 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
             "limits": {
                 "client": settings.ip_rate_limit,
                 "window_minutes": max(1, settings.ip_rate_window // 60),
+                "daily": settings.daily_scan_limit,
+                "probe": settings.probe_limit > 0,
                 "cooldown_minutes": max(1, settings.target_cooldown // 60),
                 "cooldown": settings.target_cooldown,
             },
@@ -744,6 +1194,12 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
             # local one: a result page keeps its uuid out of the query string
             # and therefore out of anybody's referrer.
             "language_next": safe_next_path(request.url.path),
+            # Whether this reader is inside the operator area right now, as
+            # the proxy says on this request rather than as a session
+            # remembers. Search uses it to offer the area's own index; when
+            # the sign-in ends the header stops arriving, this goes false on
+            # the very next page, and the offer is gone.
+            "is_operator": operator_for(request, settings) is not None,
             "webmcp_tools": (),
             **context,
         }
@@ -776,9 +1232,12 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
         about a target you do not hold a uuid for.
         """
         limiter: RateLimiter = app.state.limiter
-        client = await limiter.peek_client(client_address(request, settings))
+        address = client_address(request, settings)
+        blocked = await limiter.check_probe_block(address)
+        client = await limiter.peek_client(address)
+        daily = await limiter.peek_daily(address)
         target = await limiter.peek_target(target_hostname(record.metadata.get("target")))
-        return max(client.retry_after, target.retry_after)
+        return max(blocked.retry_after, client.retry_after, daily.retry_after, target.retry_after)
 
     async def accept_submission(
         request: Request,
@@ -810,6 +1269,26 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
                 params={"fields": ", ".join(sorted(extra_fields))},
             )
 
+        # Before the client limit, so the hour a block lasts does not also
+        # empty the allowance the visitor comes back to afterwards.
+        probing = await limiter.check_probe_block(address)
+        if not probing.allowed:
+            audit.rate_limited(
+                client=address,
+                scope=REASON_RATE_LIMIT_PROBE,
+                retry_after=probing.retry_after,
+            )
+            raise _Rejected(
+                "Several of the addresses scanned from your network recently "
+                "did not turn out to be OpenCloud, so this service is taking "
+                "a break from your scans for a while. If you meant to check "
+                "your own instance, the scanner runs on your machine too.",
+                status=429,
+                retry_after=probing.retry_after,
+                self_host=True,
+                key="error.rate_limit.probe",
+            )
+
         client = await limiter.check_client(address)
         if not client.allowed:
             audit.rate_limited(
@@ -826,11 +1305,59 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
                 key="error.rate_limit.client",
             )
 
+        daily = await limiter.check_daily(address)
+        if not daily.allowed:
+            audit.rate_limited(
+                client=address,
+                scope=REASON_RATE_LIMIT_DAILY,
+                retry_after=daily.retry_after,
+            )
+            raise _Rejected(
+                "That is all the scans this service can run for your network "
+                "today. It will make room again tomorrow - or run the scanner "
+                "yourself, which has no daily limit.",
+                status=429,
+                retry_after=daily.retry_after,
+                self_host=True,
+                key="error.rate_limit.daily",
+            )
+
+        # Read per submission rather than held from startup: an operator who
+        # excludes a target in the area has excluded it for the next request,
+        # in every process, without a restart.
+        #
+        # A store that does not answer refuses the submission instead of
+        # falling back to the environment half (ADR 0044): losing an exclusion
+        # scans something this deployment was told not to touch. It is its own
+        # answer rather than an unhandled error, because the two differ in
+        # everything a visitor can act on - the address is fine, nothing they
+        # change will help, and the way through is to run the scanner
+        # themselves, which is exactly what `self_host` offers.
+        try:
+            exclusions = await effective_exclusions(app.state.backend, settings)
+        except RedisUnavailable as exc:
+            audit.submission_rejected(
+                client=address,
+                reason=REASON_EXCLUSIONS_UNREADABLE,
+                status=503,
+            )
+            LOGGER.warning("submission_refused_exclusions_unreadable")
+            raise _Rejected(
+                "This service cannot reach its own configuration right now, "
+                "and will not scan without knowing what it has been asked to "
+                "leave alone. Please try again in a few minutes.",
+                status=503,
+                self_host=True,
+                key="error.store_unavailable",
+            ) from exc
+
         try:
             target = validate_target(
                 target_url,
                 allow_private=settings.allow_private_targets,
                 allowed_hosts=settings.extra_hosts_allowed,
+                blocked_targets=exclusions,
+                check_consistency=settings.dns_consistency_check,
             )
         except TargetRejected as exc:
             audit.submission_rejected(
@@ -838,9 +1365,25 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
                 reason=REASON_TARGET_REJECTED,
                 status=400,
             )
+            if exc.key in SUSPICIOUS_REJECTIONS:
+                await limiter.record_refused_target(address)
             raise _Rejected(
                 str(exc), status=400, key=getattr(exc, "key", "")
             ) from exc
+
+        # Off the event loop: with DNS approval this is a lookup that may
+        # take its whole timeout, and every other visitor is waiting on the
+        # same loop.
+        if settings.require_approval and not await asyncio.to_thread(
+            approved, target, settings
+        ):
+            audit.submission_rejected(
+                client=address,
+                reason=REASON_TARGET_NOT_APPROVED,
+                status=403,
+            )
+            await limiter.record_refused_target(address)
+            raise _Rejected(NOT_APPROVED, status=403, key="error.target.not_approved")
 
         waivers = sanitize_waivers(ignore_hardenings)
         chosen_format = output_format if output_format in OUTPUT_FORMATS else "dashboard"
@@ -861,6 +1404,7 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
                 retry_after=cooldown.retry_after,
                 self_host=True,
                 key="error.rate_limit.target",
+                cooldown_target=target.display,
             )
 
         identifier = str(uuid_module.uuid4())
@@ -870,6 +1414,7 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
             ignore_hardenings=waivers,
             output_format=chosen_format,
             release_track=chosen_track,
+            prober=limiter.prober_for(address),
         )
         await (await queue()).enqueue(identifier)
         LOGGER.info("scan_created %s", identifier)
@@ -890,6 +1435,7 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
         error: str | None = None,
         error_self_host: bool = False,
         target_url: str = "",
+        cooldown_target: str = "",
     ) -> dict[str, Any]:
         """The form and its WebMCP schema, both from the same catalogues."""
         waivers = waiver_options(translate)
@@ -902,56 +1448,11 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
             "error": error,
             "error_self_host": error_self_host,
             "target_url": target_url,
+            "cooldown_target": cooldown_target,
             "index_meta_tags": settings.index_meta_tags,
             "webmcp_tools": (
-                {
-                    "action": "scan",
-                    "endpoint": "/api/scans",
-                    "name": "scan_opencloud_security",
-                    "title": "Scan OpenCloud security",
-                    "description": (
-                        "Queue a security scan for a public OpenCloud instance. "
-                        "Returns a capability UUID and result-page URL; the scan "
-                        "continues asynchronously."
-                    ),
-                    "inputSchema": {
-                        "type": "object",
-                        "additionalProperties": False,
-                        "required": ["target_url"],
-                        "properties": {
-                            "target_url": {
-                                "type": "string",
-                                "description": "Public OpenCloud base URL or hostname.",
-                            },
-                            "release_track": {
-                                "type": "string",
-                                "enum": [track.id for track in tracks],
-                                "default": DEFAULT_RELEASE_TRACK,
-                            },
-                            "output_format": {
-                                "type": "string",
-                                "enum": list(OUTPUT_FORMATS),
-                                "default": "dashboard",
-                            },
-                            "ignore_hardenings": {
-                                "type": "array",
-                                "items": {
-                                    "type": "string",
-                                    "enum": [option.id for option in waivers],
-                                },
-                                "uniqueItems": True,
-                                "default": [],
-                            },
-                        },
-                    },
-                    "annotations": {
-                        "readOnlyHint": False,
-                        "untrustedContentHint": True,
-                    },
-                },
-            )
-            if mcp_enabled
-            else (),
+                (_webmcp_scan_tool(tracks, waivers),) if mcp_enabled else ()
+            ),
         }
 
     @app.get("/", response_class=HTMLResponse)
@@ -1011,7 +1512,9 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
         selected = DOCUMENTATION_BY_SLUG.get(slug)
         if selected is None:
             return not_found(request)
-        return page(request, f"docs/{selected.slug}.html", {})
+        language = locale_for_request(request)
+        language_dir = f"{language}/" if language in GUIDE_LANGUAGES else ""
+        return page(request, f"docs/{language_dir}{selected.slug}.html", {})
 
     @app.get("/search", response_class=HTMLResponse, include_in_schema=False)
     async def search_page(request: Request) -> Response:
@@ -1033,9 +1536,13 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
     async def api_page(request: Request) -> Response:
         return page(request, "api.html", {})
 
-    @app.get("/ai", response_class=HTMLResponse, include_in_schema=False)
-    async def ai_page(request: Request) -> Response:
-        return page(request, "ai.html", {})
+    # The agent page is now the second half of /api: a caller wiring up
+    # software should not have to guess whether a curl call and an MCP
+    # endpoint are documented in the same place. The path stays as a permanent
+    # redirect because the discovery document has been publishing it.
+    @app.get("/ai", include_in_schema=False)
+    async def ai_page() -> Response:
+        return RedirectResponse("/api#api-agents", status_code=301)
 
     # The Docker page - for the visitor who would rather not hand an address
     # to a stranger's server at all - is now the first half of /documentation,
@@ -1045,6 +1552,13 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
     @app.get("/cli", include_in_schema=False)
     async def cli_page() -> Response:
         return RedirectResponse("/documentation#oneliner", status_code=301)
+
+    # Browsers, feed readers and crawlers ask for this path whether or not a
+    # page names an icon, and a 404 on every first visit is noise in every log.
+    # The SVG is the only icon there is; everything that asks here reads it.
+    @app.get("/favicon.ico", include_in_schema=False)
+    async def favicon() -> Response:
+        return RedirectResponse("/static/img/logo.svg", status_code=301)
 
     @app.get("/about", response_class=HTMLResponse, include_in_schema=False)
     async def about(request: Request) -> Response:
@@ -1173,6 +1687,37 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
             headers={"Cache-Control": "public, max-age=3600"},
         )
 
+    # The two reference documents, subscribable. Both refresh themselves daily
+    # and may only gain knowledge, and until now the only way to notice a new
+    # advisory was to reopen /catalogue and remember what had been there.
+    #
+    # These are the one kind of page about which `public, max-age` is right
+    # (ADR 0031): they describe what *this service* knows, name no instance
+    # and hold no uuid, exactly like the contracts and the sitemap.
+    @app.get(ADVISORIES_PATH, include_in_schema=False)
+    async def advisories_atom(request: Request) -> Response:
+        origin = site_origin(str(request.base_url), settings.public_base_url)
+        database = await stored_database(app.state.backend, settings)
+        return Response(
+            advisories_feed(
+                advisory_catalogue(database),
+                origin=origin,
+                updated=await database_updated(app.state.backend, settings),
+            ),
+            media_type=ATOM_MEDIA_TYPE,
+            headers={"Cache-Control": "public, max-age=3600"},
+        )
+
+    @app.get(SCHEDULE_PATH, include_in_schema=False)
+    async def release_schedule_atom(request: Request) -> Response:
+        origin = site_origin(str(request.base_url), settings.public_base_url)
+        schedule = await stored_schedule(app.state.backend, settings)
+        return Response(
+            schedule_feed(schedule, origin=origin),
+            media_type=ATOM_MEDIA_TYPE,
+            headers={"Cache-Control": "public, max-age=3600"},
+        )
+
     # The browser form posts to "/" and the API to "/api/scans". They are the
     # same handler: a submission that fails validation is re-rendered at the
     # URL it was sent to, and a person who then reloads the page should get
@@ -1235,6 +1780,7 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
                         error=exc.translated(translate),
                         error_self_host=exc.self_host,
                         target_url=str(submitted_url),
+                        cooldown_target=exc.cooldown_target,
                     ),
                     status=exc.status,
                 )
@@ -1270,6 +1816,13 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
     # while others wait for a cooldown they share with nobody.
     @app.post("/api/scans/batch")
     async def create_batch(request: Request) -> Response:
+        # The same refusal the single submission meets, and for the same
+        # reason. The body is parsed as JSON whatever its Content-Type says,
+        # so a foreign page's `text/plain` form - which needs no preflight -
+        # could otherwise queue a batch from a borrowed browser.
+        if cross_site_post(request, settings):
+            LOGGER.info("submission_cross_site")
+            return _cross_site_response(request, wants_html(request))
         try:
             parsed = await request.json()
         except ValueError:
@@ -1439,6 +1992,17 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
         store: ScanStore = app.state.store
         limiter: RateLimiter = app.state.limiter
         report = await store.purge_target(hostname)
+        # A cached comparison names two instances and is not a scan, so it is
+        # not in the walk above - but it is a scan result's arithmetic, and
+        # "it expires within five minutes anyway" is the argument ADR 0007
+        # refuses for the result itself. Its keys are counted into the same
+        # receipt so that `remaining == 0` keeps meaning what it says.
+        erased, left = await app.state.comparisons.purge_target(hostname)
+        report = replace(
+            report,
+            keys_deleted=report.keys_deleted + erased,
+            remaining=report.remaining + left,
+        )
         cooldown_keys = await limiter.forget_target(hostname)
         receipt = build_receipt(
             target=hostname,
@@ -1477,6 +2041,11 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
             return JSONResponse(_scan_payload(record))
         translate = translator_for(request)
         summary = summarise(record.result, translate) if record.result else None
+        rescan_after = (
+            await rescan_wait(request, record)
+            if record.state in (STATE_COMPLETED, STATE_FAILED)
+            else 0
+        )
         return page(
             request,
             "scan.html",
@@ -1490,63 +2059,363 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
                 # or running has nothing to rescan and nothing to fix, and a
                 # countdown beside a progress bar would be answering a
                 # question nobody has yet.
-                "rescan_after": (
-                    await rescan_wait(request, record)
-                    if record.state in (STATE_COMPLETED, STATE_FAILED)
-                    else 0
+                "rescan_after": rescan_after,
+                # Arrived here from a refused submission (cooldown-offer.js):
+                # this is the reader's own earlier result, shown instead of a
+                # dead end. Only a finished report still inside a cooldown
+                # says so - otherwise the note would be describing a wait
+                # that is not there. The parameter carries no data.
+                "earlier_result": (
+                    request.query_params.get("earlier") == "1"
+                    and record.state == STATE_COMPLETED
+                    and rescan_after > 0
                 ),
                 "fragments": (
                     _configuration_fragments(summary) if summary else ()
                 ),
                 "webmcp_tools": (
-                    {
-                        "action": "status",
-                        "endpoint": f"/scan/{identifier}?output_format=json",
-                        "name": "get_scan_result",
-                        "title": "Get scan result",
-                        "description": (
-                            "Read the current state and, when complete, the "
-                            "structured result for the scan shown on this page."
-                        ),
-                        "inputSchema": {
-                            "type": "object",
-                            "additionalProperties": False,
-                            "properties": {},
-                        },
-                        "annotations": {
-                            "readOnlyHint": True,
-                            "untrustedContentHint": True,
-                        },
-                    },
-                    {
-                        "action": "export",
-                        "endpoint": f"/api/scans/{identifier}/export/",
-                        "name": "export_scan_report",
-                        "title": "Export scan report",
-                        "description": (
-                            "Download the completed scan shown on this page in "
-                            "JSON, CSV, SARIF, or PDF format."
-                        ),
-                        "inputSchema": {
-                            "type": "object",
-                            "additionalProperties": False,
-                            "required": ["format"],
-                            "properties": {
-                                "format": {
-                                    "type": "string",
-                                    "enum": list(EXPORT_FORMATS),
-                                    "default": "json",
-                                }
-                            },
-                        },
-                        "annotations": {
-                            "readOnlyHint": False,
-                            "untrustedContentHint": True,
-                        },
-                    },
+                    _webmcp_result_tools(identifier) if mcp_enabled else ()
+                ),
+            },
+        )
+
+    @app.get("/compare", response_class=HTMLResponse, include_in_schema=False)
+    async def compare_page(request: Request) -> Response:
+        """
+        Did the fixes work? Two uuids a reader already holds, and one answer.
+
+        The same question `--baseline` answers for an operator's monitoring
+        and the `compare_scans` tool answers for an agent, for the person who
+        ran both scans in a browser and until now had no way to ask it. The
+        arithmetic is neither of theirs twice over: this route reads the two
+        result documents and hands them to `workflows.compare_documents`, so
+        a reader and their own alerting cannot disagree about the same pair.
+
+        Both uuids have to be presented and both results have to still exist.
+        Nothing is stored, nothing is listed, and each uuid remains the whole
+        of the authorisation for the result behind it - which is why an
+        unknown one is the same 404 here as anywhere else in the service.
+        """
+        translate = translator_for(request)
+        # Capped before anything is done with them, the form included: a uuid
+        # is 36 characters, the store refuses anything that is not one, and
+        # the value is echoed back into the field a reader types into.
+        def _submitted(name: str) -> str:
+            return (request.query_params.get(name) or "").strip()[:64]
+
+        baseline, current = _submitted("baseline"), _submitted("current")
+        context: dict[str, Any] = {
+            "t": translate,
+            "baseline": baseline,
+            "current": current,
+        }
+        if not baseline or not current:
+            return page(request, "compare.html", context)
+
+        documents: list[dict[str, Any]] = []
+        for side, identifier in (("baseline", baseline), ("current", current)):
+            record = await app.state.store.get(identifier)
+            if record is None:
+                # Which of the two is gone, because "one of your uuids has
+                # expired" sends somebody looking through both.
+                return page(
+                    request,
+                    "compare.html",
+                    {**context, "error": translate(f"compare.error.unknown.{side}")},
+                    status=404,
                 )
-                if mcp_enabled
-                else (),
+            if record.state != STATE_COMPLETED or record.result is None:
+                return page(
+                    request,
+                    "compare.html",
+                    {**context, "error": translate(f"compare.error.unfinished.{side}")},
+                    status=409,
+                )
+            documents.append(record.result)
+
+        try:
+            comparison = compare_documents(baseline, current, *documents)
+        except WorkflowError as exc:
+            # The rule stays where every surface enforces it; only the wording
+            # is this layer's, because a reader gets the page in their own
+            # language and a workflow's message is English for an agent. The
+            # same uuid twice is always the same instance, so anything else
+            # refused here is two different ones (ADR 0059).
+            key = (
+                "compare.error.same"
+                if baseline == current
+                else "compare.error.different_targets"
+            )
+            return page(
+                request,
+                "compare.html",
+                {**context, "error": translate(key)},
+                status=exc.status or 422,
+            )
+        return page(request, "compare.html", {**context, "comparison": comparison})
+
+    def _upload_sentence(translate: Translator, key: str) -> str:
+        """
+        One of this service's own upload sentences, with its numbers filled in.
+
+        Several of them name the size limit or the window a comparison lives
+        for, and a sentence handed to a reader with a literal `{kilobytes}` in
+        it is a sentence that failed to say the one thing it was for. The two
+        numbers come from the settings that actually enforce them, and a
+        catalogue string that mentions neither is unaffected - `str.format`
+        ignores what it was not asked for.
+        """
+        return translate(
+            key,
+            kilobytes=MAX_UPLOAD_BYTES // 1024,
+            minutes=max(1, app.state.comparisons.ttl // 60),
+        )
+
+    def _upload_error(
+        request: Request,
+        translate: Translator,
+        key: str,
+        *,
+        status: int = 422,
+        current: str = "",
+    ) -> Response:
+        """
+        The compare page, with one of this service's own sentences on it.
+
+        Chosen by key and never composed from the upload: the file name, its
+        content and any parser message stay out of the response entirely. The
+        uuid is echoed because the reader typed it and has to correct it; the
+        file field is not, because a browser will not refill it anyway.
+        """
+        return page(
+            request,
+            "compare.html",
+            {
+                "t": translate,
+                "current": current,
+                "error": _upload_sentence(translate, key),
+            },
+            status=status,
+        )
+
+    @app.post("/compare", response_class=HTMLResponse, include_in_schema=False)
+    async def compare_upload(request: Request) -> Response:
+        """
+        A report from somebody's disk against a scan this service still holds.
+
+        The question is the one the page above answers, asked by the reader
+        who has the earlier scan as a *file* rather than as a uuid - because
+        they downloaded it, or because the scan it came from expired hours
+        ago. Nothing else changes: the arithmetic is still
+        `workflows.compare_documents`, so an uploaded baseline and a stored
+        one cannot produce two different verdicts about the same pair.
+
+        What does change is where the earlier document came from, and that is
+        the whole of the security story here. It is the only structure this
+        application parses that it did not write, so it crosses one boundary -
+        `imports.parse_report` - which does not hand back what it was given
+        but an allow-listed rebuild of it. A key nobody named there reaches
+        nothing downstream.
+
+        The file itself is read once, into memory, and is never written
+        anywhere. What survives the request is the comparison drawn from it,
+        held under a fresh capability for at most five minutes so that a
+        reload and a link back to the answer keep working - and no longer,
+        because holding somebody's evidence is what this service exists not to
+        do. See [ADR 0057](../adr/0057-an-uploaded-report-is-evidence-not-a-scan.md).
+        """
+        translate = translator_for(request)
+        audit: AuditLog = app.state.audit
+        address = client_address(request, settings)
+        # Before the limiter and before the parse, for the same reason the
+        # submission form checks it first: a cross-site POST must not be able
+        # to spend a borrowed browser's allowance or its parsing budget.
+        if cross_site_post(request, settings):
+            LOGGER.info("compare_upload_cross_site")
+            return _cross_site_response(request, wants_html(request))
+
+        limiter: RateLimiter = app.state.limiter
+        # A network serving a probe block is refused here too. The block is a
+        # judgement about the *client* - its recent scans kept turning out not
+        # to be OpenCloud - and a client this service has stopped working for
+        # does not get to hand it a file to parse instead (ADR 0051). Asked
+        # before the upload bucket, as `accept_submission` asks it before the
+        # client limit, so a blocked client's refusals do not also run down an
+        # allowance it will want back when the block ends.
+        blocked = await limiter.check_probe_block(address)
+        if not blocked.allowed:
+            audit.rate_limited(
+                client=address,
+                scope=REASON_RATE_LIMIT_PROBE,
+                retry_after=blocked.retry_after,
+            )
+            LOGGER.info("compare_upload_blocked")
+            response = page(
+                request,
+                "compare.html",
+                {
+                    "t": translate,
+                    "error": _upload_sentence(
+                        translate, "compare.upload.error.blocked"
+                    ),
+                },
+                status=429,
+            )
+            if blocked.retry_after:
+                response.headers["Retry-After"] = str(blocked.retry_after)
+            return response
+
+        decision = await limiter.check_upload(address)
+        if not decision.allowed:
+            # Recorded like every other limit that triggered. This is the one
+            # parser in the service fed from outside, so an operator with a
+            # trail on has to be able to see the rate of it without reading
+            # the application log for a line that was never an event.
+            audit.rate_limited(
+                client=address,
+                scope=REASON_RATE_LIMIT_UPLOAD,
+                retry_after=decision.retry_after,
+            )
+            response = page(
+                request,
+                "compare.html",
+                {
+                    "t": translate,
+                    "error": _upload_sentence(
+                        translate, "compare.upload.error.rate_limit"
+                    ),
+                },
+                status=429,
+            )
+            if decision.retry_after:
+                response.headers["Retry-After"] = str(decision.retry_after)
+            return response
+
+        try:
+            # Bounded twice over: `RequestBodyLimit` has already refused
+            # anything past a megabyte, and these stop a body within it from
+            # being a thousand small parts instead of one file.
+            form = await request.form(max_files=1, max_fields=8)
+        except (ValueError, RuntimeError):
+            return _upload_error(request, translate, "compare.upload.error.unreadable")
+
+        try:
+            current = str(form.get("current") or "").strip()[:64]
+            upload = form.get("report")
+            if not isinstance(upload, StarletteUploadFile):
+                return _upload_error(
+                    request, translate, "compare.upload.error.missing", current=current
+                )
+            # One byte past the ceiling is enough to know it is over it, and
+            # is all that is ever held.
+            raw = await upload.read(MAX_UPLOAD_BYTES + 1)
+        finally:
+            # Starlette spills a large part to a temporary file. Closing the
+            # form is what removes it, and it happens whatever went wrong
+            # above rather than only on the path that read successfully.
+            await form.close()
+
+        if not current:
+            return _upload_error(request, translate, "compare.upload.error.no_current")
+
+        record = await app.state.store.get(current)
+        if record is None:
+            return _upload_error(
+                request,
+                translate,
+                "compare.error.unknown.current",
+                status=404,
+                current=current,
+            )
+        if record.state != STATE_COMPLETED or record.result is None:
+            return _upload_error(
+                request,
+                translate,
+                "compare.error.unfinished.current",
+                status=409,
+                current=current,
+            )
+
+        try:
+            imported = parse_report(raw)
+        except ReportRejected as exc:
+            # The file's own text never reaches the page: the sentence a
+            # reader is shown is this service's, chosen by key. An error page
+            # is exactly where a hostile upload would like to be quoted - and
+            # so is an audit trail, which is why the record carries the key
+            # this service chose and no part of the file.
+            LOGGER.info("compare_upload_rejected key=%s", exc.key)
+            audit.submission_rejected(
+                client=address,
+                reason=REASON_REPORT_REJECTED,
+                status=exc.status,
+                fields=(exc.key,),
+            )
+            return _upload_error(
+                request, translate, exc.key, status=exc.status, current=current
+            )
+
+        try:
+            comparison = compare_documents(
+                UPLOADED_BASELINE,
+                current,
+                # A family the uploaded format never recorded is removed from
+                # both documents, not from one. See `imports.restrict_to`.
+                restrict_to(imported.document, imported.carries),
+                restrict_to(record.result, imported.carries),
+                baseline_page=NO_PAGE,
+            )
+        except WorkflowError as exc:
+            # The only refusal an upload can meet: a report of another
+            # instance, or of none it names (ADR 0059).
+            return _upload_error(
+                request,
+                translate,
+                "compare.error.different_targets",
+                status=exc.status or 422,
+                current=current,
+            )
+        comparison["source"] = _import_notes(imported)
+
+        token = new_token()
+        await app.state.comparisons.save(token, comparison)
+        # Post/Redirect/Get: a reload re-reads the cached answer instead of
+        # asking the reader's browser to send the file a second time.
+        return RedirectResponse(f"/compare/{token}", status_code=303)
+
+    @app.get("/compare/{token}", response_class=HTMLResponse, include_in_schema=False)
+    async def compare_result(request: Request, token: str) -> Response:
+        """
+        One cached comparison, for as long as it is cached.
+
+        The token is the whole of the authorisation, exactly as a scan uuid
+        is: unknown, malformed and expired are one 404, and nothing lists
+        them. Five minutes after it was issued there is nothing behind it -
+        which is the answer to "where did my uploaded report go".
+        """
+        translate = translator_for(request)
+        comparison = await app.state.comparisons.get(token)
+        if comparison is None:
+            return page(
+                request,
+                "compare.html",
+                {
+                    "t": translate,
+                    "error": _upload_sentence(
+                        translate, "compare.upload.error.expired"
+                    ),
+                },
+                status=404,
+            )
+        return page(
+            request,
+            "compare.html",
+            {
+                "t": translate,
+                "comparison": comparison,
+                "expires_in_minutes": max(
+                    1, await app.state.comparisons.expires_in(token) // 60
+                ),
             },
         )
 
@@ -1587,6 +2456,41 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
             headers=headers,
         )
 
+    @app.get("/api/scans/{identifier}/badge.svg")
+    async def scan_badge(request: Request, identifier: str) -> Response:
+        """
+        One finished scan as a grade somebody can embed.
+
+        The uuid is still the whole of the authorisation, so this answers the
+        same 404 and the same 409 the export does - a badge that quietly said
+        "unknown" for a uuid that does not exist would be a way to ask whether
+        one does.
+
+        It keeps the service-wide `no-store`. Every route that opts into a
+        public cache publishes metadata about *this service*
+        ([ADR 0031](../adr/0031-a-response-is-uncacheable-until-a-route-opts-in.md));
+        this one is a statement about somebody's instance, and a shared cache
+        holding it is exactly what that rule exists to prevent. The scan's own
+        TTL is the other half: a badge lasts as long as the result it draws,
+        and then goes back to being a 404.
+        """
+        record = await app.state.store.get(identifier)
+        if record is None:
+            return JSONResponse({"detail": "Not found."}, status_code=404)
+        if record.state != STATE_COMPLETED or record.result is None:
+            return JSONResponse(
+                {"detail": "This scan has no result yet.", "state": record.state},
+                status_code=409,
+            )
+        return Response(
+            render_badge(record.result.get("rating")),
+            media_type="image/svg+xml",
+            # An SVG is a document, and a browser asked to render one as a
+            # page would run what it contained. This one contains no script,
+            # and says so in the way a browser enforces.
+            headers={"Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'"},
+        )
+
     @app.get("/api/scans/{identifier}")
     async def scan_state(request: Request, identifier: str) -> Response:
         record = await app.state.store.get(identifier)
@@ -1624,11 +2528,17 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
         def admin_operator(request: Request) -> Operator | None:
             return operator_for(request, settings)
 
-        def admin_context(
+        async def admin_context(
             operator: Operator, outcome: dict[str, Any] | None
         ) -> dict[str, Any]:
             return {
                 "operator": operator,
+                # The one reading on this page that is not a setting read at
+                # startup: the exclusions, both halves, as they stand now.
+                # None where the store did not answer, so the card can say it
+                # could not read them rather than draw an empty list, which
+                # here would read as "nothing is excluded".
+                "exclusions": await exclusions_or_none(app.state.backend, settings),
                 "poll_interval": ADMIN_POLL_SECONDS,
                 "stream_minutes": ADMIN_STREAM_MAX_MINUTES,
                 # Past how long an unrefreshed reference document is worth
@@ -1658,6 +2568,9 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
                 # The same two functions answer /admin/state, so the card and
                 # the document an operator copies cannot disagree.
                 "surfaces": surface_rows(surfaces(settings), audit_surface(settings)),
+                # Which release runs, and whether a newer one is out. One
+                # cached PyPI lookup at most every few hours (webapp.updates).
+                "update": await update_state(app.state.backend, settings),
                 "outcome": outcome,
                 # Stated rather than inherited. `is_indexable` already
                 # answers no for any path outside PUBLIC_PAGES, and the
@@ -1672,6 +2585,12 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
                 # it out of a list of things to go looking for.
                 "robots": ADMIN_ROBOTS,
                 "canonical_url": None,
+                # The tab strip, rendered from the same manifest the pages
+                # are generated from, so a document added there appears in
+                # the navigation without a second list to keep in step.
+                "admin_path": ADMIN_PATH,
+                "admin_tab": "overview",
+                "admin_doc_tabs": OPERATOR_DOCUMENTATION_PAGES,
             }
 
         @app.get(ADMIN_PATH, response_class=HTMLResponse, include_in_schema=False)
@@ -1679,7 +2598,98 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
             operator = admin_operator(request)
             if operator is None:
                 return not_found(request)
-            return page(request, "admin.html", admin_context(operator, None))
+            return page(request, "admin.html", await admin_context(operator, None))
+
+        @app.get(f"{ADMIN_PATH}/configuration", response_class=HTMLResponse,
+                 include_in_schema=False)
+        async def admin_configuration(request: Request) -> Response:
+            """
+            Every ``COS_WEB_*`` variable and what this process runs with.
+
+            Rendered by the server and never polled: every value is one read
+            at startup, so there is nothing a refresh could move. Credentials
+            are shown as set or not set only - see :mod:`webapp.configuration`.
+            """
+            operator = admin_operator(request)
+            if operator is None:
+                return not_found(request)
+            context = await admin_context(operator, None)
+            context["admin_tab"] = "configuration"
+            context["configuration_groups"] = configuration_groups(settings)
+            context["configuration_unrecognised"] = configuration_unrecognised()
+            return page(request, "admin-configuration.html", context)
+
+        @app.get(f"{ADMIN_PATH}/rules", response_class=HTMLResponse,
+                 include_in_schema=False)
+        async def admin_rules(request: Request) -> Response:
+            """
+            How a grade is decided, and every rule enforced against a request.
+
+            Server-rendered like the configuration tab: the rules are read off
+            the settings this process started with and the constants the
+            enforcing code uses (:mod:`webapp.rules`), so the page states what
+            is enforced rather than what was once documented. The exclusion
+            count and the reference data are the two readings taken per
+            request, because the area and the daily refresh can change them.
+            """
+            operator = admin_operator(request)
+            if operator is None:
+                return not_found(request)
+            context = await admin_context(operator, None)
+            exclusions = context["exclusions"]
+            try:
+                advisories = await advisory_state(app.state.backend, settings)
+                schedule = await schedule_state(app.state.backend, settings)
+            except RedisUnavailable:
+                advisories, schedule = {}, {}
+            context.update(
+                {
+                    "admin_tab": "rules",
+                    "rule_groups": enforcement_groups(
+                        settings,
+                        None if exclusions is None else len(exclusions.effective),
+                    ),
+                    "rating": rating_rules(settings),
+                    "grades": grade_scale(translator_for(request)),
+                    "severity_tags": SEVERITY_TAGS,
+                    "reference": {
+                        "advisories": advisories.get("advisories", "?"),
+                        "schedule": schedule.get("updated") or "?",
+                    },
+                }
+            )
+            return page(request, "admin-rules.html", context)
+
+        @app.get(f"{ADMIN_PATH}/docs/{{slug}}", response_class=HTMLResponse,
+                 include_in_schema=False)
+        async def admin_documentation(request: Request, slug: str) -> Response:
+            """
+            One of the repository's own documents, for whoever runs this.
+
+            Authorised exactly like every other page in the area, and 404 for
+            an unknown slug for the same reason the area itself is 404 to a
+            stranger: an operator has a tab strip and does not need to guess
+            addresses, and anybody guessing gets the answer the rest of the
+            area gives.
+
+            The pages are generated at build time by
+            `scripts/build_frontend_documentation.py` (ADR 0018), so nothing
+            here reads Markdown at runtime and the web application keeps no
+            Markdown dependency.
+            """
+            operator = admin_operator(request)
+            if operator is None:
+                return not_found(request)
+            document = OPERATOR_DOCUMENTATION_BY_SLUG.get(slug)
+            if document is None:
+                return not_found(request)
+            context = await admin_context(operator, None)
+            context["admin_tab"] = slug
+            # Named so the page can say which repository file it is showing,
+            # rather than leaving a reader to guess which document they are
+            # reading and where to edit it.
+            context["page_source"] = document.source
+            return page(request, f"admin-docs/{slug}.html", context)
 
         @app.get(f"{ADMIN_PATH}/state", include_in_schema=False)
         async def admin_state(request: Request) -> Response:
@@ -1695,9 +2705,34 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
                 )
             )
 
+        @app.get(f"{ADMIN_PATH}/search-index.json", include_in_schema=False)
+        async def admin_search_index(request: Request) -> Response:
+            """The operator area's own search index, for an operator only.
+
+            The public index is a static asset because every page in it is
+            public. This one is not: it carries the text of the configuration
+            tab, the rules tab and the operations notes, so it is read from
+            the package rather than served from ``/static``, and it answers
+            404 to exactly the people the rest of the area answers 404 to.
+
+            ``no-store`` because the answer is only true while the proxy is
+            still authorising this reader. An operator who signs out must not
+            leave a copy of the area's text in a cache the next person at the
+            same browser can search.
+            """
+            if admin_operator(request) is None:
+                return not_found(request)
+            index = admin_search_document(locale_for_request(request))
+            if index is None:
+                # Built at release time; a deployment missing the file gets an
+                # empty index rather than an error, so search still answers
+                # with the public pages.
+                index = {"version": 1, "scope": "admin", "pages": []}
+            return JSONResponse(index, headers={"Cache-Control": "no-store"})
+
         @app.post(f"{ADMIN_PATH}/refresh", include_in_schema=False)
         async def admin_refresh(
-            request: Request, action: str = Form(default="")
+            request: Request, action: str = Form(default="", alias="source")
         ) -> Response:
             operator = admin_operator(request)
             if operator is None:
@@ -1705,7 +2740,7 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
             # The same check every other POST here meets. An area reachable
             # from a browser is an area a foreign page can try to post to,
             # and these two buttons reach somebody else's server.
-            if cross_site_post(request, settings):
+            if cross_origin_post(request, settings):
                 LOGGER.info("admin_cross_site")
                 return _cross_site_response(request, wants_html(request))
             if action not in ACTIONS:
@@ -1722,7 +2757,98 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
                 "seconds": remaining,
             }
             if wants_html(request):
-                return page(request, "admin.html", admin_context(operator, answer))
+                return page(request, "admin.html", await admin_context(operator, answer))
+            return JSONResponse(answer)
+
+        @app.post(f"{ADMIN_PATH}/update", include_in_schema=False)
+        async def admin_update(request: Request) -> Response:
+            """
+            Switch this deployment to the newest release on GitHub.
+
+            Volatile by design (ADR 0070): the release's web bundle is
+            fetched, its build attestation verified against the release
+            workflow, unpacked on
+            a tmpfs, and this process restarts from it once the answer has
+            been sent; the workers follow through a Redis key. The version
+            is the one GitHub named, never one the form sent.
+            """
+            operator = admin_operator(request)
+            if operator is None:
+                return not_found(request)
+            if cross_origin_post(request, settings):
+                LOGGER.info("admin_cross_site")
+                return _cross_site_response(request, wants_html(request))
+            state, tree = await request_update(
+                app.state.backend, settings, operator.username
+            )
+            answer = {"state": state, "action": "update"}
+            response: Response
+            if wants_html(request):
+                response = page(
+                    request, "admin.html", await admin_context(operator, answer)
+                )
+            else:
+                response = JSONResponse(answer)
+            if tree is not None:
+                response.background = BackgroundTask(_restart_soon, tree)
+            return response
+
+        @app.post(f"{ADMIN_PATH}/exclusions", include_in_schema=False)
+        async def admin_exclusions(
+            request: Request,
+            action: str = Form(default="", alias="operation"),
+            entry: str = Form(default=""),
+        ) -> Response:
+            """
+            Add or withdraw one exclusion, in force from the next request.
+
+            The one thing in this area that writes rather than reads
+            ([ADR 0044](adr/0044-the-operator-area-may-write-the-exclusions.md)).
+            It is bounded on purpose: a list that only ever *refuses* a scan,
+            no target, uuid or result anywhere near it, and the environment's
+            own entries untouchable from here, so what the compose file
+            declares stays true whatever happens in a browser.
+            """
+            operator = admin_operator(request)
+            if operator is None:
+                return not_found(request)
+            if cross_origin_post(request, settings):
+                LOGGER.info("admin_cross_site")
+                return _cross_site_response(request, wants_html(request))
+            if action not in {"add", "remove"}:
+                return JSONResponse(
+                    {"state": "failed", "action": action}, status_code=422
+                )
+
+            try:
+                if action == "add":
+                    await add_exclusion(app.state.backend, settings, entry)
+                else:
+                    await remove_exclusion(app.state.backend, settings, entry)
+            except EntryRejected as exc:
+                answer = {
+                    "state": "refused",
+                    "action": f"exclusions.{action}",
+                    "seconds": 0,
+                    "reason": str(exc),
+                    "key": exc.key,
+                }
+                if wants_html(request):
+                    return page(
+                        request,
+                        "admin.html",
+                        await admin_context(operator, answer),
+                        status=422,
+                    )
+                return JSONResponse(answer, status_code=422)
+
+            answer = {
+                "state": "excluded" if action == "add" else "withdrawn",
+                "action": f"exclusions.{action}",
+                "seconds": 0,
+            }
+            if wants_html(request):
+                return page(request, "admin.html", await admin_context(operator, answer))
             return JSONResponse(answer)
 
         @app.post(f"{ADMIN_PATH}/probe", include_in_schema=False)
@@ -1735,7 +2861,7 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
             operator = admin_operator(request)
             if operator is None:
                 return not_found(request)
-            if cross_site_post(request, settings):
+            if cross_origin_post(request, settings):
                 LOGGER.info("admin_cross_site")
                 return _cross_site_response(request, wants_html(request))
 
@@ -1747,7 +2873,7 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
                 "seconds": remaining,
             }
             if wants_html(request):
-                return page(request, "admin.html", admin_context(operator, answer))
+                return page(request, "admin.html", await admin_context(operator, answer))
             return JSONResponse(answer)
 
         @app.get(f"{ADMIN_PATH}/audit/stream", include_in_schema=False)
@@ -1873,6 +2999,8 @@ def _render_export(result: dict[str, Any], fmt: str, identifier: str) -> bytes |
         return json.dumps(sarif_report(result), indent=2)
     if fmt == "pdf":
         return pdf_report(result, identifier=identifier)
+    if fmt == "html":
+        return html_report(result, identifier=identifier)
     return json.dumps(result, indent=2)
 
 

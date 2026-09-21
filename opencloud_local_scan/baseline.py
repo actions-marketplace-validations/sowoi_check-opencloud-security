@@ -30,6 +30,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .fingerprint import digests as fingerprint_digests
+from .fingerprint import drift as configuration_drift
 from .hardening import is_actionable
 
 __all__ = [
@@ -61,6 +63,11 @@ class Snapshot:
     version: str = ""
     update_version: str = ""
     support_days: int | None = None
+    #: One digest per configuration group, from the scan's fingerprint. It is
+    #: how a run says "the deployment is not the one you stored" when no
+    #: finding and no grade moved. Empty for a snapshot written before the
+    #: block existed, which is a snapshot that cannot say.
+    configuration: dict[str, str] = field(default_factory=dict)
 
     def as_dict(self) -> dict[str, Any]:
         """Render the snapshot in the shape stored on disk."""
@@ -72,6 +79,7 @@ class Snapshot:
             "version": self.version,
             "updateVersion": self.update_version,
             "supportDays": self.support_days,
+            "configuration": dict(self.configuration),
         }
 
     @classmethod
@@ -93,6 +101,13 @@ class Snapshot:
             version=str(data.get("version", "")),
             update_version=str(data.get("updateVersion", "")),
             support_days=data.get("supportDays") if isinstance(data.get("supportDays"), int) else None,
+            configuration={
+                str(group): str(value)
+                for group, value in (data.get("configuration") or {}).items()
+                if isinstance(value, str)
+            }
+            if isinstance(data.get("configuration"), dict)
+            else {},
         )
 
 
@@ -104,6 +119,10 @@ class Comparison:
     current: Snapshot
     new_findings: tuple[str, ...] = ()
     resolved_findings: tuple[str, ...] = ()
+    #: The configuration groups whose digest is not the one that was stored.
+    #: A report of a change, never a finding: it does not make a run regress
+    #: and it never reaches the exit code.
+    configuration_drift: tuple[str, ...] = ()
 
     @property
     def first_run(self) -> bool:
@@ -152,6 +171,15 @@ class Comparison:
         since = self.previous.recorded_at if self.previous else ""
         known = len(self.current.findings)
         tail = f" since {since}" if since else ""
+        # Said before the "nothing to report" line, because a deployment that
+        # changed is the one thing a reader would otherwise not learn from a
+        # run where the grade and the findings both stood still.
+        if self.configuration_drift:
+            listed = ", ".join(self.configuration_drift)
+            return (
+                f"No new findings{tail}, but the configuration changed "
+                f"({listed})"
+            )
         if known:
             return f"No new findings{tail} ({known} known issue(s) unchanged)"
         return f"No new findings{tail}"
@@ -218,6 +246,13 @@ class Comparison:
                     "change": f"{previous.version} -> {self.current.version}",
                 }
             )
+        for group in self.configuration_drift:
+            changes.append(
+                {
+                    "category": "Configuration",
+                    "change": f"{group} settings changed",
+                }
+            )
         if previous.update_version != self.current.update_version:
             changes.append(
                 {
@@ -236,6 +271,7 @@ class Comparison:
             "first_run": self.first_run,
             "regressed": self.regressed,
             "summary": self.summary(),
+            "configuration_drift": list(self.configuration_drift),
             "changes": self.items(),
         }
 
@@ -296,6 +332,9 @@ class Baseline:
             current=current,
             new_findings=tuple(sorted(now - before)),
             resolved_findings=tuple(sorted(before - now)),
+            configuration_drift=configuration_drift(
+                previous.configuration, current.configuration
+            ),
         )
 
     def record(self, host: str, current: Snapshot) -> None:
@@ -478,4 +517,5 @@ def snapshot_of(
         version=str(response.get("version") or ""),
         update_version=update_version,
         support_days=support_days,
+        configuration=fingerprint_digests(response),
     )

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import http.server
 import threading
+from typing import Any, cast
 
 import pytest
 import requests
@@ -32,6 +33,12 @@ SETTINGS = ScannerSettings(
     scheme="http", timeout=3, check_debug_ports=False, include_bundled_db=True
 )
 NO_UPDATES = ReleaseSettings(mode="off")
+
+
+def _capabilities(behaviour: InstanceBehaviour) -> dict[str, Any]:
+    """The capabilities a fake instance publishes, for a test to edit in place."""
+    assert behaviour.capabilities is not None
+    return behaviour.capabilities["ocs"]["data"]["capabilities"]
 
 
 def run_scan(behaviour: InstanceBehaviour, settings: ScannerSettings = SETTINGS) -> dict:
@@ -133,7 +140,7 @@ def test_capabilities_absent_does_not_invent_hardenings():
 def test_a_disabled_password_policy_is_reported_instead_of_disappearing():
     """Turning the policy off must fail more loudly than lowering its minimum."""
     behaviour = InstanceBehaviour()
-    policy = behaviour.capabilities["ocs"]["data"]["capabilities"]["password_policy"]
+    policy = _capabilities(behaviour)["password_policy"]
     policy.clear()
     policy["max_characters"] = 72
 
@@ -142,7 +149,7 @@ def test_a_disabled_password_policy_is_reported_instead_of_disappearing():
     assert result["hardenings"]["passwordPolicyEnforced"] is False
 
     unknown = InstanceBehaviour()
-    unknown.capabilities["ocs"]["data"]["capabilities"]["password_policy"].clear()
+    _capabilities(unknown)["password_policy"].clear()
     unknown_result = run_scan(unknown)
     assert "passwordPolicyEnforced" not in unknown_result["hardenings"]
 
@@ -1283,7 +1290,7 @@ def test_office_and_calendar_integrations_are_reported_as_observations():
     neither is a finding, and the result document says what was observed.
     """
     behaviour = InstanceBehaviour(app_providers=("Collabora",), caldav=True)
-    behaviour.capabilities["ocs"]["data"]["capabilities"]["groupware"] = {
+    _capabilities(behaviour)["groupware"] = {
         "enabled": True
     }
 
@@ -1461,7 +1468,7 @@ def test_a_weakened_password_policy_is_caught_even_when_it_is_long_enough(
     assert default_result["hardenings"]["passwordPolicyComplexity"] is True
 
     weakened = InstanceBehaviour()
-    policy = weakened.capabilities["ocs"]["data"]["capabilities"]["password_policy"]
+    policy = _capabilities(weakened)["password_policy"]
     policy["min_special_characters"] = 0
 
     result = run_scan(weakened)
@@ -1482,7 +1489,7 @@ def test_a_policy_that_publishes_no_character_classes_reports_no_complexity_find
     no setting could clear.
     """
     disabled = InstanceBehaviour()
-    policy = disabled.capabilities["ocs"]["data"]["capabilities"]["password_policy"]
+    policy = _capabilities(disabled)["password_policy"]
     policy.clear()
     policy["max_characters"] = 72
 
@@ -1490,3 +1497,213 @@ def test_a_policy_that_publishes_no_character_classes_reports_no_complexity_find
 
     assert "passwordPolicyComplexity" not in result["hardenings"]
     assert result["hardenings"]["passwordPolicyEnforced"] is False
+
+
+def _count_status_requests(monkeypatch, failure: ScanError) -> list[str]:
+    """Make every status.php read fail with ``failure``, recording where it was sent."""
+    asked: list[str] = []
+
+    def refuse(probe):
+        asked.append(probe.base_url)
+        raise failure
+
+    monkeypatch.setattr(scanner_module, "_fetch_status", refuse)
+    return asked
+
+
+def test_a_host_that_answers_as_something_else_is_asked_once_when_told_to_stop(monkeypatch):
+    """
+    A stranger's submission must buy one request against a host that is not OpenCloud.
+
+    The unverified HTTPS retry would read the same answer again, and port 80
+    is somewhere nobody asked this service to look.
+    """
+    asked = _count_status_requests(
+        monkeypatch, scanner_module.NotOpenCloud("status.php did not return JSON")
+    )
+
+    with pytest.raises(scanner_module.NotOpenCloud):
+        scan("opencloud.example.com", settings=ScannerSettings(stop_when_not_opencloud=True))
+
+    assert asked == ["https://opencloud.example.com"]
+
+
+def test_the_plugin_still_looks_for_the_endpoint_that_works(monkeypatch):
+    """Monitoring one's own instance keeps the unverified and plain HTTP attempts."""
+    asked = _count_status_requests(
+        monkeypatch, scanner_module.NotOpenCloud("status.php did not return JSON")
+    )
+
+    with pytest.raises(ScanError):
+        scan("opencloud.example.com", settings=ScannerSettings())
+
+    assert asked == [
+        "https://opencloud.example.com",
+        "https://opencloud.example.com",
+        "http://opencloud.example.com",
+    ]
+
+
+def test_silence_is_still_worth_asking_again_another_way(monkeypatch):
+    """A host that did not answer at all may only lack a trusted certificate."""
+    asked = _count_status_requests(monkeypatch, ScanError("status.php is unreachable"))
+
+    with pytest.raises(ScanError):
+        scan("opencloud.example.com", settings=ScannerSettings(stop_when_not_opencloud=True))
+
+    assert len(asked) == 3
+
+
+def test_an_answer_that_is_not_opencloud_is_its_own_kind_of_scan_error():
+    """The web service tells silence from a foreign answer by this type alone."""
+    behaviour = InstanceBehaviour(status_payload={"productname": "Nextcloud", "version": "29.0.0"})
+
+    with pytest.raises(scanner_module.NotOpenCloud):
+        run_scan(behaviour)
+
+
+def test_an_advertised_http3_listener_is_recorded_and_never_graded():
+    """Alt-Svc h3 names a UDP listener a TCP firewall may miss; it costs no rating."""
+    quic = run_scan(InstanceBehaviour(extra_headers={"Alt-Svc": 'h3=":443"; ma=86400'}))
+    services = quic["alternativeServices"]
+    assert services["advertised"] is True
+    assert services["http3"] is True
+    assert services["entries"] == [
+        {"protocol": "h3", "host": "", "port": 443, "udp": True}
+    ]
+
+    bare = run_scan(InstanceBehaviour())
+    assert bare["alternativeServices"]["advertised"] is False
+    assert bare["alternativeServices"]["http3"] is False
+    assert bare["rating"] == quic["rating"]
+    assert not any("altsvc" in str(item).lower() for item in quic.get("extraChecks") or [])
+
+
+def test_an_alt_svc_clear_advertises_nothing():
+    """'clear' withdraws every alternative, so nothing is recorded as advertised."""
+    result = run_scan(InstanceBehaviour(extra_headers={"Alt-Svc": "clear"}))
+
+    assert result["alternativeServices"]["advertised"] is False
+    assert result["alternativeServices"]["entries"] == []
+
+
+class _Headers:
+    """Just enough of a response for the Alt-Svc parser."""
+
+    def __init__(self, headers):
+        self.headers = headers
+
+
+def _alt_svc(value):
+    return scanner_module._alternative_services(cast(Any, _Headers({"Alt-Svc": value})))
+
+
+def test_no_response_records_no_alternative_services():
+    """A scan without a root response has no header to read: None, not an empty record."""
+    assert scanner_module._alternative_services(None) is None
+    recorded = scanner_module._alternative_services(cast(Any, _Headers({})))
+    assert recorded is not None and recorded["advertised"] is False
+
+
+def test_every_alt_svc_entry_is_recorded_with_its_parameters_ignored():
+    """h3, a draft h3 and h2 each become an entry; ma= and persist= are not protocols."""
+    services = _alt_svc('h3=":443"; ma=86400, h3-29=":443"; persist=1, h2="alt.example.com:8443"')
+
+    assert [entry["protocol"] for entry in services["entries"]] == ["h3", "h3-29", "h2"]
+    assert [entry["udp"] for entry in services["entries"]] == [True, True, False]
+    assert services["entries"][2] == {
+        "protocol": "h2", "host": "alt.example.com", "port": 8443, "udp": False
+    }
+    assert services["http3"] is True
+
+
+def test_an_ipv6_alternative_keeps_its_brackets_and_port():
+    """The last colon separates the port; the address's own colons stay in the host."""
+    (entry,) = _alt_svc('h3="[2001:db8::1]:8443"')["entries"]
+
+    assert entry["host"] == "[2001:db8::1]"
+    assert entry["port"] == 8443
+
+
+@pytest.mark.parametrize("authority", ["alt.example.com:", ":abc", "", "alt.example.com"])
+def test_an_alternative_without_a_numeric_port_has_no_port(authority):
+    """A missing or unreadable port is None, never an exception."""
+    (entry,) = _alt_svc(f'h3="{authority}"')["entries"]
+
+    assert entry["port"] is None
+    assert entry["udp"] is True
+
+
+@pytest.mark.parametrize("value", ["h3=443", "garbage", ";;;", '="x:443"', ", ,", "CLEAR"])
+def test_a_malformed_or_cleared_header_advertises_nothing(value):
+    """Entries that do not parse are skipped; 'clear' is matched case-insensitively."""
+    services = _alt_svc(value)
+
+    assert services["advertised"] is False
+    assert services["http3"] is False
+    assert services["entries"] == []
+
+
+def test_a_malformed_entry_does_not_hide_a_valid_one_after_it():
+    """One bad alternative must not cost the record the h3 that follows it."""
+    services = _alt_svc('garbage, h3=":443"')
+
+    assert services["http3"] is True
+    assert [entry["port"] for entry in services["entries"]] == [443]
+
+
+def test_an_oversized_header_is_truncated_in_the_record():
+    """A hostile or broken server cannot bloat the result document through Alt-Svc."""
+    services = _alt_svc("x" * 5000)
+
+    assert len(services["header"]) == 512
+    assert services["advertised"] is False
+
+
+LOGIN_THROTTLING = ScannerSettings(
+    scheme="http", timeout=3, check_debug_ports=False, include_bundled_db=True,
+    check_login_throttling=True,
+)
+
+
+def test_failed_sign_ins_that_are_throttled_are_recorded_and_never_graded():
+    """A 429 with Retry-After after a few failures is recorded; the rating does not move."""
+    throttled = run_scan(InstanceBehaviour(throttle_after=3), LOGIN_THROTTLING)
+    record = throttled["loginThrottling"]
+    assert record["tested"] is True
+    assert record["throttled"] is True
+    assert record["evidence"] == "HTTP 429, Retry-After: 30"
+    assert 1 <= record["attempts"] <= 4
+
+    open_door = run_scan(InstanceBehaviour(), LOGIN_THROTTLING)
+    assert open_door["loginThrottling"]["throttled"] is False
+    assert open_door["loginThrottling"]["attempts"] == 6
+    assert open_door["rating"] == throttled["rating"]
+
+
+def test_login_throttling_is_off_unless_asked_for():
+    """The default scan sends no sign-in beyond the demo-account check."""
+    behaviour = InstanceBehaviour()
+    result = run_scan(behaviour)
+
+    assert result["loginThrottling"] is None
+    assert not any("cos-throttle-probe" in str(entry) for entry in behaviour.seen)
+
+
+def test_login_throttling_never_asks_an_external_identity_provider():
+    """An upstream provider is somebody else's; no sign-in is pushed at it."""
+    from opencloud_local_scan.scanner import _login_throttling
+
+    never_used = cast(Any, None)  # both answers are decided before any probe
+    assert _login_throttling(never_used, {"detected": True, "external": True}) is None
+    assert _login_throttling(never_used, {"detected": False}) is None
+
+
+def test_throttling_runs_after_the_demo_accounts_are_checked():
+    """A throttled instance must still fail on its demo accounts, not hide them behind 429."""
+    result = run_scan(
+        InstanceBehaviour(demo_users=True, throttle_after=5), LOGIN_THROTTLING
+    )
+
+    assert _check(result, "demoUsersDisabled")["passed"] is False
+    assert result["loginThrottling"]["throttled"] is True

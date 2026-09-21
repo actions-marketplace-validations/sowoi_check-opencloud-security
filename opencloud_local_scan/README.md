@@ -3,10 +3,9 @@
 The scan engine behind `check-opencloud-security` and the
 `check-opencloud-scanner` service.
 
-This package **is** the built-in scanner. It talks to an instance over HTTP(S), reads what OpenCloud exposes without
-authentication, probes for the misconfigurations that actually occur in
-OpenCloud deployments, and returns a single result document with a `0`-`5`
-rating.
+The scanner connects directly to the instance over HTTP(S), checks publicly observable
+settings and returns one result document with a rating from `0` to `5`. It also tests
+the documented demo credentials against the instance’s own identity provider.
 
 The rating scale follows the ratings of the Nextcloud scan API, so that
 existing thresholds, performance data, webhooks and dashboards keep their
@@ -37,14 +36,10 @@ Two endpoints are unauthenticated in OpenCloud, and both are needed:
 Everything else is inferred from response headers, status codes and TCP
 connects.
 
-`/status.php` is not proof of OpenCloud, though: ownCloud and Nextcloud serve
-the same endpoint, which OpenCloud inherited from them. A status document
-whose product name carries either of those names is refused with `ScanError`
-rather than scanned - their releases, advisories and defaults are not
-OpenCloud's, and a verdict here would be a confident answer about the wrong
-software. See
-[`docs/what-is-opencloud.md`](../docs/what-is-opencloud.md) for the fork
-history behind all three, and what actually differs between them.
+A `/status.php` response alone does not identify OpenCloud. The scanner checks the
+reported product and raises `ScanError` for another product, whose releases, advisories
+and defaults would not match this database. See [What OpenCloud
+is](../docs/what-is-opencloud.md).
 
 ### The version trap
 
@@ -84,12 +79,10 @@ Evaluated in this order:
 then **capped** by the worst failed additional check: `critical` -> at most `2`
 (D), `high` -> `3` (C), `medium` -> `4` (A), `low` -> `5` (A+).
 
-Capping rather than assigning is a deliberate choice. One exposed path is a
-real problem, but it is not the same problem as running a release that receives
-no security fixes at all, and a monitoring system that cannot tell them apart
-is not useful. The consequence to be aware of: a single critical finding lands
-at `D`, which the plugin's default `--critical 1` reports as WARNING. Run with
-`--critical 2` if such a finding should page.
+A cap can only lower the starting rating, so a configuration finding cannot improve an
+end-of-life result. Note the monitoring consequence: a critical finding caps the score
+at `2` (`D`), which the default `--critical 1` reports as WARNING. Use `--critical 2` to
+make it CRITICAL.
 
 To report the findings without touching the rating at all:
 
@@ -235,14 +228,10 @@ Two cases are deliberately *not* end of life:
   ages between updates and a fresh release must not trip the alarm;
 - the newest line of a track, which has nothing to upgrade to.
 
-A version ahead of the file is also *said out loud*. When the reported release
-is newer than the newest one recorded for its line - or sits on a line newer
-than every line on record - the verdict carries `scheduleStale: true` together
-with `scheduleUpdated`, `scheduleSource` and a `scheduleNote` naming the
-[lifecycle page][lifecycle]. It is a remark about this package's data and
-never a finding: the rating, the upgrade recommendation and the end-of-life
-verdict are all exactly what they would be without it. `ReleaseSchedule.is_behind()`
-is the same question asked directly.
+When the instance is newer than the schedule, the result includes `scheduleStale`,
+`scheduleUpdated`, `scheduleSource` and a `scheduleNote` linking to the [lifecycle
+page][lifecycle]. These describe the reference data without changing the rating or
+update recommendation. `ReleaseSchedule.is_behind()` exposes the same comparison.
 
 The plugin keeps the schedule that shipped with it: a monitoring host runs the
 check every few minutes and must not turn that into a documentation fetch, so
@@ -293,6 +282,30 @@ understands a plain `{"tag_name": ...}` document and a list of releases, so an
 internal mirror needs no special format. Drafts and prereleases are skipped.
 
 ## Vulnerabilities
+
+Beside `vulnerabilities`, a result carries `upgradePath` when the installed
+release has known advisories and a newer release is recommended: the
+`target`, the advisories it `fixes`, the ones it is `stillAffected` by, and
+`safeVersion`, the lowest release past every missing fix (`null` when one has
+none yet). It is `null` otherwise. See
+[Does the upgrade clear the advisories?](../docs/release-lifecycle.md#does-the-upgrade-clear-the-advisories)
+
+`upgradeRehearsal` goes one step further: for every candidate release (the
+newest patch of the installed line and the newest release of each later line,
+restricted to the declared track) it lists what the release `fixes`, leaves
+`stillAffected` and `introduces`, whether it is `endOfLife`, and the 0-5
+`rating` the scan would give it - the version rules replayed, still capped by
+the instance's failed checks. An empty list when nothing newer is known. See
+[Rehearse every upgrade](../docs/release-lifecycle.md#rehearse-every-upgrade).
+
+`alternativeServices` records the instance's `Alt-Svc` header - whether it
+advertises HTTP/3 over UDP - as an observation that is never graded. See
+[Alternative services](../docs/scanner-checks.md#alternative-services-http3).
+
+`loginThrottling` is `null` unless `check_login_throttling` is set; then it
+records whether six failed sign-ins for a non-existent account were slowed
+down. Never graded. See
+[Failed sign-ins](../docs/scanner-checks.md#failed-sign-ins-opt-in).
 
 ### Refreshing reference data on a monitoring host
 
@@ -422,6 +435,9 @@ feature. An older release therefore does not accumulate phantom findings, and
 `capabilitiesAvailable` in the result document says whether the second half of
 the table could be evaluated at all.
 
+Which of them was omitted, and why, is recorded in `coverage` - see
+[What the scan covered](#what-the-scan-covered).
+
 The additional probes also read the public web configuration: wildcard embed
 message origins fail `webEmbedMessageOriginRestricted`, delegated iframe
 authentication without an explicit origin fails
@@ -466,14 +482,25 @@ The `files.app_providers` capability is a hardcoded constant and is ignored.
 `setup.advisoryChecks` is the other block that cannot move the rating, and for
 a different reason: not that the observation is neutral, but that OpenCloud
 satisfies it on no instance, so counting it would report the shipped state of
-the software as a fault in this deployment. It currently holds one entry,
-`securityTxtPublished` - whether `/.well-known/security.txt` carries the
-`Contact` field RFC 9116 requires, so that somebody who finds a flaw knows
-where to send it. The body is what is read, not the status code: an instance
-whose frontend answers every unknown path with its own shell returns 200 for
-that path too. The block is `{}` rather than a dictionary of `false` when the
-extra checks are off, because an observation nobody made is not one that
-failed. See
+the software as a fault in this deployment. It holds two entries:
+
+- `securityTxtPublished` - whether `/.well-known/security.txt` carries the
+  `Contact` field RFC 9116 requires, so that somebody who finds a flaw knows
+  where to send it. The body is what is read, not the status code: an
+  instance whose frontend answers every unknown path with its own shell
+  returns 200 for that path too.
+- `hstsPreloadEligible` - whether the `Strict-Transport-Security` header
+  would actually be accepted for browser preloading, which needs a max-age of
+  at least a year, `includeSubDomains` and `preload` together. `hstsPreload`
+  in the `hardenings` block answers the narrower question of whether the
+  directive is present at all; OpenCloud's proxy sends it alongside ten years
+  and no `includeSubDomains`, so the header on every stock instance asks for
+  something the preload list refuses. Whether the domain is *on* the list is
+  deliberately not measured - see
+  [ADR 0037](../adr/0037-preload-eligibility-is-measured-list-membership-is-not.md).
+
+The block is `{}` rather than a dictionary of `false` when the extra checks
+are off, because an observation nobody made is not one that failed. See
 [ADR 0034](../adr/0034-an-advisory-observation-need-not-be-a-header.md).
 
 The `identityProvider` observation names an external provider when its OIDC
@@ -497,17 +524,12 @@ Two questions come up often enough to be worth stating as non-goals:
   provider is registered says nothing about WOPI secrets, share permissions or
   the second service's own configuration, all of which sit behind a login.
 
-Everything else the scanner does is a read. It never submits a form and never
-guesses a password. The one credential it sends is the documented demo one:
-when the instance runs OpenCloud's built-in identity provider,
-`_demo_user_finding` asks `/ocs/v1.php/cloud/user` with each of the accounts
-`IDM_CREATE_DEMO_USERS` creates - `dennis`, `margaret`, `alan`, `lynn` and
-`mary`, all with the password published in OpenCloud's documentation. An
-accepted login is `demoUsersDisabled`, a `critical` finding, because `dennis`
-is an administrator. Nothing is guessed, nothing is sent to an external
-identity provider, and a rejection is the answer the check came for - so no
-result here can be taken as evidence that authentication works, only that
-those particular accounts are gone.
+The scanner does not use ordinary user credentials. The documented exception is
+`_demo_user_finding`: with the built-in provider, it tests the published demo accounts
+through `/ocs/v1.php/cloud/user`. A successful login produces the critical
+`demoUsersDisabled` finding. No credentials go to an external provider. Rejection
+confirms only that those demo credentials failed, not that authentication is secure in
+every respect.
 
 ### Explaining the flags
 
@@ -548,19 +570,15 @@ $ check-opencloud-scanner explain --list
 $ check-opencloud-scanner explain --format json cookieSecure
 ```
 
-It reads nothing but its own package - no configuration file, no network, no
-instance - so it answers at three in the morning on a host that cannot reach
-anything. Header names and per-path findings are accepted as they appear in an
-alert; `exposed:/config/opencloud.yaml` resolves to the `exposed` family the
-catalogue actually lists. With no identifier it prints the whole catalogue. An
-identifier it does not know exits 1 and suggests the nearest ones, rather than
-printing the placeholder above as though it were an answer.
+The command works offline and reads only the installed catalogue. It accepts header
+names and path-specific identifiers such as `exposed:/config/opencloud.yaml`. With no
+identifier it prints the whole catalogue. An unknown identifier returns exit code 1 and
+suggests nearby names.
 
 ### The same fix, as configuration
 
-The sentence above is what a person reads. `snippets.py` writes the same
-answer in the syntax of the file that has to change, from the `env_fix` and
-`header_fix` pairs the catalogue entries carry:
+`snippets.py` turns the catalogue’s `env_fix` and `header_fix` entries into
+configuration snippets:
 
 ```python
 from opencloud_local_scan import configuration_fragment
@@ -584,13 +602,221 @@ into a Compose environment block would produce a line that does nothing, so a
 flavour reports what it cannot express in `Fragment.elsewhere` instead, and
 `flavours_for` names the flavours that can.
 
-It renders, it does not decide. Every name and value comes from the
-catalogue - this module holds no configuration knowledge of its own - and a
-check whose right value is a decision about the deployment (a CORS origin, a
-path to a CSP file) carries no pair at all. Those land in
-`Fragment.undecided` rather than being guessed at with a placeholder: a
-fragment that has to be edited before it is pasted is worse than the sentence
-it replaced, because it looks finished.
+All configuration names and values come from the catalogue. Settings that depend on the
+deployment, such as a CORS origin or CSP file path, appear in `Fragment.undecided`. They
+require an operator’s choice before a usable snippet can be generated.
+
+## What the scan covered
+
+A passed check and a check that never ran leave the same shape in this
+document: nothing. `coverage` is where the difference is written down. See
+[ADR 0064](../adr/0064-a-scan-records-what-it-did-not-measure.md).
+
+```json
+{
+  "coverage": {
+    "schema": 1,
+    "counts": {"passed": 49, "failed": 10, "not_checked": 12, "inconclusive": 0, "total": 71},
+    "checks": [
+      {"id": "Content-Security-Policy", "group": "header", "state": "passed"},
+      {"id": "directoryListing", "group": "extraCheck", "state": "failed"},
+      {"id": "tlsInspection", "group": "tls", "state": "not_checked",
+       "reason": "not_applicable", "detail": "The instance answered over plain HTTP."}
+    ]
+  }
+}
+```
+
+Every check the scan considered appears exactly once, in one of four states:
+
+| State | Meaning |
+|:--|:--|
+| `passed` | The check ran and the instance satisfied it |
+| `failed` | The check ran and the instance did not satisfy it |
+| `not_checked` | The scanner did not run the check |
+| `inconclusive` | The scanner ran the check and could not decide |
+
+`passed` and `failed` carry no reason - a measurement that ran needs no
+excuse. The other two always carry one, from a closed set:
+
+| Reason | Meaning |
+|:--|:--|
+| `not_applicable` | The check cannot apply to this deployment - no certificate on a plain-HTTP instance, no second address to compare |
+| `probe_disabled` | A setting turned the probe off for this scan |
+| `prerequisite_missing` | The instance did not publish what the check reads |
+| `timeout` | Nothing answered in time |
+| `unreadable` | Something answered and could not be understood |
+| `no_route` | There is no route to that address family from where the scan ran |
+
+Two properties are worth relying on:
+
+- **The total is what this scan considered**, not a constant. The checks are
+  dynamic - which paths are probed, which debug ports are dialled, which
+  addresses are compared depend on the instance and the settings - so there is
+  no fixed denominator.
+- **Coverage never changes a grade.** Nothing in the block reaches the rating,
+  the severities, the alert line or the exit code. The webhook payload carries
+  the counts, but only as a report of what was measured - no receiver has to
+  read them to know the verdict. A waived failure stays `failed` here; the
+  acceptance is in `extraChecks[].ignored`, because a waiver is a decision
+  about alerting and not about evidence.
+
+A document written before this block existed simply has no `coverage` key,
+which is a report that does not say what it covered - not a scan without
+gaps. Read it with `coverage.coverage_of(result)`, which returns `None` for
+both a missing and a malformed block.
+
+### The one-line summary
+
+`coverage.summary(result)` reduces the block to the four numbers a reader
+needs, and `coverage.summary_line(result)` writes them as one English
+sentence:
+
+```
+84 checks evaluated, 6 skipped, 2 indeterminate, 1 network-limited
+```
+
+Every check is in exactly one of the four. `evaluated` is a conclusion, pass
+or fail; `skipped` is a check the scanner decided not to run; `indeterminate`
+is one that ran and could not tell; `networkLimited` is split out of the last
+two because a timeout or a missing route is the one gap another vantage point
+might close - DNSSEC from a resolver that validates, an external identity
+provider that is reachable from elsewhere. Zero counts are left out of the
+sentence, but the number evaluated is always named. Both functions return
+`None` / `""` for a document that has no coverage block, so "nothing was
+missed" and "this report does not say" never read alike.
+
+The plugin prints the sentence as a `Coverage:` detail line, the webhook
+payload carries the same numbers under `coverage` (snake_case, as the payload
+is), and the web application shows them under *What this scan did not
+measure*.
+
+## The conditions a scan ran under
+
+Two scans of the same instance can disagree without the instance having
+changed: the advisory database learned a CVE, a support window closed, the
+scanner was upgraded, a waiver expired. `provenance` records what was known
+at the time, so a comparison can tell those apart from a real regression. See
+[ADR 0066](../adr/0066-a-result-records-the-conditions-it-was-produced-under.md).
+
+```json
+{
+  "provenance": {
+    "schema": 1,
+    "scannerVersion": "1.25.0",
+    "scannedAt": "2026-09-17T19:56:35.852320+00:00",
+    "releaseTrack": "auto",
+    "advisoryData": {"digest": "7ffa242f...", "count": 1},
+    "scheduleData": {"digest": "6e9468bf...", "updated": "2026-09-15"},
+    "waivers": {"active": [], "expired": []},
+    "coverage": {"measured": 59, "total": 71}
+  }
+}
+```
+
+`digest` is a SHA-256 over the reference data's own identifying fields in
+canonical form, so the same advisories hash the same however they were
+serialised, merged or ordered. It is a digest rather than a copy - embedding
+the database would put megabytes of other people's advisories in every report -
+and rather than a file path, which would publish where the machine keeps its
+files. `scheduleData.updated` is when the schedule was *generated*, which is
+not when it was read; `scannedAt` is the scan.
+
+`waivers` records patterns and states, never the reason text: a reason is
+prose written for a person, and a comparison that diffed it would report a
+corrected typo as a change of policy.
+
+### Comparing two results
+
+`check-opencloud-scanner diff` prints the contributing changes under the
+existing summary, and `--format json` carries them as `explanation`:
+
+| Category | What changed |
+|:--|:--|
+| `instance` | The version, a check that started or stopped failing, or a configuration group whose fingerprint moved |
+| `referenceData` | The advisories, the release schedule, the release track, or a support window that simply elapsed |
+| `scanner` | The scanner's version, or how many checks reached a conclusion |
+| `policy` | A waiver expired, was added or was removed |
+| `unknown` | Something moved and nothing recorded accounts for it |
+
+The wording is deliberately conservative. A changed digest establishes that
+the reference data differed; it does not establish that it caused any
+particular grade to move, and the sentence says so. Several changes may
+contribute without one being chosen as *the* cause.
+
+`limitations` lists what the comparison could not establish - most often that
+one of the two reports predates these blocks, and so cannot say what it was
+judged against or how much of it ran. That is reported rather than assumed.
+
+## Has the deployment changed?
+
+A grade says whether an instance is in good shape. It does not say whether it
+is still the same instance as last week. A policy rewritten without gaining
+`unsafe-inline`, a proxy replaced with a different product that sets the same
+headers, public links that stopped requiring a password and require one again,
+a certificate moved to another issuer - none of that has to move a grade, and
+an operator watching only the grade sees none of it.
+
+`configuration` is a **fingerprint**: grouped digests of how the deployment is
+configured, and nothing it is configured to. See
+[ADR 0073](../adr/0073-a-result-fingerprints-the-configuration-it-measured.md).
+
+```json
+{
+  "configuration": {
+    "schema": 1,
+    "digest": "9e3c4428...",
+    "groups": {
+      "tls": {"digest": "89a97538...", "scope": "1d0f4b77...", "facts": 12},
+      "headers": {"digest": "cb25144c...", "scope": "b8e1a930...", "facts": 13},
+      "sharing": {"digest": "7b8a1ced...", "scope": "44c0ae51...", "facts": 3},
+      "authentication": {"digest": "588d045f...", "scope": "0a7be2cc...", "facts": 6},
+      "proxy": {"digest": "b7db6daf...", "scope": "ff31c084...", "facts": 5}
+    }
+  }
+}
+```
+
+Two scans with the same group digest were looking at the same configuration
+for that group; two that differ were not. That is the entire claim, and these
+rules are what make it worth reading:
+
+- **Digests only, never the configuration.** A content security policy names
+  the origins a deployment trusts, a discovery document can name a tenant, a
+  server banner names an internal build. Every fact is hashed into its group
+  and discarded; a reader learns *that* sharing changed, never *what* it is
+  set to. The block is safe on a public page for the same reason it is safe in
+  a ticket.
+- **Groups are the questions an operator asks.** "Did TLS change?" is useful;
+  "did fact 37 change?" is not.
+- **Only what the deployment decides.** The transport group hashes the issuer,
+  the key, the signature algorithm and the negotiated protocols - not the
+  serial number, the dates or the certificate fingerprint, because a renewal
+  is routine. The proxy group hashes the vendor, not the banner, whose build
+  number moves with every patch.
+- **A scan's own settings are never a fact.** `scope` is a digest of *which*
+  facts a group looked at, without their values. Two groups are compared only
+  when their scopes match, so a run that stopped inspecting TLS reports "not
+  comparable" instead of drift. A group with nothing to hash at all is `none`.
+- **It never changes a grade.** Nothing here reaches the rating, the
+  severities, the alert line or the exit code.
+
+Read it with `fingerprint.fingerprint_of(result)`, which returns `None` for
+both a missing and a malformed block - a report that cannot say is not a
+deployment that did not change. `fingerprint.digests(result)` reduces it to
+one opaque `scope:digest` string per group, which is what a baseline file, a
+webhook receiver and a comparison all store, and
+`fingerprint.drift(before, after)` names the groups that differ:
+
+```python
+from opencloud_local_scan.fingerprint import digests, drift
+
+changed = drift(digests(last_week), digests(today))  # ('headers',)
+```
+
+The plugin prints `Configuration fingerprint: 9e3c4428` with each scan, and
+`--baseline` turns the same digests into `No new findings, but the
+configuration changed (headers)`.
 
 ## Debug ports
 
@@ -618,6 +844,32 @@ available.
 
 The same handlers are also probed on the main address, where they must never
 appear at all (`debugEndpoint:` findings).
+
+## Every resolved address
+
+`check_all_addresses=True` (`--all-addresses` on `scan`) repeats the
+node-dependent part of a scan - `status.php`, the root page's graded headers,
+capabilities, the authentication challenge, the identity provider and the demo
+accounts - against each address the name resolved to, one after another, and
+emits `addressParity`. Each request keeps the hostname in `Host` and SNI and is
+pinned to one address through its own session. The addresses are the
+resolver's answer, or `pinned_addresses` when given, so a pinned scan never
+widens past what the caller vetted; IPv6 is skipped when `ipv6_enabled` is
+false. What each address served is listed under `addressObservations`:
+
+```json
+{"addressObservations": [
+  {"address": "198.51.100.1", "reachable": true, "version": "7.2.3",
+   "headers": {"Strict-Transport-Security": true}, "hardenings": {},
+   "demoUsersDisabled": true, "error": ""}
+]}
+```
+
+The first address is the reference; severity follows the worst difference
+(demo accounts as `demoUsersDisabled`, another release `high`, anything else
+`medium`); waived names are not compared. With one address, or with the
+setting off (the default), there is no finding and the list is empty. See
+[ADR 0042](../adr/0042-every-resolved-address-is-compared-only-when-the-operator-asks.md).
 
 ## Concurrency
 
@@ -669,11 +921,12 @@ nothing about ratings. Beyond the handshake and trust it reports:
 | `tlsHostname` | Does the certificate cover the name it was asked for, wildcards and IP addresses included? |
 | `tlsChain` | Does the server send its intermediates, or only a leaf that validates by luck? |
 | `tlsCertificate` | Does it expire within `tls_min_days`, or has it already? |
-| `tlsCertificateLifetime` | Is it valid for longer than the 398 days browsers accept? |
+| `tlsCertificateLifetime` | Is it valid for longer than the scanner’s 398-day threshold? |
 | `tlsCipherSuite` | Is the cipher suite negotiated by this scan modern and forward-secret? |
 | `tlsCertificatePolicy` | Does the certificate use an adequately sized key and a modern signature? |
 | `tlsAddressParity` | Do the published IPv4 and IPv6 endpoints present the same usable TLS identity? |
 | `tlsCaaRecord` | Does the name have a DNS CAA record naming at least one authorized issuer? |
+| `tlsDnssec` | Is the zone signed, so that the address every check above rests on can be trusted? Absent rather than failed when the resolver in use does not speak DNSSEC |
 | `cookieSecure`, `cookieHttpOnly`, `cookieSameSite` | Do cookies actually observed on the public response carry these attributes? |
 | `tlsOcspStapling` | Is a revocation response stapled to the handshake? |
 
@@ -757,10 +1010,12 @@ result = scan("opencloud.example.com", settings=ScannerSettings(timeout=10))
 print(result["rating"], result["version"], result["extraChecks"])
 ```
 
-`scan()` raises `ScanError` when the instance cannot be identified as an
-OpenCloud - an unreachable `/status.php`, a non-JSON response, a JSON document
-without any recognisable version field, or one naming ownCloud or Nextcloud as
-the product.
+`scan()` raises `ScanError` when it cannot identify OpenCloud: the endpoint is
+unreachable, its response is not suitable JSON, version fields are missing or the
+product is different. Cases where a service answered raise `NotOpenCloud`. By default
+the scanner retries an unsuitable HTTPS response without certificate verification and
+then over HTTP. `ScannerSettings(stop_when_not_opencloud=True)` stops after the first
+such response; the public web application enables it.
 
 The document also carries `addresses`, the IPv4 and IPv6 the hostname resolved
 to while the scan ran:
@@ -794,6 +1049,41 @@ result = scan(
     release_settings=ReleaseSettings(mode="bundled"),
 )
 ```
+
+## Verifying a fix without a full scan
+
+`opencloud_local_scan.verification.verify` re-measures only the findings it is
+given, by running the scanner's own probes for them and nothing else. It is
+what `--verify-remediation` is built on (see
+[ADR 0072](../adr/0072-remediation-verification-re-measures-named-findings-without-a-full-scan.md)).
+
+```python
+from opencloud_local_scan.verification import verify
+
+document = verify(
+    "opencloud.example.com",
+    ["Strict-Transport-Security", "exposed"],
+)
+for entry in document["results"]:
+    print(entry["id"], entry["passed"], entry["reason"])
+```
+
+The document has `domain`, `url`, `verifiedAt`, `probeGroups` (the groups
+that actually ran) and `results`, one entry per requested id in the order
+given:
+
+| Key | Meaning |
+|:----|:--------|
+| `id` | The requested id; a family root such as `exposed` covers every `exposed:...` member |
+| `verifiable` | False for an id only a full scan can settle (`eol`, `vulnerability:...`, `httpsAvailable`, the address-parity checks) or that this build does not know |
+| `passed` | True or false when measured, `None` when nothing was |
+| `group` | The probe group that measured it |
+| `checks` | The measured findings, in the same shape as `extraChecks` entries |
+| `reason` | Why `passed` is `None`, otherwise empty |
+
+Like `scan()`, it measures and never judges: no rating, no waivers, no
+remediation plan. `probe_group(id)` tells you in advance which group, if any,
+an id maps to. It raises `ScanError` when the instance cannot be reached.
 
 ## Comparing a scan with the last one
 

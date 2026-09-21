@@ -70,11 +70,32 @@ EVENT_DATA_PURGED = "data_purged"
 
 REASON_UNSUPPORTED_FIELDS = "unsupported_fields"
 REASON_TARGET_REJECTED = "target_rejected"
+#: The exclusions could not be read, so the submission was refused rather
+#: than run without them. A fault of this deployment, not of the target, and
+#: recorded apart from `target_rejected` so that an operator reading the
+#: trail is not looking for a bad address that was never the problem.
+REASON_EXCLUSIONS_UNREADABLE = "exclusions_unreadable"
 REASON_RATE_LIMIT_CLIENT = "rate_limit_client"
 REASON_RATE_LIMIT_TARGET = "rate_limit_target"
+#: Refused because the client's recent scans kept finding no OpenCloud.
+REASON_RATE_LIMIT_PROBE = "rate_limit_probe"
+#: Refused because the client's daily cap was spent.
+REASON_RATE_LIMIT_DAILY = "rate_limit_daily"
+#: Refused because the deployment scans approved targets only.
+REASON_TARGET_NOT_APPROVED = "target_not_approved"
 REASON_BATCH_TOO_LARGE = "batch_too_large"
 REASON_PURGE_UNAUTHORISED = "purge_unauthorised"
 REASON_RATE_LIMIT_PURGE = "rate_limit_purge"
+#: Refused because the client's report uploads filled their own bucket. Apart
+#: from `rate_limit_client` because the bucket is apart from it: an upload
+#: costs this service a parse and costs nobody else's instance anything.
+REASON_RATE_LIMIT_UPLOAD = "rate_limit_upload"
+#: An uploaded report that `imports.parse_report` would not read. The one
+#: structure this service parses that it did not write, so the rate at which
+#: it is fed something else is worth a record of its own. The `fields` of that
+#: record carry the refusal key this service chose - never any part of the
+#: file, which is the whole point of refusing it.
+REASON_REPORT_REJECTED = "report_rejected"
 
 # Field names come from a stranger's request body. They are worth recording -
 # a probe for "workers" or "timeout" is exactly what an audit trail is for -

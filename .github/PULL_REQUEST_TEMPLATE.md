@@ -39,11 +39,19 @@ Fixes #
 - [ ] `uv run mypy --config-file mypy.ini` passes.
 - [ ] `ansible-lint` passes, run from inside `ansible/` - only if you touched
       that directory.
-- [ ] I added an entry under `## [Unreleased]` in `CHANGELOG.md`.
+- [ ] I added an entry under `## [Unreleased]` in `CHANGELOG.md`, and left
+      `RELEASE.md` to the release
+      (`python scripts/check_pull_request.py --base origin/main` checks it).
 - [ ] If that entry is under `### Security`, I added a matching record in
       `security/advisories/` and
       `python scripts/security_advisories.py --check` passes. I did **not**
       publish an advisory.
+- [ ] If this adds a Python dependency (in `pyproject.toml` or a workflow's
+      `uvx`), it has a record in `security/dependencies/` with the
+      justification, the tests that exercise it and a security review, and
+      `python scripts/check_dependencies.py --check` fails only because the
+      record still awaits the maintainer's approval. Nothing was added to
+      `grandfathered.txt`.
 - [ ] I did **not** touch the `version` in `pyproject.toml`, and did not create
       a tag or a release. That is the maintainer's call, and a bump publishes
       to PyPI as soon as it lands.

@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.mcp.description') }}</p>
 </section>
 
-{% if locale != 'en' %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -326,7 +326,7 @@ transport, the answer is <em>streamable HTTP</em> (sometimes called "HTTP" or
 <p>An agent that has never heard of this service can find the endpoint itself:
 <code>https://scan.okxo.de/.well-known/ai.json</code> names it, alongside the OpenAPI and
 Arazzo documents. That is the whole point of the discovery document - see
-<a href="https://scan.okxo.de/ai">the page for agents</a>. <code>https://scan.okxo.de/agents.txt</code>
+<a href="https://scan.okxo.de/api#api-agents">the API page</a>. <code>https://scan.okxo.de/agents.txt</code>
 and <code>https://scan.okxo.de/llms.txt</code> point at the same document for a fetcher
 that goes looking for one of those two filenames first, in the informal
 conventions some agent frameworks and crawlers already use - see <a href="https://github.com/sowoi/check-opencloud-security/blob/main/AGENTS.md#working-on-the-agent-facing-surfaces">Working on

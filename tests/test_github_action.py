@@ -168,8 +168,8 @@ def test_fail_on_decides_which_results_fail_the_step(
     tmp_path, scan_script, fail_on, plugin_exit, expected
 ):
     """The action's only judgement of its own, exercised against a stub plugin."""
-    stub_dir = tmp_path / "bin"
-    stub_dir.mkdir()
+    stub_dir = tmp_path / "opencloud-security" / "bin"
+    stub_dir.mkdir(parents=True)
     stub = stub_dir / "check-opencloud-security"
     stub.write_text(
         textwrap.dedent(
@@ -203,6 +203,7 @@ def test_fail_on_decides_which_results_fail_the_step(
             "INPUT_EXTRA_ARGS": "",
             "GITHUB_OUTPUT": str(tmp_path / "github_output"),
             "GITHUB_STEP_SUMMARY": str(tmp_path / "summary"),
+            "RUNNER_TEMP": str(tmp_path),
         },
         capture_output=True,
         text=True,
@@ -223,8 +224,8 @@ def test_the_result_is_published_as_outputs_a_workflow_can_branch_on(
     The plugin's summary contains newlines; written as `message=...` the lines
     after the first would be parsed as output names by the runner.
     """
-    stub_dir = tmp_path / "bin"
-    stub_dir.mkdir()
+    stub_dir = tmp_path / "opencloud-security" / "bin"
+    stub_dir.mkdir(parents=True)
     stub = stub_dir / "check-opencloud-security"
     document = json.dumps(
         [
@@ -261,6 +262,7 @@ def test_the_result_is_published_as_outputs_a_workflow_can_branch_on(
             "INPUT_EXTRA_ARGS": "",
             "GITHUB_OUTPUT": str(tmp_path / "github_output"),
             "GITHUB_STEP_SUMMARY": str(tmp_path / "summary"),
+            "RUNNER_TEMP": str(tmp_path),
         },
         capture_output=True,
         text=True,
@@ -288,8 +290,8 @@ def test_a_scanned_host_cannot_forge_the_actions_outputs(tmp_path, scan_script):
     outputs in whatever workflow consumes them, from a host that only had to
     answer an HTTP request.
     """
-    stub_dir = tmp_path / "bin"
-    stub_dir.mkdir()
+    stub_dir = tmp_path / "opencloud-security" / "bin"
+    stub_dir.mkdir(parents=True)
     stub = stub_dir / "check-opencloud-security"
     # What a hostile instance would put in the field it controls.
     document = json.dumps(
@@ -327,6 +329,7 @@ def test_a_scanned_host_cannot_forge_the_actions_outputs(tmp_path, scan_script):
             "INPUT_EXTRA_ARGS": "",
             "GITHUB_OUTPUT": str(tmp_path / "github_output"),
             "GITHUB_STEP_SUMMARY": str(tmp_path / "summary"),
+            "RUNNER_TEMP": str(tmp_path),
         },
         capture_output=True,
         text=True,

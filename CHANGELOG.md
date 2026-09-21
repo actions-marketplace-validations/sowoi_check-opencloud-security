@@ -12,6 +12,2680 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+## [1.29.0] - 2026-09-21
+
+### Added
+
+- **A scan fingerprints the configuration it measured, so drift is visible
+  without the grade moving.** A rewritten content security policy, a replaced
+  reverse proxy, public links that stopped requiring a password, a certificate
+  at a different issuer - none of that has to change a grade, and an operator
+  watching only the grade saw none of it. The result document now carries a
+  `configuration` block: grouped digests for transport, headers, sharing,
+  authentication and proxy, plus one over all five. **Digests only, never the
+  configuration** - a policy, an issuer and a server banner go in and a hash
+  comes out, so the block is safe on a public page, in a webhook and in an
+  uploaded report. The plugin prints `Configuration fingerprint: 9e3c4428`,
+  `--baseline` reports `No new findings, but the configuration changed
+  (headers)`, `check-opencloud-scanner diff` adds a `configurationChanged`
+  change, and the web application shows the groups under *Has this deployment
+  changed?*. Routine churn is deliberately excluded: a renewed certificate and
+  a proxy's new build number are not drift, and a group the two scans looked
+  at differently is reported as not comparable rather than as a change.
+  Nothing in it touches a rating, an exit code or an alert line. See
+  [ADR 0073](adr/0073-a-result-fingerprints-the-configuration-it-measured.md).
+- **`--policy` fails a deployment on explicit requirements, not on a grade.**
+  `-w`/`-c` and `--profile` judge an instance by its rating, which is the
+  wrong shape for a CI gate: a team that requires HTTPS enforcement and no
+  demo accounts cannot express that as a number. A policy file states it
+  directly - `minimum_rating`, `required_hardenings` and `forbidden` (a
+  missing measure, a failed check or a vulnerability id) - and anything it
+  asks for that an instance does not meet ends the run CRITICAL. A policy
+  only ever makes a verdict worse, a waiver does not excuse a requirement,
+  and an unknown key or measure is a usage error rather than a rule that
+  quietly requires nothing. `--format json` and the webhook payload carry the
+  verdict under `policy`. See [CI policy mode](README.md#ci-policy-mode) and
+  [`config/policy.example.yml`](config/policy.example.yml).
+- **`--format summary` reads a whole fleet in one table.** Checking a dozen
+  instances printed a dozen result blocks written for a monitoring system,
+  which is a lot to read when the question is just "which of these needs me
+  today". The new format prints one aligned row per host instead - host,
+  grade, version, end-of-life state, how many advisories apply, and how much
+  moved since `--baseline` - followed by the same tally the Nagios output
+  starts with. Rows keep the order the hosts were given and the exit code is
+  unchanged, so it works from a cron job that mails its output. The `NEW`
+  column distinguishes "no baseline given" (`-`) from "no new findings" (`0`),
+  and a host whose scan failed shows its Nagios status where the grade would
+  be. See [Reading a fleet in one table](README.md#reading-a-fleet-in-one-table).
+- **The output says how much it could actually measure.** A check that
+  passed and one that never ran left the same trace in the plugin's output -
+  nothing - so the plugin now prints a `Coverage:` line such as `84 checks
+  evaluated, 6 skipped, 2 indeterminate, 1 network-limited`, and the webhook
+  payload and `--format json` carry the same counts under `coverage`. The web
+  application's *What this scan did not measure* section shows the same four
+  numbers. `network_limited` is split out of the skipped and indeterminate
+  counts because a timeout or a missing route - DNSSEC, an external identity
+  provider, an optional endpoint - is the gap another vantage point might
+  close. Nothing in it changes a grade, an exit code or an alert line.
+
+## [1.28.1] - 2026-09-21
+
+### Added
+
+- **`--profile` judges a scan by a named threshold set.** `strict`, `ops` and
+  `lenient` each decide the five settings a team otherwise writes out by hand
+  - `--warning`, `--critical`, `--check-hardening`, `--update-warning` and
+  `--eol-warning` - so a monitoring definition can adopt a stance without
+  twelve flags. A profile decides **how the same measurements are judged,
+  never how hard the instance is probed**: there is no profile that scans
+  more or less. It is also the weakest source of a value, so an explicit
+  flag, an environment variable or a configuration key still wins, and the
+  `--debug` explanation names the profile a rating was judged by. Leaving it
+  unset keeps every default exactly as it was. See
+  [Threshold profiles](README.md#threshold-profiles).
+
+- **The web application renders the upgrade rehearsal.** The result page
+  gains a *What upgrading would buy you* panel: one row per candidate
+  release, with the advisories it clears, the ones it leaves, any it newly
+  brings in, whether it is already end of life, and the grade it would reach.
+  Where the version alone would rate better than the row shows, the panel
+  says so - the difference is this instance's own findings, which an upgrade
+  does not touch. Every number comes from the scanner's `upgradeRehearsal`;
+  the web layer only picks the letter and the tone, as it does for every
+  other grade on the page. A result stored before the rehearsal existed
+  renders without the panel rather than as an instance with nothing to
+  upgrade to.
+
+- **A golden corpus of frozen verdicts.** `tests/golden/` records the whole
+  judgement a handful of known instances earn - rating, grade, failed checks,
+  missing measures, the caps that produced the rating and the exit code under
+  the plugin's defaults and under every profile - and `tests/test_golden_corpus.py`
+  replays them. It is the assertion no single test makes: that a severity
+  raised or a measure added to the catalogue cannot silently re-grade every
+  instance that looks like one of these. The reference data is pinned in
+  `tests/golden_corpus.py`, so a published release or advisory does not move
+  the corpus; `python scripts/update_golden_corpus.py` rewrites it when the
+  new verdict is the intended one.
+
+### Changed
+
+- **The Icinga check commands offer `--profile`.** The three CheckCommand
+  definitions - `contrib/icinga2/check_opencloud_security.conf` and the
+  `opencloud_check_native` / `opencloud_check_docker` role templates - carry
+  the new option as `$opencloud_profile$`, next to `--warning` and
+  `--critical`. Without it an Icinga user could not reach a profile at all,
+  which is what `tests/test_monitoring_parity.py` is there to notice.
+
+- **The upgrade rehearsal's reporting is pinned by tests.** Mutation testing
+  found the two plugin helpers behind it under-covered: an end-of-life
+  candidate, a malformed entry, a rating outside the 0-5 range and seven of
+  the webhook payload's ten keys were asserted by nothing. The gaps are
+  closed, and `tests/test_verify_remediation.py` and
+  `tests/test_threshold_profiles.py` are now part of the mutmut test
+  selection, which reported "no tests" for `verification.py` before.
+
+### Security
+
+- **The web application sends `Strict-Transport-Security` over HTTPS.** The
+  generated reverse-proxy configuration deliberately adds no security headers
+  - "the application sends its own, and an `add_header` here would be one
+  more place they can disagree" - and HSTS was the one the application did
+  not send, so no deployment built by `docker/setup-wizard.py` had it. A
+  service whose subject is HTTPS enforcement now asks of itself what
+  `hstsLongMaxAge` and `hstsIncludeSubdomains` ask of the instances it
+  scans: `max-age=63072000; includeSubDomains`. Not `preload`, which is an
+  effectively irreversible submission to a list browsers ship and belongs to
+  whoever owns the domain. Sent only over TLS, because RFC 6797 forbids a
+  browser to record it from a cleartext hop - and the scheme is read from
+  `X-Forwarded-Proto` only where `COS_WEB_TRUST_FORWARDED_FOR` says a proxy
+  writes it, which is the same trust decision `client_address` makes.
+
+- **A tampered erasure receipt verifies as false rather than raising.**
+  `webapp.purge.verify` compared the expected digest with the receipt's
+  signature as `str`, and `hmac.compare_digest` raises `TypeError` on a
+  string outside ASCII - so a receipt edited to carry one answered an auditor
+  with a traceback instead of the `False` the function is read for. Both
+  sides are encoded now, exactly as the purge endpoint has always compared
+  its token. The endpoint itself was never affected.
+
+## [1.28.0] - 2026-09-20
+
+### Added
+
+- **Upgrade rehearsal: what each candidate release would fix, leave and
+  rate.** The scan result gains `upgradeRehearsal`, which simulates every
+  release worth moving to (the newest patch of the installed line and the
+  newest release of each later line, only on the declared track) against the
+  advisory database and the release schedule. The plugin prints it as one
+  detail line, for example "Upgrade rehearsal: 7.2.4 fixes 3 findings,
+  leaves 1, reaches rating C", and the webhook payload carries it as
+  `upgrade_rehearsal`. The rating replays the scanner's own version rules and
+  keeps the instance's failed checks as caps, because an upgrade does not
+  change the proxy. See
+  [Rehearse every upgrade](docs/release-lifecycle.md#rehearse-every-upgrade).
+
+- **A scan the target cooldown refuses now opens your earlier result.** When
+  an instance was scanned too recently and this browser tab has already shown
+  a finished scan of it, the web application opens that result instead of
+  only refusing, says it is the earlier result, and counts down to when a new
+  scan is possible. The earlier result comes from the tab's own scan history
+  (the one the comparison offer keeps in `sessionStorage`); the server never
+  hands one visitor a scan somebody else started, as
+  [ADR 0002](adr/0002-no-scan-result-caching.md) requires. Without such a
+  scan the refusal is unchanged.
+
+- **`--verify-remediation` re-checks one finding without a full scan.**
+  After changing a single reverse-proxy setting, pass the finding ids the
+  full output reported (repeatable or comma-separated, a family root such as
+  `exposed` covers every member) and only the probes that measure them run.
+  The plugin answers `OK` when every one now passes, `WARNING`/`CRITICAL`
+  while one still fails, and `UNKNOWN` for an id only a full scan can settle
+  (`eol`, a vulnerability, address parity). No rating, baseline or webhook.
+  The measurement is `opencloud_local_scan.verification.verify`, which reuses
+  the scanner's own probes so its answer matches the next full scan. See
+  ADR 0072.
+
+### Documentation
+
+- **Translated release-lifecycle guides now include the upgrade-rehearsal
+  section.** Their section anchors stay aligned with the English guide.
+
+### Fixed
+
+- **A gateway answer no longer fails the documented link check.** An HTTP
+  408, 502, 503 or 504 comes from the machinery in front of a site, not from
+  the page, so it is now retried like a transport error and - when the whole
+  run is unlucky - reported without failing the workflow. A link that rotted
+  answers 404; a merge that fails because GitHub was briefly slow is exactly
+  the noise this check is meant to avoid.
+- **Pytest no longer collects mutmut's generated working copy.** This avoids
+  an `ImportPathMismatchError` between the real and mutated test suites.
+
+## [1.27.2] - 2026-09-19
+
+### Added
+
+- **Property-based tests for the parsers that read outside text.**
+  `tests/test_properties.py` uses Hypothesis, a new test-only dependency
+  (reviewed in `security/dependencies/hypothesis.yml`), to generate inputs
+  for version parsing and comparison, advisory ranges, the
+  Strict-Transport-Security and Content-Security-Policy readers, the web
+  application's SSRF guard (private literals, IPv4-mapped and 6to4
+  addresses, arbitrary input) and the `;`-joined configuration lists.
+- **The output documents' key names are pinned.**
+  `tests/test_output_shape.py` fails when a top-level key of the scan result
+  or of the plugin's `--format json` / webhook payload is renamed, added or
+  dropped, or when a key breaks the camelCase (result) / snake_case (plugin)
+  convention, so a breaking rename cannot land unnoticed.
+- **The advisory database also reads OpenCloud's repository advisories.**
+  OpenCloud publishes some advisories only on its GitHub repository, where
+  OSV never sees them. The daily refresh (`scripts/update_vulnerability_db.py`,
+  new `--repository-url`) and the web application's refresh (new
+  `COS_WEB_ADVISORY_REPOSITORY_URL`, `off` to skip) now add those
+  advisories. Their version ranges are read strictly: an advisory fixed on two
+  release lines becomes one range per line, and prose ranges are never
+  guessed at. OSV stays the primary source, and if the repository feed can't
+  be read, OSV's answer is kept.
+  [ADR 0071](adr/0071-repository-advisories-are-a-second-advisory-source.md).
+
+### Changed
+
+- **Polished recent German, Spanish and French web translations.** Fixed mixed
+  forms of address and several literal or awkward phrases in the operator
+  update messages, scan facts and coverage explanations.
+
+### Security
+
+- **GHSA-gf4p-7p27-26w7 (CVE-2026-57500, "Access to internal metadata") is
+  now reported.** OpenCloud published it only as a repository advisory, which
+  never reaches OSV, the one feed the advisory database was refreshed from - so
+  every release before 4.0.8, and 5.0.0 up to 7.2.0, was rated as free of
+  known advisories. The bundled database now carries it, affecting releases
+  from 1.0.0 up to 4.0.8 and from 4.1.0 up to (but not including) 7.2.0.
+
+## [1.27.1] - 2026-09-19
+
+### Added
+
+- Codex can use the repository's Claude Code skills, hooks, subagent roles and
+  Playwright MCP configuration through portable `.agents/` and `.codex/`
+  compatibility files. The original `.claude/` setup remains unchanged.
+
+- The operator's area shows the running release and whether a newer one is
+  published on GitHub (cached six hours, `COS_WEB_UPDATE_CHECK`), and a button
+  installs it: the release's web bundle is verified against its Sigstore build
+  attestation from this repository's release workflow, unpacked on a tmpfs
+  (`COS_WEB_ADMIN_UPDATE_DIR`, mounted by every compose file) and the web and
+  worker processes restart on it - a short downtime, lasting until the
+  containers restart. The Docker setup wizard sets it up whenever it enables
+  the operator's area. The web image now installs the `signing` extra
+  ([ADR 0070](adr/0070-the-operator-area-installs-attested-releases-in-place.md)).
+
+### Changed
+
+- mypy now also checks the bodies of functions without annotations
+  (`check_untyped_defs` in `mypy.ini`), so CI type-checks the test suite
+  too. The 98 errors that surfaced - all in `tests/` - are fixed.
+
+### Fixed
+
+- The Codex scan driver no longer prints the raw scanner document, which could
+  expose TLS inspection data in its JSON output; `scan --json` now emits only
+  the version, verdict and failed checks.
+
+- The operator area's **Releases** tab never listed the release it was running
+  on: the image is built from the version-bump commit, before the release
+  workflow renames `[Unreleased]`. The page is now generated with that section
+  under the `pyproject.toml` version when the changelog has no heading for it.
+
+## [1.27.0] - 2026-09-19
+
+### Added
+
+- The web report lists an advertised HTTP/3 listener (with its UDP ports) and
+  the upgrade path - what the recommended release fixes, what it leaves open
+  and which release clears everything - in all four languages.
+
+- `upgrade_path_complete` performance data (`1` when the recommended upgrade
+  clears every known advisory, `0` when it does not), and with
+  `--eol-warning` the `support_days_left` metric carries that window as its
+  warning range and the end of life as critical. The webhook payload gains
+  `eol_warning_days`, `eol_warning` and `upgrade_path`.
+
+- `--login-throttling` (`COS_LOGIN_THROTTLING`, YAML
+  `scanner.check_login_throttling`, also on `scan` and in the setup wizard)
+  sends six failed sign-ins for a random, non-existent account to the
+  built-in identity provider and records `loginThrottling` - whether an HTTP
+  429 or `Retry-After` slowed them down. Off by default, never graded, run
+  after every other probe, and never sent by the web service
+  ([ADR 0069](adr/0069-login-throttling-is-observed-only-when-the-operator-asks.md)).
+
+## [1.26.1] - 2026-09-19
+
+### Added
+
+- The operator's area has a **Releases** tab at `/admin/docs/releases`: the
+  ten newest released sections of `CHANGELOG.md`, newest first, so an
+  operator can read what the running release changed without leaving the
+  area. The publish workflow regenerates it together with the release notes.
+
+## [1.26.0] - 2026-09-19
+
+### Added
+
+- `--eol-warning DAYS` (`COS_EOL_WARNING`, YAML `eol_warning`, and a setup
+  wizard question) turns an otherwise `OK` result into `WARNING` once the
+  running release line has `DAYS` or fewer days of support left, naming the
+  end-of-life date and the upgrade target. Off (`0`) by default; past end of
+  life stays `CRITICAL` as before.
+
+- The scan result records `upgradePath` when the installed release carries
+  known advisories: which of them the recommended release fixes, which it is
+  still affected by, and `safeVersion`, the lowest release past every missing
+  fix. The plugin prints it as a detail line, so an update that would leave an
+  advisory open no longer reads as the whole answer.
+
+- The scan result records `alternativeServices`, what the instance advertises
+  in its `Alt-Svc` header, and the plugin prints a detail line when it
+  advertises HTTP/3 - a UDP listener a firewall written for TCP 443 may not
+  cover. It is an observation, never graded, and the advertised address is
+  never probed.
+
+### Changed
+
+- The "On this page" contents list of a scan report groups its up to twelve
+  entries into three labelled columns - *Fix*, *Details* and *Keep* - instead
+  of one long row of links, so the sections worth acting on stand apart from
+  the reference material and the export and share cards.
+
+- The Docker setup wizard opens each section with a two-column card: the step
+  counter, progress and the section's purpose on the left, and every section
+  of the walk on the right, marked done, skipped or still ahead, with the
+  current one highlighted. A terminal narrower than the card, a pipe or
+  `NO_COLOR` keeps the plain heading lines.
+
+## [1.25.3] - 2026-09-18
+
+### Added
+
+- The `/check-changelog-docs` skill checks that every new `Added` or
+  `Changed` entry under `[Unreleased]` is documented where AGENTS.md requires
+  it - the README option table, the example YAML, the `docs/` guides in all
+  four languages, `docs/webapp.md`, the guide index and the generated
+  `/documentation` pages - and reports each gap as a concrete action. A new
+  Claude Code hook stops the first `git commit` that adds such entries and
+  asks for the check; retrying the same commit goes through.
+
+- Manual mutation testing for contributors: the `/mutation-test` skill runs
+  mutmut through the read-only `mutation-tester` agent on chosen plugin or
+  scanner functions and sorts every surviving mutant into a real test gap,
+  unreachable code or noise. mutmut 3.8.0 is a new dependency in its own
+  `mutation` group - never installed by CI or a plain `uv sync`, never run in
+  CI - reviewed and approved in `security/dependencies/mutmut.yml`.
+
+- The browser tests now also run in Chromium, the engine behind Chrome,
+  Edge and most Android browsers, as a third job in the browser-tests
+  workflow ([ADR 0068](adr/0068-chromium-is-a-third-browser-test-engine-behind-the-dead-proxy.md),
+  superseding ADR 0061's WebKit-and-Firefox-only rule). Chromium is
+  Playwright's build, which is Google's, and runs behind the same dead proxy
+  and request watch as the other engines; WebKit stays the default. The
+  workflow now runs every `tests/test_webapp_browser_*.py` file, including
+  the enhancements, phone and operator tests it had been leaving out.
+  Chromium's first run showed ReDoc asking for Redocly's logo from its CDN;
+  the `/redoc` page's policy already blocks it, and a test now keeps it that
+  way.
+
+### Fixed
+
+- The end-of-life alert no longer shows a double space ("The 2.x  release
+  line") when the scan result names a release line but no release type.
+- `--baseline` and `--warn-on-new` are now tested in-process: suppressing an
+  unchanged problem, keeping new findings, worse ratings and OK runs as they
+  are, leaving waived measures out of the baseline, and a baseline that
+  cannot be written. The rating messages (end of life, thresholds, OK and
+  UNKNOWN) are pinned exactly. A mutation-testing trial run found both gaps.
+- `check_vulnerabilities` is now tested as a whole, in-process: a scan with
+  known vulnerabilities and a good rating, the exact hardening and update
+  alert lines, what the baseline records with and without
+  `--check-hardening`, perfdata, the self-update note, extra-check
+  truncation and the payload behind `--format` and the webhook. A
+  `/mutation-test` run of the rating, baseline and check functions now
+  leaves only 3 equivalent mutants alive (was 108).
+- The browser tests for the below-the-fold reveal no longer time out in
+  Firefox on CI. They ran the longest page with the blurred fade switched
+  on, which starved headless Firefox until even the next page load timed
+  out; they now use reduced motion like every other browser test, which
+  still exercises the same hiding and revealing, and the motion itself
+  stays covered on the landing page.
+
+### Documentation
+
+- Polished awkward German guide wording and corrected inconsistent address forms.
+
+- `docker/docker-compose.yml` now shows every web setting it had left out:
+  the operator's area (`COS_WEB_ADMIN_*`), `COS_WEB_AUDIT_LOG_ROTATION` and
+  `COS_WEB_RATE_LIMIT_SALT` as commented examples, and why
+  `COS_WEB_FRONTEND_DIR` stays unset. The example configuration shows
+  `scanner.proxy` and `releases.proxy`, which override the top-level `proxy`.
+
+### Security
+
+- **Scan targets and redirect hops in deprecated IPv6 site-local space are refused.**
+  The web service's SSRF guard let the deprecated site-local range (RFC 3879) through because no
+  `ipaddress` private flag covers it, so a name resolving there - or a redirect
+  to it - could reach a network that still routes site-local addresses.
+
+- **Webhooks to deprecated IPv6 site-local addresses are refused.** The
+  plugin's webhook guard had the same site-local gap as the web service.
+
+## [1.25.2] - 2026-09-18
+
+### Added
+
+- The Docker setup wizard moves while it works, in the four places where
+  motion tells the operator something the static page could not. Section
+  headings sweep into view, the step counter is a single-line gauge redrawn
+  in place rather than a new bar per section, the wait for the started stack
+  to answer spins and then morphs into a tick or a cross, and the summary is
+  drawn as one bordered card per group. The look is borrowed from
+  [ratatui](https://ratatui.rs)'s throbber, LineGauge and Block widgets; the
+  wizard still depends on nothing but the standard library.
+
+  All of it is gated on the same check that gates colour - no terminal,
+  `NO_COLOR`, `FORCE_COLOR`, `TERM=dumb` or a captured run prints exactly the
+  plain text it printed before, with no escape and no carriage return. A card
+  narrows its label column to fit an eighty column terminal and falls back to
+  the plain list in a pane too narrow for one.
+
+### Changed
+
+- `specs.md` states the no-JavaScript promise as clause X-20: a page read
+  without a script works with plain forms and links, and a control only a
+  script can make work stays hidden until the script reveals it. Clause C-8
+  no longer asks for a `RELEASE.md` entry when a setting is added - the
+  release workflow writes that file (ADR 0048).
+
+### Security
+
+- **The Docker setup wizard no longer writes credentials through a symbolic
+  link.** A link left where `.env` belongs - even a dangling one, which did
+  not count as an existing file and so raised no overwrite question - made
+  the wizard create the link's target and write every generated secret into
+  it. The wizard now refuses to write when the compose file or `.env` is a
+  link, whatever `--force` says, and opens every owner-only file (`.env`,
+  the nginx admin secret header, credential backups) with `O_NOFOLLOW`.
+  Affected anyone who ran `setup-wizard.py` from 1.9.0 to 1.25.1 in a
+  directory somebody else could write to.
+
+### Fixed
+
+- A report page read without JavaScript no longer shows controls that only
+  a script can make work: the configuration-fragment picker and the copy
+  buttons were rendered `hidden`, but their `display` rules outranked the
+  attribute. New browser tests (`tests/test_webapp_browser_enhancements.py`)
+  now drive the remembered form settings, the fragment picker, the share
+  buttons, the rescan countdown and the expiry warning.
+- The below-the-fold reveal and the site's own 404 page now have browser
+  tests too (`tests/test_webapp_browser_ux.py`): blocks arrive as a reader
+  scrolls, a jump to the end sweeps up every block it carried past, a page
+  read without JavaScript hides nothing, and a mistyped address gets a 404
+  page that runs clean under the CSP with a way home.
+- The waiver search on the landing page no longer makes iOS Safari zoom the
+  page when it is tapped: on a phone it is now set at 16 pixels, the size
+  below which Safari zooms into a focused field. New phone tests
+  (`tests/test_webapp_browser_mobile.py`) drive the menu, a scan, target
+  sizes and field sizes by touch on a 390-pixel screen.
+- The operator's area and the API documentation pages now have browser
+  tests (`tests/test_webapp_browser_operator.py`): the admin pages run clean
+  under their CSP, `admin.js` fills every tile from `/admin/state`, a
+  request without the outpost's headers gets the ordinary 404, and Swagger
+  UI and ReDoc render from the vendored bundles with nothing fetched from
+  outside.
+- The security headers are now tested on every kind of response a stranger
+  can reach (`tests/test_webapp_security_headers.py`), not only the landing
+  page: errors, the JSON API, every export, the badge, static files,
+  redirects and the operator's area. Nothing tied to a scan's uuid may be
+  stored by a cache, and the documentation pages' relaxed policy applies to
+  exactly `/docs` and `/redoc`, never a neighbouring address.
+- `opencloud_local_scan.scan()` raises `ScanError` for an address it cannot
+  parse - an unclosed IPv6 bracket or a port outside 0-65535 - instead of
+  letting urllib's `ValueError` escape. The plugin already reported these as
+  UNKNOWN; a direct caller of the library now gets the exception it is
+  promised. New robustness tests (`tests/test_scanner_robustness.py`) cover
+  malformed, empty, binary and failing status answers, an oversized body,
+  capabilities of the wrong shape, a target that never answers and a
+  redirect loop.
+- The Docker setup wizard checks the answers it reads back from its
+  answers file the way it checks a typed answer: a value outside a
+  question's choices, one its validation refuses, or one carrying a control
+  character is dropped. A newline in an edited file could otherwise rewrite
+  `docker-compose.yml` around it. A `.env` that is not UTF-8 now stops the
+  run with a sentence instead of a traceback, and without regenerating the
+  credentials a running deployment depends on. New tests
+  (`tests/test_docker_wizard_hardening.py`) cover links, edited and
+  unreadable files, input that ends mid-walk, refused answers and masked
+  credentials.
+
+## [1.25.1] - 2026-09-18
+
+### Fixed
+
+- **A release that stopped after its tag is finished by the next run.** The
+  release workflow skipped any version whose tag existed, so when v1.25.0 was
+  tagged and GitHub then answered an asset upload with HTTP 500, it reached
+  PyPI and Docker Hub but never got a GitHub release, and every re-run stayed
+  green without doing anything. The workflow now treats a published GitHub
+  release as the end of a version: a tagged version without one is rebuilt
+  from its tag and released, the release stays a draft until every asset has
+  been uploaded (each upload is retried), and the workflow can be started by
+  hand. See ADR 0067.
+- **A semicolon in a waiver's reason no longer creates a permanent waiver.**
+  `temporary_waivers` is a list, and a list in the environment or a
+  configuration file is split on `;`, so the reason
+  `Firewall change; debugPort:9206 stays open` left a second entry behind,
+  which was read as a bare pattern and became a waiver with no deadline and
+  no reason. `temporary_waivers` and `--waive-until` now refuse an entry
+  without an expiry and a reason instead; a permanent waiver still belongs in
+  `--ignore-hardening`.
+- **A malformed waiver in the configuration is UNKNOWN, not WARNING.** A
+  `temporary_waivers` entry that could not be read ended the plugin in a
+  traceback with exit status 1, which a monitoring system reports as WARNING.
+  It now answers UNKNOWN with the reason, on every output path - several
+  hosts, `--format json` and the other machine formats included, which also
+  let a configuration error such as an unreadable secret escape the same way.
+  `check-opencloud-scanner` reports it as a usage error.
+- **`check-opencloud-scanner diff` explains a hand-edited report instead of
+  crashing.** A provenance, coverage or waiver block of the wrong shape - a
+  string where an object belongs, a count that is not a number - ended the
+  comparison in a traceback. It is now read as missing, the same as in a
+  report that predates the block.
+- **The browser tests declare the web server they start.** `uvicorn` is
+  imported by `tests/browser_support.py` but reached the `test` dependency
+  group only as a dependency of `mcp`; it is now listed there itself.
+
+## [1.25.0] - 2026-09-17
+
+### Added
+
+- **The comparison journeys are covered in a real browser.** The Playwright
+  suite now downloads a scan report and uploads it as the baseline for a later
+  scan, follows the same-tab comparison offer through to its result, and
+  verifies that the capability-bearing scan history does not cross into
+  another tab.
+- **Translation quality checks.** `scripts/check_translations.py` compares the
+  four frontend catalogues and the translated guides against their English
+  source and separates what a machine can decide from what it cannot.
+  Structural differences - a missing or unknown key, changed `{placeholders}`,
+  a string `str.format` would refuse, changed or disallowed inline markup, a
+  translated `href`, a relative guide link that resolves to no file - are
+  errors and fail CI. Prose heuristics - the form of address a language uses,
+  a string left in English, a dropped product name, a glossary term rendered
+  two ways - are warnings that name a key for a reviewer, and `--strict` fails
+  on those too. Decisions about a warning are recorded in the script's
+  `ACCEPTED` table rather than by removing the check.
+- **[`TRANSLATING.md`](TRANSLATING.md), the style guide behind those checks.**
+  It records the register each language uses - German informal "du", French
+  polite "vous", Spanish polite "usted" - the agreed terminology, what happens
+  to example hostnames and placeholders, and the review workflow.
+
+- **A scan now records what it did not measure.** The result document gains an
+  additive `coverage` block: every check the scan considered, in one of four
+  states - `passed`, `failed`, `not_checked` or `inconclusive` - and, whenever
+  there is no measurement, a machine-readable reason from a closed set
+  (`not_applicable`, `probe_disabled`, `prerequisite_missing`, `timeout`,
+  `unreadable`, `no_route`) with a sentence of detail. A passed check and a
+  check that never ran no longer look identical. The reason is what separates
+  a property of the deployment - no certificate to inspect on a plain-HTTP
+  instance - from a probe somebody turned off. The total is what that scan
+  considered rather than a fixed denominator, because the checks are dynamic.
+  Coverage explains a grade and never changes one: nothing in the block reaches
+  the rating, the severities, the alert line, the exit code or the webhook
+  payload, and a waived failure stays a failed measurement with its acceptance
+  recorded separately. A report written before this existed has no block, which
+  every reader treats as "does not say" rather than "nothing was missed". The
+  result page shows the gaps beside the grade in all four languages. See
+  [ADR 0064](adr/0064-a-scan-records-what-it-did-not-measure.md).
+
+- **A waiver can now carry a reason and a deadline.** `--waive-until
+  'debugPort:9205|2026-12-31T00:00:00Z|Firewall change, OPS-412'` accepts a
+  failing check until a stated moment, after which it alerts again with no
+  configuration change - the fix for a waiver added "for two weeks" that is
+  still suppressing an alert a year later. The expiry must carry a timezone and
+  the reason may not be empty; a record missing either is refused rather than
+  quietly becoming permanent, because failing open is how a typo outlives
+  everybody who knew about it. The boundary is `now >= expires_at`, decided
+  once per scan against one UTC clock. A bare pattern in `--ignore-hardening`
+  is still a permanent waiver and is unchanged. Any active record suppresses,
+  and the result document's new `waivers` block lists every record that applies
+  to a check - active, expired, and the ones that matched nothing - so a
+  permanent wildcard cannot silently absorb an expiry underneath it. Waivers
+  still only apply to failing checks, still never remove evidence, and end of
+  life is still an F. Configurable as `COS_SCANNER_TEMPORARY_WAIVERS` and
+  `scanner.temporary_waivers`. See
+  [ADR 0065](adr/0065-a-waiver-may-carry-a-reason-and-a-deadline.md).
+- **A comparison now explains why a result changed, not only that it did.**
+  Every scan records a `provenance` block built from the data it was actually
+  given while it ran: the scanner version, the scan time, the release track,
+  the waivers in force, how much was measured, and a stable digest of the exact
+  advisory database and release schedule it judged against - a digest rather
+  than a copy or a file path, and one that is independent of serialisation
+  order. `check-opencloud-scanner diff` and the web comparison then share one
+  explanation model that groups contributing changes as `instance`,
+  `referenceData`, `scanner`, `policy` or `unknown`, so an upgrade, a newly
+  recorded advisory, a support window that simply elapsed, a scanner upgrade
+  and an expired waiver are told apart instead of all reading as a regression.
+  It claims only what the evidence supports: a changed digest establishes that
+  the reference data differed and explicitly not that it caused any particular
+  grade to move, several changes may contribute without one being elected the
+  cause, and a difference nothing accounts for is reported as unexplained
+  rather than dropped. An older report that records neither block still
+  compares; what cannot be established is reported as a limitation instead of
+  guessed. Uploaded reports pass both blocks through the same bounded
+  allow-list (ADR 0057). No new scan history is stored. See
+  [ADR 0066](adr/0066-a-result-records-the-conditions-it-was-produced-under.md).
+- **A scan can be downloaded as one standalone HTML report.** A result link
+  is a capability with a time limit, which is right for a page a stranger can
+  reach and wrong for the evidence somebody needs at the end of the quarter.
+  `GET /api/scans/{uuid}/export/html` is the same report without the service
+  under it: the styling travels inside the document, and there is no script, no
+  image, no font service and no stylesheet to fetch, so opening the file makes
+  no network request at all - the documentation links are the only addresses in
+  it and are followed only if the reader chooses to. It carries the findings,
+  the ignored ones with their waiver reasons, the remediation plan, the
+  coverage gaps and the reference data the scan was judged against, marking
+  what an older report does not record rather than leaving it blank. It says
+  plainly that it is a copy that outlives the link, does not update, and is not
+  erased when the scan is. There is nothing to operate in it: no form, no
+  rescan control, no polling, no erasure token. Every string in it comes from
+  the scanned instance or from an operator's waiver, so all of it is escaped
+  and a `javascript:` reference renders as text rather than as a link. The
+  download sits beside the existing exports on the result page in all four
+  languages; the report itself is English, as every export is.
+
+### Security
+
+- **An uploaded report that carries more findings than a report can is now
+  refused rather than read in part.** `webapp/imports.py` capped every block
+  of a report to its first 500 entries and read the rest of the file as if
+  they had never been written. That is the one kind of hole the page cannot
+  name: everything past the cut reads as resolved on the earlier side and as
+  introduced on the later one, in a comparison that otherwise looks complete.
+  A block longer than the cap is now the same 422 as any other file that is
+  not a report this service wrote - the answer the CSV row limit already gave
+  a file that was too long. What is still read in part is still counted: an
+  entry that is not the shape its block is written in, and a waiver that is
+  not an identifier this scanner writes, now reach the count the page shows
+  beside the comparison instead of disappearing. The grade is read through the
+  same length cap as every other string in the file, so a quarter of a
+  megabyte of digits is not handed to `int` on the strength of an interpreter
+  default an operator can turn off. See
+  [ADR 0057](adr/0057-an-uploaded-report-is-evidence-not-a-scan.md).
+- **A network serving a probe block can no longer upload a report either.**
+  The block ADR 0051 imposes on a client whose recent scans kept turning out
+  not to be OpenCloud was asked about on the submission path only, so the same
+  network could still hand `POST /compare` a file to parse - the one parser
+  here fed from outside, and work this service does whether or not a scan
+  follows. It is now asked before the upload's own bucket, as the submission
+  path asks it before the client limit, so a blocked client's refusals do not
+  run down an allowance it will want back when the block ends. The answer is
+  the 429 with `Retry-After` the block gives everywhere else, in its own
+  sentence in all four languages.
+- **The report upload now reaches the audit trail.** It is the only structure
+  this service parses that it did not write, and it was the one refusal an
+  operator with `COS_WEB_AUDIT_LOG` on could not see: a spent upload limit and
+  a file the parser would not read are now `rate_limited` with the scope
+  `rate_limit_upload` and `submission_rejected` with the reason
+  `report_rejected`. The record carries the key of this service's own refusal
+  and no part of the file, because an audit trail is as attractive a place for
+  a hostile upload to be quoted as an error page is.
+
+### Fixed
+
+- **Two sentences about a refused upload printed their own placeholder.** The
+  page that says a file is too large, and the one that says a comparison has
+  expired, are catalogue strings with a number in them, and both were rendered
+  without it - so a reader was told their file exceeded the "{kilobytes} KB"
+  limit. Every sentence on that path is now given the size limit and the
+  window a comparison lives for, from the settings that enforce them.
+
+- **101 dead links in the French guides.** A guide under `docs/<language>/`
+  sits one directory deeper than its English source, so every path out of
+  `docs/` needed `../../` and had `../`. The generated French pages carried
+  the same mistake into the public documentation, where links to ADRs and
+  repository files pointed at GitHub addresses that did not exist. The
+  English guide index also linked to a German index that was never written;
+  it now points at the three translated guide directories.
+
+## [1.24.2] - 2026-09-17
+
+### Changed
+
+- **The German interface and guides now address the reader as "du"
+  throughout.** The remaining formal strings in the German catalogue and the
+  last formal sentences in `docs/de/` are rewritten, and the test that
+  tolerated a list of older formal strings now fails on any formal German
+  string, in the catalogue and in the German guides alike.
+- **Spanish guide sources are now available in the frontend.** Every public
+  guide has a matching `docs/es/` source, generated Spanish template and
+  search index entry, so a Spanish visitor no longer gets the English guide
+  under a notice. The languages with guide sources are listed once, in
+  `GUIDE_LANGUAGES`, for the generator, the route and the search index. See
+  [ADR 0063](adr/0063-public-guides-have-spanish-sources.md).
+
+### Fixed
+
+- **The browser tests pass in Firefox again.** Playwright's Firefox drops an
+  emulated colour scheme once a page sends
+  `Cross-Origin-Opener-Policy: same-origin`, so the dark-theme test now gives
+  Firefox a browser whose system theme is dark instead; and waiting for a
+  finished scan tolerates the moment during the result page's reload when the
+  new document has no body yet.
+- **The MCP sign-in no longer warns about `validate_token_resource` at
+  startup.** The token verifier already checks a token's audience against
+  `COS_WEB_MCP_AUTH_AUDIENCE`, so the MCP SDK is now told explicitly not to
+  also require the token's resource to equal the resource URL, which would
+  have refused valid tokens once SDK 3.0 turns that check on by default.
+- **The grade page test matches the reworded English copy again.** It now
+  looks for "Explanations for failed checks", the heading the copy polish
+  gave that item.
+
+## [1.24.1] - 2026-09-16
+
+### Added
+
+- **The frontend is tested in a real browser.** `tests/test_webapp_browser_ux.py`
+  and `tests/test_webapp_browser_e2e.py` drive the web application in WebKit
+  (and Firefox in CI, `.github/workflows/browser-tests.yml`) through
+  Playwright: every public page runs clean under its Content-Security-Policy,
+  fits a phone screen and hides what is marked hidden; navigation, theme,
+  language, form validation, waiver search, site search and back-to-top
+  behave; and a visitor's journeys work from the form to the report - the
+  waiting page's hand-over, severity filters, all four exports, waivers,
+  keyboard only, without JavaScript and in German. No browser can reach
+  anything but loopback, and Chromium is never used because its builds are
+  Google's. New test dependency `playwright` has an approved review in
+  `security/dependencies/playwright.yml`; see
+  [ADR 0061](adr/0061-the-frontend-is-tested-in-real-browsers-that-cannot-leave-loopback.md).
+- **Agents can drive the running app through the Playwright MCP server.**
+  `.mcp.json` starts the server bundled with the same `playwright` package,
+  configured in `.claude/playwright-mcp.json` for WebKit, an isolated
+  headless profile and loopback only - no Node.js installation needed.
+
+### Fixed
+
+- **The scan form validates the address in the browser again.** Browsers
+  compile the field's `pattern` with the `v` flag, under which the unescaped
+  `-` in `[A-Za-z0-9._~-]` is an error, so WebKit and Chromium silently
+  skipped client-side validation and sent malformed addresses to the server.
+- **The catalogue and reports no longer scroll sideways on phones.** A
+  remediation naming a long environment variable had no break opportunity,
+  and the findings list grew to fit it - 319 pixels past a 390-pixel screen on
+  `/catalogue`.
+- **The findings filter note is hidden until a filter is chosen.** A
+  `display: flex` rule outranked the `hidden` attribute, so every report showed
+  an empty "showing only" line with a "show all" link.
+
+### Changed
+
+- **A new Python dependency needs an approved review first.** Every package in
+  `pyproject.toml` and every `uvx` tool in a workflow needs a record in
+  `security/dependencies/` that says why it is needed, which tests exercise
+  it, what a security review found, and which maintainer approved it.
+  `scripts/check_dependencies.py`, run by a new `dependency-policy` job in the
+  supply-chain workflow, fails without one. The 33 dependencies already in use
+  are listed in `security/dependencies/grandfathered.txt`, which may only
+  shrink. The dependency-review action now fails a pull request that
+  introduces a known-vulnerable package instead of only commenting, and the
+  supply-chain workflow grants its attestation permissions to the one job that
+  attests. See
+  [ADR 0060](adr/0060-a-new-dependency-is-justified-tested-and-reviewed-first.md).
+- **Routine dependency updates get a seven-day stabilization window.**
+  Dependabot still raises security updates immediately, while monthly version
+  updates wait long enough for a compromised or broken release to be noticed.
+  The composite action also invokes its private scanner environment directly
+  instead of adding that directory to the rest of the job's executable path.
+
+- **Comparing two scans of different instances is refused.** The `/compare`
+  page, the report upload and the MCP tool `compare_scans` used to compare a
+  scan of one host with a scan of another and only show a warning. They now
+  answer 422 and compare nothing, matching the default of
+  `check-opencloud-scanner diff`. A report that names no instance is refused
+  the same way. `sameTarget` stays in the answer and is always `true`. See
+  [ADR 0059](adr/0059-a-comparison-refuses-two-different-instances.md), which
+  supersedes this part of ADR 0029.
+### Documentation
+
+- **New German text addresses the reader as "du".** New and reworded strings
+  in the German web interface and guides use the informal form instead of
+  "Sie". Existing formal strings are listed in `tests/test_webapp_i18n.py`,
+  which fails on any other formal string; the list only shrinks as strings
+  are converted. The "Die beiden Scans betreffen unterschiedliche Instanzen"
+  message already uses the new form.
+- **The release skills build a release skeleton and never write a changelog
+  entry.** `/patch-release`, `/minor-release` and `/major-release` now make
+  exactly the version bump in `pyproject.toml`, a new `uv.lock` and the
+  refreshed generated files (release schedule, advisory database, frontend
+  documentation, search indexes), and leave `CHANGELOG.md` and `RELEASE.md`
+  alone: the release notes are the `[Unreleased]` entries the merged pull
+  requests wrote. A new OpenCloud release or advisory found by the refresh is
+  reported to the user instead of written down. The version guard now runs
+  after the commit, because it reads the committed version, with
+  `--labels skip-changelog` so that only its version check applies.
+- **`/open-release-pr` checks the changelog before it opens anything.** It
+  stops when the `[Unreleased]` section is empty, when the release branch
+  changes `RELEASE.md`, or when it changes a released section of
+  `CHANGELOG.md`. Entries the release branch adds under `[Unreleased]` are
+  allowed and become part of the pull request body, which uses the
+  `[Unreleased]` entries verbatim; the skill never edits either file.
+- **Claude Code hooks enforce the project's hard rules.** `.claude/settings.json`
+  refuses publishing or syncing advisories, merging pull requests, creating
+  tags and releases, force-pushing, pushing to `main`, `git reset --hard`,
+  aborting a merge and `ruff format`; refuses hand edits to `RELEASE.md`, the
+  generated documentation, search indexes, bundled data, the README
+  release-schedule block and the embedded wizard blueprints; asks before a
+  version change or a literal `__version__`; and refuses inline styles and
+  scripts in templates. When the session ends, it runs the fast generator
+  `--check` guards for changed sources.
+- **A privacy guard keeps real instances, scan output and personal data out
+  of commits.** `.claude/hooks/privacy_guard.py` checks staged changes and
+  commit messages before `git commit`, the commits a `git push` would send,
+  pull request bodies, and, when the session ends, everything staged or not
+  yet pushed. It refuses hostnames that look like an instance or scan target,
+  public IP addresses, personal e-mail addresses, credentials and scanner or
+  plugin output in any format, and asks about any other new hostname. Values
+  already on `main` and public references in
+  `.claude/hooks/privacy_allowlist.txt` pass.
+- **The hooks refuse when they cannot run, and have tests.** A guard that is
+  missing, crashes or cannot read its input now refuses the command or edit
+  instead of letting it through; the generator checks at the end of a
+  session run in the project's environment and report a missing dependency
+  as skipped rather than as a stale file; the privacy guard only starts for
+  `git` and `gh` commands. `tests/test_claude_hooks.py` covers all of it.
+- **The hooks close the gaps a review found.** The Bash guard now applies the
+  Edit guard's rules to shell writes (redirects, `tee`, `sed -i`, `cp`, `mv`,
+  `rm`), sees commands inside `$(...)`, backticks, `bash -c`, `eval`, braces,
+  background jobs and `xargs`, ignores quoted text, heredoc bodies and
+  comments, lets `ruff format --check`/`--diff` and redirected `git tag`
+  listings through, and reads `git push -o` values correctly. Pushes using
+  `--repo` are checked against both the main-branch guard and the privacy
+  guard. The privacy
+  guard matches values already on `main` as whole tokens only, reads diffs
+  without mistaking an added `++ ` line for a file header, checks merge
+  commits, checks the branch a push actually sends, reads `git commit -F`
+  message files and `gh` `-F`/`--body-file=` bodies (issues too), only widens
+  a commit check to the working tree for a real `git add`, `-a`/`-i`/`-o` or
+  pathspec, and asks when it cannot read the commits of a push. The session-end
+  generator checks treat only a traceback ending in an import error as a
+  missing dependency.
+- **`/preflight` runs in a read-only `preflight-runner` agent**, so its output
+  stays out of the conversation and nothing is changed while it checks.
+- **`/patch-release`, `/minor-release` and `/major-release` are now one
+  `/release <patch|minor|major>` skill.**
+- **German guide pages no longer repeat their title inside the article.** The
+  frontend generator removes the source and translated Markdown title before
+  rendering the page header; German sources keep their headings and key
+  external references in German, and the Spanish agent-client guidance uses
+  the formal form of address consistently.
+- **French guide sources are now available in the frontend.** Every public
+  guide has a matching `docs/fr/` source, generated French template and search
+  index entry. Spanish guide pages continue to use the explicit English
+  fallback until their own source set is reviewed. See
+  [ADR 0062](adr/0062-public-guides-have-french-sources.md).
+
+## [1.24.0] - 2026-09-16
+
+### Documentation
+
+- Rewrite frontend explanations and operator documentation for clearer,
+  consistent wording in English, German, French and Spanish. Clarify scan
+  coverage, temporary storage, alert timing and configuration instructions.
+- Add German versions of all public guides under `docs/de/`, generated German
+  frontend pages and German guide search content. Preserve section links across
+  languages; French and Spanish continue to use English guide bodies.
+
+### Added
+
+- **The comparison page takes the earlier scan as an uploaded report.**
+  `/compare` needed both scans to still exist, and the baseline worth
+  comparing against is usually older than the hour a result lives. It now also
+  accepts the JSON or CSV file from a result page's downloads: upload the
+  report you kept, name a scan that has not expired, and the page answers the
+  same question with the same arithmetic - `workflows.compare_documents`, which
+  is the plugin's own `--baseline` comparison, so a reader, an agent and an
+  operator's alerting still cannot disagree about one pair. The file is the
+  only structure this service parses that it did not write, so it crosses one
+  boundary: `webapp/imports.py` does not hand back what it was given but a
+  result document rebuilt key by key from an allow-list, capped at 256 KB,
+  strict UTF-8, with identifiers dropped and counted unless they are spelled
+  the way this scanner spells its own. The file is read once in memory and
+  written nowhere - not its contents, not its name, which nothing reads. What
+  survives is the comparison, under a fresh uuid4 for at most five minutes so
+  a reload and a shared link keep working; `COS_WEB_COMPARISON_TTL` can
+  shorten that window and cannot widen it. Unknown, malformed and expired
+  tokens are one 404, and nothing lists them, and `DELETE /api/purge` erases a
+  cached comparison along with the scans of the instance it names rather than
+  leaving it to its own clock. A browser feature only: no MCP
+  tool and not in the OpenAPI schema, because an agent already has
+  `compare_scans` and two uuids. See
+  [ADR 0057](adr/0057-an-uploaded-report-is-evidence-not-a-scan.md).
+
+- **`--format otlp` hands the scan's metrics to an OpenTelemetry collector.**
+  The eight metrics the Prometheus exporter publishes, rendered as one
+  OTLP/JSON `ExportMetricsServiceRequest` covering every scanned host - the
+  body a collector accepts at `/v1/metrics`. Pipe it at `curl` from the timer
+  that already runs the check: the plugin prints the document and never dials
+  the collector itself, so where the metrics go and which credential reaches
+  them stay out of a scan. Like `--format prometheus` it exits `0` whatever
+  the instance scored and reports an unreachable one as
+  `opencloud_security_scrape_success 0`, because a metrics pipeline has no
+  other way to tell that apart from a scan that stopped running. The names,
+  labels and values are the exporter's: both formats now render one reading of
+  the scan rather than each deciding for itself what a waived measure counts
+  as - see
+  [ADR 0054](adr/0054-metrics-are-collected-once-and-rendered-twice.md).
+
+- **A Helm chart installs the Kubernetes deployment this project documents.**
+  [`contrib/helm/check-opencloud-security`](contrib/helm/check-opencloud-security)
+  renders the scheduled scan as a `CronJob` and, when asked for, the shared
+  scan service with a `NetworkPolicy` naming the instances it may reach.
+  Four values have no default and an install that omits one is refused rather
+  than rendered: the image tag, because the release schedule ships inside the
+  image and `latest` would move the verdict under a running alert; the hosts,
+  because a Job with no host scans nothing daily while looking like
+  monitoring; the scan service's token, because an untokened one scans any
+  host its callers name; and that policy's allowlist, because a policy with no
+  egress rule is a different policy rather than an unfinished one. The chart
+  writes no `Secret` and carries no version of its own - every credential is
+  read from one you created and named. `tests/test_helm_chart.py` holds every
+  flag it can emit against the plugin's own argument parser.
+
+- **A finished scan can be shown as a grade badge.**
+  `GET /api/scans/{uuid}/badge.svg` renders the letter as a small SVG this
+  service draws itself - no badge service, no external font, no script,
+  because an image fetched from somebody else's server would hand them the
+  result URL in a referrer on every view, and that URL's uuid is the whole of
+  the authorisation. It carries nothing the scanned instance chose: no
+  hostname, no product, no version. It answers 404 for an unknown or expired
+  uuid and 409 while the scan is running, like every other reading of one, and
+  keeps the service-wide `no-store`. A badge therefore lives exactly as long
+  as its scan - an hour by default - which makes it right for a ticket or a
+  chat message and wrong for a README; there is deliberately no badge for a
+  hostname, because that would be a permanent handle on somebody's instance.
+  See [ADR 0055](adr/0055-a-badge-is-a-rendering-of-one-scan-not-a-handle-on-an-instance.md).
+
+- **The reference data can be subscribed to.** `/advisories.atom` and
+  `/release-schedule.atom` publish the advisory database and the release
+  lifecycle as Atom feeds, built from the same functions `/catalogue` and the
+  scan pipeline use. Both documents refresh themselves daily and may only gain
+  knowledge, and until now noticing a new advisory meant reopening a page and
+  remembering what had been there. The feeds name no instance, carry no uuid
+  and take no parameter, which is what lets them be publicly cacheable under
+  [ADR 0031](adr/0031-a-response-is-uncacheable-until-a-route-opts-in.md);
+  advisory titles and descriptions come from a feed this project does not
+  control and are carried as escaped text rather than markup. See
+  [ADR 0056](adr/0056-the-reference-data-is-subscribable.md).
+
+### Changed
+
+- **The CSV export records two facts the findings table cannot carry.** A
+  `Update available` row and an `HTTPS enforced` row now sit with the header
+  block, because both are single measurements that live outside the per-finding
+  table and a report read back without them cannot tell "no" from "never
+  recorded". A file downloaded before this is still readable: the comparison
+  leaves those two measurements out of *both* sides rather than guessing at
+  them, and says on the page that it did. Anything parsing that CSV by row
+  position rather than by label will need adjusting.
+
+- **The bundled release schedule and advisory database were re-checked against
+  their published sources.** Neither moved: the schedule still names OpenCloud
+  7.2.4 as production and 8.0.0 as rolling, and the advisory database still
+  holds the same two records. The generated frontend documentation and the
+  public and operator search indexes were rebuilt so that the version they
+  carry is this release's.
+
+## [1.23.3] - 2026-09-16
+
+### Added
+
+- **An operator can search the operator area.** While the sign-in lasts,
+  `/search` also answers from the area's own pages - the overview, the
+  configuration and rules tabs and the two operator documents - and marks
+  those results as the operator area's. The index behind them is built into
+  the package rather than `frontend/static`, is served only by an authorised
+  route under `/admin`, and is sent `no-store` so that signing out ends
+  access to it immediately. Everybody else gets the public index alone and no
+  indication that another one exists.
+
+### Fixed
+
+- **The operator documents no longer carry broken images.** The repository's
+  Markdown points at files beside it, which resolve to nothing once a page is
+  served from `/admin/docs/`. The architecture diagram is now served from this
+  origin, as `img-src 'self'` requires; the two interface screenshots are
+  megabytes each and show the page the reader is already on, so they become
+  links to the repository rather than weight in the bundle.
+- **The two generated operator documents now look like the rest of the area.**
+  `Architecture` and `Operations` never loaded `admin.css`, so the tab strip
+  above them rendered as bare links and neither page carried the signed-in
+  band or the ruled heading the other tabs have.
+
+### Changed
+
+- **The operator index is chosen from a table rather than named by a request.**
+  The file each language's operator search index lives in is now a fixed entry
+  in one table in `webapp/search.py`, which both the build script and the
+  request path read. The language a request asks for could already only be one
+  of the four this frontend has - a cookie or `Accept-Language` is reduced to a
+  supported code or to nothing before anything else sees it - so no traversal
+  was reachable, but the name was still assembled from that value, which is a
+  shape static analysis rightly objects to and one refactor away from being
+  true. A cookie the visitor wrote by hand now selects an entry or misses the
+  table and gets English.
+
+- **The agent guide is now part of the API page.** `/ai` was a tab of its own
+  next to `/api`, which asked a reader wiring up software to guess whether a
+  curl call and an MCP endpoint were documented in the same place. Discovery,
+  WebMCP, client configuration and the rules for agents are now sections of
+  `/api`, which keeps its name. `/ai` redirects there permanently, and the
+  discovery document's `documentation` key follows it.
+
+- **Reference data re-read and the generated documentation rebuilt.** The
+  OpenCloud release schedule is unchanged (production 7.2.4, rolling 8.0.0)
+  and the advisory database brought no new entries, so this release carries
+  the same ratings as the last one. The bundled documentation pages and the
+  four search indexes are regenerated against the new version.
+
+## [1.23.2] - 2026-09-15
+
+### Fixed
+
+- **Parallel scanner tests no longer overflow the fake server's backlog.**
+  The fixture accepts a full burst of probes, so dropped local connections
+  do not turn a reachable test finding into an intermittent pass.
+
+### Security
+
+- **Anonymous scans no longer inherit local credentials.** Scanner sessions, including
+  parallel sessions, disable ambient Requests configuration. Explicit demo
+  authentication remains intact. Webhook sessions also disable ambient credentials.
+- **Pinned scans cannot be redirected through ambient proxies.** Scans ignore
+  environment proxies. A pinned scan with an explicit resolving proxy is rejected.
+  Unpinned CLI scans still support the explicitly configured proxy.
+- **Workers cannot resurrect erased or expired scan results.** Worker transitions
+  require the original metadata and status keys to exist, and check and write atomically
+  in Redis. MemoryRedis follows the same contract. Deletion between reading metadata and
+  committing completion cannot revive the UUID.
+- **Browser-origin fallback checks validate the complete origin.** Opaque and
+  malformed origins are rejected; comparison includes scheme, normalized hostname and
+  effective port. The configured public origin is authoritative, not the request's
+  internal Host header.
+- **Webhook delivery dials only the addresses that passed validation.** Delivery pins
+  the validated address set while preserving Host, TLS SNI and certificate hostname
+  verification. Restricted delivery refuses an explicit resolving proxy and ignores
+  ambient proxies. Redirects remain disabled and response bodies are not downloaded.
+- **Redirect responses obey the scanner response-size limit.** Scanner sessions leave
+  all redirect handling to the capped manual redirect loop, including the normally
+  implicit Response.next preparation. Explicit request Authorization headers are not
+  propagated to redirect targets.
+- **A web scan timeout now stops its probes.** Each web scan runs in a spawned child
+  process. Timeout and cancellation kill and reap it, including its probe threads,
+  before the slot is released. Unexpected child failures return a generic
+  classification; worker logs no longer include exception traces that may contain scan
+  data.
+- **Authentication-key fetches stay bounded during outages.** Only one key lookup may
+  be in progress per verifier; concurrent attempts fail closed without queuing another
+  blocking fetch. Failed fetches impose a 60-second retry floor, including initial
+  fetches. Valid cached-key verification and key rotation retain their existing
+  behavior.
+- **Web request bodies are bounded before parsing.** An ASGI guard bounds mutation
+  request bodies to 1 MiB and a 30-second total receive deadline before downstream
+  parsing. Chunked bodies are counted as well. Oversized bodies return 413 and
+  incomplete bodies return 408.
+- **Unrelated browser pages cannot trigger loopback-service scans.** Scan-triggering
+  GET and POST routes reject cross-site/same-site Fetch Metadata and foreign or opaque
+  fallback Origins. Ordinary non-browser monitoring clients remain supported. Malformed
+  Host values are refused instead of raising.
+- **Existing wizard secret files are private before new secrets are written.** The
+  wizard applies fchmod(0600) to the open descriptor before writing any secret data,
+  including existing .env files, nginx admin-header files and secret backups.
+
+### Documentation
+
+- **Repository-wide security audit.** `security/audit-2026-09-16.md` records
+  the review scope, eleven fixes, validation results and remaining deployment
+  checks. Advisory records are drafts; nothing was published by the audit.
+- **German, French and Spanish frontend wording and terminology have been
+  polished.** The translated catalogues now use more natural phrasing and
+  established technical terms across the public and operator-facing pages,
+  without changing any scan behaviour or API contract.
+- **Keeping the release schedule and advisories current.**
+  `docs/reference-data.md` documents `check-opencloud-scanner refresh-data`:
+  - the reviewed, Sigstore-attested files it fetches, and the three
+    verification outcomes;
+  - the structural checks that apply either way;
+  - pointing `scanner.release_schedule` and `scanner.vulnerability_db` at the
+    result;
+  - the daily systemd timer;
+  - mirrors for hosts without internet access.
+
+  It also warns that a schedule file the check cannot read turns the
+  end-of-life check off rather than falling back to the bundled schedule.
+- **A reference for `check-opencloud-scanner`.** `docs/scanner-cli.md` covers
+  the global options and configuration search, `scan`, `diff`, `explain`,
+  `refresh-data`, `serve` and `configure`, with options and exit codes for
+  each. It explains how they differ from the plugin's Nagios codes.
+- **Signed exports are documented in `docs/webapp.md`.** A new section
+  explains what `X-COS-Signature` covers and that it is a shared-secret HMAC
+  rather than a public signature. It shows how to keep the header with the
+  file, and how to verify it with `scripts/verify_export.py` or `openssl`.
+- **The README no longer says the bundled advisory database is empty.** It
+  names the advisory it carries and points to the refresh guide.
+- Both new pages are listed in `docs/README.md` and published under
+  `/documentation`. The frontend documentation and search indexes are rebuilt.
+
+## [1.23.1] - 2026-09-15
+
+### Changed
+
+- **The bundled release schedule knows OpenCloud 8.0.** Regenerated from the
+  published lifecycle page: the 8.0 line is the current rolling release
+  (8.0.0), so 7.5 is now behind the rolling track. Production (7.2.4) and LTS
+  (4.0.8) are unchanged, and the README release table follows. The advisory
+  database was re-read from OSV and has nothing new. The frontend
+  documentation and the search indexes are rebuilt to match.
+
+### Documentation
+
+- **Claude Code skills for the repetitive maintenance tasks.** `.claude/skills/`
+  now carries step-by-step skills for patch, minor and major releases, opening
+  the release pull request, refreshing the bundled data, adding a setting, a
+  hardening check or a translated string, writing a security advisory record or
+  an ADR, a local run of the pull request checks, fixing OpenCloud
+  documentation links, and resolving conflicts in generated files. They follow
+  `AGENTS.md`: none of them publishes an advisory, merges to `main` or bumps a
+  version unless the maintainer invokes a release skill.
+- **A skill to run and drive the project locally.**
+  `.claude/skills/run-check-opencloud-security/` runs the scanner library,
+  the plugin or the web app against the fake OpenCloud from the tests, with no
+  Redis, Docker or real instance. The web app gets an in-process worker, so a
+  submitted scan completes. Headless Chromium submits the form and takes
+  screenshots.
+- **`.claude/` stays out of images and source archives.** It is listed in
+  `.dockerignore` and marked `export-ignore` in `.gitattributes`, like
+  `.github/`.
+
+## [1.23.0] - 2026-09-14
+
+### Added
+
+- **The operator area has a Rules tab.** `/admin/rules` documents how a grade
+  is decided - the scale, the scanner's severity ceilings, the end-of-life and
+  track overrides, whether extra checks count, the waivers a visitor may
+  choose, and the advisory database and release schedule rated against - and
+  every rule enforced against a request: the per-client, daily and per-target
+  limits, the probe block with its strikes, network scope and escalation, the
+  SSRF guard's refused ranges, names and wildcard DNS services, approval mode,
+  the flags every scan runs with, and the credential and refresh limits. Each
+  rule is marked enforced or off and names its `COS_WEB_*` variables. Nothing
+  is restated: every number and list is read from the running settings and
+  the constants of the code that enforces it, and the page names no target,
+  uuid or client.
+- **The operator area has a Configuration tab.** `/admin/configuration`
+  lists every `COS_WEB_*` variable the web service reads, grouped, with the
+  value in effect after parsing, whether the environment set it or the default
+  applies, and the documented default and description from `docs/webapp.md`.
+  Credentials - tokens, signing keys, salts, the admin proxy secret and the
+  password in `COS_WEB_REDIS_URL` - are shown only as set or not set; for
+  `COS_WEB_ENCRYPTION_KEY_<n>` only the versions present are named. `COS_WEB_*`
+  names the service does not recognise are listed without their values, so a
+  misspelt variable is noticed instead of silently leaving the default in
+  force. `scripts/build_frontend_documentation.py` now also generates
+  `webapp/environment_reference.py` from the documentation table, and
+  `COS_WEB_IPV6_ENABLED` and `COS_WEB_WEBHOOK_SECRET` are documented there for
+  the first time.
+- **The web service blocks a client that keeps scanning hosts that are not
+  OpenCloud.** Five scans from one client address that find no OpenCloud -
+  nothing answering on `status.php`, something that is not JSON, another
+  product, or no answer in time - within five minutes block that address for
+  an hour; the same host scanned again counts again. A blocked submission
+  answers 429 with a `Retry-After` of the rest of the block, the usual pointer
+  to running the scanner locally, and `rate_limit_probe` in the audit trail.
+  Only the worker learns the outcome, so a submission hands it the client's
+  rate-limit fingerprint, never the address, under `scan:{uuid}:prober`, and
+  the worker deletes it as soon as it starts the scan. Tuned with
+  `COS_WEB_PROBE_LIMIT`, `COS_WEB_PROBE_WINDOW` and `COS_WEB_PROBE_BLOCK`,
+  which the web service and the worker both read; `COS_WEB_PROBE_LIMIT=0`
+  turns it off. MCP and the workflows now wait out a `Retry-After` of at most
+  five minutes by themselves and hand a longer one back to the caller instead
+  of sleeping through it. See ADR 0051.
+- **The probe block counts networks, grows when it is earned again, and counts
+  refused targets.** An IPv6 client is one /64 for every limit
+  (`COS_WEB_CLIENT_IPV6_PREFIX`), so rotating through a subscriber's own
+  addresses no longer resets anything, and the probe block covers an IPv4 /24
+  (`COS_WEB_PROBE_IPV4_PREFIX`) so the next address along cannot step around
+  it; the per-minute limit still counts single IPv4 addresses. A block earned
+  again within `COS_WEB_PROBE_REPEAT_WINDOW` of the last one lasts six times
+  longer - an hour, six hours, a day - up to `COS_WEB_PROBE_BLOCK_MAX`. A
+  submission the guard refuses for what it points at - a private or internal
+  address, an exclusion, a misleading DNS name, an unapproved instance - is a
+  strike too; a typo or an unresolvable name is not. See ADR 0052.
+- **A daily cap per client.** `COS_WEB_DAILY_SCAN_LIMIT` (default 50) refuses
+  the patient version of a burst with 429, `rate_limit_daily` in the audit
+  trail and the usual self-host pointer.
+- **Wildcard and rebinding DNS names are refused, and a name must resolve the
+  same way twice.** Names under `nip.io`, `sslip.io`, `xip.io`, `traefik.me`,
+  `localtest.me`, `lvh.me`, `vcap.me`, `lacolhost.com`, `localhost.direct`,
+  `local.gd`, `rbndr.us` and `1u.ms` are refused by name wherever the SSRF
+  guard applies. A submitted name is looked up twice and refused when the
+  answers share no address, with every address from both held to the guard
+  (`COS_WEB_DNS_CONSISTENCY_CHECK`).
+- **Approval mode.** `COS_WEB_REQUIRE_APPROVAL=true` scans only instances in
+  `COS_WEB_APPROVED_TARGETS` or, with `COS_WEB_APPROVAL_DNS`, instances whose
+  zone publishes `_check-opencloud-security.<host> TXT
+  "check-opencloud-security=<this service's hostname>"`; anything else is a
+  403 and `target_not_approved` in the audit trail. A mode that could approve
+  nothing, or a list entry that does not parse, refuses startup.
+- **The operator's area has an Abuse guard tile**: networks blocked now, and
+  blocks, strikes and daily caps reached over seven days, as counts only.
+- **The Docker setup wizard asks for every abuse limit** in a new *Abuse
+  protection* section and writes them to both containers.
+- **`ScannerSettings.stop_when_not_opencloud` and `NotOpenCloud`.** A
+  `status.php` answer that is not OpenCloud now raises `NotOpenCloud`, a
+  subclass of `ScanError`. With the setting on, the scan stops there rather
+  than asking again without certificate verification and over plain HTTP;
+  the web service turns it on, and the plugin's default is unchanged.
+
+### Security
+
+- **The scan service refuses a request not addressed to loopback when it has
+  no token.** `check-opencloud-scanner serve` on its default `127.0.0.1` bind
+  with no token answered any `Host`, so a web page open in a browser on the
+  same machine could point a hostname of its own at `127.0.0.1` (DNS
+  rebinding), read every answer as same-origin, and use `/api/scan` - which
+  has no target guard - to scan and report back what the operator's network
+  holds. Without a token a request must now name `localhost`, a `127.0.0.0/8`
+  address or `::1`, or it is answered 403; a service with a token is
+  unaffected, since a page cannot know it.
+- **`POST /api/scans/batch` refuses a cross-site submission like the single
+  one does.** It was the one public POST without the `Sec-Fetch-Site`/`Origin`
+  check, and it parses its body as JSON whatever the `Content-Type` says, so a
+  foreign page's `text/plain` form - which needs no preflight - could queue a
+  batch of scans from a borrowed browser, spending that visitor's allowance
+  and, with the probe guard, earning their address a block.
+- **The operator area accepts a write only from its own origin.** Its three
+  POSTs took the public pages' check, which lets `same-site` through, and a
+  sign-in cookie is sent on a same-site request - so a page on any sibling
+  subdomain, the identity provider's or an OpenCloud instance's among them,
+  could add or withdraw exclusions and press the refreshes with the
+  operator's session. `/admin` now requires `Sec-Fetch-Site: same-origin`
+  (or `none`), or an `Origin` of this service where that header is absent.
+- **A non-ASCII `X-COS-Admin-Proxy` header is refused with 404 instead of
+  crashing with 500.** The secret was compared as `str`, which raises on
+  characters outside ASCII; the 500 differed from the 404 an area that is off
+  answers, and told a prober from outside that `/admin` was switched on. It is
+  now compared as bytes, as the erasure token already was.
+
+## [1.22.7] - 2026-09-14
+
+### Fixed
+
+- **The two refresh buttons in the operator area work again.** Each of those
+  forms carries a hidden `action` field naming the source to refresh, and a
+  control of that name is reachable as `form.action` - so the script read the
+  input element instead of the path and posted to
+  `/[object HTMLInputElement]`, which answered 404 and left the page saying
+  nothing. It now reads the form's `action` attribute. The dry-run probe
+  beside them, which has no such field, was unaffected.
+- **The light/dark switch keeps switching in a browser that refuses to
+  remember it.** A press wrote the scheme to the document and to
+  localStorage, and where the write was refused - a private window, blocked
+  site data - the next press asked storage what was on screen, got nothing,
+  fell back to the operating system's scheme and so computed the scheme the
+  page had just left. The button changed nothing from the second press on.
+  It now reads the scheme the document is actually in first, which a press
+  writes whether or not anything can be stored.
+
+### Changed
+
+- **The operator area's forms no longer name a field `action`.** A refresh
+  now posts `source=schedule|advisories` to `/admin/refresh`, and an exclusion
+  posts `operation=add|remove` to `/admin/exclusions`; the old `action` field
+  is refused with 422. Only a script posting to these routes by hand needs
+  the new names - the JSON answers still carry `action`. A test now keeps
+  every template from naming a control after a form property it would shadow
+  (`action`, `method`, `submit`, ...), and the button test posts each form's
+  own fields to its own path instead of reading the script's text.
+- **Every pull request to `main` rebuilds the search index.** A new
+  `search-index.yml` workflow runs `scripts/build_search_index.py` on every
+  pull request, whether or not a template changed, and commits the result to
+  the branch when it differs - so a page edited in a pull request no longer
+  merges with search describing it as it read one release ago. A fork's pull
+  request gets a read-only token, so there a stale index is reported as a
+  warning instead. The release workflow still rebuilds it before building
+  artefacts. ADR 0050 records the change and supersedes the release-only
+  refresh in ADR 0019.
+- **The operator area's search index card says how to fix a stale index.**
+  It lists every reason the index is out of date rather than only the first,
+  and, unless the index is current, shows the command that regenerates it
+  and the rebuild that follows. There is still no button: the index stays
+  generated by CI, never by the running service (ADR 0035).
+- **Code scanning no longer mistakes a file path in the Docker setup wizard
+  for a credential.** The path of the nginx admin-proxy header file was held
+  in a variable called `secret`, and because the wizard prints that path in
+  its list of written files, CodeQL reported clear-text logging of sensitive
+  data. Only the name changed: the wizard never printed the value, and the
+  file is still written owner-readable only.
+
+## [1.22.6] - 2026-09-13
+
+### Security
+
+- **The Docker setup wizard no longer shows a stored credential when it is
+  run again.** A re-run reads `.env` back so that its credentials survive, and
+  every question then offered the value in brackets as the default - the SMTP
+  password, the erasure token, the signing keys, the audit salt, the
+  encryption key, the `/admin` proxy secret and the releases token, in plain
+  text on the screen and in the scrollback. Those prompts now say `[set,
+  hidden - Enter keeps it]` instead, Enter still keeps the stored value, and
+  what is typed at them is read without an echo when the wizard runs in a
+  terminal. Settings kept in `.env` that are not credentials - the issuer, the
+  audience, the key set and resource URLs - are still shown, so they can be
+  checked.
+- **The scan service no longer lets a submitted host write its own log
+  lines.** `opencloud-local-scan serve` logged a failed scan with the host
+  exactly as the request body held it, so a newline in `url=` started a new
+  line in the service log that looked like any other. The host and the error
+  are now logged in quoted, escaped form. Found by CodeQL.
+
+### Added
+
+- **The Docker setup wizard is downloaded from a release, checksummed, and
+  knows its version.** Every release now attaches `setup-wizard.py` with a
+  `setup-wizard.py.sha256` beside it, built and attested by the release
+  workflow, and the guides download that copy instead of whatever `main` held.
+  `setup-wizard.py --version` names the release it came from: stamped into the
+  download, and read from `pyproject.toml` in a checkout or the web bundle.
+  See ADR 0049. The release asset first exists with the next release.
+- **The Docker setup wizard asks how much to ask.** `quick`, the default on a
+  first run, asks only the image, the port and public address, `/mcp` and its
+  sign-in, `/admin`, the identity provider and its mail, and the reverse proxy;
+  `private` asks the same from the private preset; `full` asks everything and
+  is the default when editing an existing deployment. `--mode` answers it in
+  advance, and a section passed over is now named as skipped so the step
+  counter adds up.
+- **The Docker setup wizard shows what a re-run would change, and keeps what
+  it replaces.** Before asking to overwrite, it prints a diff of the compose
+  file and the proxy and logrotate files - never of `.env` - and every replaced
+  file is kept as `<name>.<UTC time>.bak`, the `.env` copy owner-readable only.
+- **The Docker setup wizard checks the host and can start the stack.** The
+  summary points out Docker or the Compose plugin missing, the host port
+  already in use, and a certificate the proxy configuration names that does
+  not exist. After writing it offers `docker compose config`, then
+  `docker compose up -d` and a wait for `/healthz` - each only when asked, and
+  `up` only when nothing has to be done as root first.
+- **Answers can travel between hosts.** `--print-answers` prints every
+  non-credential answer as JSON and writes nothing; `--answers FILE` starts a
+  run from such a file, read as untrusted, and refuses one with nothing usable
+  in it.
+
+### Changed
+
+- **The Docker setup wizard no longer binds every interface to check a
+  port.** When `bind_address` publishes on all interfaces (`0.0.0.0`, `::` or
+  empty), the check that the host port is free now probes loopback - a port
+  taken on every interface is taken there too - instead of briefly binding the
+  wildcard address itself.
+
+- **Web: page titles no longer repeat the site name.** A title that already
+  says "OpenCloud Security Scanner" - most documentation guides - is no longer
+  followed by `· OpenCloud Security Scan`, so a search result shows the part
+  that tells the pages apart. Every page also declares its language as
+  `og:locale`, and the `/ai` description is short enough not to be cut off.
+  An address with a trailing slash (`/about/`) now redirects permanently
+  (308) instead of temporarily (307), so a crawler keeps one address per
+  page, and `/favicon.ico` redirects to the site icon instead of answering 404.
+
+- **The Docker setup wizard is easier to read.** A question opens with its
+  first sentence, and `?` shows the rest with a link to the page documenting
+  the setting, at the release the wizard came from. Text wraps to the width of
+  the terminal. The summary labels each answer with its question, gives the
+  name to type in brackets and marks every answer that differs from the
+  default, and the enrollment link block uses the same rules as the rest of
+  the output.
+- **The Docker setup wizard offers the bundled Authentik once a sign-in is
+  wanted.** Switching on the operator's area at `/admin` or the sign-in on
+  `/mcp` now makes *yes* the default at the identity provider question, because
+  nearly every deployment asking for either has no provider of its own and was
+  otherwise sent on to issuer, audience and key questions it could not answer.
+  Answering `no` still checks tokens against a provider you run. The default
+  moves only when a sign-in is switched on, so re-running over a deployment
+  that already declined Authentik keeps it out, and `--sign-in` on its own
+  still adds no provider.
+- **The Docker setup wizard is easier to follow.** It opens with a framed
+  title, the list of steps ahead and a table of what can be typed at a
+  question; every section heading shows `Step N of 12` with a progress bar;
+  the question, its current value and a refused answer stand out from the
+  explanation; and the summary and closing screens are grouped under rules.
+  The styling is plain ANSI from the standard library - Rich, questionary and
+  InquirerPy were considered and would each need installing on a host that
+  has only Docker - and it is left out entirely when the output is not a
+  terminal, `NO_COLOR` is set or `TERM=dumb`, so piped and logged runs print
+  exactly the plain text they did before.
+
+### Documentation
+
+- **`tests/README.md` indexes the test suite.** Every test module is listed by
+  area with a line on what it protects, alongside the shared fixtures, how to
+  run the suite and its conventions. `tests/test_documentation_indexes.py`
+  fails when a test module is added, renamed or removed without the index
+  following.
+
+## [1.22.5] - 2026-09-13
+
+### Changed
+
+- **The Docker setup wizard sets the enrollment link apart.** It was one
+  paragraph among the proxy commands and the `/admin` steps at the end of a
+  long run, and easy to scroll past - leaving an operator to create accounts
+  and group memberships by hand in Authentik that the link would have made.
+  It now closes under its own `ENROLLMENT LINK` heading, with the command that
+  builds the link from `.env` first, and says "Send it to scanokko. It asks for
+  that username" for one name rather than "Send that link to each of
+  scanokko".
+
+### Documentation
+
+- **Setting up an operator for `/admin`, by the wizard or by hand.**
+  `docs/authentik.md` has a new section on the two places an operator has to
+  be named - `COS_WEB_ADMIN_USERS` and Authentik's
+  `opencloud-scanner-operators` group - and reaches it both ways: through the
+  wizard's enrollment link, and in the Authentik interface or from a shell,
+  including getting into `akadmin` with `ak create_recovery_key` when
+  `AUTHENTIK_BOOTSTRAP_PASSWORD` is refused by a database older than `.env`.
+  The second-factor section now says what a person sees when enrolling an
+  authenticator app, a security key or recovery codes. The troubleshooting
+  table gains the refused bootstrap password, a sign-in Authentik stops
+  because the account is not in the group, and `password authentication
+  failed for user "authentik"` from a database volume created under another
+  `AUTHENTIK_PG_PASS`. `ADMIN.md` points there.
+
+## [1.22.4] - 2026-09-13
+
+### Changed
+
+- **A pull request documents itself in `CHANGELOG.md` alone.**
+  `scripts/check_pull_request.py` no longer requires `RELEASE.md` to change or
+  its heading to name the version in `pyproject.toml`, and the test that
+  compared the two in the repository is gone. The release workflow writes
+  `RELEASE.md` from `## [Unreleased]` and overwrites it, so an entry copied
+  there by hand was discarded, and between a bump and its release the file
+  rightly still names the last release - which failed the suite on a branch
+  with nothing wrong in it. `AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md` and the
+  pull request template now say to leave it to the release. See ADR 0048.
+
+### Fixed
+
+- **A Docker setup wizard downloaded on its own writes the Authentik
+  blueprints.** `docker/README.md` says to `curl` just `setup-wizard.py`, but
+  the wizard copied the blueprints from a checkout beside it and skipped any
+  it could not find without a word. The generated stack mounted
+  `./authentik/blueprints` anyway, Docker created it empty, and Authentik
+  started with no provider: `/mcp` refused every token, and the forward auth
+  in front of `/admin` answered 404, which nginx turns into a 500. The wizard
+  now carries the four blueprints itself, generated into it from
+  `authentik/blueprints/` by `scripts/embed_wizard_blueprints.py`, and a test
+  fails when the embedded copies differ from those files. A deployment set up
+  with an earlier download gets them by re-running the wizard.
+- Fixed version bump.
+
+## [1.22.2] - 2026-09-13
+
+### Added
+
+- **The bundled Authentik requires a second factor at every sign-in.**
+  `authentik/blueprints/opencloud-mfa.yaml` sets Authentik's own
+  `default-authentication-mfa-validation` stage to enrol an account that has
+  no authenticator - TOTP or WebAuthn - before the sign-in completes, instead
+  of skipping it, and is re-applied so the requirement stays on. It is mounted
+  by `docker-compose.authentik.yml` and copied by the Docker setup wizard.
+  Agents using `client_credentials` run no flow and are unaffected.
+- **The Docker setup wizard configures Authentik without its admin interface.**
+  It asks who signs in, by username (the operator guest list is always
+  included), and prints one enrollment link. Each person named chooses a
+  password and enrols a second factor there; an operator joins
+  `opencloud-scanner-operators` on the way. The link is an invitation keyed by
+  a generated `AUTHENTIK_ENROLLMENT_TOKEN` in `.env` - the wizard prints the
+  link with a placeholder and a command that fills the token in from `.env`,
+  never the token itself, so it stays out of scrollback and CI logs
+  (`authentik/blueprints/opencloud-enrollment.yaml`), admits only the listed
+  names, each once, and creates nothing without the token. `akadmin` gets a
+  generated `AUTHENTIK_BOOTSTRAP_PASSWORD` for recovery, which also closes the
+  initial-setup flow that would otherwise make whoever reached it first the
+  administrator. See ADR 0047.
+
+### Changed
+
+- **The Authentik stack runs Authentik 2026.8.2.** `docker-compose.authentik.yml`
+  and the image the Docker setup wizard writes move from 2026.8.0 together, so
+  a generated stack and the file next to the wizard still pin the same version.
+- **`forwardedHostIgnored` names a missing default server on the reverse proxy
+  as a cause.** The explanation used to trace every failure to an instance
+  that was never told its address, so an operator with `OC_URL` set correctly
+  was sent back to it. A proxy with no default server answers a `Host` it has
+  no site for from whichever site it loaded first for that port - often
+  another application on the same machine - and a redirect there built from
+  `$host` repeats the probe host without OpenCloud ever seeing the request.
+  The explanation now says so when only `Host` comes back as a redirect, the
+  remediation gives an explicit nginx default server that refuses unknown names
+  (and the Apache equivalent) plus how to tell which server answered, and
+  `docs/reverse-proxy.md` and `docs/scanner-checks.md` describe the same.
+- **`forwardedHostIgnored` names a missing default server on the reverse proxy
+  as a cause.** The explanation used to trace every failure to an instance
+  that was never told its address, so an operator with `OC_URL` set correctly
+  was sent back to it. A proxy with no default server answers a `Host` it has
+  no site for from whichever site it loaded first for that port - often
+  another application on the same machine - and a redirect there built from
+  `$host` repeats the probe host without OpenCloud ever seeing the request.
+  The explanation now says so when only `Host` comes back as a redirect, the
+  remediation gives an explicit nginx default server that refuses unknown names
+  (and the Apache equivalent) plus how to tell which server answered, and
+  `docs/reverse-proxy.md` and `docs/scanner-checks.md` describe the same.
+
+### Fixed
+
+- **Signing in to `/admin` through Authentik works.** The operator-area
+  blueprint created a proxy outpost of its own, but named no configuration for
+  it, so Authentik refused the entry - and, a blueprint being applied as a
+  whole, rolled back the provider, application and binding with it. Nothing in
+  the stack ran that outpost either, so the forward-auth path answered 404,
+  which nginx turns into a 500 for every request to `/admin`. The provider is
+  now assigned to Authentik's embedded outpost, which the server already serves
+  on port 9000, and the old outpost is removed where an earlier version did
+  create it. The embedded outpost is re-applied every hour with exactly the
+  providers the blueprint lists, so a provider assigned to it by hand is taken
+  off again.
+- **The embedded outpost sends a browser to Authentik's public address.** Left
+  unconfigured it redirects to `http://localhost/application/o/authorize/`,
+  which no visitor can reach. The blueprint now sets it from
+  `COS_AUTHENTIK_URL`, which `docker-compose.authentik.yml` passes to the
+  server and worker from `AUTHENTIK_URL`, and which the Docker setup wizard
+  writes into the compose file it generates.
+
+- **Re-running the Docker setup wizard moves Authentik to its newer patch
+  release.** The image tag is remembered with every other answer, so a newer
+  wizard run against an existing deployment kept writing the release that
+  deployment was first set up with - which is how a stack stayed on 2026.8.0
+  after the wizard moved to 2026.8.2. A remembered pin in the same `YYYY.M`
+  series is now moved up and the wizard says so; a pin in an older series is
+  left alone with a warning, because an upgrade across series can carry
+  migrations worth reading first.
+- **The generated nginx configuration gives the forward auth room for
+  Authentik's headers.** The `/admin` and `/outpost.goauthentik.io` locations
+  now set `proxy_buffers 8 16k` and `proxy_buffer_size 32k`, as Authentik's own
+  nginx example does: its session cookie and identity headers outgrow nginx's
+  defaults and fail as "upstream sent too big header", a 502 for a sign-in that
+  worked.
+- **Verified end to end.** A generated stack with Authentik 2026.8.2 and the
+  generated nginx configuration signs an operator in and serves `/admin`, and
+  keeps an account outside the operator group out. A test now fails if the
+  blueprint creates an outpost of its own again or stops setting the embedded
+  outpost's address.
+
+## [1.22.1] - 2026-09-13
+
+### Added
+
+- **The Docker setup wizard generates for rootless Docker too.** Under a
+  rootless daemon, uid 10001 in a container is the user's subordinate uid at
+  that offset on the host, so the `sudo chown 10001` the wizard printed for a
+  bind-mounted audit or Redis directory handed it to an account the container
+  never runs as, and the container could not write to it. The wizard now asks
+  whether the daemon is rootful or rootless - detected from the socket, which a
+  rootless daemon serves under `/run/user/<uid>` - and for a rootless one
+  prints a `chown` that runs inside a container instead and needs no sudo. A
+  logrotate policy names the mapped host ids from `/etc/subuid` and
+  `/etc/subgid`, and the wizard says so when there is no range to read. It
+  also points out that the default rootless port driver hides the client
+  address from a port published beyond `127.0.0.1`. Verified end to end on
+  `docker:dind-rootless`: both containers write to their directories.
+
+- **The Docker setup wizard writes Authentik's site into the proxy
+  configuration too.** `docker/setup-wizard.py` already wrote nginx, Apache,
+  Caddy or Traefik for the scan service, including the forward auth in front
+  of `/admin` - but a stack that brought Authentik still left its sign-in page
+  to be proxied by hand, and every sign-in redirects a browser there. When the
+  stack brings Authentik, the same file now carries a second server block,
+  virtual host or router answering to the host name of Authentik's public
+  address and proxying to its published port, with the WebSocket its
+  interface keeps open and `X-Forwarded-For` set rather than appended. nginx
+  and Apache are asked for a certificate for that name, since it is not the
+  scanner's; Caddy and Traefik fetch their own. An address that is
+  `localhost`, a bare IP or the scanner's own host name gets no site, and the
+  warning that used to cover only `/admin` now says so for any stack with
+  Authentik behind a generated proxy.
+
+### Changed
+
+- **The Docker setup wizard pulls the published image by default.** It is one
+  file meant to be downloaded onto a host with nothing but Docker, and the
+  former default, `build`, needed a checkout of this repository such a host
+  does not have. `dockerhub` is now the default and listed first; answer
+  `build`, or pass the new `--image-source build`, to build the code in a
+  checkout instead - the local-testing recipe in `ADMIN.md` now does.
+- **`--force` lets the Docker setup wizard replace a shipped compose file in
+  place.** `docker/docker-compose.yml` and the other compose files in
+  `docker/` were refused as targets even with `--force`, so reconfiguring the
+  stack a checkout already runs meant moving it to a directory of its own.
+  They are still refused without the flag, and the refusal now names it; with
+  it they are overwritten, and the wizard says on stderr - where an unattended
+  run shows it too - that the checkout now carries a modified tracked file and
+  how to put the shipped one back.
+
+### Fixed
+
+- **Automatic updates work on Docker 29 again.** The Watchtower the Docker
+  setup wizard adds with `--auto-updates` was `containrrr/watchtower`, which
+  was archived in December 2025 and always speaks Docker API 1.25. Docker 29.0
+  raised the daemon's minimum to 1.44 and 29.3 to 1.40, so the container
+  panicked on start with `client version 1.25 is too old` unless
+  `DOCKER_API_VERSION` was pinned by hand. The wizard now writes
+  `nickfedor/watchtower`, the maintained fork, which negotiates the API
+  version with the daemon and reads the same variables and enable label - so
+  no version is pinned, and none goes stale when a daemon raises its minimum
+  again. Reproduced and verified against Docker 29.6.
+
+- **The Docker setup wizard no longer lets the audit trail and Redis share a
+  host directory.** The web image writes as uid 10001 and Redis as uid 999,
+  and a directory has one owner, so whichever was chowned last kept the other
+  container from writing. The same directory - however it is spelled - or one
+  inside the other is now refused at the question, blocks the summary, and
+  makes an unattended run write nothing.
+- **A generated logrotate policy names the audit file by its absolute path.**
+  The default `./audit` was written into the policy as it was, and logrotate
+  resolves a relative path against wherever cron runs it from rather than
+  against the compose file, so the policy rotated nothing.
+
+## [1.22.0] - 2026-09-13
+
+### Added
+
+- **The browser can ask whether the fixes worked.** Three surfaces already
+  answered it - `--baseline` between two monitoring runs,
+  `check-opencloud-scanner diff` between two archived documents, and the
+  `compare_scans` tool for an agent - and the person who ran both scans in a
+  browser was the only one who could not. `GET /compare` takes the two uuids
+  they already hold and shows what was resolved, what is new, what is still
+  open and how the grade moved; a finished result page links to it with its
+  own uuid already filled in, so only the earlier one has to be pasted.
+
+  **It is the same arithmetic, not a fourth opinion.** The comparison in
+  `webapp/workflows.py` was split into the part that reads two documents and
+  the part that compares them, and the page calls the second directly. A
+  reader, an agent and an operator's own alerting are therefore told the same
+  thing about the same pair - the failure mode a second implementation in the
+  page would eventually produce, and the one
+  [ADR 0029](adr/0029-a-comparison-is-two-live-results-and-one-arithmetic.md)
+  exists to prevent.
+
+  **Nothing is stored, and nothing is listed.** Both uuids have to be
+  presented, both results have to still exist, and the answer is written
+  nowhere. An unknown uuid is a 404 that names *which* of the two is gone, a
+  scan still running is a 409 rather than a 404, and the same uuid twice is
+  refused with 422 - an empty diff of a scan against itself reads as "nothing
+  is wrong". Two documents describing different instances are compared and
+  said so. Like every page that renders a result, it is never indexed.
+
+- **Checkmk runs this check from either side now.** Checkmk speaks Nagios, so
+  a Checkmk server has always been able to run the plugin as an active check
+  and read its line - but that route needs the server to reach the instance,
+  and the deployments where it cannot are exactly the ones an agent already
+  sits inside. The agent's own protocol is not the Nagios line: metrics are
+  separated by `|` rather than spaces, every value has to parse as a number
+  (the `s` on `time=4.120s` does not), the service name is quoted, and the
+  detail follows the summary as a literal `\n`, because a real newline starts
+  another service. `--format checkmk` writes that line - one per host in
+  `--host`, since one line is one service - and
+  `contrib/checkmk/opencloud_security` is it as a script ready to install.
+
+  **The scanned instance names the service**, not the host the agent runs on:
+  this plugin probes an instance from outside, so the natural place to run it
+  is a monitoring host watching several instances, each of which needs a
+  service of its own.
+
+  **The state stays the plugin's.** A local check's thresholds are only
+  evaluated when the state field is `P`, which hands the verdict to Checkmk,
+  and deciding is this plugin's whole job - thresholds, waivers, the rules
+  end of life and a baseline add on top. So the line carries the state it
+  already reached and the metrics carry values alone, with no second opinion
+  for Checkmk to disagree with. A measurement that was not taken is left out
+  rather than sent as a zero: without `--check-hardening` there is no
+  `hardenings_missing`, because an empty list of missing measures would
+  otherwise be indistinguishable from a perfect one.
+
+  [`docs/checkmk.md`](docs/checkmk.md) has both routes, the metric table, and
+  why the local check is installed in a `local/3600/` subdirectory rather than
+  in `local/` itself - a script in the directory proper runs on every agent
+  call, once a minute, which is a full scan a minute against somebody's
+  production instance.
+
+- **The web pages keep track of a scan while the reader is elsewhere.** Four
+  small things for the moments nobody is looking at the page, each running
+  entirely in the browser and each leaving the page exactly as it was without
+  scripting:
+
+  - **The tab title follows the scan.** `Queued: host`, `#2 in line: host`,
+    `Scanning: host`, and on a finished report `Grade B: host`, so a reader
+    who switched tabs sees the result from the tab strip. The server writes
+    the first reading and a finished page names its grade with no script at
+    all. The title never carries the uuid, and the grade goes into the tab
+    alone: the `title` block that also feeds `og:title` and the structured
+    data stays generic, through a new `tab_title` block in `base.html`, so a
+    link preview in a chat channel does not print somebody's grade.
+  - **A rescan offers the comparison with the scan before it.** A finished
+    report now says "You scanned this instance earlier in this tab, at 14:02 -
+    see what changed since then", linking `/compare` with both uuids filled
+    in. The earlier uuids are kept in the tab's `sessionStorage` only: never
+    sent to the server, gone when the tab closes, and dropped once their
+    result has expired rather than offered as a link to a 404.
+  - **A report warns before it disappears.** In its last five minutes a
+    finished report shows a warning near the top with a link to the
+    downloads, keeps the minutes current, and says so once the result has
+    gone. The server renders the warning already visible when a page is
+    loaded inside that window, so a reader without scripting is warned too,
+    and a failed scan, which has nothing to export, is offered no download.
+  - **The form offers back the last settings used.** After a scan, the next
+    visit to the form offers the release track, output format and waivers
+    that scan used - "use them again" or "forget them" - instead of applying
+    them unasked. They are kept in `localStorage`; the address is not, since
+    the browser's own autocomplete already remembers it on the visitor's
+    terms. A waiver or track the catalogue no longer lists is simply not
+    applied.
+
+- **An operator can name the addresses this deployment will not scan.** Every
+  rule in the SSRF guard so far was a property of the address - private,
+  link-local, a metadata endpoint. None of them could express the request that
+  actually arrives: an instance owner asking to be left alone, a host somebody
+  keeps submitting so the service hammers it, a range that is not a scanning
+  target here however public it looks. `COS_WEB_BLOCKED_TARGETS` is that list -
+  hostnames, `.suffix` domains (`*.example.org` is accepted as the same thing)
+  and CIDR ranges, separated by `;`.
+
+  **It outranks every setting that loosens the guard**, `COS_WEB_ALLOWED_HOSTS`
+  and `COS_WEB_ALLOW_PRIVATE_TARGETS` included. Those answer whether a request
+  could be an attack, and an operator may reasonably say "not on my own
+  network"; an exclusion answers whether this service scans that address at
+  all, which is a promise made to somebody outside the deployment. See
+  [ADR 0043](adr/0043-an-operators-exclusion-outranks-every-allowance.md).
+
+  **A name is matched by name, a range against every address the name resolves
+  to**, so a second DNS record pointing at the same machine does not buy a
+  scan. It is checked at submission, again in the worker immediately before
+  the scan - a target excluded while its job waited in the queue is refused
+  rather than scanned - and on every redirect hop, so a scanned host cannot
+  name an excluded one in a `Location` header. Agents inherit it by calling
+  the same API.
+
+  **An entry that does not parse refuses startup**, in the web process and in
+  the worker alike, because a typo here is otherwise invisible: the service
+  comes up, answers normally, and scans exactly what it was told to leave
+  alone. The refusal a visitor sees says only that the service has been asked
+  not to scan that address; which entry matched is the operator's business.
+
+- **A name behind several addresses can be checked on every one of them.** A
+  scan dials the name once and sees whichever node the resolver put first, so
+  in a pool where one node missed a configuration rollout - no HSTS, demo
+  accounts still signing in, an older release - that node served some of the
+  visitors and none of the scans. `tlsAddressParity` could not catch it: it
+  compares only the TLS identity of the two address families, and nodes behind
+  one certificate share it whatever they serve. `--all-addresses`
+  (`COS_ALL_ADDRESSES`, `scanner.check_all_addresses`, and the same flag on
+  `check-opencloud-scanner scan`) repeats the version, header, hardening and
+  demo-account checks against each resolved address and reports
+  `addressParity` when they disagree; the result document lists what each
+  address served under `addressObservations`.
+
+  **It stays aimed where the scan was pointed.** Every request keeps the
+  hostname in `Host` and SNI, and the addresses are the resolver's answer for
+  that name - or the caller's pin, which a pinned scan never widens. The
+  finding is as severe as the worst difference, because the rating was built
+  from whichever node answered first: a demo sign-in on another node counts
+  like `demoUsersDisabled`, another release is `high`, other drift `medium`,
+  and an address that resolves but does not answer fails too. Waived names are
+  not compared.
+
+  **Off by default, and never in the web service.** It costs about a dozen
+  requests per address and a single-address name has nothing to compare; the
+  web application sets it off explicitly and offers no field for it, since a
+  request there chooses what to scan and never how hard. See
+  [ADR 0042](adr/0042-every-resolved-address-is-compared-only-when-the-operator-asks.md).
+
+- **The exclusions can be changed without a deployment window.** The request
+  that produces most of them - somebody writing to ask not to be scanned -
+  rarely arrives at a convenient moment, and an environment variable read at
+  startup answers it with "after the next restart". The operator's area now
+  has an *Exclusions* card that adds and withdraws entries, and a change takes
+  effect **from the next request, in every process**: the API reads the list
+  on each submission and the worker when each job starts, so a scan already
+  waiting in the queue is refused rather than run.
+
+  **It is the one control in that area that writes**, and deliberately the
+  safest shape of one. It can only ever *refuse* a scan, so a stolen operator
+  session cannot point this service at anything. `COS_WEB_BLOCKED_TARGETS` is
+  a floor the page cannot withdraw - those entries are listed with no control
+  beside them, and an attempt to remove one is refused with a pointer to the
+  environment, so a compose file stays the truth about what it declares. And a
+  store that cannot be read refuses the scan rather than proceeding without
+  the list, which is the opposite of how this service treats every other piece
+  of runtime state and the right way round for a list whose absence means
+  scanning somebody who asked not to be. See
+  [ADR 0044](adr/0044-the-operator-area-may-write-the-exclusions.md).
+
+  **That refusal is an answer, not a stack trace**: HTTP 503 with a sentence
+  in the visitor's own language saying the service cannot reach its own
+  configuration, and - because there is nothing they can change to get past it
+  - the same pointer at running the scanner themselves that a rate limit
+  carries. The audit trail records it as `exclusions_unreadable` rather than
+  as a rejected target, so an operator reading the trail is not sent looking
+  for a bad address that was never the problem.
+
+  **The two halves are one list, however each is spelled.** An entry written
+  in the area is normalised; one from the environment is shown exactly as the
+  compose file spells it, so that card and file can be read side by side.
+  Comparing those two as text made `Example.COM` and `example.com` two
+  exclusions where the guard, which parses both, only ever saw one - so they
+  are now compared parsed: the area declines to store what the environment
+  already holds, and refuses to withdraw it under any spelling.
+
+  Entries added there live in Redis and are as durable as it is; the card says
+  so, and points at the environment variable for anything that must outlive a
+  flush. An entry is capped at 253 characters, the longest a hostname can be,
+  in the area and in `COS_WEB_BLOCKED_TARGETS` alike - anything longer could
+  never match a target this service would accept, so it is a typo, and the
+  ceiling on the number of entries bounds nothing without it. `/admin/state` -
+  the document an operator copies into an issue report - carries how many
+  exclusions are in force and never which.
+
+### Changed
+
+- **The workflows, shell scripts, Dockerfiles, compose files and frontend
+  scripts are linted.** `workflow-lint.yml` runs actionlint and zizmor over
+  `.github/workflows`; `static-analysis.yml` runs shellcheck on every tracked
+  shell script, hadolint on both Dockerfiles, `docker compose config` on every
+  compose file and Biome on `frontend/static/js` (rules in `biome.jsonc`);
+  `codeql.yml` adds CodeQL for Python, JavaScript and the workflows. Every tool
+  is pinned by version, and the downloaded binaries by digest. What they found
+  is fixed: checkouts no longer leave the job token in `.git/config` unless the
+  job pushes, the release workflow reads its version from the environment
+  instead of pasting an expression into shell, the SBOM is generated from the
+  locked environment, a Docker Hub pin carried the wrong version comment, and
+  the plugin image runs as the numeric `USER 1000` - the uid it already had, so
+  mounted files keep their owner.
+
+- **The .deb and the .rpm are installed on every pull request.** The release
+  dry run now installs both packages in Debian 12, Ubuntu 24.04 and Fedora 43
+  with the distribution's own package manager, runs both commands and the
+  Nagios plugin path, and removes them again (`packaging/tests/install-smoke.sh`).
+
+- **A missed Homebrew formula regeneration opens a pull request.**
+  `homebrew-formula.yml` runs `build_homebrew_formula.py --check` daily and,
+  when the formula no longer pins the newest release on PyPI, regenerates it
+  and opens a pull request. The architecture diagram's image references are
+  checked on every pull request, and so are the documented OpenCloud links.
+
+- **CI is locked, cached and cancels what is superseded.** Every `uv sync` is
+  `--locked`; workflows that publish nothing cache uv's downloads, while those
+  that push, publish or sign never restore a cache; pull request runs cancel
+  the run they replace; and the nox suite runs as a five-job matrix, one per
+  Python. `tests/test_workflow_hardening.py` holds each of these.
+
+- **A release is built on the pull request, and publishes to PyPI last.** The
+  release workflow uploaded to PyPI straight after building the wheel, and
+  only then built the `.deb`, the `.rpm` and the web bundle - so a broken
+  packaging recipe left a version on PyPI with no tag and no GitHub release,
+  and the retry failed on "File already exists". Every artifact is now built
+  and attested before the upload, `uv publish --check-url` lets a repeated run
+  finish the release, and the new `release-dry-run.yml` builds the release
+  notes, the wheel (checked by `twine check --strict`), both distribution
+  packages, the web bundle and both images on every pull request, publishing
+  nothing. See
+  [ADR 0045](adr/0045-a-release-is-rehearsed-on-the-pull-request-and-publishes-last.md).
+
+- **The pull request checklist's two release rules can be checked locally.**
+  `python scripts/check_pull_request.py --base origin/main` refuses a change
+  without a new `CHANGELOG.md` entry and a `RELEASE.md` under the declared
+  version, and a version change that does not move past every tag or whose
+  bump commit names a different version. It is a local check, not a CI gate,
+  and a release needs no label. The README table of contents, the `docs/` index and the
+  `/documentation` manifest are held to their contents by
+  `tests/test_documentation_indexes.py`.
+
+- **The architecture decision records have an index.** `adr/README.md` now
+  lists every record with its number, decision and status, so the one that
+  governs an area can be found without opening forty-odd files by name.
+
+- **On a phone, the address field is the first thing on the page.** Stacked
+  into one column, the eyebrow, the two-line headline and the lede filled
+  most of the screen before the form, so a visitor had to scroll to find the
+  one field the service exists for. Below 640px the form is now painted at
+  the top, with the headline and introduction, the artwork and the promises
+  following it. Only the painting order changes: the markup still puts the
+  heading first, so screen readers and the tab order are unaffected, and
+  wider screens look exactly as before.
+
+### Fixed
+
+- **A name pinned to several addresses no longer fails on the first one
+  alone.** The web service resolves a submitted name, vets every address and
+  pins the scan to them - and then only ever dialled the first. A dual-stack
+  instance whose AAAA record points at nothing, or a scan from a host without
+  an IPv6 route, answered "unreachable" where a visitor's browser simply used
+  IPv4. A connection now tries the vetted addresses in order and the one that
+  accepts is dialled first from then on; the TLS inspection and the debug-port
+  probes use that address too, so a dead first address no longer reports a
+  handshake failure or closed ports the instance does not have. Nothing
+  outside the pinned list is ever dialled, only a failure to connect moves on,
+  a single pinned address - the per-address comparison - is never widened, and
+  the result document still lists the addresses in the order they resolved.
+  The plugin, which does not pin, was not affected.
+
+- **A comparison shows when each scan ran, instead of calling both times
+  "unparsable".** `scannedAt` is written by the scanner from its own clock and
+  is not one of the fields a scanned host has any say in, but it was being run
+  through the allow-list meant for a version string a stranger chose - and
+  that list has no `:` in it. Every comparison reported both timestamps as
+  `unparsable`, to an agent as well as on the new page.
+
+## [1.21.3] - 2026-09-11
+
+### Fixed
+
+- **A storage directory nobody named no longer writes a compose file Docker
+  refuses to parse.** Answering `filesystem` to the Redis persistence or audit
+  trail question and then leaving the path empty produced `- :/data` - an
+  empty mount source, a colon, and a stack that will not start, over a
+  question that was never answered. The empty answer now falls back to the
+  named volume, which needs nothing from anybody and keeps the data, and the
+  wizard says that it did.
+
+  **The directory is asked for properly, and it has a default**: `./data` for
+  Redis and `./audit` for the trail, beside the generated compose file. The
+  leading `./` is the whole point - Compose reads `data:/data` as a *named
+  volume* called data and `./data:/data` as the directory next to the file, so
+  a bare name is refused with that explanation rather than silently mounting
+  something else. An absolute path still works.
+
+- **The wizard asks the questions an answer opens, instead of only the first
+  one.** Each section's question list was filtered once, before the section
+  began, and the re-check inside the loop could only ever remove a question -
+  never add the ones a fresh answer had just made relevant. The visible result
+  was a mail server configured with nothing but a host name: the port, the
+  transport security, the credentials and the From address all hung off
+  `smtp_host` being set, and by the time it was, the list they would have been
+  in had already been decided. Relevance is now decided one question at a time
+  as the answers arrive.
+
+  The same fault hid every Authentik question behind `--with-authentik`.
+  Answering *yes* to "add Authentik to this stack" at the prompt asked for
+  neither its address, nor its slug, nor **its ports**, and then generated a
+  stack pinned to 9000 and 9443.
+
+- **The release tarball carries the blueprint that provisions `/admin`.** It
+  shipped `opencloud-scanner.yaml` and not `opencloud-admin.yaml`, so a
+  deployment set up from the download could turn the operator's area on and
+  get no proxy provider to reach it with.
+
+### Added
+
+- **The wizard's questions can be moved around in, and its summary can be
+  worked in.** Forty-odd questions with no way back, no way to skip ahead and
+  no way to fix one from the summary meant that noticing a typo one question
+  too late left two options: abandon the run, or answer the rest of it knowing
+  the compose file would need editing anyway. Now, at any question: `b` goes
+  back to the one actually asked before it, a numbered choice can be answered
+  with its number, `-` empties a text setting where an empty line only ever
+  kept the default, and `rest` takes every remaining default and jumps to the
+  summary. Section headings carry their position - *(7 of 12)* - because a
+  long walk that says nothing about how much is left is one people abandon
+  halfway.
+
+  **The summary is the last place a mistake is caught, and it used to be a
+  dead end.** It is now grouped under the headings the questions were asked
+  under, with what was derived or generated listed apart from what somebody
+  decided, and it asks *"Write it all out now? [Y/n], or name a setting to
+  change"*. Naming one - `host_port`, or enough of it to be unambiguous -
+  re-asks that question and comes straight back, so the express path through
+  the whole thing is `rest` and then the three settings that matter.
+
+- **Running the wizard again edits the deployment rather than re-describing
+  it.** It always promised that, and delivered half: `.env` was read back so
+  no credential was regenerated, and every *other* answer - the ports, the
+  limits, the paths, the proxy, the sign-in - was gone. It now writes
+  `.<compose-file>.answers.json` beside the compose file, its own notebook of
+  every non-secret answer, and offers those back as the defaults on the next
+  run. Changing a port on a live deployment is a re-run, `rest`, one setting,
+  done. The notebook holds no credentials - those stay in the owner-readable
+  `.env` they are already read back from - and is safe to delete. A preset
+  named on the command line now overrides what it remembers, which is why
+  `--preset public` sets the answers the private preset moves rather than
+  doing nothing.
+
+- **Turning the operator's area on ends the wizard with the walkthrough for
+  opening it.** `/admin` refuses rather than asks - no login page to arrive
+  at, no password prompt to get wrong - so every missing piece of the
+  arrangement produces the same 404 as any unknown path: the right answer to
+  give a stranger, and a miserable one to debug against. The steps are now
+  printed in order with this deployment's own addresses in them: set the first
+  Authentik password, put that account in the `opencloud-scanner-operators`
+  group the blueprint binds the application to, install the generated proxy
+  configuration, give Caddy or Traefik the shared secret in its own
+  environment - it reads the value at run time rather than carrying it, so an
+  installed, correct-looking file is not the last step - check that
+  `COS_WEB_ADMIN_USERS` names the same person, and open the area. Then what
+  each failure means: a bare 404 is the header that never arrived, a 404 after
+  signing in is the second guest list, and a looping sign-in is a provider
+  whose public address is not the one the browser used. Against somebody
+  else's provider it names the header contract instead, and the sign-out URL
+  the bundled stack sets for itself.
+
+- **The wizard writes the reverse proxy configuration too.** The stack
+  publishes a plain HTTP port on the loopback address and nothing else, so
+  something in front has to terminate TLS - and the notes for doing that lived
+  only in `docs/reverse-proxy.md`, to be copied by hand. Name what you run -
+  nginx, Apache httpd, Caddy or Traefik - and the file is written beside the
+  compose file, with the install commands in its header and in the wizard's
+  next steps: TLS with a redirect from port 80 that leaves the ACME challenge
+  alone, an `X-Forwarded-For` that is *set* rather than appended so a client
+  cannot choose the address its rate limit is counted against, and a `/mcp`
+  that is never buffered, because a buffered event stream is an agent session
+  that waits for ever. Each of the four was checked against the server itself.
+
+  **Where the stack can provide it, the file carries the forward auth in front
+  of `/admin`**: the request is shown to the authentik outpost first and only
+  what it accepts is passed on, carrying the identity the outpost established
+  and the shared secret that makes those headers worth believing. Apache is
+  the exception and says so in the file - it has no forward auth of its own,
+  so the area is proxied by the catch-all without that header and the service
+  answers 404, which is the right failure rather than an unauthenticated
+  console.
+
+  **The secret is not in the file you would commit.** A proxy configuration is
+  pasted into tickets and copied between hosts exactly like a compose file, so
+  nginx gets a one-line `include` of an owner-readable snippet - deliberately
+  not named `.conf`, since everything called that under `conf.d` is included
+  into the `http` block and this belongs to one location - while Caddy and
+  Traefik read the value from their own environment.
+
+### Changed
+
+- **An identity provider can now be asked for by the operator's area alone.**
+  `/admin` has no other way in - the service authenticates nobody and refuses
+  a request that did not arrive through an outpost - but every Authentik
+  question hung off the MCP endpoint being enabled, so a deployment that
+  wanted the area and not the agent endpoint could not be offered one. The
+  provider is its own section now, asked for by either consumer, and a
+  deployment with an area gets the second blueprint,
+  `authentik/blueprints/opencloud-admin.yaml`, copied beside the compose file
+  that mounts it, with `COS_WEB_ADMIN_URL` set to the origin it protects. A
+  provider with nothing to guard is still not deployed.
+
+- **The mail questions cover the whole session.** Beyond the server name:
+  the port, STARTTLS or implicit TLS or neither, whether the server wants an
+  account at all, the username, the password and the From address. Saying it
+  wants no account stops the credential questions and drops any answer left
+  over from before, because Authentik reads an empty username as *do not
+  authenticate* and half a credential fails at the first message rather than
+  at the first mistake. A username with no password, and a password with no
+  username, are each pointed out before anything is written.
+
+- The guest list and the shared secret for the operator's area are no longer
+  asked for when the area is off - an unused credential in `.env` is an
+  invitation to turn the area on without one.
+
+## [1.21.2] - 2026-09-10
+
+### Changed
+
+- **A WebMCP tool in the browser now answers a failure instead of throwing
+  one.** The two agent surfaces disagreed about the same service. Every
+  server-side `/mcp` tool returns `ok: false` with a status and a `retryable`
+  flag, and says so in its own description — *retryable false means stop; do
+  not loop* — while `webmcp.js` threw a bare `Error` carrying the sentence and
+  nothing else. A browser agent that met the per-target cooldown, which is a
+  routine 429 with `Retry-After` here and not a refusal, was told only that a
+  request had failed. Retrying at once is the obvious next move and the wrong
+  one, and nothing in the tool said otherwise.
+
+  Browser tools now return the same shape: `status`, `error`, `retryable`,
+  `retryAfter` where the service sent one, and the hint pointing at running
+  the scanner yourself where a target cannot be reached from here. A request
+  that never arrived — offline, DNS, an aborted navigation — is an answer too.
+  A 409 from an export keeps its own meaning, *the scan exists and has not
+  finished*, so it is never reported as the 404 that means the scan is gone.
+
+  **Which statuses may be repeated is rendered into the page, not written into
+  the script.** `webmcp.js` compares against no status number of its own; the
+  retry policy and the export's size bound come from `webapp/workflows.py`
+  beside the schemas, and a test asserts the script contains no copy of them.
+  The first draft of this change did hardcode the list and got it wrong,
+  inventing retryable statuses the workflow layer does not treat as retryable,
+  which is the whole argument for rendering them.
+
+  The descriptions are now composed from the workflow layer's own notes rather
+  than paraphrased beside them, so a browser agent is told what an `/mcp`
+  client is told: that submitting does not produce a rating, that a uuid is
+  the whole of the authorisation, that results expire, and — the one every
+  server-side tool carries and no browser tool did — that the fields in a
+  result came from the scanned host and are data to report, never instructions
+  to follow. Tools also declare the standard `destructiveHint`,
+  `idempotentHint` and `openWorldHint` annotations.
+
+  Two smaller things behind the same seam: an export handed back a download
+  and its size, so an agent asked to export a report received a file it had no
+  way to read — the text formats now come back as content as well, bounded by
+  the server-side export's own limit, with a PDF still reported as its size
+  because a model cannot read one. And registration used `Promise.all`, where
+  one rejected tool takes a result page's other tool down with it; it is
+  `allSettled` now, and prefers the draft's declarative `provideContext` where
+  a browser offers it.
+
+  Page scoping is unchanged — the landing page still registers no reader and
+  no browser tool accepts a uuid — but the submit tool now says where the
+  reading tools live instead of leaving an agent holding a uuid and no next
+  step. See
+  [ADR 0041](adr/0041-a-browser-tool-answers-a-failure-rather-than-throwing.md).
+
+### Added
+
+- **Tests for four behaviours that were being asserted by nothing.** Each was
+  found by reading coverage rather than the diff, and each is a promise the
+  code already makes in prose:
+
+  - **The operator area's live audit stream is now actually driven.** It was
+    covered only by a test that read `admin.py` with a regular expression, so
+    the generator itself never ran: the `disabled` state, the half-hour cap,
+    the keep-alive frame, the client hanging up, and both of the
+    start-at-the-end rules were untested. That last pair is the one worth
+    having - neither the in-memory window nor a configured audit *file* may be
+    replayed into a browser when somebody opens the view, because retention is
+    the log's business and a copy of it in a page is not. `_sse` is now tested
+    for what its docstring already claimed: a newline inside a record cannot
+    end the event early and forge a second one.
+  - **Key rotation, which is the entire reason a stored value carries a
+    `v<n>:` prefix.** Nothing checked that a value written under the old key
+    still decrypts after a new one is added, or that new writes move to the
+    new version - and nothing checked the other half, that a value whose key
+    version has been retired is lost rather than quietly read with a different
+    key. Tampered, truncated and malformed ciphertexts are now asserted to
+    come back as `None` rather than as an exception out of a request, and a
+    plaintext value written before encryption was switched on is asserted to
+    keep rendering until it expires.
+  - **The transport block in the CSV and PDF exports.** Every export test
+    scans the fake instance, which is plain HTTP, so the entire TLS section
+    was unreachable from the suite. It is now exercised against a real
+    loopback handshake: the negotiated version, the chain, the issuer and the
+    dates, that an expired certificate says *expired 30 day(s) ago* rather
+    than printing a date somebody has to subtract, that "not trusted" and "no
+    path to a public root" stay two different problems, and that a deprecated
+    version still accepted does not read like one that was refused.
+  - **`SecretProvider.resolve_tree`, and the refusals around it.** The
+    recursion that resolves every `secret://` in a nested configuration had no
+    test at all, nor did a reference naming nothing, an unset environment
+    variable, or a command that exits non-zero - the last of which would
+    otherwise hand the caller an empty credential. Two boundaries are now
+    written down: only the four listed schemes are references, so a
+    `redis://` URL in a setting is a value and not a lookup; and `exec://`
+    runs its argv directly, so a `;` in a reference is part of an argument
+    rather than a second command.
+
+### Fixed
+
+- **A certificate that expired today no longer passes the expiry check.**
+  `days_remaining` truncates towards zero, so the first day of expiry counts
+  as `0` rather than `-1` - and both the wording and the verdict were read
+  from the sign of that number. A certificate that had gone out of date hours
+  earlier was therefore reported as expiring "in 0 day(s)" and *passed*
+  `--tls-min-days 0`, on precisely the day the distinction matters most.
+  `Certificate` now carries an `expired` flag read from `notAfter` against
+  the clock, and the check consults that instead of the sign. The flag is
+  deliberately kept out of `as_dict()`: `notAfter` and `daysRemaining` are
+  both already in the result document, and its shape is a contract.
+
+- **A zone that publishes only an `iodef` CAA record is no longer told it has
+  none.** `iodef` names where a CA should report a violation; it authorizes
+  nobody, so the issuance risk is real and the finding was right to fail. The
+  wording was not: an operator who had published a CAA record was sent looking
+  for one they already had. The detail now names the tags actually present and
+  says that they authorize no issuer, which is a different thing to fix.
+
+- **A rating cap is reported as applied even when the base rating had already
+  reached it.** A cap counted only when it *lowered* the rating, so a critical
+  finding capping at `2` on an instance the advisories had already put at `2`
+  was rendered as "would cap at 2/5, already lower" - which says something
+  untrue about the only critical finding in the report. A cap is now applied
+  when it equals the final rating, which is what makes the explanation
+  independent of the order the checks ran in.
+
+- **A clean instance is no longer told its failed extra checks are being
+  disregarded.** With `extra_checks_affect_rating` off, the explanation
+  appended "failed extra checks are reported but do not affect the rating"
+  whenever `findings` was non-empty - and `findings` holds the passes too, so
+  an instance with nothing wrong got the note as well. It is now added only
+  when a finding actually counts.
+
+- **`derive()` no longer discards the redirect pins on the session it shares.**
+  It re-runs `__post_init__` on a probe holding an existing session, and
+  mounting unconditionally replaced a pinning adapter already in use: the pins
+  added to it were silently dropped, and the pool holding its open connections
+  was no longer reachable from `session.adapters` for `close()` to shut down.
+  Mounting is now skipped where a pinning adapter is already mounted.
+
+- **Probes abandoned while opening an instance are closed.** Only the probe
+  `_open_instance` returns was ever closed by its caller, while each fallback
+  attempt - HTTPS without verification, then plain HTTP - opened another. An
+  abandoned probe still owns the sockets its session pooled, which is the
+  whole reason `_Probe.close` exists; all three paths now close what they
+  are not returning.
+
+- **An advisory that only the running image knows about is no longer missing
+  from every scan.** The stored advisory document carries no TTL - reference
+  data is superseded, never expired - and the bundled file was folded in only
+  when nothing was stored yet. A deployment upgraded to an image whose wheel
+  ships a hand-curated advisory therefore merged into whatever an older image
+  had left in Redis, and unless the feed happened to mention that advisory it
+  stayed absent for the life of the deployment. The bundled file is now folded
+  in on every read as well as every refresh, so the floor holds on the read
+  path and an upgraded deployment is right immediately rather than after its
+  next daily fetch.
+
+- **Only the canonical spelling of a uuid is treated as one of ours.**
+  `is_scan_uuid` asked `uuid.UUID()` whether it could parse the value, and it
+  parses rather more than the form this service hands out: braces, a
+  `urn:uuid:` prefix, upper case, and no hyphens at all. Every one of those
+  interpolates into a *different* Redis key for the same scan, which is the
+  opposite of what the function exists to guarantee — and the urn form puts
+  colons into a key name, where `_identifiers_for` splits on them and would
+  stop recognising the scan as one of its own to erase. Nothing could reach
+  that today, because a key is only ever written under a server-generated
+  uuid4 and every other spelling simply missed and answered 404; the check now
+  holds the value to the spelling it claims to accept.
+
+- **A rate-limit counter that lost its window no longer refuses that client for
+  ever.** `INCR` and `EXPIRE` are two round trips, and a counter created by the
+  first without reaching the second has no window to fall out of: the count
+  never resets, so the client stays refused indefinitely with nothing in the
+  log to say why. A counter already over its limit is the one place this can be
+  observed, so it is also where it is now put right — the window is re-applied
+  and the client waits one of them rather than for somebody to notice a key in
+  Redis. A counter that still has its window keeps the one it has, so a refusal
+  cannot push the client's own deadline further away.
+
+### Documentation
+
+- **`specs.md`: the normative contract, stated clause by clause.** Everything
+  this project promises was already written down somewhere - the rating
+  invariants in `AGENTS.md`, the layer boundaries in `ARCHITECTURE.md`, the
+  thresholds in `README.md`, the reasoning in forty ADRs - but all of it in
+  prose written to explain rather than to be checked. Asking "is this
+  behaviour a promise or an accident?" meant reading the code and guessing at
+  the intent behind it.
+
+  The new file answers that question directly: numbered MUST/MUST NOT clauses
+  grouped by subject - layers, the result document, findings, waivers, the
+  rating, the lifecycle, exit codes, output, the webhook, configuration, how a
+  scan is allowed to behave towards somebody else's machine, the web
+  application, and the prohibitions - each one small enough that a test can be
+  pointed at it and a commit message can cite it. Clause numbers are stable,
+  and a withdrawn one keeps its number rather than being reused, so a citation
+  cannot quietly come to mean something else.
+
+  It is deliberately not a fourth explanation of the same material. Where a
+  clause needs a reason, it links the ADR that argues it; where it needs a
+  mechanism, it names the symbol that enforces it. And it says what to do when
+  it is wrong: the code and its tests win, and the clause gets corrected in the
+  same pull request.
+
+## [1.21.1] - 2026-09-06
+
+### Fixed
+
+- **On a phone, the four promises no longer open the landing page.** Below
+  640px `.hero` becomes a flex column so that the artwork can move underneath
+  the form, and the reordering names `.hero-copy`, `.scan-form` and
+  `.hero-art` - but the assurance strip is a child of `.hero` as well, and
+  nothing gave it an order. Its default `0` sorted it ahead of all three, so
+  the first thing a visitor met was *100% air-gapped · No data stored · No
+  registration needed · Ephemeral results*, four answers to questions the page
+  had not asked yet, with the headline and the address field below them. The
+  strip is now ordered last, where it reads as a footnote to the instrument it
+  follows. Desktop is untouched: `.hero` is a grid there and `order` never
+  applied.
+
+- **Drafting advisories after a release no longer fails the workflow asking
+  for a permission that does not exist.** The `draft` job ran
+  `security_advisories.py --sync` with the built-in `GITHUB_TOKEN` and stopped
+  at `Resource not accessible by integration (HTTP 403)`. The job had asked
+  for `security-events: write`, which sounds like the right thing and is not:
+  it grants code scanning alerts, while creating a repository advisory is the
+  Security tab, and *no* `permissions:` line grants a workflow token that —
+  the advisories API is outside what an installation token may reach at all.
+  So the job could not have worked as written, and the advisories drafted so
+  far were all made by hand.
+
+  Drafting now runs on a `SECURITY_ADVISORY_TOKEN` secret — a fine-grained
+  token with *Security advisories: Read and write* — and where none is
+  configured, it and the commit that records the new ids are skipped, with the
+  reason and the command to run by hand written to the step summary. A release
+  is no longer reported as failed over an advisory nobody could have drafted,
+  and the records still waiting are listed either way.
+
+  The script now recognises that 403 as well, rather than passing GitHub's
+  sentence through unexplained: it names the token that would work and the
+  near-miss permission that would not, so the next person to meet it does not
+  go looking for a missing line in `permissions:`.
+
+## [1.21.0] - 2026-09-06
+
+### Added
+
+- **Three step-by-step identity-provider tutorials, in
+  [`docs/identity-providers.md`](docs/identity-providers.md).** Putting
+  Keycloak, Authentik or Authelia in front of an instance was one section of
+  [Running OpenCloud in a secure
+  infrastructure](docs/secure-deployment.md#1-put-a-real-identity-provider-in-front),
+  which argued the case and then summarised each provider in a screenful.
+  This is the other half: installing each one, the provider configuration in
+  full, verifying it worked, and moving an instance that already has accounts
+  without stranding anybody's files in an account they can no longer reach.
+
+  The part worth having is the section none of the three vendors can write,
+  because it is not about them: **the four clients, their redirect URIs and
+  their scopes are properties of OpenCloud's own applications** and are
+  identical whichever provider you pick. The web client needs
+  `oidc-silent-redirect.html` registered or sessions start dying at an
+  interval nobody can reproduce; only the non-browser clients get
+  `offline_access`, because a refresh token in a browser tab is a credential
+  in a place that cannot protect it; and all four are public clients with
+  PKCE, because everything OpenCloud ships runs on somebody else's machine
+  and cannot keep a secret. Each provider tutorial is then only what that
+  provider calls those things.
+
+  The troubleshooting table is the failures in order of how often they are
+  the answer, and the verification section ends where this repository begins:
+  a scan, and the four OpenID Connect properties it reads from the discovery
+  document - plus a note on the two things it deliberately cannot tell you,
+  which are your group mapping and whether your second factor is enforced.
+
+- **The operator's area has a Documentation tab.** `/admin` gained a tab
+  strip, and beside the overview it now renders the two repository documents
+  somebody running this service actually needs while running it:
+  `ARCHITECTURE.md` at `/admin/docs/architecture`, and the operations notes in
+  `ADMIN.md` at `/admin/docs/operations`. Reaching for either used to mean
+  leaving the service and finding the repository.
+
+  They are generated at build time into `frontend/templates/admin-docs/` by
+  the same pipeline the public guides use ([ADR
+  0018](adr/0018-cli-documentation-is-generated-at-build-time.md)), so nothing
+  parses Markdown at runtime and the web application still has no Markdown
+  dependency. English only, with a line above each saying which repository
+  file it came from - a half-translated operations note is worse than an
+  English one that says so.
+
+  **They come from a manifest of their own**, `OPERATOR_DOCUMENTATION_PAGES`,
+  deliberately separate from the one that feeds `/documentation`. That is what
+  keeps `ADMIN.md`'s own promise about itself intact: the pages are absent
+  from the public documentation index, the sitemap, `robots.txt` and the
+  search index, they answer **404** to anybody the outpost did not authorise,
+  and `tests/test_webapp_admin.py` holds them to every one of those. The one
+  thing that did change is recorded in `ADMIN.md` itself: the rendered page
+  travels inside the web bundle and the container image, which is acceptable
+  only because that file is already world-readable in the public repository
+  and contains operations notes rather than credentials.
+
+### Fixed
+
+- **The hero instrument follows the scheme a visitor chose, not only the one
+  their operating system reports.** It was `<img src="hero.svg">`, and an
+  `<img>` is a separate document: it can read `prefers-color-scheme` but never
+  the `data-theme` this page writes on the root element when somebody presses
+  the header switch. So the drawing answered the system while everything
+  around it answered the toggle, and pressing the switch left a daylight
+  instrument on a midnight page - or a midnight one on a daylight page, which
+  is the same bug from the other side.
+
+  It is now inline in `index.html`, with its styles in `app.css` under all
+  three of the states the rest of the page already handles. That ends the
+  second palette it was carrying: the markers are the page's own `--good`,
+  `--fair`, `--info` and `--bad` rather than a hand-copy that had already
+  drifted in the light scheme, and only the three colours genuinely its own -
+  the sweep's magenta, the lit top of the shield, the static - are still
+  written down. `hero.svg` is gone rather than left unreferenced beside it.
+
+  The `<style>` block could not come along: `style-src 'self'` carries no
+  `unsafe-inline`, so a `<style>` element in the markup is dropped by the
+  browser and caught by `tests/test_webapp_api.py`. The drawing is also
+  explicitly decorative now - inline, its `<title>` *would* be announced, and
+  what it would announce is the headline directly above it, a second time.
+
+- **On a phone the hero puts the field before the picture.** Stacked into one
+  column, a full-width 480×300 illustration sat between the headline and the
+  one field this service exists for, so the first gesture on a small screen
+  was a scroll looking for something the page had just promised. The column is
+  reordered rather than the artwork dropped: the wrapper dissolves with
+  `display: contents` so copy, form and instrument become siblings in one
+  flex column, and the drawing keeps its place underneath at a size that looks
+  deliberate. The markup is untouched, so a reader without CSS still meets
+  them in the order it states.
+
+- **The lock file no longer pins a package its own maintainers withdrew.**
+  `securesystemslib` 1.5.0 was yanked from PyPI as incompatible with sigstore,
+  which is the only reason it is here at all: the `signing` extra pulls
+  sigstore, sigstore pulls tuf, and tuf pulls securesystemslib. A resolve from
+  scratch would have skipped a yanked release, but the version was already
+  written down, so every `uv lock` re-pinned it and said so in a warning. The
+  pin moves to 1.5.1, the release that restores the compatibility, and no
+  constraint is left behind to remove later.
+
+### Security
+
+- **`--configure` no longer writes the configuration world-readable before
+  narrowing it.** The file it saves may hold a release token, a service token
+  or a webhook URL with a credential in it - the wizard says so - and it was
+  written with `write_text` and only then `chmod`ed to `0600`. On a monitoring
+  host with more than one account, any local user could read the token in the
+  window between the two, and a descriptor opened in that window stays
+  readable after the `chmod`.
+
+  The window was not the whole of it. Where the destination **already existed**
+  at `0644` - an earlier run, an editor, `touch` - the write went through that
+  same inode, so the token sat world-readable for the entire write rather than
+  for an instant. Re-running `--configure` to *rotate* a token is exactly that
+  path.
+
+  The configuration is now written to a `mkstemp` file, which is owner-only
+  from the moment it exists, and moved into place. The secret is therefore
+  never on disk under a wider mode, and the move being atomic means a save
+  that fails leaves the previous configuration intact instead of a truncated
+  one. This is the rule `docker/setup-wizard.py` already held its `.env` to and
+  `baseline.py` already held its state file to; the plugin's own wizard was the
+  one place that did not.
+
+## [1.20.0] - 2026-09-04
+
+### Added
+
+- **`cert_days_left`: the certificate's remaining life is now a metric, not
+  only a finding.** The scan has always measured it and the rating has always
+  judged it, but the number reached an operator only as `tlsCertificate` - a
+  state, on the day the margin had already run out. A monitoring system wants
+  the number *before* that day, to graph and to alert on, which is exactly
+  what `support_days_left` already does for the release line beside it.
+
+  It carries the scan's own thresholds rather than a second opinion invented
+  for the graph: warning at or below `scanner.tls_min_days`, the margin the
+  finding itself fires at, and critical once the certificate has expired. Both
+  are open at the bottom (`@~:30`), and the value keeps counting past zero
+  into negative days, because "expired nine days ago" is the reading somebody
+  needs to see.
+
+  **An unmeasured certificate is absent rather than zero.** A scan over plain
+  HTTP, a host that refused the handshake and a certificate whose dates would
+  not parse all measured nothing, and reporting nothing as `0` would page
+  somebody about an expiry that was never observed.
+
+- **The webhook can post to ntfy and Gotify directly**, with
+  `--webhook-format ntfy` and `--webhook-format gotify`. Both were previously
+  a shell wrapper around `curl` - the one in
+  [Webhook recipes](docs/webhook-recipes.md) is still there for anyone who
+  wants the plugin's full text or a priority scheme of their own. Priorities
+  follow the state, matching what that wrapper did: CRITICAL arrives at ntfy's
+  `urgent` and Gotify's 8, WARNING at `default` and 5, UNKNOWN at `high` and
+  5. An OK - which only `--webhook-on always` ever sends - arrives at the
+  quietest value each service has, so a dead man's switch does not buzz
+  somebody nightly to say nothing is wrong.
+
+  `--webhook-digest` renders too, rather than falling back to the flat
+  document neither service can read. Same selection as the chat digests: only
+  the hosts that are not OK, capped, with the healthy ones counted.
+
+  **With `ntfy`, point `--webhook-url` at the topic URL.** ntfy reads a JSON
+  publication only at its server root, taking the topic from the document
+  rather than the path, so the plugin reads the topic off the configured URL
+  and posts to the root of that same server. Scheme, host and port are
+  untouched, so the address the SSRF guard checked is the address posted to. A
+  URL naming no topic is refused when the check starts, rather than answering
+  400 on every notification for the life of the configuration. See
+  [ADR 0040](adr/0040-a-push-format-may-rewrite-the-path-never-the-host.md).
+
+  There is still no `matrix` format, for the reason there was not one before:
+  matrix-hookshot's outbound webhook connector accepts the `slack` shape, and
+  a second name for the same document would only suggest they differ.
+
+- **The plugin installs with Homebrew**, as
+  `brew install sowoi/tap/check-opencloud-security`. This is the workstation
+  half of the argument the `.deb` and the `.rpm` make for monitoring hosts: on
+  macOS and on the Linux laptops that use it, `brew` is the package database,
+  and a `pip install --user` is absent from it, invisible to `brew outdated`
+  and unanswerable to whoever inherits the machine.
+
+  The formula is generated by `scripts/build_homebrew_formula.py` from what
+  PyPI published, so every URL and `sha256` in it names an artifact the index
+  already serves. It therefore describes a *released* version and defaults to
+  the newest one published rather than the one in `pyproject.toml` - a formula
+  for a version that has not gone out yet would pin a URL answering 404.
+  `--check` asks only whether a release was missed, deliberately not whether a
+  regeneration would reproduce the file byte for byte: that second question
+  answers no whenever an unrelated dependency publishes.
+
+  It lives in a tap rather than in Homebrew core, which has notability
+  requirements this project does not claim to meet. Nothing here pushes to
+  that tap; a release workflow writing to a second repository is a decision
+  about credentials rather than about packaging.
+
+  **`--upgrade-self` refuses on a Homebrew installation** and names
+  `brew upgrade`, exactly as it already does for `apt` and `dnf`. The failure
+  it avoids is quieter than the distribution one: Homebrew's formula is a
+  virtualenv under the Cellar, so pip finds it writable and appears to
+  succeed - and the next `brew` operation relinks the Cellar and puts the old
+  version back, leaving no record that pip was ever there.
+
+- **The collaboration backend beside an instance is now looked at, not just
+  counted.** The scanner has always reported *that* an office integration
+  exists, because the instance names its own app providers. It never asked
+  what that second service publishes - and a document editor is a second HTTP
+  server, with an administration console listing every open document session
+  and a transport of its own. Where a reverse proxy serves that backend on the
+  instance's own origin, two findings now follow: `companionAdminConsole`
+  (high) when the editor's console answers from the internet, and
+  `companionEditorHttps` (high) when the WOPI discovery document advertises
+  editor addresses over plain HTTP, which sends the document and the token
+  authorising the session unencrypted.
+
+  The backend is detected by the `wopi-discovery` root element the WOPI
+  protocol specifies rather than by a status code, because OpenCloud answers
+  unknown paths with its own HTML shell and a check that trusted the code
+  would find an editor on every instance in existence.
+
+  **The scan asks the origin it was pointed at and nothing else.** It
+  deliberately does not follow the editor host named inside the discovery
+  document: that would let a scanned instance choose the next address the
+  scanner connects to, walking straight past the SSRF pinning the public
+  service depends on. A deployment serving its editor from a host of its own
+  therefore gets neither finding rather than a pass, because nothing was
+  measured - point a second scan at that host. See
+  [ADR 0036](adr/0036-a-companion-service-is-probed-only-where-the-scan-was-pointed.md).
+
+- **`tlsDnssec`: whether the zone answering for this name is signed.**
+  Everything else the scan concludes about the transport starts from an
+  address a resolver handed over. In an unsigned zone that answer carries no
+  signature, so one forged on the way to the resolver cannot be told apart
+  from the real one - and the CAA record restricting who may issue a
+  certificate for the name arrives over the same channel and can be forged
+  along with the address it protects.
+
+  The check queries the resolver this machine already uses, read from
+  `/etc/resolv.conf` and never a public one, for the same reason the CAA
+  lookup does: asking 1.1.1.1 would hand a third party the hostname being
+  scanned. It is a low finding, and a zone that is signed but read through a
+  non-validating resolver passes - whether the operator signed their zone is
+  the part this scan is entitled to judge.
+
+  **A resolver that does not speak DNSSEC leaves the finding out of the result
+  entirely**, rather than reporting the zone as unsigned. The two produce
+  identical silence, and treating the second as the first would fail every
+  scan run from behind such a resolver for a reason that has nothing to do
+  with the instance being scanned. See
+  [ADR 0038](adr/0038-a-dnssec-answer-nobody-could-have-given-is-not-a-finding.md).
+
+- **`hstsPreloadEligible`: whether the `preload` directive would actually be
+  honoured**, under `setup.advisoryChecks`. `hstsPreload` reports whether the
+  header *asks* to be preloaded, which is an intention rather than a state - a
+  host is protected before its first request only if it is really in the
+  browser preload list, and the list only accepts a header carrying a max-age
+  of at least a year, `includeSubDomains` and `preload` together.
+
+  OpenCloud's own proxy sends ten years and `preload` but no
+  `includeSubDomains`, so the header on every stock instance asks for
+  something the list refuses. That makes the shortfall a fact about OpenCloud
+  rather than about any one deployment, which is why it is an advisory
+  observation - measured, explained by `--debug` and catalogued, never
+  counted, never alerted on and never offered as a waiver.
+
+  Membership of the list itself is deliberately not measured: the only ways to
+  know are to ask a third party, which would leak the scanned hostname, or to
+  ship tens of megabytes of the list in a plugin meant to stay small on a
+  monitoring host. See
+  [ADR 0037](adr/0037-preload-eligibility-is-measured-list-membership-is-not.md).
+
+- **The plugin now ships as a `.deb` and an `.rpm`, built from the same wheel
+  and attached to every release.** Its audience is monitoring hosts, and on
+  those `apt install` and `dnf install` are how software arrives - a pip
+  install has no entry in the package database, so it is absent from the
+  inventory, missed by the unattended-upgrade job that patches everything else
+  and unanswerable to whoever inherits the host. Both packages are
+  architecture-independent, so one file fits every release of a distribution.
+
+  The check lands on `PATH` and in the monitoring plugin directory
+  (`/usr/lib/nagios/plugins` on Debian, `/usr/lib64/...` on RPM systems), so an
+  Icinga2 `CheckCommand` built on `PluginDir` needs no path configuration.
+
+  **The package configures nothing and enables nothing.** It creates
+  `/etc/check-opencloud-security/` and leaves it empty, and the example
+  configuration ships as documentation: that example names a host that is not
+  yours, and the path it would occupy is one the plugin genuinely reads, so
+  installing it would give every invocation on that host a default target
+  nobody chose. The four systemd units install disabled for the same reason.
+
+  The payload is the wheel unpacked into one private directory rather than
+  files in the system's `site-packages`, which cannot then collide with a pip
+  install of the same name on the same host. The two commands are small
+  launchers that find a Python 3.10 or newer for themselves - RHEL 9 answers
+  3.9 to `python3` and carries 3.11 and 3.12 beside it under their own names -
+  and exit **3 (UNKNOWN)** rather than a verdict when none is usable, because
+  a check that could not run has measured nothing.
+
+  `--upgrade-self` now refuses on such an installation and names `apt` or
+  `dnf`. That is not politeness: pip would appear to succeed, installing into
+  a `site-packages` the launcher never reads, leaving two versions on the host
+  and the old one still running. See
+  [ADR 0039](adr/0039-the-plugin-ships-as-a-distribution-package-built-from-the-wheel.md)
+  and [Installing the plugin](docs/installation.md#debian-ubuntu-rhel-fedora-deb-and-rpm).
+
+### Changed
+
+- The DNS wire format the CAA lookup speaks now lives in
+  `opencloud_local_scan/dns.py`, where the DNSSEC lookup shares it rather than
+  carrying a second copy of it. `caa.py` keeps its behaviour, its identifier
+  and its refusal to query any resolver the operator did not already choose.
+
+### Fixed
+
+- **An advisory patched on two release lines is now matched on both of them,
+  whichever format it arrives in.** The GitHub Advisory API writes one
+  `vulnerabilities` entry per affected range, so an issue fixed in *both*
+  `4.0.3` and `5.0.2` arrives as two entries for the same package. The
+  converter stopped at the first one, which cleared every instance on the other
+  line: a `5.0.1` server was told no advisory matched it, and the instances
+  that *were* flagged were pointed at the fix for a line they are not on. Every
+  bounded range is now kept, exactly as the OSV converter beside it already
+  did, and `for_version` reports the fix belonging to the installed line. The
+  bundled database is generated from OSV and is unaffected; this is the path an
+  operator takes with `--vulnerability-db` or `--vulnerability-feed` pointed at
+  a GitHub-format document.
+
+- **An advisory whose lower bound is exclusive no longer reports the one release
+  it excludes.** `>= 7.0.0` and `> 7.0.0` were read alike, so an advisory that
+  went out of its way to say `7.0.0` is not affected produced a finding on
+  exactly that release - one no upgrade can clear, because the installed
+  version is already the one the advisory considers safe. The bound now moves
+  just past the named release, the way an inclusive upper bound already moved
+  just past its own.
+
+- **An upgrade recommendation cannot point backwards.** A release line the
+  schedule has no record of - dropped from the lifecycle page as it aged, or
+  never published there - is judged end of life, and the release to move to was
+  read off the declared track alone. The newest release recorded for a track can
+  be *older* than a version that is not in the schedule at all, so an LTS
+  instance on `5.0.0` was told to "upgrade" to `4.0.8`: advice that removes
+  fixes rather than adding them. The verdict now names the newest release that
+  is genuinely ahead of the installed one, and no arrow at all when there is
+  none. Where the arrow already pointed forwards nothing changes.
+
+- **A `q=nan` in `Accept-Language` no longer decides which language a page is
+  written in.** It parses as a float and then compares false against every
+  other weight, so the sort that orders a browser's language list - and with it
+  the language served - followed whichever comparisons Python happened to make
+  rather than the header. A weight that is not a weight is now dropped like an
+  unparsable one, while a client that overshoots the range with `q=1.5` is
+  still understood as meaning "this one first".
+
+- **A `--webhook-url` the plugin cannot parse is refused instead of raising.**
+  An unclosed IPv6 literal is a URL `urlsplit` rejects, and the rejection
+  happened inside the log call that was explaining why the webhook had been
+  blocked - so a typo in the flag replaced the check's own result with a
+  traceback, which for a monitoring plugin is the one output that says nothing.
+  Redaction now answers `<redacted>` for a URL it cannot read, the delivery
+  fails as a delivery failure, and the scan result is still reported.
+
 ## [1.19.0] - 2026-09-03
 
 ### Added

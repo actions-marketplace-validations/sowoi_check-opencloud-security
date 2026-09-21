@@ -11,17 +11,26 @@
   <p class="lede">{{ t('docs.release-lifecycle.description') }}</p>
 </section>
 
-{% if locale != 'en' %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
+<nav class="docs-toc card section-gap" aria-label="{{ t('docs.guide.toc.aria') }}" data-reveal>
+  <p class="kicker">{{ t('docs.guide.toc.heading') }}</p>
+  <a href="#why-a-version-number-is-not-an-answer" lang="en">Why a version number is not an answer</a>
+  <a href="#what-the-bundled-schedule-can-and-cannot-tell-you" lang="en">What the bundled schedule can and cannot tell you</a>
+  <a href="#the-recommended-release-follows-your-track" lang="en">The recommended release follows your track</a>
+  <a href="#declaring-your-release-track" lang="en">Declaring your release track</a>
+  <a href="#warning-before-the-end-of-life" lang="en">Warning before the end of life</a>
+  <a href="#does-the-upgrade-clear-the-advisories" lang="en">Does the upgrade clear the advisories?</a>
+  <a href="#rehearse-every-upgrade" lang="en">Rehearse every upgrade</a>
+</nav>
+
 <article class="docs-article card section-gap" data-reveal lang="en">
-<p>OpenCloud maintains a rolling, a production and an LTS track at the same
-time, so the <em>same</em> version can be current on one and long dead on another.
-This page explains how the plugin resolves that: how it reasons in release
-lines rather than version numbers, what the bundled schedule knows, why the
-update recommendation follows your track rather than the newest release, and
-what <code>--release-track</code> changes.</p>
+<p>OpenCloud maintains rolling, production and LTS tracks in parallel. A version’s support
+status therefore depends on its track as well as its number. This guide explains how the
+scanner uses release lines and the bundled schedule, chooses an update and applies
+<code>--release-track</code>.</p>
 <p>The <a href="/documentation/reference#end-of-life-detection">main README</a> carries the current
 state of each track and the settings that switch the check off.</p>
 <!-- TOC -->
@@ -210,6 +219,54 @@ output marks it as declared so it can be told apart from an inferred one:</p>
 </code></pre>
 <p>An unknown value is ignored rather than treated as an error, so a typo in a
 config file degrades to the default behaviour instead of taking the check down.</p>
+<h2 id="warning-before-the-end-of-life">Warning before the end of life</h2>
+<p>End of life is <code>CRITICAL</code> on the day it arrives, which is too late to plan an
+upgrade. <code>--eol-warning DAYS</code> (<code>COS_EOL_WARNING</code>, YAML <code>eol_warning</code>) turns an
+otherwise <code>OK</code> result into <code>WARNING</code> once the running line has <code>DAYS</code> or fewer
+days of support left:</p>
+<pre><code class="language-text">WARNING: The 7.2 release line reaches end of life on 2026-10-14 (20 days left). Upgrade to 7.4.0.
+</code></pre>
+<p>It only ever raises <code>OK</code>; a result that is already <code>WARNING</code> or <code>CRITICAL</code>
+keeps its own line. A line without a published end-of-life date has nothing to
+count down and never warns. <code>0</code>, the default, turns it off.</p>
+<h2 id="does-the-upgrade-clear-the-advisories">Does the upgrade clear the advisories?</h2>
+<p>When the installed release carries known advisories, the scan records
+<code>upgradePath</code>: what moving to the recommended release does about each one.</p>
+<pre><code class="language-json">{&quot;upgradePath&quot;: {&quot;target&quot;: &quot;7.2.4&quot;, &quot;fixes&quot;: [&quot;GHSA-aaaa&quot;],
+  &quot;stillAffected&quot;: [&quot;GHSA-bbbb&quot;], &quot;safeVersion&quot;: &quot;7.3.0&quot;&#125;&#125;
+</code></pre>
+<p>Every range of an advisory is checked against the target, so a fix backported
+to another line counts. <code>safeVersion</code> is the lowest release past every fix the
+target still lacks, or <code>null</code> when one of them has no fix yet. The plugin
+prints it as a detail line:</p>
+<pre><code class="language-text">Upgrade path: 7.2.4 fixes GHSA-aaaa but is still affected by GHSA-bbbb; 7.3.0 is the first release that clears them all.
+</code></pre>
+<h2 id="rehearse-every-upgrade">Rehearse every upgrade</h2>
+<p><code>upgradePath</code> covers the one release the scan recommends. <code>upgradeRehearsal</code>
+covers every release worth moving to: the newest patch of the installed line
+and the newest release of each later line (only lines on the declared release
+track, when the instance declares one). For each one it lists the advisories
+the release <code>fixes</code>, those it is <code>stillAffected</code> by, any it <code>introduces</code>,
+whether it is <code>endOfLife</code>, and the <code>rating</code> the scan would give it.</p>
+<pre><code class="language-json">{&quot;upgradeRehearsal&quot;: [
+  {&quot;version&quot;: &quot;7.2.4&quot;, &quot;line&quot;: &quot;7.2&quot;, &quot;recommended&quot;: false,
+   &quot;fixes&quot;: [&quot;GHSA-aaaa&quot;], &quot;stillAffected&quot;: [&quot;GHSA-bbbb&quot;], &quot;introduces&quot;: [],
+   &quot;endOfLife&quot;: false, &quot;versionRating&quot;: 2, &quot;rating&quot;: 2}
+]}
+</code></pre>
+<p>The rating uses the same version rules as the scan. The instance's failed
+checks still cap it (<code>versionRating</code> is what the version alone would allow),
+because an upgrade changes the release, not the proxy in front of it. The
+plugin prints one detail line, graded with its own rating letters:</p>
+<pre><code class="language-text">Upgrade rehearsal: 7.2.4 fixes 1 finding, leaves 1, reaches rating D; 7.3.0 fixes 2 findings, leaves 0, reaches rating A+.
+</code></pre>
+<p>The rehearsal knows only the bundled or refreshed schedule and advisory
+database. A release or advisory published later can change the answer.</p>
+<p>The web application renders the same entries as <strong>What upgrading would buy
+you</strong>, one row per candidate with the advisories it clears, the ones it
+leaves and the grade it would reach. Where the version alone would rate
+better than the row shows, the difference is this instance's own findings,
+which an upgrade does not touch.</p>
 </article>
 
 {% include "_page-nav.html" %}

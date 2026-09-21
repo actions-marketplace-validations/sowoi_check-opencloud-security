@@ -1,0 +1,64 @@
+# A security advisory record. See AGENTS.md, "Security advisories".
+#
+# One file per bullet under a `### Security` heading in CHANGELOG.md.
+# `state` is the decision; `verified` is the evidence it rests on.
+
+slug: scan-service-dns-rebinding
+state: draft
+ghsa: GHSA-6cxh-p5j3-hv7h
+changelog_version: "1.23.0"
+changelog_entry: "The scan service refuses a request not addressed to loopback when it has no token."
+shipped: true
+severity: medium
+cwe_ids:
+  - CWE-350
+  - CWE-918
+package: plugin
+introduced: "1.0.1"
+fixed: "1.23.0"
+summary: >-
+  check-opencloud-scanner serve without a token did not check the Host header,
+  so a web page could reach it through DNS rebinding and scan the local network
+verified: |
+  git show v1.22.7:opencloud_local_scan/service.py - DEFAULT_LISTEN = "127.0.0.1",
+  _authorized returns True when no token is set, and neither do_GET nor do_POST
+  reads the Host header. opencloud_local_scan/service.py is present from v1.0.1
+  onwards with no Host check in any tag; a loopback bind without a token became
+  the default in v1.17.0 (scan-service-open-bind), and was possible before by
+  setting it. tests/test_service.py::test_a_page_rebound_onto_loopback_cannot_use_a_service_without_a_token
+  answers 200 against the v1.22.7 handler.
+description: |
+  ### Impact
+
+  Only `check-opencloud-scanner serve` running **without a token** is affected -
+  the default since 1.17.0, which binds `127.0.0.1`. The Nagios/Icinga plugin,
+  the web application and a service started with `--token` /
+  `COS_SERVICE_TOKEN` are not.
+
+  Binding loopback keeps other machines out, but not a web page opened in a
+  browser on the same machine. A page can serve a hostname of its own, then
+  answer DNS for it with `127.0.0.1` (DNS rebinding); the browser then treats
+  the service as the page's own origin and hands every response back to it.
+  The service did not look at the `Host` header, which still names the page's
+  hostname, and `GET /api/scan?url=<host>` passes the host straight to the
+  scanner with no target validation. The page could therefore have the
+  service probe hosts on the operator's internal network - an admin panel, a
+  metadata endpoint, another OpenCloud - and read back the version, headers,
+  TLS details and findings the scan collected.
+
+  It needs somebody to open an attacker's page in a browser on the host
+  running the service and leave it open long enough for the rebinding to take
+  effect, which makes a workstation or a laptop far more exposed than a
+  monitoring server.
+
+  ### Patches
+
+  Fixed in **1.23.0**. Without a token, a request whose `Host` does not name
+  `localhost`, a `127.0.0.0/8` address or `::1` is answered 403 before anything
+  reaches the scanner. With a token nothing changes: a rebinding page cannot
+  know it.
+
+  ### Workarounds
+
+  Set a token (`--token`, or `COS_SERVICE_TOKEN`) even on loopback, or stop the
+  service when it is not in use.

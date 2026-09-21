@@ -78,6 +78,8 @@ jobs:
       - name: Checkout repository
         if: steps.creds.outputs.configured == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - name: Install uv
         if: steps.creds.outputs.configured == 'true'
@@ -92,11 +94,11 @@ jobs:
 
       - name: Set up QEMU
         if: steps.creds.outputs.configured == 'true'
-        uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4
+        uses: docker/setup-qemu-action@1f40c72289eff860ee54a304f1438e3cff362e0a # v4.3.0
 
       - name: Set up Buildx
         if: steps.creds.outputs.configured == 'true'
-        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
 
       - name: Log in to Docker Hub
         if: steps.creds.outputs.configured == 'true'
@@ -133,16 +135,18 @@ jobs:
             tags="${tags},${IMAGE}:${VERSION},${IMAGE}:${minor},${IMAGE}:latest"
           fi
 
-          echo "list<<EOF" >> "$GITHUB_OUTPUT"
-          printf '%s\n' "$tags" | tr ',' '\n' >> "$GITHUB_OUTPUT"
-          echo "EOF" >> "$GITHUB_OUTPUT"
+          {
+            echo "list<<EOF"
+            printf '%s\n' "$tags" | tr ',' '\n'
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       # The build context is the repository root: the image needs the wheel
       # sources, `webapp/` and `frontend/`, none of which live in docker/.
       - name: Build and push
         if: steps.creds.outputs.configured == 'true'
         id: build
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
           file: docker/Dockerfile.web

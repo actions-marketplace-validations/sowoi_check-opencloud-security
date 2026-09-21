@@ -1,15 +1,12 @@
 # Running the scanner as a service
 
-The package ships a second entry point, `check-opencloud-scanner`, which runs
-the very same scanner as a long-lived HTTP service so that several consumers
-can share one cached result. The
-[main README](../README.md#running-the-scanner-as-a-service) describes the
-endpoints and the rule that a wide bind needs a credential; this page is the
-deployment detail.
+Run `check-opencloud-scanner serve` to make the built-in scanner available as a
+persistent HTTP service. Several consumers can then share a cached result for each
+instance. The [main README](../README.md#running-the-scanner-as-a-service) lists the
+endpoints and token requirements; this guide covers deployment.
 
-This is **not** the public web application - that is
-[the scan service](webapp.md), which takes a URL from a stranger, queues it
-and renders the answer.
+For a browser interface with a scan queue, use the separate
+[public web application](webapp.md).
 
 <!-- TOC -->
 * [Running the scanner as a service](#running-the-scanner-as-a-service)
@@ -21,9 +18,8 @@ and renders the answer.
 ## In a container
 
 The service refuses to bind anything but loopback without a token. In a
-container that means two settings: bind the container's interfaces so the
-published port reaches the process, and set the token that makes doing so
-allowed.
+container, bind to the container's interfaces so the published port reaches
+the process, and set a token to authenticate requests.
 
 ```shell
 docker run -d --name opencloud-scanner -p 127.0.0.1:8811:8811 \
@@ -61,10 +57,12 @@ docker compose -f docker-compose.monitoring.yml run --rm check
 The plain `docker compose up` in that directory is the public web application
 instead - see [the web application](webapp.md). Set that one up with
 **`docker/setup-wizard.py`** rather than by editing a compose file: it asks
-what the service should be reachable at, how hard it may scan and who may
-erase a result, then writes a commented compose file and a `.env` holding the
-Redis password and every other credential that file refers to. It is one
-stdlib-only Python file, so it runs on a host with Docker and nothing else -
+what the service should be reachable at, how hard it may scan, who may erase
+a result and what terminates TLS in front, then writes a commented compose
+file, a `.env` holding the Redis password and every other credential that file
+refers to, and - when you name one - the nginx, Apache, Caddy or Traefik
+configuration to go with it. It is one stdlib-only Python file, so it runs on
+a host with Docker and nothing else -
 see [`docker/README.md`](../docker/README.md#setting-up-the-whole-stack).
 
 Everything in `secrets/` except the `*.example` templates is git-ignored - see

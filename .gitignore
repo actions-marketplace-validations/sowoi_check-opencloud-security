@@ -29,6 +29,13 @@ share/python-wheels/
 *.egg
 MANIFEST
 
+# The .deb and .rpm built by scripts/build_distro_packages.py. Kept out of
+# dist/ because `uv publish` uploads everything it finds there.
+distro-packages/
+
+# The stamped Docker setup wizard built by scripts/build_wizard_release.py.
+wizard-release/
+
 # PyInstaller
 #   Usually these files are written by a python script from a template
 #   before PyInstaller builds the exe, so as to inject date/other infos into it.
@@ -244,7 +251,18 @@ __marimo__/
 /requirements.txt
 /requirements-*.txt
 
-# Editor state
+# Editor and operating-system state
+.DS_Store
 .idea/
 .vscode/
 /.ansible/
+
+# Backups the Docker setup wizard keeps of the files it replaces; one of
+# them is a copy of a .env.
+*.bak
+
+# Screenshots and snapshots written by the Playwright MCP server (.mcp.json).
+.playwright-mcp/
+
+# mutmut working copy and results (/mutation-test)
+mutants/

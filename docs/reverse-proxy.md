@@ -277,6 +277,38 @@ backend opencloud
   own configuration (`proxy_set_header X-Forwarded-Host $host;`) rather than
   forwarding whatever arrived. A default virtual host that refuses a name it
   does not recognise closes the same door for the `Host` header.
+- **No default server.** Without one, nginx answers a `Host` it has no
+  `server_name` for from whichever `server` block it loaded first for that
+  port - often a different application on the same machine - and Apache from
+  the first `<VirtualHost>`. When that site redirects with `$host`, the probe
+  host comes back in the `Location`, and `forwardedHostIgnored` fails with
+  `Host comes back as the address it redirects to` although OpenCloud never
+  saw the request and `OC_URL` is set correctly. A different certificate or a
+  different set of headers on a request with a made-up `Host` is the tell:
+
+  ```bash
+  curl -sI -H "Host: unknown.invalid" https://opencloud.example.com/.well-known/openid-configuration
+  ```
+
+  Give the proxy an explicit default server that refuses every name it does
+  not serve, and write redirects in other sites with their own name rather
+  than `$host`:
+
+  ```nginx
+  server {
+      listen 80 default_server;
+      listen [::]:80 default_server;
+      listen 443 ssl default_server;
+      listen [::]:443 ssl default_server;
+      server_name _;
+      ssl_reject_handshake on;   # nginx 1.19.4 and later; no certificate needed
+      return 444;
+  }
+  ```
+
+  In Apache, make the first `<VirtualHost>` for each port one that serves
+  nothing (`Redirect 403 /`). Caddy and Traefik answer an unknown name
+  without routing it to a site, so they need nothing here.
 - **HTTP left open.** A redirect is enough; this check follows it and grades
   the destination. What it will not forgive is a plain-HTTP listener that
   serves the interface as well - that is the `httpsEnforced` flag
@@ -291,6 +323,14 @@ plain ASGI service on one port. It sends its own security headers, including a
 `Content-Security-Policy` with no `unsafe-inline`, so a proxy has nothing to
 add. What it does need is the truth about who is calling and enough patience
 for a scan to finish.
+
+**You do not have to copy any of this by hand.**
+[`docker/setup-wizard.py`](../docker/setup-wizard.py) writes the nginx, Apache,
+Caddy or Traefik configuration for a generated deployment, following the notes
+below and filling in the host name, the port and - where the stack brings its
+own identity provider - the forward auth in front of `/admin` and a site for
+Authentik itself at the host name of its public address. These sections
+are what it generates, and the reference for a deployment it did not write.
 
 ### What the service needs from a proxy
 

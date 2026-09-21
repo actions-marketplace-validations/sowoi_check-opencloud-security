@@ -11,15 +11,24 @@
   <p class="lede">{{ t('docs.output-formats.description') }}</p>
 </section>
 
-{% if locale != 'en' %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
+<nav class="docs-toc card section-gap" aria-label="{{ t('docs.guide.toc.aria') }}" data-reveal>
+  <p class="kicker">{{ t('docs.guide.toc.heading') }}</p>
+  <a href="#json" lang="en"><code>json</code></a>
+  <a href="#sarif" lang="en"><code>sarif</code></a>
+  <a href="#junit" lang="en"><code>junit</code></a>
+  <a href="#checkmk" lang="en"><code>checkmk</code></a>
+  <a href="#otlp" lang="en"><code>otlp</code></a>
+  <a href="#choosing-a-format" lang="en">Choosing a format</a>
+</nav>
+
 <article class="docs-article card section-gap" data-reveal lang="en">
-<p>The scanner's default output is a single Nagios-style line, because that is
-what a monitoring system expects. <code>--format</code> (<code>COS_FORMAT</code>) switches that
-line for a document instead, when whatever consumes the result is not a
-monitoring plugin but a script, a dashboard, or a CI pipeline.</p>
+<p>The plugin’s default output is a Nagios status line with performance data. Use
+<code>--format</code> (<code>COS_FORMAT</code>) to choose a document or metrics format for scripts, dashboards
+and CI pipelines.</p>
 <p><code>--format json</code>, <code>--format sarif</code>, or <code>--format junit</code> all print <strong>one
 combined document for every scanned host</strong> - never one document per host,
 even when <code>--host</code> names only one. That means the output is always valid
@@ -28,13 +37,18 @@ downstream has to special-case a single-host run.</p>
 <p><strong>The exit code keeps its Nagios meaning under every format</strong> - <code>0</code>
 (OK), <code>1</code> (WARNING), <code>2</code> (CRITICAL), <code>3</code> (UNKNOWN). A CI step gates on the
 exit code exactly the way an Icinga check does; the document these flags
-produce is a separate, additional artifact, not a replacement for it.</p>
+produce is a separate, additional artifact, not a replacement for it. The two
+metric formats, <code>prometheus</code> and <code>otlp</code>, are the exception: they report a
+scan rather than judging it, so a finding travels as a sample and the process
+exits <code>0</code>.</p>
 <!-- TOC -->
 <ul>
 <li><a href="#machine-readable-output---format-json-sarif-junit">Machine-readable output: <code>--format json</code>, <code>sarif</code>, <code>junit</code></a></li>
 <li><a href="#json"><code>json</code></a></li>
 <li><a href="#sarif"><code>sarif</code></a></li>
 <li><a href="#junit"><code>junit</code></a></li>
+<li><a href="#checkmk"><code>checkmk</code></a></li>
+<li><a href="#otlp"><code>otlp</code></a></li>
 <li><a href="#choosing-a-format">Choosing a format</a></li>
 </ul>
 <!-- TOC -->
@@ -81,6 +95,41 @@ JUnit-reading tools treat as "nothing ran" rather than "nothing failed".</p>
 <p>The same pattern works for any CI system that turns a JUnit file into a
 check-run summary - the step just needs to point its JUnit reporter at the
 file this command produces.</p>
+<h2 id="checkmk"><code>checkmk</code></h2>
+<p>One <a href="/documentation/checkmk">Checkmk local check</a> line per scanned host, for the agent to
+read: the state, the quoted service name, the metrics and the detail text.</p>
+<pre><code class="language-shell">check-opencloud-security --host opencloud.example.com --format checkmk
+</code></pre>
+<p>This is the one format that is <em>not</em> a single combined document, because the
+protocol it writes is a line per service - several hosts are several
+services. It is also only needed for the agent-side route: a Checkmk server
+running the plugin as an active check reads the default <code>nagios</code> output
+natively. <a href="/documentation/checkmk">Checkmk</a> has both, and the metric table.</p>
+<h2 id="otlp"><code>otlp</code></h2>
+<p>The metrics the Prometheus exposition publishes, rendered as OTLP/JSON: one
+<code>ExportMetricsServiceRequest</code> holding every scanned host, which is the body an
+OpenTelemetry collector accepts at <code>POST /v1/metrics</code> over OTLP/HTTP.</p>
+<pre><code class="language-shell">check-opencloud-security --host opencloud.example.com --format otlp \
+  | curl -sf -X POST http://collector.example.com:4318/v1/metrics \
+      -H 'Content-Type: application/json' --data-binary @-
+</code></pre>
+<p>The plugin prints the document and never dials the collector itself: where
+the metrics go, through which proxy and with which credential is the
+collector's configuration, not a scan's. Piping it at <code>curl</code> from the same
+timer that already runs the check keeps that split, and keeps the plugin free
+of an instrumentation stack a monitoring host never asked for.</p>
+<p>Several hosts become several data points on the same metrics, distinguished
+by their <code>host</code> attribute, exactly as they become repeated samples in a
+scrape. Every metric is a gauge - the current reading of something - and the
+names, attributes and values are the exposition's, so one dashboard query
+works against either pipeline. <a href="/documentation/prometheus#what-the-exporter-publishes">Prometheus and Grafana</a>
+has the metric table both formats share.</p>
+<p>Like <code>--format prometheus</code>, <strong>this format exits <code>0</code> even for an instance that
+would have alerted</strong>, and reports a failed scan as
+<code>opencloud_security_scrape_success 0</code> rather than as an exit code. A metrics
+pipeline has no other way to tell an unreachable instance from a scan that
+stopped running; where the exit code is the point, use <code>nagios</code>, <code>json</code>,
+<code>sarif</code> or <code>junit</code>.</p>
 <h2 id="choosing-a-format">Choosing a format</h2>
 <table>
 <thead>
@@ -99,6 +148,10 @@ file this command produces.</p>
 <td>A scrape target or textfile collector wants metrics directly - see <a href="/documentation/prometheus">Prometheus and Grafana</a></td>
 </tr>
 <tr>
+<td><code>otlp</code></td>
+<td>An OpenTelemetry collector should receive those same metrics at <code>/v1/metrics</code></td>
+</tr>
+<tr>
 <td><code>json</code></td>
 <td>Something else parses the result programmatically</td>
 </tr>
@@ -109,6 +162,10 @@ file this command produces.</p>
 <tr>
 <td><code>junit</code></td>
 <td>A CI system renders test results and should render findings the same way</td>
+</tr>
+<tr>
+<td><code>checkmk</code></td>
+<td>A Checkmk agent runs the plugin as a local check - see <a href="/documentation/checkmk">Checkmk</a></td>
 </tr>
 </tbody>
 </table>

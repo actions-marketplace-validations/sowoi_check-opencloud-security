@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.prometheus.description') }}</p>
 </section>
 
-{% if locale != 'en' %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -22,6 +22,7 @@
   <a href="#what-there-is-to-graph" lang="en">What there is to graph</a>
   <a href="#node_exporter-textfile-collector" lang="en">node_exporter textfile collector</a>
   <a href="#pushgateway" lang="en">Pushgateway</a>
+  <a href="#opentelemetry-collector" lang="en">OpenTelemetry collector</a>
   <a href="#alerting-rules" lang="en">Alerting rules</a>
   <a href="#grafana" lang="en">Grafana</a>
 </nav>
@@ -39,7 +40,8 @@ container needs, alongside publishing the port:</p>
   --prometheus-listen-addr 0.0.0.0
 </code></pre>
 <p>For a batch job, <code>--format=prometheus</code> prints one text exposition payload and
-exits. Both modes require no extra dependency.</p>
+exits, and <code>--format=otlp</code> prints the same metrics as the OTLP/JSON body an
+OpenTelemetry collector accepts. Every mode requires no extra dependency.</p>
 <p>The textfile collector and Pushgateway patterns below remain useful when a
 scheduled scan is a better fit than a long-running exporter.</p>
 <p>If you already run Icinga2, you do not need any of this: the
@@ -53,6 +55,7 @@ up by Icinga2's Graphite/InfluxDB writers directly.</p>
 <li><a href="#what-there-is-to-graph">What there is to graph</a></li>
 <li><a href="#node_exporter-textfile-collector">node_exporter textfile collector</a></li>
 <li><a href="#pushgateway">Pushgateway</a></li>
+<li><a href="#opentelemetry-collector">OpenTelemetry collector</a></li>
 <li><a href="#alerting-rules">Alerting rules</a></li>
 <li><a href="#grafana">Grafana</a></li>
 </ul>
@@ -82,11 +85,9 @@ metric names the native exporter publishes:</p>
 <pre><code class="language-shell">cp contrib/prometheus/alerts.yml /etc/prometheus/rules/opencloud-security.yml
 promtool check rules /etc/prometheus/rules/opencloud-security.yml
 </code></pre>
-<p>The dashboard has an <code>Instance</code> selector, so one copy serves every host you
-scrape. The rules assume a scrape of a cached scan every minute or so; with a
-scan scheduled once a day, shorten every <code>for:</code> - a one-hour <code>for:</code> never
-becomes true when the value only changes once between long gaps of the same
-reading.</p>
+<p>The dashboard’s <code>Instance</code> selector lets one dashboard cover multiple targets. Set alert
+delays for the response time you need, and account for how often the underlying scan is
+refreshed. Repeated scrapes can contain the same cached scan.</p>
 <p>The sections after the next one are the <em>other</em> way to do this: a scheduled
 scan whose JSON is reshaped by <code>jq</code> into metric names of your own. Those names
 are shorter and deliberately different, and the two shipped files above do not
@@ -135,6 +136,16 @@ match them.</p>
 <td><code>opencloud_security_update_available</code></td>
 <td><code>host</code>, <code>target_version</code></td>
 <td><code>1</code> when a newer release exists</td>
+</tr>
+<tr>
+<td><code>opencloud_security_certificate_days_remaining</code></td>
+<td><code>host</code></td>
+<td>Days until the presented certificate expires; negative once it has, no sample over plain HTTP</td>
+</tr>
+<tr>
+<td><code>opencloud_security_upgrade_path_complete</code></td>
+<td><code>host</code>, <code>target_version</code></td>
+<td><code>1</code> when the recommended upgrade fixes every known advisory; no sample without one</td>
 </tr>
 <tr>
 <td><code>opencloud_security_scan_duration_seconds</code></td>
@@ -256,6 +267,26 @@ running leaves its last value visible rather than mixing hosts together.</p>
 instance, or it will be alerting on a server that no longer exists:</p>
 <pre><code class="language-shell">curl -X DELETE http://pushgateway.example.com:9091/metrics/job/opencloud_security/instance/opencloud.example.com
 </code></pre>
+<h2 id="opentelemetry-collector">OpenTelemetry collector</h2>
+<p><code>--format otlp</code> renders the metrics in this table as one OTLP/JSON
+<code>ExportMetricsServiceRequest</code>, which is what a collector accepts at
+<code>/v1/metrics</code> over OTLP/HTTP. The plugin prints it; <code>curl</code> posts it, from the
+same <a href="/documentation/scheduling">systemd timer or cron job</a> that already runs the scan:</p>
+<pre><code class="language-shell">check-opencloud-security --host opencloud.example.com,other.example.com \
+  --format otlp \
+  | curl -sf -X POST http://collector.example.com:4318/v1/metrics \
+      -H 'Content-Type: application/json' --data-binary @-
+</code></pre>
+<p>The metric names and the <code>host</code> attribute are the exporter's, so a query
+written against a scrape works against a collector's output too, and the
+alerting rules below need no translation beyond your backend's own label
+conventions. Where the collector lives, which proxy reaches it and what
+credential it wants are the collector's business and stay in <code>curl</code>'s
+arguments rather than becoming scanner settings.</p>
+<p>A scan that fails still reports: <code>opencloud_security_scrape_success</code> arrives
+as <code>0</code>, with the duration beside it and no findings at all, so an instance
+that could not be reached is visible as such instead of keeping the numbers
+from the last run that worked.</p>
 <h2 id="alerting-rules">Alerting rules</h2>
 <p>For the native exporter, copy
 <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/prometheus/alerts.yml"><code>contrib/prometheus/alerts.yml</code></a> rather
@@ -295,8 +326,9 @@ which are shorter and different:</p>
         annotations:
           summary: &quot;The OpenCloud security scan has not produced a result&quot;
 </code></pre>
-<p>Match <code>for:</code> to your scan interval. With a daily scan a <code>for: 5m</code> fires on the
-first scrape after a bad result, which is the same thing as no <code>for:</code> at all.</p>
+<p>Prometheus <code>for:</code> measures how long an expression remains true across rule evaluations.
+It does not count fresh scans. With daily scan data, <code>for: 5m</code> waits five minutes while
+the same cached failure remains visible; it does not wait for a second daily scan.</p>
 <h2 id="grafana">Grafana</h2>
 <p>Import <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/grafana/dashboard.json"><code>contrib/grafana/dashboard.json</code></a>
 and pick your Prometheus data source. It draws the scan-health tile first, the

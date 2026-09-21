@@ -1,0 +1,33 @@
+# A security advisory record. See AGENTS.md, "Security advisories".
+#
+# One file per bullet under a `### Security` heading in CHANGELOG.md.
+# `state` is the decision; `verified` is the evidence it rests on.
+
+slug: advisory-db-missed-repository-advisory
+state: declined
+changelog_version: "1.27.2"
+changelog_entry: "GHSA-gf4p-7p27-26w7 (CVE-2026-57500, \"Access to internal metadata\") is now reported."
+shipped: true
+declined_because: |
+  A detection gap, not a vulnerability in this package. Nothing an attacker
+  can reach through check-opencloud-security was exposed: the plugin and the
+  web service behaved as designed and reported what the advisory database
+  said. The database missed one upstream OpenCloud advisory because OpenCloud
+  published it only as a repository advisory, which never reaches OSV - the
+  single source ADR 0017 chose. The vulnerability itself is OpenCloud's
+  (GHSA-gf4p-7p27-26w7, already public); an advisory against this package
+  would alert every PyPI user about code with no defect in it. The fix ships
+  in the release notes, and ADR 0071 adds the repository advisories as a
+  second source so the gap cannot recur silently.
+summary: >-
+  The bundled advisory database omitted OpenCloud's repository-only advisory
+  GHSA-gf4p-7p27-26w7, so affected instances were rated free of advisories
+verified: |
+  git show v1.0.1..v1.27.1:opencloud_local_scan/data/vulnerabilities.json
+  (spot-checked v1.14.0, v1.20.0, v1.27.1): none contains GHSA-gf4p-7p27-26w7.
+  The advisory was published 2026-07-03; the first tag, v1.0.1, is dated
+  2026-08-12, so every release shipped without it. OSV
+  (api.osv.dev/v1/vulns/GHSA-gf4p-7p27-26w7) answers "not found"; GitHub's
+  global advisory database (api.github.com/advisories/GHSA-gf4p-7p27-26w7)
+  answers 404; api.github.com/repos/opencloud-eu/opencloud/security-advisories
+  lists it with patched versions 4.0.8 and 7.2.0.

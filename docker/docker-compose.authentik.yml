@@ -50,11 +50,29 @@ services:
     ports:
       - "127.0.0.1:8811:8811"
     environment:
+      # The operator's area says when a newer release is on GitHub and can
+      # install it: the release's web bundle, verified against its build
+      # attestation, unpacked on the tmpfs below and run in place of the
+      # image's code until the container restarts (ADR 0070). Unset
+      # COS_WEB_ADMIN_UPDATE_DIR to only be told; COS_WEB_UPDATE_CHECK=false
+      # with no outbound access.
+      COS_WEB_UPDATE_CHECK: "${COS_WEB_UPDATE_CHECK:-true}"
+      COS_WEB_ADMIN_UPDATE_DIR: "${COS_WEB_ADMIN_UPDATE_DIR-/var/lib/opencloud-scan/update}"
       COS_WEB_REDIS_URL: "redis://:${COS_REDIS_PASSWORD:-}@redis:6379/0"
       COS_WEB_RESULT_TTL: "3600"
       COS_WEB_IP_RATE_LIMIT: "10"
       COS_WEB_IP_RATE_WINDOW: "60"
       COS_WEB_TARGET_COOLDOWN: "300"
+      COS_WEB_PROBE_LIMIT: "5"
+      COS_WEB_PROBE_WINDOW: "300"
+      COS_WEB_PROBE_BLOCK: "3600"
+      COS_WEB_PROBE_BLOCK_MAX: "86400"
+      COS_WEB_PROBE_REPEAT_WINDOW: "86400"
+      COS_WEB_PROBE_IPV4_PREFIX: "24"
+      COS_WEB_CLIENT_IPV6_PREFIX: "64"
+      COS_WEB_DAILY_SCAN_LIMIT: "50"
+      COS_WEB_DNS_CONSISTENCY_CHECK: "true"
+      COS_WEB_REQUIRE_APPROVAL: "false"
       COS_WEB_MAX_BATCH_TARGETS: "10"
       COS_WEB_TRUST_FORWARDED_FOR: "false"
       # The address agents and browsers reach this service at. It is also what
@@ -119,6 +137,7 @@ services:
     read_only: true
     tmpfs:
       - /tmp:size=16m
+      - /var/lib/opencloud-scan/update:size=64m,uid=10001,gid=10001,mode=0700
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -136,6 +155,8 @@ services:
       redis:
         condition: service_healthy
     environment:
+      # Follows an update the operator's area installed (ADR 0070).
+      COS_WEB_ADMIN_UPDATE_DIR: "${COS_WEB_ADMIN_UPDATE_DIR-/var/lib/opencloud-scan/update}"
       COS_WEB_REDIS_URL: "redis://:${COS_REDIS_PASSWORD:-}@redis:6379/0"
       COS_WEB_RESULT_TTL: "3600"
       # The whole of this service's load on other people's servers, and set
@@ -143,6 +164,11 @@ services:
       COS_WEB_MAX_WORKERS: "5"
       COS_WEB_SCAN_CONCURRENCY: "4"
       COS_WEB_SCAN_TIMEOUT: "15"
+      COS_WEB_PROBE_LIMIT: "5"
+      COS_WEB_PROBE_WINDOW: "300"
+      COS_WEB_PROBE_BLOCK: "3600"
+      COS_WEB_PROBE_BLOCK_MAX: "86400"
+      COS_WEB_PROBE_REPEAT_WINDOW: "86400"
       COS_WEB_JOB_TIMEOUT: "180"
       COS_WEB_ALLOW_PRIVATE_TARGETS: "false"
       COS_WEB_CHECK_DEBUG_PORTS: "false"
@@ -171,6 +197,7 @@ services:
     read_only: true
     tmpfs:
       - /tmp:size=16m
+      - /var/lib/opencloud-scan/update:size=64m,uid=10001,gid=10001,mode=0700
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -231,6 +258,12 @@ services:
   # and secret from `.env`. That is the difference between this stack and a
   # page of instructions: there is nothing to click, and the issuer and the
   # audience above are already right.
+  #
+  # The same directory carries `opencloud-mfa.yaml`, which makes every sign-in
+  # require a second factor: the first one enrols an authenticator app or a
+  # security key. `opencloud-enrollment.yaml` is there too, but creates no
+  # invitation here - that needs AUTHENTIK_ENROLLMENT_TOKEN, which only the
+  # setup wizard generates.
 
   authentik_postgresql:
     image: docker.io/library/postgres:18.6-alpine
@@ -261,7 +294,7 @@ services:
       - no-new-privileges:true
 
   authentik_server:
-    image: "${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2026.8.0}"
+    image: "${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2026.8.2}"
     container_name: opencloud-scan-authentik
     restart: unless-stopped
     command: server
@@ -316,6 +349,10 @@ services:
       AUTHENTIK_SCANNER_CLIENT_ID: "${AUTHENTIK_CLIENT_ID}"
       AUTHENTIK_SCANNER_CLIENT_SECRET: "${AUTHENTIK_CLIENT_SECRET:?run ./authentik-env.sh, or set AUTHENTIK_CLIENT_SECRET in docker/.env}"
       AUTHENTIK_SCANNER_REDIRECT_URI: "${AUTHENTIK_REDIRECT_URI:-http://localhost:8811/}"
+      # Read by the operator-area blueprint: where the embedded outpost sends a
+      # browser to sign in, and the address /admin is served at.
+      COS_AUTHENTIK_URL: "${AUTHENTIK_URL:-http://localhost:9000}"
+      COS_WEB_ADMIN_URL: "${COS_WEB_PUBLIC_BASE_URL:-http://localhost:8811}"
     ports:
       - "127.0.0.1:${AUTHENTIK_PORT_HTTP:-9000}:9000"
       - "127.0.0.1:${AUTHENTIK_PORT_HTTPS:-9443}:9443"
@@ -336,7 +373,7 @@ services:
       - no-new-privileges:true
 
   authentik_worker:
-    image: "${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2026.8.0}"
+    image: "${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2026.8.2}"
     container_name: opencloud-scan-authentik-worker
     restart: unless-stopped
     command: worker
@@ -391,6 +428,10 @@ services:
       AUTHENTIK_SCANNER_CLIENT_ID: "${AUTHENTIK_CLIENT_ID}"
       AUTHENTIK_SCANNER_CLIENT_SECRET: "${AUTHENTIK_CLIENT_SECRET}"
       AUTHENTIK_SCANNER_REDIRECT_URI: "${AUTHENTIK_REDIRECT_URI:-http://localhost:8811/}"
+      # Read by the operator-area blueprint: where the embedded outpost sends a
+      # browser to sign in, and the address /admin is served at.
+      COS_AUTHENTIK_URL: "${AUTHENTIK_URL:-http://localhost:9000}"
+      COS_WEB_ADMIN_URL: "${COS_WEB_PUBLIC_BASE_URL:-http://localhost:8811}"
     # The upstream compose file gives this container the Docker socket so it
     # can manage outpost containers. This stack runs no outposts, so it does
     # not: handing a container the daemon socket is handing it the host.

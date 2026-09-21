@@ -1,0 +1,30 @@
+# Example CI policy for check-opencloud-security (--policy / COS_POLICY).
+#
+# A policy is what an organization requires of every instance, as opposed to
+# the generic rating thresholds. Anything it asks for that an instance does
+# not meet ends the run CRITICAL, whatever -w/-c would have said, so a
+# pipeline can fail a deployment on an explicit rule.
+#
+# Read as YAML; name the file '.json' to write the same three keys as JSON.
+# Every key is optional - a policy that sets only one of them is fine.
+
+# Lowest acceptable rating, 0 (F) to 5 (A+). 4 is "A".
+minimum_rating: 4
+
+# Hardening measures and checks that must be in place. Use the identifiers
+# the scan reports (`--format json`, or `--debug` for what each one means).
+# A waiver does NOT excuse one of these: --ignore-hardening is the local
+# operator accepting a finding, a policy is the organization saying it may
+# not be accepted.
+required_hardenings:
+  - httpsEnforced
+  - basicAuthDisabled
+  - cspWithoutUnsafeInline
+  - corsOriginRestricted
+
+# Findings that must not be present. An entry may name a missing hardening
+# measure, a failed extra check, or a vulnerability id such as
+# CVE-2025-00000 - whichever of the three the scan reports.
+forbidden:
+  - demoUsersDisabled
+  - directoryListing

@@ -5,7 +5,7 @@ application image, and the three Compose stacks they belong to.
 
 | File | What it is |
 |:-----|:-----------|
-| [`setup-wizard.py`](setup-wizard.py) | **Start here.** Asks what a deployment needs and writes a compose file and its `.env` |
+| [`setup-wizard.py`](setup-wizard.py) | **Start here.** Asks what a deployment needs and writes a compose file, its `.env`, and the reverse proxy configuration in front |
 | [`docker-compose.yml`](docker-compose.yml) | The locally built web stack: `web_app`, `arq_worker`, `redis` |
 | [`docker-compose.dockerhub.yml`](docker-compose.dockerhub.yml) | The published-image web stack: `okxo/opencloud-scanner`, worker and Redis |
 | [`docker-compose.authentik.yml`](docker-compose.authentik.yml) | The whole thing with a sign-in: the web stack *and* Authentik, in one file |
@@ -31,11 +31,9 @@ paths inside those files point one level up (`../config`, `../secrets`).
 
 ## Setting up the whole stack
 
-**Start with [`setup-wizard.py`](setup-wizard.py).** The compose files here
-are the two shapes this service usually takes, and if yours is one of them you
-can run one directly. Anything else - a different port, an on-premise instance
-the SSRF guard would otherwise refuse, encryption at rest, a sign-in on
-`/mcp` - is a question to answer rather than a file to edit into place.
+Use [`setup-wizard.py`](setup-wizard.py) to generate a deployment with your ports,
+network access, encryption and authentication settings. The included Compose files are
+ready-made alternatives for the standard stacks.
 
 ```bash
 cd docker
@@ -45,18 +43,26 @@ docker compose up -d
 # http://127.0.0.1:8811
 ```
 
-It needs no checkout of its own: it is one file, uses the standard library
-alone, and runs on a host that has Docker and nothing else installed yet.
+The wizard is a standalone Python script using only the standard library. Download it
+directly on a host with Python and Docker:
 
 ```bash
-curl -fsSLO https://raw.githubusercontent.com/sowoi/check-opencloud-security/main/docker/setup-wizard.py
-chmod +x setup-wizard.py && ./setup-wizard.py
+base=https://github.com/sowoi/check-opencloud-security/releases/latest/download
+curl -fsSLO "$base/setup-wizard.py" -O "$base/setup-wizard.py.sha256"
+sha256sum --check setup-wizard.py.sha256    # macOS: shasum -a 256 --check
+chmod +x setup-wizard.py
+./setup-wizard.py --version
+./setup-wizard.py
 ```
+
+The download is attached to the latest release. `--version` identifies it; the checksum
+checks file integrity. Use `gh attestation verify setup-wizard.py --repo
+sowoi/check-opencloud-security` to verify its release-workflow provenance.
 
 [The flags, the presets and the Authentik answers](#the-setup-wizard) are
 below.
 
-Three things the wizard gets right that a hand-edited file often does not:
+The wizard configures three requirements for a public deployment:
 
 - **`COS_WEB_PUBLIC_BASE_URL` is required.** Canonical URLs, the sitemap and
   the discovery document must not be built from an incoming `Host` header, so
@@ -133,7 +139,7 @@ Common changes:
 | A different port | Change the `ports` mapping on `web_app`; `8811` inside the container is fixed |
 | Reachable from outside | Drop the `127.0.0.1:` prefix, set `COS_WEB_PUBLIC_BASE_URL` to the address visitors use, and put a reverse proxy in front - see [`docs/webapp.md`](../docs/webapp.md#putting-it-behind-a-reverse-proxy) |
 | A password on Redis | `COS_REDIS_PASSWORD` in `docker/.env`. Both compose files already read it - see [`docs/redis.md`](../docs/redis.md) |
-| Behind a proxy | Set `COS_WEB_TRUST_FORWARDED_FOR: "true"`, but only if the proxy **overwrites** `X-Forwarded-For` |
+| Behind a proxy | Set `COS_WEB_TRUST_FORWARDED_FOR: "true"`, but only if the proxy **overwrites** `X-Forwarded-For`. It also governs `X-Forwarded-Proto`, which is how the service knows a visitor arrived over TLS and may send `Strict-Transport-Security` |
 | More scans at once | Raise `COS_WEB_MAX_WORKERS` on `arq_worker`, and think about the instances on the other end |
 | Swagger UI | `COS_WEB_ENABLE_DOCS: "true"` on `web_app`, then <http://127.0.0.1:8811/docs> |
 | The schema, the workflows and the discovery document | Already public: `/openapi.json`, `/arazzo.json`, `/.well-known/ai.json` |
@@ -160,9 +166,17 @@ example answer, then writes into whichever directory you point it at:
   owner-readable only. A purge token or an encryption key never reaches the
   compose file;
 - the **Redis password**, generated into that same `.env`;
-- and, when you ask it to bring an identity provider, the **Authentik
-  blueprint**, in `authentik/blueprints/` beside the compose file that mounts
-  it.
+- when you ask it to bring an identity provider, the **Authentik
+  blueprints**, in `authentik/blueprints/` beside the compose file that mounts
+  them — the OAuth2 one that issues tokens for `/mcp`, the one that requires a
+  second factor at every sign-in, the invitation-only enrollment flow, and,
+  where there is an operator's area to guard, the proxy one that signs
+  somebody into `/admin`;
+- when you name one, a **reverse proxy configuration** — nginx, Apache,
+  Caddy or Traefik — see [The reverse proxy](#the-reverse-proxy);
+- and `.<compose-file>.answers.json`, the **wizard's own notebook** of what it
+  was told, so that running it again is an edit rather than a re-description.
+  No credentials in it; those stay in `.env`.
 
 It generates the credentials nobody should invent by hand - answer `generate`
 at the erasure token, the signing key, the audit salt or the encryption key -
@@ -170,21 +184,98 @@ and warns before writing about the combinations the service itself refuses to
 start on, such as a sign-in on `/mcp` with a provider it was told nothing
 about.
 
-Point it at a directory that already has a `.env` and it reads that file back
-instead of overwriting it: every value it holds becomes the default the
-question offers, so re-running the wizard against a live deployment edits it
-rather than regenerating credentials something else already depends on. A
-flag still wins over a reused value.
+**Switching on `/admin` or the sign-in on `/mcp` makes the bundled Authentik
+the default.** The provider question that follows then offers *yes* in
+brackets, because a deployment asking for either usually has no identity
+provider of its own yet; answer `no` to keep checking tokens against the one
+you run. Only switching one on moves the default - re-running over a
+deployment that already said `no` keeps it. The flags are unchanged:
+`--sign-in` alone still means a provider you already run.
+
+**It is easier to follow in a terminal.** Each section opens with a rule,
+`Step 3 of 12` and a progress bar, questions and their current value stand
+out from the explanation under them, and refusals are marked. The colour is
+plain ANSI from the standard library - no Rich or questionary to install on a
+host that has only Docker - and it switches itself off when the output is not
+a terminal, when `NO_COLOR` is set or when `TERM=dumb`, so a piped or logged
+run is the same plain text as before. `FORCE_COLOR=1` turns it on regardless.
+
+**At any question**, besides answering it:
+
+| Type | What happens |
+|:--|:--|
+| *Enter* | Takes the value in brackets |
+| A number | Picks that option, for a question that lists them. The word still works |
+| `b` | Goes back one question — the one actually asked before this, not the one defined before it |
+| `-` | Empties a text setting, which an empty line cannot: that keeps the default. Still refused where the setting may not be empty |
+| `rest` | Takes every remaining default and jumps to the summary |
+| `generate` | Makes a strong random value, at the questions that say so |
+| `?` | Shows the whole explanation and the page that documents the setting. A question opens with its first sentence only |
+
+**It asks how much to ask, first.** `quick` - the default on a first run -
+asks only what a deployment cannot be right without: the image, the port and
+public address, `/mcp` and its sign-in, `/admin`, the identity provider and
+its mail, and the reverse proxy, with whatever those answers bring into play.
+`private` asks the same, starting from the private preset. `full` asks every
+question, and is the default when the wizard is editing a deployment that is
+already there. A section passed over is named as skipped, so `Step 7 of 12`
+after `Step 2` is explained rather than a surprise. `--mode` answers this in
+advance.
+
+Each question wraps to the terminal it is shown in, and credentials are typed
+without an echo. A credential already in `.env` is offered back as `[set,
+hidden - Enter keeps it]`, never as its value.
+
+**The summary is somewhere you can work.** It lists the answers grouped under
+the headings they were asked under - each by its question's wording, with the
+name to type in `[brackets]` and a `*` in front of every answer that differs
+from the default - then what was derived or generated for you, then anything
+worth a second look. That includes what this host says: Docker or the Compose
+plugin missing, the host port already in use, a certificate the proxy
+configuration names that does not exist yet. Then it asks `Write it all out
+now? [Y/n], or name a setting to change`. Typing `host_port`, or enough of a
+name to be unambiguous, re-asks that one question and comes straight back. So the
+short path through the whole thing is `rest` at the first question, then the
+three or four settings you actually care about, by name.
+
+**Running it again edits the deployment.** It reads two things back: `.env`,
+so every credential it already holds survives rather than being regenerated
+under something that depends on it, and `.<compose-file>.answers.json` — the
+wizard's own notebook, written beside the compose file — so every other
+answer is offered back as the default too. Changing the port on a live
+deployment is a re-run, `rest`, `host_port`, and done. The notebook holds no
+credentials, is safe to delete, and a preset or a flag named on this command
+line still overrides what it remembers.
+
+**Nothing is replaced unseen.** Before asking whether to overwrite, a re-run
+shows a diff of the compose file - and of the proxy and logrotate files it
+would rewrite - against what is there; `.env` and the proxy's secret include
+are never diffed, because that would print a credential. Every file it
+replaces is kept beside the new one as `<name>.<UTC time>.bak`, the copy of
+`.env` owner-readable like the original. `*.bak` is in `.gitignore`.
+
+**It can check and start what it wrote.** Where Docker is installed it offers
+`docker compose config` on the new files, and then - only when you say yes,
+and only when nothing has to be done as root first - `docker compose up -d`,
+waiting for `/healthz` to answer.
+
+**The same deployment on another host** is `--print-answers` on the first,
+which prints every non-credential answer as JSON and writes nothing, and
+`--answers that.json` on the second. The file is read as untrusted, exactly
+as the notebook is, and an answers file with nothing usable in it is refused
+rather than quietly ignored.
 
 | Flag | What it does |
 |:-----|:-------------|
 | `--output-dir DIR` | Where the generated files go. Default: the current directory |
 | `--compose-file NAME` | Name of the generated compose file |
 | `--env-file NAME` | Name of the generated secrets file |
-| `--preset public\|private` | Starting answers: open to anybody, or scanning your own network |
+| `--preset public\|private` | Starting answers: open to anybody, or scanning your own network. Naming one overrides what a previous run remembered |
 | `--auto-updates` | Add Watchtower to the stack, updating the pulled images daily. Scoped to this stack's own containers |
 | `--sign-in` | Require a sign-in on `/mcp`, against a provider you already run |
 | `--with-authentik` | Add Authentik to the stack, provisioned to issue those tokens. Does not require one by itself |
+| `--reverse-proxy nginx\|apache\|caddy\|traefik\|none` | Write a configuration for the proxy in front. Default: `none` |
+| `--proxy-hostname NAME` | The name it answers to. Taken from the public base URL when not given |
 | `--smtp-host HOST` | Mail server Authentik sends from. Empty leaves it on local delivery |
 | `--smtp-port PORT` | Default: `587` |
 | `--smtp-username NAME` | The account it authenticates as |
@@ -192,7 +283,12 @@ flag still wins over a reused value.
 | `--smtp-security starttls\|ssl\|none` | Default: `starttls` |
 | `--smtp-timeout SECONDS` | Default: `10` |
 | `--non-interactive` | Ask nothing, take every default, generate the credentials |
-| `--force` | Overwrite existing files without asking |
+| `--mode quick\|private\|full` | How much to ask, instead of asking that first |
+| `--answers FILE` | Start from the answers in this JSON file, for example one written by `--print-answers` |
+| `--print-answers` | Print the answers this run starts from as JSON - no credentials - and exit without writing |
+| `--version` | Print the release this wizard came from: stamped into the release download, read from `pyproject.toml` in a checkout or the web bundle |
+| `--image-source dockerhub\|build` | Pull the published image (the default) or build it from this checkout |
+| `--force` | Overwrite existing files without asking - including `docker-compose.yml` and the other compose files shipped in `docker/`, which are otherwise refused, so the stack a checkout already runs can be reconfigured in place |
 
 There is deliberately no `--smtp-password`: a password on a command line is a
 password in `ps` and in the shell history. The wizard takes it from
@@ -210,6 +306,14 @@ detected for the user running the wizard: a rootless Docker serves it under
 `/run/user/<uid>` rather than `/var/run`, and the detected path is the default
 of a question, so a different daemon is an edit rather than a discovery.
 
+The image is [`nickfedor/watchtower`](https://github.com/nicholas-fedor/watchtower),
+the maintained fork, rather than `containrrr/watchtower`. The original was
+archived in December 2025 and always speaks Docker API 1.25, which Docker 29
+refuses (`client version 1.25 is too old`) unless `DOCKER_API_VERSION` is
+pinned by hand. The fork negotiates the version with the daemon and reads the
+same variables and label, so a stack generated with the old image needs only
+its `image:` line changed - and any `DOCKER_API_VERSION` workaround removed.
+
 **A sign-in and an identity provider are two answers, not one**, and neither
 implies the other:
 
@@ -218,7 +322,7 @@ implies the other:
   case and adds no containers.
 - `--with-authentik` provisions one: Authentik and its database join the
   generated stack, those three values are derived rather than asked for, the
-  credentials are generated into `.env` and the blueprint is written beside
+  credentials are generated into `.env` and the blueprints are written beside
   the compose file. It leaves `/mcp` **open**, which is the point - bring the
   provider up, log in, try a token, and switch the guard on when it works.
 
@@ -228,6 +332,107 @@ nothing of Authentik reaches a deployment that did not ask for it. Its mail
 settings are asked for when it *is* provisioned, because an identity provider
 with no way to send a password recovery locks out the one account it starts
 with. See [`../docs/authentik.md`](../docs/authentik.md).
+
+**Two different things can want that provider**, and the MCP endpoint is only
+one of them. The operator's area at `/admin` has no other way in at all - the
+service authenticates nobody and refuses a request that did not come through
+an outpost - so a deployment that leaves `/mcp` open, or turns it off
+entirely, and switches `/admin` on is still offered a provider and asked for
+its address, its slug and its ports. Answer yes there and the second
+blueprint, `opencloud-admin.yaml`, is copied beside the compose file too: it
+provisions the proxy provider, the operator group and the outpost that the
+generated reverse proxy then asks about every request to the area.
+
+**Nobody clicks anything in Authentik.** The wizard asks who signs in, by
+username, and prints one enrollment link at the end. Each person named opens
+it, chooses a password and enrols an authenticator app or a security key -
+every sign-in requires a second factor - and an operator lands in the group
+`/admin` is bound to on the way. The link carries `AUTHENTIK_ENROLLMENT_TOKEN`
+from `.env`, admits only the listed names, each once, and `akadmin` gets a
+generated `AUTHENTIK_BOOTSTRAP_PASSWORD` for recovery, which also closes the
+initial-setup flow. See
+[`../docs/authentik.md`](../docs/authentik.md#accounts-without-the-admin-interface).
+
+**The mail questions are asked in full.** Naming a server is what brings the
+rest of the session into play - the port, whether it is STARTTLS, implicit TLS
+or neither, whether the server wants an account and which - so that a
+deployment leaves the wizard able to send the password recovery it will
+eventually need, rather than with a host name and six unset settings. Say the
+server needs no account and the username and password are not asked for, and
+any left over from an earlier answer are dropped: Authentik reads an empty
+username as *do not authenticate*, and half a credential fails at the first
+message.
+
+**Turning the area on prints the walkthrough for opening it.** `/admin`
+refuses rather than asking - there is no login page to arrive at and no
+password prompt to get wrong, so a request missing any part of the
+arrangement meets the same 404 as any unknown path. The wizard therefore ends
+with the steps in order, filled in with this deployment's own addresses:
+create the account at the enrollment link, install the generated proxy
+configuration, give Caddy or Traefik the shared secret in its environment,
+check `COS_WEB_ADMIN_USERS` names the same person, and open the area. Then
+what each failure means:
+
+| What you see | What is missing |
+|:--|:--|
+| A 500 instead of a sign-in | The forward auth reached Authentik but no outpost answered it: the operator-area blueprint did not apply, or the embedded outpost does not carry its provider. Re-run the wizard, `docker compose up -d`, then `docker compose exec authentik_worker ak apply_blueprint /blueprints/custom/opencloud-admin.yaml` |
+| No sign-in at all, just 404 | The `X-COS-Admin-Proxy` header never arrived — the proxy in front is not adding it |
+| Signed in, then 404 | That account is not in `COS_WEB_ADMIN_USERS` |
+| The sign-in loops | The provider's public address is not the one the browser used |
+
+Against your own provider the same walkthrough names the header contract
+instead of the Authentik steps, and reminds you to set
+`COS_WEB_ADMIN_SIGN_OUT_URL` - the bundled stack sets that for itself, and
+nobody else's exit is guessable.
+
+### The reverse proxy
+
+The stack publishes a plain HTTP port on the loopback address and nothing
+else, so something in front has to terminate TLS. Name what you run -
+`nginx`, `apache`, `caddy` or `traefik` - and the configuration is written
+beside the compose file, ready to install; the wizard prints the install
+commands in its next steps and the file repeats them in its own header.
+
+Each one is a working configuration rather than a sketch:
+
+- **TLS**, with a redirect from port 80 that leaves `/.well-known/acme-challenge/`
+  alone. nginx and Apache are asked for the certificate and key; Caddy and
+  Traefik fetch their own, and are asked only for the address the certificate
+  authority should write to.
+- **`X-Forwarded-For` set, never appended**, so a client cannot choose the
+  address its rate limit is counted against. The wizard says so if
+  `COS_WEB_TRUST_FORWARDED_FOR` is still off, because until it is on, every
+  visitor shares one bucket - and the service sends no
+  `Strict-Transport-Security`, because `X-Forwarded-Proto` is the only thing
+  that knows the visitor was on TLS and it is believed under the same setting.
+- **`/mcp` unbuffered**, with a timeout long enough for an agent session. A
+  buffered event stream is a client that waits for ever.
+- **The forward auth in front of `/admin`**, where the stack can provide it:
+  the request is shown to the authentik outpost first and only what it accepts
+  is passed on, carrying the identity the outpost established and the shared
+  secret that makes those headers worth believing. The audit view is an event
+  stream too, so that block is not buffered either.
+- **A site for Authentik**, when the stack brings it: a second server block,
+  virtual host or router in the same file, answering to the host name of
+  Authentik's public address and proxying to its published port, WebSocket
+  included. That address is where every sign-in sends a browser, so a proxy
+  that served only the scanner would install cleanly and sign nobody in. nginx
+  and Apache are asked for a certificate for that name as well - the scanner's
+  own works if it carries both names. An address that is `localhost`, a bare
+  IP, or the scanner's own host name gets no site, and the wizard says so.
+
+**Apache gets no `/admin` block**, because it has no forward auth of its own.
+The area is proxied by the catch-all like every other path but without
+`X-COS-Admin-Proxy`, so the service answers 404 - the right failure, and the
+file says so rather than leaving you to find out. Give it mod_auth_openidc, or
+put an authentik proxy provider in full proxy mode in front.
+
+**The secret stays out of the file you would commit.** A proxy configuration
+is pasted into tickets and copied between hosts, exactly like a compose file,
+so nginx gets a one-line `include` of `<project>-admin-proxy.secret`, created
+owner-readable only, while Caddy and Traefik read the value from their own
+environment. Remove the include and the area stops answering, which is the
+direction this should fail in.
 
 The `private` preset is the estate deployment: private targets allowed, the
 debug ports probed, search engines refused and an audit log that names its own
@@ -293,9 +498,41 @@ cannot write to a mount Docker created for root; the wizard prints the exact
 command in its next steps:
 
 ```bash
-mkdir -p /srv/opencloud-scan/audit && sudo chown 10001 /srv/opencloud-scan/audit
-mkdir -p /srv/opencloud-scan/redis && sudo chown 999 /srv/opencloud-scan/redis
+mkdir -p ./audit && sudo chown 10001 ./audit
+mkdir -p ./data  && sudo chown 999 ./data
 ```
+
+**The two are always different directories**, and neither may be inside the
+other: the web image writes as uid 10001 and Redis as uid 999, and a directory
+has one owner. The wizard refuses the answer at the question, and an unattended
+run with such answers writes nothing.
+
+**On a rootless Docker those commands are wrong**, because uid 10001 in a
+container is your subordinate uid at that offset on the host (the start of your
+range in `/etc/subuid`, plus 10000), not host uid 10001. The wizard asks which
+kind of daemon it is generating for - detected from the socket, which a
+rootless daemon serves under `/run/user/<uid>` - and prints the rootless form
+instead, which runs the `chown` inside a container and needs no sudo:
+
+```bash
+mkdir -p ./audit && docker run --rm --user 0 --entrypoint chown -v "$(realpath ./audit)":/target redis:8.10-alpine 10001 /target
+mkdir -p ./data  && docker run --rm --user 0 --entrypoint chown -v "$(realpath ./data)":/target redis:8.10-alpine 999 /target
+```
+
+Your own account cannot read those directories afterwards; read them through a
+container the same way. A logrotate policy generated for a rootless daemon
+names the mapped host ids on its `create` line, and says so if `/etc/subuid`
+has no range for you. The default rootless port driver also hides the client
+address from a port published beyond `127.0.0.1`, so the wizard points out
+that the rate limit then needs a reverse proxy on the host in front.
+
+**Which directory is asked for, and it defaults to one beside the compose
+file** - `./data` for Redis, `./audit` for the trail. The leading `./` is not
+decoration: Compose reads `data:/data` as a *named volume* called data and
+`./data:/data` as the directory next to the file, so a bare name is refused
+rather than silently mounting something else. An absolute path works too. An
+empty answer used to produce `- :/data`, which Compose cannot parse at all -
+it now falls back to the named volume and says that it did.
 
 The same thing by hand, without the wizard, is documented under
 [keeping the trail past the container](../docs/webapp.md#keeping-the-trail-past-the-container).

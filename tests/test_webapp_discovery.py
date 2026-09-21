@@ -121,9 +121,9 @@ def test_every_page_carries_the_machine_readable_discovery_hints():
 
 def test_the_agent_page_points_a_human_at_the_same_three_documents():
     """A page people can read is also the page a crawler indexes."""
-    body = client().get("/ai").text
+    body = client().get("/api").text
 
-    assert "For AI agents" in body
+    assert "Start from one address" in body
     for href in ("/openapi.json", "/arazzo.json", DISCOVERY_PATH):
         assert f'href="{href}"' in body, href
     assert "scan_instance" in body

@@ -11,7 +11,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from .config import Configuration
+from .config import Configuration, ConfigurationError
 from .releases import (
     DEFAULT_FEED_URL,
     MODES,
@@ -34,6 +34,7 @@ from .versions import (
     ReleaseSchedule,
     load_release_schedule,
 )
+from .waivers import Waiver, WaiverError, parse_waivers
 
 
 def _int_tuple(config: Configuration, name: str) -> tuple[int, ...]:
@@ -83,6 +84,30 @@ def _waivers(config: Configuration) -> tuple[str, ...]:
     return tuple(dict.fromkeys(entries))
 
 
+def _temporary_waivers(config: Configuration) -> tuple[Waiver, ...]:
+    """
+    Read the waivers that carry a reason and a deadline.
+
+    Entries are whole records - `pattern|expires|reason` - so unlike
+    `SCANNER_IGNORE_HARDENINGS` they are not split on commas: a reason is a
+    sentence and sentences have commas in them. A record that cannot be
+    parsed raises rather than being dropped, because a waiver that silently
+    does not exist is as bad as one that silently never expires. They are
+    split on `;`, though, so a reason with a semicolon in it leaves a bare
+    fragment behind; `require_deadline` refuses that fragment instead of
+    reading it as a permanent waiver.
+    """
+    try:
+        return parse_waivers(
+            config.get_list("SCANNER_TEMPORARY_WAIVERS"), require_deadline=True
+        )
+    except WaiverError as error:
+        # A configuration mistake, and reported as one: every caller turns a
+        # ConfigurationError into UNKNOWN, where a bare ValueError escaped
+        # as a traceback and exit status 1 - WARNING, to a monitoring system.
+        raise ConfigurationError(f"temporary_waivers: {error}") from error
+
+
 def scanner_settings_from_config(
     config: Configuration, **overrides: Any
 ) -> ScannerSettings:
@@ -106,6 +131,8 @@ def scanner_settings_from_config(
         extra_checks_affect_rating=config.get_bool("SCANNER_EXTRA_CHECKS_RATING", True),
         tls_min_days=config.get_int("SCANNER_TLS_MIN_DAYS", DEFAULT_TLS_MIN_DAYS),
         check_debug_ports=config.get_bool("SCANNER_CHECK_DEBUG_PORTS", True),
+        check_all_addresses=config.get_bool("SCANNER_CHECK_ALL_ADDRESSES", False),
+        check_login_throttling=config.get_bool("SCANNER_CHECK_LOGIN_THROTTLING", False),
         debug_ports=_int_tuple(config, "SCANNER_DEBUG_PORTS"),
         debug_port_timeout=config.get_int(
             "SCANNER_DEBUG_PORT_TIMEOUT", DEFAULT_DEBUG_PORT_TIMEOUT_SECONDS
@@ -115,6 +142,7 @@ def scanner_settings_from_config(
         release_schedule=_release_schedule(config),
         release_track=_release_track(config),
         ignore_hardenings=_waivers(config),
+        waivers=_temporary_waivers(config),
         vulnerability_files=tuple(config.get_list("SCANNER_VULNERABILITY_DB")),
         vulnerability_feed=config.get("SCANNER_VULNERABILITY_FEED"),
         include_bundled_db=config.get_bool("SCANNER_BUNDLED_DB", True),

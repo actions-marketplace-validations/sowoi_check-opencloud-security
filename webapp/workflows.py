@@ -30,6 +30,7 @@ from urllib.parse import quote
 # what counts as a new finding must be the same question here, in the
 # plugin's --baseline and in `check-opencloud-scanner diff`.
 from opencloud_local_scan.baseline import Baseline, snapshot_of
+from opencloud_local_scan.changes import Explanation, explain
 
 # ---------------------------------------------------------------------------
 # The semantics, as constants. Both the Arazzo document and the MCP tools read
@@ -60,6 +61,12 @@ RATE_LIMIT_FALLBACK_SECONDS = 60
 #: How many times to re-submit after a 429. Three polite attempts, then stop.
 SUBMIT_MAX_ATTEMPTS = 3
 
+#: The longest ``Retry-After`` a submission waits out by itself. The client
+#: limit and the target cooldown lift within minutes; a probe block lasts an
+#: hour or more and the daily cap up to a day, and an agent sleeping through that is an agent that looks hung. Past
+#: this the answer goes back to the caller, who can tell the user why.
+SUBMIT_MAX_WAIT_SECONDS = 300
+
 #: States a scan can be in.
 STATE_QUEUED = "queued"
 STATE_RUNNING = "running"
@@ -73,7 +80,7 @@ PENDING_STATES = (STATE_QUEUED, STATE_RUNNING)
 TERMINAL_STATES = (STATE_COMPLETED, STATE_FAILED)
 
 #: Export formats the service renders from a finished scan.
-EXPORT_FORMATS = ("json", "csv", "sarif", "pdf")
+EXPORT_FORMATS = ("json", "csv", "sarif", "pdf", "html")
 
 #: Statuses that mean "wait, then try the same call again".
 RETRYABLE_STATUSES = (429, 503)
@@ -116,7 +123,10 @@ UUID_NOTE = (
 RATE_LIMIT_NOTE = (
     "429 is not a refusal. A client limit and a per-target cooldown both "
     "answer 429 with Retry-After in seconds; wait that long and try again, at "
-    f"most {SUBMIT_MAX_ATTEMPTS} times. The whole scanner is open source and "
+    f"most {SUBMIT_MAX_ATTEMPTS} times. A Retry-After longer than "
+    f"{SUBMIT_MAX_WAIT_SECONDS} seconds is a daily cap or a block for scanning "
+    "hosts that were not OpenCloud: do not wait it out, tell the user. 403 "
+    "means the deployment scans approved instances only. The whole scanner is open source and "
     f"runs locally with no limits at all: {SELF_HOST_URL}"
 )
 
@@ -395,7 +405,9 @@ async def submit_scan(
 
     A 429 is waited out and retried up to :data:`SUBMIT_MAX_ATTEMPTS` times,
     because both the client limit and the target cooldown say when they will
-    lift. Anything in :data:`TERMINAL_STATUSES` stops immediately - a rejected
+    lift - unless the wait is longer than :data:`SUBMIT_MAX_WAIT_SECONDS`,
+    which only a probe block or the daily cap is, and that goes straight back
+    to the caller. Anything in :data:`TERMINAL_STATUSES` stops immediately - a rejected
     target does not become acceptable by asking twice.
     """
     payload: dict[str, Any] = {
@@ -412,14 +424,15 @@ async def submit_scan(
         response = await client.request("POST", "/api/scans", json_body=payload)
         if response.status == SUBMIT_STATUS:
             return response.json()
-        if response.status == 429 and attempt < SUBMIT_MAX_ATTEMPTS:
+        waitable = response.retry_after <= SUBMIT_MAX_WAIT_SECONDS
+        if response.status == 429 and waitable and attempt < SUBMIT_MAX_ATTEMPTS:
             await (sleep or default_sleep)(response.retry_after)
             continue
         detail = response.json().get("detail") or "The scan was not accepted."
         raise WorkflowError(
             str(detail),
             status=response.status,
-            retryable=is_retryable(response.status),
+            retryable=is_retryable(response.status) and waitable,
         )
     raise WorkflowError(  # pragma: no cover - loop always returns or raises
         "The scan was rate limited on every attempt.", status=429, retryable=True
@@ -723,43 +736,48 @@ async def _result_document(
     )
 
 
-def _compared_side(identifier: str, document: Mapping[str, Any]) -> dict[str, Any]:
-    """How one of the two scans is named in the answer."""
+#: Passed as ``baseline_page`` when the earlier side did not come from a scan
+#: this service still holds - an uploaded report, which has no page here.
+NO_PAGE = ""
+
+
+def _compared_side(
+    identifier: str, document: Mapping[str, Any], url: str | None
+) -> dict[str, Any]:
+    """
+    How one of the two scans is named in the answer.
+
+    ``url`` is the page the side can be reopened at, or ``None`` where there
+    is none. A side that arrived as an uploaded file has no result page here -
+    the file was read and discarded - so the reader is offered nothing to
+    click rather than a link to a uuid that was never this service's to issue.
+    """
     scanned_at = document.get("scannedAt")
     return {
         "uuid": identifier,
-        "url": f"/scan/{identifier}",
+        "url": url,
         "target": _safe_text(document.get("domain")),
         "rating": document.get("rating"),
         "version": _safe_token(document.get("version")),
         "eol": bool(document.get("EOL")),
-        "scannedAt": _safe_token(
+        # _safe_text, not _safe_token: the scanner writes this from its own
+        # clock as "%Y-%m-%d %H:%M:%S.%f", and it is not in REMOTE_FIELDS
+        # because no scanned host has any say in it. The token allow-list has
+        # no ':' in it, so every timestamp came back as "unparsable" - a
+        # sanitiser applied to the one field it was not written for.
+        "scannedAt": _safe_text(
             scanned_at.get("date") if isinstance(scanned_at, Mapping) else None
         ),
     }
 
 
-async def compare_scans(
-    client: ApiClient,
-    baseline_identifier: str,
-    current_identifier: str,
-    *,
-    sleep: Sleeper | None = None,
-    wait: bool = True,
-) -> dict[str, Any]:
+def refuse_identical_scans(baseline_identifier: str, current_identifier: str) -> None:
     """
-    What changed between two scans of the same instance.
+    Refuse a comparison of a scan with itself.
 
-    The question after a remediation plan has been worked through: *did it
-    help?* Both scans have to still be here - a uuid outlives its result by
-    nothing, so this compares two live results and stores neither.
-
-    The arithmetic is the plugin's own baseline comparison, which is also what
-    ``--baseline`` spends on staying quiet and what
-    ``check-opencloud-scanner diff`` prints. Three surfaces, one definition of
-    "new finding": if this module decided for itself what counts as a
-    regression, an agent and an operator's own monitoring could disagree about
-    the same two scans.
+    Checked before anything is read, because the answer is the same whoever
+    asked and an empty diff of a scan against itself reads as "nothing is
+    wrong" - the one wrong answer worth spending a request to avoid.
     """
     if baseline_identifier == current_identifier:
         raise WorkflowError(
@@ -769,8 +787,59 @@ async def compare_scans(
             retryable=False,
         )
 
-    before = await _result_document(client, baseline_identifier, sleep=sleep, wait=wait)
-    after = await _result_document(client, current_identifier, sleep=sleep, wait=wait)
+
+def _compared_host(document: Mapping[str, Any]) -> str:
+    """The instance a result document describes, as a comparison matches it."""
+    return str(document.get("domain") or "").strip().rstrip(".").lower()
+
+
+def refuse_different_instances(
+    before: Mapping[str, Any], after: Mapping[str, Any]
+) -> None:
+    """
+    Refuse a comparison of two different instances.
+
+    "Did the fix work" is a question about one instance, and two hosts
+    compared by accident is a wrong answer nobody notices - the reason
+    ``check-opencloud-scanner diff`` refuses them too. A document that names
+    no instance at all cannot be shown to be the same one, so it is refused
+    as well. See ADR 0059.
+    """
+    host = _compared_host(after)
+    if not host or _compared_host(before) != host:
+        raise WorkflowError(
+            "The two scans describe different instances, so they are not "
+            "compared. Compare two scans of the same instance.",
+            status=422,
+            retryable=False,
+        )
+
+
+def compare_documents(
+    baseline_identifier: str,
+    current_identifier: str,
+    before: dict[str, Any],
+    after: dict[str, Any],
+    *,
+    baseline_page: str | None = None,
+) -> dict[str, Any]:
+    """
+    What changed between two whole scanner documents.
+
+    The comparison itself, with no reading in it, so that every surface that
+    can already get hold of two documents shares this one answer: the MCP
+    tool through :func:`compare_scans` below, and the page a reader arrives
+    at with two uuids of their own.
+
+    The arithmetic is the plugin's own baseline comparison, which is also what
+    ``--baseline`` spends on staying quiet and what
+    ``check-opencloud-scanner diff`` prints. One definition of "new finding"
+    across all of them: if this module decided for itself what counts as a
+    regression, an agent, a reader and an operator's own monitoring could
+    disagree about the same two scans.
+    """
+    refuse_identical_scans(baseline_identifier, current_identifier)
+    refuse_different_instances(before, after)
 
     baseline = Baseline(path=Path(os.devnull))
     host = str(after.get("domain") or "")
@@ -785,7 +854,6 @@ async def compare_scans(
     previous = comparison.previous
     assert previous is not None
 
-    same_target = str(before.get("domain") or "") == host
     rated_before, rated_after = before.get("rating"), after.get("rating")
     rating_change = (
         rated_after - rated_before
@@ -801,13 +869,19 @@ async def compare_scans(
 
     return {
         "ok": True,
-        "baseline": _compared_side(baseline_identifier, before),
-        "current": _compared_side(current_identifier, after),
-        # False means the two documents describe different instances. Not
-        # refused - comparing staging with production is a fair question - but
-        # said plainly, because every other number below then answers a
-        # different question than the caller probably asked.
-        "sameTarget": same_target,
+        # :data:`NO_PAGE` is "this side has no page at all", which is a
+        # different answer from the default of "the usual one for this uuid".
+        "baseline": _compared_side(
+            baseline_identifier,
+            before,
+            f"/scan/{baseline_identifier}" if baseline_page is None else (baseline_page or None),
+        ),
+        "current": _compared_side(
+            current_identifier, after, f"/scan/{current_identifier}"
+        ),
+        # Always true since ADR 0059 refuses two instances above. Kept so a
+        # client that reads the field keeps working.
+        "sameTarget": True,
         "verdict": verdict,
         "ratingChange": rating_change,
         "resolved": list(comparison.resolved_findings),
@@ -829,8 +903,65 @@ async def compare_scans(
             }
             for item in comparison.items()
         ],
+        # Why it changed, from the same model the CLI comparison uses. Two
+        # scans can differ without the instance having changed at all - the
+        # advisory database learned something, a support window closed, a
+        # waiver expired - and the diff above cannot tell those apart.
+        # `_safe_text` because a summary can quote a version string that came
+        # from a stranger's status.php.
+        "explanation": _sanitised_explanation(explain(before, after)),
         "untrusted": {"fields": list(REMOTE_FIELDS), "note": REMOTE_NOTE},
     }
+
+
+def _sanitised_explanation(explanation: Explanation) -> dict[str, Any]:
+    """
+    The shared explanation, with every rendered string made safe.
+
+    The codes and the categories are this project's own tokens and pass
+    through untouched, which is what lets a client branch on the kind of
+    change without reading the sentence.
+    """
+    return {
+        "changes": [
+            {
+                "category": change.category,
+                "code": change.code,
+                "summary": _safe_text(change.summary),
+                "evidence": change.evidence,
+            }
+            for change in explanation.changes
+        ],
+        "limitations": [_safe_text(item) for item in explanation.limitations],
+    }
+
+
+async def compare_scans(
+    client: ApiClient,
+    baseline_identifier: str,
+    current_identifier: str,
+    *,
+    sleep: Sleeper | None = None,
+    wait: bool = True,
+) -> dict[str, Any]:
+    """
+    What changed between two scans of the same instance, read by uuid.
+
+    The question after a remediation plan has been worked through: *did it
+    help?* Both scans have to still be here - a uuid outlives its result by
+    nothing, so this compares two live results and stores neither.
+
+    Both documents are read through the ordinary HTTP API in-process, as
+    every other workflow reads one (ADR 0011); the comparison itself is
+    :func:`compare_documents`.
+    """
+    refuse_identical_scans(baseline_identifier, current_identifier)
+
+    before = await _result_document(client, baseline_identifier, sleep=sleep, wait=wait)
+    after = await _result_document(client, current_identifier, sleep=sleep, wait=wait)
+    return compare_documents(
+        baseline_identifier, current_identifier, before, after
+    )
 
 
 async def export_scan(

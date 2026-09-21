@@ -1,0 +1,30 @@
+apiVersion: v2
+name: check-opencloud-security
+description: Scan an OpenCloud instance on a schedule, and optionally run the shared scan service
+type: application
+kubeVersion: ">=1.21.0-0"
+
+# The chart's own version, bumped when the templates change. It is deliberately
+# not the plugin's: that number lives in pyproject.toml alone, and the release
+# it refers to is whichever image tag you pin in values.yaml.
+version: 0.1.0
+
+# No appVersion on purpose. image.tag has no default and the templates refuse
+# to render without one, because the release schedule and the newest known
+# OpenCloud version ship inside the image - which tag you run is part of the
+# verdict, so it is not something a chart should choose for you.
+
+home: https://github.com/sowoi/check-opencloud-security
+sources:
+  - https://github.com/sowoi/check-opencloud-security
+keywords:
+  - opencloud
+  - security
+  - monitoring
+  - nagios
+  - icinga
+maintainers:
+  - name: sowoi
+    url: https://github.com/sowoi
+annotations:
+  artifacthub.io/license: GPL-3.0-or-later

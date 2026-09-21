@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{#
+  The operator area's rules tab: how a grade is decided, and every rule this
+  deployment enforces against a request - as this process runs them.
+
+  Server-rendered and never repainted. Every number and every list comes from
+  webapp/rules.py, which reads the settings this process started with and the
+  constants the enforcing code itself uses, so this page cannot describe a
+  limit the service no longer has. Nothing here names a target, a uuid or a
+  client: the only lists are the ones the code or the operator wrote.
+#}
+
+{% block title %}{{ t('admin.rules.title') }}{% endblock %}
+{% block description %}{{ t('admin.rules.lede') }}{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/static/css/admin.css">
+{% endblock %}
+
+{% block content %}
+<section class="admin-band" role="note">
+  <span class="admin-band-dot" aria-hidden="true"></span>
+  <p class="flush">
+    {{ t('admin.band', user=operator.username) }}
+  </p>
+  {% if sign_out_url %}
+  <a class="admin-band-exit" href="{{ sign_out_url }}">{{ t('admin.band.signout') }}</a>
+  {% endif %}
+</section>
+
+{% include "_admin-tabs.html" %}
+
+<section class="page-head admin-head">
+  <p class="kicker">{{ t('admin.kicker') }}</p>
+  <h1>{{ t('admin.rules.title') }}</h1>
+  <p class="lede">{{ t('admin.rules.lede') }}</p>
+</section>
+
+<p class="hint section-gap">{{ t('admin.rules.scope') }}</p>
+
+{% set toc = [{"href": "#admin-rules-rating", "label": t('admin.rules.rating.heading')}] %}
+{% for group, rules in rule_groups %}
+  {% set toc = toc + [{"href": "#admin-rules-" ~ group, "label": t('admin.rules.group.' ~ group)}] %}
+{% endfor %}
+{% include "_toc.html" %}
+
+{# ---------------------------------------------------------------- rating #}
+<section class="card section-gap" aria-labelledby="admin-rules-rating" data-reveal>
+  <p class="kicker">{{ t('admin.rules.rating.kicker') }}</p>
+  <h2 id="admin-rules-rating">{{ t('admin.rules.rating.heading') }}</h2>
+  <p class="lede">{{ t('admin.rules.rating.lede') }}</p>
+
+  <h3>{{ t('admin.rules.rating.scale') }}</h3>
+  <ul class="admin-rules-grades">
+    {% for grade in grades %}
+    <li data-tone="{{ grade.tone }}">
+      <span class="grade-mark" data-tone="{{ grade.tone }}" aria-hidden="true">{{ grade.label }}</span>
+      <span>
+        <strong>{{ grade.headline }}</strong>
+        <span class="hint hint-inline">{{ t('grades.row.score', rating=grade.rating) }}</span>
+      </span>
+    </li>
+    {% endfor %}
+  </ul>
+
+  <h3>{{ t('admin.rules.rating.caps') }}</h3>
+  <ul class="cap-list">
+    {% for severity, cap, label in rating.caps %}
+    <li>
+      <span class="tag tag-{{ severity_tags[severity] }}">{{ t('severity.' ~ severity) }}</span>
+      <span class="cap-arrow" aria-hidden="true">&rarr;</span>
+      <span class="cap-grade">{{ t('grades.caps.at_best') }} <strong>{{ label }}</strong></span>
+      <span class="hint hint-inline">{{ t('grades.row.score', rating=cap) }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+
+  <ul class="admin-rules">
+    <li class="admin-rule" data-state="on">
+      <span class="admin-rule-title">{{ t('admin.rules.rating.version.title') }}</span>
+      <span class="admin-surface-pill">{{ t('admin.rules.on') }}</span>
+      <span class="admin-rule-body">{{ t('admin.rules.rating.version.body') }}</span>
+    </li>
+    <li class="admin-rule" data-state="on">
+      <span class="admin-rule-title">{{ t('admin.rules.rating.overrides.title') }}</span>
+      <span class="admin-surface-pill">{{ t('admin.rules.on') }}</span>
+      <span class="admin-rule-body">{{ t.html('grades.caps.rules') }}</span>
+    </li>
+    <li class="admin-rule" data-state="on">
+      <span class="admin-rule-title">{{ t('admin.rules.rating.shared.title') }}</span>
+      <span class="admin-surface-pill">{{ t('admin.rules.on') }}</span>
+      <span class="admin-rule-body">{{ t('grades.caps.shared') }}</span>
+    </li>
+    <li class="admin-rule" data-state="{{ 'on' if rating.extra_checks_rated else 'off' }}">
+      <span class="admin-rule-title">{{ t('admin.rules.rating.extra.title') }}</span>
+      <span class="admin-surface-pill">{{ t('admin.rules.on') if rating.extra_checks_rated else t('admin.rules.off') }}</span>
+      <span class="admin-rule-body">{{ t('admin.rules.rating.extra.body') }}</span>
+    </li>
+    <li class="admin-rule" data-state="on">
+      <span class="admin-rule-title">{{ t('admin.rules.rating.waivers.title') }}</span>
+      <span class="admin-surface-pill">{{ t('admin.rules.on') }}</span>
+      <span class="admin-rule-body">{{ t('admin.rules.rating.waivers.body', count=rating.waivers) }}</span>
+    </li>
+    <li class="admin-rule" data-state="on">
+      <span class="admin-rule-title">{{ t('admin.rules.rating.track.title') }}</span>
+      <span class="admin-surface-pill">{{ t('admin.rules.on') }}</span>
+      <span class="admin-rule-body">{{ t('admin.rules.rating.track.body', track=rating.default_track) }}</span>
+    </li>
+    <li class="admin-rule" data-state="on">
+      <span class="admin-rule-title">{{ t('admin.rules.rating.reference.title') }}</span>
+      <span class="admin-surface-pill">{{ t('admin.rules.on') }}</span>
+      <span class="admin-rule-body">{{ t('admin.rules.rating.reference.body', advisories=reference.advisories, schedule=reference.schedule) }}</span>
+    </li>
+  </ul>
+  <p class="flush hint">{{ t.html('admin.rules.rating.more') }}</p>
+</section>
+
+{# ----------------------------------------------------- the enforced rules #}
+{% for group, rules in rule_groups %}
+<section class="card section-gap" aria-labelledby="admin-rules-{{ group }}" data-reveal>
+  <h2 id="admin-rules-{{ group }}">{{ t('admin.rules.group.' ~ group) }}</h2>
+  <p class="lede">{{ t('admin.rules.group.' ~ group ~ '.lede') }}</p>
+  <ul class="admin-rules">
+    {% for rule in rules %}
+    <li class="admin-rule" data-rule="{{ rule.key }}" data-state="{{ 'on' if rule.on else 'off' }}">
+      <span class="admin-rule-title">{{ t('admin.rules.rule.' ~ rule.key ~ '.title') }}</span>
+      <span class="admin-surface-pill">{{ t('admin.rules.on') if rule.on else t('admin.rules.off') }}</span>
+      <span class="admin-rule-body">{{ t('admin.rules.rule.' ~ rule.key ~ '.body', **rule.params) }}</span>
+      {% if rule.labels %}
+      <ul class="admin-rule-labels">
+        {% for label in rule.labels %}<li>{{ t(label) }}</li>{% endfor %}
+      </ul>
+      {% endif %}
+      {% if rule.items %}
+      <ul class="admin-rule-items">
+        {% for item in rule.items %}<li><code>{{ item }}</code></li>{% endfor %}
+      </ul>
+      {% endif %}
+      {% if rule.variables %}
+      <span class="admin-rule-variables">
+        {{ t('admin.rules.variables') }}
+        {% for name in rule.variables %}<code>COS_WEB_{{ name }}</code>{% if not loop.last %}, {% endif %}{% endfor %}
+      </span>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endfor %}
+{% endblock %}

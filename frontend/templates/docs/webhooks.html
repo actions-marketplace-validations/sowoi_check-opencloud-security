@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.webhooks.description') }}</p>
 </section>
 
-{% if locale != 'en' %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -23,17 +23,17 @@
   <a href="#verifying-the-signature" lang="en">Verifying the signature</a>
   <a href="#uptime-kuma" lang="en">Uptime Kuma</a>
   <a href="#slack-mattermost-discord" lang="en">Slack, Mattermost, Discord</a>
-  <a href="#ntfy" lang="en">ntfy</a>
+  <a href="#ntfy-and-gotify" lang="en">ntfy and Gotify</a>
   <a href="#alertmanager" lang="en">Alertmanager</a>
   <a href="#testing-a-receiver-without-an-instance" lang="en">Testing a receiver without an instance</a>
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="en">
 <p>The <a href="/documentation/reference#webhook-notifications">webhook</a> posts the plugin's own JSON
-document by default. That is deliberate: it carries the whole verdict, not a
-rendered sentence. <code>--webhook-format</code> can render it as Slack or Discord's own
-shape directly (see <a href="#slack-mattermost-discord">below</a>); anything else still
-wants the generic document, and needs a few lines of translation in between.</p>
+document by default, including the status and findings. Use <code>--webhook-format</code>
+to send Slack or Discord messages (see <a href="#slack-mattermost-discord">below</a>),
+or push notifications for <a href="#ntfy-and-gotify">ntfy or Gotify</a>. For other
+receivers, use the generic document and adapt it to the format they expect.</p>
 <p>Two rules apply to every recipe here:</p>
 <ul>
 <li><strong>A failing webhook never changes the check result.</strong> The plugin appends
@@ -97,6 +97,14 @@ wants the generic document, and needs a few lines of translation in between.</p>
 <td><code>failed_extra_checks</code>, <code>missing_hardenings</code></td>
 <td>The findings themselves</td>
 </tr>
+<tr>
+<td><code>coverage</code></td>
+<td>How many checks reached a conclusion, and how many did not</td>
+</tr>
+<tr>
+<td><code>configuration</code></td>
+<td>Digests of how the deployment is configured, for spotting drift</td>
+</tr>
 </tbody>
 </table>
 <p>A scan that failed outright carries only <code>plugin</code>, <code>plugin_version</code>,
@@ -136,16 +144,30 @@ end-of-life release:</p>
     &quot;scheduleSource&quot;: &quot;https://docs.opencloud.eu/docs/admin/resources/lifecycle/&quot;,
     &quot;scheduleNote&quot;: null
   },
+  &quot;eol_warning_days&quot;: 30,
+  &quot;eol_warning&quot;: false,
+  &quot;upgrade_path&quot;: null,
+  &quot;upgrade_rehearsal&quot;: [],
   &quot;vulnerability_count&quot;: 0,
   &quot;vulnerabilities&quot;: [],
   &quot;missing_hardenings&quot;: [],
   &quot;failed_extra_checks&quot;: [&quot;exposed:/opencloud.yaml&quot;],
+  &quot;coverage&quot;: {&quot;evaluated&quot;: 84, &quot;skipped&quot;: 6, &quot;indeterminate&quot;: 2, &quot;network_limited&quot;: 1, &quot;total&quot;: 93, &quot;summary&quot;: &quot;84 checks evaluated, 6 skipped, 2 indeterminate, 1 network-limited&quot;},
+  &quot;configuration&quot;: {&quot;digest&quot;: &quot;9e3c4428...&quot;, &quot;groups&quot;: {&quot;tls&quot;: &quot;1d0f4b77...:89a97538...&quot;, &quot;headers&quot;: &quot;b8e1a930...:cb25144c...&quot;, &quot;sharing&quot;: &quot;44c0ae51...:7b8a1ced...&quot;, &quot;authentication&quot;: &quot;0a7be2cc...:588d045f...&quot;, &quot;proxy&quot;: &quot;ff31c084...:b7db6daf...&quot;&#125;&#125;,
   &quot;scan_backend&quot;: &quot;local&quot;,
   &quot;scan_uuid&quot;: &quot;6a1d1bd0-...&quot;,
   &quot;update&quot;: {&quot;available&quot;: true, &quot;version&quot;: &quot;7.3.0&quot;, &quot;availableVersion&quot;: &quot;7.4.0&quot;, &quot;releasedAt&quot;: &quot;2026-08-03&quot;, &quot;source&quot;: &quot;feed&quot;, &quot;error&quot;: null, &quot;track&quot;: &quot;rolling&quot;, &quot;newestRelease&quot;: null},
   &quot;duration_seconds&quot;: 1.234
 }
 </code></pre>
+<p><code>eol_warning_days</code> is the <code>--eol-warning</code> window the check ran with (<code>0</code> when
+off) and <code>eol_warning</code> whether this result is inside it. <code>upgrade_path</code> is the
+scan's <code>upgradePath</code> - which advisories the recommended release fixes and which
+it leaves open - or <code>null</code> when there is nothing to clear.
+<code>upgrade_rehearsal</code> lists every candidate release with what it <code>fixes</code>, leaves
+(<code>still_affected</code>) and <code>introduces</code>, whether it is <code>end_of_life</code>, and the
+<code>rating</code> it would reach with its <code>rating_label</code> letter - see
+<a href="/documentation/release-lifecycle#rehearse-every-upgrade">Rehearse every upgrade</a>.</p>
 <p><code>scan_backend</code> is always <code>"local"</code> - it records how the result was obtained,
 so a receiver that also handles payloads from scanners with a remote backend
 can tell them apart without special-casing the plugin name.</p>
@@ -188,15 +210,15 @@ def verify(raw_body: bytes, header: str, secret: str) -&gt; bool:
 </code></pre>
 <p>Use <code>hmac.compare_digest</code> rather than <code>==</code>; comparing hex digests with a
 short-circuiting comparison leaks how much of a guess was correct.</p>
-<p>In a Flask or FastAPI receiver, reach for the raw body rather than the parsed
-JSON - <code>await request.body()</code> in FastAPI, <code>request.get_data()</code> in Flask.
-Frameworks that only hand you a parsed object cannot verify this signature at
-all, and the honest fix is to read the body yourself before parsing.</p>
+<p>Read the raw body with <code>await request.body()</code> in FastAPI or
+<code>request.get_data()</code> in Flask. Signature verification requires the original
+bytes, so read the body before parsing it as JSON.</p>
 <p>Three things worth knowing:</p>
 <ul>
-<li><strong>The signature covers whatever was sent</strong>, including the chat-native
-  documents <code>--webhook-format slack</code> and <code>discord</code> produce. Slack and Discord
-  ignore the header; it is there for receivers that check it.</li>
+<li><strong>The signature covers whatever was sent</strong>, including the chat-native and
+  push documents <code>--webhook-format slack</code>, <code>discord</code>, <code>ntfy</code> and <code>gotify</code>
+  produce. Those services ignore the header; it is there for receivers that
+  check it.</li>
 <li><strong>No signature header is sent when no secret is set.</strong> A receiver that
   requires one should reject the request rather than treat a missing header
   as valid.</li>
@@ -232,10 +254,10 @@ webhook:
 <a href="/documentation/scheduling#cron">cron</a>. Uptime Kuma goes red when no push arrives
 within the heartbeat interval, so a plugin that cannot run at all shows up as
 well.</p>
-<p>Uptime Kuma stores the JSON body it receives and shows it on the monitor, so
-the rating, the OpenCloud version and the reason for the state are visible in
-the heartbeat detail. To surface the state in the message column too, use the
-push URL's own query parameters alongside the webhook:</p>
+<p>A Push monitor records the status supplied through its own protocol. Do not rely on it
+to interpret the plugin’s generic JSON as an OpenCloud verdict. To report the measured
+state, map the plugin result to the Push URL’s <code>status</code> and <code>msg</code> parameters. These
+payload fields are useful when writing an adapter:</p>
 <table>
 <thead>
 <tr>
@@ -270,15 +292,14 @@ push URL's own query parameters alongside the webhook:</p>
 </tr>
 </tbody>
 </table>
-<p>If you would rather have Uptime Kuma go down on <em>any</em> problem, keep
-<code>--webhook-on always</code> and add a keyword check on the JSON, or run a second
-Push monitor fed by a wrapper that only pushes when the plugin exits <code>0</code>:</p>
+<p>To mark any non-OK plugin result as down, use a wrapper that sends the appropriate Push
+status:</p>
 <pre><code class="language-shell">check-opencloud-security --host opencloud.example.com \
   &amp;&amp; curl -fsS 'https://kuma.example.com/api/push/&lt;token&gt;?status=up' \
   || curl -fsS 'https://kuma.example.com/api/push/&lt;token&gt;?status=down&amp;msg=opencloud'
 </code></pre>
-<p>The webhook route is the better one of the two: it pushes on every outcome and
-carries the detail, while the wrapper only carries up or down.</p>
+<p>Use the direct heartbeat to detect missing scheduled runs. Use the wrapper or a
+result-aware adapter when the monitor must also reflect the security check’s status.</p>
 <h2 id="slack-mattermost-discord">Slack, Mattermost, Discord</h2>
 <p>These expect their own JSON. For the common case, <code>--webhook-format slack</code>
 or <code>--webhook-format discord</code> posts it directly - no adapter needed:</p>
@@ -335,10 +356,39 @@ HTTPServer((&quot;127.0.0.1&quot;, 8099), Handler).serve_forever()
 reachable from elsewhere is an open relay into your chat system.</p>
 <p>Discord accepts a compatible payload at <code>&lt;webhook-url&gt;/slack</code>. Mattermost
 accepts Slack's format directly.</p>
-<h2 id="ntfy">ntfy</h2>
-<p>ntfy takes a plain body plus headers, so <code>curl</code> in a wrapper is simpler than a
-webhook receiver. This shape also works for any "notify me if it fails"
-service:</p>
+<h2 id="ntfy-and-gotify">ntfy and Gotify</h2>
+<p>Both are built in, and neither needs an adapter:</p>
+<pre><code class="language-shell">check-opencloud-security --host opencloud.example.com \
+  --webhook-url https://ntfy.example.com/opencloud \
+  --webhook-format ntfy
+
+check-opencloud-security --host opencloud.example.com \
+  --webhook-url https://gotify.example.com/message \
+  --webhook-header 'X-Gotify-Key: ...' \
+  --webhook-format gotify
+</code></pre>
+<p><strong>For ntfy, give the topic URL.</strong> ntfy reads a JSON publication only at its
+server root, taking the topic from the document rather than from the path, so
+the plugin reads the topic off the URL you configured and posts to the root of
+that same server. Scheme, host and port are untouched, so the address checked
+by the SSRF guard is the address posted to. A URL naming no topic is refused
+when the check starts, rather than 400-ing on every notification for the life
+of the configuration. This is the only format whose URL is rewritten, and only
+ever its path - see
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0040-a-push-format-may-rewrite-the-path-never-the-host.md">ADR 0040</a>.</p>
+<p><strong>For Gotify, keep the token out of the URL if you can.</strong> <code>?token=...</code> works
+and is redacted in the plugin's own logs, but <code>--webhook-header 'X-Gotify-Key:
+...'</code> keeps it out of the URL entirely - and out of any proxy log between the
+two hosts. Either way, <code>--webhook-secret</code> still signs the body, so a receiver
+that verifies <code>X-COS-Signature</code> can do so here as it does everywhere else.</p>
+<p>Priorities follow the state: CRITICAL arrives at ntfy's <code>urgent</code> and Gotify's
+8, WARNING at <code>default</code> and 5, UNKNOWN at <code>high</code> and 5, and an OK - which only
+<code>--webhook-on always</code> ever sends - at the quietest value each service has, so
+a dead-man's switch does not buzz anybody nightly to say nothing is wrong.</p>
+<h3 id="doing-it-in-a-wrapper-instead">Doing it in a wrapper instead</h3>
+<p>Worth keeping if you want the plugin's full text rather than its summary, or a
+priority scheme of your own. This shape also works for any other "notify me if
+it fails" service:</p>
 <pre><code class="language-shell">#!/bin/sh
 set -eu
 output=&quot;$(check-opencloud-security --host opencloud.example.com --check-hardening)&quot; || state=$?
@@ -393,6 +443,26 @@ point the webhook at something that echoes it, such as
 <code>python3 -m http.server</code> or a one-line receiver of your own.</p>
 <hr>
 <p><a href="/documentation">Back to the documentation index</a> | <a href="/documentation/reference">Back to the main README</a></p>
+<p><code>coverage</code> is the scan's own account of what it managed to measure. Every
+check is in exactly one of <code>evaluated</code> (a conclusion, pass or fail),
+<code>skipped</code> (the scanner did not run it), <code>indeterminate</code> (it ran and could not
+tell) and <code>network_limited</code> (nothing answered in time, or there was no route
+- the gap a retry from elsewhere may close). It is <code>null</code> for a scan document
+that predates the coverage block, which is a report that does not say rather
+than a scan with no gaps. Nothing in it changes the status or the rating; the
+plugin prints the same numbers as a <code>Coverage:</code> line in its output.</p>
+<p><code>configuration</code> is the scan's <strong>configuration fingerprint</strong>: one digest for
+the deployment as a whole, and one <code>scope:digest</code> string per group - <code>tls</code>,
+<code>headers</code>, <code>sharing</code>, <code>authentication</code>, <code>proxy</code>. Store them and compare them
+with the next notification: a group whose string differs was configured
+differently, even where the grade did not move. Nothing in it is the
+configuration itself - a content security policy, an issuer and a server
+banner all go in and only a hash comes out - so a receiver can keep these
+next to a ticket without publishing how the instance is set up. The <code>scope</code>
+half says which facts that group was able to look at, so two scans that
+probed differently compare as "not comparable" rather than as a change. It is
+<code>null</code> for a scan document that predates the block, and nothing in it changes
+the status or the rating.</p>
 </article>
 
 {% include "_page-nav.html" %}

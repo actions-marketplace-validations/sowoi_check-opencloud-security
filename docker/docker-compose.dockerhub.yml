@@ -19,6 +19,14 @@ services:
     ports:
       - "127.0.0.1:8811:8811"
     environment:
+      # The operator's area says when a newer release is on GitHub and can
+      # install it: the release's web bundle, verified against its build
+      # attestation, unpacked on the tmpfs below and run in place of the
+      # image's code until the container restarts (ADR 0070). Unset
+      # COS_WEB_ADMIN_UPDATE_DIR to only be told; COS_WEB_UPDATE_CHECK=false
+      # with no outbound access.
+      COS_WEB_UPDATE_CHECK: "${COS_WEB_UPDATE_CHECK:-true}"
+      COS_WEB_ADMIN_UPDATE_DIR: "${COS_WEB_ADMIN_UPDATE_DIR-/var/lib/opencloud-scan/update}"
       COS_WEB_REDIS_URL: "redis://:${COS_REDIS_PASSWORD:-}@redis:6379/0"
       # How long a result stays readable. Also the lifetime of every key.
       COS_WEB_RESULT_TTL: "3600"
@@ -26,6 +34,16 @@ services:
       COS_WEB_IP_RATE_LIMIT: "10"
       COS_WEB_IP_RATE_WINDOW: "60"
       COS_WEB_TARGET_COOLDOWN: "300"
+      COS_WEB_PROBE_LIMIT: "5"
+      COS_WEB_PROBE_WINDOW: "300"
+      COS_WEB_PROBE_BLOCK: "3600"
+      COS_WEB_PROBE_BLOCK_MAX: "86400"
+      COS_WEB_PROBE_REPEAT_WINDOW: "86400"
+      COS_WEB_PROBE_IPV4_PREFIX: "24"
+      COS_WEB_CLIENT_IPV6_PREFIX: "64"
+      COS_WEB_DAILY_SCAN_LIMIT: "50"
+      COS_WEB_DNS_CONSISTENCY_CHECK: "true"
+      COS_WEB_REQUIRE_APPROVAL: "false"
       # Set this only when a reverse proxy overwrites X-Forwarded-For.
       COS_WEB_TRUST_FORWARDED_FOR: "false"
       # Required. The address this service is reached at from outside, so the
@@ -75,6 +93,7 @@ services:
     read_only: true
     tmpfs:
       - /tmp:size=16m
+      - /var/lib/opencloud-scan/update:size=64m,uid=10001,gid=10001,mode=0700
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -90,12 +109,19 @@ services:
       redis:
         condition: service_healthy
     environment:
+      # Follows an update the operator's area installed (ADR 0070).
+      COS_WEB_ADMIN_UPDATE_DIR: "${COS_WEB_ADMIN_UPDATE_DIR-/var/lib/opencloud-scan/update}"
       COS_WEB_REDIS_URL: "redis://:${COS_REDIS_PASSWORD:-}@redis:6379/0"
       COS_WEB_RESULT_TTL: "3600"
       # These values are the service's complete scanning load on other hosts.
       COS_WEB_MAX_WORKERS: "5"
       COS_WEB_SCAN_CONCURRENCY: "4"
       COS_WEB_SCAN_TIMEOUT: "15"
+      COS_WEB_PROBE_LIMIT: "5"
+      COS_WEB_PROBE_WINDOW: "300"
+      COS_WEB_PROBE_BLOCK: "3600"
+      COS_WEB_PROBE_BLOCK_MAX: "86400"
+      COS_WEB_PROBE_REPEAT_WINDOW: "86400"
       COS_WEB_JOB_TIMEOUT: "180"
       COS_WEB_ALLOW_PRIVATE_TARGETS: "false"
       COS_WEB_CHECK_DEBUG_PORTS: "false"
@@ -136,6 +162,7 @@ services:
     read_only: true
     tmpfs:
       - /tmp:size=16m
+      - /var/lib/opencloud-scan/update:size=64m,uid=10001,gid=10001,mode=0700
     security_opt:
       - no-new-privileges:true
     cap_drop:

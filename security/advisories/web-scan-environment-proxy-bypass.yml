@@ -1,0 +1,33 @@
+# Security advisory record; publication remains a maintainer decision.
+slug: web-scan-environment-proxy-bypass
+state: draft
+ghsa: GHSA-pqw3-72fw-3x53
+changelog_version: "1.23.2"
+changelog_entry: "Pinned scans cannot be redirected through ambient proxies."
+shipped: true
+severity: medium
+cwe_ids:
+  - CWE-918
+package: web
+introduced: "1.9.0"
+fixed: "1.23.2"
+summary: >-
+  Environment proxies bypassed the web scanner's validated-address connection pins
+verified: |
+  git show v1.9.0:webapp/runner.py introduces pinned_addresses. git show v1.23.1:opencloud_local_scan/scanner.py mounts the pinned adapter but leaves requests.Session.trust_env enabled; Requests proxy pools do not use its pinned pool manager.
+description: |
+  ### Impact
+  
+  When a worker inherited HTTP_PROXY, HTTPS_PROXY or ALL_PROXY, Requests could route a scan through a proxy that resolves the target independently. A target changing its DNS answer after the web guard's validation could then reach an address the guard had refused, subject to the proxy's network access. Deployments without an ambient proxy are not affected by this bypass.
+  
+  ### Patches
+  
+  Fixed in the source for **1.23.2**. Scans ignore environment proxies. A pinned scan with an explicit resolving proxy is rejected. Unpinned CLI scans still support the explicitly configured proxy.
+  
+  ### Workarounds
+  
+  Remove ambient proxy variables from web workers and enforce egress restrictions. Do not configure a proxy for a pinned scan.
+  
+  ### Distribution
+  
+  This affects the web application or its standalone deployment wizard, not the PyPI plugin distribution.

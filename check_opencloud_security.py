@@ -32,8 +32,9 @@ from datetime import datetime, timezone
 from enum import IntEnum
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from typing import Any, NoReturn, TypeVar
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, urlunsplit
 from xml.etree import ElementTree
 
 import requests
@@ -49,6 +50,7 @@ from opencloud_local_scan import (
     __version__,
     failed_extra_checks,
     fetch_update_info,
+    load_config_file,
     load_configuration,
     release_settings_from_config,
     run_setup,
@@ -63,12 +65,26 @@ from opencloud_local_scan.baseline import (
     snapshot_of,
 )
 from opencloud_local_scan.completion import enable as enable_completion
+from opencloud_local_scan.coverage import summary as coverage_summary
+from opencloud_local_scan.coverage import summary_line as coverage_summary_line
+from opencloud_local_scan.fingerprint import digests as configuration_digests
+from opencloud_local_scan.fingerprint import fingerprint_of
+from opencloud_local_scan.fingerprint import unmeasured as unmeasured_groups
+from opencloud_local_scan.hardening import catalogue_id as hardening_catalogue_id
 from opencloud_local_scan.hardening import describe as describe_hardening
 from opencloud_local_scan.hardening import is_actionable
-from opencloud_local_scan.prometheus import render as render_prometheus_metrics
+from opencloud_local_scan.metrics import MetricFamily
+from opencloud_local_scan.metrics import collect as collect_metrics
+from opencloud_local_scan.otlp import render as render_otlp_metrics
+from opencloud_local_scan.prometheus import (
+    render_families as render_prometheus_families,
+)
 from opencloud_local_scan.releases import MODES as UPDATE_SOURCES
+from opencloud_local_scan.scanner import _NoRedirectSession, _PinnedHTTPAdapter
 from opencloud_local_scan.selfupdate import self_update_note
+from opencloud_local_scan.verification import verify as verify_remediation
 from opencloud_local_scan.versions import RELEASE_TRACK_CHOICES, TRACK_AUTO
+from opencloud_local_scan.waivers import Waiver, WaiverError, parse_waivers
 
 LOGGER = logging.getLogger("check_opencloud")
 
@@ -102,12 +118,63 @@ ARGPARSE_ERROR = 2
 # thresholds, graphs and alert rules keep their meaning.
 RATE_MAP: dict[int, str] = {5: "A+", 4: "A", 3: "C", 2: "D", 1: "E", 0: "F"}
 MIN_RATING = 0
+# Stands in for a missing or non-numeric rating; never a key of RATE_MAP.
+UNKNOWN_RATING = -1
 MAX_RATING = 5
 
 # Default rating thresholds: a rating at or below these values triggers the
 # corresponding state. 3 == "C", 1 == "E".
 DEFAULT_WARNING_RATING = 3
 DEFAULT_CRITICAL_RATING = 1
+
+# Named threshold sets behind --profile. A profile decides how the same
+# measurements are judged, never how hard the instance is probed, so every
+# value here is a judgement setting: the thresholds, whether hardening is
+# reported, whether an available update alerts, and how far ahead the end of
+# life is announced. Leaving --profile unset keeps the defaults above, which
+# is what every existing monitoring definition already expects.
+PROFILE_STRICT = "strict"
+PROFILE_OPS = "ops"
+PROFILE_LENIENT = "lenient"
+PROFILES: dict[str, dict[str, object]] = {
+    # Everything below A alerts, and a release worth upgrading is worth
+    # knowing about a quarter before it stops receiving fixes.
+    PROFILE_STRICT: {
+        "warning": 4,
+        "critical": 2,
+        "check_hardening": True,
+        "update_warning": True,
+        "eol_warning": 90,
+    },
+    # The default thresholds, plus the two things a team on call usually
+    # turns on by hand anyway.
+    PROFILE_OPS: {
+        "warning": 3,
+        "critical": 1,
+        "check_hardening": True,
+        "update_warning": False,
+        "eol_warning": 30,
+    },
+    # Only a rating that says something is actually exploitable alerts.
+    PROFILE_LENIENT: {
+        "warning": 2,
+        "critical": 0,
+        "check_hardening": False,
+        "update_warning": False,
+        "eol_warning": 0,
+    },
+}
+
+# How each setting a profile governs is spelled on the command line. A flag
+# given explicitly outranks the profile, and this is what says "explicitly":
+# argparse alone cannot tell a default apart from the same value typed out.
+PROFILE_OPTIONS: dict[str, tuple[str, ...]] = {
+    "warning": ("-w", "--warning"),
+    "critical": ("-c", "--critical"),
+    "check_hardening": ("--check-hardening",),
+    "update_warning": ("--update-warning",),
+    "eol_warning": ("--eol-warning",),
+}
 
 # Prefix for all environment variables recognized by this plugin, e.g. COS_HOST.
 ENV_PREFIX = "COS_"
@@ -162,6 +229,135 @@ WEBHOOK_TRIGGERS.update({
 })
 
 
+# --------------------------------------------------------------------------
+# CI policy mode: --policy. An organization writes down what it requires of
+# every instance, and a run that does not meet it is CRITICAL regardless of
+# what the generic rating thresholds would have said.
+#
+#     minimum_rating: 4
+#     required_hardenings:
+#       - hstsLongMaxAge
+#       - corsOriginRestricted
+#     forbidden:
+#       - demoUsersDisabled
+#
+# Three rules, deliberately no more: a floor under the grade, measures that
+# must be in place, and findings that must not appear. Anything expressible
+# as "which of the things this scan already measured do we insist on" fits
+# one of them; anything that needs a new measurement is a scanner change,
+# not a policy key.
+#
+# Two decisions worth stating, because both could reasonably go the other
+# way:
+#
+# * A waiver does not excuse a policy requirement. --ignore-hardening and
+#   --waive-until are the local operator accepting a finding; a policy is the
+#   organization saying it may not be accepted. If a waiver could silence a
+#   required measure, a policy would describe nothing enforceable.
+# * A key, or a hardening id the catalogue does not know, is a usage error
+#   (UNKNOWN), never a silent pass. A policy exists to fail deployments, so a
+#   typo that quietly requires nothing is the worst outcome available - the
+#   same reasoning behind RETIRED_FLAGS (E-7).
+# --------------------------------------------------------------------------
+
+_POLICY_KEYS = frozenset({"minimum_rating", "required_hardenings", "forbidden"})
+
+
+@dataclass(frozen=True)
+class Policy:
+    """The organization's requirements, as read from the policy file."""
+
+    #: Lowest acceptable rating, or None when the policy does not set one.
+    minimum_rating: int | None = None
+    #: Hardening measures that must be in place, waived or not.
+    required_hardenings: tuple[str, ...] = ()
+    #: Finding ids that must not be present - a missing hardening, a failed
+    #: extra check or a vulnerability.
+    forbidden: tuple[str, ...] = ()
+    #: Where it was read from, named in the output so a failing pipeline says
+    #: which policy failed it.
+    path: str = ""
+
+
+def _policy_string_list(value: Any, key: str, path: str) -> tuple[str, ...]:
+    """Read one list-of-names key, rejecting every other shape."""
+    if value is None:
+        return ()
+    if isinstance(value, str) or not isinstance(value, list):
+        raise ConfigurationError(f"Policy file {path}: '{key}' must be a list of names.")
+    names: list[str] = []
+    for entry in value:
+        if isinstance(entry, bool) or not isinstance(entry, (str, int)):
+            raise ConfigurationError(
+                f"Policy file {path}: '{key}' must contain names, "
+                f"not {type(entry).__name__}."
+            )
+        name = str(entry).strip()
+        if not name:
+            raise ConfigurationError(f"Policy file {path}: '{key}' has an empty entry.")
+        if name not in names:
+            names.append(name)
+    return tuple(names)
+
+
+def load_policy(path: str) -> Policy:
+    """
+    Read and validate a policy file ('.json' is read as JSON, anything else
+    as YAML - the rule every other file this plugin reads follows).
+
+    Everything that can be checked without a scan is checked here, so a
+    broken policy fails before any instance is probed rather than once per
+    host.
+    """
+    document = load_config_file(Path(path))
+
+    unknown = sorted(set(document) - _POLICY_KEYS)
+    if unknown:
+        raise ConfigurationError(
+            f"Policy file {path}: unknown key(s) {', '.join(unknown)}. "
+            f"Known keys: {', '.join(sorted(_POLICY_KEYS))}."
+        )
+
+    minimum = document.get("minimum_rating")
+    if minimum is not None:
+        if isinstance(minimum, bool) or not isinstance(minimum, int):
+            raise ConfigurationError(
+                f"Policy file {path}: 'minimum_rating' must be a whole number "
+                f"between {MIN_RATING} and {MAX_RATING}."
+            )
+        if not MIN_RATING <= minimum <= MAX_RATING:
+            raise ConfigurationError(
+                f"Policy file {path}: 'minimum_rating' {minimum} is outside "
+                f"{MIN_RATING}-{MAX_RATING} "
+                f"({RATE_MAP[MIN_RATING]} to {RATE_MAP[MAX_RATING]})."
+            )
+
+    required = _policy_string_list(
+        document.get("required_hardenings"), "required_hardenings", path
+    )
+    unrecognised = [
+        name for name in required if hardening_catalogue_id(name) is None
+    ]
+    if unrecognised:
+        raise ConfigurationError(
+            f"Policy file {path}: 'required_hardenings' names no such measure: "
+            f"{', '.join(unrecognised)}."
+        )
+
+    return Policy(
+        minimum_rating=minimum,
+        required_hardenings=required,
+        forbidden=_policy_string_list(document.get("forbidden"), "forbidden", path),
+        path=path,
+    )
+
+
+def _load_policy_argument(args: argparse.Namespace) -> Policy | None:
+    """The policy for this run, or None when --policy was not given."""
+    path = getattr(args, "policy", None)
+    return load_policy(path) if path else None
+
+
 @dataclass(frozen=True)
 class ScanContext:
     """Immutable configuration for a single scan run."""
@@ -174,6 +370,10 @@ class ScanContext:
     timeout: int = DEFAULT_TIMEOUT_SECONDS
     warning_rating: int = DEFAULT_WARNING_RATING
     critical_rating: int = DEFAULT_CRITICAL_RATING
+    # The named threshold set the values above came from, when one was asked
+    # for. Reported, never re-applied: by the time a context exists the
+    # profile has already decided what it decides.
+    profile: str | None = None
     check_hardening: bool = False
     webhook_url: str | None = None
     webhook_on: str = DEFAULT_WEBHOOK_ON
@@ -192,12 +392,17 @@ class ScanContext:
     release_settings: ReleaseSettings | None = None
     update_check: bool = True
     update_warning: bool = False
+    # Days before the running line's end of life at which OK becomes WARNING;
+    # 0 disables. Past end of life is CRITICAL regardless.
+    eol_warning_days: int = 0
     # Remember the findings of the last run and report only what changed.
     baseline_path: str | None = None
     warn_on_new: bool = False
     diff_format: str = "text"
     # Look up whether a newer plugin version has been published.
     self_update_check: bool = False
+    # The organization's requirements, when --policy was given.
+    policy: Policy | None = None
 
 
 @dataclass
@@ -261,6 +466,22 @@ def _waiver_patterns(values: list[str] | None) -> tuple[str, ...] | None:
         part.strip() for value in values for part in value.split(",") if part.strip()
     ]
     return tuple(dict.fromkeys(patterns))
+
+
+def _temporary_waivers(values: list[str] | None) -> tuple[Waiver, ...] | None:
+    """
+    Read every --waive-until record, refusing any that is incomplete.
+
+    A malformed record is an error rather than a permanent waiver: failing
+    open here is how a typo becomes a suppression that outlives everybody who
+    knew about it. Returning None leaves the configured value untouched.
+    """
+    if values is None:
+        return None
+    try:
+        return parse_waivers(values, require_deadline=True)
+    except WaiverError as error:
+        _fail(f"UNKNOWN - {error}")
 
 
 def _env_int(name: str, default: int) -> int:
@@ -401,7 +622,7 @@ def check_vulnerabilities(
 
     response_scan = scan_result.response
 
-    rating: int = response_scan.get("rating", -1)
+    rating = _rating_of(response_scan)
     product: str = response_scan.get("product", "Unknown")
     version: str = response_scan.get("version") or "Unknown"
     domain: str = response_scan.get("domain", "Unknown")
@@ -436,6 +657,39 @@ def check_vulnerabilities(
     if num_vulns:
         detail_lines.append(
             f"Known vulnerabilities: {_format_vulnerabilities(vulnerabilities)}"
+        )
+        path_line = _upgrade_path_line(response_scan)
+        if path_line:
+            detail_lines.append(path_line)
+
+    rehearsal_line = _upgrade_rehearsal_line(response_scan)
+    if rehearsal_line:
+        detail_lines.append(rehearsal_line)
+
+    throttling = response_scan.get("loginThrottling")
+    if isinstance(throttling, dict) and throttling.get("tested"):
+        detail_lines.append(
+            f"Failed sign-ins throttled ({throttling.get('evidence')}) (not rated)."
+            if throttling.get("throttled")
+            else (
+                f"{throttling.get('attempts')} failed sign-ins in a row were not "
+                "throttled - consider rate limiting at the proxy (not rated)."
+            )
+        )
+
+    services = response_scan.get("alternativeServices")
+    if isinstance(services, dict) and services.get("http3"):
+        ports = sorted(
+            {
+                str(entry.get("port"))
+                for entry in services.get("entries") or ()
+                if isinstance(entry, dict) and entry.get("udp") and entry.get("port")
+            }
+        )
+        detail_lines.append(
+            "Advertises HTTP/3 via Alt-Svc"
+            + (f" on UDP {', '.join(ports)}" if ports else "")
+            + " - make sure the firewall covers it (not rated)."
         )
 
     if context.check_hardening:
@@ -480,6 +734,8 @@ def check_vulnerabilities(
             )
             exit_code = NagiosExitCode.WARNING
 
+    msg, exit_code = _apply_eol_warning(context, response_scan, msg, exit_code)
+
     msg, exit_code, baseline_lines, baseline_diff = _apply_baseline(
         context,
         response_scan,
@@ -490,9 +746,33 @@ def check_vulnerabilities(
     )
     detail_lines.extend(baseline_lines)
 
+    msg, exit_code, policy_lines, policy_block = _apply_policy(
+        context,
+        response_scan,
+        rating=rating,
+        vulnerabilities=vulnerabilities,
+        message=msg,
+        exit_code=exit_code,
+    )
+    detail_lines.extend(policy_lines)
+
     note = _self_update_line(context)
     if note:
         detail_lines.append(note)
+
+    # Said whether or not anything was missed: "6 skipped" and the silence
+    # that means nothing was skipped have to be different sentences, or a
+    # reader learns nothing from either.
+    coverage_line = coverage_summary_line(response_scan)
+    if coverage_line:
+        detail_lines.append(f"Coverage: {coverage_line}")
+
+    # The deployment's own fingerprint, so that a reconfiguration that moved
+    # no grade is still visible in the output an operator keeps. What
+    # changed, against the last run, is the baseline's line above.
+    configuration_line = _configuration_line(response_scan)
+    if configuration_line:
+        detail_lines.append(configuration_line)
 
     if context.debug:
         detail_lines.extend(
@@ -509,6 +789,8 @@ def check_vulnerabilities(
         failed_extra_checks_count=len(extra_failures) if response_scan.get("extraChecks") else None,
         update_available=update_info.available if update_info is not None else None,
         support_days_left=_support_days_left(response_scan),
+        certificate_days_left=_certificate_days_left(response_scan),
+        upgrade_path_complete=_upgrade_path_complete(response_scan),
     )
 
     # Built unconditionally: it is the same document whether it goes out over
@@ -527,18 +809,175 @@ def check_vulnerabilities(
         update_info=update_info,
         extra_failures=extra_failures,
         baseline_diff=baseline_diff,
+        policy=policy_block,
     )
     delivered, fires = _send_or_defer_webhook(context, payload, exit_code)
     if not delivered:
         detail_lines.append("Webhook delivery failed (see debug log)")
 
-    _RESULT_PAYLOAD.set({"payload": payload, "scan": response_scan, "webhook_fires": fires})
+    # hardening_checked is not derivable from the payload: with
+    # --check-hardening off, missing_hardenings is empty for the same reason
+    # a perfectly hardened instance's is, and a format that reports a count
+    # has to tell those two apart (see _checkmk_metrics).
+    _RESULT_PAYLOAD.set(
+        {
+            "payload": payload,
+            "scan": response_scan,
+            "webhook_fires": fires,
+            "hardening_checked": context.check_hardening,
+        }
+    )
 
     safe_message = _safe_monitoring_text(msg)
     safe_details = [_safe_monitoring_text(line) for line in detail_lines]
     _fail(
         f"{safe_message}\n" + "\n".join(safe_details) + f" | {perfdata}",
         exit_code,
+    )
+
+
+def _rating_of(response_scan: dict[str, Any]) -> int:
+    """
+    The scan's rating, or UNKNOWN_RATING when it is missing or not a number.
+
+    Only a real integer counts: a string or a boolean would otherwise slip
+    past RATE_MAP with a misleading label.
+    """
+    rating = response_scan.get("rating")
+    if isinstance(rating, int) and not isinstance(rating, bool):
+        return rating
+    return UNKNOWN_RATING
+
+
+def _upgrade_path_complete(response_scan: dict[str, Any]) -> bool | None:
+    """Whether the recommended upgrade clears every known advisory; None without a path."""
+    path = response_scan.get("upgradePath")
+    if not isinstance(path, dict) or not path.get("target"):
+        return None
+    return not path.get("stillAffected")
+
+
+def _upgrade_path_line(response_scan: dict[str, Any]) -> str:
+    """Say what the recommended upgrade fixes, and what it would leave open."""
+    path = response_scan.get("upgradePath")
+    if not isinstance(path, dict) or not path.get("target"):
+        return ""
+    target = str(path["target"])
+    fixes = [str(item) for item in path.get("fixes") or ()]
+    remaining = [str(item) for item in path.get("stillAffected") or ()]
+    if not remaining:
+        return f"Upgrade path: {target} fixes all {len(fixes)} known vulnerabilities."
+    safe = path.get("safeVersion")
+    fixed_part = f"fixes {', '.join(fixes)} but " if fixes else ""
+    after = (
+        f"; {safe} is the first release that clears them all"
+        if safe
+        else "; no published release fixes all of them yet"
+    )
+    return f"Upgrade path: {target} {fixed_part}is still affected by {', '.join(remaining)}{after}."
+
+
+def _rehearsed_count(entry: dict[str, Any], key: str) -> int:
+    items = entry.get(key)
+    return len(items) if isinstance(items, list) else 0
+
+
+def _upgrade_rehearsal_line(response_scan: dict[str, Any]) -> str:
+    """
+    What each candidate release would do, graded with RATE_MAP.
+
+    The scanner rehearses the upgrade in its own 0-5 numbers; the letter is
+    this layer's judgement, like every other grade the plugin prints.
+    """
+    rehearsal = response_scan.get("upgradeRehearsal")
+    if not isinstance(rehearsal, list):
+        return ""
+    parts: list[str] = []
+    for entry in rehearsal:
+        if not isinstance(entry, dict) or not entry.get("version"):
+            continue
+        rating = entry.get("rating")
+        grade = RATE_MAP.get(rating, "?") if isinstance(rating, int) else "?"
+        fixes = _rehearsed_count(entry, "fixes")
+        left = _rehearsed_count(entry, "stillAffected")
+        new = _rehearsed_count(entry, "introduces")
+        noun = "finding" if fixes == 1 else "findings"
+        part = f"{entry['version']} fixes {fixes} {noun}, leaves {left}"
+        if new:
+            part += f", adds {new}"
+        if entry.get("endOfLife"):
+            part += ", is end of life"
+        parts.append(f"{part}, reaches rating {grade}")
+    if not parts:
+        return ""
+    return "Upgrade rehearsal: " + "; ".join(parts) + "."
+
+
+def _upgrade_rehearsal_payload(response_scan: dict[str, Any]) -> list[dict[str, Any]]:
+    """The scanner's rehearsal in this layer's snake_case, with the grade added."""
+    rehearsal = response_scan.get("upgradeRehearsal")
+    entries: list[dict[str, Any]] = []
+    for entry in rehearsal if isinstance(rehearsal, list) else ():
+        if not isinstance(entry, dict):
+            continue
+        rating = entry.get("rating")
+        entries.append(
+            {
+                "version": entry.get("version"),
+                "line": entry.get("line"),
+                "recommended": bool(entry.get("recommended")),
+                "fixes": list(entry.get("fixes") or ()),
+                "still_affected": list(entry.get("stillAffected") or ()),
+                "introduces": list(entry.get("introduces") or ()),
+                "end_of_life": bool(entry.get("endOfLife")),
+                "version_rating": entry.get("versionRating"),
+                "rating": rating,
+                "rating_label": RATE_MAP.get(rating) if isinstance(rating, int) else None,
+            }
+        )
+    return entries
+
+
+def _within_eol_window(context: ScanContext, response_scan: dict[str, Any]) -> bool:
+    """Whether a supported line has --eol-warning days of support or fewer left."""
+    if context.eol_warning_days <= 0:
+        return False
+    lifecycle = _lifecycle(response_scan)
+    remaining = lifecycle.get("daysRemaining")
+    if lifecycle.get("state") != "supported" or not isinstance(remaining, int):
+        return False
+    if isinstance(remaining, bool):
+        return False
+    return 0 < remaining <= context.eol_warning_days
+
+
+def _apply_eol_warning(
+    context: ScanContext,
+    response_scan: dict[str, Any],
+    message: str,
+    exit_code: NagiosExitCode,
+) -> tuple[str, NagiosExitCode]:
+    """
+    Raise an otherwise OK result to WARNING when support ends soon.
+
+    Only OK is raised: a result that is already WARNING or CRITICAL says
+    something more urgent, and one past its end of life is CRITICAL anyway.
+    """
+    if exit_code is not NagiosExitCode.OK or not _within_eol_window(context, response_scan):
+        return message, exit_code
+    lifecycle = _lifecycle(response_scan)
+    remaining = lifecycle["daysRemaining"]
+    line = str(lifecycle.get("line") or "")
+    described = f"The {line} release line" if line else "This server version"
+    target = str(lifecycle.get("upgradeTo") or "")
+    upgrade = f" Upgrade to {target}." if target else ""
+    end_of_life = lifecycle.get("endOfLife") or "an unknown date"
+    return (
+        (
+            f"WARNING: {described} reaches end of life on {end_of_life} "
+            f"({remaining} days left).{upgrade}"
+        ),
+        NagiosExitCode.WARNING,
     )
 
 
@@ -681,6 +1120,63 @@ def _build_base_payload(
     }
 
 
+def _configuration_line(response_scan: dict[str, Any]) -> str | None:
+    """
+    The configuration fingerprint, short enough to read in an alert.
+
+    Eight hex characters of the digest over the five groups: enough for a
+    person to see that two runs differ, never enough to be mistaken for the
+    configuration itself. ``None`` for a scan document that carries no
+    fingerprint, because a report that cannot say must not look like a
+    deployment that never changes.
+    """
+    block = fingerprint_of(response_scan)
+    if block is None:
+        return None
+    line = f"Configuration fingerprint: {str(block.get('digest'))[:8]}"
+    missing = unmeasured_groups(configuration_digests(response_scan))
+    if missing:
+        line += f" ({', '.join(missing)} not measured)"
+    return line
+
+
+def _configuration_payload(response_scan: dict[str, Any]) -> dict[str, Any] | None:
+    """
+    The fingerprint for the payload: the digests, and nothing they were made of.
+
+    A receiver stores these and compares them itself, which is the whole
+    point of a digest - it can answer "did this deployment change?" without
+    ever being told what the deployment is set to.
+    """
+    block = fingerprint_of(response_scan)
+    if block is None:
+        return None
+    return {
+        "digest": block.get("digest"),
+        "groups": configuration_digests(response_scan),
+    }
+
+
+def _coverage_payload(response_scan: dict[str, Any]) -> dict[str, Any] | None:
+    """
+    The coverage counts for the payload, snake_case as the payload is.
+
+    ``None`` when the scan document has no coverage block: a receiver must
+    be able to tell "nothing was missed" from "this report does not say".
+    """
+    totals = coverage_summary(response_scan)
+    if totals is None:
+        return None
+    return {
+        "evaluated": totals["evaluated"],
+        "skipped": totals["skipped"],
+        "indeterminate": totals["indeterminate"],
+        "network_limited": totals["networkLimited"],
+        "total": totals["total"],
+        "summary": coverage_summary_line(response_scan),
+    }
+
+
 def _build_webhook_payload(
     context: ScanContext,
     *,
@@ -696,6 +1192,7 @@ def _build_webhook_payload(
     update_info: UpdateInfo | None = None,
     extra_failures: list[str] | None = None,
     baseline_diff: Comparison | None = None,
+    policy: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """
     Build the JSON document posted to the webhook.
@@ -715,6 +1212,13 @@ def _build_webhook_payload(
         "eol": bool(response_scan.get("EOL")) or rating == MIN_RATING,
         "release_type": response_scan.get("releaseType"),
         "lifecycle": _lifecycle(response_scan) or None,
+        # The early end-of-life window the check ran with (0 = off), and
+        # whether this result is inside it, so a receiver need not redo it.
+        "eol_warning_days": context.eol_warning_days,
+        "eol_warning": _within_eol_window(context, response_scan),
+        "upgrade_path": response_scan.get("upgradePath") or None,
+        # Every candidate release, simulated; ``rating_label`` is RATE_MAP's.
+        "upgrade_rehearsal": _upgrade_rehearsal_payload(response_scan),
         "vulnerability_count": len(vulnerabilities),
         "vulnerabilities": [
             entry.get("id") for entry in vulnerabilities if isinstance(entry, dict)
@@ -723,11 +1227,15 @@ def _build_webhook_payload(
         # text and the hardenings_missing metric.
         "missing_hardenings": missing_hardenings if context.check_hardening else [],
         "failed_extra_checks": extra_failures or [],
+        "coverage": _coverage_payload(response_scan),
+        "configuration": _configuration_payload(response_scan),
         "scan_backend": "local",
         "scan_uuid": scan_result.uuid,
         "update": update_info.as_dict() if update_info is not None else None,
         "duration_seconds": round(duration_seconds, 3) if duration_seconds is not None else None,
     }
+    if policy is not None:
+        payload["policy"] = policy
     if baseline_diff is not None:
         payload["baseline_diff"] = baseline_diff.as_dict()
         if context.diff_format in {"slack", "json"}:
@@ -748,15 +1256,34 @@ _WEBHOOK_STATUS_COLORS = {
 }
 
 
-def _webhook_status_line(payload: dict[str, Any]) -> str:
-    """One human-readable line, shared by every chat-native webhook format."""
-    text = f"*{payload.get('host', '?')}* - {payload.get('status', 'UNKNOWN')}\n{payload.get('message', '')}"
+def _webhook_body_text(payload: dict[str, Any]) -> str:
+    """
+    What was measured, without naming the host again.
+
+    The formats split here: a chat message is one block of text and has to
+    carry the host inside it, while a push notification has a title field of
+    its own and would otherwise say the host twice on a phone screen.
+    """
+    text = str(payload.get("message", ""))
     if payload.get("rating_label"):
         text += (
             f"\nRating {payload['rating_label']}, "
             f"OpenCloud {payload.get('product_version') or '?'}"
         )
     return text
+
+
+def _webhook_title(payload: dict[str, Any]) -> str:
+    """The one-line heading a push notification shows, host first."""
+    return f"{payload.get('host', '?')} - {payload.get('status', 'UNKNOWN')}"
+
+
+def _webhook_status_line(payload: dict[str, Any]) -> str:
+    """One human-readable line, shared by every chat-native webhook format."""
+    return (
+        f"*{payload.get('host', '?')}* - {payload.get('status', 'UNKNOWN')}\n"
+        + _webhook_body_text(payload)
+    )
 
 
 def _slack_webhook_payload(payload: dict[str, Any]) -> dict[str, Any]:
@@ -800,9 +1327,65 @@ def _discord_webhook_payload(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+# The two push services' priority scales, which are not the same scale and do
+# not run in the same direction as each other. Both mirror the wrapper scripts
+# in docs/webhook-recipes.md for the states those cover, so an operator moving
+# off a wrapper onto a built-in format does not find their phone behaving
+# differently. OK is the one state no wrapper sends, and it is deliberately
+# the quietest value each service has: --webhook-on always exists to feed a
+# dead-man's switch, not to buzz somebody nightly to say nothing is wrong.
+_NTFY_PRIORITIES = {"OK": 2, "WARNING": 3, "UNKNOWN": 4, "CRITICAL": 5}
+_NTFY_TAGS = {
+    "OK": ["white_check_mark"],
+    "WARNING": ["warning"],
+    "UNKNOWN": ["question"],
+    "CRITICAL": ["rotating_light"],
+}
+# Gotify's range is 0-10, where 8 and above is what raises a notification on
+# its Android client rather than filing the message quietly.
+_GOTIFY_PRIORITIES = {"OK": 2, "WARNING": 5, "UNKNOWN": 5, "CRITICAL": 8}
+
+
+def _ntfy_webhook_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    """
+    Render the result as an ntfy publication.
+
+    The topic is deliberately absent here: it comes from the path of
+    --webhook-url and is attached by _format_webhook_body, because ntfy reads
+    a JSON publication only at its server root and takes the topic from the
+    document. See _webhook_post_url.
+    """
+    status = str(payload.get("status", "UNKNOWN"))
+    return {
+        "title": _webhook_title(payload),
+        "message": _webhook_body_text(payload),
+        "priority": _NTFY_PRIORITIES.get(status, 4),
+        "tags": _NTFY_TAGS.get(status, ["question"]),
+    }
+
+
+def _gotify_webhook_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    """
+    Render the result as a Gotify message.
+
+    Gotify reads the application token from the URL or the X-Gotify-Key
+    header, so nothing about the credential belongs in the body - a token in
+    --webhook-url is redacted in the log like any other, and
+    `--webhook-header 'X-Gotify-Key: ...'` keeps it out of the URL entirely.
+    """
+    status = str(payload.get("status", "UNKNOWN"))
+    return {
+        "title": _webhook_title(payload),
+        "message": _webhook_body_text(payload),
+        "priority": _GOTIFY_PRIORITIES.get(status, 5),
+    }
+
+
 _WEBHOOK_FORMATTERS: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "slack": _slack_webhook_payload,
     "discord": _discord_webhook_payload,
+    "ntfy": _ntfy_webhook_payload,
+    "gotify": _gotify_webhook_payload,
 }
 
 # Reserve headroom under Discord's 25-field-per-embed cap for the "+more"
@@ -862,9 +1445,62 @@ def _discord_digest_webhook_payload(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _push_digest_text(payload: dict[str, Any]) -> str:
+    """
+    A --webhook-digest result as plain lines, for the formats with no markup.
+
+    Same selection as the chat digests above - only the hosts that are not OK,
+    capped, with the healthy ones counted rather than listed - because the
+    reason is the same one and it is stronger on a phone than in a chat
+    window.
+    """
+    hosts = payload.get("hosts") or []
+    non_ok = [host for host in hosts if host.get("status") != "OK"]
+    ok_count = len(hosts) - len(non_ok)
+    lines = [
+        f"{host.get('host', '?')} - {host.get('status', 'UNKNOWN')}: "
+        f"{host.get('message') or '(no message)'}"
+        for host in non_ok[:_DIGEST_HOST_LIMIT]
+    ]
+    if len(non_ok) > _DIGEST_HOST_LIMIT:
+        lines.append(f"...and {len(non_ok) - _DIGEST_HOST_LIMIT} more")
+    if ok_count:
+        lines.append(f"{ok_count} host(s) OK, not shown")
+    return "\n".join(lines)
+
+
+def _push_digest_title(payload: dict[str, Any]) -> str:
+    """The heading a digest push notification shows."""
+    hosts = payload.get("hosts") or []
+    return f"{len(hosts)} host(s) checked - {payload.get('status', 'UNKNOWN')}"
+
+
+def _ntfy_digest_webhook_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    """Render a --webhook-digest result as one ntfy publication."""
+    status = str(payload.get("status", "UNKNOWN"))
+    return {
+        "title": _push_digest_title(payload),
+        "message": _push_digest_text(payload),
+        "priority": _NTFY_PRIORITIES.get(status, 4),
+        "tags": _NTFY_TAGS.get(status, ["question"]),
+    }
+
+
+def _gotify_digest_webhook_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    """Render a --webhook-digest result as one Gotify message."""
+    status = str(payload.get("status", "UNKNOWN"))
+    return {
+        "title": _push_digest_title(payload),
+        "message": _push_digest_text(payload),
+        "priority": _GOTIFY_PRIORITIES.get(status, 5),
+    }
+
+
 _WEBHOOK_DIGEST_FORMATTERS: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "slack": _slack_digest_webhook_payload,
     "discord": _discord_digest_webhook_payload,
+    "ntfy": _ntfy_digest_webhook_payload,
+    "gotify": _gotify_digest_webhook_payload,
 }
 
 
@@ -878,7 +1514,58 @@ def _format_webhook_body(context: ScanContext, payload: dict[str, Any]) -> dict[
     """
     formatters = _WEBHOOK_DIGEST_FORMATTERS if payload.get("digest") else _WEBHOOK_FORMATTERS
     formatter = formatters.get(context.webhook_format)
-    return formatter(payload) if formatter is not None else payload
+    if formatter is None:
+        return payload
+    body = formatter(payload)
+    if context.webhook_format == "ntfy":
+        # The one field that comes from the configuration rather than the
+        # result, and the only reason ntfy needs a step the others do not.
+        body["topic"] = _ntfy_topic(context.webhook_url)
+    return body
+
+
+def _ntfy_topic(url: str | None) -> str:
+    """
+    The topic named by the path of an ntfy publish URL.
+
+    A topic never contains a slash, so the last segment is the topic and
+    anything in front of it is a reverse proxy's prefix. Refusing at parse
+    time (see _validate_thresholds) means this is never reached with a URL
+    that has no path to read.
+    """
+    try:
+        path = urlsplit(url or "").path
+    except ValueError:
+        return ""
+    return path.strip("/").rsplit("/", 1)[-1]
+
+
+def _webhook_post_url(context: ScanContext) -> str | None:
+    """
+    The URL the body is actually POSTed to.
+
+    Every format posts to the URL the operator configured. 'ntfy' is the
+    exception, and only because ntfy says so: it reads a JSON publication at
+    its server root alone, taking the topic from the document rather than the
+    path. So the operator still configures the topic URL they already have
+    and the path is dropped here.
+
+    Scheme, host and port are untouched, which is what keeps this safe: the
+    address the URL resolves to is the same one either way, so the SSRF guard
+    and the rebinding check below are validating exactly what is posted. See
+    ADR 0040.
+    """
+    url = context.webhook_url
+    if not url or context.webhook_format != "ntfy":
+        return url
+    try:
+        parts = urlsplit(url)
+    except ValueError:
+        # A URL that will not parse cannot be rewritten; hand back what was
+        # configured and let delivery fail as a delivery failure, the way any
+        # other unusable webhook URL does.
+        return url
+    return urlunsplit((parts.scheme, parts.netloc, "/", "", ""))
 
 
 def _send_webhook(context: ScanContext, payload: dict[str, Any]) -> bool:
@@ -889,12 +1576,15 @@ def _send_webhook(context: ScanContext, payload: dict[str, Any]) -> bool:
     check's own state, because the monitoring result must stay truthful about
     the OpenCloud instance rather than about the notification channel.
     """
-    url = context.webhook_url
+    url = _webhook_post_url(context)
     if not url:
         return True
-    
+
     validated_addresses: tuple[str, ...] | None = None
     if not context.allow_private_webhooks:
+        if context.proxy:
+            LOGGER.warning("A restricted webhook cannot use a proxy that resolves its target")
+            return False
         is_safe, validated_addresses = _resolve_and_validate_webhook_url(url)
         if not is_safe:
             LOGGER.warning(
@@ -950,14 +1640,26 @@ def _send_webhook(context: ScanContext, payload: dict[str, Any]) -> bool:
         # `X-COS-Signature` and every `--webhook-header` go with it, and
         # `requests` drops `Authorization` across hosts but keeps the rest, so
         # a receiver's own API key would be handed to whatever it points at.
-        response = requests.post(
-            url,
-            data=body_bytes,
-            headers=headers,
-            proxies=_proxies(context),
-            timeout=context.webhook_timeout,
-            allow_redirects=False,
-        )
+        with _NoRedirectSession() as session:
+            session.trust_env = False
+            if validated_addresses:
+                hostname = urlsplit(url).hostname
+                assert hostname is not None
+                adapter = _PinnedHTTPAdapter({hostname.lower().rstrip("."): validated_addresses})
+                session.mount("http://", adapter)
+                session.mount("https://", adapter)
+                headers["Host"] = urlsplit(url).netloc
+            response = session.post(
+                url,
+                data=body_bytes,
+                headers=headers,
+                proxies=_proxies(context),
+                timeout=context.webhook_timeout,
+                allow_redirects=False,
+                stream=True,
+            )
+            # Delivery depends on the status, never on a receiver's body.
+            response.close()
         # `raise_for_status` passes a 3xx, so an unfollowed redirect would
         # otherwise be reported as a delivered notification that never arrived.
         # The status range rather than `response.is_redirect`: that property is
@@ -1029,8 +1731,16 @@ def _redact_url(url: str) -> str:
     A webhook URL is routinely the credential itself - the token sits in the
     path or the query of a chat provider's endpoint - so the whole of it must
     never reach a log file that is read by more people than the secret is.
+
+    A URL this cannot parse redacts to nothing rather than raising. Every
+    caller is a log call explaining what the plugin decided, and an unclosed
+    IPv6 literal in an operator's ``--webhook-url`` must not turn the refusal
+    to deliver a notification into a traceback in place of the check result.
     """
-    parts = urlsplit(url)
+    try:
+        parts = urlsplit(url)
+    except ValueError:
+        return "<redacted>"
     if not parts.hostname:
         return "<redacted>"
     host = parts.hostname
@@ -1082,6 +1792,10 @@ def _webhook_address_is_public(address: ipaddress.IPv4Address | ipaddress.IPv6Ad
         address.is_private
         or address.is_loopback
         or address.is_link_local
+        # Deprecated IPv6 site-local (RFC 3879) is still routed as
+        # private space on networks that never renumbered, yet no is_private
+        # flag covers it.
+        or (isinstance(address, ipaddress.IPv6Address) and address.is_site_local)
         or address.is_multicast
         or address.is_reserved
         or address.is_unspecified
@@ -1195,7 +1909,8 @@ def _evaluate_rating(
         track = str(lifecycle.get("releaseType") or "")
         target = str(lifecycle.get("upgradeTo") or "")
         line = str(lifecycle.get("line") or "")
-        described = f"The {line} {track} release line".strip() if line else "This server version"
+        named = " ".join(part for part in (line, track) if part)
+        described = f"The {named} release line" if line else "This server version"
         upgrade = f" Upgrade to {target}." if target else ""
         return (
             f"CRITICAL: {described} is end-of-life and has no security fixes.{upgrade}",
@@ -1258,6 +1973,30 @@ def _lifecycle(response_scan: dict[str, Any]) -> dict[str, Any]:
 def _support_days_left(response_scan: dict[str, Any]) -> int | None:
     """Days until the instance's release line stops receiving fixes."""
     remaining = _lifecycle(response_scan).get("daysRemaining")
+    return remaining if isinstance(remaining, int) else None
+
+
+def _certificate_days_left(response_scan: dict[str, Any]) -> int | None:
+    """
+    Days until the certificate the instance presented expires.
+
+    The scan has always measured this and the rating has always judged it, but
+    it reached an operator only as a finding - a state, on the day the margin
+    ran out. The number itself is what a monitoring system graphs and alerts
+    on ahead of that day, so it belongs in the performance data next to
+    support_days_left, which answers the same question about the release.
+
+    ``None`` whenever nothing was measured: a scan over plain HTTP, a host
+    that refused the handshake, or a certificate whose dates would not parse.
+    An unmeasured certificate must not arrive as a number.
+    """
+    tls = response_scan.get("tls")
+    if not isinstance(tls, dict):
+        return None
+    certificate = tls.get("certificate")
+    if not isinstance(certificate, dict):
+        return None
+    remaining = certificate.get("daysRemaining")
     return remaining if isinstance(remaining, int) else None
 
 
@@ -1458,6 +2197,7 @@ def _explain_lines(
         f"Final rating: {rating}/5 ({RATE_MAP.get(rating, 'Unknown')}). "
         f"WARNING at or below {RATE_MAP.get(context.warning_rating, '?')}, "
         f"CRITICAL at or below {RATE_MAP.get(context.critical_rating, '?')}."
+        + (f" Profile: {context.profile}." if context.profile else "")
     )
     if not context.check_hardening:
         lines.append(
@@ -1575,6 +2315,8 @@ def _build_perfdata(
     failed_extra_checks_count: int | None = None,
     update_available: bool | None = None,
     support_days_left: int | None = None,
+    certificate_days_left: int | None = None,
+    upgrade_path_complete: bool | None = None,
 ) -> str:
     """
     Build a Nagios/Icinga performance data string.
@@ -1605,8 +2347,37 @@ def _build_perfdata(
     if support_days_left is not None:
         # No min: the value goes negative once the release line is out of
         # support, which is exactly what an operator wants to see on a graph.
-        parts.append(f"support_days_left={support_days_left};;;;")
+        # With --eol-warning the graph carries the same window the alert
+        # uses; critical is the end of life itself.
+        eol_window = context.eol_warning_days if context is not None else 0
+        thresholds = f"@~:{eol_window};@~:0" if eol_window > 0 else ";"
+        parts.append(f"support_days_left={support_days_left};{thresholds};;")
+    if certificate_days_left is not None:
+        # The thresholds are the scan's own opinion restated in Nagios range
+        # syntax rather than a second one invented here: warning at or below
+        # the same margin tls_min_days makes the finding fire at, critical
+        # once the certificate has actually expired. '~' is negative
+        # infinity, so both ranges are open at the bottom - and the value
+        # goes negative after expiry, so like support_days_left it has no min.
+        margin = _certificate_margin_days(context)
+        warn_range = f"@~:{margin}" if margin is not None else ""
+        parts.append(f"cert_days_left={certificate_days_left};{warn_range};@~:0;;")
+    if upgrade_path_complete is not None:
+        parts.append(f"upgrade_path_complete={int(upgrade_path_complete)};;;0;1")
     return " ".join(parts)
+
+
+def _certificate_margin_days(context: ScanContext | None) -> int | None:
+    """
+    The number of days below which the scan calls a certificate a finding.
+
+    Read from the settings the scan actually ran with rather than the default,
+    so a deployment that moved the margin gets perfdata thresholds that agree
+    with the alert beside them.
+    """
+    settings = context.scanner_settings if context is not None else None
+    margin = getattr(settings, "tls_min_days", None)
+    return margin if isinstance(margin, int) else None
 
 
 # --- Main ---
@@ -1777,6 +2548,21 @@ def build_arg_parser() -> argparse.ArgumentParser:
             f"Default: none (env: {ENV_PREFIX}SCANNER_IGNORE_HARDENINGS)."
         ),
     )
+    scope.add_argument(
+        "--waive-until",
+        action="append",
+        default=None,
+        metavar="PATTERN|EXPIRES|REASON",
+        help=(
+            "Accept a failing check until a deadline, with a reason, e.g. "
+            "'debugPort:9205|2026-12-31T00:00:00Z|Firewall change scheduled'. "
+            "The pattern matches as --ignore-hardening does; the expiry must "
+            "carry a timezone; the reason may not be empty. After the expiry "
+            "the check alerts again, without anybody having to remember to "
+            "remove this. Repeatable. "
+            f"Default: none (env: {ENV_PREFIX}SCANNER_TEMPORARY_WAIVERS)."
+        ),
+    )
     rating.add_argument(
         "--release-track",
         choices=sorted(RELEASE_TRACK_CHOICES),
@@ -1815,6 +2601,29 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help=(
             "Skip probing the OpenCloud debug ports (9205, 9141, 9124, 9134, 9239). "
             f"Default: False (env: {ENV_PREFIX}NO_DEBUG_PORTS)."
+        ),
+    )
+    scope.add_argument(
+        "--login-throttling",
+        action="store_true",
+        default=_env_bool("LOGIN_THROTTLING"),
+        help=(
+            "Send a few failed sign-ins for an account that cannot exist to the "
+            "built-in identity provider and report whether they were throttled. "
+            "Never rated. "
+            f"Default: False (env: {ENV_PREFIX}LOGIN_THROTTLING)."
+        ),
+    )
+    scope.add_argument(
+        "--all-addresses",
+        action="store_true",
+        default=_env_bool("ALL_ADDRESSES"),
+        help=(
+            "Repeat the version, header, hardening and demo-account checks "
+            "against every address the name resolves to, and report "
+            "addressParity when they disagree. About a dozen requests per "
+            "address. "
+            f"Default: False (env: {ENV_PREFIX}ALL_ADDRESSES)."
         ),
     )
     updates.add_argument(
@@ -1871,6 +2680,17 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help=(
             "Report WARNING when a newer OpenCloud release is available. "
             f"Default: False (env: {ENV_PREFIX}UPDATE_WARNING)."
+        ),
+    )
+    updates.add_argument(
+        "--eol-warning",
+        type=int,
+        default=_env_int("EOL_WARNING", 0),
+        metavar="DAYS",
+        help=(
+            "Report WARNING when the running release line reaches its end of life "
+            "within DAYS days; 0 disables. "
+            f"Default: 0 (env: {ENV_PREFIX}EOL_WARNING)."
         ),
     )
     baseline.add_argument(
@@ -1932,16 +2752,45 @@ def build_arg_parser() -> argparse.ArgumentParser:
     output.add_argument(
         "--format",
         dest="output_format",
-        choices=("nagios", "prometheus", "json", "sarif", "junit"),
+        choices=(
+            "nagios",
+            "prometheus",
+            "otlp",
+            "json",
+            "sarif",
+            "junit",
+            "checkmk",
+            "summary",
+        ),
         default=_env("FORMAT") or "nagios",
         help=(
             "Output format for a one-shot scan: 'nagios', Prometheus text "
-            "exposition, or a machine-readable document for every host "
-            "combined - 'json' (an array of the webhook payload shape), "
-            "'sarif' (2.1.0, for a code-scanning dashboard) or 'junit' XML "
-            "(one testsuite per host). The exit code keeps its Nagios "
-            "meaning under every format. "
+            "exposition, 'otlp' (the same metrics as OTLP/JSON, to pipe at a "
+            "collector's /v1/metrics), 'checkmk' (one Checkmk local check "
+            "line per host), 'summary' (an aligned table, one row per host, "
+            "for reading a fleet in one table), or a machine-readable document "
+            "for every host combined - 'json' (an array of the webhook "
+            "payload shape), 'sarif' (2.1.0, for a code-scanning dashboard) "
+            "or 'junit' XML (one testsuite per host). The exit code keeps its "
+            "Nagios meaning under every format except the two metric ones, "
+            "which report a failed scan as a sample and exit 0. "
             f"Default: nagios (env: {ENV_PREFIX}FORMAT)."
+        ),
+    )
+    output.add_argument(
+        "--verify-remediation",
+        action="append",
+        metavar="FINDING_ID",
+        default=None,
+        help=(
+            "Re-measure only the named finding (repeatable, or comma "
+            "separated) instead of running a full scan - for checking one "
+            "reverse-proxy change without waiting for everything else. Takes "
+            "the ids the full output reports, e.g. 'Strict-Transport-Security', "
+            "'corsOriginRestricted' or 'exposed' for every exposed path. OK when "
+            "every one now passes, WARNING or CRITICAL when one still fails, "
+            "UNKNOWN when one can only be verified by a full scan. No rating, "
+            "baseline or webhook."
         ),
     )
     output.add_argument(
@@ -1997,6 +2846,36 @@ def build_arg_parser() -> argparse.ArgumentParser:
         ),
     )
     rating.add_argument(
+        "--profile",
+        choices=tuple(PROFILES),
+        default=_env("PROFILE"),
+        help=(
+            "Judge this scan by a named threshold set instead of the defaults: "
+            "'strict' alerts on anything below A and announces an end of life "
+            "90 days ahead, 'ops' keeps the default thresholds but reports "
+            "hardening and warns 30 days ahead, 'lenient' alerts only on a "
+            "rating of D or worse. A profile changes how the result is judged, "
+            "never what is probed, and any of -w, -c, --check-hardening, "
+            "--update-warning or --eol-warning given explicitly wins over it. "
+            f"Default: unset (env: {ENV_PREFIX}PROFILE)."
+        ),
+    )
+    rating.add_argument(
+        "--policy",
+        default=_env("POLICY"),
+        help=(
+            "Path to a policy file ('.json' is read as JSON, anything else as "
+            "YAML) stating what this organization requires of every instance: "
+            "'minimum_rating' (0-5), 'required_hardenings' (measures that must "
+            "be in place) and 'forbidden' (finding ids that must not be "
+            "present). A requirement that is not met is CRITICAL, whatever the "
+            "thresholds would have said, so a pipeline can fail a deployment "
+            "on explicit policy rather than on a generic grade. A waiver does "
+            "not excuse a requirement, and an unknown key or measure is a "
+            f"usage error. Default: none (env: {ENV_PREFIX}POLICY)."
+        ),
+    )
+    rating.add_argument(
         "-w",
         "--warning",
         type=int,
@@ -2049,13 +2928,16 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
     webhook.add_argument(
         "--webhook-format",
-        choices=("generic", "slack", "discord"),
+        choices=("generic", "slack", "discord", "ntfy", "gotify"),
         default=_env("WEBHOOK_FORMAT") or DEFAULT_WEBHOOK_FORMAT,
         help=(
             "Shape of the webhook body: the plugin's own flat JSON document "
-            "('generic'), or a payload a Slack or Discord incoming webhook "
-            "accepts directly. Mattermost and the common Matrix webhook "
-            "bridges also accept 'slack'. "
+            "('generic'), a payload a Slack or Discord incoming webhook "
+            "accepts directly, or a push notification for an ntfy or Gotify "
+            "server. Mattermost and the common Matrix webhook bridges also "
+            "accept 'slack'. With 'ntfy', point --webhook-url at the topic "
+            "URL: the topic is read from it and the publication goes to the "
+            "server root, which is the only place ntfy reads JSON. "
             f"Default: {DEFAULT_WEBHOOK_FORMAT} (env: {ENV_PREFIX}WEBHOOK_FORMAT)."
         ),
     )
@@ -2147,8 +3029,55 @@ def _parse_webhook_headers(raw_headers: list[str] | None) -> tuple[tuple[str, st
     return tuple(headers)
 
 
+def _options_on_command_line(argv: list[str] | None = None) -> set[str]:
+    """
+    Which settings a profile governs were also named on the command line.
+
+    argparse cannot answer this: a threshold typed out at its default value
+    is indistinguishable from one nobody gave. The spellings in
+    PROFILE_OPTIONS are matched against the raw tokens instead, including
+    '--eol-warning=90' and the attached form of a short flag, '-w4'.
+    """
+    tokens = sys.argv[1:] if argv is None else argv
+    named: set[str] = set()
+    for token in tokens:
+        head = token.split("=", 1)[0]
+        for dest, spellings in PROFILE_OPTIONS.items():
+            for spelling in spellings:
+                attached = len(spelling) == 2 and token.startswith(spelling)
+                if head == spelling or attached:
+                    named.add(dest)
+    return named
+
+
+def _apply_profile(args: argparse.Namespace, argv: list[str] | None = None) -> None:
+    """
+    Fill in the settings --profile decides, without overruling anybody.
+
+    Precedence is the same everywhere else in this plugin - an explicit flag
+    beats an environment variable or configuration key, and both beat a
+    default - so a profile is the weakest source of all: it only ever
+    supplies a value nobody else did.
+    """
+    profile = PROFILES.get(args.profile or "")
+    if profile is None:
+        return
+    given = _options_on_command_line(argv)
+    for dest, value in profile.items():
+        if dest in given or _CONFIG.get(dest.upper()) is not None:
+            continue
+        setattr(args, dest, value)
+
+
 def _validate_thresholds(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:
     """Reject rating thresholds outside 0-5 or with critical above warning."""
+    # argparse checks 'choices' only for a value it parsed off the command
+    # line, so a misspelled COS_PROFILE would otherwise be read as "no
+    # profile" and judge the instance by rules nobody asked for.
+    if args.profile is not None and args.profile not in PROFILES:
+        parser.error(
+            f"--profile must be one of {', '.join(PROFILES)}, got {args.profile!r}."
+        )
     for name in ("warning", "critical"):
         value = getattr(args, name)
         if not MIN_RATING <= value <= MAX_RATING:
@@ -2181,8 +3110,19 @@ def _validate_thresholds(parser: argparse.ArgumentParser, args: argparse.Namespa
         parser.error(f"--scrape-interval must not be negative, got {args.scrape_interval}.")
     if args.webhook_url and not args.webhook_url.lower().startswith(("http://", "https://")):
         parser.error(f"--webhook-url must be an http(s) URL, got {args.webhook_url!r}.")
+    # ntfy publishes to a topic, and with this format the topic comes from the
+    # URL's path. A root URL therefore names no destination, and ntfy would
+    # answer 400 on every notification for the life of the configuration -
+    # worth one sentence now rather than a silent channel discovered later.
+    if args.webhook_format == "ntfy" and args.webhook_url and not _ntfy_topic(args.webhook_url):
+        parser.error(
+            "--webhook-format ntfy needs --webhook-url to name a topic, "
+            "e.g. https://ntfy.example.com/opencloud."
+        )
     # A --warn-on-new with nowhere to remember the last run would report
     # "nothing new" forever without ever having compared anything.
+    if args.eol_warning < 0:
+        parser.error("--eol-warning must be 0 (off) or a number of days.")
     if args.warn_on_new and not args.baseline:
         parser.error("--warn-on-new needs --baseline PATH to compare this run against.")
     if args.check_only:
@@ -2243,8 +3183,11 @@ def _build_context(host: str, args: argparse.Namespace) -> ScanContext:
         verify_tls=False if args.insecure else None,
         tls_ca_file=args.ca_file,
         check_debug_ports=False if args.no_debug_ports else None,
+        check_all_addresses=True if args.all_addresses else None,
+        check_login_throttling=True if args.login_throttling else None,
         release_track=args.release_track,
         ignore_hardenings=_waiver_patterns(args.ignore_hardening),
+        waivers=_temporary_waivers(args.waive_until),
     )
     mode = "off" if args.no_update_check else args.update_source
     if mode is None and args.latest_version:
@@ -2269,6 +3212,7 @@ def _build_context(host: str, args: argparse.Namespace) -> ScanContext:
         timeout=timeout,
         warning_rating=args.warning,
         critical_rating=args.critical,
+        profile=args.profile,
         check_hardening=args.check_hardening,
         webhook_url=args.webhook_url,
         webhook_on=args.webhook_on,
@@ -2282,7 +3226,9 @@ def _build_context(host: str, args: argparse.Namespace) -> ScanContext:
         release_settings=release_settings,
         update_check=not args.no_update_check,
         update_warning=args.update_warning,
+        eol_warning_days=args.eol_warning,
         baseline_path=args.baseline,
+        policy=_load_policy_argument(args),
         warn_on_new=args.warn_on_new,
         diff_format=args.diff_format,
         self_update_check=args.self_update_check,
@@ -2465,6 +3411,10 @@ def _run_multi_host_checks(hosts: list[str], args: argparse.Namespace) -> Nagios
 # is printed for the whole run (never one per host, even for a single one)
 # because concatenating N independent JSON/SARIF/XML documents the way the
 # nagios/text path concatenates blocks would not parse as one.
+#
+# --format checkmk shares this runner and not that rule: its protocol is a
+# line per service, so several hosts are several lines by definition, and
+# --format summary is a table whose whole point is a row per host.
 # --------------------------------------------------------------------------
 
 # SARIF has three levels that matter here, matching the mapping the webapp's
@@ -2485,7 +3435,8 @@ _SARIF_SCHEMA = (
 
 def _run_machine_format_checks(hosts: list[str], args: argparse.Namespace) -> int:
     """
-    Run every host and print one combined json/sarif/junit document.
+    Run every host and print one combined json/sarif/junit document, or the
+    Checkmk local check lines.
 
     Every other flag - baseline diffing, webhooks, --warn-on-new - keeps
     working exactly as it does for the nagios format, because this only
@@ -2508,6 +3459,10 @@ def _run_machine_format_checks(hosts: list[str], args: argparse.Namespace) -> in
         print(json.dumps([document["payload"] for document in documents], indent=2))
     elif args.output_format == "sarif":
         print(json.dumps(_render_sarif(documents), indent=2))
+    elif args.output_format == "checkmk":
+        print(_render_checkmk(documents, exit_codes))
+    elif args.output_format == "summary":
+        print(_render_summary(documents, exit_codes))
     else:
         print(_render_junit(documents))
 
@@ -2694,8 +3649,364 @@ def _render_junit(documents: list[dict[str, Any]]) -> str:
     )
 
 
-def _prometheus_scan(context: ScanContext) -> str:
-    """Run one scan and render either its metrics or a scrape-success failure sample."""
+# --------------------------------------------------------------------------
+# Checkmk local check output: --format checkmk. One line per host, in the
+# agent's own protocol:
+#
+#     <state> "<service name>" <metrics> <status detail>
+#
+# Checkmk reads the Nagios line above natively when the plugin is configured
+# as an active check on the site server, and that path needs nothing from
+# here. This format is for the other one - a local check run by the agent -
+# where three things differ enough that reformatting the Nagios line would
+# have been a parser, not a renderer:
+#
+# * metrics are separated by '|' rather than by spaces, and every value has
+#   to parse as a number, which the 's' on the Nagios 'time' metric does not.
+# * a metric's levels are evaluated only when the state field is 'P', which
+#   hands the verdict to Checkmk. Deciding is this plugin's whole job -
+#   thresholds, waivers, the rules end of life and a baseline add on top -
+#   so the state is the one it already reached and the metrics carry values
+#   alone rather than a second opinion Checkmk could disagree with.
+# * the detail follows the summary as a literal backslash-n, because a local
+#   check is one line per service and a real newline starts another service.
+#
+# The state numbers need no mapping at all: Checkmk inherited 0/1/2/3 from
+# Nagios, which is what NagiosExitCode already is.
+#
+# Format reference:
+# https://docs.checkmk.com/latest/en/localchecks.html
+# --------------------------------------------------------------------------
+
+_CHECKMK_SERVICE_PREFIX = "OpenCloud_Security"
+
+# Everything else in a host becomes '_'. The name is quoted on the line, so a
+# space would survive - but a Nagios core rejects a service name containing
+# any of ;~!$%^&*|\'"<>?,()= outright, and this set stays well inside that
+# for either core, so a URL target survives as a name rather than as a shape
+# nobody can write a rule condition against.
+_CHECKMK_NAME_SAFE = frozenset(
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.-"
+)
+
+
+def _checkmk_service_name(host: str) -> str:
+    """
+    The Checkmk service name for one scanned instance.
+
+    The target is named in the service rather than left to the host the agent
+    runs on, because those are rarely the same machine: this plugin probes an
+    instance from outside, so the natural place to run it is a monitoring
+    host that scans several instances, each of which needs its own service.
+    """
+    cleaned = "".join(
+        character if character in _CHECKMK_NAME_SAFE else "_" for character in host
+    )
+    while "__" in cleaned:
+        cleaned = cleaned.replace("__", "_")
+    cleaned = cleaned.strip("_")
+    return f"{_CHECKMK_SERVICE_PREFIX}_{cleaned}" if cleaned else _CHECKMK_SERVICE_PREFIX
+
+
+def _checkmk_metrics(document: dict[str, Any]) -> str:
+    """
+    The metrics field for one host: the same measurements the Nagios perfdata
+    carries, under the same names, minus the thresholds and the unit suffix
+    Checkmk cannot read.
+
+    A measurement that was not taken is left out rather than sent as a zero,
+    which is why ``hardenings_missing`` needs the flag the document carries:
+    an empty list of missing measures means "none missing" with
+    ``--check-hardening`` and "none looked for" without it, and a graph flat
+    at zero cannot say which.
+    """
+    payload = document["payload"]
+    scan = document.get("scan") or {}
+    metrics: list[str] = []
+
+    rating = payload.get("rating")
+    if isinstance(rating, int) and rating in RATE_MAP:
+        metrics.append(f"rating={rating}")
+    if isinstance(payload.get("vulnerability_count"), int):
+        metrics.append(f"vulnerabilities={payload['vulnerability_count']}")
+    if document.get("hardening_checked"):
+        metrics.append(f"hardenings_missing={len(payload.get('missing_hardenings') or [])}")
+    if scan.get("extraChecks"):
+        metrics.append(f"extra_checks_failed={len(payload.get('failed_extra_checks') or [])}")
+
+    update = payload.get("update")
+    if isinstance(update, dict) and "available" in update:
+        metrics.append(f"update_available={int(bool(update['available']))}")
+
+    support_days = _support_days_left(scan)
+    if support_days is not None:
+        metrics.append(f"support_days_left={support_days}")
+    certificate_days = _certificate_days_left(scan)
+    if certificate_days is not None:
+        metrics.append(f"cert_days_left={certificate_days}")
+    complete = _upgrade_path_complete(scan)
+    if complete is not None:
+        metrics.append(f"upgrade_path_complete={int(complete)}")
+
+    duration = payload.get("duration_seconds")
+    if isinstance(duration, (int, float)):
+        metrics.append(f"execution_time={float(duration):.3f}")
+
+    return "|".join(metrics) if metrics else "-"
+
+
+def _render_checkmk(
+    documents: list[dict[str, Any]], exit_codes: list[NagiosExitCode]
+) -> str:
+    """
+    Render one Checkmk local check line per host.
+
+    The findings under the summary are the ones _host_findings already
+    derives for SARIF and JUnit, so the three formats cannot disagree about
+    what this run found.
+    """
+    lines: list[str] = []
+    for document, exit_code in zip(documents, exit_codes):
+        payload = document["payload"]
+        summary = _safe_monitoring_text(payload.get("message") or "")
+        details = [
+            _safe_monitoring_text(f"{finding['id']}: {finding['title']}")
+            for finding in _host_findings(document)
+        ]
+        text = "\\n".join([summary, *details])
+        service = _checkmk_service_name(str(payload.get("host") or "unknown"))
+        # Exactly one space between the four fields: agents up to 2.4.0p4
+        # split on a single space and read a second one as part of the next
+        # field.
+        lines.append(f'{int(exit_code)} "{service}" {_checkmk_metrics(document)} {text}')
+    return "\n".join(lines)
+
+
+# --------------------------------------------------------------------------
+# Fleet summary output: --format summary. One aligned row per host, for a
+# person reading a fleet in one table rather than a machine parsing it.
+#
+# It renders only what the other formats already carry - the grade the plugin
+# decided, the version and lifecycle the scan measured, the vulnerability
+# count, and how the baseline moved - so a row can never disagree with the
+# Nagios line or the JSON document for the same host. Nothing here decides
+# anything; picking a column is the whole of it.
+#
+# A scan that never produced a rating shows its Nagios status in the GRADE
+# column instead. That reads correctly because no grade is ever spelled
+# UNKNOWN: RATE_MAP is A+, A, C, D, E and F.
+# --------------------------------------------------------------------------
+
+_SUMMARY_HEADERS = ("HOST", "GRADE", "VERSION", "EOL", "VULNS", "NEW")
+
+
+def _summary_eol(payload: dict[str, Any]) -> str:
+    """
+    The lifecycle column: past end of life, inside the early warning window,
+    or supported.
+
+    The window is reported as 'soon' rather than as a day count because the
+    column has to stay narrow, and `--eol-warning-days` already decides what
+    soon means for this run.
+    """
+    if payload.get("eol"):
+        return "YES"
+    if payload.get("eol_warning"):
+        return "soon"
+    return "no"
+
+
+def _summary_new_findings(payload: dict[str, Any]) -> str:
+    """
+    How much the baseline moved for this host.
+
+    Without --baseline there is nothing to compare against, which is '-' and
+    not '0': no new findings and no way to tell are different answers. A
+    first run records the baseline instead of diffing against one.
+
+    The count comes from the rendered changes rather than from the Comparison
+    itself, because by the time a document reaches a renderer the comparison
+    is already the dict shape the webhook posts. Baseline.items() prefixes
+    exactly the new findings with '+ ', and resolved ones with '- '.
+    """
+    diff = payload.get("baseline_diff")
+    if not isinstance(diff, dict):
+        return "-"
+    if diff.get("first_run"):
+        return "new"
+    changes = diff.get("changes")
+    if not isinstance(changes, list):
+        return "?"
+    added = sum(
+        1
+        for change in changes
+        if isinstance(change, dict) and str(change.get("change", "")).startswith("+ ")
+    )
+    return f"+{added}" if added else "0"
+
+
+def _summary_row(
+    document: dict[str, Any], exit_code: NagiosExitCode
+) -> tuple[str, ...]:
+    """The six cells for one host, all already decided elsewhere."""
+    payload = document["payload"]
+    grade = payload.get("rating_label") or exit_code.name
+    count = payload.get("vulnerability_count")
+    return (
+        str(payload.get("host") or "unknown"),
+        str(grade),
+        str(payload.get("product_version") or "?"),
+        _summary_eol(payload),
+        str(count) if isinstance(count, int) else "?",
+        _summary_new_findings(payload),
+    )
+
+
+def _render_summary(
+    documents: list[dict[str, Any]], exit_codes: list[NagiosExitCode]
+) -> str:
+    """
+    Render the fleet as an aligned table followed by the run's one-line
+    tally.
+
+    Columns are padded to the widest cell rather than to a fixed width, so a
+    long hostname widens the table instead of being cut: this output is read,
+    not parsed, and a truncated host is a row nobody can act on. The last
+    column is not padded, which keeps trailing spaces out of every line.
+    """
+    rows = [
+        _summary_row(document, exit_code)
+        for document, exit_code in zip(documents, exit_codes)
+    ]
+    widths = [
+        max(len(row[column]) for row in (_SUMMARY_HEADERS, *rows))
+        for column in range(len(_SUMMARY_HEADERS))
+    ]
+
+    def _line(cells: tuple[str, ...]) -> str:
+        padded = [cell.ljust(widths[index]) for index, cell in enumerate(cells)]
+        return "  ".join(padded).rstrip()
+
+    lines = [_line(_SUMMARY_HEADERS), *(_line(row) for row in rows)]
+    lines.append("")
+    lines.append(_summarize_multi_host_result(exit_codes))
+    return "\n".join(lines)
+
+
+def _policy_findings(
+    response_scan: dict[str, Any], vulnerabilities: list[dict[str, Any]]
+) -> set[str]:
+    """
+    Every id a 'forbidden' entry can name, from all three sources at once: a
+    missing hardening measure, a failed extra check, a known vulnerability.
+
+    Waived and hardcoded measures are included on purpose. A policy asks
+    whether the instance is in that state, not whether this run chose to
+    alert on it.
+    """
+    found = set(_collect_missing_hardenings(response_scan))
+    found.update(failed_extra_checks(response_scan))
+    found.update(
+        str(entry.get("id"))
+        for entry in vulnerabilities
+        if isinstance(entry, dict) and entry.get("id")
+    )
+    return found
+
+
+def evaluate_policy(
+    policy: Policy,
+    response_scan: dict[str, Any],
+    *,
+    rating: int,
+    vulnerabilities: list[dict[str, Any]],
+) -> list[str]:
+    """
+    One sentence per requirement this instance does not meet, in the order
+    the policy states them, or an empty list when it meets all of them.
+
+    Nothing is measured here: every answer comes from the scan document the
+    run already produced.
+    """
+    violations: list[str] = []
+
+    if policy.minimum_rating is not None and rating < policy.minimum_rating:
+        violations.append(
+            f"rating {RATE_MAP.get(rating, 'Unknown')} is below the required "
+            f"{RATE_MAP.get(policy.minimum_rating, policy.minimum_rating)}"
+        )
+
+    missing = set(_collect_missing_hardenings(response_scan))
+    violations.extend(
+        f"required hardening '{name}' is not in place"
+        for name in policy.required_hardenings
+        if name in missing
+    )
+
+    present = _policy_findings(response_scan, vulnerabilities)
+    violations.extend(
+        f"forbidden finding '{name}' is present"
+        for name in policy.forbidden
+        if name in present
+    )
+
+    return violations
+
+
+def _apply_policy(
+    context: ScanContext,
+    response_scan: dict[str, Any],
+    *,
+    rating: int,
+    vulnerabilities: list[dict[str, Any]],
+    message: str,
+    exit_code: NagiosExitCode,
+) -> tuple[str, NagiosExitCode, list[str], dict[str, Any] | None]:
+    """
+    Apply the policy, if one was given, to a result that is otherwise decided.
+
+    A violation is CRITICAL because a policy is a deployment gate: there is
+    little point failing a pipeline with a status the pipeline might be
+    configured to tolerate. A policy never improves a verdict - an instance
+    that meets every requirement keeps whatever the thresholds, hardening,
+    lifecycle and baseline rules already decided.
+    """
+    if context.policy is None:
+        return message, exit_code, [], None
+
+    violations = evaluate_policy(
+        context.policy,
+        response_scan,
+        rating=rating,
+        vulnerabilities=vulnerabilities,
+    )
+    block: dict[str, Any] = {
+        "path": context.policy.path,
+        "passed": not violations,
+        "violations": list(violations),
+    }
+    if not violations:
+        return message, exit_code, ["Policy: every requirement met"], block
+
+    lines = [f"Policy violations ({len(violations)}):"]
+    lines.extend(f"  - {violation}" for violation in violations)
+    message = (
+        f"CRITICAL: {len(violations)} policy violation(s) - {violations[0]}"
+        + (f" (+{len(violations) - 1} more)" if len(violations) > 1 else "")
+    )
+    return message, NagiosExitCode.CRITICAL, lines, block
+
+
+def _scan_metric_families(context: ScanContext) -> list[MetricFamily]:
+    """
+    Run one scan and read it as metric families, for whichever metric format
+    asked - the exposition, the exporter or OTLP.
+
+    A scan that fails is still a reading: the families come back carrying the
+    duration and a scrape-success sample of zero, so a collector learns that
+    this instance could not be reached rather than silently keeping the last
+    numbers that worked.
+    """
     start = time.perf_counter()
     try:
         response = _call_with_retry(
@@ -2710,19 +4021,24 @@ def _prometheus_scan(context: ScanContext) -> str:
             description=f"Scanning {context.host}",
         )
     except (ScanError, *REQUEST_ERRORS) as exc:
-        LOGGER.info("Prometheus scan of %s failed: %s", context.host, exc)
-        return render_prometheus_metrics(
+        LOGGER.info("Metrics scan of %s failed: %s", context.host, exc)
+        return collect_metrics(
             context.host,
             None,
             duration_seconds=time.perf_counter() - start,
             success=False,
         )
-    return render_prometheus_metrics(
+    return collect_metrics(
         context.host,
         response,
         duration_seconds=time.perf_counter() - start,
         success=True,
     )
+
+
+def _prometheus_scan(context: ScanContext) -> str:
+    """Run one scan and render either its metrics or a scrape-success failure sample."""
+    return render_prometheus_families(_scan_metric_families(context))
 
 
 def _prometheus_metrics(hosts: list[str], args: argparse.Namespace) -> str:
@@ -2750,6 +4066,30 @@ def _prometheus_metrics(hosts: list[str], args: argparse.Namespace) -> str:
                 declarations.add(line)
             lines.append(line)
     return "\n".join(lines) + "\n"
+
+
+def _otlp_metrics(hosts: list[str], args: argparse.Namespace) -> dict[str, Any]:
+    """
+    Collect one OTLP/JSON document covering every requested host.
+
+    The host pool is the Prometheus one, for the same reason: several hosts
+    are scanned in parallel while each worker scans its own instance serially,
+    so the pools never nest. Unlike the text exposition the result is one
+    document however many hosts there are - several JSON objects in a row do
+    not parse as one, which is the rule --format json, sarif and junit already
+    follow.
+    """
+    contexts = [_build_context(host, args) for host in hosts]
+    if len(contexts) == 1:
+        return render_otlp_metrics([_scan_metric_families(contexts[0])])
+    with ThreadPoolExecutor(
+        max_workers=_host_worker_count(hosts, args),
+        thread_name_prefix="opencloud-otlp",
+    ) as pool:
+        collections = list(
+            pool.map(_scan_metric_families, map(_serial_host_context, contexts))
+        )
+    return render_otlp_metrics(collections)
 
 
 class _PrometheusExporter:
@@ -2912,6 +4252,7 @@ def main() -> None:
     if not hosts:
         parser.error(f"--host must not be empty (or set the {ENV_PREFIX}HOST environment variable).")
 
+    _apply_profile(args)
     _validate_thresholds(parser, args)
 
     logging.basicConfig(
@@ -2919,8 +4260,118 @@ def main() -> None:
         format="%(asctime)s [%(levelname)s] %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
+    try:
+        _run_checks(hosts, args)
+    except ConfigurationError as exc:
+        # Settings are read lazily - a secret reference, a waiver record - so
+        # a mistake can surface on any output path, not only the first one.
+        _fail(f"UNKNOWN: {exc}")
+
+
+#: Severities whose check, still failing after a fix, is a CRITICAL.
+_CRITICAL_SEVERITIES = frozenset({"critical", "high"})
+
+
+def _requested_finding_ids(values: list[str]) -> list[str]:
+    """Every id named by --verify-remediation, in order, without duplicates."""
+    ids = (part.strip() for value in values for part in value.split(","))
+    return list(dict.fromkeys(item for item in ids if item))
+
+
+def _verification_exit_code(results: list[dict[str, Any]]) -> NagiosExitCode:
+    """
+    Judge a verification document.
+
+    A check that still fails outranks one that could not be verified: the
+    operator has a definite answer about it. A failure at high or critical
+    severity is CRITICAL; any other - including a header, which carries no
+    severity - is WARNING.
+    """
+    failing = [entry for entry in results if entry.get("passed") is False]
+    if failing:
+        severities = {
+            str(check.get("severity") or "").lower()
+            for entry in failing
+            for check in entry.get("checks") or []
+            if not check.get("passed", True)
+        }
+        if severities & _CRITICAL_SEVERITIES:
+            return NagiosExitCode.CRITICAL
+        return NagiosExitCode.WARNING
+    if any(entry.get("passed") is None for entry in results):
+        return NagiosExitCode.UNKNOWN
+    return NagiosExitCode.OK
+
+
+def _verification_lines(host: str, document: dict[str, Any]) -> tuple[NagiosExitCode, list[str]]:
+    """The Nagios status line and detail lines for one verified host."""
+    results = document["results"]
+    exit_code = _verification_exit_code(results)
+    fixed = [entry["id"] for entry in results if entry.get("passed") is True]
+    failing = [entry["id"] for entry in results if entry.get("passed") is False]
+    unknown = [entry["id"] for entry in results if entry.get("passed") is None]
+    parts = []
+    if failing:
+        parts.append(f"still failing: {', '.join(failing)}")
+    if unknown:
+        parts.append(f"not verified: {', '.join(unknown)}")
+    if fixed:
+        parts.append(f"verified: {', '.join(fixed)}")
+    lines = [f"{exit_code.name}: {host} remediation check - {'; '.join(parts)}"]
+    for entry in results:
+        if entry.get("passed") is None:
+            lines.append(f"{entry['id']}: {entry.get('reason') or 'not verified'}")
+            continue
+        for check in entry.get("checks") or []:
+            state = "passes" if check.get("passed") else "fails"
+            detail = f" - {check['detail']}" if check.get("detail") else ""
+            lines.append(f"{check['id']}: {state}{detail}")
+    return exit_code, [_safe_monitoring_text(line) for line in lines]
+
+
+def _run_remediation_verification(hosts: list[str], args: argparse.Namespace) -> int:
+    """
+    Re-measure the findings named by --verify-remediation on every host.
+
+    Deliberately outside the scan pipeline: nothing is rated, compared with
+    a baseline or sent to a webhook, because a partial measurement is not a
+    state of the instance any of those should record.
+    """
+    finding_ids = _requested_finding_ids(args.verify_remediation)
+    if not finding_ids:
+        _fail("UNKNOWN: --verify-remediation needs at least one finding id.")
+    exit_codes: list[NagiosExitCode] = []
+    documents: list[dict[str, Any]] = []
+    for host in hosts:
+        context = _build_context(host, args)
+        check_if_ip_or_host(context.host, context)
+        try:
+            document = verify_remediation(
+                context.host, finding_ids, settings=context.scanner_settings
+            )
+        except (ScanError, *REQUEST_ERRORS) as exc:
+            exit_codes.append(NagiosExitCode.UNKNOWN)
+            if args.output_format != "json":
+                print(_safe_monitoring_text(f"UNKNOWN: {context.host} Scan failed: {exc}"))
+            continue
+        exit_code, lines = _verification_lines(context.host, document)
+        exit_codes.append(exit_code)
+        document["exit_code"] = int(exit_code)
+        documents.append(document)
+        if args.output_format != "json":
+            print("\n".join(lines))
+    if args.output_format == "json":
+        print(json.dumps(documents, indent=2))
+    return int(_aggregate_exit_code(exit_codes))
+
+
+def _run_checks(hosts: list[str], args: argparse.Namespace) -> None:
+    """Scan every host in the requested output format."""
     if _CONFIG.source:
         LOGGER.debug("Using configuration file %s", _CONFIG.source)
+
+    if args.verify_remediation:
+        sys.exit(_run_remediation_verification(hosts, args))
 
     if args.prometheus_listen_port:
         serve_prometheus_metrics(hosts, args)
@@ -2930,14 +4381,15 @@ def main() -> None:
         print(_prometheus_metrics(hosts, args), end="")
         return
 
-    if args.output_format in {"json", "sarif", "junit"}:
+    if args.output_format == "otlp":
+        print(json.dumps(_otlp_metrics(hosts, args), indent=2))
+        return
+
+    if args.output_format in {"json", "sarif", "junit", "checkmk", "summary"}:
         sys.exit(_run_machine_format_checks(hosts, args))
 
     if len(hosts) == 1:
-        try:
-            context = _build_context(hosts[0], args)
-        except ConfigurationError as exc:
-            _fail(f"UNKNOWN: {exc}")
+        context = _build_context(hosts[0], args)
         LOGGER.debug("Starting scan for host: %s", context.host)
 
         check_if_ip_or_host(context.host, context)

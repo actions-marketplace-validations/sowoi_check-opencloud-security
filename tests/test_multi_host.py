@@ -2,6 +2,7 @@
 
 import json
 import threading
+from typing import Any
 
 import pytest
 import requests
@@ -129,7 +130,7 @@ def test_call_with_retry_reraises_after_the_last_attempt():
 
 def test_backoff_grows_exponentially(monkeypatch):
     """Hammering a struggling instance would make things worse."""
-    sleeps = []
+    sleeps: list[float] = []
     monkeypatch.setattr(plugin.time, "sleep", sleeps.append)
 
     def _func():
@@ -166,7 +167,7 @@ def test_scan_errors_are_not_retried(monkeypatch):
 @pytest.fixture
 def scans(monkeypatch):
     """Serve a canned result per host, or raise for hosts marked as broken."""
-    results = {}
+    results: dict[str, Any] = {}
 
     def _scan(host, settings=None, release_settings=None):
         if host not in results:
@@ -323,10 +324,13 @@ def posts(monkeypatch):
     class _Response:
         status_code = 200
 
+        def close(self):
+            pass
+
         def raise_for_status(self):
             pass
 
-    def _post(url, **kwargs):
+    def _post(self, url, **kwargs):
         # See the identical fixture in tests/test_webhook.py: the plugin posts
         # pre-serialised bytes so that what it signed is what it sends, and
         # these tests assert against the document parsed back out of them.
@@ -335,7 +339,7 @@ def posts(monkeypatch):
         recorded.append((url, kwargs))
         return _Response()
 
-    monkeypatch.setattr(plugin.requests, "post", _post)
+    monkeypatch.setattr(plugin.requests.Session, "post", _post)
     return recorded
 
 

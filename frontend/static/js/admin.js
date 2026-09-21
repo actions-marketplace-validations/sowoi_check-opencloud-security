@@ -76,7 +76,7 @@
 
     function seconds(iso) {
         var moment = Date.parse(iso);
-        return isNaN(moment)
+        return Number.isNaN(moment)
             ? null
             : Math.max(0, Math.round((Date.now() - moment) / 1000));
     }
@@ -97,7 +97,7 @@
     function exactly(iso) {
         try {
             return new Date(iso).toLocaleString();
-        } catch (error) {
+        } catch (_error) {
             return iso;
         }
     }
@@ -225,6 +225,33 @@
         }));
         put("cooldown", fill(text("cooldown"), { seconds: limits.targetCooldown }));
 
+        // Counts only: the service never hands this page a blocked network,
+        // just how many there are. A store that did not answer is "?" rather
+        // than a reassuring zero.
+        var guard = stats.guard || {};
+        if (guard.reachable === false) {
+            put("guard", "?", "warn");
+            put("guard-week", text("store-down"));
+        } else if (!guard.probeGuard) {
+            put("guard", text("guard-off"));
+            put("guard-week", fill(text("guard-week"), {
+                blocks: guard.blocksWeek || 0,
+                strikes: guard.strikesWeek || 0,
+                daily: guard.dailyCapWeek || 0
+            }));
+        } else {
+            put(
+                "guard",
+                fill(text("guard"), { active: guard.activeBlocks }),
+                guard.activeBlocks ? "warn" : "good"
+            );
+            put("guard-week", fill(text("guard-week"), {
+                blocks: guard.blocksWeek,
+                strikes: guard.strikesWeek,
+                daily: guard.dailyCapWeek
+            }));
+        }
+
         // The keys the state document actually uses: `updated` is the date
         // the schedule itself carries, `advisories` is how many the database
         // holds. Both are the same names /healthz reports them under.
@@ -256,6 +283,11 @@
         }
         put("index-state", verdict, state);
         put("index-detail", describeIndex(index, state));
+        // How to fix it is only worth reading when there is something to fix.
+        var remedy = document.querySelector("[data-admin-index-remedy]");
+        if (remedy) {
+            remedy.hidden = state === "fresh";
+        }
 
         flash(before);
         painted = true;
@@ -270,29 +302,34 @@
         if (index.unreadable) {
             return text("index-unreadable");
         }
+        // Every reason, not the first one found: fixing the release stamp
+        // and then discovering a missing language is two deployments where
+        // one would have done.
+        var reasons = [];
         if (index.builtFor && index.builtFor !== index.running) {
-            return fill(text("index-release"), {
+            reasons.push(fill(text("index-release"), {
                 built: index.builtFor,
                 running: index.running
-            });
+            }));
         }
         var missing = (index.missingPaths || []).concat(index.missingLocales || []);
         if (missing.length) {
-            return fill(text("index-missing"), { list: missing.join(", ") });
+            reasons.push(fill(text("index-missing"), { list: missing.join(", ") }));
         }
-        // A page the index holds and this build does not serve. It is a
-        // reason the index is not current, it is reported in the document,
-        // and until now nothing here read it - so an index stale for this
-        // reason alone said "out of date" over "everything is indexed".
+        // A page the index holds and this build does not serve: a search
+        // result leading to a page that is not there.
         if ((index.extraPaths || []).length) {
-            return fill(text("index-extra"), {
+            reasons.push(fill(text("index-extra"), {
                 list: index.extraPaths.join(", ")
-            });
+            }));
         }
         if ((index.changedPaths || []).length) {
-            return fill(text("index-changed"), {
+            reasons.push(fill(text("index-changed"), {
                 count: index.changedPaths.length
-            });
+            }));
+        }
+        if (reasons.length) {
+            return reasons.join(" ");
         }
         if (state === "unknown") {
             return text("index-unstamped");
@@ -462,6 +499,11 @@
     }
 
     function posts(form, show) {
+        // The attribute, not the property: a control named "action" would
+        // shadow `form.action` and the POST would go to
+        // "[object HTMLInputElement]". The templates no longer name a control
+        // that way (a test holds them to it); this keeps a future one harmless.
+        var where = form.getAttribute("action");
         form.addEventListener("submit", function (event) {
             event.preventDefault();
             var button = form.querySelector("button");
@@ -469,7 +511,7 @@
                 button.disabled = true;
             }
             busy(true);
-            window.fetch(form.action, {
+            window.fetch(where, {
                 method: "POST",
                 body: new FormData(form),
                 headers: { Accept: "application/json" },

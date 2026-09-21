@@ -1,10 +1,8 @@
 # Redis
 
-Redis is the only moving part of the scan service that is not this project's
-own code, and the only place a scan exists between the moment somebody submits
-it and the moment it expires. This page is about running it: what goes in it,
-how long any of it stays, how to give it a password, and what to do when it
-stops answering.
+Redis holds the web service’s queue, temporary scan results, reference data and shared
+operational state. This guide covers authentication, network access, retention, memory
+limits and recovery from connection failures.
 
 It applies to the **web application** in [`webapp/`](../webapp/README.md).
 The command line plugin does not use Redis at all: `check-opencloud-security`
@@ -47,9 +45,10 @@ Three jobs, and nothing else:
    advisory database the worker re-reads once a day, the worker's heartbeat,
    and the rate limit counters.
 
-What Redis is **not** here is a database. Nothing in it is authoritative,
-nothing in it is worth recovering, and every key expires. A cold start with an
-empty Redis loses nothing except results whose owners can run the scan again.
+Most Redis state can be recreated, but clearing it discards queued work, readable
+results, rate-limit state and exclusions added through the operator area. Keep
+exclusions that must survive a reset in `COS_WEB_BLOCKED_TARGETS`. Scan data expires
+automatically; do not assume every operational key has the same lifetime.
 
 ## What is stored, and for how long
 
@@ -62,6 +61,12 @@ empty Redis loses nothing except results whose owners can run the scan again.
 | `cos:web:worker:heartbeat` | That a worker is alive, for `/healthz` | Refreshed by the worker |
 | `cos:web:rl:client:{fingerprint}` | The per-client request count | `COS_WEB_IP_RATE_WINDOW` |
 | `cos:web:rl:target:{fingerprint}` | The per-target cooldown | `COS_WEB_TARGET_COOLDOWN` |
+| `scan:{uuid}:prober` | The client fingerprint a scan's outcome counts against, until a worker starts it | `COS_WEB_RESULT_TTL` at most |
+| `cos:web:rl:probe:{fingerprint}` | Strikes against one client network | `COS_WEB_PROBE_WINDOW` |
+| `cos:web:rl:blocked:{fingerprint}` | A client network blocked for probing | `COS_WEB_PROBE_BLOCK`, growing to `COS_WEB_PROBE_BLOCK_MAX` |
+| `cos:web:rl:blocks:{fingerprint}` | How many blocks a network earned recently, for escalation | The last block plus `COS_WEB_PROBE_REPEAT_WINDOW` |
+| `cos:web:rl:daily:{fingerprint}` | The per-client daily count | A day |
+| `cos:web:stats:{blocks,strikes,daily}:{YYYYMMDD}` | Counts for the operator's area: blocks started, strikes, daily caps reached. A number per day, nothing else | Eight days |
 | `cos:web:schedule:document`, `cos:web:schedule:checked` | The release lifecycle re-read once a day | Until the next refresh |
 | `cos:web:advisories:document`, `cos:web:advisories:checked` | The advisory database re-read once a day | Until the next refresh |
 
@@ -73,9 +78,10 @@ uuids all answer with the same 404, so an expired result is indistinguishable
 from one that never existed. There is no endpoint that enumerates scans, and
 adding one would turn every result into a public document.
 
-**The rate limit keys hold fingerprints, not addresses.** A client IP is
-hashed with `COS_WEB_AUDIT_SALT` before it is counted, so a dump of Redis is
-not a list of who scanned what. See [what gets logged](webapp.md#what-gets-logged).
+**Rate-limit keys contain fingerprints instead of client addresses.** They use
+`COS_WEB_RATE_LIMIT_SALT`; audit records use the separate `COS_WEB_AUDIT_SALT`.
+Configure a shared rate-limit salt when running multiple web processes. See
+[logging](webapp.md#what-gets-logged).
 
 Redis is therefore, for as long as a TTL lasts, a copy of the addresses people
 submitted and the security findings for each. That is the reason for the two
@@ -200,10 +206,10 @@ address is found by scanners within minutes.
 The shipped Redis runs with `--save ""` and `--appendonly no`. It writes
 nothing to disk, on purpose.
 
-A dump file would be a copy of everybody's scans sitting on a disk, surviving
-the TTL that was supposed to have removed them, and turning up in whatever
-backs that disk up. Nothing in Redis needs to survive a restart: a scan whose
-result is gone can be run again in half a minute.
+Persistence and backups can retain scan data beyond its expiry in the running store. The
+default stack therefore disables both snapshots and append-only persistence. A restart
+loses temporary results and other Redis-managed state, including operator-added
+exclusions; keep durable exclusions in the environment.
 
 Do not add a volume to the `redis` service. If you are using a managed Redis
 that persists by default, either accept that results outlive their TTL in
@@ -224,15 +230,14 @@ a deployment strangers can reach, the answer is still `none`.
 --maxmemory-policy allkeys-lru
 ```
 
-256 MB is generous for the shipped worker count. A result document is a few
-kilobytes and every key already carries a TTL, so the cap is a backstop rather
-than a working limit: it is what stops a queue that nobody is draining from
-consuming the host.
+The shipped memory limit is a starting point for the default worker count. Monitor
+actual usage as scan volume and retention increase. A memory cap prevents an undrained
+queue from consuming the host’s available memory.
 
-`allkeys-lru` is the right policy here precisely because nothing is
-authoritative. Under pressure Redis drops the least recently used key, which
-is the oldest result nobody has come back for, and the visitor sees the same
-404 they would have seen a few minutes later anyway.
+`allkeys-lru` may evict any key under memory pressure, based on approximate recent use.
+It is not limited to old scan results: queue state, counters and operator-managed data
+can also be affected. Treat eviction as a capacity signal and investigate it rather than
+relying on TTL alone.
 
 Raise the cap if you raise `COS_WEB_RESULT_TTL` a long way, or run a fleet
 scan of hundreds of instances. Watch `evicted_keys`:

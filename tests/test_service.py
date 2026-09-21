@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import threading
 import urllib.error
+import urllib.parse
 import urllib.request
 
 import pytest
@@ -83,6 +84,21 @@ def test_healthz_needs_no_token(server):
 
     assert status == 200
     assert payload == {"status": "ok"}
+
+
+@pytest.mark.parametrize("headers", [
+    {"Sec-Fetch-Site": "cross-site"}, {"Sec-Fetch-Site": "same-site"},
+    {"Origin": "null"}, {"Origin": "https://untrusted.example.com"},
+    {"Origin": "http://["},
+])
+@pytest.mark.parametrize("post", [False, True])
+def test_browser_pages_cannot_borrow_the_loopback_scanner(server, fake_scan, headers, post):
+    base, _ = server()
+    url = f"{base}/api/queue" if post else f"{base}/api/scan?url=opencloud.example.com"
+    with pytest.raises(urllib.error.HTTPError) as error:
+        _request(url, data="url=opencloud.example.com" if post else None, headers=headers)
+    assert error.value.code == 403
+    assert fake_scan == []
 
 
 def test_queue_returns_a_uuid_and_result_serves_the_document(server, fake_scan):
@@ -162,6 +178,30 @@ def test_failed_scan_is_reported_as_a_bad_request(server):
     assert "status document" in json.loads(excinfo.value.read())["error"]
 
 
+def test_a_newline_in_a_failed_host_cannot_forge_a_log_line(server, monkeypatch, caplog):
+    """The host comes from the request body, and the log is evidence an operator reads."""
+    base, _ = server()
+
+    def _scan(host, settings=None, release_settings=None):
+        raise ScanError(f"Could not resolve {host}.")
+
+    monkeypatch.setattr(service_module, "scan", _scan)
+    forged = "INFO opencloud_local_scan.service: Scan of admin succeeded"
+    caplog.set_level("INFO", logger=service_module.LOGGER.name)
+
+    with pytest.raises(urllib.error.HTTPError) as excinfo:
+        _request(
+            f"{base}/api/queue",
+            data=urllib.parse.urlencode({"url": f"bad.example.com\n{forged}"}),
+        )
+
+    assert excinfo.value.code == 400
+    messages = [r.getMessage() for r in caplog.records if "failed" in r.getMessage()]
+    assert messages, "the failed scan is still logged"
+    assert all("\n" not in message for message in messages)
+    assert any("bad.example.com\\n" in message for message in messages)
+
+
 def test_unknown_uuid_is_a_not_found(server):
     """Asking for a scan that never happened returns 404."""
     base, _ = server()
@@ -222,6 +262,65 @@ def test_wrong_token_is_rejected(server):
         )
 
     assert excinfo.value.code == 401
+
+
+def _status(url, headers):
+    try:
+        return _request(url, headers=headers)[0]
+    except urllib.error.HTTPError as error:
+        return error.code
+
+
+def test_a_page_rebound_onto_loopback_cannot_use_a_service_without_a_token(server):
+    """
+    DNS rebinding turns a browser tab into a client of a loopback service.
+
+    The page's own hostname stays in ``Host``, and without a token that header
+    is the only thing telling the operator's request apart from the page's -
+    which would otherwise be reading scans of the operator's own network.
+    """
+    base, _ = server()
+
+    status = _status(f"{base}/api/scan?url=cloud.example.com", {"Host": "rebind.example.net"})
+
+    assert status == 403
+
+
+@pytest.mark.parametrize("host", ["127.0.0.1:8811", "localhost:8811", "[::1]:8811", "localhost"])
+def test_a_request_addressed_to_a_loopback_name_is_still_served(server, host):
+    """The operator's own curl, and an SSH tunnel, name the machine they reach."""
+    base, _ = server()
+
+    assert _status(f"{base}/api/scan?url=cloud.example.com", {"Host": host}) == 200
+
+
+def test_a_service_with_a_token_does_not_judge_the_host_header(server):
+    """A rebinding page cannot know the token, and a proxy may name any host."""
+    base, _ = server(token="s3cret")
+
+    status = _status(
+        f"{base}/api/scan?url=cloud.example.com",
+        {"Host": "scanner.example.net", "Authorization": "Bearer s3cret"},
+    )
+
+    assert status == 200
+
+
+def test_a_rebound_page_cannot_queue_a_scan_either(server, fake_scan):
+    """POST is refused the same way, before anything reaches the scanner."""
+    base, _ = server()
+
+    request = urllib.request.Request(
+        f"{base}/api/queue",
+        data=b"url=cloud.example.com",
+        headers={"Host": "rebind.example.net"},
+        method="POST",
+    )
+    with pytest.raises(urllib.error.HTTPError) as refused:
+        urllib.request.urlopen(request, timeout=5)
+
+    assert refused.value.code == 403
+    assert fake_scan == []
 
 
 def test_responses_carry_nosniff(server):

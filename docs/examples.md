@@ -1,8 +1,7 @@
 # Worked examples
 
-Complete, copy-and-paste invocations for the situations that come up most
-often. Every example uses `opencloud.example.com` as the host - substitute
-your own, and scan only instances you are responsible for.
+These examples cover common ways to run the scanner. Replace `opencloud.example.com`
+with your instance’s address and scan only systems you have permission to test.
 
 Longer, platform-specific examples have pages of their own:
 [Kubernetes](kubernetes.md), [CI pipelines](ci.md),

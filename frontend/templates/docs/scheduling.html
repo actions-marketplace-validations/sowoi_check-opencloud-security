@@ -11,14 +11,14 @@
   <p class="lede">{{ t('docs.scheduling.description') }}</p>
 </section>
 
-{% if locale != 'en' %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
 <article class="docs-article card section-gap" data-reveal lang="en">
-<p>If you don't run Icinga2/Nagios, you can still schedule regular scans with
-systemd timers or cron. Ready-to-adapt example files live in
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib"><code>contrib/</code></a>:</p>
+<p>Schedule regular scans with a systemd timer or cron when you do not use Icinga2 or
+Nagios. The examples in <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib"><code>contrib/</code></a> provide service, timer and environment
+files you can adapt to your installation:</p>
 <ul>
 <li><a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/systemd/check-opencloud-security.service"><code>contrib/systemd/check-opencloud-security.service</code></a>
   and <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/systemd/check-opencloud-security.timer"><code>.timer</code></a></li>

@@ -1,0 +1,33 @@
+# Security advisory record; publication remains a maintainer decision.
+slug: mcp-jwks-outage-amplification
+state: draft
+ghsa: GHSA-2whp-w4pj-vgxm
+changelog_version: "1.23.2"
+changelog_entry: "Authentication-key fetches stay bounded during outages."
+shipped: true
+severity: medium
+cwe_ids:
+  - CWE-770
+package: web
+introduced: "1.9.0"
+fixed: "1.23.2"
+summary: >-
+  Cold caches and failed JWKS fetches bypassed the unknown-key fetch cooldown
+verified: |
+  git show v1.9.0:webapp/mcp_auth.py constructs PyJWKClient. git show v1.23.1:webapp/mcp_auth.py calls keys.get_signing_keys before _may_refetch; failures on that initial lookup never reach the unknown-kid cooldown, and concurrent cold lookups are not serialized.
+description: |
+  ### Impact
+  
+  On deployments requiring MCP sign-in, unauthenticated tokens could repeatedly trigger provider requests when the signing-key cache was cold, expired or the provider unavailable. Concurrent requests could stampede the provider and occupy verifier threads. Token verification remained fail-closed: this is availability impact, not an authentication bypass.
+  
+  ### Patches
+  
+  Fixed in the source for **1.23.2**. Only one key lookup may be in progress per verifier; concurrent attempts fail closed without queuing another blocking fetch. Failed fetches impose a 60-second retry floor, including initial fetches. Valid cached-key verification and key rotation retain their existing behavior.
+  
+  ### Workarounds
+  
+  Rate-limit unauthenticated /mcp requests at the reverse proxy, particularly during provider outages. Do not disable required authentication as a workaround.
+  
+  ### Distribution
+  
+  This affects the web application or its standalone deployment wizard, not the PyPI plugin distribution.

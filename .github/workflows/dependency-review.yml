@@ -23,17 +23,26 @@ permissions:
   # Write permissions for pull-requests are required for using the `comment-summary-in-pr` option, comment out if you aren't using this option
   pull-requests: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   dependency-review:
     runs-on: ubuntu-latest
     steps:
       - name: 'Checkout repository'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
       - name: 'Dependency Review'
         uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         # Commonly enabled options, see https://github.com/actions/dependency-review-action#configuration-options for all available options.
+        # Any known vulnerability in a newly added or changed package fails the
+        # pull request, whatever its severity (ADR 0060). A real exception is a
+        # maintainer's call, made with `allow-ghsas` and a comment saying why.
         with:
           comment-summary-in-pr: always
-        #   fail-on-severity: moderate
+          fail-on-severity: low
         #   deny-licenses: GPL-1.0-or-later, LGPL-2.0-or-later
         #   retry-on-snapshot-warnings: true

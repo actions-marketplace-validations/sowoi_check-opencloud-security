@@ -11,17 +11,15 @@
   <p class="lede">{{ t('docs.csp.description') }}</p>
 </section>
 
-{% if locale != 'en' %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
 <article class="docs-article card section-gap" data-reveal lang="en">
-<p>A <code>Content-Security-Policy</code> (CSP) header tells the browser which origins are
-allowed to supply scripts, styles, frames and other active content for a
-page. It is the browser-enforced backstop against cross-site scripting (XSS):
-even if an attacker manages to inject markup into a page OpenCloud serves, a
-correctly scoped CSP stops the browser from running it. This scanner checks
-CSP in two independent places.</p>
+<p>A Content-Security-Policy (CSP) tells the browser which sources may supply scripts,
+styles, frames and other content. A well-configured policy can limit the effects of
+injected content and scripts. The scanner checks whether the header is present and
+whether its script policy allows specific forms of unsafe execution.</p>
 <!-- TOC -->
 <ul>
 <li><a href="#content-security-policy-what-this-scanner-checks-and-why">Content-Security-Policy: what this scanner checks, and why</a></li>

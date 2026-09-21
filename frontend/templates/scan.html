@@ -33,7 +33,32 @@
   {%- endif -%}
 {%- endmacro %}
 
+{#
+  The tab says where the scan is, because a scan is something people wait for
+  in another tab. The host without its scheme, since a tab is narrow and the
+  scheme is the part every tab would share. It is the server's reading of the
+  state; scan.js keeps it current while the page polls, from the sentences the
+  progress card carries, and a finished page names the grade without any
+  script at all.
+
+  Never the uuid: a title is what a bookmark, a history entry and a screen
+  share show, and the uuid is the credential for the report. And only the
+  tab: `title` stays the generic one, because it is also the og:title a link
+  preview would print into a chat channel.
+#}
 {% block title %}{{ t('result.title') }}{% endblock %}
+{% block tab_title -%}
+  {%- set tab_host = (scan.get('target') or '').split('://')[-1].rstrip('/') -%}
+  {%- if scan.state == "completed" and summary -%}
+    {{ t('result.tab.done', label=summary.label, target=tab_host) }}
+  {%- elif scan.state == "failed" -%}
+    {{ t('result.tab.failed', target=tab_host) }}
+  {%- elif scan.state == "running" -%}
+    {{ t('result.tab.running', target=tab_host) }}
+  {%- else -%}
+    {{ t('result.tab.queued', target=tab_host) }}
+  {%- endif -%}
+{%- endblock %}
 {% block description %}{{ t('result.description') }}{% endblock %}
 
 {% block body_attrs %}data-scan-uuid="{{ scan.uuid }}" data-scan-state="{{ scan.state }}" data-expires-in="{{ scan.expiresIn }}"{% endblock %}
@@ -95,6 +120,17 @@
         </button>
       </form>
       {% endif %}
+      {#
+        The comparison a reader arrives at from here rather than by typing
+        two uuids: this one is already known, so only the earlier one has to
+        be pasted. Offered on a finished result only - there is nothing to
+        compare while the scan is still running.
+      #}
+      {% if can_rescan %}
+      <a class="btn btn-quiet" href="/compare?current={{ scan.uuid }}">
+        {{ t('result.compare') }}
+      </a>
+      {% endif %}
       <a class="btn btn-quiet" href="/">{{ t('result.another') }}</a>
     </div>
   </div>
@@ -105,6 +141,17 @@
     the wrong answer at everybody, and would be the only answer a reader
     without scripting ever got.
   #}
+  {% if earlier_result %}
+  {#
+    Reached after a submission the target cooldown refused: the reader asked
+    for a new scan and is shown their own last one instead. Said plainly, so
+    an older report is never mistaken for the answer to the new request;
+    the countdown right below is when the new one can be run.
+  #}
+  <p class="alert section-gap flush" role="status" data-earlier-result>
+    <span>{{ t('result.earlier.note') }}</span>
+  </p>
+  {% endif %}
   <p class="hint section-gap flush" id="rescan-note" aria-live="polite">
     {%- if rescan_after -%}
       {{ t('result.rescan.wait',
@@ -118,6 +165,63 @@
     <a href="{{ project_url }}" rel="noopener noreferrer">{{ t('result.rescan.self_host') }}</a>.
   </p>
   {% endif %}
+
+  {#
+    "Did that fix it?", answered without pasting the earlier uuid.
+
+    compare-offer.js remembers, in this tab's sessionStorage and nowhere else,
+    the finished scans of each target this tab has shown. When the page is a
+    later scan of a target it has seen, this sentence is revealed and the link
+    gets the earlier uuid. The server is not told and keeps nothing: the
+    history is the reader's own, dies with the tab, and every uuid in it is
+    one they already held. A result that has expired is forgotten rather than
+    offered as a link to a 404.
+
+    Hidden in the markup, because without the script there is no earlier scan
+    to name - the "compare" button above still takes the reader there by hand.
+    Finished scans only; a failed one has nothing to compare.
+  #}
+  {% if scan.state == "completed" %}
+  <p class="hint section-gap flush" data-compare-offer hidden aria-live="polite"
+     data-compare-target="{{ scan.target }}"
+     data-compare-offer-text="{{ t.raw('result.compare.offer') }}">
+    <span data-compare-offer-sentence></span>
+    <a href="/compare?current={{ scan.uuid }}" data-compare-offer-link>{{ t('result.compare.offer.link') }}</a>
+  </p>
+  {% endif %}
+
+  {#
+    The warning before the report disappears, near the top where it will be
+    read rather than beside the expiry line at the foot of the page.
+
+    Rendered visible by the server when the page is already inside the last
+    minutes, so a reader without scripting is warned too; expiry.js reveals
+    it for everyone else when the moment arrives, keeps the minutes current,
+    and says so once the report has gone. The way to keep a copy is offered
+    only where there is one - a failed scan has no exports.
+  #}
+  {% set expiry_warn_seconds = 300 %}
+  {% set expiry_warn_now = scan.state in ("completed", "failed") and 0 < scan.expiresIn <= expiry_warn_seconds %}
+  {% set expiry_warn_minutes = ((scan.expiresIn + 59) // 60) or 1 %}
+  <div aria-live="polite">
+    <p class="hint share-warning" data-expiry-warning
+       {% if not expiry_warn_now %}hidden{% endif %}
+       data-expiry-warn-after="{{ expiry_warn_seconds }}"
+       data-expiry-warning-one="{{ t('result.expiry.warning.one') }}"
+       data-expiry-warning-many="{{ t.raw('result.expiry.warning.many') }}"
+       data-expiry-gone="{{ t('result.expiry.gone') }}">
+      <span data-expiry-warning-text>
+        {%- if expiry_warn_minutes == 1 -%}
+          {{ t('result.expiry.warning.one') }}
+        {%- else -%}
+          {{ t('result.expiry.warning.many', minutes=expiry_warn_minutes) }}
+        {%- endif -%}
+      </span>
+      {% if summary %}
+      <a href="#exports" data-expiry-warning-action>{{ t('result.expiry.warning.action') }}</a>
+      {% endif %}
+    </p>
+  </div>
 </section>
 
 {# --------------------------------------------------------------- progress #}
@@ -139,7 +243,15 @@
          data-queue-position="{{ t.raw('result.progress.queue.position') }}"
          data-queue-next="{{ t('result.progress.queue.next') }}"
          data-queue-waiting="{{ t('result.progress.queue.waiting') }}"
-         data-elapsed="{{ t.raw('result.progress.elapsed') }}">
+         data-elapsed="{{ t.raw('result.progress.elapsed') }}"
+         {#- The tab's wording for each state, host already filled in; only
+             the queue position is left for the script to substitute. #}
+         {%- set tab_host = (scan.get('target') or '').split('://')[-1].rstrip('/') %}
+         data-tab-queued="{{ t('result.tab.queued', target=tab_host) }}"
+         data-tab-queued-position="{{ t('result.tab.queued.position', target=tab_host, position='{position}') }}"
+         data-tab-running="{{ t('result.tab.running', target=tab_host) }}"
+         data-tab-done="{{ t('result.tab.ready', target=tab_host) }}"
+         data-tab-failed="{{ t('result.tab.failed', target=tab_host) }}">
   <p class="kicker">{{ t('result.progress.kicker') }}</p>
   <h2 id="progress-heading">
     <span class="pulse" aria-hidden="true"></span>
@@ -284,6 +396,24 @@
         <dt>{{ t('result.facts.proxy') }}</dt>
         <dd>{{ summary.reverseProxy.vendor or t('result.facts.proxy.detected') }}</dd>
         {% endif %}
+        {% if summary.alternativeServices.http3 %}
+        <dt>{{ t('result.facts.http3') }}</dt>
+        <dd>{% if summary.alternativeServices.ports %}{{ t('result.facts.http3.value', ports=summary.alternativeServices.ports) }}{% else %}{{ t('result.facts.http3.noport') }}{% endif %}</dd>
+        {% endif %}
+        {% if summary.upgradePath.target %}
+        <dt>{{ t('result.facts.upgrade_path') }}</dt>
+        <dd>
+          {% if not summary.upgradePath.open %}
+          {{ t('result.facts.upgrade_path.complete', target=summary.upgradePath.target) }}
+          {% elif summary.upgradePath.safe %}
+          {{ t('result.facts.upgrade_path.partial', target=summary.upgradePath.target,
+                open=summary.upgradePath.open, safe=summary.upgradePath.safe) }}
+          {% else %}
+          {{ t('result.facts.upgrade_path.unfixed', target=summary.upgradePath.target,
+                open=summary.upgradePath.open) }}
+          {% endif %}
+        </dd>
+        {% endif %}
         {% if summary.integrations.office and summary.integrations.office.detected %}
         <dt>{{ t('result.facts.office') }}</dt>
         <dd>{{ summary.integrations.office.apps | join(", ") }}</dd>
@@ -363,28 +493,35 @@
 {% set toc = [] %}
 {% if summary.remediation.steps %}
   {% set _ = toc.append({"href": "#remediation",
-                         "label": t('result.plan.heading', label=summary.remediation.achievableLabel)}) %}
+                         "label": t('result.plan.heading', label=summary.remediation.achievableLabel), "group": t('toc.group.act')}) %}
+{% endif %}
+{% if summary.upgradeRehearsal %}
+  {% set _ = toc.append({"href": "#rehearsal", "label": t('result.rehearsal.heading'), "group": t('toc.group.act')}) %}
 {% endif %}
 {% if summary.vulnerabilities %}
-  {% set _ = toc.append({"href": "#advisories", "label": t('result.advisories.heading')}) %}
+  {% set _ = toc.append({"href": "#advisories", "label": t('result.advisories.heading'), "group": t('toc.group.act')}) %}
 {% endif %}
-{% set _ = toc.append({"href": "#findings", "label": t('result.findings.heading')}) %}
+{% set _ = toc.append({"href": "#findings", "label": t('result.findings.heading'), "group": t('toc.group.act')}) %}
 {% if summary.missingHardenings or summary.missingHeaders %}
-  {% set _ = toc.append({"href": "#hardening", "label": t('result.hardening.heading')}) %}
+  {% set _ = toc.append({"href": "#hardening", "label": t('result.hardening.heading'), "group": t('toc.group.act')}) %}
 {% endif %}
 {% if fragments %}
-  {% set _ = toc.append({"href": "#configuration", "label": t('result.fragment.heading')}) %}
+  {% set _ = toc.append({"href": "#configuration", "label": t('result.fragment.heading'), "group": t('toc.group.act')}) %}
 {% endif %}
 {% if summary.waived or summary.unfixable %}
-  {% set _ = toc.append({"href": "#excluded", "label": t('result.excluded.heading')}) %}
+  {% set _ = toc.append({"href": "#excluded", "label": t('result.excluded.heading'), "group": t('toc.group.details')}) %}
 {% endif %}
 {% if summary.tls and summary.tls.reachable %}
-  {% set _ = toc.append({"href": "#tls", "label": t('result.tls.heading')}) %}
+  {% set _ = toc.append({"href": "#tls", "label": t('result.tls.heading'), "group": t('toc.group.details')}) %}
 {% endif %}
-{% set _ = toc.append({"href": "#scan-limits", "label": t('result.scope.heading')}) %}
-{% set _ = toc.append({"href": "#raw-document", "label": t('result.raw.heading')}) %}
-{% set _ = toc.append({"href": "#exports", "label": t('result.export.heading')}) %}
-{% set _ = toc.append({"href": "#share", "label": t('result.share.heading')}) %}
+{% if summary.coverage.gaps or not summary.coverage.available %}
+  {% set _ = toc.append({"href": "#coverage", "label": t('result.coverage.heading'), "group": t('toc.group.details')}) %}
+{% endif %}
+{% set _ = toc.append({"href": "#configuration", "label": t('result.fingerprint.heading'), "group": t('toc.group.details')}) %}
+{% set _ = toc.append({"href": "#scan-limits", "label": t('result.scope.heading'), "group": t('toc.group.details')}) %}
+{% set _ = toc.append({"href": "#raw-document", "label": t('result.raw.heading'), "group": t('toc.group.details')}) %}
+{% set _ = toc.append({"href": "#exports", "label": t('result.export.heading'), "group": t('toc.group.keep')}) %}
+{% set _ = toc.append({"href": "#share", "label": t('result.share.heading'), "group": t('toc.group.keep')}) %}
 {% include "_toc.html" %}
 
 {% if summary.remediation.steps %}
@@ -424,6 +561,51 @@
     {% for step in summary.remediation.blocked %}<li>{{ step.id }}</li>{% endfor %}
   </ul>
   {% endif %}
+</section>
+{% endif %}
+
+{#
+  The rehearsal answers the question the remediation plan above cannot: the
+  plan says what to change on this instance, this says what a different
+  version would be worth. Both are the scanner's own arithmetic - the ratings
+  come out of the document, this page only picks the letter and the tone for
+  each one, the same pair every other grade here goes through.
+#}
+{% if summary.upgradeRehearsal %}
+<section class="card" data-reveal>
+  <p class="kicker">{{ t('result.rehearsal.kicker') }}</p>
+  <h2 id="rehearsal">{{ t('result.rehearsal.heading') }}</h2>
+  <p class="lede">{{ t('result.rehearsal.lede') }}</p>
+  <ul class="findings">
+    {% for entry in summary.upgradeRehearsal %}
+    <li class="finding" data-tag="info">
+      <div class="finding-head">
+        <code>{{ entry.version }}</code>
+        {% if entry.line %}<span class="tag tag-info">{{ t('result.rehearsal.line', line=entry.line) }}</span>{% endif %}
+        {% if entry.recommended %}<span class="tag tag-info">{{ t('result.rehearsal.recommended') }}</span>{% endif %}
+        {% if entry.endOfLife %}<span class="tag tag-critical">{{ t('result.rehearsal.eol') }}</span>{% endif %}
+        <span class="rehearsal-grade" data-tone="{{ entry.tone }}">{{ t('result.rehearsal.grade', label=entry.label) }}</span>
+      </div>
+      {% if entry.fixes %}
+      <p>{{ t('result.rehearsal.fixes') }}: {{ entry.fixes | join(", ") }}</p>
+      {% else %}
+      <p>{{ t('result.rehearsal.nothing') }}</p>
+      {% endif %}
+      {% if entry.stillAffected %}
+      <p class="hint">{{ t('result.rehearsal.still') }}: {{ entry.stillAffected | join(", ") }}</p>
+      {% elif entry.fixes %}
+      <p class="hint">{{ t('result.rehearsal.clean') }}</p>
+      {% endif %}
+      {% if entry.introduces %}
+      <p class="hint">{{ t('result.rehearsal.introduces') }}: {{ entry.introduces | join(", ") }}</p>
+      {% endif %}
+      {% if entry.cappedByFindings %}
+      <p class="hint">{{ t('result.rehearsal.capped', label=entry.versionLabel) }}</p>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  <p class="hint section-gap">{{ t('result.rehearsal.note') }}</p>
 </section>
 {% endif %}
 
@@ -632,6 +814,67 @@
 </section>
 {% endif %}
 
+{#
+  What the scan did not measure. This is not the same list as "what a scan
+  can never see" below it: that one is about the method, this one is about
+  this run - a probe that was switched off, a name with one address, a
+  capabilities document the instance did not publish. A grade describes
+  evidence, so the gaps in the evidence belong beside it.
+#}
+<section class="card" data-reveal>
+  <p class="kicker">{{ t('result.coverage.kicker') }}</p>
+  <h2 id="coverage">{{ t('result.coverage.heading') }}</h2>
+  {% if not summary.coverage.available %}
+  <p class="hint">{{ t('result.coverage.unavailable') }}</p>
+  {% else %}
+  <p>{{ t('result.coverage.summary',
+          measured=summary.coverage.measured,
+          total=summary.coverage.counts.total) }}</p>
+  <p class="hint">{{ t('result.coverage.breakdown',
+          evaluated=summary.coverage.summary.evaluated,
+          skipped=summary.coverage.summary.skipped,
+          indeterminate=summary.coverage.summary.indeterminate,
+          networkLimited=summary.coverage.summary.networkLimited) }}</p>
+  {% if summary.coverage.groups %}
+  <p class="hint">{{ t('result.coverage.note') }}</p>
+  {% for group in summary.coverage.groups %}
+  <h3 class="section-gap">{{ group.label }}</h3>
+  <ul class="plain-list">
+    {% for check in group.checks %}
+    <li>{{ check_name(check.id) }} - <span class="hint">{{ check.reasonLabel }}. {{ check.detail }}</span></li>
+    {% endfor %}
+  </ul>
+  {% endfor %}
+  {% else %}
+  <p class="hint">{{ t('result.coverage.complete') }}</p>
+  {% endif %}
+  {% endif %}
+</section>
+
+{#
+  The configuration fingerprint. Digests of how the instance is set up, never
+  of what it is set to: a reader compares them with an earlier scan to see a
+  deployment change that moved no grade, and learns nothing else from them.
+#}
+<section class="card" data-reveal>
+  <p class="kicker">{{ t('result.fingerprint.kicker') }}</p>
+  <h2 id="configuration">{{ t('result.fingerprint.heading') }}</h2>
+  {% if not summary.fingerprint.available %}
+  <p class="hint">{{ t('result.fingerprint.unavailable') }}</p>
+  {% else %}
+  <p>{{ t('result.fingerprint.body') }}</p>
+  <ul class="plain-list">
+    {% for group in summary.fingerprint.groups %}
+    <li><strong>{{ group.label }}</strong> -
+      {% if group.measured %}<code>{{ group.digest }}</code>
+      {% else %}<span class="hint">{{ t('result.fingerprint.unmeasured') }}</span>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  <p class="hint">{{ t('result.fingerprint.overall', digest=summary.fingerprint.digest) }}</p>
+  {% endif %}
+</section>
+
 <section class="card" data-reveal>
   <p class="kicker">{{ t('result.scope.kicker') }}</p>
   <h2 id="scan-limits">{{ t('result.scope.heading') }}</h2>
@@ -729,6 +972,11 @@
       <a class="btn btn-quiet" href="/api/scans/{{ scan.uuid }}/export/pdf"
          download>{{ t('result.export.pdf') }}</a>
       <span class="hint">{{ t('result.export.pdf.hint') }}</span>
+    </li>
+    <li>
+      <a class="btn btn-quiet" href="/api/scans/{{ scan.uuid }}/export/html"
+         download>{{ t('result.export.html') }}</a>
+      <span class="hint">{{ t('result.export.html.hint') }}</span>
     </li>
     <li>
       <a class="btn btn-quiet" href="/api/scans/{{ scan.uuid }}/export/csv"
@@ -847,4 +1095,6 @@
 <script src="/static/js/rescan.js" defer></script>
 <script src="/static/js/fragment.js" defer></script>
 <script src="/static/js/findings-filter.js" defer></script>
+<script src="/static/js/compare-offer.js" defer></script>
+<script src="/static/js/expiry.js" defer></script>
 {% endblock %}

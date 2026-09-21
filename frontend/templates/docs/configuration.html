@@ -11,15 +11,14 @@
   <p class="lede">{{ t('docs.configuration.description') }}</p>
 </section>
 
-{% if locale != 'en' %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
 <article class="docs-article card section-gap" data-reveal lang="en">
-<p>No credential this plugin uses - a GitHub token, a webhook URL, a service
-token - has to be written into the configuration file or the process
-environment. Any value may instead be a reference that is resolved when it is
-needed.</p>
+<p>Keep credentials out of the configuration file by referring to their source instead.
+GitHub tokens, webhook URLs and service tokens can be read from a file, an environment
+variable or a command when needed.</p>
 <p>The file itself, where it is looked for and how its keys map onto environment
 variables, is in
 <a href="/documentation/reference#configuration-file-and-secrets">Configuration file and secrets</a>;

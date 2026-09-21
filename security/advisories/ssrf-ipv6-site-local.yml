@@ -1,0 +1,49 @@
+# A security advisory record. See AGENTS.md, "Security advisories".
+#
+# One file per bullet under a `### Security` heading in CHANGELOG.md.
+# `state` is the decision; `verified` is the evidence it rests on.
+
+slug: ssrf-ipv6-site-local
+state: draft
+ghsa: GHSA-9j37-x4mm-4c4g
+changelog_version: "1.25.3"
+changelog_entry: "Scan targets and redirect hops in deprecated IPv6 site-local space are refused."
+shipped: true
+severity: low
+cwe_ids:
+  - CWE-918
+package: web
+introduced: "1.4.0"
+fixed: "1.25.3"
+summary: >-
+  SSRF guard accepts deprecated IPv6 site-local addresses (RFC 3879)
+verified: |
+  git show v1.25.2:webapp/ssrf.py:460-467 - _address_public checks is_private,
+  is_loopback, is_link_local, is_multicast, is_reserved, is_unspecified; a site-local address
+  passes all of them on Python 3.10, 3.12 and 3.14. The check dates from 3c0ff66
+  (first tag v1.4.0).
+description: |
+  ### Impact
+
+  The guard that decides which addresses a submitted scan (and every redirect
+  hop) may connect to accepted IPv6 site-local addresses (RFC 3879). That
+  range is deprecated but still routed as private space on some networks; a
+  web service running on such a network could be made to scan hosts on it and
+  report the answers back. Deployments without site-local routes are not
+  reachable this way.
+
+  ### Patches
+
+  Fixed in **1.25.3**: site-local addresses are refused like any other private
+  range.
+
+  ### Workarounds
+
+  Add the IPv6 site-local range to the operator's blocked targets.
+
+  ### Note on distribution
+
+  The web application is **not** published to PyPI - the wheel and the sdist
+  exclude `webapp/` and `frontend/`. It ships as
+  `check_opencloud_security_web.tar.gz`. Installations of the
+  `check-opencloud-security` PyPI package are unaffected.

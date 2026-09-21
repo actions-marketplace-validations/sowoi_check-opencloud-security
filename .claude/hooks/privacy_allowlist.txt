@@ -1,0 +1,129 @@
+# Public references the privacy guard (privacy_guard.py) accepts in new commits.
+#
+# One hostname, e-mail address or IP address per line; `*` is a wildcard.
+# Only for public reference material - documentation, vendors, standards,
+# public resolvers. Never an OpenCloud instance that is or was scanned, and
+# never a person. Only the user extends this list; an agent asks.
+# Values already on origin/main are accepted without being listed here.
+
+# The OpenCloud project and its documentation
+opencloud.eu
+*.opencloud.eu
+opencloud-eu.github.io
+
+# Other file-sync vendors (their websites, not instances)
+owncloud.com
+*.owncloud.com
+owncloud.org
+*.owncloud.org
+nextcloud.com
+*.nextcloud.com
+
+# Anthropic / Claude (session links in commit and pull request text)
+claude.ai
+*.claude.ai
+claude.com
+*.claude.com
+anthropic.com
+*.anthropic.com
+
+# Code hosting, packages, containers
+github.com
+*.github.com
+*.githubusercontent.com
+*.github.io
+gitlab.com
+pypi.org
+*.pypi.org
+*.pythonhosted.org
+docker.com
+*.docker.com
+docker.io
+*.docker.io
+quay.io
+ghcr.io
+artifacthub.io
+*.goreleaser.com
+
+# Language, framework and tool documentation
+python.org
+*.python.org
+*.readthedocs.io
+*.readthedocs.org
+biomejs.dev
+astral.sh
+*.astral.sh
+*.kubernetes.io
+kubernetes.io
+*.k8s.io
+helm.sh
+*.ansible.com
+*.goauthentik.io
+goauthentik.io
+docs.checkmk.com
+icinga.com
+*.icinga.com
+nagios.org
+*.nagios.org
+prometheus.io
+opentelemetry.io
+grafana.com
+*.grafana.com
+traefik.io
+*.traefik.io
+caddyserver.com
+nginx.org
+*.nginx.org
+redis.io
+shields.io
+*.shields.io
+
+# Standards and security references
+*.w3.org
+w3.org
+ietf.org
+*.ietf.org
+rfc-editor.org
+*.rfc-editor.org
+iana.org
+*.iana.org
+owasp.org
+*.owasp.org
+cwe.mitre.org
+cve.org
+*.cve.org
+nvd.nist.gov
+developer.mozilla.org
+mozilla.org
+letsencrypt.org
+*.letsencrypt.org
+securitytxt.org
+schemastore.org
+json-schema.org
+keepachangelog.com
+semver.org
+spdx.org
+*.spdx.org
+oasis-open.org
+*.oasis-open.org
+
+# Wildcard-DNS services named in SSRF documentation and tests
+nip.io
+*.nip.io
+sslip.io
+*.sslip.io
+xip.io
+*.xip.io
+traefik.me
+*.traefik.me
+
+# Public DNS resolvers and the classic placeholder address
+1.1.1.1
+1.0.0.1
+8.8.8.8
+8.8.4.4
+9.9.9.9
+149.112.112.112
+1.2.3.4
+# example.com's published address, used in resolver tests
+93.184.216.34

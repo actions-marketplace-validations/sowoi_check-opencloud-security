@@ -11,7 +11,7 @@
   <p class="lede">{{ t('docs.tls.description') }}</p>
 </section>
 
-{% if locale != 'en' %}
+{% if locale not in ('en', 'de', 'fr', 'es') %}
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
@@ -26,6 +26,7 @@
   <a href="#7-is-the-negotiated-cipher-suite-and-certificate-policy-sound" lang="en">7. Is the negotiated cipher suite and certificate policy sound</a>
   <a href="#8-do-ipv4-and-ipv6-present-the-same-service-tlsaddressparity" lang="en">8. Do IPv4 and IPv6 present the same service: <code>tlsAddressParity</code></a>
   <a href="#9-is-certificate-issuance-restricted-tlscaarecord" lang="en">9. Is certificate issuance restricted: <code>tlsCaaRecord</code></a>
+  <a href="#9a-can-the-address-itself-be-trusted-tlsdnssec" lang="en">9a. Can the address itself be trusted: <code>tlsDnssec</code></a>
   <a href="#10-is-revocation-actually-checkable-tlsocspstapling" lang="en">10. Is revocation actually checkable: <code>tlsOcspStapling</code></a>
   <a href="#11-was-the-certificate-published-to-a-log-tlscertificatetransparency" lang="en">11. Was the certificate published to a log: <code>tlsCertificateTransparency</code></a>
   <a href="#12-is-a-replayable-0-rtt-flight-invited-tlsearlydata" lang="en">12. Is a replayable 0-RTT flight invited: <code>tlsEarlyData</code></a>
@@ -36,11 +37,9 @@
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="en">
-<p>Everything on this page happens before a single byte of HTTP is exchanged.
-OpenCloud's proxy terminates TLS itself on port 9200 (or whatever sits in
-front of it does), and this scanner reads what that transport actually
-negotiated - protocol version, certificate, chain, cipher suite - the same
-way a browser or a sync client would, without any special access.</p>
+<p>The scanner examines the TLS connection, the certificate presented by the server and
+related DNS records. These checks describe the connection from the scanner’s network
+position; they do not enumerate every configuration a different client might encounter.</p>
 <!-- TOC -->
 <ul>
 <li><a href="#tls-and-certificates-what-this-scanner-checks-and-why">TLS and certificates: what this scanner checks, and why</a></li>
@@ -53,6 +52,7 @@ way a browser or a sync client would, without any special access.</p>
 <li><a href="#7-is-the-negotiated-cipher-suite-and-certificate-policy-sound">7. Is the negotiated cipher suite and certificate policy sound</a></li>
 <li><a href="#8-do-ipv4-and-ipv6-present-the-same-service-tlsaddressparity">8. Do IPv4 and IPv6 present the same service: <code>tlsAddressParity</code></a></li>
 <li><a href="#9-is-certificate-issuance-restricted-tlscaarecord">9. Is certificate issuance restricted: <code>tlsCaaRecord</code></a></li>
+<li><a href="#9a-can-the-address-itself-be-trusted-tlsdnssec">9a. Can the address itself be trusted: <code>tlsDnssec</code></a></li>
 <li><a href="#10-is-revocation-actually-checkable-tlsocspstapling">10. Is revocation actually checkable: <code>tlsOcspStapling</code></a></li>
 <li><a href="#11-was-the-certificate-published-to-a-log-tlscertificatetransparency">11. Was the certificate published to a log: <code>tlsCertificateTransparency</code></a></li>
 <li><a href="#12-is-a-replayable-0-rtt-flight-invited-tlsearlydata">12. Is a replayable 0-RTT flight invited: <code>tlsEarlyData</code></a></li>
@@ -119,14 +119,13 @@ intermediate, without the root - which is what most issuers publish as a
 <h2 id="6-is-the-certificate-about-to-expire-or-issued-for-too-long">6. Is the certificate about to expire, or issued for too long</h2>
 <p>Two independent checks, both about time, in opposite directions:</p>
 <ul>
-<li><strong><code>tlsCertificate</code></strong> - remaining validity is below <code>--tls-min-days</code> (14 by
+<li><strong><code>tlsCertificate</code></strong> - remaining validity is below <code>scanner.tls_min_days</code> (14 by
   default). Unlike most findings, this one has a date on it: it will fail
   whether or not anybody acts, so the usual cause is worth checking directly</li>
 <li>an automated issuer that stopped renewing, or a reload that never reaches
   the process actually serving TLS.</li>
 <li><strong><code>tlsCertificateLifetime</code></strong> (low) - the certificate's validity period is
-  <em>longer</em> than the 398 days the CA/Browser Forum caps publicly trusted
-  certificates at. That points at a private authority or a hand-issued
+  <em>longer</em> than the scanner’s 398-day lifetime threshold. That points at a private authority or a hand-issued
   certificate, and the risk is the key: a certificate valid for years stays
   valid for years after the key behind it leaks, with nothing forcing the
   rotation that a short-lived certificate does on its own.</li>
@@ -148,6 +147,11 @@ TLS endpoints agree. Visitors may reach either address, so a stale IPv6
 listener - an old certificate, a forgotten reverse-proxy config, or nothing
 answering at all - can bypass whatever TLS configuration is actually
 maintained on IPv4.</p>
+<p>It compares one address per family, and only the TLS identity. Several nodes
+behind one certificate present the same identity whatever they serve, so a
+node that missed a configuration rollout is caught by <code>addressParity</code> with
+<code>--all-addresses</code> instead - see
+<a href="/documentation/scanner-checks#every-resolved-address">Every resolved address</a>.</p>
 <h2 id="9-is-certificate-issuance-restricted-tlscaarecord">9. Is certificate issuance restricted: <code>tlsCaaRecord</code></h2>
 <p>A DNS <strong>CAA</strong> (Certification Authority Authorization) record names which
 certificate authorities may issue for a domain at all. Without one, any
@@ -157,6 +161,52 @@ exact name scanned (not the RFC 8659 parent-domain fallback chain), and it
 is a DNS change at the zone, never an OpenCloud setting:</p>
 <pre><code>example.com. CAA 0 issue &quot;letsencrypt.org&quot;
 </code></pre>
+<h2 id="9a-can-the-address-itself-be-trusted-tlsdnssec">9a. Can the address itself be trusted: <code>tlsDnssec</code></h2>
+<p>Everything above starts from an address a resolver handed over. Without
+<strong>DNSSEC</strong> that answer carries no signature, so one forged on the way to the
+resolver cannot be told apart from the real one - and the CAA record above,
+which restricts who may issue a certificate for the name, arrives over the
+same unauthenticated channel and can be forged along with it.</p>
+<p>The check asks the resolver this machine already uses - the one in
+<code>/etc/resolv.conf</code>, never a public one - for the scanned name with the DNSSEC
+bit set, and reads whether the resolver validated the answer, whether the
+answer carried signatures, and whether the resolver understood the question
+at all.</p>
+<p>That last part is why the finding is sometimes simply absent. A resolver that
+does not speak DNSSEC produces exactly the same silence an unsigned zone
+does, and reporting it would fail every scan run from behind such a resolver
+for a reason that has nothing to do with the instance. So:</p>
+<table>
+<thead>
+<tr>
+<th>What the resolver answered</th>
+<th><code>tlsDnssec</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>It validated the answer itself</td>
+<td>passes</td>
+</tr>
+<tr>
+<td>It forwarded signatures without validating</td>
+<td>passes - the zone is signed, which is the part the operator controls</td>
+</tr>
+<tr>
+<td>Neither, but it understood the question</td>
+<td><strong>fails</strong> - the zone is not signed</td>
+</tr>
+<tr>
+<td>It does not speak DNSSEC, or never answered</td>
+<td>absent from the result entirely</td>
+</tr>
+</tbody>
+</table>
+<p>This is a low finding, and the fix is at the domain's own zone rather than in
+OpenCloud: sign the zone at the DNS provider, then publish the resulting DS
+record at the <em>parent</em> zone - an unsigned delegation leaves a signed zone
+unprotected. See
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0038-a-dnssec-answer-nobody-could-have-given-is-not-a-finding.md">ADR 0038</a>.</p>
 <h2 id="10-is-revocation-actually-checkable-tlsocspstapling">10. Is revocation actually checkable: <code>tlsOcspStapling</code></h2>
 <p>The certificate names an OCSP responder, but the server does not attach the
 revocation answer to the handshake - so every client has to ask the
@@ -175,16 +225,13 @@ mis-issuance that would otherwise be invisible until it was used.</p>
 certificate it already fetched, using the same <code>openssl x509 -text</code> call that
 reads the key and signature algorithm - no extra connection and no extra
 process.</p>
-<p>Chrome and Safari refuse a publicly trusted certificate without SCTs
-outright, so this is an outage waiting for the next browser release rather
-than only a transparency gap, which is why it is a <code>medium</code> finding.</p>
-<p><strong>The check only runs where the question is fair.</strong> A private or self-signed
-authority cannot publish to a log, and OpenCloud generates a self-signed
-certificate during <code>opencloud init</code> - so on a large share of instances the
-honest answer is that the question does not apply. <code>tlsCertificateTransparency</code>
-is therefore withheld entirely unless the chain reaches a public root. It is
-also withheld when the local OpenSSL does not decode the extension at all:
-an absent finding is an unknown, never a pass.</p>
+<p>The check looks specifically for SCTs embedded in the certificate. Missing embedded SCTs
+produce a <code>medium</code> finding, but do not by themselves prove a browser will reject the
+connection: Certificate Transparency evidence can also be delivered through other
+mechanisms.</p>
+<p><code>tlsCertificateTransparency</code> is evaluated only when the chain reaches a public root.
+Private or self-signed certificates are outside this check’s scope. If the local OpenSSL
+cannot decode the extension, the finding is omitted rather than recorded as a pass.</p>
 <p><strong>Fix:</strong> reissue through a certificate authority that embeds SCTs. Every
 public one has done so for years, Let's Encrypt included; a trusted
 certificate without them was almost certainly issued by a private CA that is
@@ -209,12 +256,10 @@ unknown rather than as accepting it.</p>
 Leave it on only where a measured latency problem justifies it <em>and</em> the
 application is known to reject replayed non-idempotent requests.</p>
 <h2 id="what-is-deliberately-left-unmeasured">What is deliberately left unmeasured</h2>
-<p><strong>Nothing here reports a pass it did not measure.</strong> A build of OpenSSL that
-refuses to speak TLS 1.0 at all cannot tell the scanner whether the <em>server</em>
-would have accepted it, and a missing <code>openssl</code> binary means OCSP stapling
-cannot be probed. In both cases the check is left out of the result entirely
-rather than recorded as passed - a gap in the output is honest; a green tick
-for something nobody looked at is not.</p>
+<p><strong>Checks that cannot run are omitted from the result.</strong> If the local OpenSSL
+build does not support TLS 1.0, the scanner cannot test whether the server
+accepts it. Without an <code>openssl</code> binary, it cannot probe OCSP stapling.
+Neither case is reported as a pass.</p>
 <p><strong>A certificate that fails verification is still read.</strong> <code>getpeercert()</code>
 returns nothing for an unverified peer, so on the self-signed instances this
 matters most for, the scanner fetches the certificate in DER form and decodes
@@ -233,9 +278,8 @@ needing to be told which case it is looking at:</p>
 </ol>
 <p><code>--insecure</code> (<code>COS_INSECURE</code>) skips step 1's verification requirement. The
 untrusted chain is still listed in the output; it simply stops counting
-against the rating. Use it for an instance you know is self-signed, so that a
-<em>genuinely</em> broken certificate elsewhere still stands out rather than being
-lost in an expected finding.</p>
+against the rating. Use it only when you intentionally accept an untrusted
+certificate for that instance.</p>
 <h2 id="severity-and-rating-impact">Severity and rating impact</h2>
 <p>Every check on this page is an <code>extraChecks</code> entry, so a failure caps the
 rating the way any failed extra check does (critical -&gt; <code>D</code>, high -&gt; <code>C</code>,

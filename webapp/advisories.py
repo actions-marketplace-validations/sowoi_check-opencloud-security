@@ -13,7 +13,10 @@ scan jobs rate against the answer. Where the release schedule can fail by
 in particular, so the rules are the mirror image:
 
 * **A refresh never removes an advisory.** The document is merged into the
-  bundled one, so a feed that answers with an empty list changes nothing.
+  bundled one, so a feed that answers with an empty list changes nothing - and
+  the bundled one is folded in on every read as well as every refresh, because
+  the stored document has no TTL and an image deployed today would otherwise
+  inherit an older image's idea of which advisories exist.
 * **Nothing unbounded is ever believed.** An advisory that does not say which
   versions it affects would flag every instance in the world; the parser drops
   those, and this module refuses a document that slipped one through.
@@ -30,8 +33,10 @@ import logging
 from typing import Any
 
 from opencloud_local_scan.advisory_source import (
+    OSV_PACKAGE,
     AdvisoryFetchError,
     fetch_advisory_document,
+    merge_document,
 )
 from opencloud_local_scan.vulndb import (
     BUNDLED_DB,
@@ -138,6 +143,30 @@ def _bundled() -> VulnerabilityDatabase:
     return load_database()
 
 
+def _with_bundled_floor(document: dict[str, Any] | None) -> dict[str, Any]:
+    """A stored document with every bundled advisory folded back into it.
+
+    The bundled file is the floor, and the floor *moves*: a new image can add
+    an advisory CI curated by hand, and the feed may never mention it. The
+    stored document carries no TTL - reference data is superseded, never
+    expired - so an image deployed today merges into whatever the image of six
+    months ago left behind, and an advisory that only the newer wheel knows
+    about would be missing from every scan for the life of the deployment.
+
+    Merging here rather than only at the moment of a refresh is what makes the
+    floor hold on the *read* path too, so an upgraded deployment is right
+    before its next daily fetch rather than after it.
+    """
+    entries = [
+        entry
+        for entry in _bundled_document().get("advisories") or []
+        if isinstance(entry, dict) and entry.get("id")
+    ]
+    if not entries:  # pragma: no cover - the wheel always ships advisories
+        return dict(document or {})
+    return merge_document(entries, document)
+
+
 async def stored_database(
     backend: RedisBackend, settings: WebSettings
 ) -> VulnerabilityDatabase:
@@ -146,7 +175,9 @@ async def stored_database(
 
     Always returns a usable database. The refreshed document has to pass the
     same test it passed to be stored, so nothing that has since become
-    unusable is believed on the way out either.
+    unusable is believed on the way out either - and it is read through
+    :func:`_with_bundled_floor`, so a document written by an older image can
+    add to what this one ships but never take anything away from it.
     """
     if not settings.advisory_refresh:
         return _bundled()
@@ -155,14 +186,15 @@ async def stored_database(
         if document is not None:
             LOGGER.warning("advisory_stored_rejected")
         return _bundled()
-    advisories = parse_document(document)
+    merged = _with_bundled_floor(document)
+    advisories = parse_document(merged)
     # The refreshed document is the bundled one plus whatever the feed added,
     # so it replaces rather than supplements it. Naming every feed the entries
     # came from keeps the result document honest about where a verdict
     # originated, which is the only way a reader can check one.
     return VulnerabilityDatabase(
         advisories=advisories,
-        sources=[str(BUNDLED_DB), *_feed_sources(document)],
+        sources=[str(BUNDLED_DB), *_feed_sources(merged)],
     )
 
 
@@ -198,10 +230,12 @@ async def _refresh_advisories(backend: RedisBackend, settings: WebSettings) -> s
         return "disabled"
 
     # Merge into whatever this deployment is already using, so an advisory
-    # that reached it yesterday is not lost if the feed forgets it today.
-    previous = await read_document(backend, ADVISORY_DOCUMENT_KEY)
-    if previous is None:
-        previous = _bundled_document()
+    # that reached it yesterday is not lost if the feed forgets it today - and
+    # into the bundled file as well, so one this image ships and the stored
+    # document has never heard of is not lost either.
+    previous = _with_bundled_floor(
+        await read_document(backend, ADVISORY_DOCUMENT_KEY)
+    )
 
     try:
         document = await asyncio.to_thread(
@@ -209,6 +243,8 @@ async def _refresh_advisories(backend: RedisBackend, settings: WebSettings) -> s
             settings.advisory_refresh_url,
             previous,
             REFRESH_TIMEOUT_SECONDS,
+            OSV_PACKAGE,
+            settings.advisory_repository_url,
         )
     except AdvisoryFetchError as exc:
         # The URL is operator configuration, not a visitor's target, so the
@@ -253,9 +289,9 @@ async def probe_advisories(backend: RedisBackend, settings: WebSettings) -> str:
     if not settings.advisory_refresh:
         return "disabled"
 
-    previous = await read_document(backend, ADVISORY_DOCUMENT_KEY)
-    if previous is None:
-        previous = _bundled_document()
+    previous = _with_bundled_floor(
+        await read_document(backend, ADVISORY_DOCUMENT_KEY)
+    )
 
     try:
         document = await asyncio.to_thread(
@@ -263,6 +299,8 @@ async def probe_advisories(backend: RedisBackend, settings: WebSettings) -> str:
             settings.advisory_refresh_url,
             previous,
             REFRESH_TIMEOUT_SECONDS,
+            OSV_PACKAGE,
+            settings.advisory_repository_url,
         )
     except AdvisoryFetchError as exc:
         LOGGER.info("advisory_probe_unreadable %s", exc)
@@ -285,6 +323,23 @@ def _bundled_document() -> dict[str, Any]:
     except (OSError, ValueError):
         return {}
     return loaded if isinstance(loaded, dict) else {}
+
+
+async def database_updated(backend: RedisBackend, settings: WebSettings) -> str:
+    """
+    The date the advisory database itself records, for dating a feed.
+
+    Deliberately the document's `updated` rather than
+    :func:`~webapp.reference_data.last_checked`: the question is when the
+    database last changed, not when this deployment last asked. A deployment
+    that has never refreshed answers with the date the bundled file was
+    curated, which is the truth about what it knows.
+    """
+    if settings.advisory_refresh:
+        document = await read_document(backend, ADVISORY_DOCUMENT_KEY)
+        if document is not None and _is_usable(document) and document.get("updated"):
+            return str(document["updated"])
+    return str(_bundled_document().get("updated") or "")
 
 
 async def advisory_state(

@@ -36,6 +36,9 @@
   data-admin-queue="{{ t.raw('admin.state.queue') }}"
   data-admin-ratelimit="{{ t.raw('admin.state.ratelimit.value') }}"
   data-admin-cooldown="{{ t.raw('admin.state.cooldown.value') }}"
+  data-admin-guard="{{ t.raw('admin.state.guard.value') }}"
+  data-admin-guard-week="{{ t.raw('admin.state.guard.week') }}"
+  data-admin-guard-off="{{ t('admin.state.guard.off') }}"
   data-admin-checked="{{ t.raw('admin.state.checked') }}"
   data-admin-checked-failed="{{ t.raw('admin.state.checked.failed') }}"
   data-admin-checked-rejected="{{ t.raw('admin.state.checked.rejected') }}"
@@ -101,6 +104,8 @@
   {% endif %}
 </section>
 
+{% include "_admin-tabs.html" %}
+
 <section class="page-head admin-head">
   <p class="kicker">{{ t('admin.kicker') }}</p>
   <h1>{{ t('admin.title') }}</h1>
@@ -129,6 +134,11 @@
       <span class="admin-stat-label">{{ t('admin.state.ratelimit') }}</span>
       <strong class="admin-stat-value" data-value="ratelimit">-</strong>
       <span class="admin-stat-note" data-value="cooldown">-</span>
+    </div>
+    <div class="admin-stat" data-stat="guard">
+      <span class="admin-stat-label">{{ t('admin.state.guard') }}</span>
+      <strong class="admin-stat-value" data-value="guard">-</strong>
+      <span class="admin-stat-note" data-value="guard-week">-</span>
     </div>
     <div class="admin-stat" data-stat="schedule">
       <span class="admin-stat-label">{{ t('admin.state.schedule') }}</span>
@@ -223,6 +233,123 @@
   </ul>
 </section>
 
+{# --------------------------------------------------------------- updates #}
+{#
+  Which release is running, whether a newer one is on GitHub, and a button
+  that installs it: the release's web bundle, verified against its build
+  attestation and run in place of the image's code until the container
+  restarts (ADR 0070). An ordinary form, so it works with no scripting.
+#}
+<section class="card section-gap" aria-labelledby="admin-update" data-reveal>
+  <p class="kicker">{{ t('admin.update.kicker') }}</p>
+  <h2 id="admin-update">{{ t('admin.update.heading') }}</h2>
+  <p class="lede">
+    {{ t('admin.update.running', version=update.running) }}
+    {% if not update.checked %}{{ t('admin.update.off') }}
+    {% elif update.available %}<strong>{{ t('admin.update.available', version=update.latest) }}</strong>
+    {% elif update.latest %}{{ t('admin.update.current') }}
+    {% else %}{{ t('admin.update.unknown') }}{% endif %}
+  </p>
+
+  {% if outcome and outcome.action == 'update' %}
+  <p class="admin-outcome" data-outcome="{{ outcome.state }}" aria-live="polite">
+    {{ t('admin.update.outcome.' ~ outcome.state) }}
+  </p>
+  {% endif %}
+
+  {% if update.available %}
+    {% if update.automatic %}
+    <form method="post" action="/admin/update">
+      <button class="btn btn-primary" type="submit">
+        {{ t('admin.update.install', version=update.latest) }}
+      </button>
+    </form>
+    <p class="hint">{{ t('admin.update.downtime') }}</p>
+    {% else %}
+    <p class="hint">{{ t('admin.update.manual') }}</p>
+    {% endif %}
+  {% endif %}
+</section>
+
+{# ------------------------------------------------------------ exclusions #}
+{#
+  The one card that writes. Everything else here reads a setting or presses a
+  refresh; this changes what the service will do, from the next request, in
+  every process - because both the API and the worker read the list where it
+  is kept rather than where they started (ADR 0044).
+
+  The two halves are shown apart because they are governed apart: what the
+  compose file names cannot be withdrawn here, so the deployment's own promise
+  survives a browser, and an operator can see which entries will
+  still be there after a restart.
+
+  Ordinary forms again, so this works with no scripting at all.
+#}
+<section class="card section-gap" aria-labelledby="admin-exclusions" data-reveal>
+  <p class="kicker">{{ t('admin.exclusions.kicker') }}</p>
+  <h2 id="admin-exclusions">{{ t('admin.exclusions.heading') }}</h2>
+  <p class="lede">{{ t('admin.exclusions.lede') }}</p>
+
+  {# The answer to the last form posted here, said in this card rather than
+     in the refresh card's outcome line - a refusal carries its own sentence,
+     and "that is not an entry" belongs beside the field it was typed in. #}
+  {% if outcome and outcome.action and outcome.action.startswith('exclusions.') %}
+  <p class="admin-outcome" data-outcome="{{ outcome.state }}" aria-live="polite">
+    {% if outcome.key %}{{ t(outcome.key) }}{% else %}{{ t('admin.outcome.' ~ outcome.state) }}{% endif %}
+  </p>
+  {% endif %}
+
+  {% if exclusions is none %}
+  <p class="admin-outcome" data-outcome="failed">{{ t('admin.exclusions.unreadable') }}</p>
+  {% else %}
+  <form class="admin-exclusion-add" method="post" action="/admin/exclusions">
+    <input type="hidden" name="operation" value="add">
+    <label class="admin-exclusion-label" for="admin-exclusion-entry">
+      {{ t('admin.exclusions.add.label') }}
+    </label>
+    <div class="admin-exclusion-row">
+      <input class="admin-exclusion-input" id="admin-exclusion-entry" type="text"
+             name="entry" required maxlength="253" autocomplete="off" spellcheck="false"
+             placeholder="{{ t('admin.exclusions.add.placeholder') }}">
+      <button class="btn btn-primary" type="submit">{{ t('admin.exclusions.add.action') }}</button>
+    </div>
+    <span class="hint">{{ t('admin.exclusions.add.hint') }}</span>
+  </form>
+
+  <ul class="admin-exclusions">
+    {% for entry in exclusions.configured %}
+    <li class="admin-exclusion" data-source="configured">
+      <span class="admin-exclusion-entry">{{ entry }}</span>
+      <span class="admin-surface-pill">{{ t('admin.exclusions.source.configured') }}</span>
+    </li>
+    {% endfor %}
+    {# stored_only, not stored: an entry the environment also names is listed
+       under its own half above and cannot be withdrawn here, so a remove
+       button beside it would be a button that answers with a refusal. #}
+    {% for entry in exclusions.stored_only %}
+    <li class="admin-exclusion" data-source="stored">
+      <span class="admin-exclusion-entry">{{ entry }}</span>
+      <form method="post" action="/admin/exclusions">
+        <input type="hidden" name="operation" value="remove">
+        <input type="hidden" name="entry" value="{{ entry }}">
+        <button class="btn btn-quiet" type="submit">{{ t('admin.exclusions.remove') }}</button>
+      </form>
+    </li>
+    {% endfor %}
+    {% if not exclusions.effective %}
+    <li class="admin-exclusion" data-source="empty">
+      <span class="admin-exclusion-entry">{{ t('admin.exclusions.empty') }}</span>
+    </li>
+    {% endif %}
+  </ul>
+
+  {% if exclusions.updated %}
+  <p class="hint">{{ t('admin.exclusions.updated', when=exclusions.updated) }}</p>
+  {% endif %}
+  <p class="hint">{{ t('admin.exclusions.durability') }}</p>
+  {% endif %}
+</section>
+
 {# --------------------------------------------------------------- actions #}
 <section class="card section-gap" aria-labelledby="admin-actions" data-reveal>
   <p class="kicker">{{ t('admin.actions.kicker') }}</p>
@@ -234,10 +361,13 @@
     scripting - the page simply reloads with the outcome - and admin.js only
     turns the reload into an in-place answer. The cross-site check every
     other POST here meets applies to these too.
+
+    The field is "source", never "action": a control named after a form
+    property (action, method, submit, ...) shadows that property in scripts.
   #}
   <div class="admin-actions">
     <form method="post" action="/admin/refresh" data-admin-action>
-      <input type="hidden" name="action" value="schedule">
+      <input type="hidden" name="source" value="schedule">
       <button class="btn btn-primary" type="submit">
         {{ t('admin.actions.schedule') }}
       </button>
@@ -245,7 +375,7 @@
     </form>
 
     <form method="post" action="/admin/refresh" data-admin-action>
-      <input type="hidden" name="action" value="advisories">
+      <input type="hidden" name="source" value="advisories">
       <button class="btn btn-primary" type="submit">
         {{ t('admin.actions.advisories') }}
       </button>
@@ -279,7 +409,7 @@
     </li>
     {% endfor %}
   </ul>
-  {% elif outcome %}
+  {% elif outcome and not (outcome.action and outcome.action.startswith('exclusions.')) %}
   <p class="admin-outcome" data-outcome="{{ outcome.state }}">
     {{ t('admin.outcome.' ~ outcome.state, action=outcome.action, seconds=outcome.seconds) }}
   </p>
@@ -304,6 +434,18 @@
   <div class="admin-index" id="admin-index" aria-live="polite">
     <p class="flush"><strong data-value="index-state">-</strong></p>
     <p class="hint flush" data-value="index-detail">-</p>
+  </div>
+  {#
+    What an operator can actually do about it, shown only once the verdict
+    is anything but current. A published release always ships an index built
+    for it, so a stale one on a running service is a build that is not a
+    release as published - and the fix is a deployment, not a button.
+  #}
+  <div class="admin-index-remedy" data-admin-index-remedy hidden>
+    <p class="hint flush">{{ t('admin.search.remedy') }}</p>
+    <pre class="code-block"><code>python scripts/build_search_index.py
+cd docker &amp;&amp; docker compose up --build -d</code></pre>
+    <p class="hint flush">{{ t('admin.search.remedy.commit') }}</p>
   </div>
   <p class="hint section-gap flush">{{ t('admin.search.fix') }}</p>
 </section>

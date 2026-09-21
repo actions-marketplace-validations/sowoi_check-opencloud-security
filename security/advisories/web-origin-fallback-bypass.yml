@@ -1,0 +1,33 @@
+# Security advisory record; publication remains a maintainer decision.
+slug: web-origin-fallback-bypass
+state: draft
+ghsa: GHSA-xcv9-j4rj-r59h
+changelog_version: "1.23.2"
+changelog_entry: "Browser-origin fallback checks validate the complete origin."
+shipped: true
+severity: medium
+cwe_ids:
+  - CWE-346
+package: web
+introduced: "1.17.0"
+fixed: "1.23.2"
+summary: >-
+  Opaque and wrong-scheme origins bypassed fallback browser request checks
+verified: |
+  git show v1.17.0:webapp/app.py introduces the fallback accepting Origin: null and comparing netloc only. git show v1.23.1:webapp/app.py retains this logic; cross_origin_post delegates to it when Fetch Metadata is absent.
+description: |
+  ### Impact
+  
+  When Sec-Fetch-Site was absent, an opaque Origin: null was accepted and origin comparison ignored the URL scheme. A hostile browser context could submit scans using the visitor's allowance. The same fallback protected later operator-area writes, where exploitability also depends on the identity proxy sending the operator's session. Malformed origins could raise an exception rather than return a refusal.
+  
+  ### Patches
+  
+  Fixed in the source for **1.23.2**. Opaque and malformed origins are rejected; comparison includes scheme, normalized hostname and effective port. The configured public origin is authoritative, not the request's internal Host header.
+  
+  ### Workarounds
+  
+  Require same-origin Origin or Fetch Metadata at the reverse proxy for browser mutation requests, especially /admin. Non-browser API calls need not forge browser headers.
+  
+  ### Distribution
+  
+  This affects the web application or its standalone deployment wizard, not the PyPI plugin distribution.

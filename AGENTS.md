@@ -3,6 +3,11 @@
 Guidance for AI coding agents working on **check-opencloud-security**
 (version **1.0.0**).
 
+Codex: the repository's Claude Code skills, hooks, subagent roles and
+Playwright MCP server are available through `.agents/` and `.codex/` - see
+[`.codex/README.md`](.codex/README.md). The hooks there enforce the same
+rules as `.claude/hooks/`.
+
 ## What this project is
 
 A Nagios/Icinga plugin that checks an OpenCloud instance for known
@@ -25,11 +30,14 @@ for a remote scan service.
 | `opencloud_local_scan/versions.py` | The release lifecycle model (tracks, lines, end of life) |
 | `opencloud_local_scan/releases.py` | The update check and its track-aware recommendation |
 | `opencloud_local_scan/tls.py` | Transport security: protocol, certificate, chain, stapling |
+| `opencloud_local_scan/dns.py` | The DNS wire format both lookups below share, over the system resolver only |
+| `opencloud_local_scan/caa.py` | Who may be issued a certificate for the scanned name |
+| `opencloud_local_scan/dnssec.py` | Whether the zone is signed, and when that cannot be established at all |
 | `opencloud_local_scan/hardening.py` | Catalogue explaining every hardening identifier |
 | `opencloud_local_scan/snippets.py` | The catalogue's fixes rendered as Compose, .env, nginx, Caddy or Traefik |
 | `opencloud_local_scan/config.py`, `factory.py` | Configuration, secrets, settings construction |
 | `opencloud_local_scan/wizard.py` | The interactive setup behind `--configure` |
-| `opencloud_local_scan/selfupdate.py` | `--upgrade-self`, via pipx, uv or pip |
+| `opencloud_local_scan/selfupdate.py` | `--upgrade-self`, via pipx, uv or pip - and refused for a distribution package |
 | `opencloud_local_scan/schedule_source.py` | Reading the published lifecycle page: one parser, used by CI and by the web application |
 | `opencloud_local_scan/data/release_schedule.json` | Bundled release schedule |
 | `scripts/update_release_schedule.py` | Regenerates that file and the README block from the published documentation |
@@ -52,9 +60,13 @@ for a remote scan service.
 | `frontend/static/llms.txt`, `frontend/static/js/webmcp.js` | Agent discovery and page-scoped browser tools |
 | `frontend/` | Everything the browser sees: templates, CSS, JavaScript, SVG |
 | `scripts/build_web_bundle.py` | Builds the GitHub release tarball of the web application |
+| `scripts/build_wizard_release.py` | Builds the Docker setup wizard a release attaches: version stamped, checksum beside it |
+| `packaging/` | The nfpm recipe and the launchers behind the `.deb` and the `.rpm` |
+| `scripts/build_distro_packages.py` | Builds both of those from the already-built wheel |
+| `scripts/update_golden_corpus.py` | Regenerates `tests/golden/`: the verdict a frozen set of instances earns |
 | `tests/` | Test suite, including `tests/fake_opencloud.py` |
 | `docker/` | Every Dockerfile and compose file; the build context is the repository root |
-| `authentik/blueprints/` | The provider the signed-in stack provisions for itself |
+| `authentik/blueprints/` | What the signed-in stack provisions for itself: providers, a required second factor, invitation-only enrollment |
 | `ansible/`, `contrib/`, `config/` | Deployment role, Icinga definitions, example config |
 | `docs/` | Deployment guides and worked examples, indexed by `docs/README.md` |
 
@@ -74,6 +86,12 @@ for a remote scan service.
   `draft`; publishing raises Dependabot alerts for every affected installation
   and cannot be undone. See [Security advisories](#security-advisories) - like
   the version, that is the user's decision alone.
+- **Never use a Python dependency nobody approved.** A new package - in
+  `pyproject.toml` or as a `uvx` tool in a workflow - is justified, tested and
+  security-reviewed in a `security/dependencies/<name>.yml` record first, and
+  only a maintainer approves that record. Draft it as `proposed`, never set
+  `approved`, and never add a name to `grandfathered.txt`. See [Adding a
+  Python dependency](#adding-a-python-dependency).
 - **`pyproject.toml` is the only place the version is written.**
   `opencloud_local_scan.__version__` derives it from there (package metadata
   when installed, the file itself in a checkout) and the plugin imports that.
@@ -101,19 +119,29 @@ a patch, a minor or a major release is a judgement call about the project, not
 a mechanical step - and a bump that lands on `main` publishes to PyPI
 immediately.
 
-**Every change must be documented in both `CHANGELOG.md` and `RELEASE.md`
-under the version currently declared in `pyproject.toml`.** Read that version
-before editing either file, add the entry to the matching Keep a Changelog
-section (`Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`, or
-`Documentation`), and keep the two release notes consistent. Never invent or
-bump a version heading yourself.
+**Every change must be documented in `CHANGELOG.md` under
+`## [Unreleased]`.** Add the entry to the matching Keep a Changelog section
+(`Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`, or
+`Documentation`). Never invent or bump a version heading yourself. Do not edit
+`RELEASE.md`: the release workflow writes it from that section and overwrites
+it on every release, so between releases it names the last one - see
+[ADR 0048](adr/0048-release-md-is-written-by-the-release-not-by-a-pull-request.md).
+
+`python scripts/check_pull_request.py --base origin/main` checks this before a
+pull request is opened: a change needs a new `CHANGELOG.md` entry, and a
+version change has to move past every tag. No workflow runs it, and a release
+needs no label.
+`release-dry-run.yml` builds everything the
+release builds on the same pull request, and the release itself uploads to
+PyPI only after every other artifact is built. See
+[ADR 0045](adr/0045-a-release-is-rehearsed-on-the-pull-request-and-publishes-last.md).
 
 An entry under `Security` needs one more thing: a record in
 `security/advisories/`. See [Security advisories](#security-advisories).
 
 When the user bumps the version, `scripts/release_notes.py` prepares the notes
 for that `pyproject.toml` version and writes `RELEASE.md` for the GitHub
-release. Keep the release documents synchronized before that workflow runs.
+release.
 
 Preview what the next release would look like. It rewrites `CHANGELOG.md` and
 `RELEASE.md`, so do it on a scratch copy or revert afterwards:
@@ -190,10 +218,53 @@ python scripts/security_advisories.py --publish <slug>   # publish one
 `--sync` also runs automatically after `Publish to PyPI` succeeds
 ([`security-advisories.yml`](.github/workflows/security-advisories.yml)), so a
 record marked `draft` becomes a GitHub draft advisory without anyone
-remembering to. **Publishing is never automatic and an agent must never do
+remembering to — but only where a `SECURITY_ADVISORY_TOKEN` secret exists.
+Writing a repository advisory is not a permission a workflow's built-in
+`GITHUB_TOKEN` can be granted, so without that secret the job skips drafting,
+says so in its step summary, and the drafts wait for a maintainer to run
+`--sync` locally. **Publishing is never automatic and an agent must never do
 it.** A published advisory enters the GitHub Advisory Database and raises
 Dependabot alerts for everyone on the affected range; like the version bump,
 that is the user's call. Do not request a CVE either.
+
+## Adding a Python dependency
+
+**Every new Python dependency is justified, tested and security-reviewed
+before it is used, and a maintainer approves it.**
+[ADR 0060](adr/0060-a-new-dependency-is-justified-tested-and-reviewed-first.md)
+has the reasoning; `security/dependencies/README.md` has the record format;
+`/add-dependency` walks through it.
+
+- **What counts:** every requirement in `pyproject.toml` - `[project]
+  dependencies`, every extra, every dependency group, `[build-system]
+  requires` - and every package a workflow runs with `uvx`.
+- **First ask whether it is needed.** The standard library (3.10, so no
+  `tomllib`), a package already declared, or a few lines of our own code
+  usually are enough. Fewer packages is a security property here: the plugin
+  runs on monitoring hosts and the web service fetches URLs strangers submit.
+- **The record** in `security/dependencies/<name>.yml` says why the package is
+  needed and what else was considered. It names the tests that exercise it
+  (at least one must mention its import name) and gives a review: known
+  vulnerabilities, maintenance, provenance, install-time behaviour, runtime
+  network use, native code, transitive packages and license. A package that
+  contacts a third party is refused outright - see
+  [Third parties](#third-parties).
+- **Scope is part of the review.** Declare a package in the narrowest place
+  that works, and put the same scopes in the record. Moving it somewhere wider
+  (a test group into the runtime) fails the check until the record is updated,
+  on purpose.
+- **Approval is the maintainer's alone.** Write `status: proposed`; the check
+  fails until a maintainer sets `status: approved` and `approved_by`. Like
+  the version bump and advisories, never do that yourself.
+- **`security/dependencies/grandfathered.txt` only shrinks.** It lists what
+  was declared when the policy was adopted - unreviewed, not approved. Never
+  add a name; remove one when its record is approved or the package is
+  dropped. Removing a package also removes its record.
+
+`python scripts/check_dependencies.py --check` enforces all of this, and the
+`dependency-policy` job in `supply-chain.yml` runs it with `--base` on every
+pull request. The dependency-review action fails a pull request that
+introduces any known-vulnerable version, and `pip-audit` audits the locked set.
 
 ## Architectural decision records
 
@@ -280,8 +351,11 @@ missing one is a fact about *this* deployment. `setup.advisoryHeaders` -
 `Permissions-Policy`, `Cross-Origin-Opener-Policy`,
 `Cross-Origin-Resource-Policy`, `Cross-Origin-Embedder-Policy` - grades
 headers **no** OpenCloud sends, so a missing one is a fact about OpenCloud.
-`setup.advisoryChecks` carries the same bargain for what is not a header,
-currently `securityTxtPublished`. All of them are measured, explained by
+`setup.advisoryChecks` carries the same bargain for what is not a header:
+`securityTxtPublished`, and `hstsPreloadEligible` - the header OpenCloud's own
+proxy sends asks to be preloaded and omits the `includeSubDomains` the preload
+list requires, so the shortfall describes OpenCloud rather than any one
+deployment (ADR 0037). All of them are measured, explained by
 `--debug` and listed in the web catalogue, and they never reach
 `_collect_missing_hardenings`, the alert line, the `hardenings_missing`
 metric, the webhook or an exit code, and are never offered as waivers. Do not
@@ -299,6 +373,30 @@ Every request the scan makes is `GET`, `HEAD`, `PROPFIND` or `TRACE` - all
 safe by RFC 9110, none of them able to change the instance. A test asserts the
 set. Nothing may widen it, and no probe may send a credential except the
 documented demo passwords, to the instance's own identity provider.
+
+## The scan probes only the origin it was pointed at
+
+Every HTTP request goes to the base URL the caller gave, and no other. This is
+what makes the web application's SSRF guard meaningful: it resolves and pins
+that one target, and a probe aimed anywhere else walks past it.
+
+The rule bites hardest where a second service is genuinely involved. A
+collaboration backend's WOPI discovery document names the host its editor is
+served from, and following that name would let a scanned instance choose the
+next address the scanner connects to. So `companionAdminConsole` and
+`companionEditorHttps` are measured only where a reverse proxy publishes the
+backend on the instance's *own* origin, and are absent - never passing -
+otherwise. Do not add a probe that takes its address from the target's
+response, and do not "fix" the coverage gap that leaves. See
+[ADR 0036](adr/0036-a-companion-service-is-probed-only-where-the-scan-was-pointed.md).
+
+The same reasoning bounds the DNS lookups: `caa.py` and `dnssec.py` query only
+the resolver in `/etc/resolv.conf`, never a public one, because a scan that
+asked 1.1.1.1 would hand a third party the hostname being scanned. When no
+resolver can be found, or the one found cannot answer the question, the
+finding is left out of the result rather than guessed at. See
+[ADR 0024](adr/0024-caa-record-uses-the-systems-own-resolver.md) and
+[ADR 0038](adr/0038-a-dnssec-answer-nobody-could-have-given-is-not-a-finding.md).
 
 ## Working on the web application
 
@@ -397,12 +495,25 @@ list, and an empty one with the area on **refuses to start** rather than
 being read as "anybody the provider authenticated". Every refusal - no
 secret, wrong secret, no name, unlisted name - is the same 404.
 
-**It reads state and borrows the worker's two refreshes. Nothing else.** The
-buttons call `refresh_schedule` and `refresh_advisories`, the same functions
-with the same acceptance rules, behind a per-action cooldown so a button
-cannot be held down against somebody else's documentation site. Statistics
-are counts and configured limits; **no target, uuid, result or client address
-is reachable from `webapp/admin.py`**, and a test asserts it.
+**It reads state, borrows the worker's two refreshes, and writes exactly one
+thing.** The buttons call `refresh_schedule` and `refresh_advisories`, the same
+functions with the same acceptance rules, behind a per-action cooldown so a
+button cannot be held down against somebody else's documentation site.
+Statistics are counts and configured limits; **no target, uuid, result or
+client address is reachable from `webapp/admin.py`**, and a test asserts it.
+
+**The one control that writes is the exclusions**, and the four properties
+that made it acceptable are the bar for any future one - not precedent. It can
+only ever *refuse* a scan, so a stolen session cannot point this service at
+anything; `COS_WEB_BLOCKED_TARGETS` is a floor the area cannot withdraw, so
+compose stays true; a change takes effect from the next request in every
+process, because the API reads the list per submission and the worker per job
+rather than holding it from startup; and a store that cannot be read refuses
+the scan instead of proceeding without the list. Do not extend this into
+settings generally - concurrency, limits and TLS policy stay environment-only,
+which is what keeps "can a visitor make this service noisier?" out of a
+browser. See [ADR 0044](adr/0044-the-operator-area-may-write-the-exclusions.md)
+and [ADR 0043](adr/0043-an-operators-exclusion-outranks-every-allowance.md).
 
 **The search index is reported, never rebuilt.** The index stays a release
 artefact - the generator is not in the deployed bundle and the container is
@@ -577,7 +688,8 @@ document then stops advertising it. A new tool or resource needs a row in
 **Search is a release artefact, never a runtime crawl.**
 `webapp/search.py` explicitly lists the public templates,
 `scripts/build_search_index.py` writes the English index and its German,
-Spanish and French overlays, and only the release workflow refreshes them.
+Spanish and French overlays, and only automation refreshes them: every pull
+request to `main` (`search-index.yml`, ADR 0050) and the release workflow.
 Never give the generator a store, API, result template, export, UUID or
 network input; scan results and submitted addresses must be structurally
 impossible to index.
@@ -590,9 +702,19 @@ carrying another catalogue. A validated `cos_locale` cookie wins over the
 weighted `Accept-Language` header, then English is the fallback. The language
 switch is a POST to `/language` and may return only to a validated local path.
 Keep OpenAPI, Arazzo, MCP, discovery documents and exports in English, and
-keep remote scan evidence verbatim. Generated guide bodies remain English
-under `lang="en"` with a localized notice and chrome. See
-[ADR 0020](adr/0020-frontend-language-is-request-scoped.md).
+keep remote scan evidence verbatim. Public guide bodies have English, German,
+French and Spanish sources (`docs/`, `docs/de/`, `docs/fr/`, `docs/es/`), and
+adding or removing a guide updates all four; a locale without sources gets the
+English body under `lang="en"` with a localized notice. See
+[ADR 0020](adr/0020-frontend-language-is-request-scoped.md) and
+[ADR 0063](adr/0063-public-guides-have-spanish-sources.md).
+
+**German text addresses the reader informally, with "du".** Every German
+string - in `webapp/locales/de.py` and in the guides under `docs/de/` - uses
+`du`/`dein`/`dir` and informal imperatives (`Prüfe`, `Starte`), never
+`Sie`/`Ihr`/`Ihnen`. `tests/test_webapp_i18n.py` fails on a formal string in
+the catalogue or in a German guide. Spanish (formal "usted", in the catalogue
+and under `docs/es/`) and French keep their existing register.
 
 Every page carries the trademark notice in the footer of `base.html`. See
 [Trademarks and affiliation](#trademarks-and-affiliation) - do not remove it
@@ -631,7 +753,9 @@ line is whether *this* page causes a request the visitor did not ask for.
 This is not only a frontend rule. It covers the scanner, the plugin, the
 container images, the CI workflows and the documentation. A dependency that
 phones one of them home is the same leak with more steps, so check what a new
-package fetches at install time and at runtime before adding it.
+package fetches at install time and at runtime before adding it - that is the
+`runtime_network` question of its dependency record (see
+[Adding a Python dependency](#adding-a-python-dependency)).
 
 `tests/test_webapp_seo.py` asserts no page carries such metadata, and the
 third-party test in `tests/test_webapp_api.py` walks the rendered HTML for any
@@ -665,7 +789,7 @@ repository root, because an image needs files from outside that directory:
 | `docker/docker-compose.yml` | The default stack - `web_app`, `arq_worker` and `redis`, ready to `up` |
 | `docker/docker-compose.authentik.yml` | The same stack plus Authentik, when `/mcp` should require a sign-in |
 | `docker/authentik-env.sh` | Writes the secrets that stack needs into `docker/.env`, once |
-| `docker/setup-wizard.py` | The standalone Docker setup wizard: asks, then writes a compose file and its `.env` |
+| `docker/setup-wizard.py` | The standalone Docker setup wizard: asks, then writes a compose file, its `.env` and the reverse proxy configuration in front |
 | `docker/docker-compose.monitoring.yml` | The plugin's own scan service, unrelated to the web application |
 
 - Build by hand with `docker build -f docker/Dockerfile.web .`, never with
@@ -683,15 +807,57 @@ the non-secret answers inline and a `.env` holding every credential that file
 refers to as `${NAME}`. The split is the rule: a secret never lands in the
 compose file, `.env` is created `0600`, and the compose files that ship in
 `docker/` are refused as targets, because the next update would take a
-hand-made deployment with it. An existing `.env` is read back and its values
-become the defaults, so a re-run edits a deployment rather than regenerating
-its credentials. Asked for automatic updates, it adds Watchtower
+hand-made deployment with it - unless `--force` is given, which replaces them
+in place and says on stderr that the checkout now carries a modified tracked
+file. An existing `.env` is read back and so is
+`.<compose-file>.answers.json`, the notebook it writes of every non-secret
+answer, so a re-run edits a deployment rather than re-describing it or
+regenerating its credentials. That notebook is untrusted input: a value is
+taken only when the field still exists and the type matches **exactly**
+(`type(...) is not`, never `isinstance` - a bool is an int, and
+`host_port: true` would otherwise become a port). Asked for automatic updates, it adds Watchtower
 scoped by label to the stack's own containers and detects the Docker socket
 for the user running it - a rootless Docker serves it under
-`/run/user/<uid>`, not `/var/run`. Keep it independent of
+`/run/user/<uid>`, not `/var/run`. Asked for a reverse proxy, it writes the
+nginx, Apache, Caddy or Traefik configuration too, following
+`docs/reverse-proxy.md` - and the same split applies there: the shared secret
+in front of `/admin` goes into an owner-readable include or is read from the
+proxy's environment, never into the file an operator would commit. **A
+question's relevance is decided as the answers arrive, never per section**:
+naming an SMTP server is what brings the rest of the mail session into play,
+and asking for the bundled provider is what brings its address and ports in.
+Switching on `/admin` or the
+sign-in on `/mcp` during an interactive run makes the bundled Authentik the
+default at the provider question - only on that change, so a remembered *no*
+survives a re-run - while `--sign-in` alone still adds no provider. Its colour
+and progress bars are hand-written ANSI rather than Rich or questionary,
+because of the standard-library rule, and never reach a pipe, a test or a
+`NO_COLOR` terminal. With the bundled Authentik
+**nobody clicks anything in its interface**: the wizard asks who signs in,
+generates `AUTHENTIK_ENROLLMENT_TOKEN` and `AUTHENTIK_BOOTSTRAP_PASSWORD` into
+`.env`, and prints the one enrollment link where a listed person chooses a
+password and enrols the second factor every sign-in requires. Never put the
+token, a password or a username into blueprint source - they reach Authentik
+as environment variables (ADR 0047). Keep it independent of
 `opencloud_local_scan.wizard`, which sets up a monitoring check against one
 instance - no imports, no shared configuration.
 `tests/test_docker_wizard.py` asserts all of that.
+
+**Its version is stamped, never written.** The repository copy keeps
+`RELEASE_VERSION = ""`; `scripts/build_wizard_release.py` fills it in for the
+copy a release attaches, and `--version` otherwise reads `pyproject.toml`
+beside it. Never commit a number into that line - `tests/test_wizard_release.py`
+fails if you do - and keep the documented download on
+`releases/latest/download`, never on `main` (ADR 0049).
+
+**It never prints a credential and never replaces a file unseen.** A value in
+`CREDENTIALS` is typed without an echo and offered back masked; a re-run shows
+a diff of the non-secret files only, and keeps every replaced file as
+`<name>.<UTC time>.bak` (an `.env` copy `0600`). Anything that reads the host -
+Docker, the port, the certificates - lives in `check_host`, apart from
+`check_consistency`, which must give the same verdict on every machine; and
+the only things it runs are `docker compose config` and `up -d`, each after
+the operator said yes.
 
 ## Validation
 
@@ -703,7 +869,16 @@ uvx ruff check .                       # linting, as CI runs it
 uv run mypy --config-file mypy.ini     # type checking
 cd ansible && ansible-lint             # must be run from ansible/
 python scripts/security_advisories.py --check   # every Security entry decided
+python scripts/check_pull_request.py --base origin/main  # changelog and version guard
+npx @biomejs/biome@2.5.13 lint                  # frontend scripts, rules in biome.jsonc
+uvx zizmor@1.30.1 .github/workflows             # workflow security audit
 ```
+
+CI also runs actionlint, shellcheck on every tracked `*.sh`, hadolint on the
+Dockerfiles, `docker compose config` and CodeQL. Suppress a deliberate zizmor
+finding inline with `# zizmor: ignore[<audit>]` and a comment saying why, and
+keep `persist-credentials: false` on every checkout whose job does not push -
+`tests/test_workflow_hardening.py` fails otherwise.
 
 Notes that will otherwise cost you time:
 
@@ -744,8 +919,7 @@ and its frontend - the API, Swagger, the input restrictions and the template
 contract. `docs/webapp.md` is the operator's view of the same service; keep
 the two from contradicting each other. Every new option needs a row in the CLI
 option table, an entry in `config/check-opencloud-security.example.yml`, and
-matching entries in `CHANGELOG.md` and `RELEASE.md` under the version in
-`pyproject.toml`; see [Versioning and releases](#versioning-and-releases).
+a matching entry under `## [Unreleased]` in `CHANGELOG.md`; see [Versioning and releases](#versioning-and-releases).
 
 The web application is documented in [`docs/webapp.md`](docs/webapp.md):
 every `COS_WEB_*` setting, the request pipeline, the isolation model and the

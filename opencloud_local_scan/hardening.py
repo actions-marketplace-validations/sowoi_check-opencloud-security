@@ -768,6 +768,67 @@ CHECKS: dict[str, Hardening] = {
         ),
         reference=DOCS_TLS,
     ),
+    "tlsDnssec": Hardening(
+        id="tlsDnssec",
+        category="transport",
+        title="The zone answering for this name is not signed",
+        meaning=(
+            "Everything else measured about the transport starts from an "
+            "address a resolver handed over. Without DNSSEC that answer "
+            "carries no signature, so one forged on the way to the resolver "
+            "cannot be told apart from the real one - and the CAA record "
+            "restricting who may issue a certificate for this name can be "
+            "forged along with the address it protects. Reported only when "
+            "the resolver used demonstrably understands DNSSEC; when it does "
+            "not, the finding is left out rather than guessed at."
+        ),
+        remediation=(
+            "Sign the zone at the DNS provider and publish the resulting DS "
+            "record at the parent zone - an unsigned delegation leaves a "
+            "signed zone unprotected. This is a change at the domain's own "
+            "zone, not an OpenCloud setting."
+        ),
+        reference="https://www.rfc-editor.org/rfc/rfc9364.html",
+    ),
+    "companionAdminConsole": Hardening(
+        id="companionAdminConsole",
+        category="exposure",
+        title="The collaboration backend's admin console is publicly reachable",
+        meaning=(
+            "A document collaboration backend is published on this instance's "
+            "own origin, and its administration console answers from the "
+            "internet. That console lists every open document session and the "
+            "users in them, reports the server's own configuration, and can "
+            "terminate sessions - and it is guarded by nothing but a single "
+            "shared password that has no rate limiting in front of it."
+        ),
+        remediation=(
+            "Block the console's path at the reverse proxy that publishes the "
+            "collaboration backend, so only the editor's own paths are served "
+            "to the internet. Leaving it reachable and setting a password is "
+            "the weaker of the two fixes, because the password is one "
+            "credential protecting every document session on the server."
+        ),
+        reference=DOCS_REVERSE_PROXY,
+    ),
+    "companionEditorHttps": Hardening(
+        id="companionEditorHttps",
+        category="transport",
+        title="The collaboration backend loads its editor over plain HTTP",
+        meaning=(
+            "The WOPI discovery document published on this origin advertises "
+            "editor addresses that are not HTTPS. Documents opened through "
+            "them travel unencrypted, along with the access token that "
+            "authorises the session - and a browser on an HTTPS page blocks "
+            "the frame as mixed content, so the editor does not load at all."
+        ),
+        remediation=(
+            "Serve the collaboration backend over HTTPS and configure it with "
+            "its public HTTPS address, so the addresses it advertises in "
+            "/hosting/discovery match how a browser actually reaches it."
+        ),
+        reference=DOCS_TLS,
+    ),
     "tlsAddressParity": Hardening(
         id="tlsAddressParity",
         category="transport",
@@ -784,6 +845,27 @@ CHECKS: dict[str, Hardening] = {
             "ready."
         ),
         reference=DOCS_TLS,
+    ),
+    "addressParity": Hardening(
+        id="addressParity",
+        category="proxy",
+        title="The name's addresses do not all serve the same instance",
+        meaning=(
+            "The hostname resolves to several addresses, and they answer with "
+            "a different release, different security headers or hardening, or "
+            "still accept the documented demo accounts. Whoever reaches "
+            "the odd node gets the configuration nobody is watching - a scan "
+            "that dials the name once sees only whichever address the resolver "
+            "put first. Reported only when the scan was asked to dial every "
+            "address; unlike tlsAddressParity, which compares the TLS identity "
+            "of the two DNS families, this compares what each address serves."
+        ),
+        remediation=(
+            "Roll the same configuration out to every node behind the name, or "
+            "take the node that lags out of DNS until it has caught up. A node "
+            "serving an older release needs the upgrade the others already had."
+        ),
+        reference=DOCS_REVERSE_PROXY,
     ),
     "cookieSecure": Hardening(
         id="cookieSecure",
@@ -971,9 +1053,16 @@ CHECKS: dict[str, Hardening] = {
             "authentication request goes. On its own it misleads only the "
             "caller who sent the header; behind a cache it becomes the answer "
             "everybody gets, and behind a proxy that forwards a client's own "
-            "X-Forwarded-Host it is a stranger who chooses. It means the "
+            "X-Forwarded-Host it is a stranger who chooses. Usually it means the "
             "instance was never told its public address and is deriving one "
-            "from each request instead."
+            "from each request instead. When only the Host header comes back, "
+            "and as the address it redirects to, the answer may not come from "
+            "the instance at all: a reverse proxy with no default server hands "
+            "a name it has no site for to whichever site it loaded first for "
+            "that port - often another application on the same machine - and "
+            "a redirect written there as 'return 301 https://$host...' names "
+            "the caller's host back. OC_URL can be set correctly and the "
+            "finding stays."
         ),
         remediation=(
             "Set OC_URL to the public address of the instance so that every "
@@ -981,9 +1070,16 @@ CHECKS: dict[str, Hardening] = {
             "whatever is in front, set the forwarded headers from the proxy's "
             "own configuration rather than passing the client's through - "
             "'proxy_set_header X-Forwarded-Host $host;' in Nginx, "
-            "'RequestHeader set X-Forwarded-Host' in Apache - and give the "
-            "server a default virtual host that refuses a Host it does not "
-            "recognise instead of serving the instance for any name at all."
+            "'RequestHeader set X-Forwarded-Host' in Apache. Then give the "
+            "proxy an explicit default server that refuses a Host it does not "
+            "recognise, so no other site answers for it: in Nginx a server "
+            "block with 'listen 443 ssl default_server;', 'server_name _;', "
+            "'ssl_reject_handshake on;' and 'return 444;' (and the same for "
+            "port 80), in Apache a first <VirtualHost> that answers 421 or "
+            "403. A redirect in any other site should name that site's own "
+            "host rather than $host. To confirm which server answers, request "
+            "the discovery document with a made-up Host header and compare the "
+            "certificate and headers with the instance's own."
         ),
         reference=DOCS_REVERSE_PROXY,
         setting="OC_URL",
@@ -1114,6 +1210,32 @@ ADVISORY_CHECKS: dict[str, Hardening] = {
             "this is a deployment decision rather than a setting to switch on."
         ),
         reference=DOCS_SECURITY_TXT,
+    ),
+    "hstsPreloadEligible": Hardening(
+        id="hstsPreloadEligible",
+        category="transport",
+        title="The preload directive would be rejected by the preload list",
+        meaning=(
+            "'preload' is a request, not a state: it asks to be added to the "
+            "list of hosts browsers force onto HTTPS before ever contacting "
+            "them, and the list only accepts a header carrying a max-age of "
+            "at least one year, 'includeSubDomains' and 'preload' together. "
+            "OpenCloud's own proxy sends a ten-year max-age and 'preload' but "
+            "no 'includeSubDomains', so the header on a stock instance asks "
+            "for something the list refuses - which is a fact about "
+            "OpenCloud rather than about this deployment, and why it is "
+            "reported here and never counted. The instance is no less secure "
+            "for it; it is simply not preloaded, however the header reads."
+        ),
+        remediation=(
+            "Add 'includeSubDomains' in the reverse proxy in front of "
+            "OpenCloud, so the header reads "
+            "'max-age=63072000; includeSubDomains; preload', and then submit "
+            "the domain at hstspreload.org - being accepted takes both. "
+            "Confirm every subdomain is HTTPS-only first: 'includeSubDomains' "
+            "commits all of them, and the list is slow to leave."
+        ),
+        reference="https://hstspreload.org/",
     ),
 }
 

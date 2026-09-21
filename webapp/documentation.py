@@ -16,14 +16,22 @@ class DocumentationPage:
     start_heading: str | None = None
     end_heading: str | None = None
     demote_headings: bool = False
+    #: Render only the newest this many released sections of a Keep a
+    #: Changelog file - never ``[Unreleased]`` - instead of a heading range.
+    latest_releases: int = 0
 
+
+#: The languages with a translated source for every public guide, under
+#: `docs/<language>/`. English is the source itself; any other interface
+#: language shows the English guide with a notice.
+GUIDE_LANGUAGES: tuple[str, ...] = ("de", "fr", "es")
 
 DOCUMENTATION_PAGES: tuple[DocumentationPage, ...] = (
     DocumentationPage(
         "what-is-opencloud",
         "docs/what-is-opencloud.md",
-        "What OpenCloud is, and how it differs from ownCloud and Nextcloud",
-        "The fork history behind OpenCloud, ownCloud and Nextcloud, and the architecture, storage and release differences between them.",
+        "What OpenCloud is",
+        "OpenCloud’s architecture, release tracks and what an external security scan can assess.",
     ),
     DocumentationPage(
         "secure-deployment",
@@ -32,10 +40,22 @@ DOCUMENTATION_PAGES: tuple[DocumentationPage, ...] = (
         "Put OpenCloud behind Keycloak, Authentik or Authelia, enable and ship the audit log, firewall the debug ports, and monitor it continuously.",
     ),
     DocumentationPage(
+        "identity-providers",
+        "docs/identity-providers.md",
+        "Putting an identity provider in front of OpenCloud, step by step",
+        "Three complete tutorials - Keycloak, Authentik and Authelia - from nothing to a working OpenID Connect sign-in, with the four OpenCloud clients they all need.",
+    ),
+    DocumentationPage(
         "cli-reference",
         "docs/cli-reference.md",
         "OpenCloud Security Scanner CLI option reference",
         "Every command-line flag, its default, and the environment variable that sets the same thing.",
+    ),
+    DocumentationPage(
+        "scanner-cli",
+        "docs/scanner-cli.md",
+        "The check-opencloud-scanner command",
+        "Print the raw OpenCloud scan result, compare two saved results, explain a finding, refresh reference data and run the scan service.",
     ),
     DocumentationPage(
         "reference",
@@ -69,6 +89,12 @@ DOCUMENTATION_PAGES: tuple[DocumentationPage, ...] = (
         "docs/release-lifecycle.md",
         "OpenCloud release tracks, end of life and update recommendations",
         "Why the same version can be current on one track and dead on another, and what --release-track changes.",
+    ),
+    DocumentationPage(
+        "reference-data",
+        "docs/reference-data.md",
+        "Keep the OpenCloud release schedule and advisories current",
+        "Refresh the release schedule and advisory database with signature verification, without waiting for a package upgrade.",
     ),
     DocumentationPage(
         "hardening",
@@ -159,6 +185,12 @@ DOCUMENTATION_PAGES: tuple[DocumentationPage, ...] = (
         "docs/icinga-director.md",
         "OpenCloud Security Scanner in Icinga Director",
         "Import OpenCloud security check commands, fields, and apply rules into Icinga Director.",
+    ),
+    DocumentationPage(
+        "checkmk",
+        "docs/checkmk.md",
+        "OpenCloud Security Scanner in Checkmk",
+        "Run the OpenCloud security check as a Checkmk active check on the server, or as a local check on an agent host.",
     ),
     DocumentationPage(
         "reverse-proxy",
@@ -253,3 +285,50 @@ DOCUMENTATION_PAGES: tuple[DocumentationPage, ...] = (
 )
 
 DOCUMENTATION_BY_SLUG = {page.slug: page for page in DOCUMENTATION_PAGES}
+
+
+#: The two repository documents the operator's area renders, and the only
+#: documents outside :data:`DOCUMENTATION_PAGES` that are turned into pages at
+#: all.
+#:
+#: They are deliberately *not* in the manifest above. That one feeds
+#: ``/documentation``, the sitemap, the search index and the public page
+#: navigation; these two are reachable only from ``/admin``, which authorises
+#: every request and answers 404 to everybody else. An operator reading how
+#: this service is put together, and what to do when it misbehaves, should not
+#: have to leave the area to find it - and a reader of ``/documentation``
+#: should not meet internal operations notes filed among the guides.
+#:
+#: English only, and no catalogue keys: these are the repository's own
+#: documents, and a half-translated operations note is worse than an English
+#: one that says so.
+OPERATOR_DOCUMENTATION_PAGES: tuple[DocumentationPage, ...] = (
+    DocumentationPage(
+        "architecture",
+        "ARCHITECTURE.md",
+        "Architecture",
+        "How this repository is put together, and why the seams are where they are.",
+    ),
+    DocumentationPage(
+        "operations",
+        "ADMIN.md",
+        "Operations",
+        "Keeping the data current, rebuilding what is generated, and where to look when the service misbehaves.",
+    ),
+    # What the releases leading up to the running one changed. Released
+    # sections only: [Unreleased] is what a deployment does *not* run yet,
+    # and leaving it out means an ordinary pull request's changelog entry
+    # does not make this page stale - only a release does, and the publish
+    # workflow regenerates it in the same commit as the release notes.
+    DocumentationPage(
+        "releases",
+        "CHANGELOG.md",
+        "Releases",
+        "What the latest releases of this service changed, newest first.",
+        latest_releases=10,
+    ),
+)
+
+OPERATOR_DOCUMENTATION_BY_SLUG = {
+    page.slug: page for page in OPERATOR_DOCUMENTATION_PAGES
+}

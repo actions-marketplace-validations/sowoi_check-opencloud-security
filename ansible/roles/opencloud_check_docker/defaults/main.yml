@@ -64,6 +64,19 @@ opencloud_check_webhook_url: ""
 opencloud_check_webhook_on: critical
 opencloud_check_webhook_timeout: 10
 
+# Every other option of the CheckCommand, as custom variables on the Service:
+# the key is the variable name without its `opencloud_` prefix, the value is
+# rendered as JSON (a string, number, boolean or list). A list repeats its
+# flag once per element. Example:
+#
+#   opencloud_check_extra_vars:
+#     eol_warning: 30
+#     release_track: production
+#     ignore_hardening: [hstsPreload, "debugPort:*"]
+#
+# contrib/icinga2/check_opencloud_security.conf lists every variable.
+opencloud_check_extra_vars: {}
+
 # Set to false to skip `icinga2 daemon -C` validation (not recommended).
 opencloud_check_validate_config: true
 
