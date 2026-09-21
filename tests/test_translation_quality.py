@@ -45,7 +45,7 @@ AI_SLOP = re.compile(
     r"seamless|robust|leverage|empower|unlock|delve|harness|streamline|"
     r"cutting-edge|game-changer|world-class|best-in-class|furthermore|"
     r"moreover|rest assured|at a glance|it is important to note|"
-    r"nahtlos\w*|bahnbrechend\w*|umfassend\w*|darüber hinaus|im heutigen|"
+    r"nahtlos\w*|bahnbrechend\w*|darüber hinaus|im heutigen|"
     r"sin fisuras|puntero|de vanguardia|cabe destacar|en el mundo actual|"
     r"descubre|sans effort|révolutionnaire|à la pointe|il est important de|"
     r"dans le monde actuel|découvrez"
@@ -93,11 +93,28 @@ def test_catalogues_do_not_use_ai_slop_wording():
     assert findings == []
 
 
+def test_handwritten_guides_and_templates_do_not_use_ai_slop_wording():
+    """First-party prose should stay concrete outside the catalogues too."""
+    roots = (REPO_ROOT / "docs", REPO_ROOT / "frontend" / "templates")
+    findings = []
+    for root in roots:
+        for path in sorted(root.rglob("*")):
+            if path.suffix not in {".md", ".html"}:
+                continue
+            for line_number, line in enumerate(
+                path.read_text(encoding="utf-8").splitlines(), start=1
+            ):
+                for hit in _ai_slop_hits(line):
+                    findings.append((path.relative_to(REPO_ROOT).as_posix(), line_number, hit))
+
+    assert findings == []
+
+
 @pytest.mark.parametrize(
     "value",
     [
         "A seamless and robust experience.",
-        "Eine nahtlose und umfassende Lösung.",
+        "Eine nahtlose und bahnbrechende Lösung.",
         "Una solución de vanguardia; cabe destacar su alcance.",
         "Une solution robuste et à la pointe.",
     ],
