@@ -134,6 +134,12 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ### Fixed
 
+- **A gateway answer no longer fails the documented link check.** An HTTP
+  408, 502, 503 or 504 comes from the machinery in front of a site, not from
+  the page, so it is now retried like a transport error and - when the whole
+  run is unlucky - reported without failing the workflow. A link that rotted
+  answers 404; a merge that fails because GitHub was briefly slow is exactly
+  the noise this check is meant to avoid.
 - **Pytest no longer collects mutmut's generated working copy.** This avoids
   an `ImportPathMismatchError` between the real and mutated test suites.
 

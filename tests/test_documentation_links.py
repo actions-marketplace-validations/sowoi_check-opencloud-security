@@ -160,6 +160,32 @@ def test_a_rate_limited_answer_is_not_treated_as_rot(monkeypatch):
     assert links.check(link, attempts=1).broken is True
 
 
+def test_a_gateway_answer_is_retried_and_never_fails_the_run(monkeypatch):
+    """GitHub answers 504 for a few seconds at a time; the link is still there.
+
+    A link that rotted answers 404. Failing a merge because a site was briefly
+    in the way of its own page is the noise this check exists to avoid.
+    """
+    attempts = []
+
+    def flaky(url, timeout):
+        attempts.append(url)
+        return ("HTTP 504", True) if len(attempts) == 1 else (None, False)
+
+    link = links.Link("https://github.com/opencloud-eu/reva", "vulnerabilities.json")
+    monkeypatch.setattr(links, "_check_once", flaky)
+    assert links.check(link, attempts=3) is None
+    assert len(attempts) == 2
+
+    monkeypatch.setattr(links, "_check_once", lambda url, timeout: ("HTTP 504", True))
+    problem = links.check(link, attempts=2)
+    assert problem.broken is False
+    assert "504" in problem.detail
+
+    monkeypatch.setattr(links, "_check_once", lambda url, timeout: ("HTTP 500", True))
+    assert links.check(link, attempts=2).broken is True
+
+
 @pytest.mark.parametrize(
     ("url", "final", "expected"),
     [
