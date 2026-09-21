@@ -198,7 +198,7 @@ class Segment:
         chars = list(self.raw)
         for m in _REDIRECT.finditer(self.shape):
             chars[m.start():m.end()] = " " * (m.end() - m.start())
-        text = "".join(c for c, s in zip(chars, self.shape) if s != _BODY)
+        text = "".join(c for c, s in zip(chars, self.shape, strict=True) if s != _BODY)
         try:
             return shlex.split(text)
         except ValueError:

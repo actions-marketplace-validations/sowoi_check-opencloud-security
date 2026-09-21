@@ -701,7 +701,7 @@ def _schemas() -> dict[str, Any]:
                 "detail": {"type": "string"},
                 "state": {
                     "type": "string",
-                    "enum": list(wf.PENDING_STATES + (wf.STATE_FAILED,)),
+                    "enum": [*wf.PENDING_STATES, wf.STATE_FAILED],
                 },
             },
         },

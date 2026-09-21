@@ -315,6 +315,26 @@ def submit_scan(page: Any, site: LiveSite, target: str, **form: Any) -> str:
     return uuid
 
 
+def wait_for_visible_findings(page: Any, count: int, timeout: int = 10_000) -> None:
+    """Wait until exactly ``count`` findings on the result page carry no ``hidden``.
+
+    Pressing a severity counter both hides most of the list and reveals the
+    status line above it, so the page it leaves behind is a different height
+    from the one that was pressed. Reading the count back with a single
+    `locator.count()` samples that page while it is still settling, and the
+    press that follows lands on a control that has moved - which WebKit on CI
+    drops rather than delivers, leaving the filter on and the next assertion
+    counting the wrong list. Waiting for the count the press asked for is what
+    makes the next press land where the reader would have aimed it.
+    """
+    page.wait_for_function(
+        "expected => document.querySelectorAll("
+        "'[data-findings-list] .finding:not([hidden])').length === expected",
+        arg=count,
+        timeout=timeout,
+    )
+
+
 def wait_until_final(page: Any, timeout: int = 60_000) -> None:
     """Wait for the result page to reload into its finished state."""
     # The poll can land between the reload and the new document's <body>

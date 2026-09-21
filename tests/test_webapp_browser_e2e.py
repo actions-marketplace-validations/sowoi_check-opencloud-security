@@ -29,6 +29,7 @@ from tests.browser_support import (  # noqa: F401 - the fixtures register under 
     shown_but_hidden,
     site_fixture,
     submit_scan,
+    wait_for_visible_findings,
     wait_until_final,
     watch_fixture,
 )
@@ -111,8 +112,11 @@ def test_the_severity_counters_filter_the_findings_and_give_them_back(page, site
 
     critical.click()
     assert critical.get_attribute("aria-pressed") == "true"
+    # Each press is waited out rather than sampled: the list it leaves behind
+    # is a different height from the one that was pressed, and the control the
+    # next press aims at is still moving until it has settled.
+    wait_for_visible_findings(page, announced)
     visible = page.locator("[data-findings-list] .finding:not([hidden])")
-    assert visible.count() == announced
     assert set(visible.evaluate_all("els => els.map(e => e.dataset.tag)")) == {"critical"}
     status = page.locator("#findings-filter-status")
     assert status.is_visible()
@@ -120,13 +124,17 @@ def test_the_severity_counters_filter_the_findings_and_give_them_back(page, site
 
     critical.click()
     assert critical.get_attribute("aria-pressed") == "false"
-    assert page.locator("[data-findings-list] .finding:not([hidden])").count() == total
+    wait_for_visible_findings(page, total)
     assert status.is_hidden()
 
-    page.click(".counter[data-filter=warning]")
-    assert page.locator("[data-findings-list] .finding:not([hidden])").count() < total
+    warning = page.locator(".counter[data-filter=warning]")
+    announced_warnings = int(warning.inner_text().split()[0])
+    assert 0 < announced_warnings < total
+    warning.click()
+    wait_for_visible_findings(page, announced_warnings)
     page.click("[data-filter-clear]")
-    assert page.locator("[data-findings-list] .finding:not([hidden])").count() == total
+    wait_for_visible_findings(page, total)
+    assert warning.get_attribute("aria-pressed") == "false"
     watch.assert_clean()
 
 
