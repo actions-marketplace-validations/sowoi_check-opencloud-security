@@ -45,8 +45,44 @@
 
 <article class="docs-article card section-gap" data-reveal lang="en">
 <h2 id="1290-this-release">[1.29.0] - this release</h2>
-<h2 id="1281-2026-09-21">[1.28.1] - 2026-09-21</h2>
 <h3 id="added">Added</h3>
+<ul>
+<li><strong><code>--policy</code> fails a deployment on explicit requirements, not on a grade.</strong>
+  <code>-w</code>/<code>-c</code> and <code>--profile</code> judge an instance by its rating, which is the
+  wrong shape for a CI gate: a team that requires HTTPS enforcement and no
+  demo accounts cannot express that as a number. A policy file states it
+  directly - <code>minimum_rating</code>, <code>required_hardenings</code> and <code>forbidden</code> (a
+  missing measure, a failed check or a vulnerability id) - and anything it
+  asks for that an instance does not meet ends the run CRITICAL. A policy
+  only ever makes a verdict worse, a waiver does not excuse a requirement,
+  and an unknown key or measure is a usage error rather than a rule that
+  quietly requires nothing. <code>--format json</code> and the webhook payload carry the
+  verdict under <code>policy</code>. See <a href="/documentation/reference#ci-policy-mode">CI policy mode</a> and
+  <a href="https://github.com/sowoi/check-opencloud-security/blob/main/config/policy.example.yml"><code>config/policy.example.yml</code></a>.</li>
+<li><strong><code>--format summary</code> reads a whole fleet in one table.</strong> Checking a dozen
+  instances printed a dozen result blocks written for a monitoring system,
+  which is a lot to read when the question is just "which of these needs me
+  today". The new format prints one aligned row per host instead - host,
+  grade, version, end-of-life state, how many advisories apply, and how much
+  moved since <code>--baseline</code> - followed by the same tally the Nagios output
+  starts with. Rows keep the order the hosts were given and the exit code is
+  unchanged, so it works from a cron job that mails its output. The <code>NEW</code>
+  column distinguishes "no baseline given" (<code>-</code>) from "no new findings" (<code>0</code>),
+  and a host whose scan failed shows its Nagios status where the grade would
+  be. See <a href="/documentation/reference#reading-a-fleet-in-one-table">Reading a fleet in one table</a>.</li>
+<li><strong>The output says how much it could actually measure.</strong> A check that
+  passed and one that never ran left the same trace in the plugin's output -
+  nothing - so the plugin now prints a <code>Coverage:</code> line such as <code>84 checks
+  evaluated, 6 skipped, 2 indeterminate, 1 network-limited</code>, and the webhook
+  payload and <code>--format json</code> carry the same counts under <code>coverage</code>. The web
+  application's <em>What this scan did not measure</em> section shows the same four
+  numbers. <code>network_limited</code> is split out of the skipped and indeterminate
+  counts because a timeout or a missing route - DNSSEC, an external identity
+  provider, an optional endpoint - is the gap another vantage point might
+  close. Nothing in it changes a grade, an exit code or an alert line.</li>
+</ul>
+<h2 id="1281-2026-09-21">[1.28.1] - 2026-09-21</h2>
+<h3 id="added_1">Added</h3>
 <ul>
 <li><strong><code>--profile</code> judges a scan by a named threshold set.</strong> <code>strict</code>, <code>ops</code> and
   <code>lenient</code> each decide the five settings a team otherwise writes out by hand</li>
@@ -135,7 +171,7 @@
 </li>
 </ul>
 <h2 id="1280-2026-09-20">[1.28.0] - 2026-09-20</h2>
-<h3 id="added_1">Added</h3>
+<h3 id="added_2">Added</h3>
 <ul>
 <li>
 <p><strong>Upgrade rehearsal: what each candidate release would fix, leave and
@@ -191,7 +227,7 @@
   an <code>ImportPathMismatchError</code> between the real and mutated test suites.</li>
 </ul>
 <h2 id="1272-2026-09-19">[1.27.2] - 2026-09-19</h2>
-<h3 id="added_2">Added</h3>
+<h3 id="added_3">Added</h3>
 <ul>
 <li><strong>Property-based tests for the parsers that read outside text.</strong>
   <code>tests/test_properties.py</code> uses Hypothesis, a new test-only dependency
@@ -232,7 +268,7 @@
   from 1.0.0 up to 4.0.8 and from 4.1.0 up to (but not including) 7.2.0.</li>
 </ul>
 <h2 id="1271-2026-09-19">[1.27.1] - 2026-09-19</h2>
-<h3 id="added_3">Added</h3>
+<h3 id="added_4">Added</h3>
 <ul>
 <li>
 <p>Codex can use the repository's Claude Code skills, hooks, subagent roles and
@@ -272,7 +308,7 @@
 </li>
 </ul>
 <h2 id="1270-2026-09-19">[1.27.0] - 2026-09-19</h2>
-<h3 id="added_4">Added</h3>
+<h3 id="added_5">Added</h3>
 <ul>
 <li>
 <p>The web report lists an advertised HTTP/3 listener (with its UDP ports) and
@@ -297,7 +333,7 @@
 </li>
 </ul>
 <h2 id="1261-2026-09-19">[1.26.1] - 2026-09-19</h2>
-<h3 id="added_5">Added</h3>
+<h3 id="added_6">Added</h3>
 <ul>
 <li>The operator's area has a <strong>Releases</strong> tab at <code>/admin/docs/releases</code>: the
   ten newest released sections of <code>CHANGELOG.md</code>, newest first, so an
@@ -305,7 +341,7 @@
   area. The publish workflow regenerates it together with the release notes.</li>
 </ul>
 <h2 id="1260-2026-09-19">[1.26.0] - 2026-09-19</h2>
-<h3 id="added_6">Added</h3>
+<h3 id="added_7">Added</h3>
 <ul>
 <li>
 <p><code>--eol-warning DAYS</code> (<code>COS_EOL_WARNING</code>, YAML <code>eol_warning</code>, and a setup
@@ -346,7 +382,7 @@
 </li>
 </ul>
 <h2 id="1253-2026-09-18">[1.25.3] - 2026-09-18</h2>
-<h3 id="added_7">Added</h3>
+<h3 id="added_8">Added</h3>
 <ul>
 <li>
 <p>The <code>/check-changelog-docs</code> skill checks that every new <code>Added</code> or
@@ -429,7 +465,7 @@
 </li>
 </ul>
 <h2 id="1252-2026-09-18">[1.25.2] - 2026-09-18</h2>
-<h3 id="added_8">Added</h3>
+<h3 id="added_9">Added</h3>
 <ul>
 <li>The Docker setup wizard moves while it works, in the four places where
   motion tells the operator something the static page could not. Section
