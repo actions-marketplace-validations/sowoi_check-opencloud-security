@@ -31,6 +31,7 @@
 
 <nav class="docs-toc card section-gap" aria-label="{{ t('docs.guide.toc.aria') }}" data-reveal>
   <p class="kicker">{{ t('docs.guide.toc.heading') }}</p>
+  <a href="#1290-this-release" lang="en">[1.29.0] - this release</a>
   <a href="#1281-2026-09-21" lang="en">[1.28.1] - 2026-09-21</a>
   <a href="#1280-2026-09-20" lang="en">[1.28.0] - 2026-09-20</a>
   <a href="#1272-2026-09-19" lang="en">[1.27.2] - 2026-09-19</a>
@@ -40,10 +41,10 @@
   <a href="#1260-2026-09-19" lang="en">[1.26.0] - 2026-09-19</a>
   <a href="#1253-2026-09-18" lang="en">[1.25.3] - 2026-09-18</a>
   <a href="#1252-2026-09-18" lang="en">[1.25.2] - 2026-09-18</a>
-  <a href="#1251-2026-09-18" lang="en">[1.25.1] - 2026-09-18</a>
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="en">
+<h2 id="1290-this-release">[1.29.0] - this release</h2>
 <h2 id="1281-2026-09-21">[1.28.1] - 2026-09-21</h2>
 <h3 id="added">Added</h3>
 <ul>
@@ -512,42 +513,6 @@
   (<code>tests/test_docker_wizard_hardening.py</code>) cover links, edited and
   unreadable files, input that ends mid-walk, refused answers and masked
   credentials.</li>
-</ul>
-<h2 id="1251-2026-09-18">[1.25.1] - 2026-09-18</h2>
-<h3 id="fixed_4">Fixed</h3>
-<ul>
-<li><strong>A release that stopped after its tag is finished by the next run.</strong> The
-  release workflow skipped any version whose tag existed, so when v1.25.0 was
-  tagged and GitHub then answered an asset upload with HTTP 500, it reached
-  PyPI and Docker Hub but never got a GitHub release, and every re-run stayed
-  green without doing anything. The workflow now treats a published GitHub
-  release as the end of a version: a tagged version without one is rebuilt
-  from its tag and released, the release stays a draft until every asset has
-  been uploaded (each upload is retried), and the workflow can be started by
-  hand. See ADR 0067.</li>
-<li><strong>A semicolon in a waiver's reason no longer creates a permanent waiver.</strong>
-  <code>temporary_waivers</code> is a list, and a list in the environment or a
-  configuration file is split on <code>;</code>, so the reason
-  <code>Firewall change; debugPort:9206 stays open</code> left a second entry behind,
-  which was read as a bare pattern and became a waiver with no deadline and
-  no reason. <code>temporary_waivers</code> and <code>--waive-until</code> now refuse an entry
-  without an expiry and a reason instead; a permanent waiver still belongs in
-  <code>--ignore-hardening</code>.</li>
-<li><strong>A malformed waiver in the configuration is UNKNOWN, not WARNING.</strong> A
-  <code>temporary_waivers</code> entry that could not be read ended the plugin in a
-  traceback with exit status 1, which a monitoring system reports as WARNING.
-  It now answers UNKNOWN with the reason, on every output path - several
-  hosts, <code>--format json</code> and the other machine formats included, which also
-  let a configuration error such as an unreadable secret escape the same way.
-  <code>check-opencloud-scanner</code> reports it as a usage error.</li>
-<li><strong><code>check-opencloud-scanner diff</code> explains a hand-edited report instead of
-  crashing.</strong> A provenance, coverage or waiver block of the wrong shape - a
-  string where an object belongs, a count that is not a number - ended the
-  comparison in a traceback. It is now read as missing, the same as in a
-  report that predates the block.</li>
-<li><strong>The browser tests declare the web server they start.</strong> <code>uvicorn</code> is
-  imported by <code>tests/browser_support.py</code> but reached the <code>test</code> dependency
-  group only as a dependency of <code>mcp</code>; it is now listed there itself.</li>
 </ul>
 </article>
 {% endblock %}
