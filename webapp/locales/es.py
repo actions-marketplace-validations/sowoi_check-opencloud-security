@@ -569,7 +569,7 @@ MESSAGES: dict[str, str] = {
     "grade.4.meaning": (
         "Existe una versión de parche más reciente en la misma línea de "
         "versiones. No se sabe que la instalada tenga ningún problema; "
-        "simplemente no es la más reciente."
+        "pero no es la más reciente."
     ),
     "grade.4.improve": "Instale la actualización recomendada para su rama de versiones.",
     "grade.3.headline": "Una línea de versiones por detrás",
@@ -1566,8 +1566,8 @@ MESSAGES: dict[str, str] = {
     "coverage.group.updates": "Actualizaciones",
     "coverage.group.integrations": "Integraciones",
     "result.excluded.heading": "Reportado, pero no contabilizado",
-    "result.excluded.waived.heading": "Pidió ignorar estos",
-    "result.excluded.waived.note": "Siguieron fallando. Simplemente no frenaron la calificación.",
+    "result.excluded.waived.heading": "Hallazgos excluidos a petición suya",
+    "result.excluded.waived.note": "Siguieron fallando, pero las exenciones impidieron que redujeran la calificación.",
     "result.excluded.unfixable.heading": "Valores fijos en OpenCloud",
     "result.excluded.unfixable.note": "Estos valores están fijados en el código de OpenCloud y no se pueden configurar. Se muestran como referencia y no afectan a la nota.",
     "result.scope.kicker": "Alcance",

@@ -48,7 +48,8 @@ AI_SLOP = re.compile(
     r"nahtlos\w*|bahnbrechend\w*|darüber hinaus|im heutigen|"
     r"sin fisuras|puntero|de vanguardia|cabe destacar|en el mundo actual|"
     r"descubre|sans effort|révolutionnaire|à la pointe|il est important de|"
-    r"dans le monde actuel|découvrez"
+    r"dans le monde actuel|découvrez|simplemente no es la más reciente|"
+    r"simplemente no frenaron la calificación"
     r")\b",
     re.IGNORECASE,
 )
@@ -118,6 +119,8 @@ def test_handwritten_guides_and_templates_do_not_use_ai_slop_wording():
         "Eine nahtlose und bahnbrechende Lösung.",
         "Una solución de vanguardia; cabe destacar su alcance.",
         "Une solution robuste et à la pointe.",
+        "Siguieron fallando. Simplemente no frenaron la calificación.",
+        "La versión simplemente no es la más reciente.",
     ],
 )
 def test_ai_slop_detector_catches_typical_cliches(value: str):
