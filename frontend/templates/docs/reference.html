@@ -207,6 +207,10 @@ comparisons, execution, output and notifications.</p>
 <td>The ratings (0-5) at or below which the check warns or goes critical</td>
 </tr>
 <tr>
+<td><code>--profile</code></td>
+<td>Judge by a named threshold set - <code>strict</code>, <code>ops</code> or <code>lenient</code> - instead of setting each flag</td>
+</tr>
+<tr>
 <td><code>--format</code></td>
 <td><code>nagios</code>, <code>prometheus</code>, <code>otlp</code>, <code>checkmk</code>, <code>json</code>, <code>sarif</code> or <code>junit</code></td>
 </tr>
@@ -714,7 +718,7 @@ description.</p>
 <tbody>
 <tr>
 <td><strong>Rolling</strong></td>
-<td><code>8.0.0</code></td>
+<td><code>8.0.1</code></td>
 <td><code>8.0</code></td>
 <td>2026-09-15</td>
 <td>the next rolling release</td>
@@ -735,7 +739,7 @@ description.</p>
 </tr>
 </tbody>
 </table>
-<p>Read from the <a href="https://docs.opencloud.eu/docs/admin/resources/lifecycle/">OpenCloud release lifecycle</a> on 2026-09-15.</p>
+<p>Read from the <a href="https://docs.opencloud.eu/docs/admin/resources/lifecycle/">OpenCloud release lifecycle</a> on 2026-09-21.</p>
 <!-- release-schedule:end -->
 
 <p>A line that is out of support is rated <code>F</code> and reported as <code>CRITICAL</code>:</p>
@@ -1006,6 +1010,59 @@ check-opencloud-security --host opencloud.example.com --warning 1 --critical 0
 ## Page on any critical finding
 check-opencloud-security --host opencloud.example.com --warning 4 --critical 2
 </code></pre>
+<h3 id="threshold-profiles">Threshold profiles</h3>
+<p>Every team ends up writing the same handful of flags into its monitoring
+definition, and then disagreeing about which handful. <code>--profile</code> /
+<code>COS_PROFILE</code> names one instead:</p>
+<table>
+<thead>
+<tr>
+<th>Profile</th>
+<th><code>--warning</code></th>
+<th><code>--critical</code></th>
+<th><code>--check-hardening</code></th>
+<th><code>--update-warning</code></th>
+<th><code>--eol-warning</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>strict</code></td>
+<td><code>4</code> (<code>A</code>)</td>
+<td><code>2</code> (<code>D</code>)</td>
+<td>on</td>
+<td>on</td>
+<td><code>90</code></td>
+</tr>
+<tr>
+<td><code>ops</code></td>
+<td><code>3</code> (<code>C</code>)</td>
+<td><code>1</code> (<code>E</code>)</td>
+<td>on</td>
+<td>off</td>
+<td><code>30</code></td>
+</tr>
+<tr>
+<td><code>lenient</code></td>
+<td><code>2</code> (<code>D</code>)</td>
+<td><code>0</code> (<code>F</code>)</td>
+<td>off</td>
+<td>off</td>
+<td><code>0</code></td>
+</tr>
+</tbody>
+</table>
+<p>A profile decides <strong>how the same measurements are judged, never how hard the
+instance is probed</strong> - there is no profile that scans more, and none that
+scans less. Leaving <code>--profile</code> unset keeps the defaults documented above, so
+an existing monitoring definition behaves exactly as it did.</p>
+<p>It is also the weakest source of a value: anything you write yourself wins.</p>
+<pre><code class="language-shell">## The strict set, except that a critical finding should not page here
+check-opencloud-security --host opencloud.example.com --profile strict --critical 1
+</code></pre>
+<p>The flag, the environment variable and the <code>profile:</code> key in the
+configuration file are the same setting, and the <code>--debug</code> explanation names
+the profile a rating was judged by.</p>
 <h2 id="hardening-checks">Hardening checks</h2>
 <p>Besides the pass/fail checks above, the scanner reports which hardening
 measures the instance has in place. With <code>--check-hardening</code> /

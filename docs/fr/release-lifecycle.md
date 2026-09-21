@@ -94,8 +94,8 @@ own track:
 | `4.0.0`   | LTS        | `4.0.8`     | Where the backports are                                       |
 
 The newest release overall is still reported, as `newestRelease` in the JSON
-result and the webhook payload, so nothing is hidden - it is just not
-presented as the thing to install. If the feed reports a newer patch of the
+result and the webhook payload, so nothing is hidden - it is simply not
+presented as the release to install. If the feed reports a newer patch of the
 line you are already on, the feed wins, because it is fresher than the bundled
 schedule.
 
@@ -222,3 +222,9 @@ Upgrade rehearsal: 7.2.4 fixes 1 finding, leaves 1, reaches rating D; 7.3.0 fixe
 La répétition ne connaît que le calendrier et la base des avis, intégrés ou
 actualisés. Une version ou un avis publié ultérieurement peut modifier le
 résultat.
+
+L'application web affiche les mêmes entrées sous **Ce qu'une mise à niveau
+vous apporterait** : une ligne par version candidate, avec les avis qu'elle
+lève, ceux qu'elle laisse et la note qu'elle atteindrait. Lorsque la version
+seule obtiendrait mieux, l'écart vient des constats de cette instance, qu'une
+mise à niveau ne touche pas.

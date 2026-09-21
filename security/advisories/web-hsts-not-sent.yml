@@ -1,0 +1,42 @@
+# A security advisory record. See AGENTS.md, "Security advisories".
+#
+# One file per bullet under a `### Security` heading in CHANGELOG.md.
+# `state` is the decision; `verified` is the evidence it rests on.
+
+slug: web-hsts-not-sent
+state: declined
+changelog_version: "1.28.1"
+changelog_entry: "The web application sends `Strict-Transport-Security` over HTTPS."
+shipped: true
+package: web
+severity: low
+declined_because: |
+  Hardening, not a fixed vulnerability. HSTS is defence in depth over a
+  deployment that already redirects HTTP to HTTPS: the generated nginx and
+  Apache configurations both serve a redirect from port 80, so the released
+  behaviour was a transport that was already TLS, without the browser-side
+  memory that makes a first-request downgrade harder. Nothing about the
+  service's own authentication or data handling depended on it - the
+  operator area is behind an identity proxy, a result uuid is a capability
+  over TLS either way, and no cookie carries a credential. Adding the header
+  narrows the residual risk of an active network attacker stripping TLS on a
+  visitor's first contact; it does not close a defect that was exploitable
+  against a correctly deployed released version.
+
+  Recorded rather than filed also because the fix is not distributed the way
+  an advisory assumes: HSTS is a property of a deployment, and an operator
+  who already sets the header at their own reverse proxy - which the
+  documentation has always allowed - was never missing it.
+summary: >-
+  the web application sent no Strict-Transport-Security header, and its own
+  generated reverse-proxy configuration deliberately adds none, so a
+  wizard-built TLS deployment had no HSTS at all
+verified: |
+  git show v1.28.0:webapp/app.py | grep -c -i "strict-transport"   # 0
+  git ls-tree -r --name-only v1.4.0 | grep -x webapp/app.py        # present
+  The header is absent from SECURITY_HEADERS in every tagged release that
+  carries webapp/app.py, v1.4.0 through v1.28.0. docker/setup-wizard.py's
+  generated nginx site states outright that it adds no security headers
+  because "the application sends its own".
+introduced: "1.4.0"
+fixed: "1.28.1"

@@ -613,8 +613,8 @@ healthy instance into `UNKNOWN`.
 
 ## Running the scanner as a service
 
-The package ships a second entry point, `check-opencloud-scanner`. It runs the
-very same scanner, either once or as a service:
+The package ships a second entry point, `check-opencloud-scanner`. It runs
+exactement le même scanner, une fois ou comme service :
 
 ```shell
 # one-shot: print the full result document as JSON
@@ -791,6 +791,20 @@ check-opencloud-security --host opencloud.example.com --warning 1 --critical 0
 check-opencloud-security --host opencloud.example.com --warning 4 --critical 2
 ```
 
+## Threshold profiles
+`--profile` / `COS_PROFILE` names a ready-made set instead of spelling out
+the same five flags every time:
+
+| Profile | `--warning` | `--critical` | `--check-hardening` | `--update-warning` | `--eol-warning` |
+|:--|:--|:--|:--|:--|:--|
+| `strict` | `4` (`A`) | `2` (`D`) | on | on | `90` |
+| `ops` | `3` (`C`) | `1` (`E`) | on | off | `30` |
+| `lenient` | `2` (`D`) | `0` (`F`) | off | off | `0` |
+
+A profile decides **how the same measurements are judged, never how hard the
+instance is probed**. Leaving it unset changes nothing, and anything you set
+yourself - a flag, an environment variable or a file - still wins.
+
 # Hardening checks
 Besides the pass/fail checks above, the scanner reports which hardening
 measures the instance has in place. With `--check-hardening` /
@@ -867,7 +881,7 @@ give: `5` up to date, `4` a patch update pending, `3` a whole release line
 behind, `2` known vulnerabilities, `1` critical or high ones, `0` end of life.
 Failed additional checks then cap it by severity - `critical` to `2`, `high` to
 `3`, `medium` to `4`, `low` to `5`. A check that failed but did not decide the
-outcome is still listed, marked as such, so nothing looks quietly dropped.
+outcome is still listed, marked as such, so no result disappears silently.
 
 Without `--debug` the output stays the size a monitoring system wants. The
 same breakdown is always present in the scan result as `ratingExplanation`, so

@@ -608,6 +608,50 @@ check-opencloud-security --host opencloud.example.com --warning 1 --critical 0
 ### Page on any critical finding
 check-opencloud-security --host opencloud.example.com --warning 4 --critical 2
 </code></pre>
+<h4 id="threshold-profiles">Schwellenwertprofile</h4>
+<p><code>--profile</code> / <code>COS_PROFILE</code> benennt einen fertigen Satz, statt dass du
+jedes Mal dieselben fünf Flags schreibst:</p>
+<table>
+<thead>
+<tr>
+<th>Profil</th>
+<th><code>--warning</code></th>
+<th><code>--critical</code></th>
+<th><code>--check-hardening</code></th>
+<th><code>--update-warning</code></th>
+<th><code>--eol-warning</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>strict</code></td>
+<td><code>4</code> (<code>A</code>)</td>
+<td><code>2</code> (<code>D</code>)</td>
+<td>an</td>
+<td>an</td>
+<td><code>90</code></td>
+</tr>
+<tr>
+<td><code>ops</code></td>
+<td><code>3</code> (<code>C</code>)</td>
+<td><code>1</code> (<code>E</code>)</td>
+<td>an</td>
+<td>aus</td>
+<td><code>30</code></td>
+</tr>
+<tr>
+<td><code>lenient</code></td>
+<td><code>2</code> (<code>D</code>)</td>
+<td><code>0</code> (<code>F</code>)</td>
+<td>aus</td>
+<td>aus</td>
+<td><code>0</code></td>
+</tr>
+</tbody>
+</table>
+<p>Ein Profil entscheidet, <strong>wie dieselben Messungen bewertet werden, nie wie
+hart die Instanz geprüft wird</strong>. Ohne <code>--profile</code> bleibt alles wie zuvor, und
+alles, was du selbst setzt - Flag, Umgebungsvariable oder Datei - gewinnt.</p>
 <h3 id="hardening-checks">Schutzmaßnahmen bewerten</h3>
 <p><code>--check-hardening</code> berücksichtigt fehlende Maßnahmen und Sicherheitsheader.
 Ein sonstiges OK wird bei fehlenden Maßnahmen zu WARNING; höhere Zustände

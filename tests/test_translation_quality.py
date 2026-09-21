@@ -12,6 +12,7 @@ the manifest deliberately leaves in English) really do not.
 from __future__ import annotations
 
 import importlib.util
+import re
 import sys
 from pathlib import Path
 
@@ -34,6 +35,40 @@ def _load_checker():
 checker = _load_checker()
 
 
+# These are marketing and assistant-cliché words, not a general vocabulary
+# ban. A technical sentence may be enthusiastic without sounding generated;
+# these phrases are the recurring signal that it is not saying anything
+# concrete. Keep the list small and add a term only when it has appeared in a
+# proposed translation or user-facing sentence.
+AI_SLOP = re.compile(
+    r"\b(?:"
+    r"seamless|robust|leverage|empower|unlock|delve|harness|streamline|"
+    r"cutting-edge|game-changer|world-class|best-in-class|furthermore|"
+    r"moreover|rest assured|at a glance|it is important to note|"
+    r"nahtlos\w*|bahnbrechend\w*|darüber hinaus|im heutigen|"
+    r"sin fisuras|puntero|de vanguardia|cabe destacar|en el mundo actual|"
+    r"descubre|sans effort|révolutionnaire|à la pointe|il est important de|"
+    r"dans le monde actuel|découvrez"
+    r")\b",
+    re.IGNORECASE,
+)
+
+# These phrases are especially easy to miss because they are valid English,
+# but they are a defect when copied into a translated guide. They came from
+# the profile option added to the four installation guides and stay here as
+# a regression check for future generated documentation.
+UNTRANSLATED_GUIDE_SLOP = re.compile(
+    r"\b(?:Named threshold set|judging the result|One pitfall is easy to miss|"
+    r"very same scanner|nothing looks quietly dropped|it is just not)\b",
+    re.IGNORECASE,
+)
+
+
+def _ai_slop_hits(value: str) -> list[str]:
+    """Return cliché wording found in one visible catalogue string."""
+    return [match.group(0) for match in AI_SLOP.finditer(value)]
+
+
 # ------------------------------------------------- the tree as it stands
 
 
@@ -45,6 +80,63 @@ def test_the_catalogues_have_no_structural_differences():
     true of the repository as it is, not only of fixtures.
     """
     assert checker.structural_findings() == []
+
+
+def test_catalogues_do_not_use_ai_slop_wording():
+    """Localized copy should describe the product, not sound auto-generated."""
+    findings = [
+        (locale, key, hit)
+        for locale, messages in checker.OWN_MESSAGES.items()
+        for key, value in messages.items()
+        for hit in _ai_slop_hits(value)
+    ]
+
+    assert findings == []
+
+
+def test_handwritten_guides_and_templates_do_not_use_ai_slop_wording():
+    """First-party prose should stay concrete outside the catalogues too."""
+    roots = (REPO_ROOT / "docs", REPO_ROOT / "frontend" / "templates")
+    findings = []
+    for root in roots:
+        for path in sorted(root.rglob("*")):
+            if path.suffix not in {".md", ".html"}:
+                continue
+            for line_number, line in enumerate(
+                path.read_text(encoding="utf-8").splitlines(), start=1
+            ):
+                for hit in _ai_slop_hits(line):
+                    findings.append((path.relative_to(REPO_ROOT).as_posix(), line_number, hit))
+
+    assert findings == []
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "A seamless and robust experience.",
+        "Eine nahtlose und bahnbrechende Lösung.",
+        "Una solución de vanguardia; cabe destacar su alcance.",
+        "Une solution robuste et à la pointe.",
+    ],
+)
+def test_ai_slop_detector_catches_typical_cliches(value: str):
+    """The guard must fail closed when a known cliché is introduced."""
+    assert _ai_slop_hits(value)
+
+
+def test_translated_guides_do_not_keep_known_english_placeholders():
+    """Translated guides must not ship the English source sentence unchanged."""
+    findings = []
+    for locale in checker.GUIDE_LANGUAGES:
+        for path in sorted((REPO_ROOT / "docs" / locale).glob("*.md")):
+            for line_number, line in enumerate(
+                path.read_text(encoding="utf-8").splitlines(), start=1
+            ):
+                for match in UNTRANSLATED_GUIDE_SLOP.finditer(line):
+                    findings.append((locale, path.name, line_number, match.group(0)))
+
+    assert findings == []
 
 
 def test_no_guide_links_to_a_file_that_is_not_there():

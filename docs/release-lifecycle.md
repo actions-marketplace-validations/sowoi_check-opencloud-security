@@ -219,3 +219,9 @@ Upgrade rehearsal: 7.2.4 fixes 1 finding, leaves 1, reaches rating D; 7.3.0 fixe
 
 The rehearsal knows only the bundled or refreshed schedule and advisory
 database. A release or advisory published later can change the answer.
+
+The web application renders the same entries as **What upgrading would buy
+you**, one row per candidate with the advisories it clears, the ones it
+leaves and the grade it would reach. Where the version alone would rate
+better than the row shows, the difference is this instance's own findings,
+which an upgrade does not touch.

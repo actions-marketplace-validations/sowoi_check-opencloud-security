@@ -1,0 +1,25 @@
+{
+  "advisories": [],
+  "case": "server_disclosed",
+  "description": "A proxy naming its backend in Server and X-Powered-By.",
+  "endOfLife": false,
+  "exitCodes": {
+    "default": "OK",
+    "lenient": "OK",
+    "ops": "OK",
+    "strict": "OK"
+  },
+  "failedChecks": [
+    "reverseProxyDetected",
+    "versionDisclosure:X-Powered-By"
+  ],
+  "grade": "A+",
+  "missingHardenings": [],
+  "missingHeaders": [],
+  "rating": 5,
+  "ratingBase": 5,
+  "ratingCaps": [
+    "reverseProxyDetected:low:5",
+    "versionDisclosure:X-Powered-By:low:5"
+  ]
+}

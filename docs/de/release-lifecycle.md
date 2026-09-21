@@ -144,6 +144,12 @@ Die Vorabprüfung kennt nur den gebündelten oder aktualisierten Zeitplan und
 die Beratungsdatenbank. Eine später veröffentlichte Version oder ein später
 veröffentlichter Hinweis kann das Ergebnis ändern.
 
+Die Weboberfläche zeigt dieselben Einträge als **Was dir ein Upgrade bringen
+würde**: eine Zeile pro Kandidat mit den Hinweisen, die sie ausräumt, denen,
+die bleiben, und der Note, die sie erreicht. Wo die Version allein besser
+abschneiden würde, liegt der Unterschied an den Befunden dieser Instanz, die
+ein Upgrade nicht anfasst.
+
 ## Marken und Unabhängigkeit
 
 Dies ist ein unabhängiges Community-Projekt. Es ist nicht mit OpenCloud GmbH

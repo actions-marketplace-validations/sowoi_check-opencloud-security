@@ -225,3 +225,9 @@ Upgrade rehearsal: 7.2.4 fixes 1 finding, leaves 1, reaches rating D; 7.3.0 fixe
 El ensayo solo conoce el calendario y la base de datos de avisos incluidos o
 actualizados. Una versión o un aviso publicado más adelante puede cambiar el
 resultado.
+
+La aplicación web muestra las mismas entradas como **Qué le aportaría
+actualizar**: una fila por versión candidata, con los avisos que resuelve, los
+que deja y la calificación que alcanzaría. Cuando la versión por sí sola
+obtendría más, la diferencia son los hallazgos de esta instancia, que una
+actualización no toca.

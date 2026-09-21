@@ -1,0 +1,24 @@
+{
+  "advisories": [],
+  "case": "directory_listing",
+  "description": "A proxy serving an Apache-style index of the document root.",
+  "endOfLife": false,
+  "exitCodes": {
+    "default": "WARNING",
+    "lenient": "WARNING",
+    "ops": "WARNING",
+    "strict": "CRITICAL"
+  },
+  "failedChecks": [
+    "directoryListing",
+    "reverseProxyDetected"
+  ],
+  "grade": "D",
+  "missingHardenings": [],
+  "missingHeaders": [],
+  "rating": 2,
+  "ratingBase": 5,
+  "ratingCaps": [
+    "directoryListing:critical:2"
+  ]
+}

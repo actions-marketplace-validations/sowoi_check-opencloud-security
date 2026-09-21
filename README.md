@@ -27,6 +27,7 @@
 * [Update check](#update-check)
 * [Configuration file and secrets](#configuration-file-and-secrets)
 * [Rating thresholds](#rating-thresholds)
+  * [Threshold profiles](#threshold-profiles)
 * [Hardening checks](#hardening-checks)
 * [Explaining a rating](#explaining-a-rating)
 * [What would raise the rating](#what-would-raise-the-rating)
@@ -233,6 +234,7 @@ The handful you will actually type most days:
 | `-d, --debug` | Explain the rating and every finding, at length |
 | `--check-hardening` | Also report missing hardening measures and security headers |
 | `-w, --warning` / `-c, --critical` | The ratings (0-5) at or below which the check warns or goes critical |
+| `--profile` | Judge by a named threshold set - `strict`, `ops` or `lenient` - instead of setting each flag |
 | `--format` | `nagios`, `prometheus`, `otlp`, `checkmk`, `json`, `sarif` or `junit` |
 | `--ignore-hardening` | Accept a finding you are not going to fix, by name |
 | `--waive-until` | Accept one until a deadline, with a reason, after which it alerts again |
@@ -663,11 +665,11 @@ Where the tracks stand today, straight from the bundled schedule:
 
 | Track | Current release | Line | Line opened | Supported until |
 |:------|:----------------|:-----|:------------|:----------------|
-| **Rolling** | `8.0.0` | `8.0` | 2026-09-15 | the next rolling release |
+| **Rolling** | `8.0.1` | `8.0` | 2026-09-15 | the next rolling release |
 | **Production** | `7.2.4` | `7.2` | 2026-06-25 | the next production release |
 | **LTS** | `4.0.8` | `4.0` | 2025-12-01 | 2027-12-01 |
 
-Read from the [OpenCloud release lifecycle][lifecycle] on 2026-09-15.
+Read from the [OpenCloud release lifecycle][lifecycle] on 2026-09-21.
 <!-- release-schedule:end -->
 
 A line that is out of support is rated `F` and reported as `CRITICAL`:
@@ -913,6 +915,33 @@ check-opencloud-security --host opencloud.example.com --warning 1 --critical 0
 # Page on any critical finding
 check-opencloud-security --host opencloud.example.com --warning 4 --critical 2
 ```
+
+## Threshold profiles
+Every team ends up writing the same handful of flags into its monitoring
+definition, and then disagreeing about which handful. `--profile` /
+`COS_PROFILE` names one instead:
+
+| Profile | `--warning` | `--critical` | `--check-hardening` | `--update-warning` | `--eol-warning` |
+|:--------|:------------|:-------------|:--------------------|:-------------------|:----------------|
+| `strict` | `4` (`A`) | `2` (`D`) | on | on | `90` |
+| `ops` | `3` (`C`) | `1` (`E`) | on | off | `30` |
+| `lenient` | `2` (`D`) | `0` (`F`) | off | off | `0` |
+
+A profile decides **how the same measurements are judged, never how hard the
+instance is probed** - there is no profile that scans more, and none that
+scans less. Leaving `--profile` unset keeps the defaults documented above, so
+an existing monitoring definition behaves exactly as it did.
+
+It is also the weakest source of a value: anything you write yourself wins.
+
+```shell
+# The strict set, except that a critical finding should not page here
+check-opencloud-security --host opencloud.example.com --profile strict --critical 1
+```
+
+The flag, the environment variable and the `profile:` key in the
+configuration file are the same setting, and the `--debug` explanation names
+the profile a rating was judged by.
 
 # Hardening checks
 Besides the pass/fail checks above, the scanner reports which hardening

@@ -194,3 +194,51 @@ def test_the_operators_pages_are_hardened_and_never_cached():
         stranger = test_client.get(path)
         assert stranger.status_code == 404, path
         _assert_hardened(stranger, f"stranger {path}")
+
+
+# --------------------------------------------------------------- HSTS
+#
+# The generated reverse-proxy configuration adds no security headers of its
+# own ("the application sends its own"), so if the application does not send
+# this one, no deployment built by the project's own wizard has it.
+
+
+def test_a_plain_http_request_is_not_told_to_be_https_forever():
+    """RFC 6797: a browser may not record HSTS from a cleartext hop, so none is sent over one."""
+    response = client().get("/")
+    assert "strict-transport-security" not in response.headers
+
+
+def test_a_forwarded_https_request_carries_hsts():
+    """Behind a proxy the deployment vouched for, an HTTPS visitor is told to stay on HTTPS."""
+    test_client = client(trust_forwarded_for=True)
+    response = test_client.get("/", headers={"x-forwarded-proto": "https"})
+    policy = response.headers.get("strict-transport-security", "")
+    assert policy, "no strict-transport-security behind an HTTPS proxy"
+    # At least the year `hardening.HARDENINGS["hstsLongMaxAge"]` asks of an
+    # instance this project scans, and the subdomain cover `hstsIncludeSubdomains`
+    # asks for. Not `preload`: that is the domain owner's decision to make.
+    directive = re.search(r"max-age=(\d+)", policy)
+    assert directive is not None, policy
+    assert int(directive.group(1)) >= 31_536_000, policy
+    assert "includesubdomains" in policy.lower(), policy
+    assert "preload" not in policy.lower(), policy
+
+
+def test_a_forwarded_scheme_is_ignored_when_the_deployment_did_not_vouch_for_it():
+    """Without COS_WEB_TRUST_FORWARDED_FOR there is no proxy, so the header is a visitor's claim."""
+    response = client().get("/", headers={"x-forwarded-proto": "https"})
+    assert "strict-transport-security" not in response.headers
+
+
+def test_hsts_reaches_the_responses_that_are_not_pages():
+    """A JSON body, an error and a redirect are answered by the same middleware."""
+    test_client = client(trust_forwarded_for=True)
+    secure = {"x-forwarded-proto": "https"}
+    for label, response in {
+        "health": test_client.get("/healthz", headers=secure),
+        "unknown scan": test_client.get(f"/api/scans/{UNKNOWN}", headers=secure),
+        "static": test_client.get("/static/js/app.js", headers=secure),
+        "redirect": test_client.get("/about/", headers=secure, follow_redirects=False),
+    }.items():
+        assert response.headers.get("strict-transport-security"), label

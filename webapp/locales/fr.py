@@ -1522,6 +1522,31 @@ MESSAGES: dict[str, str] = {
         "modifiées dans la configuration. Le plan ne peut donc pas atteindre "
         "une note supérieure."
     ),
+    "result.rehearsal.kicker": "Simulation de mise à niveau",
+    "result.rehearsal.heading": "Ce qu’une mise à niveau corrigerait",
+    "result.rehearsal.lede": (
+        "Chaque version pertinente est évaluée avant son installation. Une "
+        "mise à niveau change la version, pas le proxy inverse ; les constats "
+        "de cette page restent donc exactement ceux mesurés par cette analyse."
+    ),
+    "result.rehearsal.line": "branche {line}",
+    "result.rehearsal.recommended": "recommandée",
+    "result.rehearsal.eol": "fin de vie",
+    "result.rehearsal.grade": "atteindrait {label}",
+    "result.rehearsal.fixes": "Corrige",
+    "result.rehearsal.still": "Toujours concernée par",
+    "result.rehearsal.introduces": "Désormais concernée par",
+    "result.rehearsal.clean": "Corrige tous les avis de sécurité qui concernent cette version.",
+    "result.rehearsal.nothing": "Ne corrige aucun avis de sécurité concernant cette version.",
+    "result.rehearsal.capped": (
+        "La version seule atteindrait {label} ; les constats de cette page "
+        "maintiennent la note à son niveau actuel."
+    ),
+    "result.rehearsal.note": (
+        "Cette simulation utilise uniquement le calendrier des versions et la "
+        "base d’avis disponibles pour cette analyse. Les versions et avis "
+        "publiés depuis n’y figurent pas."
+    ),
     "result.eol.alert": (
         "Cette version ne reçoit plus de correctifs de sécurité. Rien "
         "d'autre sur cette page ne peut faire remonter la note tant qu'elle "

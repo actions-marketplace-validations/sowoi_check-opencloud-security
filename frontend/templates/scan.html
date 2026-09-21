@@ -495,6 +495,9 @@
   {% set _ = toc.append({"href": "#remediation",
                          "label": t('result.plan.heading', label=summary.remediation.achievableLabel), "group": t('toc.group.act')}) %}
 {% endif %}
+{% if summary.upgradeRehearsal %}
+  {% set _ = toc.append({"href": "#rehearsal", "label": t('result.rehearsal.heading'), "group": t('toc.group.act')}) %}
+{% endif %}
 {% if summary.vulnerabilities %}
   {% set _ = toc.append({"href": "#advisories", "label": t('result.advisories.heading'), "group": t('toc.group.act')}) %}
 {% endif %}
@@ -557,6 +560,51 @@
     {% for step in summary.remediation.blocked %}<li>{{ step.id }}</li>{% endfor %}
   </ul>
   {% endif %}
+</section>
+{% endif %}
+
+{#
+  The rehearsal answers the question the remediation plan above cannot: the
+  plan says what to change on this instance, this says what a different
+  version would be worth. Both are the scanner's own arithmetic - the ratings
+  come out of the document, this page only picks the letter and the tone for
+  each one, the same pair every other grade here goes through.
+#}
+{% if summary.upgradeRehearsal %}
+<section class="card" data-reveal>
+  <p class="kicker">{{ t('result.rehearsal.kicker') }}</p>
+  <h2 id="rehearsal">{{ t('result.rehearsal.heading') }}</h2>
+  <p class="lede">{{ t('result.rehearsal.lede') }}</p>
+  <ul class="findings">
+    {% for entry in summary.upgradeRehearsal %}
+    <li class="finding" data-tag="info">
+      <div class="finding-head">
+        <code>{{ entry.version }}</code>
+        {% if entry.line %}<span class="tag tag-info">{{ t('result.rehearsal.line', line=entry.line) }}</span>{% endif %}
+        {% if entry.recommended %}<span class="tag tag-info">{{ t('result.rehearsal.recommended') }}</span>{% endif %}
+        {% if entry.endOfLife %}<span class="tag tag-critical">{{ t('result.rehearsal.eol') }}</span>{% endif %}
+        <span class="rehearsal-grade" data-tone="{{ entry.tone }}">{{ t('result.rehearsal.grade', label=entry.label) }}</span>
+      </div>
+      {% if entry.fixes %}
+      <p>{{ t('result.rehearsal.fixes') }}: {{ entry.fixes | join(", ") }}</p>
+      {% else %}
+      <p>{{ t('result.rehearsal.nothing') }}</p>
+      {% endif %}
+      {% if entry.stillAffected %}
+      <p class="hint">{{ t('result.rehearsal.still') }}: {{ entry.stillAffected | join(", ") }}</p>
+      {% elif entry.fixes %}
+      <p class="hint">{{ t('result.rehearsal.clean') }}</p>
+      {% endif %}
+      {% if entry.introduces %}
+      <p class="hint">{{ t('result.rehearsal.introduces') }}: {{ entry.introduces | join(", ") }}</p>
+      {% endif %}
+      {% if entry.cappedByFindings %}
+      <p class="hint">{{ t('result.rehearsal.capped', label=entry.versionLabel) }}</p>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  <p class="hint section-gap">{{ t('result.rehearsal.note') }}</p>
 </section>
 {% endif %}
 

@@ -1435,6 +1435,31 @@ MESSAGES: dict[str, str] = {
         "ajuste los alcanza. Son la razón por la que el plan anterior se "
         "detiene donde lo hace."
     ),
+    "result.rehearsal.kicker": "Simulación de actualización",
+    "result.rehearsal.heading": "Qué solucionaría una actualización",
+    "result.rehearsal.lede": (
+        "Cada versión recomendable se califica antes de instalarla. Una "
+        "actualización cambia la versión, no el proxy inverso, por lo que los "
+        "hallazgos de esta página siguen siendo los que midió este análisis."
+    ),
+    "result.rehearsal.line": "rama {line}",
+    "result.rehearsal.recommended": "recomendada",
+    "result.rehearsal.eol": "fin de vida",
+    "result.rehearsal.grade": "alcanzaría {label}",
+    "result.rehearsal.fixes": "Corrige",
+    "result.rehearsal.still": "Sigue afectada por",
+    "result.rehearsal.introduces": "Queda afectada por",
+    "result.rehearsal.clean": "Resuelve todos los avisos que afectan a esta versión.",
+    "result.rehearsal.nothing": "No resuelve ningún aviso que afecte a esta versión.",
+    "result.rehearsal.capped": (
+        "La versión por sí sola alcanzaría {label}; los hallazgos de esta "
+        "página mantienen la calificación en su nivel actual."
+    ),
+    "result.rehearsal.note": (
+        "Esta simulación usa únicamente el calendario de versiones y la base "
+        "de datos de avisos disponibles para este análisis. No incluye "
+        "versiones ni avisos publicados después."
+    ),
     "result.eol.alert": (
         "Esta versión ya no recibe correcciones de seguridad. Nada más en "
         "esta página puede elevar la calificación hasta que se actualice."

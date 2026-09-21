@@ -212,8 +212,9 @@ writes nothing and exits `1`.
 | `--advisory-url` | *(none)* | An OSV endpoint or mirror, fetched unverified |
 
 The files have no effect until the configuration points at them. The
-signature check needs the `signing` extra. One pitfall is easy to miss: a
-schedule file the check cannot read turns the end-of-life check off. All of
+signature check needs the `signing` extra. Un point est important : si le
+contrôle ne peut pas lire le fichier de calendrier, le contrôle de fin de
+support est désactivé. Tout cela est décrit dans
 this is covered in
 [Keeping the release schedule and advisories current](reference-data.md).
 
@@ -269,7 +270,7 @@ automatically. `-c` names the path instead. It is the same wizard as
 ## Exit codes
 
 These are **not** the plugin's Nagios codes. A `scan` that finds an F-rated
-instance still exits `0`, because judging the result is the plugin's job.
+instance still exits `0`, parce que c’est au plugin d’évaluer le résultat.
 
 | Subcommand | `0` | `1` | `2` | `3` |
 |:--|:--|:--|:--|:--|

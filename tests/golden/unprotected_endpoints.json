@@ -1,0 +1,27 @@
+{
+  "advisories": [],
+  "case": "unprotected_endpoints",
+  "description": "Endpoints that must ask for credentials answering with a body.",
+  "endOfLife": false,
+  "exitCodes": {
+    "default": "WARNING",
+    "lenient": "WARNING",
+    "ops": "WARNING",
+    "strict": "CRITICAL"
+  },
+  "failedChecks": [
+    "authentication:/graph/v1.0/users",
+    "authentication:/ocs/v1.php/cloud/user",
+    "authentication:/remote.php/dav/files/",
+    "reverseProxyDetected"
+  ],
+  "grade": "D",
+  "missingHardenings": [],
+  "missingHeaders": [],
+  "rating": 2,
+  "ratingBase": 5,
+  "ratingCaps": [
+    "authentication:/graph/v1.0/users:critical:2",
+    "authentication:/remote.php/dav/files/:critical:2"
+  ]
+}

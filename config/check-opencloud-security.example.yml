@@ -36,6 +36,11 @@ backoff_factor: 0.5
 # prometheus_listen_addr: 127.0.0.1
 # scrape_interval: 60           # cache duration; 0 refreshes every scrape
 
+# A named threshold set: strict, ops or lenient. It decides the five
+# judgement settings below that you do not set yourself - nothing here
+# changes what is probed. Anything written explicitly wins over it.
+# profile: ops
+
 warning: 3                       # rating <= 3 (C) -> WARNING
 critical: 1                      # rating <= 1 (E) -> CRITICAL
 check_hardening: true

@@ -17,6 +17,7 @@ check-opencloud-security --host <Hostname> --check-hardening
 | `-H, --host`                  | OpenCloud-Adresse als Hostname, IP oder URL, optional mit Port; mehrere Hosts durch Kommas trennen | **erforderlich**                                    | `COS_HOST`                      |
 | `-P, --proxy`                 | Adresse des ausgehenden Proxys | keiner                                          | `COS_PROXY`                     |
 | `-d, --debug`                 | Bewertung und Befunde erklären; ausführliche Diagnoseausgabe | `false`                                         | `COS_DEBUG`                     |
+| `--profile`                   | Benannter Schwellenwertsatz: `strict`, `ops` oder `lenient`. Entscheidet die Bewertungseinstellungen, die du nicht selbst setzt | *None* | `COS_PROFILE` |
 | `-w, --warning`               | Ab dieser Bewertung oder darunter WARNING melden | `3` (`C`)                                       | `COS_WARNING`                   |
 | `-c, --critical`              | Ab dieser Bewertung oder darunter CRITICAL melden | `1` (`E`)                                       | `COS_CRITICAL`                  |
 | `--check-hardening`           | Fehlende Härtungsmaßnahmen und Sicherheitsheader berücksichtigen | `false`                                         | `COS_CHECK_HARDENING`           |

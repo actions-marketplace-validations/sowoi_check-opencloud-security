@@ -1,0 +1,23 @@
+{
+  "advisories": [
+    "GOLDEN-0001"
+  ],
+  "case": "outdated_release",
+  "description": "An instance on an older line, which an advisory also names.",
+  "endOfLife": true,
+  "exitCodes": {
+    "default": "CRITICAL",
+    "lenient": "CRITICAL",
+    "ops": "CRITICAL",
+    "strict": "CRITICAL"
+  },
+  "failedChecks": [
+    "reverseProxyDetected"
+  ],
+  "grade": "F",
+  "missingHardenings": [],
+  "missingHeaders": [],
+  "rating": 0,
+  "ratingBase": 0,
+  "ratingCaps": []
+}

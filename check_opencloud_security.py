@@ -119,6 +119,55 @@ MAX_RATING = 5
 DEFAULT_WARNING_RATING = 3
 DEFAULT_CRITICAL_RATING = 1
 
+# Named threshold sets behind --profile. A profile decides how the same
+# measurements are judged, never how hard the instance is probed, so every
+# value here is a judgement setting: the thresholds, whether hardening is
+# reported, whether an available update alerts, and how far ahead the end of
+# life is announced. Leaving --profile unset keeps the defaults above, which
+# is what every existing monitoring definition already expects.
+PROFILE_STRICT = "strict"
+PROFILE_OPS = "ops"
+PROFILE_LENIENT = "lenient"
+PROFILES: dict[str, dict[str, object]] = {
+    # Everything below A alerts, and a release worth upgrading is worth
+    # knowing about a quarter before it stops receiving fixes.
+    PROFILE_STRICT: {
+        "warning": 4,
+        "critical": 2,
+        "check_hardening": True,
+        "update_warning": True,
+        "eol_warning": 90,
+    },
+    # The default thresholds, plus the two things a team on call usually
+    # turns on by hand anyway.
+    PROFILE_OPS: {
+        "warning": 3,
+        "critical": 1,
+        "check_hardening": True,
+        "update_warning": False,
+        "eol_warning": 30,
+    },
+    # Only a rating that says something is actually exploitable alerts.
+    PROFILE_LENIENT: {
+        "warning": 2,
+        "critical": 0,
+        "check_hardening": False,
+        "update_warning": False,
+        "eol_warning": 0,
+    },
+}
+
+# How each setting a profile governs is spelled on the command line. A flag
+# given explicitly outranks the profile, and this is what says "explicitly":
+# argparse alone cannot tell a default apart from the same value typed out.
+PROFILE_OPTIONS: dict[str, tuple[str, ...]] = {
+    "warning": ("-w", "--warning"),
+    "critical": ("-c", "--critical"),
+    "check_hardening": ("--check-hardening",),
+    "update_warning": ("--update-warning",),
+    "eol_warning": ("--eol-warning",),
+}
+
 # Prefix for all environment variables recognized by this plugin, e.g. COS_HOST.
 ENV_PREFIX = "COS_"
 
@@ -184,6 +233,10 @@ class ScanContext:
     timeout: int = DEFAULT_TIMEOUT_SECONDS
     warning_rating: int = DEFAULT_WARNING_RATING
     critical_rating: int = DEFAULT_CRITICAL_RATING
+    # The named threshold set the values above came from, when one was asked
+    # for. Reported, never re-applied: by the time a context exists the
+    # profile has already decided what it decides.
+    profile: str | None = None
     check_hardening: bool = False
     webhook_url: str | None = None
     webhook_on: str = DEFAULT_WEBHOOK_ON
@@ -1918,6 +1971,7 @@ def _explain_lines(
         f"Final rating: {rating}/5 ({RATE_MAP.get(rating, 'Unknown')}). "
         f"WARNING at or below {RATE_MAP.get(context.warning_rating, '?')}, "
         f"CRITICAL at or below {RATE_MAP.get(context.critical_rating, '?')}."
+        + (f" Profile: {context.profile}." if context.profile else "")
     )
     if not context.check_hardening:
         lines.append(
@@ -2556,6 +2610,21 @@ def build_arg_parser() -> argparse.ArgumentParser:
         ),
     )
     rating.add_argument(
+        "--profile",
+        choices=tuple(PROFILES),
+        default=_env("PROFILE"),
+        help=(
+            "Judge this scan by a named threshold set instead of the defaults: "
+            "'strict' alerts on anything below A and announces an end of life "
+            "90 days ahead, 'ops' keeps the default thresholds but reports "
+            "hardening and warns 30 days ahead, 'lenient' alerts only on a "
+            "rating of D or worse. A profile changes how the result is judged, "
+            "never what is probed, and any of -w, -c, --check-hardening, "
+            "--update-warning or --eol-warning given explicitly wins over it. "
+            f"Default: unset (env: {ENV_PREFIX}PROFILE)."
+        ),
+    )
+    rating.add_argument(
         "-w",
         "--warning",
         type=int,
@@ -2709,8 +2778,55 @@ def _parse_webhook_headers(raw_headers: list[str] | None) -> tuple[tuple[str, st
     return tuple(headers)
 
 
+def _options_on_command_line(argv: list[str] | None = None) -> set[str]:
+    """
+    Which settings a profile governs were also named on the command line.
+
+    argparse cannot answer this: a threshold typed out at its default value
+    is indistinguishable from one nobody gave. The spellings in
+    PROFILE_OPTIONS are matched against the raw tokens instead, including
+    '--eol-warning=90' and the attached form of a short flag, '-w4'.
+    """
+    tokens = sys.argv[1:] if argv is None else argv
+    named: set[str] = set()
+    for token in tokens:
+        head = token.split("=", 1)[0]
+        for dest, spellings in PROFILE_OPTIONS.items():
+            for spelling in spellings:
+                attached = len(spelling) == 2 and token.startswith(spelling)
+                if head == spelling or attached:
+                    named.add(dest)
+    return named
+
+
+def _apply_profile(args: argparse.Namespace, argv: list[str] | None = None) -> None:
+    """
+    Fill in the settings --profile decides, without overruling anybody.
+
+    Precedence is the same everywhere else in this plugin - an explicit flag
+    beats an environment variable or configuration key, and both beat a
+    default - so a profile is the weakest source of all: it only ever
+    supplies a value nobody else did.
+    """
+    profile = PROFILES.get(args.profile or "")
+    if profile is None:
+        return
+    given = _options_on_command_line(argv)
+    for dest, value in profile.items():
+        if dest in given or _CONFIG.get(dest.upper()) is not None:
+            continue
+        setattr(args, dest, value)
+
+
 def _validate_thresholds(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:
     """Reject rating thresholds outside 0-5 or with critical above warning."""
+    # argparse checks 'choices' only for a value it parsed off the command
+    # line, so a misspelled COS_PROFILE would otherwise be read as "no
+    # profile" and judge the instance by rules nobody asked for.
+    if args.profile is not None and args.profile not in PROFILES:
+        parser.error(
+            f"--profile must be one of {', '.join(PROFILES)}, got {args.profile!r}."
+        )
     for name in ("warning", "critical"):
         value = getattr(args, name)
         if not MIN_RATING <= value <= MAX_RATING:
@@ -2845,6 +2961,7 @@ def _build_context(host: str, args: argparse.Namespace) -> ScanContext:
         timeout=timeout,
         warning_rating=args.warning,
         critical_rating=args.critical,
+        profile=args.profile,
         check_hardening=args.check_hardening,
         webhook_url=args.webhook_url,
         webhook_on=args.webhook_on,
@@ -3665,6 +3782,7 @@ def main() -> None:
     if not hosts:
         parser.error(f"--host must not be empty (or set the {ENV_PREFIX}HOST environment variable).")
 
+    _apply_profile(args)
     _validate_thresholds(parser, args)
 
     logging.basicConfig(

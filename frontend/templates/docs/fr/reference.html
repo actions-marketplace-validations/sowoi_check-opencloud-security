@@ -746,8 +746,8 @@ published after your package was built, see
 or point <code>scanner.vulnerability_feed</code> at OSV or your own advisory mirror.</p>
 </blockquote>
 <h3 id="running-the-scanner-as-a-service">Running the scanner as a service</h3>
-<p>The package ships a second entry point, <code>check-opencloud-scanner</code>. It runs the
-very same scanner, either once or as a service:</p>
+<p>The package ships a second entry point, <code>check-opencloud-scanner</code>. It runs
+exactement le même scanner, une fois ou comme service :</p>
 <pre><code class="language-shell">## one-shot: print the full result document as JSON
 check-opencloud-scanner scan opencloud.example.com
 
@@ -961,6 +961,50 @@ check-opencloud-security --host opencloud.example.com --warning 1 --critical 0
 ## Page on any critical finding
 check-opencloud-security --host opencloud.example.com --warning 4 --critical 2
 </code></pre>
+<h3 id="threshold-profiles">Threshold profiles</h3>
+<p><code>--profile</code> / <code>COS_PROFILE</code> names a ready-made set instead of spelling out
+the same five flags every time:</p>
+<table>
+<thead>
+<tr>
+<th>Profile</th>
+<th><code>--warning</code></th>
+<th><code>--critical</code></th>
+<th><code>--check-hardening</code></th>
+<th><code>--update-warning</code></th>
+<th><code>--eol-warning</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>strict</code></td>
+<td><code>4</code> (<code>A</code>)</td>
+<td><code>2</code> (<code>D</code>)</td>
+<td>on</td>
+<td>on</td>
+<td><code>90</code></td>
+</tr>
+<tr>
+<td><code>ops</code></td>
+<td><code>3</code> (<code>C</code>)</td>
+<td><code>1</code> (<code>E</code>)</td>
+<td>on</td>
+<td>off</td>
+<td><code>30</code></td>
+</tr>
+<tr>
+<td><code>lenient</code></td>
+<td><code>2</code> (<code>D</code>)</td>
+<td><code>0</code> (<code>F</code>)</td>
+<td>off</td>
+<td>off</td>
+<td><code>0</code></td>
+</tr>
+</tbody>
+</table>
+<p>A profile decides <strong>how the same measurements are judged, never how hard the
+instance is probed</strong>. Leaving it unset changes nothing, and anything you set
+yourself - a flag, an environment variable or a file - still wins.</p>
 <h2 id="hardening-checks">Hardening checks</h2>
 <p>Besides the pass/fail checks above, the scanner reports which hardening
 measures the instance has in place. With <code>--check-hardening</code> /
@@ -1022,7 +1066,7 @@ give: <code>5</code> up to date, <code>4</code> a patch update pending, <code>3<
 behind, <code>2</code> known vulnerabilities, <code>1</code> critical or high ones, <code>0</code> end of life.
 Failed additional checks then cap it by severity - <code>critical</code> to <code>2</code>, <code>high</code> to
 <code>3</code>, <code>medium</code> to <code>4</code>, <code>low</code> to <code>5</code>. A check that failed but did not decide the
-outcome is still listed, marked as such, so nothing looks quietly dropped.</p>
+outcome is still listed, marked as such, so no result disappears silently.</p>
 <p>Without <code>--debug</code> the output stays the size a monitoring system wants. The
 same breakdown is always present in the scan result as <code>ratingExplanation</code>, so
 it can be read without rerunning the check:</p>

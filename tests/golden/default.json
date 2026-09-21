@@ -1,0 +1,23 @@
+{
+  "advisories": [],
+  "case": "default",
+  "description": "OpenCloud behind its own proxy, configured the way it ships.",
+  "endOfLife": false,
+  "exitCodes": {
+    "default": "OK",
+    "lenient": "OK",
+    "ops": "OK",
+    "strict": "OK"
+  },
+  "failedChecks": [
+    "reverseProxyDetected"
+  ],
+  "grade": "A+",
+  "missingHardenings": [],
+  "missingHeaders": [],
+  "rating": 5,
+  "ratingBase": 5,
+  "ratingCaps": [
+    "reverseProxyDetected:low:5"
+  ]
+}

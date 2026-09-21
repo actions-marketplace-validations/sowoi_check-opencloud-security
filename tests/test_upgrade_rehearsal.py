@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import copy
 from datetime import date
+from typing import cast
 
 import pytest
 
@@ -251,23 +252,116 @@ def test_the_plugin_grades_each_rehearsed_release_with_its_own_rate_map(capsys):
     details = _details(copy.deepcopy(RESULT), capsys)
     line = next(item for item in details if item.startswith("Upgrade rehearsal:"))
 
-    assert "7.2.4 fixes 3 findings, leaves 1, reaches rating D" in line
-    assert "7.3.0 fixes 1 finding, leaves 0, adds 1, reaches rating C" in line
+    assert line == (
+        "Upgrade rehearsal: 7.2.4 fixes 3 findings, leaves 1, reaches rating D; "
+        "7.3.0 fixes 1 finding, leaves 0, adds 1, reaches rating C."
+    )
 
 
 def test_no_rehearsal_line_when_there_is_nothing_to_move_to(capsys):
-    """An instance on the newest release gets no empty sentence."""
+    """
+    An instance on the newest release gets no empty sentence.
+
+    Asserting the absence of the word is not enough: a helper that returned
+    any non-empty string would still print a detail line nobody can read.
+    Comparing against the run with the key removed says the operator sees
+    exactly the same output either way.
+    """
+    empty = copy.deepcopy(RESULT)
+    empty["upgradeRehearsal"] = []
+    absent = copy.deepcopy(RESULT)
+    del absent["upgradeRehearsal"]
+
+    assert not any("rehearsal" in item for item in _details(empty, capsys))
+    assert _details(empty, capsys) == _details(absent, capsys)
+    assert plugin._upgrade_rehearsal_line({"upgradeRehearsal": []}) == ""
+    assert plugin._upgrade_rehearsal_line({}) == ""
+
+
+def test_an_end_of_life_candidate_says_so_in_the_line_and_the_payload(capsys):
+    """
+    Upgrading onto a release that receives no fixes is the worst outcome here.
+
+    Without this the branch is never taken by any test, and a rehearsal that
+    stopped reporting it would recommend a dead release in silence - in the
+    operator's alert line and in the webhook alike.
+    """
     document = copy.deepcopy(RESULT)
-    document["upgradeRehearsal"] = []
-    assert not any("rehearsal" in item for item in _details(document, capsys))
+    entries_in = cast(list[dict], document["upgradeRehearsal"])
+    entries_in[0]["endOfLife"] = True
+    line = next(
+        item for item in _details(document, capsys) if item.startswith("Upgrade rehearsal:")
+    )
+    entries = plugin._upgrade_rehearsal_payload(copy.deepcopy(document))
+
+    assert "7.2.4 fixes 3 findings, leaves 1, is end of life, reaches rating D" in line
+    assert line.count(", is end of life") == 1
+    assert entries[0]["end_of_life"] is True
+    assert entries[1]["end_of_life"] is False
+
+
+def test_a_malformed_rehearsal_entry_is_skipped_without_losing_the_rest(capsys):
+    """
+    A junk entry must cost its own row, not every row after it.
+
+    Both helpers walk the same list, and a scan document is the only thing
+    that decides what is in it.
+    """
+    document = copy.deepcopy(RESULT)
+    document["upgradeRehearsal"] = [
+        "junk",
+        {"rating": 3},
+        copy.deepcopy(cast(list[dict], RESULT["upgradeRehearsal"])[1]),
+    ]
+    line = next(
+        item for item in _details(document, capsys) if item.startswith("Upgrade rehearsal:")
+    )
+    entries = plugin._upgrade_rehearsal_payload(copy.deepcopy(document))
+
+    assert "7.3.0 fixes 1 finding" in line
+    assert line.count(";") == 0
+    assert [entry["version"] for entry in entries] == [None, "7.3.0"]
+
+
+def test_a_rating_the_plugin_cannot_grade_prints_a_question_mark(capsys):
+    """
+    A grade nobody can read beats 'None' printed where a letter belongs.
+
+    The rating comes out of a document, so it can be missing or out of the
+    0-5 range, and RATE_MAP must not be asked to explain either.
+    """
+    document = copy.deepcopy(RESULT)
+    entries_in = cast(list[dict], document["upgradeRehearsal"])
+    entries_in[0]["rating"] = None
+    entries_in[1]["rating"] = 9
+    line = next(
+        item for item in _details(document, capsys) if item.startswith("Upgrade rehearsal:")
+    )
+    entries = plugin._upgrade_rehearsal_payload(copy.deepcopy(document))
+
+    assert line.count("reaches rating ?") == 2
+    assert entries[0]["rating_label"] is None
+    assert entries[1]["rating_label"] is None
 
 
 def test_the_payload_carries_the_rehearsal_in_snake_case_with_the_grade():
     """The plugin's own output is snake_case, and the letter is RATE_MAP's."""
     entries = plugin._upgrade_rehearsal_payload(copy.deepcopy(RESULT))
 
-    assert entries[0]["still_affected"] == ["E"]
-    assert entries[0]["rating_label"] == "D"
+    assert entries[0] == {
+        "version": "7.2.4",
+        "line": "7.2",
+        "recommended": False,
+        "fixes": ["A", "B", "D"],
+        "still_affected": ["E"],
+        "introduces": [],
+        "end_of_life": False,
+        "version_rating": 2,
+        "rating": 2,
+        "rating_label": "D",
+    }
+    assert entries[1]["recommended"] is True
+    assert entries[1]["introduces"] == ["C"]
     assert entries[1]["rating_label"] == "C"
     assert "stillAffected" not in entries[0]
     assert plugin._upgrade_rehearsal_payload({}) == []

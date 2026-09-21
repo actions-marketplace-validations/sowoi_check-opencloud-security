@@ -310,7 +310,14 @@ class WebSettings:
     trust_forwarded_for: bool = False
     """Read the client address from ``X-Forwarded-For``. Only behind a proxy
     that appends to or overwrites the header, and only with
-    ``trusted_proxy_hops`` set to match how many of them there are."""
+    ``trusted_proxy_hops`` set to match how many of them there are.
+
+    It governs ``X-Forwarded-Proto`` with it, which is how a service the
+    proxy reaches over plain HTTP knows the *visitor* arrived over TLS and
+    may therefore send ``Strict-Transport-Security``. Off, a TLS deployment
+    behind a proxy sends no HSTS - so an operator terminating TLS in front
+    of this service wants it on for that reason too, not only for the rate
+    limit."""
 
     trusted_proxy_hops: int = DEFAULT_TRUSTED_PROXY_HOPS
     """How many proxies of this deployment's own sit in front of the service.

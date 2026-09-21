@@ -828,6 +828,21 @@ check-opencloud-security --host opencloud.example.com --warning 1 --critical 0
 check-opencloud-security --host opencloud.example.com --warning 4 --critical 2
 ```
 
+### Perfiles de umbrales {#threshold-profiles}
+
+`--profile` / `COS_PROFILE` nombra un conjunto ya preparado en lugar de
+escribir siempre los mismos cinco indicadores:
+
+| Perfil | `--warning` | `--critical` | `--check-hardening` | `--update-warning` | `--eol-warning` |
+|:--|:--|:--|:--|:--|:--|
+| `strict` | `4` (`A`) | `2` (`D`) | sí | sí | `90` |
+| `ops` | `3` (`C`) | `1` (`E`) | sí | no | `30` |
+| `lenient` | `2` (`D`) | `0` (`F`) | no | no | `0` |
+
+Un perfil decide **cómo se juzgan las mismas mediciones, nunca con cuánta
+intensidad se sondea la instancia**. Sin `--profile` nada cambia, y lo que
+usted fije - indicador, variable de entorno o archivo - siempre gana.
+
 ## Comprobaciones de refuerzo {#hardening-checks}
 Además de las comprobaciones de superado/fallido anteriores, el escáner
 notifica qué medidas de refuerzo tiene la instancia. Con `--check-hardening` /
