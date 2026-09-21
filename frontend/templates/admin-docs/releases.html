@@ -106,6 +106,33 @@
   selection, which reported "no tests" for <code>verification.py</code> before.</p>
 </li>
 </ul>
+<h3 id="security">Security</h3>
+<ul>
+<li><strong>The web application sends <code>Strict-Transport-Security</code> over HTTPS.</strong> The
+  generated reverse-proxy configuration deliberately adds no security headers</li>
+<li>
+<p>"the application sends its own, and an <code>add_header</code> here would be one
+  more place they can disagree" - and HSTS was the one the application did
+  not send, so no deployment built by <code>docker/setup-wizard.py</code> had it. A
+  service whose subject is HTTPS enforcement now asks of itself what
+  <code>hstsLongMaxAge</code> and <code>hstsIncludeSubdomains</code> ask of the instances it
+  scans: <code>max-age=63072000; includeSubDomains</code>. Not <code>preload</code>, which is an
+  effectively irreversible submission to a list browsers ship and belongs to
+  whoever owns the domain. Sent only over TLS, because RFC 6797 forbids a
+  browser to record it from a cleartext hop - and the scheme is read from
+  <code>X-Forwarded-Proto</code> only where <code>COS_WEB_TRUST_FORWARDED_FOR</code> says a proxy
+  writes it, which is the same trust decision <code>client_address</code> makes.</p>
+</li>
+<li>
+<p><strong>A tampered erasure receipt verifies as false rather than raising.</strong>
+  <code>webapp.purge.verify</code> compared the expected digest with the receipt's
+  signature as <code>str</code>, and <code>hmac.compare_digest</code> raises <code>TypeError</code> on a
+  string outside ASCII - so a receipt edited to carry one answered an auditor
+  with a traceback instead of the <code>False</code> the function is read for. Both
+  sides are encoded now, exactly as the purge endpoint has always compared
+  its token. The endpoint itself was never affected.</p>
+</li>
+</ul>
 <h2 id="1280-2026-09-20">[1.28.0] - 2026-09-20</h2>
 <h3 id="added_1">Added</h3>
 <ul>
@@ -188,7 +215,7 @@
   forms of address and several literal or awkward phrases in the operator
   update messages, scan facts and coverage explanations.</li>
 </ul>
-<h3 id="security">Security</h3>
+<h3 id="security_1">Security</h3>
 <ul>
 <li><strong>GHSA-gf4p-7p27-26w7 (CVE-2026-57500, "Access to internal metadata") is
   now reported.</strong> OpenCloud published it only as a repository advisory, which
@@ -381,7 +408,7 @@
   <code>scanner.proxy</code> and <code>releases.proxy</code>, which override the top-level <code>proxy</code>.</p>
 </li>
 </ul>
-<h3 id="security_1">Security</h3>
+<h3 id="security_2">Security</h3>
 <ul>
 <li>
 <p><strong>Scan targets and redirect hops in deprecated IPv6 site-local space are refused.</strong>
@@ -419,7 +446,7 @@
   no longer asks for a <code>RELEASE.md</code> entry when a setting is added - the
   release workflow writes that file (ADR 0048).</li>
 </ul>
-<h3 id="security_2">Security</h3>
+<h3 id="security_3">Security</h3>
 <ul>
 <li><strong>The Docker setup wizard no longer writes credentials through a symbolic
   link.</strong> A link left where <code>.env</code> belongs - even a dangling one, which did

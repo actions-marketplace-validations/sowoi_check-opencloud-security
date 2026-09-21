@@ -234,7 +234,17 @@ def verify(receipt: dict[str, Any], key: str) -> bool:
         return False
     body = {name: item for name, item in receipt.items() if name != "signature"}
     expected = sign(body, key)
-    return expected is not None and hmac.compare_digest(expected, value)
+    if expected is None:
+        return False
+    # Encoded on both sides, exactly as the purge endpoint compares its token.
+    # `value` is a string out of a file somebody else may have edited, and
+    # `hmac.compare_digest` raises TypeError on a str that is not ASCII - so
+    # a tampered receipt would come back as a traceback rather than as the
+    # `False` every caller here reads as "this signature does not check out".
+    return hmac.compare_digest(
+        expected.encode("utf-8", "surrogateescape"),
+        value.encode("utf-8", "surrogateescape"),
+    )
 
 
 def build_receipt(

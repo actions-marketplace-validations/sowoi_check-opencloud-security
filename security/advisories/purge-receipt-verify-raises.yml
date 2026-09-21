@@ -1,0 +1,37 @@
+# A security advisory record. See AGENTS.md, "Security advisories".
+#
+# One file per bullet under a `### Security` heading in CHANGELOG.md.
+# `state` is the decision; `verified` is the evidence it rests on.
+
+slug: purge-receipt-verify-raises
+state: declined
+changelog_version: "1.28.1"
+changelog_entry: "A tampered erasure receipt verifies as false rather than raising."
+shipped: true
+package: web
+severity: low
+declined_because: |
+  Fails closed, so it harmed usability rather than security. The defect is
+  that `webapp.purge.verify` raised `TypeError` instead of returning `False`
+  for a receipt whose signature string is not ASCII - an exception, never a
+  spurious `True`. No forged receipt ever verified, which is what an
+  advisory would be warning about.
+
+  It is also not on a request path. `verify` is a helper for the tests and
+  for an auditor checking a receipt they were handed months later; the
+  erasure endpoint compares its own bearer token with both sides already
+  encoded, and has since the token was introduced. Nothing an operator runs
+  as a service called this.
+summary: >-
+  webapp.purge.verify compared a receipt signature as str, so a receipt
+  edited to carry a non-ASCII signature raised TypeError instead of
+  answering False
+verified: |
+  git show v1.28.0:webapp/purge.py | sed -n '/^def verify/,/compare_digest/p'
+  ends in `hmac.compare_digest(expected, value)` with both sides `str`.
+  git ls-tree -r --name-only v1.7.0 | grep -x webapp/purge.py   # present
+  The same shape is in every tagged release from v1.7.0 to v1.28.0. The
+  endpoint's own comparison in webapp/app.py encodes both sides and is not
+  affected.
+introduced: "1.7.0"
+fixed: "1.28.1"

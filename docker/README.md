@@ -139,7 +139,7 @@ Common changes:
 | A different port | Change the `ports` mapping on `web_app`; `8811` inside the container is fixed |
 | Reachable from outside | Drop the `127.0.0.1:` prefix, set `COS_WEB_PUBLIC_BASE_URL` to the address visitors use, and put a reverse proxy in front - see [`docs/webapp.md`](../docs/webapp.md#putting-it-behind-a-reverse-proxy) |
 | A password on Redis | `COS_REDIS_PASSWORD` in `docker/.env`. Both compose files already read it - see [`docs/redis.md`](../docs/redis.md) |
-| Behind a proxy | Set `COS_WEB_TRUST_FORWARDED_FOR: "true"`, but only if the proxy **overwrites** `X-Forwarded-For` |
+| Behind a proxy | Set `COS_WEB_TRUST_FORWARDED_FOR: "true"`, but only if the proxy **overwrites** `X-Forwarded-For`. It also governs `X-Forwarded-Proto`, which is how the service knows a visitor arrived over TLS and may send `Strict-Transport-Security` |
 | More scans at once | Raise `COS_WEB_MAX_WORKERS` on `arq_worker`, and think about the instances on the other end |
 | Swagger UI | `COS_WEB_ENABLE_DOCS: "true"` on `web_app`, then <http://127.0.0.1:8811/docs> |
 | The schema, the workflows and the discovery document | Already public: `/openapi.json`, `/arazzo.json`, `/.well-known/ai.json` |
@@ -402,7 +402,9 @@ Each one is a working configuration rather than a sketch:
 - **`X-Forwarded-For` set, never appended**, so a client cannot choose the
   address its rate limit is counted against. The wizard says so if
   `COS_WEB_TRUST_FORWARDED_FOR` is still off, because until it is on, every
-  visitor shares one bucket.
+  visitor shares one bucket - and the service sends no
+  `Strict-Transport-Security`, because `X-Forwarded-Proto` is the only thing
+  that knows the visitor was on TLS and it is believed under the same setting.
 - **`/mcp` unbuffered**, with a timeout long enough for an agent session. A
   buffered event stream is a client that waits for ever.
 - **The forward auth in front of `/admin`**, where the stack can provide it:

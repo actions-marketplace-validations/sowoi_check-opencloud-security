@@ -550,6 +550,21 @@ SECURITY_HEADERS = {
     "Cache-Control": "no-store",
 }
 
+# Sent only over HTTPS, because that is the only transport a browser is
+# allowed to record it from (RFC 6797 section 7.2) and the only one where it
+# means anything. The generated reverse-proxy configuration deliberately adds
+# no security headers - "the application sends its own" - so this is where it
+# has to come from, and without it a service whose whole subject is HTTPS
+# enforcement did not enforce its own.
+#
+# Two years and `includeSubDomains`, which is what
+# `hardening.HARDENINGS["hstsLongMaxAge"]` and `hstsIncludeSubdomains` ask of
+# an instance this project scans; asking less of itself than of them is not a
+# defensible default. `preload` is *not* sent: it is a submission to a list
+# browsers ship, effectively irreversible, and it belongs to whoever owns the
+# domain rather than to the software running on it.
+HSTS_HEADER = "max-age=63072000; includeSubDomains"
+
 # Swagger UI and ReDoc load their bundle from jsDelivr. The relaxation is
 # scoped to those two pages, applies only when an operator asked for them, and
 # never touches the pages a visitor sees.
@@ -693,6 +708,35 @@ def client_address(request: Request, settings: WebSettings) -> str:
                 return candidate
             LOGGER.debug("forwarded_for_ignored reason=not_an_address")
     return request.client.host if request.client else "unknown"
+
+
+def _over_https(request: Request, settings: WebSettings) -> bool:
+    """
+    Whether this request reached the service over TLS.
+
+    The same trust decision `client_address` makes, for the same reason and
+    from the same setting. The container runs uvicorn *without*
+    ``--proxy-headers`` on purpose, so the scheme on the request object is
+    the scheme of the hop from the proxy - always ``http`` in the bundled
+    stack, whatever the visitor typed. ``X-Forwarded-Proto`` is the only
+    thing that knows, and it is believed exactly when the deployment has
+    said it sits behind a proxy that writes it.
+
+    Off by default is the safe direction here: a deployment that does not
+    set ``COS_WEB_TRUST_FORWARDED_FOR`` and is reached over plain HTTP sends
+    no HSTS, rather than one that is directly on TLS being taken for a
+    proxied one and told to send it over a cleartext hop.
+    """
+    if request.url.scheme == "https":
+        return True
+    if not settings.trust_forwarded_for:
+        return False
+    # Read from the left: unlike X-Forwarded-For, this header carries one
+    # value rather than a chain, and a proxy that appends still puts the
+    # scheme the *client* spoke first. A proxy that overwrites writes one
+    # entry, which is the same value either way.
+    forwarded = request.headers.get("x-forwarded-proto", "")
+    return forwarded.split(",")[0].strip().lower() == "https"
 
 
 def _canonical_address(value: str) -> str | None:
@@ -1063,6 +1107,8 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
         response = await call_next(request)
         for name, value in SECURITY_HEADERS.items():
             response.headers.setdefault(name, value)
+        if _over_https(request, settings):
+            response.headers.setdefault("Strict-Transport-Security", HSTS_HEADER)
         # The meta tag only covers a rendered page. A result export, a JSON
         # body or a redirect needs saying in the header, or a crawler that
         # reached a uuid would keep it.

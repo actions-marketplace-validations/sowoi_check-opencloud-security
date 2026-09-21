@@ -66,6 +66,30 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   `tests/test_threshold_profiles.py` are now part of the mutmut test
   selection, which reported "no tests" for `verification.py` before.
 
+### Security
+
+- **The web application sends `Strict-Transport-Security` over HTTPS.** The
+  generated reverse-proxy configuration deliberately adds no security headers
+  - "the application sends its own, and an `add_header` here would be one
+  more place they can disagree" - and HSTS was the one the application did
+  not send, so no deployment built by `docker/setup-wizard.py` had it. A
+  service whose subject is HTTPS enforcement now asks of itself what
+  `hstsLongMaxAge` and `hstsIncludeSubdomains` ask of the instances it
+  scans: `max-age=63072000; includeSubDomains`. Not `preload`, which is an
+  effectively irreversible submission to a list browsers ship and belongs to
+  whoever owns the domain. Sent only over TLS, because RFC 6797 forbids a
+  browser to record it from a cleartext hop - and the scheme is read from
+  `X-Forwarded-Proto` only where `COS_WEB_TRUST_FORWARDED_FOR` says a proxy
+  writes it, which is the same trust decision `client_address` makes.
+
+- **A tampered erasure receipt verifies as false rather than raising.**
+  `webapp.purge.verify` compared the expected digest with the receipt's
+  signature as `str`, and `hmac.compare_digest` raises `TypeError` on a
+  string outside ASCII - so a receipt edited to carry one answered an auditor
+  with a traceback instead of the `False` the function is read for. Both
+  sides are encoded now, exactly as the purge endpoint has always compared
+  its token. The endpoint itself was never affected.
+
 ## [1.28.0] - 2026-09-20
 
 ### Added
