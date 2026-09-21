@@ -12,6 +12,8 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+## [1.28.1] - 2026-09-21
+
 ### Added
 
 - **`--profile` judges a scan by a named threshold set.** `strict`, `ops` and
