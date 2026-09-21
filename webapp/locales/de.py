@@ -1466,31 +1466,30 @@ MESSAGES: dict[str, str] = {
         "über die Konfiguration ändern. Deshalb kann der Maßnahmenplan "
         "keine bessere Note erreichen."
     ),
-    "result.rehearsal.kicker": "Upgrade-Probe",
-    "result.rehearsal.heading": "Was dir ein Upgrade bringen würde",
+    "result.rehearsal.kicker": "Upgrade-Simulation",
+    "result.rehearsal.heading": "Was ein Upgrade beheben würde",
     "result.rehearsal.lede": (
-        "Jede Version, auf die sich ein Wechsel lohnt, bewertet bevor sie "
-        "jemand installiert. Ein Upgrade ändert die Version, nicht den "
-        "Reverse Proxy - die Befunde auf dieser Seite bleiben genau so, wie "
-        "dieser Scan sie gemessen hat."
+        "Jede sinnvolle Zielversion wird bewertet, bevor sie jemand installiert. "
+        "Ein Upgrade ändert die Version, nicht den Reverse Proxy. Die Befunde "
+        "auf dieser Seite bleiben daher unverändert."
     ),
-    "result.rehearsal.line": "Linie {line}",
+    "result.rehearsal.line": "Versionslinie {line}",
     "result.rehearsal.recommended": "empfohlen",
-    "result.rehearsal.eol": "Support-Ende",
+    "result.rehearsal.eol": "Ende des Supports",
     "result.rehearsal.grade": "erreicht {label}",
     "result.rehearsal.fixes": "Behebt",
-    "result.rehearsal.still": "Weiterhin betroffen von",
-    "result.rehearsal.introduces": "Neu betroffen von",
-    "result.rehearsal.clean": "Räumt jede Sicherheitsmeldung dieser Version aus.",
-    "result.rehearsal.nothing": "Behebt keine der Sicherheitsmeldungen dieser Version.",
+    "result.rehearsal.still": "Weiterhin betroffen:",
+    "result.rehearsal.introduces": "Neu betroffen:",
+    "result.rehearsal.clean": "Behebt alle Sicherheitsmeldungen, die diese Version betreffen.",
+    "result.rehearsal.nothing": "Behebt keine Sicherheitsmeldung, die diese Version betrifft.",
     "result.rehearsal.capped": (
         "Die Version allein würde {label} erreichen; die Befunde auf dieser "
-        "Seite halten das Upgrade dort, wo es steht."
+        "Seite halten die Bewertung auf ihrem aktuellen Stand."
     ),
     "result.rehearsal.note": (
-        "Geprobt gegen den Releaseplan und die Advisory-Datenbank, die dieser "
-        "Scan benutzt hat, und gegen nichts sonst. Eine seither veröffentlichte "
-        "Version oder Sicherheitsmeldung steckt nicht darin."
+        "Diese Simulation nutzt nur den Releaseplan und die Sicherheitsmeldungs-"
+        "datenbank, die diesem Scan vorlag. Später veröffentlichte Versionen "
+        "oder Meldungen sind nicht enthalten."
     ),
     "result.eol.alert": (
         "Dieses Release erhält keine Sicherheitsfixes mehr. Nichts anderes auf "

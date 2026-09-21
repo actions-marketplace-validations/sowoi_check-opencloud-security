@@ -1538,29 +1538,29 @@ MESSAGES: dict[str, str] = {
         "configuration. They prevent the plan from reaching a higher grade."
     ),
     "result.rehearsal.kicker": "Upgrade rehearsal",
-    "result.rehearsal.heading": "What upgrading would buy you",
+    "result.rehearsal.heading": "What an upgrade would fix",
     "result.rehearsal.lede": (
-        "Every release worth moving to, rated before anybody installs it. An "
-        "upgrade changes the version, not the reverse proxy, so the findings "
-        "on this page stay exactly as this scan measured them."
+        "Each worthwhile release is rated before it is installed. An upgrade "
+        "changes the version, not the reverse proxy, so the findings on this "
+        "page remain exactly as this scan measured them."
     ),
-    "result.rehearsal.line": "line {line}",
+    "result.rehearsal.line": "release line {line}",
     "result.rehearsal.recommended": "recommended",
     "result.rehearsal.eol": "end of life",
     "result.rehearsal.grade": "would reach {label}",
     "result.rehearsal.fixes": "Fixes",
     "result.rehearsal.still": "Still affected by",
     "result.rehearsal.introduces": "Newly affected by",
-    "result.rehearsal.clean": "Clears every advisory this version is affected by.",
-    "result.rehearsal.nothing": "Fixes none of the advisories this version is affected by.",
+    "result.rehearsal.clean": "Clears every advisory affecting this version.",
+    "result.rehearsal.nothing": "Does not clear any advisory affecting this version.",
     "result.rehearsal.capped": (
-        "The version alone would reach {label}; the findings on this page hold "
-        "this upgrade where it is."
+        "The version alone would reach {label}; the findings on this page keep "
+        "the upgrade at its current grade."
     ),
     "result.rehearsal.note": (
-        "Rehearsed against the release schedule and the advisory database this "
-        "scan used, and nothing else. A release or an advisory published since "
-        "is not in it."
+        "This rehearsal uses only the release schedule and advisory database "
+        "available to this scan. It does not include releases or advisories "
+        "published since."
     ),
     "result.eol.alert": (
         "This release no longer receives security fixes. Nothing else on this page "
