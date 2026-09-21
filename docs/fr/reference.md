@@ -613,8 +613,8 @@ healthy instance into `UNKNOWN`.
 
 ## Running the scanner as a service
 
-The package ships a second entry point, `check-opencloud-scanner`. It runs the
-very same scanner, either once or as a service:
+The package ships a second entry point, `check-opencloud-scanner`. It runs
+exactement le même scanner, une fois ou comme service :
 
 ```shell
 # one-shot: print the full result document as JSON
@@ -881,7 +881,7 @@ give: `5` up to date, `4` a patch update pending, `3` a whole release line
 behind, `2` known vulnerabilities, `1` critical or high ones, `0` end of life.
 Failed additional checks then cap it by severity - `critical` to `2`, `high` to
 `3`, `medium` to `4`, `low` to `5`. A check that failed but did not decide the
-outcome is still listed, marked as such, so nothing looks quietly dropped.
+outcome is still listed, marked as such, so no result disappears silently.
 
 Without `--debug` the output stays the size a monitoring system wants. The
 same breakdown is always present in the scan result as `ratingExplanation`, so

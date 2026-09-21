@@ -94,8 +94,8 @@ own track:
 | `4.0.0`   | LTS        | `4.0.8`     | Where the backports are                                       |
 
 The newest release overall is still reported, as `newestRelease` in the JSON
-result and the webhook payload, so nothing is hidden - it is just not
-presented as the thing to install. If the feed reports a newer patch of the
+result and the webhook payload, so nothing is hidden - it is simply not
+presented as the release to install. If the feed reports a newer patch of the
 line you are already on, the feed wins, because it is fresher than the bundled
 schedule.
 

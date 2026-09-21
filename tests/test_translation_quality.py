@@ -58,7 +58,8 @@ AI_SLOP = re.compile(
 # the profile option added to the four installation guides and stay here as
 # a regression check for future generated documentation.
 UNTRANSLATED_GUIDE_SLOP = re.compile(
-    r"\b(?:Named threshold set|judging the result)\b",
+    r"\b(?:Named threshold set|judging the result|One pitfall is easy to miss|"
+    r"very same scanner|nothing looks quietly dropped|it is just not)\b",
     re.IGNORECASE,
 )
 
