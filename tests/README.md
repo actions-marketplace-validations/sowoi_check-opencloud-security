@@ -94,6 +94,7 @@ is needed.
 | [`test_rating_thresholds.py`](test_rating_thresholds.py) | How ratings and thresholds map to Nagios exit codes. |
 | [`test_threshold_profiles.py`](test_threshold_profiles.py) | `--profile`: the named threshold sets decide only how a scan is judged, never how it is probed, and never overrule a flag, an environment variable or a file. |
 | [`test_policy.py`](test_policy.py) | `--policy`: an organization's requirements as a deployment gate - each key passing and failing, that a waiver does not excuse one, and that a broken policy is UNKNOWN rather than a rule that quietly requires nothing. |
+| [`test_policy_gate.py`](test_policy_gate.py) | The same gate in process rather than through the CLI: which result, rating and vulnerabilities the policy is judged against, and the `policy` block the webhook payload carries - the coverage mutation testing can run. |
 | [`test_golden_corpus.py`](test_golden_corpus.py) | The golden corpus: the whole verdict a known instance earns - rating, findings, caps and exit code per threshold set - must not drift without somebody deciding it. |
 | [`test_check_vulnerabilities.py`](test_check_vulnerabilities.py) | The whole check in-process: the alert line, detail lines, perfdata, the baseline and the result payload all receive and print what the scan found. |
 | [`test_perfdata.py`](test_perfdata.py) | Plugin output: perfdata, hardening reporting, formatting. |

@@ -14,6 +14,16 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ### Changed
 
+- **The `--policy` deployment gate is now covered by tests mutation testing
+  can run.** Its behaviour was only ever exercised through the real CLI, which
+  runs the plugin as a subprocess, so mutation testing could delete the scan
+  document, the rating or the vulnerability list that `_apply_policy` is
+  handed - and drop the policy verdict from the webhook payload - without a
+  single test noticing. A violation that should fail a pipeline could have
+  stopped failing it silently. `tests/test_policy_gate.py` now drives the same
+  gate in process and is listed in the mutmut selection; the five surviving
+  mutants it was written for are killed.
+
 - **A result list that no longer lines up with the checks that produced it is
   now an error rather than a shorter report.** Every place the scanner and the
   plugin pair a list of checks with the results `_run_all` returned for them -

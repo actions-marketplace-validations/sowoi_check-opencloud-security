@@ -47,7 +47,19 @@
 <h2 id="1291-this-release">[1.29.1] - this release</h2>
 <h3 id="changed">Changed</h3>
 <ul>
-<li><strong>A result list that no longer lines up with the checks that produced it is
+<li>
+<p><strong>The <code>--policy</code> deployment gate is now covered by tests mutation testing
+  can run.</strong> Its behaviour was only ever exercised through the real CLI, which
+  runs the plugin as a subprocess, so mutation testing could delete the scan
+  document, the rating or the vulnerability list that <code>_apply_policy</code> is
+  handed - and drop the policy verdict from the webhook payload - without a
+  single test noticing. A violation that should fail a pipeline could have
+  stopped failing it silently. <code>tests/test_policy_gate.py</code> now drives the same
+  gate in process and is listed in the mutmut selection; the five surviving
+  mutants it was written for are killed.</p>
+</li>
+<li>
+<p><strong>A result list that no longer lines up with the checks that produced it is
   now an error rather than a shorter report.</strong> Every place the scanner and the
   plugin pair a list of checks with the results <code>_run_all</code> returned for them -
   the exposed paths, the protected endpoints, the debug endpoints and ports,
@@ -59,7 +71,8 @@
   without saying so, which reads as an instance that passed them. The one
   pairing deliberately left lenient is the lifecycle page parser, where the two
   lists come from somebody else's HTML and a tab without a panel must be
-  dropped rather than raise.</li>
+  dropped rather than raise.</p>
+</li>
 </ul>
 <h2 id="1290-2026-09-21">[1.29.0] - 2026-09-21</h2>
 <h3 id="added">Added</h3>
