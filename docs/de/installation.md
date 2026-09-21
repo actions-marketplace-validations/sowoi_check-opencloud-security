@@ -313,6 +313,11 @@ object CheckCommand "check_opencloud_security" {
             value = "$opencloud_critical$"
         }
 
+        "--profile" = {
+            description = "Benanntes Schwellenwertprofil - strict, ops oder lenient - legt nicht selbst gesetzte Bewertungseinstellungen fest (optional)"
+            value = "$opencloud_profile$"
+        }
+
         "--check-hardening" = {
             description = "Also check hardening measures and security headers (optional)"
             set_if = "$opencloud_check_hardening$"
@@ -390,6 +395,10 @@ object CheckCommand "check_opencloud_security_docker" {
         "--critical" = {
             description = "Rating (0-5) at or below which the check is critical (optional)"
             value = "$opencloud_critical$"
+        }
+        "--profile" = {
+            description = "Benanntes Schwellenwertprofil - strict, ops oder lenient - legt nicht selbst gesetzte Bewertungseinstellungen fest (optional)"
+            value = "$opencloud_profile$"
         }
         "--check-hardening" = {
             description = "Also check hardening measures and security headers (optional)"

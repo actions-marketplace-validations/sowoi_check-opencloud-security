@@ -391,6 +391,11 @@ monitorización.</p>
             value = &quot;$opencloud_critical$&quot;
         }
 
+        &quot;--profile&quot; = {
+            description = &quot;Perfil de umbrales con nombre - strict, ops o lenient - fija los ajustes de calificación no establecidos (opcional)&quot;
+            value = &quot;$opencloud_profile$&quot;
+        }
+
         &quot;--check-hardening&quot; = {
             description = &quot;Also check hardening measures and security headers (optional)&quot;
             set_if = &quot;$opencloud_check_hardening$&quot;
@@ -469,6 +474,10 @@ que ejecute el contenedor bajo demanda en lugar de un binario local:</p>
         &quot;--critical&quot; = {
             description = &quot;Rating (0-5) at or below which the check is critical (optional)&quot;
             value = &quot;$opencloud_critical$&quot;
+        }
+        &quot;--profile&quot; = {
+            description = &quot;Perfil de umbrales con nombre - strict, ops o lenient - fija los ajustes de calificación no establecidos (opcional)&quot;
+            value = &quot;$opencloud_profile$&quot;
         }
         &quot;--check-hardening&quot; = {
             description = &quot;Also check hardening measures and security headers (optional)&quot;

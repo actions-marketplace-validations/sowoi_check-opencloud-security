@@ -372,6 +372,11 @@ host(s) instead.</p>
             value = &quot;$opencloud_critical$&quot;
         }
 
+        &quot;--profile&quot; = {
+            description = &quot;Profil de seuils nommé - strict, ops ou lenient - définit les réglages de notation non fixés (facultatif)&quot;
+            value = &quot;$opencloud_profile$&quot;
+        }
+
         &quot;--check-hardening&quot; = {
             description = &quot;Also check hardening measures and security headers (optional)&quot;
             set_if = &quot;$opencloud_check_hardening$&quot;
@@ -448,6 +453,10 @@ and let it run the container on demand instead of a local binary:</p>
         &quot;--critical&quot; = {
             description = &quot;Rating (0-5) at or below which the check is critical (optional)&quot;
             value = &quot;$opencloud_critical$&quot;
+        }
+        &quot;--profile&quot; = {
+            description = &quot;Profil de seuils nommé - strict, ops ou lenient - définit les réglages de notation non fixés (facultatif)&quot;
+            value = &quot;$opencloud_profile$&quot;
         }
         &quot;--check-hardening&quot; = {
             description = &quot;Also check hardening measures and security headers (optional)&quot;

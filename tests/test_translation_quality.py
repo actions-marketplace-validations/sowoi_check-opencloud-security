@@ -53,6 +53,15 @@ AI_SLOP = re.compile(
     re.IGNORECASE,
 )
 
+# These phrases are especially easy to miss because they are valid English,
+# but they are a defect when copied into a translated guide. They came from
+# the profile option added to the four installation guides and stay here as
+# a regression check for future generated documentation.
+UNTRANSLATED_GUIDE_SLOP = re.compile(
+    r"\b(?:Named threshold set|judging the result)\b",
+    re.IGNORECASE,
+)
+
 
 def _ai_slop_hits(value: str) -> list[str]:
     """Return cliché wording found in one visible catalogue string."""
@@ -96,6 +105,20 @@ def test_catalogues_do_not_use_ai_slop_wording():
 def test_ai_slop_detector_catches_typical_cliches(value: str):
     """The guard must fail closed when a known cliché is introduced."""
     assert _ai_slop_hits(value)
+
+
+def test_translated_guides_do_not_keep_known_english_placeholders():
+    """Translated guides must not ship the English source sentence unchanged."""
+    findings = []
+    for locale in checker.GUIDE_LANGUAGES:
+        for path in sorted((REPO_ROOT / "docs" / locale).glob("*.md")):
+            for line_number, line in enumerate(
+                path.read_text(encoding="utf-8").splitlines(), start=1
+            ):
+                for match in UNTRANSLATED_GUIDE_SLOP.finditer(line):
+                    findings.append((locale, path.name, line_number, match.group(0)))
+
+    assert findings == []
 
 
 def test_no_guide_links_to_a_file_that_is_not_there():

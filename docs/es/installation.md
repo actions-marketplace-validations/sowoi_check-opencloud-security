@@ -431,6 +431,11 @@ object CheckCommand "check_opencloud_security" {
             value = "$opencloud_critical$"
         }
 
+        "--profile" = {
+            description = "Perfil de umbrales con nombre - strict, ops o lenient - fija los ajustes de calificación no establecidos (opcional)"
+            value = "$opencloud_profile$"
+        }
+
         "--check-hardening" = {
             description = "Also check hardening measures and security headers (optional)"
             set_if = "$opencloud_check_hardening$"
@@ -515,6 +520,10 @@ object CheckCommand "check_opencloud_security_docker" {
         "--critical" = {
             description = "Rating (0-5) at or below which the check is critical (optional)"
             value = "$opencloud_critical$"
+        }
+        "--profile" = {
+            description = "Perfil de umbrales con nombre - strict, ops o lenient - fija los ajustes de calificación no establecidos (opcional)"
+            value = "$opencloud_profile$"
         }
         "--check-hardening" = {
             description = "Also check hardening measures and security headers (optional)"

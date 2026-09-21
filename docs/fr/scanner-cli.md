@@ -269,7 +269,7 @@ automatically. `-c` names the path instead. It is the same wizard as
 ## Exit codes
 
 These are **not** the plugin's Nagios codes. A `scan` that finds an F-rated
-instance still exits `0`, because judging the result is the plugin's job.
+instance still exits `0`, parce que c’est au plugin d’évaluer le résultat.
 
 | Subcommand | `0` | `1` | `2` | `3` |
 |:--|:--|:--|:--|:--|
