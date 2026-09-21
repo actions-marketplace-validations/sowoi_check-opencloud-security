@@ -12,6 +12,19 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The German, Spanish and French pages no longer drop names the English
+  text uses to say what this is.** The translated "About" paragraph called the
+  plugin a generic monitoring plugin, so a reader of those pages never learned
+  it plugs into Nagios and Icinga, and it also lost the English sentence's
+  point that running it yourself has no rate limit or queue. The German and
+  French descriptions of the method page said "what the scanner checks"
+  without naming an OpenCloud instance, and the Spanish search summary for the
+  API page dropped OpenAPI, Arazzo and MCP - the three things somebody
+  searching for that page is searching for. All four strings now carry the
+  names again; the search index is rebuilt with them.
+
 ## [1.29.1] - 2026-09-21
 
 ### Changed

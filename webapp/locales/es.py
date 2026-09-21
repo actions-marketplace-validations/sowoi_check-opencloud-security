@@ -781,7 +781,7 @@ MESSAGES: dict[str, str] = {
     ),
     "about.project.kicker": "El proyecto",
     "about.project.heading": "Acerca de este escáner",
-    "about.project.body": "Los resultados proceden de <code>check-opencloud-security</code>, un complemento de monitorización con su propia biblioteca de análisis. Puede utilizarlo mediante esta web o ejecutarlo en su equipo.",
+    "about.project.body": "Los resultados proceden de <code>check-opencloud-security</code>, un complemento para Nagios e Icinga con su propia biblioteca de análisis. Puede utilizarlo mediante esta web o ejecutarlo en su equipo sin límite de frecuencia ni cola.",
     "about.project.origin": "<strong>Massoud Ahmed</strong> creó este proyecto para comprobar los canales de versiones, la configuración y las instalaciones de OpenCloud con una herramienta que los administradores pueden ejecutar en sus propios equipos. <a href=\"{project}\" rel=\"noopener noreferrer\">El código fuente y las contribuciones están en GitHub</a>.",
     # ------------------------------------------------------------------- API
     "api.title": "Analizar desde un script o un agente",
@@ -1232,7 +1232,7 @@ MESSAGES: dict[str, str] = {
         "guías de despliegue."
     ),
     "search.page.api.title": "API",
-    "search.page.api.summary": "Enviar análisis, consultar resultados y descargar informes mediante la API o un agente.",
+    "search.page.api.summary": "Enviar análisis, consultar resultados, exportar informes y controlar el servicio desde un agente mediante OpenAPI, Arazzo o MCP.",
     "search.page.privacy.title": "Privacidad",
     "search.page.privacy.summary": (
         "Retención de resultados, registro de solicitudes, límites de "
