@@ -1,6 +1,6 @@
 # ADR 0073: A result fingerprints the configuration it measured
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-09-21
 - Extends: ADR 0013, ADR 0057, ADR 0064, ADR 0066
 
