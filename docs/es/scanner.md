@@ -676,6 +676,31 @@ la clave `coverage`, que es un informe que no dice lo que cubrió y no un
 análisis sin lagunas. Léalo con `coverage.coverage_of(result)`, que devuelve
 `None` tanto para un bloque ausente como para uno mal formado.
 
+### El resumen en una línea {#the-one-line-summary}
+
+`coverage.summary(result)` reduce el bloque a las cuatro cifras que necesita
+quien lo lee, y `coverage.summary_line(result)` las escribe como una frase en
+inglés:
+
+```
+84 checks evaluated, 6 skipped, 2 indeterminate, 1 network-limited
+```
+
+Cada comprobación está en exactamente una de las cuatro. `evaluated` es una
+conclusión, correcta o no; `skipped` es una comprobación que el escáner decidió
+no ejecutar; `indeterminate` es una que se ejecutó y no pudo decidir;
+`networkLimited` se separa de las dos anteriores porque un tiempo de espera
+agotado o una ruta que falta - DNSSEC, un proveedor de identidad externo, un
+extremo opcional - es la laguna que otro punto de observación podría cerrar.
+La frase omite los ceros, pero siempre nombra cuántas comprobaciones se
+evaluaron. Ambas funciones devuelven `None` y `""` para un documento sin bloque
+de cobertura, de modo que "no se pasó nada por alto" y "este informe no lo
+dice" nunca se leen igual.
+
+El complemento imprime la frase como una línea de detalle `Coverage:`, la
+carga útil del webhook lleva las mismas cifras en `coverage` y la aplicación
+web las muestra en *Lo que este análisis no midió*.
+
 ## En qué condiciones se ejecutó un análisis {#the-conditions-a-scan-ran-under}
 
 Dos análisis de la misma instancia pueden diferir sin que la instancia haya

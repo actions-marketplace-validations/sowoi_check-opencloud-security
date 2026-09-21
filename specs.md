@@ -247,6 +247,14 @@ line MAY belong to several tracks.
   `--format`.
 - **E-7** A retired flag MUST be rejected with the name of its replacement.
   Silently ignoring one is worse than not recognising it (`RETIRED_FLAGS`).
+- **E-8** A `--policy` requirement that is not met MUST be CRITICAL, whatever
+  the thresholds decided, and a policy MUST NOT improve a verdict. A waiver
+  MUST NOT excuse a requirement: a waiver is the operator accepting a finding,
+  a policy is the organization refusing to let it be accepted. An unknown key,
+  a `minimum_rating` outside 0-5, or a measure the catalogue does not know
+  MUST be a usage error (UNKNOWN) - for the same reason as E-7, a rule that
+  quietly requires nothing is worse than a rejected one. The policy MUST be
+  read and validated before any host is probed.
 
 
 ## 9. Output (`O`)

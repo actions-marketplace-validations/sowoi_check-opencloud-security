@@ -152,6 +152,46 @@ eingeklammerte IPv6-Adressen und vollständige URLs sind möglich. Bei
 unterschiedlichen Einstellungen je Instanz empfehlen sich getrennte
 [Konfigurationsdateien](../many-instances.md).
 
+## Eine Flotte in einer Tabelle {#reading-a-fleet-in-one-table}
+
+Die Ergebnisblöcke je Host sind für ein Monitoring-System geschrieben, und ein
+Dutzend davon liest sich mühsam. `--format summary` gibt denselben Lauf
+stattdessen als eine ausgerichtete Zeile je Host aus:
+
+```shell
+check-opencloud-security \
+  --host opencloud1.example.com,opencloud2.example.com \
+  --format summary
+```
+
+```text
+HOST                    GRADE  VERSION  EOL   VULNS  NEW
+opencloud1.example.com  A+     7.2.4    no    0      -
+opencloud2.example.com  F      6.9.1    YES   3      -
+
+Checked 2 host(s): overall CRITICAL (1 CRITICAL, 1 OK)
+```
+
+Die Spalten sind die Note, die dieses Plugin vergeben hat, die gemessene
+Version, der Lebenszyklus-Zustand, wie viele Meldungen zutreffen und wie viel
+sich seit der Referenzaufnahme bewegt hat. Die Zeilen behalten die Reihenfolge
+der angegebenen Hosts, und die letzte Zeile ist dieselbe Bilanz, mit der die
+Nagios-Ausgabe beginnt. Der Exit-Code bleibt unverändert - der schlechteste
+Status der Flotte -, also taugt das weiterhin für einen Cronjob, der seine
+Ausgabe verschickt.
+
+`EOL` steht auf `YES` nach dem Support-Ende, auf `soon` innerhalb des Fensters
+von [`--eol-warning-days`](#options) und sonst auf `no`. `NEW` braucht
+[`--baseline`](#options): ohne Referenz steht dort `-`, denn "nichts Neues" und
+"nicht feststellbar" sind verschiedene Antworten. Mit Referenz steht dort `new`
+im Lauf, der die Referenz aufnimmt, und danach `+n` für Befunde, die vorher
+nicht da waren. Ein Host, dessen Scan fehlgeschlagen ist, hat keine Note; in
+seiner Spalte `GRADE` steht stattdessen der Nagios-Status (`UNKNOWN`).
+
+Dieses Format ist für Menschen. Für Maschinen gibt es
+[`json`, `sarif` oder `junit`](#machine-readable-output-for-ci-jsonsarifjunit)
+mit denselben Befunden in auswertbarer Form.
+
 ## Prometheus und Kubernetes {#prometheus-kubernetes-integration}
 
 `--format=prometheus` erzeugt eine einmalige Textausgabe. Der Exporter stellt
@@ -776,8 +816,22 @@ Aktuelle Instanz:
 $ check-opencloud-security -H opencloud.example.com
 OK: Server is up to date. No known vulnerabilities.
 OpenCloud 7.4.0 on opencloud.example.com, rating: A+, last scanned: 2026-05-29 08:50:58.000000
-Additional checks: all passed | rating=5;@0:3;@0:1;0;5 vulnerabilities=0;;;0; time=0.731s;;;0; extra_checks_failed=0;;;0;
+Additional checks: all passed
+Coverage: 84 checks evaluated, 6 skipped, 2 indeterminate, 1 network-limited | rating=5;@0:3;@0:1;0;5 vulnerabilities=0;;;0; time=0.731s;;;0; extra_checks_failed=0;;;0;
 ```
+
+Zwischen den Detailzeilen und den Leistungsdaten sagt eine Zeile `Coverage:`,
+wie viel der Prüfung tatsächlich zu einem Ergebnis kam - `84 checks evaluated,
+6 skipped, 2 indeterminate, 1 network-limited`. Eine bestandene Prüfung und
+eine, die nie lief, hinterlassen sonst dieselbe Spur, also benennt die Zeile
+die Lücken: `skipped` ist eine Prüfung, die der Scan nicht ausgeführt hat,
+`indeterminate` eine, die lief und nichts entscheiden konnte, und
+`network-limited` eine, die in eine Zeitüberschreitung lief oder keine Route
+hatte - DNSSEC, ein externer Identitätsanbieter, ein optionaler Endpunkt -,
+was ein anderer Standort beantworten könnte. Die Zeile ändert weder die Note
+noch den Exit-Code, und ein Ergebnisdokument von vor diesem Block bekommt gar
+keine Zeile, denn "dieser Bericht sagt es nicht" ist nicht "nichts wurde
+übersehen".
 
 Abgelaufenes Release, unabhängig von den Schwellen CRITICAL:
 

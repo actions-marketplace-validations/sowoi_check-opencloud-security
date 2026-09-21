@@ -638,6 +638,31 @@ which is a report that does not say what it covered - not a scan without
 gaps. Read it with `coverage.coverage_of(result)`, which returns `None` for
 both a missing and a malformed block.
 
+### Le résumé en une ligne {#the-one-line-summary}
+
+`coverage.summary(result)` réduit le bloc aux quatre nombres dont une lectrice
+a besoin, et `coverage.summary_line(result)` les écrit en une phrase anglaise :
+
+```
+84 checks evaluated, 6 skipped, 2 indeterminate, 1 network-limited
+```
+
+Chaque vérification se trouve dans exactement l'un des quatre nombres.
+`evaluated` est une conclusion, réussie ou non ; `skipped` est une
+vérification que le scanner a choisi de ne pas lancer ; `indeterminate` est
+une vérification qui s'est exécutée sans pouvoir trancher ; `networkLimited`
+est isolé des deux précédents parce qu'un délai dépassé ou une route absente -
+DNSSEC, un fournisseur d'identité externe, un point d'accès facultatif - est
+la lacune qu'un autre point d'observation pourrait combler. La phrase omet les
+zéros, mais nomme toujours le nombre de vérifications évaluées. Les deux
+fonctions renvoient `None` et `""` pour un document sans bloc de couverture,
+afin que « rien n'a été manqué » et « ce rapport ne le dit pas » ne se lisent
+jamais pareil.
+
+Le greffon imprime la phrase comme une ligne de détail `Coverage:`, la charge
+utile du webhook porte les mêmes nombres sous `coverage`, et l'application web
+les affiche sous *Ce que cette analyse n'a pas mesuré*.
+
 ## The conditions a scan ran under
 
 Two scans of the same instance can disagree without the instance having

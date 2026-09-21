@@ -781,6 +781,25 @@ excuse. The other two always carry one, from a closed set:</p>
 which is a report that does not say what it covered - not a scan without
 gaps. Read it with <code>coverage.coverage_of(result)</code>, which returns <code>None</code> for
 both a missing and a malformed block.</p>
+<h3 id="the-one-line-summary">Le résumé en une ligne</h3>
+<p><code>coverage.summary(result)</code> réduit le bloc aux quatre nombres dont une lectrice
+a besoin, et <code>coverage.summary_line(result)</code> les écrit en une phrase anglaise :</p>
+<pre><code>84 checks evaluated, 6 skipped, 2 indeterminate, 1 network-limited
+</code></pre>
+<p>Chaque vérification se trouve dans exactement l'un des quatre nombres.
+<code>evaluated</code> est une conclusion, réussie ou non ; <code>skipped</code> est une
+vérification que le scanner a choisi de ne pas lancer ; <code>indeterminate</code> est
+une vérification qui s'est exécutée sans pouvoir trancher ; <code>networkLimited</code>
+est isolé des deux précédents parce qu'un délai dépassé ou une route absente -
+DNSSEC, un fournisseur d'identité externe, un point d'accès facultatif - est
+la lacune qu'un autre point d'observation pourrait combler. La phrase omet les
+zéros, mais nomme toujours le nombre de vérifications évaluées. Les deux
+fonctions renvoient <code>None</code> et <code>""</code> pour un document sans bloc de couverture,
+afin que « rien n'a été manqué » et « ce rapport ne le dit pas » ne se lisent
+jamais pareil.</p>
+<p>Le greffon imprime la phrase comme une ligne de détail <code>Coverage:</code>, la charge
+utile du webhook porte les mêmes nombres sous <code>coverage</code>, et l'application web
+les affiche sous <em>Ce que cette analyse n'a pas mesuré</em>.</p>
 <h2 id="the-conditions-a-scan-ran-under">The conditions a scan ran under</h2>
 <p>Two scans of the same instance can disagree without the instance having
 changed: the advisory database learned a CVE, a support window closed, the

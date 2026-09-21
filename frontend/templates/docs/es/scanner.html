@@ -819,6 +819,25 @@ excusa. Las otras dos llevan siempre uno, de un conjunto cerrado:</p>
 la clave <code>coverage</code>, que es un informe que no dice lo que cubrió y no un
 análisis sin lagunas. Léalo con <code>coverage.coverage_of(result)</code>, que devuelve
 <code>None</code> tanto para un bloque ausente como para uno mal formado.</p>
+<h3 id="the-one-line-summary">El resumen en una línea</h3>
+<p><code>coverage.summary(result)</code> reduce el bloque a las cuatro cifras que necesita
+quien lo lee, y <code>coverage.summary_line(result)</code> las escribe como una frase en
+inglés:</p>
+<pre><code>84 checks evaluated, 6 skipped, 2 indeterminate, 1 network-limited
+</code></pre>
+<p>Cada comprobación está en exactamente una de las cuatro. <code>evaluated</code> es una
+conclusión, correcta o no; <code>skipped</code> es una comprobación que el escáner decidió
+no ejecutar; <code>indeterminate</code> es una que se ejecutó y no pudo decidir;
+<code>networkLimited</code> se separa de las dos anteriores porque un tiempo de espera
+agotado o una ruta que falta - DNSSEC, un proveedor de identidad externo, un
+extremo opcional - es la laguna que otro punto de observación podría cerrar.
+La frase omite los ceros, pero siempre nombra cuántas comprobaciones se
+evaluaron. Ambas funciones devuelven <code>None</code> y <code>""</code> para un documento sin bloque
+de cobertura, de modo que "no se pasó nada por alto" y "este informe no lo
+dice" nunca se leen igual.</p>
+<p>El complemento imprime la frase como una línea de detalle <code>Coverage:</code>, la
+carga útil del webhook lleva las mismas cifras en <code>coverage</code> y la aplicación
+web las muestra en <em>Lo que este análisis no midió</em>.</p>
 <h2 id="the-conditions-a-scan-ran-under">En qué condiciones se ejecutó un análisis</h2>
 <p>Dos análisis de la misma instancia pueden diferir sin que la instancia haya
 cambiado: la base de datos de avisos aprendió un CVE, se cerró una ventana de

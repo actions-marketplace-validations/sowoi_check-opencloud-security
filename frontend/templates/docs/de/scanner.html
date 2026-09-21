@@ -681,6 +681,25 @@ Schlüssel <code>coverage</code> - ein Bericht, der nicht sagt, was er abgedeckt
 nicht ein Scan ohne Lücken. Lies ihn mit <code>coverage.coverage_of(result)</code>, das
 sowohl für einen fehlenden als auch für einen fehlerhaften Block <code>None</code>
 zurückgibt.</p>
+<h3 id="the-one-line-summary">Die Zusammenfassung in einer Zeile</h3>
+<p><code>coverage.summary(result)</code> verdichtet den Block auf die vier Zahlen, die eine
+Leserin braucht, und <code>coverage.summary_line(result)</code> schreibt sie als einen
+englischen Satz:</p>
+<pre><code>84 checks evaluated, 6 skipped, 2 indeterminate, 1 network-limited
+</code></pre>
+<p>Jede Prüfung steckt in genau einer der vier Zahlen. <code>evaluated</code> ist ein
+Ergebnis, bestanden oder nicht; <code>skipped</code> ist eine Prüfung, die der Scanner
+nicht ausgeführt hat; <code>indeterminate</code> ist eine, die lief und nichts entscheiden
+konnte; <code>networkLimited</code> ist aus den beiden letzten herausgelöst, weil eine
+Zeitüberschreitung oder eine fehlende Route - DNSSEC, ein externer
+Identitätsanbieter, ein optionaler Endpunkt - die Lücke ist, die ein anderer
+Standort schließen könnte. Nullen lässt der Satz weg, die Zahl der
+ausgewerteten Prüfungen nennt er immer. Beide Funktionen geben für ein Dokument
+ohne Abdeckungsblock <code>None</code> beziehungsweise <code>""</code> zurück, damit "nichts wurde
+übersehen" und "dieser Bericht sagt es nicht" nie gleich klingen.</p>
+<p>Das Plugin gibt den Satz als Detailzeile <code>Coverage:</code> aus, die Webhook-Nutzlast
+trägt dieselben Zahlen unter <code>coverage</code>, und die Weboberfläche zeigt sie unter
+<em>Was dieser Scan nicht gemessen hat</em>.</p>
 <h2 id="the-conditions-a-scan-ran-under">Unter welchen Bedingungen ein Scan lief</h2>
 <p>Zwei Scans derselben Instanz können sich unterscheiden, ohne dass sich die
 Instanz geändert hat: Die Advisory-Datenbank hat eine CVE dazugelernt, ein

@@ -530,6 +530,31 @@ nicht ein Scan ohne Lücken. Lies ihn mit `coverage.coverage_of(result)`, das
 sowohl für einen fehlenden als auch für einen fehlerhaften Block `None`
 zurückgibt.
 
+### Die Zusammenfassung in einer Zeile {#the-one-line-summary}
+
+`coverage.summary(result)` verdichtet den Block auf die vier Zahlen, die eine
+Leserin braucht, und `coverage.summary_line(result)` schreibt sie als einen
+englischen Satz:
+
+```
+84 checks evaluated, 6 skipped, 2 indeterminate, 1 network-limited
+```
+
+Jede Prüfung steckt in genau einer der vier Zahlen. `evaluated` ist ein
+Ergebnis, bestanden oder nicht; `skipped` ist eine Prüfung, die der Scanner
+nicht ausgeführt hat; `indeterminate` ist eine, die lief und nichts entscheiden
+konnte; `networkLimited` ist aus den beiden letzten herausgelöst, weil eine
+Zeitüberschreitung oder eine fehlende Route - DNSSEC, ein externer
+Identitätsanbieter, ein optionaler Endpunkt - die Lücke ist, die ein anderer
+Standort schließen könnte. Nullen lässt der Satz weg, die Zahl der
+ausgewerteten Prüfungen nennt er immer. Beide Funktionen geben für ein Dokument
+ohne Abdeckungsblock `None` beziehungsweise `""` zurück, damit "nichts wurde
+übersehen" und "dieser Bericht sagt es nicht" nie gleich klingen.
+
+Das Plugin gibt den Satz als Detailzeile `Coverage:` aus, die Webhook-Nutzlast
+trägt dieselben Zahlen unter `coverage`, und die Weboberfläche zeigt sie unter
+*Was dieser Scan nicht gemessen hat*.
+
 ## Unter welchen Bedingungen ein Scan lief {#the-conditions-a-scan-ran-under}
 
 Zwei Scans derselben Instanz können sich unterscheiden, ohne dass sich die

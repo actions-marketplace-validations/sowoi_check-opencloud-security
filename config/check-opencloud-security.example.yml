@@ -41,6 +41,12 @@ backoff_factor: 0.5
 # changes what is probed. Anything written explicitly wins over it.
 # profile: ops
 
+# What this organization requires of every instance, as opposed to what this
+# monitoring system alerts on. Anything the policy asks for that the instance
+# does not meet is CRITICAL, whatever the thresholds below say, and a waiver
+# does not excuse it. See config/policy.example.yml.
+# policy: /etc/check-opencloud-security/policy.yml
+
 warning: 3                       # rating <= 3 (C) -> WARNING
 critical: 1                      # rating <= 1 (E) -> CRITICAL
 check_hardening: true

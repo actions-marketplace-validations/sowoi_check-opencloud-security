@@ -14,7 +14,19 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ### Added
 
-- **`--format summary` reads a whole fleet at a glance.** Checking a dozen
+- **`--policy` fails a deployment on explicit requirements, not on a grade.**
+  `-w`/`-c` and `--profile` judge an instance by its rating, which is the
+  wrong shape for a CI gate: a team that requires HTTPS enforcement and no
+  demo accounts cannot express that as a number. A policy file states it
+  directly - `minimum_rating`, `required_hardenings` and `forbidden` (a
+  missing measure, a failed check or a vulnerability id) - and anything it
+  asks for that an instance does not meet ends the run CRITICAL. A policy
+  only ever makes a verdict worse, a waiver does not excuse a requirement,
+  and an unknown key or measure is a usage error rather than a rule that
+  quietly requires nothing. `--format json` and the webhook payload carry the
+  verdict under `policy`. See [CI policy mode](README.md#ci-policy-mode) and
+  [`config/policy.example.yml`](config/policy.example.yml).
+- **`--format summary` reads a whole fleet in one table.** Checking a dozen
   instances printed a dozen result blocks written for a monitoring system,
   which is a lot to read when the question is just "which of these needs me
   today". The new format prints one aligned row per host instead - host,
@@ -24,7 +36,7 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   unchanged, so it works from a cron job that mails its output. The `NEW`
   column distinguishes "no baseline given" (`-`) from "no new findings" (`0`),
   and a host whose scan failed shows its Nagios status where the grade would
-  be. See [Reading a fleet at a glance](README.md#reading-a-fleet-at-a-glance).
+  be. See [Reading a fleet in one table](README.md#reading-a-fleet-in-one-table).
 - **The output says how much it could actually measure.** A check that
   passed and one that never ran left the same trace in the plugin's output -
   nothing - so the plugin now prints a `Coverage:` line such as `84 checks
