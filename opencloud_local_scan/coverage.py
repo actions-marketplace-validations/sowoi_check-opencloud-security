@@ -160,7 +160,7 @@ class CoverageRecorder:
 
     def counts(self) -> dict[str, int]:
         """How many checks are in each state, and how many there are."""
-        counts = {state: 0 for state in (PASSED, FAILED, NOT_CHECKED, INCONCLUSIVE)}
+        counts = dict.fromkeys((PASSED, FAILED, NOT_CHECKED, INCONCLUSIVE), 0)
         for entry in self.entries.values():
             counts[entry.state] += 1
         counts["total"] = len(self.entries)

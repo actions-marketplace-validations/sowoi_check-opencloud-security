@@ -3391,7 +3391,7 @@ def _run_multi_host_checks(hosts: list[str], args: argparse.Namespace) -> Nagios
     with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="opencloud-host") as pool:
         results = list(pool.map(_run, contexts))
 
-    blocks = [f"[{host}]\n{message}" for host, (message, _, _) in zip(hosts, results)]
+    blocks = [f"[{host}]\n{message}" for host, (message, _, _) in zip(hosts, results, strict=True)]
     exit_codes = [exit_code for _, exit_code, _ in results]
 
     print(_summarize_multi_host_result(exit_codes))
@@ -3766,7 +3766,7 @@ def _render_checkmk(
     what this run found.
     """
     lines: list[str] = []
-    for document, exit_code in zip(documents, exit_codes):
+    for document, exit_code in zip(documents, exit_codes, strict=True):
         payload = document["payload"]
         summary = _safe_monitoring_text(payload.get("message") or "")
         details = [
@@ -3876,7 +3876,7 @@ def _render_summary(
     """
     rows = [
         _summary_row(document, exit_code)
-        for document, exit_code in zip(documents, exit_codes)
+        for document, exit_code in zip(documents, exit_codes, strict=True)
     ]
     widths = [
         max(len(row[column]) for row in (_SUMMARY_HEADERS, *rows))

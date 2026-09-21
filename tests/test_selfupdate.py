@@ -178,8 +178,8 @@ def test_a_dry_run_changes_nothing_but_still_names_the_command(monkeypatch):
     pretend_installed_at(
         monkeypatch, "/home/u/.local/pipx/venvs/check-opencloud-security/x.py"
     )
-    ran = []
-    monkeypatch.setattr(selfupdate, "run_upgrade", lambda plan: ran.append(plan))
+    ran: list[selfupdate.UpgradePlan] = []
+    monkeypatch.setattr(selfupdate, "run_upgrade", ran.append)
     said: list[str] = []
 
     code = selfupdate.upgrade_self(dry_run=True, version="1.2.3", output=said.append)

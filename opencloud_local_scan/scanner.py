@@ -1473,7 +1473,7 @@ def _csp_restricts_framing(value: str | None) -> bool:
 def _check_headers(response: requests.Response | None) -> dict[str, bool]:
     """Evaluate the security headers OpenCloud sets by default."""
     if response is None:
-        return {name: False for name in SCAN_HEADERS}
+        return dict.fromkeys(SCAN_HEADERS, False)
 
     result: dict[str, bool] = {}
     for name in SCAN_HEADERS:
@@ -1509,7 +1509,7 @@ def _check_advisory_headers(response: requests.Response | None) -> dict[str, boo
     keeping out of a line that is supposed to list what went wrong here.
     """
     if response is None:
-        return {name: False for name in ADVISORY_HEADERS}
+        return dict.fromkeys(ADVISORY_HEADERS, False)
 
     result: dict[str, bool] = {}
     for name in ADVISORY_HEADERS:
@@ -2305,7 +2305,7 @@ def _demo_user_finding(
 
     accepted = [
         username
-        for (username, _), response in zip(DEMO_USERS, responses)
+        for (username, _), response in zip(DEMO_USERS, responses, strict=True)
         if _demo_login_succeeded(response)
     ]
     if accepted:
@@ -2362,7 +2362,7 @@ def _exposed_path_findings(probe: _Probe) -> list[Finding]:
         ],
     )
     findings: list[Finding] = []
-    for (path, severity), response in zip(EXPOSED_PATHS, responses):
+    for (path, severity), response in zip(EXPOSED_PATHS, responses, strict=True):
         if response is None:
             findings.append(Finding(f"exposed:{path}", severity, True, "Not reachable"))
             continue
@@ -2508,7 +2508,7 @@ def _authentication_findings(probe: _Probe) -> list[Finding]:
         ],
     )
     findings: list[Finding] = []
-    for (path, severity), response in zip(PROTECTED_ENDPOINTS, responses):
+    for (path, severity), response in zip(PROTECTED_ENDPOINTS, responses, strict=True):
         if response is None:
             findings.append(
                 Finding(f"authentication:{path}", severity, True, "Endpoint not reachable")
@@ -2613,7 +2613,7 @@ def _debug_endpoint_findings(probe: _Probe) -> list[Finding]:
         + [partial(probe.get, path, allow_redirects=False) for path in DEBUG_ENDPOINTS],
     )
     findings: list[Finding] = []
-    for path, response in zip(DEBUG_ENDPOINTS, responses):
+    for path, response in zip(DEBUG_ENDPOINTS, responses, strict=True):
         if response is None:
             findings.append(
                 Finding(f"debugEndpoint:{path}", "high", True, "Not reachable")
@@ -2661,7 +2661,7 @@ def _debug_port_findings(hostname: str, settings: ScannerSettings) -> list[Findi
 
     states = _run_all(settings, [partial(reachable, port) for port in configured])
     findings: list[Finding] = []
-    for port, is_reachable in zip(configured, states):
+    for port, is_reachable in zip(configured, states, strict=True):
         service = names.get(port, "service")
         findings.append(
             Finding(

@@ -245,7 +245,10 @@ def test_a_waiver_option_can_be_found_by_its_identifier_or_its_title():
         page,
     )
     assert identifiers, "every option still submits under the one field name"
-    assert all(name.lower() in haystack for name, haystack in zip(identifiers, options))
+    assert all(
+        name.lower() in haystack
+        for name, haystack in zip(identifiers, options, strict=True)
+    )
 
 
 def test_the_search_field_is_hidden_until_its_script_reveals_it():

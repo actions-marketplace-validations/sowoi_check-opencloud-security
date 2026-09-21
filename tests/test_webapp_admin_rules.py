@@ -165,7 +165,7 @@ def test_the_rating_section_carries_the_scanners_own_ceilings():
     page = _page()
 
     assert 'id="admin-rules-rating"' in page
-    for _, cap, label in severity_caps():
+    for _, _cap, label in severity_caps():
         assert f"at best <strong>{label}</strong>" in page
 
 

@@ -1,6 +1,6 @@
 [project]
 name = "check-opencloud-security"
-version = "1.29.0"
+version = "1.29.1"
 description = "Check the security level of your OpenCloud instance with a built-in scanner - no API access required"
 authors = [{ name = "Massoud Ahmed" }]
 requires-python = ">=3.10"
@@ -166,6 +166,7 @@ pytest_add_cli_args_test_selection = [
     "tests/test_upgrade_rehearsal.py",
     "tests/test_verify_remediation.py",
     "tests/test_threshold_profiles.py",
+    "tests/test_policy_gate.py",
 ]
 also_copy = ["tests", "webapp", "frontend", "docker", "authentik", "docs", "security", "README.md", "CHANGELOG.md"]
 

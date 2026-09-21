@@ -232,7 +232,7 @@ async def add_exclusion(
             "admin.blocklist.error.full",
         )
     LOGGER.info("admin_blocklist op=add entries=%d", len(current.stored) + 1)
-    return await _write(backend, settings, current.stored + (candidate,))
+    return await _write(backend, settings, (*current.stored, candidate))
 
 
 async def remove_exclusion(
