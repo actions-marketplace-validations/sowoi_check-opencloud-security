@@ -66,7 +66,7 @@ return `409` until the scan has completed. Use the Arazzo workflow rather than
 inventing a polling or retry policy.
 
 The task-level MCP tools are `scan_instance`, `scan_instances`,
-`get_scan_result`, `plan_remediation`, `export_scan`, and
+`get_scan_result`, `plan_remediation`, `compare_scans`, `export_scan`, and
 `erase_instance_data`. The last is destructive and requires the same
 operator authorisation as the HTTP erasure endpoint. MCP and browser WebMCP
 execute the public API; they do not bypass SSRF protection, rate limits,

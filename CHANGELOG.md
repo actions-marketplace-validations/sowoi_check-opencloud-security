@@ -14,6 +14,17 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ### Fixed
 
+- **`/llms.txt` and `/llms-full.txt` described an older version of the
+  service.** They are the map an agent reads before deciding what this
+  service can do, and four of their facts had fallen behind the code:
+  `/mcp` was described as six tools and six prompts where it registers seven
+  of each, `compare_scans` was missing from the tool list in the long form,
+  the export formats omitted `html`, and the endpoint summary never mentioned
+  `GET /api/scans/{uuid}/badge.svg`. An agent that trusts the map would have
+  concluded the badge and the HTML export do not exist. All four now match
+  what `webapp/mcp_server.py`, `wf.EXPORT_FORMATS` and `webapp/openapi.py`
+  actually serve.
+
 - **The German, Spanish and French pages no longer drop names the English
   text uses to say what this is.** The translated "About" paragraph called the
   plugin a generic monitoring plugin, so a reader of those pages never learned
