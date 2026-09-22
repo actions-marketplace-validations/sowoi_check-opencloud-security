@@ -5,11 +5,12 @@ services](../README.md#running-the-scanner-as-a-service) lorsque plusieurs conso
 résultat partagé. Ce sont des options indépendantes; un CronJob est suffisant pour la plupart des programmes
 des vérifications.
 
-The image is built from this repository; see
-[Docker](installation.md#docker). Push it to your own registry and replace
-`registry.example.com/check-opencloud-security:1.1.0` below. Pin a tag rather
-than using `latest`: the release schedule and the newest known OpenCloud
-version ship *inside* the image, so which tag you run is part of the verdict.
+L'image est construite depuis ce dépôt ; voir
+[Docker](installation.md#docker). Publiez-la dans votre registre et remplacez
+`registry.example.com/check-opencloud-security:1.1.0` ci-dessous. Utilisez un
+tag fixe plutôt que `latest` : le calendrier des versions et la dernière
+version OpenCloud connue sont intégrés à l'image, donc le tag exécuté fait
+partie du résultat.
 
 <!-- TOC -->
 * [Kubernetes](#kubernetes)
@@ -24,7 +25,8 @@ version ship *inside* the image, so which tag you run is part of the verdict.
 
 [`contrib/helm/check-opencloud-security`](../../contrib/helm/check-opencloud-security)
 packages both of the manifests below. Install it from a checkout - it is not
-published to a registry, and reading what it will create is part of the point:
+publié dans un registre, et l'examen des objets rendus avant l'installation
+fait partie du contrôle de sécurité :
 
 ```shell
 helm install opencloud-security contrib/helm/check-opencloud-security \
@@ -44,11 +46,11 @@ omits one is refused rather than rendered:
 | `scanService.existingSecret` | An untokened scan service scans any host anyone who reaches the pod names |
 | `scanService.networkPolicy.allowedTargets` | A policy with no egress rule is a different policy, not an unfinished one |
 
-Every credential is read from a `Secret` you created and named; the chart
-writes none, because a values file is committed and copied while a token in
-one is not easily unremembered. The
-[chart's README](../../contrib/helm/check-opencloud-security/README.md) has the
-full value table.
+Chaque identifiant est lu dans un `Secret` que vous avez créé et nommé ; le
+chart n'en écrit aucun, car un fichier de valeurs peut être copié avec le
+projet et un jeton qui s'y trouve aussi. Le
+[README du chart](../../contrib/helm/check-opencloud-security/README.md)
+contient le tableau complet des valeurs.
 
 The rest of this page is what the chart renders, for anyone who would rather
 apply the YAML directly or read it before installing.

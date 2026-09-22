@@ -12,6 +12,12 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Sloppy generated wording was removed from the translated documentation.**
+  The translation-quality regression tests now cover vague and nonsensical
+  promotional phrases and awkward literal translations.
+
 ## [1.29.2] - 2026-09-22
 
 ### Fixed

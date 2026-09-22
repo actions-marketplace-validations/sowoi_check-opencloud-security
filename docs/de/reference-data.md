@@ -161,7 +161,7 @@ Bei diesen Optionen entfällt die Signaturprüfung mit einem ausdrücklichen Hin
 ## Weitere Hinweise {#points-worth-knowing}
 
 - Der Refresh ändert ausschließlich Daten. Neue Prüfungen und Bewertungsregeln benötigen weiterhin ein Paketupdate.
-- Eine leere Liste `vulnerabilities` bedeutet nur, dass kein konfigurierter Datenbankeintrag zur Version passt. Sie ist kein Nachweis umfassender Sicherheit.
+- Eine leere Liste `vulnerabilities` bedeutet nur, dass kein konfigurierter Datenbankeintrag zur Version passt. Sie ist kein Beleg dafür, dass die Version sicher ist.
 - Aktualisiere die Dateien, die der Check tatsächlich liest. Das Standardziel liegt im Home-Verzeichnis des ausführenden Benutzers.
 - Die [Webanwendung](../webapp.md) nutzt eigene Aktualisierungen in ihrem laufenden Betrieb.
 

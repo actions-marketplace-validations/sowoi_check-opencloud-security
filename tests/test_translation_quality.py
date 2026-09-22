@@ -49,7 +49,9 @@ AI_SLOP = re.compile(
     r"sin fisuras|puntero|de vanguardia|cabe destacar|en el mundo actual|"
     r"descubre|sans effort|révolutionnaire|à la pointe|il est important de|"
     r"dans le monde actuel|découvrez|simplemente no es la más reciente|"
-    r"simplemente no frenaron la calificación"
+    r"simplemente no frenaron la calificación|"
+    r"comprehensive security|umfassende sicherheit|"
+    r"not easily unremembered|part of the point|worth relying on"
     r")\b",
     re.IGNORECASE,
 )
@@ -121,6 +123,10 @@ def test_handwritten_guides_and_templates_do_not_use_ai_slop_wording():
         "Une solution robuste et à la pointe.",
         "Siguieron fallando. Simplemente no frenaron la calificación.",
         "La versión simplemente no es la más reciente.",
+        "This is not easily unremembered.",
+        "Reading the rendered objects is part of the point.",
+        "Two properties are worth relying on.",
+        "Kein Nachweis umfassende Sicherheit.",
     ],
 )
 def test_ai_slop_detector_catches_typical_cliches(value: str):

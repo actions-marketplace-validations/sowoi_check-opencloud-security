@@ -24,7 +24,8 @@ version ship *inside* the image, so which tag you run is part of the verdict.
 
 [`contrib/helm/check-opencloud-security`](../contrib/helm/check-opencloud-security)
 packages both of the manifests below. Install it from a checkout - it is not
-published to a registry, and reading what it will create is part of the point:
+published to a registry; reviewing the rendered objects before installing is
+part of the safety check:
 
 ```shell
 helm install opencloud-security contrib/helm/check-opencloud-security \
@@ -45,8 +46,8 @@ omits one is refused rather than rendered:
 | `scanService.networkPolicy.allowedTargets` | A policy with no egress rule is a different policy, not an unfinished one |
 
 Every credential is read from a `Secret` you created and named; the chart
-writes none, because a values file is committed and copied while a token in
-one is not easily unremembered. The
+writes none, because a values file can be committed and copied while a token
+in it can be copied too. The
 [chart's README](../contrib/helm/check-opencloud-security/README.md) has the
 full value table.
 
