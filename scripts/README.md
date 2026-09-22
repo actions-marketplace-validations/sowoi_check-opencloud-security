@@ -7,6 +7,7 @@ published material. Run them from the repository root.
 |:--|:--|
 | `build_frontend_documentation.py` | Generates `frontend/templates/docs/` from English operator Markdown and `docs/de/`. Use `--check` in CI. |
 | `build_search_index.py` | Generates the localized public search indexes. It only reads the public-page manifest. |
+| `update_page_revisions.py` | Records each public page's `<lastmod>` for `sitemap.xml` next to a digest of its template, so a date moves only when the page really changed and not on every release. Use `--check` in CI. |
 | `build_distro_packages.py` | Builds the `.deb` and the `.rpm` from the already-built wheel, using `packaging/nfpm.yaml`. Needs `nfpm` on `PATH`. See [ADR 0039](../adr/0039-the-plugin-ships-as-a-distribution-package-built-from-the-wheel.md). |
 | `build_web_bundle.py` | Builds `dist/check_opencloud_security_web.tar.gz` and its checksum for a web-service release. |
 | `check_pull_request.py` | Refuses a pull request without an Unreleased `CHANGELOG.md` entry, or with a version change that is not forward, already tagged or misnamed in its commit subject. A local check before opening a pull request; no workflow runs it. |

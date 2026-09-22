@@ -683,7 +683,7 @@ MESSAGES: dict[str, str] = {
     "catalogue.advisories.unfixed": "Noch keine Korrektur veröffentlicht",
     # -------------------------------------------------- how the scan works
     "how.title": "Wie der Scan funktioniert",
-    "how.description": "Welche Informationen der Scanner prüft und wie aus der Anfrage ein Bericht entsteht.",
+    "how.description": "Was der Scanner auf einer OpenCloud-Instanz prüft und wie aus der Anfrage ein Bericht entsteht.",
     "how.kicker": "Prüfumfang und Ablauf",
     "how.lede": "Der Scanner verbindet sich direkt mit der eingegebenen Adresse und wertet die Antworten selbst aus. Er prüft Informationen, die ohne Benutzerkonto zugänglich sind, und bewertet die installierte Version anhand seiner Release- und Schwachstellendaten.",
     "how.tests.heading": "Was geprüft wird",
@@ -781,7 +781,7 @@ MESSAGES: dict[str, str] = {
     ),
     "about.project.kicker": "Das Projekt",
     "about.project.heading": "Über diesen Scanner",
-    "about.project.body": "Die Ergebnisse stammen aus <code>check-opencloud-security</code>, einem Monitoring-Plugin mit eigener Scanner-Bibliothek. Du kannst es über diese Website oder lokal auf deinem Rechner verwenden.",
+    "about.project.body": "Die Ergebnisse stammen aus <code>check-opencloud-security</code>, einem Plugin für Nagios und Icinga mit eigener Scanner-Bibliothek. Du kannst es über diese Website oder lokal auf deinem Rechner ohne Ratenbegrenzung und Warteschlange verwenden.",
     "about.project.origin": "<strong>Massoud Ahmed</strong> hat das Projekt entwickelt, um OpenClouds Release-Kanäle, Einstellungen und typische Installationen mit einem lokal ausführbaren Scanner zu prüfen. <a href=\"{project}\" rel=\"noopener noreferrer\">Quellcode und Beiträge findest du auf GitHub</a>.",
     # ------------------------------------------------------------------- API
     "api.title": "Scannen per Skript oder Agent",

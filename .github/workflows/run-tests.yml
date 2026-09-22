@@ -69,6 +69,11 @@ jobs:
       # Structural only. The prose heuristics in the same script are
       # warnings for a reviewer, and `--check` prints just the errors that
       # break a page or a format string. See TRANSLATING.md.
+      # A sitemap date must belong to the page, not to the release: this
+      # fails when a public template was edited without re-recording it.
+      - name: Check the sitemap page revisions
+        run: uv run python scripts/update_page_revisions.py --check
+
       - name: Check the translated catalogues and guides
         run: uv run python scripts/check_translations.py --check
 

@@ -9,7 +9,7 @@
 - [/.well-known/ai.json](/.well-known/ai.json): Machine discovery for API, workflows, and Model Context Protocol (MCP) endpoints.
 - [/openapi.json](/openapi.json): OpenAPI 3.1 specification for operations and schemas.
 - [/arazzo.json](/arazzo.json): Arazzo specification for async scanning, polling, export, and erasure workflows.
-- [/mcp](/mcp): Server-side MCP endpoint (when enabled). Six task tools, six prompts, and five resources - three specifications plus a two-part knowledge base, `catalogue` and `advisories` (see below).
+- [/mcp](/mcp): Server-side MCP endpoint (when enabled). Seven task tools, seven prompts, and five resources - three specifications plus a two-part knowledge base, `catalogue` and `advisories` (see below).
 - [/catalogue](/catalogue): The human-readable page the two knowledge-base resources are built from.
 
 ## API Operations Summary
@@ -17,7 +17,8 @@
 - `POST /api/scans`: Queue a single scan (`target_url`, `ignore_hardenings`, `release_track`, `output_format`).
 - `POST /api/scans/batch`: Queue multiple scan targets using identical options.
 - `GET /api/scans/{uuid}`: Poll scan status and fetch structured results.
-- `GET /api/scans/{uuid}/export/{format}`: Export report in `json`, `csv`, `sarif`, or `pdf`.
+- `GET /api/scans/{uuid}/export/{format}`: Export report in `json`, `csv`, `sarif`, `pdf`, or `html`.
+- `GET /api/scans/{uuid}/badge.svg`: One finished scan as an SVG grade badge.
 - `DELETE /api/purge?target=...`: Trigger operator-authorized data erasure (when enabled).
 
 ## Key Parameters & Behavior
