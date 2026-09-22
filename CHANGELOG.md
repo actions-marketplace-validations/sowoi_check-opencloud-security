@@ -82,7 +82,7 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ### Fixed
 
-- **Sloppy generated wording was removed from the English, German and French
+- **Sloppy generated wording was removed from the English, German and French<
   documentation.** Replaced vague promotional phrases and awkward literal
   translations in the Kubernetes, scanner and reference-data guides, rebuilt
   their frontend pages, and expanded the translation-quality tests with
