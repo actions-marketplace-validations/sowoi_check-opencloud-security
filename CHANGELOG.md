@@ -12,6 +12,8 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+## [1.29.3] - 2026-09-22
+
 ### Fixed
 
 - **Sloppy generated wording was removed from the English, German and French
