@@ -890,6 +890,21 @@ existing summary, and <code>--format json</code> carries them as <code>explanati
 the reference data differed; it does not establish that it caused any
 particular grade to move, and the sentence says so. Several changes may
 contribute without one being chosen as <em>the</em> cause.</p>
+<p><code>--format json</code> also carries <code>findings</code>, one entry per finding in either
+document, with the severity, the waiver state and the category on each side,
+and <code>severityTotals</code>, the failing findings counted by severity before and
+after. That is what <code>opencloud_local_scan.findings</code> computes and what the
+<code>~</code> lines and <code>--format side-by-side</code> render. It keeps what the set of
+failing names throws away: a finding that stayed open and moved from <code>high</code>
+to <code>critical</code> is not a change to that set, and is a change to the rating it
+caps.</p>
+<p>A side is <code>null</code> where the document did not record that finding at all, and
+the status says <code>appeared</code> or <code>disappeared</code> rather than <code>introduced</code> or
+<code>resolved</code> - absent is not passing (<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0064-a-scan-records-what-it-did-not-measure.md">ADR
+0064</a>). Severities are
+read from the documents and held to <code>critical</code>, <code>high</code>, <code>medium</code>, <code>low</code>,
+<code>unknown</code>; an archived report is evidence about when it was written, so the
+current catalogue never overrides it.</p>
 <p><code>limitations</code> lists what the comparison could not establish - most often that
 one of the two reports predates these blocks, and so cannot say what it was
 judged against or how much of it ran. That is reported rather than assumed.</p>

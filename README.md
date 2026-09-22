@@ -472,7 +472,10 @@ artifact.
   [Webhook notifications](#webhook-notifications), one object per host.
 - `sarif` is SARIF 2.1.0, for a code-scanning dashboard. Its findings come from
   the same facts as the plugin's own text output, so a SARIF result never says
-  anything the Nagios line would not.
+  anything the Nagios line would not. Each one carries the catalogue's
+  remediation sentence and documentation link, its severity and category, the
+  release range an advisory affects, and a fingerprint that keeps one finding
+  one alert across runs.
 - `junit` is JUnit XML with one `<testsuite>` per host and one `<testcase>` per
   finding, plus an always-present `rating` case so a clean host still shows up.
 

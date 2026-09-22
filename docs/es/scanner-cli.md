@@ -120,8 +120,9 @@ Hardening: + Content-Security-Policy
 Rating: A+ (5) -> D (2)
 ```
 
-Lee dos archivos y no analiza nada. `+` marca un hallazgo que ha aparecido, y
-`-` uno que se ha resuelto. También notifica cualquier cambio en la nota, la
+Lee dos archivos y no analiza nada. `+` marca un hallazgo que ha aparecido,
+`-` uno que se ha resuelto y `~` uno que sigue abierto pero cuya gravedad ha
+cambiado. También notifica cualquier cambio en la nota, la
 versión y el horizonte de soporte. Responde a "¿ha funcionado la corrección?"
 y "¿qué ha cambiado la actualización?" sin mantener un archivo de línea base.
 Para una comprobación que recuerda por sí misma su última ejecución, consulte
@@ -131,8 +132,11 @@ Para una comprobación que recuerda por sí misma su última ejecución, consult
 |:--|:--|
 | `--format text` | Líneas legibles, como arriba. Es el valor predeterminado |
 | `--format markdown` | Una tabla Markdown, para una incidencia o un comentario en una pull request |
+| `--format side-by-side` | Los dos análisis en dos columnas, un hallazgo por fila |
 | `--format json` | La comparación estructurada que lleva el webhook del complemento |
 | `--format slack` | JSON de Slack Block Kit |
+| `--category NOMBRE` | Mostrar solo un área. Se puede repetir |
+| `--all-findings` | Listar todos los hallazgos medidos, incluidos los que no han cambiado |
 | `--exit-zero` | Termina siempre con `0` |
 | `--allow-different-hosts` | Compara resultados de dos instancias distintas |
 
@@ -141,7 +145,7 @@ canalización puede condicionarse a él. Termina con `0` cuando nada ha
 empeorado, también cuando solo se han resuelto hallazgos. `--exit-zero`
 desactiva ese control.
 
-Termina con `2`, sin comparar nada, cuando no puede dar una respuesta honesta:
+Termina con `2`, sin comparar los archivos, en estos casos:
 
 - **los dos archivos describen instancias distintas.** "¿Ha funcionado la
   corrección?" es una pregunta sobre una sola instancia, y dos hosts comparados
@@ -150,6 +154,68 @@ Termina con `2`, sin comparar nada, cuando no puede dar una respuesta honesta:
 - **un archivo no es un documento de resultado** de `scan`. Por ejemplo, no
   tiene nota, o es la entrada de error de una instancia que no se pudo
   analizar.
+
+### Severidad, hallazgo por hallazgo {#severity-finding-by-finding}
+
+Cada comparación termina con los hallazgos fallidos contados por severidad:
+
+```text
+~ exposed:/config/opencloud.yaml [exposure]: severity high -> critical
+Failing by severity: critical 0 -> 1, high 1 -> 1, medium 0 -> 1, low 1 -> 0
+```
+
+La línea `~` indica un cambio de gravedad en un hallazgo que sigue abierto.
+Al pasar de `high` a `critical`, su identificador sigue en ambas listas de
+comprobaciones fallidas. La comparación de conjuntos de
+[la línea base](../baseline.md) no detecta un hallazgo nuevo, aunque el límite
+de calificación más estricto puede empeorar la nota. La gravedad se lee de
+los resultados guardados; las modificaciones posteriores del catálogo no
+alteran esos valores históricos.
+
+Un hallazgo exceptuado se cuenta aquí y se muestra como `waived`, porque una excepción es la decisión de no recibir alertas y no la afirmación de que el hallazgo haya desaparecido.
+
+### Lado a lado {#side-by-side}
+
+```bash
+check-opencloud-scanner diff before.json after.json --format side-by-side
+```
+
+```text
+opencloud.example.com
+Rating: A+ (5) -> C (3)
+Lifecycle: EOL: False -> True
+Version: 3.4.0 -> 3.3.0
+
+Finding                           2026-09-15T17:42:21+00:00  2026-09-22T09:03:11+00:00
+--------------------------------  -------------------------  -------------------------
++ CVE-2026-0001                   not listed                 FAIL high
++ cspWithoutUnsafeInline          ok                         FAIL medium
+~ exposed:/config/opencloud.yaml  FAIL high                  FAIL critical
+- Referrer-Policy                 FAIL low                   ok
+```
+
+Cada fila indica ambos lados, de modo que quien lee no tiene que reconstruirlos a partir de una lista de cambios. `--all-findings` añade los hallazgos que no se movieron, lo que convierte la vista de «qué ha cambiado» en «qué encontraron los dos análisis».
+
+`not measured` indica que no hay una medición para esa comprobación
+([ADR 0064](https://github.com/sowoi/check-opencloud-security/blob/main/adr/0064-a-scan-records-what-it-did-not-measure.md)).
+`not listed` indica que el aviso de seguridad no figura en el resultado.
+Ninguno de estos estados se interpreta como una comprobación superada.
+
+### Un área cada vez {#one-area-at-a-time}
+
+`--category` acota la comparación y toma un valor de uno de dos espacios de nombres:
+
+- **una categoría de hallazgo** - `cookies`, `authentication`, `sharing`, `exposure`, `embedding`, `lifecycle`, `proxy`, `headers`, `transport`, `advisory` - conserva solo los hallazgos sobre esa área de la instancia.
+- **una categoría de cambio** - `instance`, `referenceData`, `scanner`, `policy`, `unknown` - conserva solo la explicación de *por qué* difieren los dos análisis. Véase [Datos de referencia](reference-data.md) para saber por qué una calificación puede moverse sin que la instancia haya cambiado.
+
+```bash
+check-opencloud-scanner diff before.json after.json --category transport
+check-opencloud-scanner diff before.json after.json --category instance
+```
+
+Cada espacio de nombres se filtra solo cuando se le da un valor, así que `--category transport` deja intacta la explicación y `--category instance` deja intactos los hallazgos. La opción se puede repetir, y un valor desconocido se rechaza con el código de salida `2` en lugar de no mostrar nada: una errata que imprimiera una comparación vacía se leería como «no ha cambiado nada».
+
+Una explicación filtrada omite las líneas `[limitation]`, porque estas matizan la comparación entera y no una de sus categorías.
 
 ## `explain`: qué significa un hallazgo y cómo corregirlo {#explain-what-a-finding-means-and-how-to-fix-it}
 
@@ -272,6 +338,41 @@ asistente que `check-opencloud-security --configure`.
 | `--all` | Recorre los ajustes opcionales sin preguntar antes |
 | `--force` | Sustituye un archivo existente sin pedir confirmación |
 | `--no-test-scan` | No ofrece un análisis de prueba del host antes de guardar |
+| `--export-monitoring` | Escribe también la comprobación programada: `icinga`, `systemd`, `both` o `none` |
+
+Después ofrece escribir también la comprobación programada, junto a la
+configuración que acaba de guardar:
+
+```text
+Also write a monitoring configuration (Icinga service, systemd timer)? [y/N]
+```
+
+`--export-monitoring` responde a esa pregunta de antemano, que es lo que
+necesita un script de aprovisionamiento. Los archivos llevan los umbrales, la
+serie de publicación y todas las demás respuestas recién dadas, de modo que la
+comprobación que se ejecuta cada día es la que se configuró y no un ejemplo
+ajustado de memoria:
+
+```bash
+check-opencloud-scanner configure --export-monitoring both
+```
+
+| Archivo | Qué es |
+|:--|:--|
+| `opencloud-security-<host>.conf` | Un objeto `Service` de Icinga 2. También necesita el `CheckCommand` de [`contrib/icinga2/`](../../contrib/icinga2/check_opencloud_security.conf): el servicio define variables y el comando las convierte en opciones |
+| `check-opencloud-security.service` | Una unidad `oneshot`, con las mismas directivas de refuerzo que la de [`contrib/systemd/`](../../contrib/systemd/check-opencloud-security.service) |
+| `check-opencloud-security.timer` | `OnCalendar=daily`, con un retardo aleatorio para que muchos hosts detrás de una misma dirección no alcancen el límite de peticiones del canal de publicaciones en el mismo segundo |
+| `check-opencloud-security.env` | Las variables `COS_` de la unidad, escritas con lectura solo para el propietario |
+
+Dos cosas son deliberadas. **No se instala nada**: los archivos se escriben
+donde fue la configuración y las órdenes que los instalarían se imprimen, así
+que lo que llega a `/etc` es algo que has leído antes. Y **no se escribe
+ninguna credencial en ellos**: una URL de webhook o un token de publicación se
+queda en el archivo de configuración, legible solo por el propietario,
+mientras que un objeto de Icinga y un archivo de unidad no lo son. Ambos
+artefactos apuntan a ese archivo en su lugar - `vars.opencloud_config` y
+`COS_CONFIG_FILE` - y nombran los ajustes que retuvieron, para que un webhook
+configurado nunca falte en silencio.
 
 ## Códigos de salida {#exit-codes}
 

@@ -110,6 +110,80 @@ def test_sarif_format_combines_several_hosts_into_one_run():
     assert second.host in hosts
 
 
+def test_sarif_rules_carry_the_remediation_link_and_dashboard_severity():
+    """A finding a dashboard can act on without a second lookup."""
+    behaviour = InstanceBehaviour(exposed_paths={"/opencloud.yaml"})
+    with FakeOpenCloud(behaviour) as instance:
+        result = run_plugin("-H", instance.host, "--format", "sarif")
+
+    run = json.loads(result.stdout)["runs"][0]
+    rules = {rule["id"]: rule for rule in run["tool"]["driver"]["rules"]}
+    exposed = rules["exposed:/opencloud.yaml"]
+    assert exposed["helpUri"].startswith("http")
+    assert exposed["help"]["text"]
+    assert exposed["properties"]["security-severity"] == "9.5"
+    assert exposed["properties"]["problem.severity"] == "error"
+    assert exposed["properties"]["severity"] == "critical"
+    # The catalogue entry that explains it, not the per-path identifier.
+    assert exposed["properties"]["catalogueId"] == "exposed"
+    assert "category/exposure" in exposed["properties"]["tags"]
+
+    finding = next(
+        entry for entry in run["results"] if entry["ruleId"] == "exposed:/opencloud.yaml"
+    )
+    assert finding["properties"]["remediation"]
+    assert finding["properties"]["reference"].startswith("http")
+    assert finding["properties"]["severity"] == "critical"
+
+
+def test_sarif_results_carry_a_fingerprint_stable_across_runs():
+    """The same finding on the same host keeps one identity, and its own."""
+    with FakeOpenCloud(InstanceBehaviour(exposed_paths={"/opencloud.yaml"})) as instance:
+        first = run_plugin("-H", instance.host, "--format", "sarif")
+        second = run_plugin("-H", instance.host, "--format", "sarif")
+
+    def fingerprints(raw):
+        return {
+            entry["ruleId"]: entry["partialFingerprints"]["checkOpenCloudSecurity/v1"]
+            for entry in json.loads(raw)["runs"][0]["results"]
+        }
+
+    assert fingerprints(first.stdout) == fingerprints(second.stdout)
+    assert len(set(fingerprints(first.stdout).values())) == len(fingerprints(first.stdout))
+
+
+def test_sarif_advisory_names_the_affected_release_range():
+    behaviour = InstanceBehaviour()
+    behaviour.status_payload["productversion"] = "4.0.0"
+    with FakeOpenCloud(behaviour) as instance:
+        result = run_plugin("-H", instance.host, "--format", "sarif")
+
+    run = json.loads(result.stdout)["runs"][0]
+    advisories = [
+        entry for entry in run["results"] if entry["ruleId"].startswith("vulnerability:")
+    ]
+    assert advisories, result.stdout
+    properties = advisories[0]["properties"]
+    assert properties["fixedIn"]
+    first_range = properties["affectedRanges"][0]
+    assert first_range["fixed"] == properties["fixedIn"]
+    assert first_range["range"]
+
+
+def test_sarif_run_properties_report_the_rating_per_host():
+    behaviour = InstanceBehaviour()
+    behaviour.status_payload["productversion"] = "2.0.0"
+    with FakeOpenCloud(behaviour) as instance:
+        result = run_plugin("-H", instance.host, "--format", "sarif")
+
+    run = json.loads(result.stdout)["runs"][0]
+    host = run["properties"]["hosts"][0]
+    assert host["host"] == instance.host
+    assert host["endOfLife"] is True
+    assert host["rating"] == 0
+    assert host["ratingLabel"]
+    assert run["properties"]["pluginVersion"]
+
 def test_junit_format_is_valid_xml_with_one_testsuite_per_host():
     behaviour = InstanceBehaviour(exposed_paths={"/opencloud.yaml"})
     with FakeOpenCloud(behaviour) as instance:

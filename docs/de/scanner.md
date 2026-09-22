@@ -627,8 +627,8 @@ ohne `unsafe-inline`, ein ausgetauschter Proxy, der dieselben Header setzt,
 Zertifikat bei einem anderen Aussteller - nichts davon muss eine Note bewegen,
 und wer nur auf die Note schaut, sieht nichts davon.
 
-`configuration` ist ein **Fingerabdruck**: gruppierte Digests davon, wie die
-Installation konfiguriert ist, und nichts davon, worauf. Siehe
+`configuration` enthält **Fingerabdrücke** der gemessenen Konfiguration,
+nach Bereichen gruppiert und ohne die ursprünglichen Einstellungswerte. Siehe
 [ADR 0073](../../adr/0073-a-result-fingerprints-the-configuration-it-measured.md).
 
 ```json

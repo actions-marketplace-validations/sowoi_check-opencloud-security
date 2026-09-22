@@ -70,9 +70,9 @@ from opencloud_local_scan.coverage import summary_line as coverage_summary_line
 from opencloud_local_scan.fingerprint import digests as configuration_digests
 from opencloud_local_scan.fingerprint import fingerprint_of
 from opencloud_local_scan.fingerprint import unmeasured as unmeasured_groups
+from opencloud_local_scan.hardening import DOCS_UPDATE, is_actionable
 from opencloud_local_scan.hardening import catalogue_id as hardening_catalogue_id
 from opencloud_local_scan.hardening import describe as describe_hardening
-from opencloud_local_scan.hardening import is_actionable
 from opencloud_local_scan.metrics import MetricFamily
 from opencloud_local_scan.metrics import collect as collect_metrics
 from opencloud_local_scan.otlp import render as render_otlp_metrics
@@ -3427,6 +3427,24 @@ _SARIF_LEVELS = {
     "low": "note",
     "info": "note",
 }
+# The numeric score GitHub code scanning sorts and filters alerts on, and its
+# own three-value scale. Both are conventions of the dashboard rather than of
+# SARIF, which is why they live in `properties` - a reader that does not know
+# them is unaffected, and one that does can tell a critical finding from a
+# missing header without parsing the message text.
+_SARIF_SECURITY_SEVERITY = {
+    "critical": "9.5",
+    "high": "7.5",
+    "medium": "5.0",
+    "low": "3.0",
+    "info": "1.0",
+    "unknown": "5.0",
+}
+_SARIF_PROBLEM_SEVERITY = {
+    "error": "error",
+    "warning": "warning",
+    "note": "recommendation",
+}
 _SARIF_SCHEMA = (
     "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/"
     "sarif-2.1/schema/sarif-schema-2.1.0.json"
@@ -3469,15 +3487,48 @@ def _run_machine_format_checks(hosts: list[str], args: argparse.Namespace) -> in
     return int(_aggregate_exit_code(exit_codes))
 
 
-def _sarif_result(*, rule_id: str, level: str, message: str, host: str) -> dict[str, Any]:
+def _sarif_fingerprint(host: str, rule_id: str) -> str:
+    """
+    A stable identity for one finding on one host.
+
+    A code-scanning dashboard uses this to recognise the same finding across
+    runs - so that a CSP that has been wrong for a month stays one alert with
+    a history rather than becoming a new one every night. It deliberately
+    covers only the host and the rule: the detail text carries measured
+    values (a certificate's days left, a version number) that change while
+    the finding does not.
+    """
+    return hashlib.sha256(f"{host}\n{rule_id}".encode()).hexdigest()[:32]
+
+
+def _sarif_result(*, finding: dict[str, Any], host: str) -> dict[str, Any]:
+    """One SARIF result for one finding on one host."""
+    detail = str(finding.get("detail") or "")
+    title = str(finding["title"])
+    properties: dict[str, Any] = {
+        "host": host,
+        "severity": finding.get("severity") or "",
+        "category": finding.get("category") or "",
+        "kind": finding.get("kind") or "",
+    }
+    # Only what was actually measured: an empty remediation link or release
+    # range in every result trains a reader to ignore the field.
+    for key in ("remediation", "reference", "fixedIn", "affectedRanges", "setting"):
+        if finding.get(key):
+            properties[key] = finding[key]
+    if finding.get("actionable") is False:
+        properties["actionable"] = False
+
     return {
-        "ruleId": rule_id,
-        "level": level,
-        "message": {"text": message},
+        "ruleId": finding["id"],
+        "kind": "fail",
+        "level": finding["level"],
+        "message": {"text": f"{title}: {detail}" if detail else title},
         "locations": [
             {"physicalLocation": {"artifactLocation": {"uri": host}}}
         ],
-        "properties": {"host": host},
+        "partialFingerprints": {"checkOpenCloudSecurity/v1": _sarif_fingerprint(host, finding["id"])},
+        "properties": properties,
     }
 
 
@@ -3490,66 +3541,236 @@ def _extra_check_details(scan: dict[str, Any]) -> dict[str, dict[str, Any]]:
     }
 
 
+def _advisory_details(scan: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """The raw vulnerabilities entries, keyed by id, for their severity and ranges."""
+    return {
+        str(entry.get("id")): entry
+        for entry in scan.get("vulnerabilities") or []
+        if isinstance(entry, dict)
+    }
+
+
+def _affected_ranges(entry: dict[str, Any]) -> list[dict[str, str]]:
+    """
+    The release windows an advisory applies to, as SARIF-safe strings.
+
+    The scan result reports an open end as null; a dashboard property with a
+    null in it reads as missing data rather than as "every release since".
+    """
+    ranges = []
+    for item in entry.get("affectedRanges") or []:
+        if not isinstance(item, dict):
+            continue
+        introduced = str(item.get("introduced") or "")
+        fixed = str(item.get("fixed") or "")
+        ranges.append(
+            {
+                "introduced": introduced,
+                "fixed": fixed,
+                "range": (
+                    f">= {introduced}, < {fixed}"
+                    if introduced and fixed
+                    else f"< {fixed}"
+                    if fixed
+                    else f">= {introduced}"
+                    if introduced
+                    else ""
+                ),
+            }
+        )
+    return ranges
+
+
+def _hardening_finding(name: str, entry: dict[str, Any], level: str, severity: str) -> dict[str, Any]:
+    """One finding built from the hardening catalogue's own explanation."""
+    described = describe_hardening(name)
+    return {
+        "id": name,
+        "level": level,
+        "severity": severity,
+        "title": described.title,
+        # `detail` is what the one-line message says - the measured value, if
+        # the check reported one. The catalogue's paragraph explains the rule
+        # itself and belongs on the rule, once, not in every occurrence.
+        "detail": str(entry.get("detail") or ""),
+        "description": described.meaning,
+        "remediation": described.remediation,
+        "reference": described.reference,
+        "setting": described.setting,
+        "category": described.category,
+        "actionable": described.actionable,
+        "catalogueId": hardening_catalogue_id(name) or name,
+        "kind": "hardening",
+    }
+
+
 def _host_findings(document: dict[str, Any]) -> list[dict[str, Any]]:
     """
     Every finding for one host, in the same terms the Nagios text output and
     the webhook payload already use: missing_hardenings, failed_extra_checks,
     vulnerabilities and eol - not the remediation plan, which is deliberately
     only the subset that would move the rating (see opencloud_local_scan.
-    remediation) and so under-reports on its own. Each item carries an id,
-    a SARIF level, a title and an optional longer detail.
+    remediation) and so under-reports on its own.
+
+    Each item carries an id, a SARIF level, a title and an optional longer
+    detail, plus what a dashboard needs to act on it without a second lookup:
+    the catalogue's severity, category, remediation sentence and
+    documentation link, and for an advisory the release ranges it covers.
     """
     payload = document["payload"]
     scan = document.get("scan") or {}
     details = _extra_check_details(scan)
+    advisories = _advisory_details(scan)
     findings: list[dict[str, Any]] = []
 
     if payload.get("eol"):
+        lifecycle = payload.get("lifecycle") or {}
         findings.append(
             {
                 "id": "eol",
                 "level": "error",
+                "severity": "critical",
                 "title": "The instance is running an end-of-life release",
                 "detail": str(payload.get("message") or ""),
+                "remediation": (
+                    "Upgrade to a supported release"
+                    + (f": {lifecycle.get('upgradeTo')}" if lifecycle.get("upgradeTo") else ".")
+                ),
+                "reference": DOCS_UPDATE,
+                "category": "lifecycle",
+                "kind": "lifecycle",
             }
         )
 
-    for entry in payload.get("vulnerabilities") or []:
+    for identifier in payload.get("vulnerabilities") or []:
+        entry = advisories.get(str(identifier), {})
+        severity = str(entry.get("severity") or "unknown")
+        ranges = _affected_ranges(entry)
         findings.append(
             {
-                "id": f"vulnerability:{entry}",
-                "level": "error",
-                "title": f"Known vulnerability {entry}",
-                "detail": "",
+                "id": f"vulnerability:{identifier}",
+                "level": _SARIF_LEVELS.get(severity.lower(), "error"),
+                "severity": severity,
+                "title": str(entry.get("title") or "") or f"Known vulnerability {identifier}",
+                "detail": f"{identifier} affects this release.",
+                "description": str(entry.get("description") or ""),
+                "remediation": (
+                    f"Upgrade to {entry['fixedIn']}."
+                    if entry.get("fixedIn")
+                    else "Upgrade to a release the advisory does not cover."
+                ),
+                "reference": str(entry.get("url") or ""),
+                "category": "lifecycle",
+                "fixedIn": str(entry.get("fixedIn") or ""),
+                "affectedRanges": ranges,
+                "cwe": str(entry.get("cwe") or ""),
+                "kind": "vulnerability",
             }
         )
 
     for name in payload.get("missing_hardenings") or []:
-        described = describe_hardening(name)
+        entry = details.get(name, {})
+        # A hardening measure is reported at note the way webapp/reports.py's
+        # own SARIF export already does, independent of the severity the
+        # catalogue gives it - which travels beside it, so a dashboard can
+        # sort on the severity without the level changing meaning.
         findings.append(
-            {
-                "id": name,
-                # Matches the level webapp/reports.py's own SARIF export
-                # already uses for every hardening/header finding.
-                "level": "note",
-                "title": described.title,
-                "detail": described.remediation,
-            }
+            _hardening_finding(name, entry, "note", str(entry.get("severity") or "low"))
         )
 
     for name in payload.get("failed_extra_checks") or []:
         entry = details.get(name, {})
         severity = str(entry.get("severity") or "")
         findings.append(
-            {
-                "id": name,
-                "level": _SARIF_LEVELS.get(severity.lower(), "warning"),
-                "title": describe_hardening(name).title,
-                "detail": str(entry.get("detail") or ""),
-            }
+            _hardening_finding(
+                name,
+                entry,
+                _SARIF_LEVELS.get(severity.lower(), "warning"),
+                severity or "medium",
+            )
         )
 
     return findings
+
+
+def _sarif_rule(finding: dict[str, Any]) -> dict[str, Any]:
+    """
+    The rule a SARIF result points at, carrying everything the dashboard
+    shows once per finding type rather than once per occurrence: the
+    remediation sentence, the link to act on it, and the properties GitHub
+    code scanning reads to place and sort the alert.
+    """
+    severity = str(finding.get("severity") or "")
+    title = str(finding["title"])
+    help_text = str(finding.get("remediation") or "")
+    reference = str(finding.get("reference") or "")
+    tags = ["security", f"severity/{severity or 'unknown'}", f"kind/{finding.get('kind') or 'finding'}"]
+    if finding.get("category"):
+        tags.append(f"category/{finding['category']}")
+    if finding.get("cwe"):
+        tags.append(str(finding["cwe"]))
+
+    properties: dict[str, Any] = {
+        "tags": tags,
+        # GitHub code scanning sorts and filters on these two: a numeric
+        # score and its own three-value scale. Without them every finding
+        # lands in the same undifferentiated bucket.
+        "security-severity": _SARIF_SECURITY_SEVERITY.get(severity.lower(), "3.0"),
+        "problem.severity": _SARIF_PROBLEM_SEVERITY.get(finding["level"], "warning"),
+        "severity": severity,
+    }
+    if finding.get("category"):
+        properties["category"] = finding["category"]
+    if finding.get("catalogueId"):
+        properties["catalogueId"] = finding["catalogueId"]
+    if finding.get("setting"):
+        properties["setting"] = finding["setting"]
+    if finding.get("affectedRanges"):
+        properties["affectedRanges"] = finding["affectedRanges"]
+    if finding.get("fixedIn"):
+        properties["fixedIn"] = finding["fixedIn"]
+
+    rule: dict[str, Any] = {
+        "id": finding["id"],
+        "name": finding["id"],
+        "shortDescription": {"text": title[:120]},
+        "fullDescription": {
+            "text": str(finding.get("description") or "") or str(finding.get("detail") or "") or title
+        },
+        "defaultConfiguration": {"level": finding["level"]},
+        "properties": properties,
+    }
+    if help_text:
+        rule["help"] = {
+            "text": help_text,
+            "markdown": f"{help_text}\n\n[Documentation]({reference})" if reference else help_text,
+        }
+    if reference:
+        rule["helpUri"] = reference
+    return rule
+
+
+def _sarif_run_properties(documents: list[dict[str, Any]]) -> dict[str, Any]:
+    """
+    What the run as a whole measured, per host: the rating a dashboard would
+    otherwise have to recompute from the findings, and the release it was
+    measured on.
+    """
+    hosts = []
+    for document in documents:
+        payload = document["payload"]
+        hosts.append(
+            {
+                "host": str(payload.get("host") or ""),
+                "status": payload.get("status"),
+                "rating": payload.get("rating"),
+                "ratingLabel": payload.get("rating_label"),
+                "productVersion": payload.get("product_version"),
+                "endOfLife": bool(payload.get("eol")),
+                "updateAvailable": bool((payload.get("update") or {}).get("available")),
+            }
+        )
+    return {"pluginVersion": __version__, "hosts": hosts}
 
 
 def _render_sarif(documents: list[dict[str, Any]]) -> dict[str, Any]:
@@ -3565,34 +3786,11 @@ def _render_sarif(documents: list[dict[str, Any]]) -> dict[str, Any]:
     rules: dict[str, dict[str, Any]] = {}
     results: list[dict[str, Any]] = []
 
-    def add_rule(rule_id: str, level: str, text: str, help_text: str = "") -> None:
-        if rule_id in rules:
-            return
-        rule: dict[str, Any] = {
-            "id": rule_id,
-            "name": rule_id,
-            "shortDescription": {"text": text[:120]},
-            "fullDescription": {"text": text},
-            "defaultConfiguration": {"level": level},
-        }
-        if help_text:
-            rule["help"] = {"text": help_text}
-        rules[rule_id] = rule
-
     for document in documents:
         host = str(document["payload"].get("host") or "")
         for finding in _host_findings(document):
-            add_rule(finding["id"], finding["level"], finding["title"], finding["detail"])
-            message = (
-                f"{finding['title']}: {finding['detail']}"
-                if finding["detail"]
-                else finding["title"]
-            )
-            results.append(
-                _sarif_result(
-                    rule_id=finding["id"], level=finding["level"], message=message, host=host
-                )
-            )
+            rules.setdefault(finding["id"], _sarif_rule(finding))
+            results.append(_sarif_result(finding=finding, host=host))
 
     return {
         "$schema": _SARIF_SCHEMA,
@@ -3603,11 +3801,17 @@ def _render_sarif(documents: list[dict[str, Any]]) -> dict[str, Any]:
                     "driver": {
                         "name": "check-opencloud-security",
                         "version": __version__,
+                        "semanticVersion": __version__,
                         "informationUri": "https://github.com/sowoi/check-opencloud-security",
                         "rules": sorted(rules.values(), key=lambda rule: rule["id"]),
                     }
                 },
+                # Names the run so a dashboard receiving several uploads per
+                # repository keeps them apart rather than replacing one with
+                # the next.
+                "automationDetails": {"id": "check-opencloud-security/scan"},
                 "results": results,
+                "properties": _sarif_run_properties(documents),
             }
         ],
     }

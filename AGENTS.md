@@ -75,6 +75,13 @@ for a remote scan service.
 - **Do not reference any real instance.** The project is tested against a live
   server, but its hostname must never appear in code, tests, documentation or
   commit messages. Use `opencloud.example.com` in examples.
+- **Work on a `release/` branch, never a feature branch.** Every change -
+  a feature, a fix, a documentation edit - is implemented on the `release/`
+  branch that is already checked out. Never create a `feature/`, `fix/`,
+  `chore/` or `docs/` branch and never switch to one; if no release branch is
+  checked out, ask the user which one to use. `.claude/hooks/guard_branch.py`
+  refuses the creation of any branch that is not `release/...` and any switch
+  to one, and asks before a switch to `main`.
 - **Do not add a remote scan API.** See above. The web application in
   `webapp/` is a *service that runs the local scanner*, not a verdict the
   plugin asks somebody else for - the plugin must never call it.

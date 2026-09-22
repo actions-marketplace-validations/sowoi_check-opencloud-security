@@ -28,7 +28,7 @@ from tests.webapp_support import (  # noqa: F401 - the fixtures are autouse
 from webapp.catalog import summarise
 from webapp.export_signing import verify_bytes
 from webapp.redis_backend import memory_backend
-from webapp.reports import csv_report, pdf_report, sarif_report
+from webapp.reports import EXPORT_FORMATS, csv_report, pdf_report, sarif_report
 from webapp.store import ScanStore
 from webapp.tasks import run_scan
 
@@ -198,7 +198,7 @@ def test_a_finished_scan_advertises_where_its_exports_live(finished_scan):
 
     assert payload["done"] is True
     assert payload["exports"]["pdf"] == f"/api/scans/{IDENTIFIER}/export/pdf"
-    assert set(payload["exports"]) == {"json", "csv", "sarif", "pdf", "html"}
+    assert set(payload["exports"]) == set(EXPORT_FORMATS)
 
 
 def test_the_result_page_offers_every_export_as_a_download(finished_scan):

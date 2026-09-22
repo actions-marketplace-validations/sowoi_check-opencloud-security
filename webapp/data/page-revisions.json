@@ -26,8 +26,8 @@
       "lastmod": "2026-09-17"
     },
     "docs/baseline.html": {
-      "digest": "793c7e7a1bdca112e1fd6f0dbc818c39d8ac7c36fe7e2d98b567fea6941dfac6",
-      "lastmod": "2026-09-21"
+      "digest": "4b897acda9f70bdfa8fdd4aa6d509a2cbcbd28e747fdb17bc6646a40478a6b5d",
+      "lastmod": "2026-09-22"
     },
     "docs/checkmk.html": {
       "digest": "7dae35a6935017098d2ec71a2701063906df05731c95d87fc20ce012f62e286a",
@@ -74,8 +74,8 @@
       "lastmod": "2026-09-17"
     },
     "docs/icinga-director.html": {
-      "digest": "c78d996cad439b9be5abab8041293d68c40a95a18a310686a66e68c996d2bc5b",
-      "lastmod": "2026-09-19"
+      "digest": "241ad7cf24f4d9b5a47255aeb27843e452f29c8038c34be6277608d58af42c92",
+      "lastmod": "2026-09-22"
     },
     "docs/identity-providers.html": {
       "digest": "d2e2c38f46d6652144f903a76af16ce3260c10b447024f93767e1323e249c884",
@@ -98,12 +98,12 @@
       "lastmod": "2026-09-17"
     },
     "docs/mcp.html": {
-      "digest": "6ea29148b015584034b913f3e68aa10d2570339885faf1ceced917a56b0f4d08",
-      "lastmod": "2026-09-17"
+      "digest": "a1f5366aff580152d8c6d728db1049e96257140caf21c592908d7b5162314f48",
+      "lastmod": "2026-09-22"
     },
     "docs/output-formats.html": {
-      "digest": "998d2175f0944327c3fcfcfd3aba174c94b45bc5aa5364da2068fe7846b3ddf7",
-      "lastmod": "2026-09-17"
+      "digest": "07c1a40f7aeb2a633a1717e9ce2e798665b277a87a4551d640ab62aeacdcc87a",
+      "lastmod": "2026-09-22"
     },
     "docs/prometheus.html": {
       "digest": "3b0aaacc8d9ff8c40a7f76b72896ae0222a51d32f10a5bc2bd5e854eb7a8755a",
@@ -118,8 +118,8 @@
       "lastmod": "2026-09-17"
     },
     "docs/reference.html": {
-      "digest": "c0700fb25eb7e7358b0dc12ab249b68bcbcf6a60bdc91d6fe296ea74767695de",
-      "lastmod": "2026-09-21"
+      "digest": "6472479ac4b4cc31504d8adb35c918cf2b2e358a1d408c75cfcef6844ce243cb",
+      "lastmod": "2026-09-22"
     },
     "docs/release-lifecycle.html": {
       "digest": "6b16dc995bf46b86eb440268f4cc6341400f6bf3a2d13fb2708ec2e710ee3246",
@@ -138,16 +138,16 @@
       "lastmod": "2026-09-19"
     },
     "docs/scanner-cli.html": {
-      "digest": "663de574820f5f7b19cdaec8944c5bddd78009eba641616d83d6ca788ec94030",
-      "lastmod": "2026-09-17"
+      "digest": "a9f8b723e0015154a135df1aa82c00d6b560014944921f784d32b83a360ed5fd",
+      "lastmod": "2026-09-22"
     },
     "docs/scanner.html": {
-      "digest": "1f7f753e2f3d4d4cbeaffdfe2e3814afd147226fcf9a6a2deb0309680a1525cd",
+      "digest": "43fce8fcb0594861d3ebb664ba757885e093ef729a8c215824aaa263238c3a36",
       "lastmod": "2026-09-22"
     },
     "docs/scheduling.html": {
-      "digest": "f90e7eaa15fe0085d89798d47db6ab1723945256b8621d82c2965836b1d945a3",
-      "lastmod": "2026-09-17"
+      "digest": "df2857ca044f0fae3c85d3e7b5173cdabc6c3dc7c9d3ef6d7f3bbaf1a113d10f",
+      "lastmod": "2026-09-22"
     },
     "docs/secure-deployment.html": {
       "digest": "7497d192d88fb2bc34454fd839eade2861994df09a21e515c501e3e56802668a",
@@ -170,8 +170,8 @@
       "lastmod": "2026-09-17"
     },
     "docs/web-service.html": {
-      "digest": "d2ed769361b6663251bfcf9c4a6e0764529a12eab4dcb7f1a773ad7b6a9bb7ef",
-      "lastmod": "2026-09-19"
+      "digest": "113a5f3f46de7ae070bfc1c85156ade2af677de95f6441435d8bdfd4c28c07a8",
+      "lastmod": "2026-09-22"
     },
     "docs/webhooks.html": {
       "digest": "15f37d8e0006d0cb905aee8790dcffb7e6e2d274b8ff32670aaaec3f1e7182f7",

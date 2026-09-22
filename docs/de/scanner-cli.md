@@ -89,14 +89,17 @@ Hardening: + Content-Security-Policy
 Rating: A+ (5) -> D (2)
 ```
 
-Der Befehl liest zwei Dateien und führt keinen Scan aus. `+` kennzeichnet neue, `-` behobene Befunde. Er zeigt außerdem Änderungen an Bewertung, Version und Supportzeitraum. Für einen automatisch gespeicherten Vergleich mit dem letzten Lauf verwende stattdessen eine [Baseline](../baseline.md).
+Der Befehl liest zwei Dateien und führt keinen Scan aus. `+` kennzeichnet neue, `-` behobene und `~` weiterhin offene Befunde mit geändertem Schweregrad. Er zeigt außerdem Änderungen an Bewertung, Version und Supportzeitraum. Für einen automatisch gespeicherten Vergleich mit dem letzten Lauf verwende stattdessen eine [Baseline](../baseline.md).
 
 | Option | Funktion |
 |:--|:--|
 | `--format text` | Lesbare Textzeilen; Standard |
 | `--format markdown` | Markdown-Tabelle für Tickets oder Kommentare |
+| `--format side-by-side` | Beide Scans als zwei Spalten, ein Befund je Zeile |
 | `--format json` | Strukturierter Vergleich wie im Plugin-Webhook |
 | `--format slack` | Slack-Block-Kit-JSON |
+| `--category NAME` | Nur einen Bereich zeigen; mehrfach angebbar |
+| `--all-findings` | Alle gemessenen Befunde auflisten, nicht nur die veränderten |
 | `--exit-zero` | Erfolgreiche Vergleiche unabhängig von Verschlechterungen mit `0` beenden |
 | `--allow-different-hosts` | Ergebnisse unterschiedlicher Instanzen vergleichen |
 
@@ -106,6 +109,69 @@ Exitcode `2` bedeutet, dass kein Vergleich möglich ist:
 
 - Die Dateien stammen von unterschiedlichen Instanzen und `--allow-different-hosts` wurde nicht gesetzt.
 - Eine Datei ist kein verwertbares Ergebnis von `scan`, etwa weil die Bewertung fehlt oder sie nur einen Scanfehler enthält.
+
+### Schweregrad, Befund für Befund {#severity-finding-by-finding}
+
+Jeder Vergleich endet mit einer Zählung der fehlgeschlagenen Befunde nach Schweregrad:
+
+```text
+~ exposed:/config/opencloud.yaml [exposure]: severity high -> critical
+Failing by severity: critical 0 -> 1, high 1 -> 1, medium 0 -> 1, low 1 -> 0
+```
+
+Die `~`-Zeile zeigt einen geänderten Schweregrad bei einem weiterhin offenen
+Befund. Bei einem Wechsel von `high` zu `critical` bleibt die Kennung in
+beiden Listen fehlgeschlagener Prüfungen enthalten. Der Mengenvergleich der
+[Baseline](../baseline.md) erkennt daher keinen neuen Befund; die strengere
+Bewertungsobergrenze kann jedoch die Note verschlechtern. Der Vergleich liest
+die Schweregrade aus den gespeicherten Ergebnissen. Spätere Änderungen am
+Katalog verändern diese historischen Werte nicht.
+
+Ein per Waiver ausgenommener Befund wird hier mitgezählt und als `waived` dargestellt, denn ein Waiver ist die Entscheidung, nicht alarmiert zu werden, und keine Aussage darüber, dass der Befund weg ist.
+
+### Nebeneinander {#side-by-side}
+
+```bash
+check-opencloud-scanner diff before.json after.json --format side-by-side
+```
+
+```text
+opencloud.example.com
+Rating: A+ (5) -> C (3)
+Lifecycle: EOL: False -> True
+Version: 3.4.0 -> 3.3.0
+
+Finding                           2026-09-15T17:42:21+00:00  2026-09-22T09:03:11+00:00
+--------------------------------  -------------------------  -------------------------
++ CVE-2026-0001                   not listed                 FAIL high
++ cspWithoutUnsafeInline          ok                         FAIL medium
+~ exposed:/config/opencloud.yaml  FAIL high                  FAIL critical
+- Referrer-Policy                 FAIL low                   ok
+```
+
+Jede Zeile zeigt den Befund in beiden Scans. Mit `--all-findings` erscheinen
+auch unveränderte Befunde.
+
+`not measured` bedeutet, dass für die Prüfung kein Messwert vorliegt
+([ADR 0064](https://github.com/sowoi/check-opencloud-security/blob/main/adr/0064-a-scan-records-what-it-did-not-measure.md)).
+`not listed` bedeutet, dass der Sicherheitshinweis im Ergebnis nicht aufgeführt
+ist. Keiner dieser Zustände wird als bestandene Prüfung gewertet.
+
+### Ein Bereich nach dem anderen {#one-area-at-a-time}
+
+`--category` schränkt den Vergleich ein und nimmt einen Wert aus einem von zwei Namensräumen:
+
+- **eine Befundkategorie** - `cookies`, `authentication`, `sharing`, `exposure`, `embedding`, `lifecycle`, `proxy`, `headers`, `transport`, `advisory` - behält nur die Befunde zu diesem Bereich der Instanz.
+- **eine Änderungskategorie** - `instance`, `referenceData`, `scanner`, `policy`, `unknown` - behält nur die Erklärung, *warum* sich die beiden Scans unterscheiden. Siehe [Referenzdaten](reference-data.md) dazu, warum sich eine Note ändern kann, ohne dass sich die Instanz verändert hat.
+
+```bash
+check-opencloud-scanner diff before.json after.json --category transport
+check-opencloud-scanner diff before.json after.json --category instance
+```
+
+Jeder Namensraum wird nur gefiltert, wenn du einen Wert dafür angibst: `--category transport` lässt die Erklärung unangetastet, `--category instance` die Befunde. Die Option ist mehrfach angebbar, und ein unbekannter Wert wird mit Exitcode `2` abgelehnt, statt stillschweigend nichts zu zeigen - ein Tippfehler, der einen leeren Vergleich ausgibt, liest sich wie „nichts hat sich geändert".
+
+Eine gefilterte Erklärung lässt die `[limitation]`-Zeilen weg, weil diese den gesamten Vergleich einschränken und nicht eine einzelne Kategorie davon.
 
 ## `explain`: Befunde erklären {#explain-what-a-finding-means-and-how-to-fix-it}
 
@@ -199,6 +265,28 @@ Der Assistent erklärt die Einstellungen und speichert sie als JSON mit Dateirec
 | `--all` | Optionale Einstellungen ohne vorherige Auswahl durchgehen |
 | `--force` | Vorhandene Datei ohne Rückfrage ersetzen |
 | `--no-test-scan` | Vor dem Speichern keinen Testscan anbieten |
+| `--export-monitoring` | Zusätzlich die geplante Prüfung schreiben: `icinga`, `systemd`, `both` oder `none` |
+
+Danach bietet er an, auch die geplante Prüfung zu schreiben, neben die gerade gespeicherte Konfiguration:
+
+```text
+Also write a monitoring configuration (Icinga service, systemd timer)? [y/N]
+```
+
+`--export-monitoring` beantwortet diese Frage vorab, was ein Provisionierungsskript braucht. Die Dateien tragen die Schwellwerte, den Release-Track und jede andere gerade gegebene Antwort, damit die täglich laufende Prüfung die konfigurierte ist und kein aus dem Gedächtnis angepasstes Beispiel:
+
+```bash
+check-opencloud-scanner configure --export-monitoring both
+```
+
+| Datei | Was sie ist |
+|:--|:--|
+| `opencloud-security-<host>.conf` | Ein Icinga-2-`Service`-Objekt. Es braucht zusätzlich das `CheckCommand` aus [`contrib/icinga2/`](../../contrib/icinga2/check_opencloud_security.conf) - der Service setzt Variablen, das Kommando macht Flags daraus |
+| `check-opencloud-security.service` | Eine `oneshot`-Unit mit denselben Härtungsdirektiven wie die in [`contrib/systemd/`](../../contrib/systemd/check-opencloud-security.service) |
+| `check-opencloud-security.timer` | `OnCalendar=daily`, mit zufälliger Verzögerung, damit viele Hosts hinter einer Adresse nicht in derselben Sekunde das Ratelimit des Release-Feeds treffen |
+| `check-opencloud-security.env` | Die `COS_`-Variablen für die Unit, nur für den Eigentümer lesbar geschrieben |
+
+Zwei Dinge sind Absicht. **Nichts wird installiert**: Die Dateien entstehen dort, wo auch die Konfiguration liegt, und die Befehle, die sie installieren würden, werden ausgegeben - was nach `/etc` gelangt, hast du also vorher gelesen. Und **es wird kein Zugangsgeheimnis hineingeschrieben**: Eine Webhook-URL oder ein Release-Token bleibt in der Konfigurationsdatei, die nur der Eigentümer lesen kann, während ein Icinga-Objekt und eine Unit-Datei das nicht sind. Beide Artefakte verweisen stattdessen auf diese Datei - `vars.opencloud_config` und `COS_CONFIG_FILE` - und benennen die zurückgehaltenen Einstellungen, damit ein konfigurierter Webhook nie stillschweigend fehlt.
 
 ## Exitcodes {#exit-codes}
 

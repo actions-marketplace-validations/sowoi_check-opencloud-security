@@ -13,7 +13,10 @@ what's needed to get productive quickly; it does not restate AGENTS.md.
 
 Project hooks in `.claude/settings.json` (scripts in `.claude/hooks/`) refuse
 the irreversible commands and hand edits to generated files that AGENTS.md
-forbids. A refusal is final: report it to the user, never work around it.
+forbids. **All work happens on the checked-out `release/` branch** - never
+create or switch to a `feature/`, `fix/`, `chore/` or `docs/` branch;
+`guard_branch.py` refuses it, and asks before a switch to `main`.
+A refusal is final: report it to the user, never work around it.
 The hooks match text, so a heredoc line that starts with such a command also
 trips them - write that content with the Write tool instead. The privacy
 guard (`privacy_guard.py`) refuses commits and pushes that carry a real

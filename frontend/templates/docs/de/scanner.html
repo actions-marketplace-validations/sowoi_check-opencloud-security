@@ -782,8 +782,8 @@ ohne <code>unsafe-inline</code>, ein ausgetauschter Proxy, der dieselben Header 
 öffentliche Links, die erst kein Passwort mehr verlangen und dann wieder, ein
 Zertifikat bei einem anderen Aussteller - nichts davon muss eine Note bewegen,
 und wer nur auf die Note schaut, sieht nichts davon.</p>
-<p><code>configuration</code> ist ein <strong>Fingerabdruck</strong>: gruppierte Digests davon, wie die
-Installation konfiguriert ist, und nichts davon, worauf. Siehe
+<p><code>configuration</code> enthält <strong>Fingerabdrücke</strong> der gemessenen Konfiguration,
+nach Bereichen gruppiert und ohne die ursprünglichen Einstellungswerte. Siehe
 <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0073-a-result-fingerprints-the-configuration-it-measured.md">ADR 0073</a>.</p>
 <pre><code class="language-json">{
   &quot;configuration&quot;: {

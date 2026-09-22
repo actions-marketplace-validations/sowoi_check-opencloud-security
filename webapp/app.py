@@ -196,6 +196,7 @@ from .purge import (
 from .queue import ScanQueue, create_queue
 from .ratelimit import RateLimiter, limiter_for
 from .redis_backend import RedisUnavailable, create_backend
+from .remediation_bundle import remediation_html, remediation_markdown
 from .reports import (
     EXPORT_FORMATS,
     MEDIA_TYPES,
@@ -3001,6 +3002,10 @@ def _render_export(result: dict[str, Any], fmt: str, identifier: str) -> bytes |
         return pdf_report(result, identifier=identifier)
     if fmt == "html":
         return html_report(result, identifier=identifier)
+    if fmt == "remediation-md":
+        return remediation_markdown(result, identifier=identifier)
+    if fmt == "remediation-html":
+        return remediation_html(result, identifier=identifier)
     return json.dumps(result, indent=2)
 
 

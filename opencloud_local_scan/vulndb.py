@@ -107,6 +107,17 @@ class Advisory:
             "severity": self.severity,
             "url": self.url,
             "fixedIn": self.fixed,
+            # The release window this advisory applies to, not merely the
+            # release that ends it: a report that says "fixed in 5.0.2" and
+            # nothing else leaves a reader unable to tell whether their own
+            # older release was ever affected. After `for_version` this is the
+            # single range that matched the scanned version; on the advisory
+            # as written it is every separately patched line.
+            "introduced": self.introduced,
+            "affectedRanges": [
+                {"introduced": introduced, "fixed": fixed}
+                for introduced, fixed in self.all_ranges()
+            ],
         }
 
 

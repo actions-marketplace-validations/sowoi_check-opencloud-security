@@ -235,7 +235,7 @@ monitoring check rather than a container deployment.</p>
 </tr>
 <tr>
 <td><code>output_format</code></td>
-<td><code>dashboard</code>, <code>json</code>, <code>csv</code>, <code>sarif</code> or <code>pdf</code>. Optional, affects presentation only</td>
+<td><code>dashboard</code>, <code>json</code>, <code>csv</code>, <code>sarif</code> or <code>pdf</code>. Optional, affects presentation only. The export-only formats (<code>html</code>, <code>remediation-md</code>, <code>remediation-html</code>) are fetched from the export endpoint instead</td>
 </tr>
 </tbody>
 </table>
@@ -1363,7 +1363,11 @@ target pays a cooldown for a batch that never ran.</p>
 the reason the first target was refused - <strong>429</strong> with <code>Retry-After</code> and the
 self-hosting hint if it was a limit, <strong>400</strong> or <strong>422</strong> otherwise.</p>
 <h3 id="get-apiscansuuidexportformat"><code>GET /api/scans/{uuid}/export/{format}</code></h3>
-<p>A finished scan as a file: <code>json</code>, <code>csv</code>, <code>sarif</code>, <code>pdf</code> or <code>html</code>.</p>
+<p>A finished scan as a file: <code>json</code>, <code>csv</code>, <code>sarif</code>, <code>pdf</code>, <code>html</code>,
+<code>remediation-md</code> or <code>remediation-html</code>. The two remediation bundles carry
+only the open, actionable findings and the nginx, Caddy, Traefik, Compose
+and <code>.env</code> fragments that close them - the grade, the passed checks and the
+advisories stay in the full report.</p>
 <pre><code class="language-bash">curl -sS -OJ http://127.0.0.1:8811/api/scans/0f4a1f22-.../export/pdf
 </code></pre>
 <p><code>html</code> is the report as <strong>one standalone file</strong>. A result link is a capability

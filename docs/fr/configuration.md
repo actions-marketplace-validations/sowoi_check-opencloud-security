@@ -1,40 +1,44 @@
-# Fichier de configuration et secrets
+# Secrets dans la configuration
 
-Gardez les identifiants hors du fichier de configuration en indiquant leur source.
-Les jetons GitHub, les URL de webhook et les jetons de service peuvent être lus depuis
-un fichier, une variable d’environnement ou une commande au moment voulu.
+Gardez les identifiants hors du fichier de configuration en désignant leur source
+plutôt que leur valeur. Les jetons GitHub, les URL de webhook et les jetons de
+service peuvent être lus depuis un fichier, une variable d'environnement ou une
+commande, au moment où ils sont nécessaires.
 
-Le fichier lui-même, son emplacement et la correspondance de ses clés avec les
-variables d’environnement sont décrits dans [Configuration et secrets](../README.md#configuration-file-and-secrets).
-`config/check-opencloud-security.example.yml` fournit un exemple entièrement commenté.
+Le fichier lui-même, l'endroit où il est recherché et la correspondance entre ses
+clés et les variables d'environnement sont décrits dans
+[Fichier de configuration et secrets](reference.md#configuration-file-and-secrets) ;
+`config/check-opencloud-security.example.yml` en est un exemple entièrement
+commenté.
 
 <!-- TOC -->
-* [Secrets in the configuration](#secrets-in-the-configuration)
-  * [Reference forms](#reference-forms)
-  * [Outside a container](#outside-a-container)
+* [Secrets dans la configuration](#secrets-in-the-configuration)
+  * [Formes de référence](#reference-forms)
+  * [Hors d'un conteneur](#outside-a-container)
 <!-- TOC -->
 
 
-## Reference forms
+## Formes de référence {#reference-forms}
 
-Four prefixes are understood, wherever a value is expected:
+Quatre préfixes sont reconnus, partout où une valeur est attendue :
 
-| Reference              | Resolves to                                                                      |
-|:-----------------------|:---------------------------------------------------------------------------------|
-| `secret://name`        | `<secrets.dir>/name`, i.e. `/run/secrets/name` for Docker and Kubernetes secrets |
-| `file:///path/to/file` | The contents of that file                                                        |
-| `env://VARIABLE`       | The value of that environment variable                                           |
-| `exec://command --arg` | The stdout of that command (requires `secrets.allow_exec: true`)                 |
+| Référence              | Se résout en                                                                                  |
+|:-----------------------|:----------------------------------------------------------------------------------------------|
+| `secret://nom`         | `<secrets.dir>/nom`, c'est-à-dire `/run/secrets/nom` pour les secrets Docker et Kubernetes     |
+| `file:///chemin/vers/fichier` | Le contenu de ce fichier                                                                 |
+| `env://VARIABLE`       | La valeur de cette variable d'environnement                                                   |
+| `exec://commande --arg` | La sortie standard de cette commande (nécessite `secrets.allow_exec: true`)                  |
 
-Alternatively append `_file` to any key or variable:
-`COS_RELEASES_TOKEN_FILE=/run/secrets/token` or `token_file: /run/secrets/token`.
-Trailing newlines are stripped, so `echo secret > file` works as expected.
+Vous pouvez aussi ajouter `_file` à n'importe quelle clé ou variable :
+`COS_RELEASES_TOKEN_FILE=/run/secrets/token` ou `token_file: /run/secrets/token`.
+Les sauts de ligne finaux sont supprimés, si bien que `echo secret > fichier`
+fonctionne comme prévu.
 
-## Outside a container
+## Hors d'un conteneur {#outside-a-container}
 
-`secret://name` looks below `secrets.dir` (`COS_SECRETS_DIR`), which defaults to
-`/run/secrets` - exactly where Docker and Kubernetes mount their secrets.
-Outside a container, point it at your own directory:
+`secret://nom` cherche sous `secrets.dir` (`COS_SECRETS_DIR`), dont la valeur par
+défaut est `/run/secrets` - exactement là où Docker et Kubernetes montent leurs
+secrets. Hors d'un conteneur, faites-le pointer vers votre propre répertoire :
 
 ```shell
 mkdir -p /etc/check-opencloud-security/secrets
@@ -46,5 +50,6 @@ check-opencloud-security --host opencloud.example.com \
   --release-token 'secret://releases_token'
 ```
 
-The repository ships templates for both files in
-[`secrets/`](../../secrets/README.md); copy them and replace the placeholder values.
+Le dépôt fournit des modèles pour les deux fichiers dans
+[`secrets/`](../../secrets/README.md) ; copiez-les et remplacez les valeurs
+d'exemple.

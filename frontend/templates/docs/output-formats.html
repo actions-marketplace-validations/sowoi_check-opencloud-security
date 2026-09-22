@@ -71,6 +71,53 @@ line would not, it is only reshaped for a scanning dashboard to render.</p>
 <pre><code class="language-shell">check-opencloud-security --host opencloud.example.com --format sarif \
   &gt; opencloud-security.sarif
 </code></pre>
+<p>Each finding carries what a dashboard needs to act on it without a second
+lookup:</p>
+<table>
+<thead>
+<tr>
+<th>In the SARIF</th>
+<th>What it holds</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>rule.help</code> / <code>rule.helpUri</code></td>
+<td>The catalogue's remediation sentence and the official documentation page for the setting</td>
+</tr>
+<tr>
+<td><code>rule.properties.security-severity</code></td>
+<td>The numeric score GitHub code scanning sorts and filters alerts on (<code>9.5</code> critical to <code>1.0</code> info)</td>
+</tr>
+<tr>
+<td><code>rule.properties.problem.severity</code></td>
+<td><code>error</code>, <code>warning</code> or <code>recommendation</code>, the dashboard's own scale</td>
+</tr>
+<tr>
+<td><code>rule.properties.catalogueId</code></td>
+<td>The catalogue entry that explains the finding - <code>exposed</code> for <code>exposed:/opencloud.yaml</code></td>
+</tr>
+<tr>
+<td><code>rule.properties.tags</code></td>
+<td><code>security</code>, plus <code>severity/…</code>, <code>category/…</code> and <code>kind/…</code> to filter on</td>
+</tr>
+<tr>
+<td><code>result.properties</code></td>
+<td>The host, severity, category, remediation, documentation link, and for an advisory <code>fixedIn</code> and <code>affectedRanges</code></td>
+</tr>
+<tr>
+<td><code>result.partialFingerprints</code></td>
+<td>A stable identity per host and rule, so the same finding stays one alert with a history rather than a new one each night</td>
+</tr>
+<tr>
+<td><code>run.properties.hosts</code></td>
+<td>The rating, label, product version and end-of-life state per scanned host</td>
+</tr>
+</tbody>
+</table>
+<p><code>affectedRanges</code> names the release window an advisory covers - <code>&gt;= 1.0.0, &lt;
+4.0.8</code> - rather than only the release that ends it, so a reader can tell
+whether an older release was ever affected.</p>
 <p>In GitHub Actions, upload it to code scanning. <code>continue-on-error: true</code> on
 the scan step keeps a non-zero exit from failing the job before the upload
 step runs - the point of scanning in CI is usually to see the findings even

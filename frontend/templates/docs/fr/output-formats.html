@@ -70,6 +70,13 @@ line would not, it is only reshaped for a scanning dashboard to render.</p>
 <pre><code class="language-shell">check-opencloud-security --host opencloud.example.com --format sarif \
   &gt; opencloud-security.sarif
 </code></pre>
+<p>Each finding carries what a dashboard needs to act on it: the catalogue's
+remediation sentence and documentation link (<code>help</code>, <code>helpUri</code>), the severity
+and category (<code>security-severity</code>, <code>problem.severity</code>, <code>tags</code>), the release
+range an advisory affects (<code>affectedRanges</code>, <code>fixedIn</code>) and a stable
+fingerprint (<code>partialFingerprints</code>), so the same finding stays one alert
+across runs. <code>run.properties.hosts</code> reports the rating, version and
+end-of-life state per scanned host.</p>
 <p>In GitHub Actions, upload it to code scanning. <code>continue-on-error: true</code> on
 the scan step keeps a non-zero exit from failing the job before the upload
 step runs - the point of scanning in CI is usually to see the findings even

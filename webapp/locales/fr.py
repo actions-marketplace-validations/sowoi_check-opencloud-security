@@ -1610,10 +1610,10 @@ MESSAGES: dict[str, str] = {
     "result.fingerprint.kicker": "Configuration",
     "result.fingerprint.heading": "Cette installation a-t-elle changé ?",
     "result.fingerprint.body": (
-        "Chaque groupe ci-dessous est une empreinte de la manière dont cette "
-        "instance est configurée, jamais de ce qu'elle contient. Comparez-les "
-        "avec une analyse plus ancienne : un groupe dont l'empreinte diffère "
-        "était configuré autrement, même si la note n'a pas bougé."
+        "Chaque groupe contient une empreinte de la configuration mesurée, "
+        "sans en exposer les valeurs. Comparez les empreintes d'analyses "
+        "ayant la même couverture de mesure pour détecter les changements "
+        "de configuration, même si la note reste identique."
     ),
     "result.fingerprint.overall": "Tous groupes confondus : {digest}",
     "result.fingerprint.unmeasured": "Non mesuré lors de cette analyse",
@@ -1765,6 +1765,16 @@ MESSAGES: dict[str, str] = {
         "Un fichier qui reste lisible après l'expiration de ce lien. Il s'ouvre "
         "hors ligne, n'effectue aucune requête réseau et ne se met pas à "
         "jour."
+    ),
+    "result.export.remediation.md": "Kit de correction (Markdown)",
+    "result.export.remediation.md.hint": (
+        "Uniquement ce qui reste ouvert : chaque constat, ce qui a été observé "
+        "et les fragments nginx, Caddy, Traefik, Compose et .env qui le "
+        "corrigent. Pour une pull request ou un runbook."
+    ),
+    "result.export.remediation.html": "Kit de correction (HTML)",
+    "result.export.remediation.html.hint": (
+        "Le même kit sous forme d'une page consultable hors ligne ou imprimable."
     ),
     "result.export.csv": "CSV",
     "result.export.csv.hint": "Une ligne par constat, pour un tableur.",

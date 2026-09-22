@@ -1,25 +1,27 @@
-# Signaler uniquement les nouveaux problèmes
+# Signaler uniquement ce qui a changé
 
-Utilisez `--baseline` pour enregistrer les résultats de chaque balayage et les comparer avec la prochaine exécution. Ajouter
-"--warn-on-new" pour alerter seulement lorsque les conclusions sont nouvelles ou sont devenues pires. Existence
-les problèmes demeurent visibles dans le rapport.
+Utilisez `--baseline` pour enregistrer les constats de chaque scan et les
+comparer à ceux de l'exécution suivante. Ajoutez `--warn-on-new` pour n'alerter
+que lorsque des constats sont nouveaux ou se sont aggravés. Les problèmes
+existants restent visibles dans le rapport.
 
-The [main README](../README.md#reporting-only-what-changed) has the short
-version. This page is the full behaviour: the diff formats, what counts as a
-regression, and the rules that keep a baseline from hiding anything.
+Le [README principal](reference.md#reporting-only-what-changed) en donne la
+version courte. Cette page décrit le comportement complet : les formats de
+comparaison, ce qui compte comme une régression, et les règles qui empêchent une
+référence de masquer quoi que ce soit.
 
 <!-- TOC -->
-* [Reporting only what changed](#reporting-only-what-changed)
-  * [Writing and comparing a baseline](#writing-and-comparing-a-baseline)
-  * [What counts as a regression](#what-counts-as-a-regression)
-  * [Points worth knowing](#points-worth-knowing)
+* [Signaler uniquement ce qui a changé](#reporting-only-what-changed)
+  * [Écrire et comparer une référence](#writing-and-comparing-a-baseline)
+  * [Ce qui compte comme une régression](#what-counts-as-a-regression)
+  * [Points à connaître](#points-worth-knowing)
 <!-- TOC -->
 
 
-## Writing and comparing a baseline
+## Écrire et comparer une référence {#writing-and-comparing-a-baseline}
 
-`--baseline` names the file the findings of each run are written to, and the
-file the next run is compared against:
+`--baseline` désigne le fichier dans lequel les constats de chaque exécution
+sont écrits, et le fichier auquel l'exécution suivante est comparée :
 
 ```bash
 check-opencloud-security -H opencloud.example.com \
@@ -27,8 +29,8 @@ check-opencloud-security -H opencloud.example.com \
     --baseline /var/lib/check_opencloud/baseline.json
 ```
 
-On its own this only adds a line to the output (`Baseline: ...`). Add
-`--warn-on-new` to act on it:
+À lui seul, cela n'ajoute qu'une ligne à la sortie (`Baseline: ...`). Ajoutez
+`--warn-on-new` pour en tirer parti :
 
 ```bash
 check-opencloud-security -H opencloud.example.com \
@@ -37,9 +39,10 @@ check-opencloud-security -H opencloud.example.com \
     --warn-on-new
 ```
 
-The check then reports `OK` while the picture is unchanged, and its normal
-status as soon as anything is new or worse. The full state is still printed
-either way - only the alert is suppressed, never the evidence:
+Le contrôle signale alors `OK` tant que la situation est inchangée, et son état
+habituel dès que quelque chose est nouveau ou plus grave. L'état complet reste
+affiché dans les deux cas : seule l'alerte est supprimée, jamais les éléments
+constatés :
 
 ```
 OK: nothing new since the last run (WARNING state unchanged).
@@ -49,10 +52,12 @@ Baseline: No new findings since 2026-01-14T09:00:00+00:00 (1 known issue(s) unch
 Suppressed by --warn-on-new: this run would otherwise be WARNING (WARNING: 1 hardening measure(s) missing, but no known vulnerabilities.)
 ```
 
-Every comparison also lists added and resolved CVEs, hardening and additional
-check changes, rating/EOL/support-horizon changes, and installed or target
-version shifts. `text` is the default for logs. For a GitHub Actions step
-summary or pull-request comment, select Markdown:
+Chaque comparaison énumère également les CVE ajoutées et corrigées, les
+changements de durcissement et de contrôles supplémentaires, les variations de
+note, de fin de vie et d'horizon de support, ainsi que les évolutions de la
+version installée ou visée. `text` est le format par défaut, adapté aux
+journaux. Pour un résumé d'étape GitHub Actions ou un commentaire de pull
+request, choisissez Markdown :
 
 ```shell
 check-opencloud-security -H opencloud.example.com \
@@ -60,10 +65,10 @@ check-opencloud-security -H opencloud.example.com \
   --diff-format markdown >> "$GITHUB_STEP_SUMMARY"
 ```
 
-Use `--diff-format slack` (or `json`) for Slack Block Kit JSON. When a webhook
-is configured, every baseline comparison is included as `baseline_diff`; Slack
-format additionally puts the blocks and color banner at the top level for
-incoming webhooks:
+Utilisez `--diff-format slack` (ou `json`) pour du JSON Slack Block Kit.
+Lorsqu'un webhook est configuré, chaque comparaison de référence y est incluse
+sous `baseline_diff` ; le format Slack place en outre les blocs et la bannière
+de couleur au niveau racine, pour les webhooks entrants :
 
 ```shell
 check-opencloud-security -H opencloud.example.com \
@@ -73,52 +78,56 @@ check-opencloud-security -H opencloud.example.com \
 ```
 
 
-## What counts as a regression
+## Ce qui compte comme une régression {#what-counts-as-a-regression}
 
 
-- a finding that was not there last time - a new advisory, a hardening measure
-  that has regressed, an additional check that started failing, a newly
-  available update;
-- a rating lower than the one recorded;
-- **a release past its end of life, always.** It receives no security fixes,
-  so it gets worse every day it stays in production and can never be
-  grandfathered in by a baseline.
+- un constat absent la fois précédente - un nouvel avis de sécurité, une mesure
+  de durcissement qui a régressé, un contrôle supplémentaire qui s'est mis à
+  échouer, une mise à jour nouvellement disponible ;
+- une note inférieure à celle enregistrée ;
+- **une version au-delà de sa fin de vie, toujours.** Elle ne reçoit plus aucun
+  correctif de sécurité : elle empire donc chaque jour qu'elle passe en
+  production et ne peut jamais être tolérée au titre de l'existant par une
+  référence.
 
 ## Dérive de configuration {#configuration-drift}
 
 
-Une référence retient aussi l'**empreinte de configuration** de l'analyse : des
-condensats groupés de la façon dont l'instance est montée - transport,
-en-têtes, partage, authentification, proxy - et jamais de ce qu'elle contient.
-Une exécution où la note et les constats n'ont pas bougé dit malgré tout que
-l'installation, elle, a changé :
+Une référence mémorise aussi l'**empreinte de configuration** du scan : des
+condensats regroupés décrivant la façon dont l'instance est configurée -
+transport, en-têtes, partage, authentification, proxy - et rien de ce sur quoi
+elle est configurée. Une exécution dont la note et les constats n'ont pas bougé
+le signale tout de même lorsque le déploiement, lui, a changé :
 
 ```text
 Baseline: No new findings since 2026-09-14T06:00:00Z, but the configuration changed (headers, proxy)
 ```
 
-Seuls les noms de groupes sont signalés. Ce que le réglage dit maintenant ne se
-trouve ni dans le fichier de référence, ni dans la sortie, ni dans le webhook -
-seulement un condensat -, si bien que le fichier peut voisiner avec le reste de
-l'état de supervision sans publier la configuration de l'instance.
+Le rapport nomme les groupes dont la configuration a changé. Le fichier de
+référence, la sortie et le webhook contiennent des empreintes, sans les valeurs
+de configuration correspondantes.
 
 La dérive est signalée, jamais jugée : elle ne crée pas de constat, ne fait pas
-régresser une exécution et ne change jamais le code de sortie. Une référence
-écrite avant l'existence des empreintes ne signale aucune dérive, ce qui est la
-réponse honnête pour un fichier qui ne peut pas le dire.
+régresser une exécution et ne modifie jamais le code de sortie. Une référence
+écrite avant l'existence des empreintes ne peut pas détecter les changements
+de configuration, faute d'empreintes à comparer. Elle ne signale donc aucun
+changement ; cela ne prouve pas que la configuration est restée identique.
 
-## Points worth knowing
+## Points à connaître {#points-worth-knowing}
 
 
-- The first run has nothing to compare against, so it reports normally and
-  becomes the baseline. Starting to use the flag never hides anything.
-- One file holds one entry per host, so a comma-separated `--host` list can
-  share it.
-- Findings that are waived with `--ignore-hardening`, and measures OpenCloud
-  hardcodes, are left out - exactly as they are left out of the alert line.
-- `--warn-on-new` without `--baseline` is rejected: with nowhere to remember
-  the last run it would report "nothing new" forever.
-- A baseline that cannot be written is reported as a line of output and
-  nothing more. Bookkeeping never decides the verdict on an instance.
-- The file is written atomically with owner-only permissions. Put it somewhere
-  the monitoring user owns, e.g. `/var/lib/check_opencloud/`.
+- La première exécution n'a rien à quoi se comparer : elle signale normalement
+  et devient la référence. Commencer à utiliser l'option ne masque jamais rien.
+- Un fichier contient une entrée par hôte : une liste `--host` séparée par des
+  virgules peut donc le partager.
+- Les constats exclus par `--ignore-hardening`, ainsi que les mesures
+  qu'OpenCloud fige, sont laissés de côté - exactement comme ils le sont dans la
+  ligne d'alerte.
+- `--warn-on-new` sans `--baseline` est refusé : sans endroit où mémoriser
+  l'exécution précédente, l'option signalerait indéfiniment « rien de nouveau ».
+- Une référence qui ne peut pas être écrite donne lieu à une ligne de sortie et
+  à rien de plus. La tenue de registres ne décide jamais du verdict sur une
+  instance.
+- Le fichier est écrit de façon atomique, avec des permissions réservées au
+  propriétaire. Placez-le à un endroit appartenant à l'utilisateur de
+  supervision, p. ex. `/var/lib/check_opencloud/`.

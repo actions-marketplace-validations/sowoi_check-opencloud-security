@@ -103,7 +103,7 @@ MESSAGES: dict[str, str] = {
     "admin.rules.rule.internal_names.title": "Lokale Namen und Metadaten-Endpunkte",
     "admin.rules.rule.internal_names.body": "Nach Name wie nach Adresse abgelehnt:",
     "admin.rules.rule.wildcard_dns.title": "Wildcard- und Rebinding-DNS-Namen",
-    "admin.rules.rule.wildcard_dns.body": "Namen unter diesen Diensten zeigen dorthin, wo ihre Schreibweise es sagt. Die Adresse dahinter lässt sich weiterhin direkt eingeben:",
+    "admin.rules.rule.wildcard_dns.body": "Diese Dienste lösen Hostnamen zur darin enthaltenen IP-Adresse auf. Du kannst diese IP-Adresse weiterhin direkt eingeben:",
     "admin.rules.rule.dns_consistency.title": "Ein Name muss zweimal gleich auflösen",
     "admin.rules.rule.dns_consistency.body": "Ein eingereichter Name wird zweimal abgefragt und abgelehnt, wenn die Antworten keine Adresse teilen; jede Adresse aus beiden wird geprüft.",
     "admin.rules.rule.redirects.title": "Jede Weiterleitung wird geprüft",
@@ -155,7 +155,7 @@ MESSAGES: dict[str, str] = {
     "admin.state.guard.week": "letzte 7 Tage: {blocks} Sperren, {strikes} Verstöße, {daily}-mal Tageslimit erreicht",
     "admin.state.guard.off": "Scan-Sperre aus",
     "admin.state.schedule": "Release-Zeitplan",
-    "admin.state.advisories": "Advisories",
+    "admin.state.advisories": "Sicherheitsmeldungen",
     "admin.state.checked": "geprüft {when}",
     "admin.state.checked.failed": (
         "geprüft {when} - der letzte Versuch war nicht abrufbar"
@@ -220,14 +220,14 @@ MESSAGES: dict[str, str] = {
     ),
     "admin.surfaces.targets": "Ziele im Klartext protokolliert",
     "admin.update.kicker": "Release",
-    "admin.update.heading": "Updates",
+    "admin.update.heading": "Aktualisierungen",
     "admin.update.running": "Läuft mit {version}.",
     "admin.update.available": "Release {version} ist verfügbar.",
     "admin.update.current": "Das ist das neueste Release.",
     "admin.update.unknown": "Ob es ein neueres Release gibt, ließ sich nicht herausfinden.",
     "admin.update.off": "Die Update-Prüfung ist ausgeschaltet (COS_WEB_UPDATE_CHECK).",
     "admin.update.install": "{version} jetzt installieren",
-    "admin.update.downtime": "Das Bundle wird gegen seine GitHub-Build-Attestierung geprüft, dann starten Webdienst und Worker damit neu - eine kurze Ausfallzeit, ein laufender Scan bricht ab. Das Update hält, bis die Container neu starten.",
+    "admin.update.downtime": "Das Bundle wird anhand seiner GitHub-Build-Attestierung geprüft. Anschließend starten Webdienst und Worker mit der neuen Version neu. Dabei ist der Dienst kurz nicht verfügbar; laufende Scans werden abgebrochen. Beim nächsten Container-Neustart wird wieder die Version aus dem Image verwendet.",
     "admin.update.manual": "Installieren von hier ist ausgeschaltet (COS_WEB_ADMIN_UPDATE_DIR). Zieh das neue Image und erstelle die Container neu.",
     "admin.update.outcome.requested": "Geprüft und installiert. Der Dienst startet gleich neu - lade die Seite neu.",
     "admin.update.outcome.current": "Es gibt nichts Neueres zu installieren.",
@@ -309,7 +309,7 @@ MESSAGES: dict[str, str] = {
         "würde. Es wird nichts gespeichert."
     ),
     "admin.probe.schedule": "Release-Zeitplan: {answer}",
-    "admin.probe.advisories": "Advisories: {answer}",
+    "admin.probe.advisories": "Sicherheitsmeldungen: {answer}",
     "admin.probe.usable": "gelesen, eine Aktualisierung würde ihn übernehmen",
     "admin.probe.rejected": "gelesen, aber die Prüfungen würden ihn ablehnen",
     "admin.probe.unreadable": "nicht lesbar - nicht erreichbar oder nicht mehr in der erwarteten Form",
@@ -352,7 +352,7 @@ MESSAGES: dict[str, str] = {
         "Jeder Pull Request auf main und der Release-Workflow erzeugen den "
         "Index neu und checken ihn ein. In dieser Ansicht kannst du den Index nicht neu erstellen."
     ),
-    "admin.audit.kicker": "Audit",
+    "admin.audit.kicker": "Audit-Log",
     "admin.audit.heading": "Audit-Log",
     "admin.audit.lede": (
         "Scan-Anfragen, Ablehnungen und ausgelöste Limits in Echtzeit. Das "
@@ -1557,11 +1557,10 @@ MESSAGES: dict[str, str] = {
     "result.fingerprint.kicker": "Konfiguration",
     "result.fingerprint.heading": "Hat sich diese Installation geändert?",
     "result.fingerprint.body": (
-        "Jede Gruppe unten ist ein Digest davon, wie diese Instanz "
-        "konfiguriert ist - nie davon, worauf sie konfiguriert ist. "
-        "Vergleiche sie mit einem früheren Scan: Eine Gruppe mit einem "
-        "anderen Digest war anders eingerichtet, auch wenn die Note gleich "
-        "geblieben ist."
+        "Jede Gruppe enthält einen Hash der gemessenen Konfiguration, ohne "
+        "deren Werte offenzulegen. Vergleiche Hashes aus Scans mit gleichem "
+        "Messumfang, um Konfigurationsänderungen zu erkennen, auch wenn die "
+        "Note gleich bleibt."
     ),
     "result.fingerprint.overall": "Über alle Gruppen: {digest}",
     "result.fingerprint.unmeasured": "In diesem Scan nicht gemessen",
@@ -1655,9 +1654,8 @@ MESSAGES: dict[str, str] = {
     "result.tls.kicker": "Transport",
     "result.tls.heading": "Transportsicherheit",
     "result.tls.lede": (
-        "Was die TLS-Schicht sagte, bevor auch nur ein Byte HTTP ausgetauscht "
-        "wurde. Die obigen Befunde beurteilen dies bereits; dies ist die "
-        "Messung dahinter."
+        "Beim TLS-Verbindungsaufbau erfasste Messwerte. Die oben aufgeführten "
+        "Befunde enthalten bereits die Bewertung dieser Werte."
     ),
     "result.tls.protocol": "Protokoll",
     "result.tls.bits": "({bits} Bit)",
@@ -1700,6 +1698,16 @@ MESSAGES: dict[str, str] = {
         "Eine Datei, die noch lesbar ist, wenn dieser Link abgelaufen ist. "
         "Sie öffnet offline, stellt keine Netzwerkanfrage und aktualisiert "
         "sich nicht."
+    ),
+    "result.export.remediation.md": "Behebungspaket (Markdown)",
+    "result.export.remediation.md.hint": (
+        "Nur das, was noch offen ist: jeder Befund, was beobachtet wurde, und "
+        "die nginx-, Caddy-, Traefik-, Compose- und .env-Fragmente, die ihn "
+        "beheben. Für einen Pull Request oder ein Runbook."
+    ),
+    "result.export.remediation.html": "Behebungspaket (HTML)",
+    "result.export.remediation.html.hint": (
+        "Dasselbe Paket als eine Seite, die du offline öffnen oder drucken kannst."
     ),
     "result.export.csv": "CSV",
     "result.export.csv.hint": "Eine Zeile pro Befund, für eine Tabellenkalkulation.",
