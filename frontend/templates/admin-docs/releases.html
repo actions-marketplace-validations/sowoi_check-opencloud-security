@@ -31,6 +31,7 @@
 
 <nav class="docs-toc card section-gap" aria-label="{{ t('docs.guide.toc.aria') }}" data-reveal>
   <p class="kicker">{{ t('docs.guide.toc.heading') }}</p>
+  <a href="#1292-this-release" lang="en">[1.29.2] - this release</a>
   <a href="#1291-2026-09-21" lang="en">[1.29.1] - 2026-09-21</a>
   <a href="#1290-2026-09-21" lang="en">[1.29.0] - 2026-09-21</a>
   <a href="#1281-2026-09-21" lang="en">[1.28.1] - 2026-09-21</a>
@@ -40,10 +41,51 @@
   <a href="#1270-2026-09-19" lang="en">[1.27.0] - 2026-09-19</a>
   <a href="#1261-2026-09-19" lang="en">[1.26.1] - 2026-09-19</a>
   <a href="#1260-2026-09-19" lang="en">[1.26.0] - 2026-09-19</a>
-  <a href="#1253-2026-09-18" lang="en">[1.25.3] - 2026-09-18</a>
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="en">
+<h2 id="1292-this-release">[1.29.2] - this release</h2>
+<h3 id="fixed">Fixed</h3>
+<ul>
+<li>
+<p><strong><code>/llms.txt</code> and <code>/llms-full.txt</code> described an older version of the
+  service.</strong> They are the map an agent reads before deciding what this
+  service can do, and four of their facts had fallen behind the code:
+  <code>/mcp</code> was described as six tools and six prompts where it registers seven
+  of each, <code>compare_scans</code> was missing from the tool list in the long form,
+  the export formats omitted <code>html</code>, and the endpoint summary never mentioned
+  <code>GET /api/scans/{uuid}/badge.svg</code>. An agent that trusts the map would have
+  concluded the badge and the HTML export do not exist. All four now match
+  what <code>webapp/mcp_server.py</code>, <code>wf.EXPORT_FORMATS</code> and <code>webapp/openapi.py</code>
+  actually serve.</p>
+</li>
+<li>
+<p><strong>A page's <code>&lt;lastmod&gt;</code> in <code>sitemap.xml</code> now moves only when the page really
+  changed.</strong> The date came from the modification time of the template that
+  renders the page, and a checkout, a container build and an unpacked release
+  tarball all write every template at once - so every public page claimed to
+  have changed on release day, and a crawler told that everything changed
+  learns nothing from the file. Each public page's date is now recorded next
+  to a digest of its template in <code>webapp/data/page-revisions.json</code>, and
+  <code>scripts/update_page_revisions.py</code> moves a date only when that digest does.
+  A page the record has never seen, or one edited since it was written, still
+  falls back to the modification time rather than publishing a date that is
+  no longer true. CI checks the record with <code>--check</code>, as it does for the
+  generated documentation.</p>
+</li>
+<li>
+<p><strong>The German, Spanish and French pages no longer drop names the English
+  text uses to say what this is.</strong> The translated "About" paragraph called the
+  plugin a generic monitoring plugin, so a reader of those pages never learned
+  it plugs into Nagios and Icinga, and it also lost the English sentence's
+  point that running it yourself has no rate limit or queue. The German and
+  French descriptions of the method page said "what the scanner checks"
+  without naming an OpenCloud instance, and the Spanish search summary for the
+  API page dropped OpenAPI, Arazzo and MCP - the three things somebody
+  searching for that page is searching for. All four strings now carry the
+  names again; the search index is rebuilt with them.</p>
+</li>
+</ul>
 <h2 id="1291-2026-09-21">[1.29.1] - 2026-09-21</h2>
 <h3 id="changed">Changed</h3>
 <ul>
@@ -74,7 +116,7 @@
   dropped rather than raise.</p>
 </li>
 </ul>
-<h3 id="fixed">Fixed</h3>
+<h3 id="fixed_1">Fixed</h3>
 <ul>
 <li>The browser test for the severity filter no longer drops its own press in
   WebKit on CI. Pressing a counter hides most of the list and reveals the
@@ -275,7 +317,7 @@
 <li><strong>Translated release-lifecycle guides now include the upgrade-rehearsal
   section.</strong> Their section anchors stay aligned with the English guide.</li>
 </ul>
-<h3 id="fixed_1">Fixed</h3>
+<h3 id="fixed_2">Fixed</h3>
 <ul>
 <li><strong>A gateway answer no longer fails the documented link check.</strong> An HTTP
   408, 502, 503 or 504 comes from the machinery in front of a site, not from
@@ -353,7 +395,7 @@
   (<code>check_untyped_defs</code> in <code>mypy.ini</code>), so CI type-checks the test suite
   too. The 98 errors that surfaced - all in <code>tests/</code> - are fixed.</li>
 </ul>
-<h3 id="fixed_2">Fixed</h3>
+<h3 id="fixed_3">Fixed</h3>
 <ul>
 <li>
 <p>The Codex scan driver no longer prints the raw scanner document, which could
@@ -439,89 +481,6 @@
   of the walk on the right, marked done, skipped or still ahead, with the
   current one highlighted. A terminal narrower than the card, a pipe or
   <code>NO_COLOR</code> keeps the plain heading lines.</p>
-</li>
-</ul>
-<h2 id="1253-2026-09-18">[1.25.3] - 2026-09-18</h2>
-<h3 id="added_8">Added</h3>
-<ul>
-<li>
-<p>The <code>/check-changelog-docs</code> skill checks that every new <code>Added</code> or
-  <code>Changed</code> entry under <code>[Unreleased]</code> is documented where AGENTS.md requires
-  it - the README option table, the example YAML, the <code>docs/</code> guides in all
-  four languages, <code>docs/webapp.md</code>, the guide index and the generated
-  <code>/documentation</code> pages - and reports each gap as a concrete action. A new
-  Claude Code hook stops the first <code>git commit</code> that adds such entries and
-  asks for the check; retrying the same commit goes through.</p>
-</li>
-<li>
-<p>Manual mutation testing for contributors: the <code>/mutation-test</code> skill runs
-  mutmut through the read-only <code>mutation-tester</code> agent on chosen plugin or
-  scanner functions and sorts every surviving mutant into a real test gap,
-  unreachable code or noise. mutmut 3.8.0 is a new dependency in its own
-  <code>mutation</code> group - never installed by CI or a plain <code>uv sync</code>, never run in
-  CI - reviewed and approved in <code>security/dependencies/mutmut.yml</code>.</p>
-</li>
-<li>
-<p>The browser tests now also run in Chromium, the engine behind Chrome,
-  Edge and most Android browsers, as a third job in the browser-tests
-  workflow (<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0068-chromium-is-a-third-browser-test-engine-behind-the-dead-proxy.md">ADR 0068</a>,
-  superseding ADR 0061's WebKit-and-Firefox-only rule). Chromium is
-  Playwright's build, which is Google's, and runs behind the same dead proxy
-  and request watch as the other engines; WebKit stays the default. The
-  workflow now runs every <code>tests/test_webapp_browser_*.py</code> file, including
-  the enhancements, phone and operator tests it had been leaving out.
-  Chromium's first run showed ReDoc asking for Redocly's logo from its CDN;
-  the <code>/redoc</code> page's policy already blocks it, and a test now keeps it that
-  way.</p>
-</li>
-</ul>
-<h3 id="fixed_3">Fixed</h3>
-<ul>
-<li>The end-of-life alert no longer shows a double space ("The 2.x  release
-  line") when the scan result names a release line but no release type.</li>
-<li><code>--baseline</code> and <code>--warn-on-new</code> are now tested in-process: suppressing an
-  unchanged problem, keeping new findings, worse ratings and OK runs as they
-  are, leaving waived measures out of the baseline, and a baseline that
-  cannot be written. The rating messages (end of life, thresholds, OK and
-  UNKNOWN) are pinned exactly. A mutation-testing trial run found both gaps.</li>
-<li><code>check_vulnerabilities</code> is now tested as a whole, in-process: a scan with
-  known vulnerabilities and a good rating, the exact hardening and update
-  alert lines, what the baseline records with and without
-  <code>--check-hardening</code>, perfdata, the self-update note, extra-check
-  truncation and the payload behind <code>--format</code> and the webhook. A
-  <code>/mutation-test</code> run of the rating, baseline and check functions now
-  leaves only 3 equivalent mutants alive (was 108).</li>
-<li>The browser tests for the below-the-fold reveal no longer time out in
-  Firefox on CI. They ran the longest page with the blurred fade switched
-  on, which starved headless Firefox until even the next page load timed
-  out; they now use reduced motion like every other browser test, which
-  still exercises the same hiding and revealing, and the motion itself
-  stays covered on the landing page.</li>
-</ul>
-<h3 id="documentation_1">Documentation</h3>
-<ul>
-<li>
-<p>Polished awkward German guide wording and corrected inconsistent address forms.</p>
-</li>
-<li>
-<p><code>docker/docker-compose.yml</code> now shows every web setting it had left out:
-  the operator's area (<code>COS_WEB_ADMIN_*</code>), <code>COS_WEB_AUDIT_LOG_ROTATION</code> and
-  <code>COS_WEB_RATE_LIMIT_SALT</code> as commented examples, and why
-  <code>COS_WEB_FRONTEND_DIR</code> stays unset. The example configuration shows
-  <code>scanner.proxy</code> and <code>releases.proxy</code>, which override the top-level <code>proxy</code>.</p>
-</li>
-</ul>
-<h3 id="security_2">Security</h3>
-<ul>
-<li>
-<p><strong>Scan targets and redirect hops in deprecated IPv6 site-local space are refused.</strong>
-  The web service's SSRF guard let the deprecated site-local range (RFC 3879) through because no
-  <code>ipaddress</code> private flag covers it, so a name resolving there - or a redirect
-  to it - could reach a network that still routes site-local addresses.</p>
-</li>
-<li>
-<p><strong>Webhooks to deprecated IPv6 site-local addresses are refused.</strong> The
-  plugin's webhook guard had the same site-local gap as the web service.</p>
 </li>
 </ul>
 </article>

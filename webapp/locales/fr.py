@@ -697,7 +697,7 @@ MESSAGES: dict[str, str] = {
     "catalogue.advisories.unfixed": "Aucun correctif publié pour le moment",
     # -------------------------------------------------- how the scan works
     "how.title": "Comment fonctionne l'analyse",
-    "how.description": "Les informations vérifiées par le scanner et les étapes entre la demande et le rapport.",
+    "how.description": "Ce que le scanner vérifie sur une instance OpenCloud et les étapes entre la demande et le rapport.",
     "how.kicker": "La méthode",
     "how.lede": "Le scanner se connecte directement à l’adresse saisie et évalue lui-même les réponses. Il examine les informations accessibles sans compte et utilise ses données de versions et de vulnérabilités pour évaluer le logiciel installé.",
     "how.tests.heading": "Ce qui est testé",
@@ -799,7 +799,7 @@ MESSAGES: dict[str, str] = {
     ),
     "about.project.kicker": "Le projet",
     "about.project.heading": "À propos de ce scanner",
-    "about.project.body": "Les résultats proviennent de <code>check-opencloud-security</code>, un plugin de supervision avec sa propre bibliothèque d’analyse. Vous pouvez l’utiliser sur ce site ou l’exécuter sur votre machine.",
+    "about.project.body": "Les résultats proviennent de <code>check-opencloud-security</code>, un plugin pour Nagios et Icinga avec sa propre bibliothèque d’analyse. Vous pouvez l’utiliser sur ce site ou l’exécuter sur votre machine sans limite de fréquence ni file d’attente.",
     "about.project.origin": "<strong>Massoud Ahmed</strong> a créé ce projet pour vérifier les canaux de publication, les paramètres et les installations d’OpenCloud avec un outil que les administrateurs peuvent exécuter sur leur propre machine. <a href=\"{project}\" rel=\"noopener noreferrer\">Le code source et les contributions sont sur GitHub</a>.",
     # ------------------------------------------------------------------- API
     "api.title": "Analyser depuis un script ou un agent",
