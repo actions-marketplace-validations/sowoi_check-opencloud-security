@@ -62,7 +62,9 @@ AI_SLOP = re.compile(
 # a regression check for future generated documentation.
 UNTRANSLATED_GUIDE_SLOP = re.compile(
     r"\b(?:Named threshold set|judging the result|One pitfall is easy to miss|"
-    r"very same scanner|nothing looks quietly dropped|it is just not)\b",
+    r"very same scanner|nothing looks quietly dropped|it is just not|"
+    r"It reads two files and scans nothing|Every comparison ends with|"
+    r"The ~ line is the one|Each row states both sides|One area at a time)\b",
     re.IGNORECASE,
 )
 
@@ -146,6 +148,21 @@ def test_translated_guides_do_not_keep_known_english_placeholders():
                     findings.append((locale, path.name, line_number, match.group(0)))
 
     assert findings == []
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "It reads two files and scans nothing.",
+        "Every comparison ends with the failing findings counted by severity.",
+        "The ~ line is the one a comparison cannot produce.",
+        "Each row states both sides.",
+        "One area at a time",
+    ],
+)
+def test_untranslated_guide_detector_catches_new_english_copy(value: str):
+    """Newly copied guide prose must be caught before it reaches a locale."""
+    assert UNTRANSLATED_GUIDE_SLOP.search(value)
 
 
 def test_no_guide_links_to_a_file_that_is_not_there():

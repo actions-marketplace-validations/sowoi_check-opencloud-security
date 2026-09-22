@@ -69,6 +69,11 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ### Fixed
 
+- **The French scanner CLI guide no longer ships the newly added comparison
+  sections in English.** Its `diff` explanation, severity view, side-by-side
+  output and category filtering are now translated, and regression tests catch
+  those copied-English phrases in future guide updates.
+
 - **The German operator area no longer leaves avoidable English labels in
   place.** Advisory status is shown as Sicherheitsmeldungen, update controls
   as Aktualisierungen, and the audit section consistently names its log.

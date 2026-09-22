@@ -98,7 +98,7 @@ consume, and what `diff` below compares. The
 [scanner library README](../../opencloud_local_scan/README.md) describes its
 fields.
 
-## `diff` - what changed between two saved results
+## `diff` - ce qui a changé entre deux résultats enregistrés
 
 ```bash
 check-opencloud-scanner scan opencloud.example.com > before.json
@@ -118,24 +118,25 @@ Hardening: + Content-Security-Policy
 Rating: A+ (5) -> D (2)
 ```
 
-It reads two files and scans nothing. `+` marks a finding that appeared, `-`
-one that was resolved, and `~` one that is still open but is now weighted
-differently. It also reports any movement in the rating, the
-version and the support horizon. It answers "did the fix work?" and "what
-did the upgrade change?" without keeping a baseline file. For a check that
-remembers its last run by itself, see [Reporting only what changed](baseline.md).
+Il lit deux fichiers et n'effectue aucun scan. `+` signale un constat apparu,
+`-` un constat corrigé et `~` un constat toujours ouvert mais dont la gravité
+a changé. Le résultat indique aussi les variations de la note, de la version
+et de la période de support. Il répond à « la correction a-t-elle fonctionné ? »
+et « qu'a changé la mise à niveau ? » sans fichier de référence. Pour un
+contrôle qui mémorise lui-même son dernier passage, voir [Signaler uniquement
+ce qui a changé](baseline.md).
 
-| Option | What it does |
+| Option | Fonction |
 |:--|:--|
-| `--format text` | Readable lines, as above. The default |
-| `--format markdown` | A Markdown table, for a ticket or a pull request comment |
-| `--format side-by-side` | Both scans as two columns, one finding per row |
-| `--format json` | The structured comparison the plugin's webhook carries |
-| `--format slack` | Slack Block Kit JSON |
-| `--category NAME` | Show one area only. Repeatable |
-| `--all-findings` | List every finding measured, not only the ones that moved |
-| `--exit-zero` | Always exit `0` |
-| `--allow-different-hosts` | Compare results from two different instances |
+| `--format text` | Lignes lisibles, comme ci-dessus ; format par défaut |
+| `--format markdown` | Tableau Markdown pour un ticket ou un commentaire de pull request |
+| `--format side-by-side` | Les deux scans en deux colonnes, un constat par ligne |
+| `--format json` | Comparaison structurée transmise par le webhook du plugin |
+| `--format slack` | JSON Slack Block Kit |
+| `--category NAME` | N'afficher qu'un domaine ; option répétable |
+| `--all-findings` | Lister tous les constats mesurés, pas seulement ceux qui ont changé |
+| `--exit-zero` | Toujours terminer avec `0` |
+| `--allow-different-hosts` | Comparer les résultats de deux instances différentes |
 
 **It exits `1` when the second result is worse**, so a pipeline can gate on
 it. It exits `0` when nothing got worse, including when findings were only
@@ -150,20 +151,29 @@ It exits `2`, and compares nothing, when it cannot give an honest answer:
 - **a file is not a result document** from `scan`. For example, it has no
   rating, or it is the error entry of an instance that could not be scanned.
 
-### Severity, finding by finding {#severity-finding-by-finding}
+### Gravité, constat par constat {#severity-finding-by-finding}
 
-Every comparison ends with the failing findings counted by severity:
+Chaque comparaison se termine par le nombre de constats échoués, regroupés par gravité :
 
 ```text
 ~ exposed:/config/opencloud.yaml [exposure]: severity high -> critical
 Failing by severity: critical 0 -> 1, high 1 -> 1, medium 0 -> 1, low 1 -> 0
 ```
 
-The `~` line is the one a comparison of two lists of names cannot produce. A check that was failing at `high` and is failing at `critical` never entered or left the set of failing checks, so [the baseline](../baseline.md) is silent about it - correctly, because by its definition nothing regressed - while the rating it caps has dropped a grade. The severity on each side comes from the documents themselves, never from today's catalogue: a scan archived last month is evidence about last month.
+La ligne `~` exprime ce qu'une comparaison de deux listes de noms ne peut pas
+montrer. Un contrôle qui échouait avec la gravité `high` et échoue maintenant
+avec `critical` n'est ni entré dans l'ensemble des contrôles en échec ni sorti
+de celui-ci ; [la référence](../baseline.md) reste donc silencieuse - à juste
+titre, puisqu'aucune régression n'est apparue selon sa définition - alors que
+la note plafonnée par ce contrôle a baissé. La gravité de chaque côté vient des
+documents eux-mêmes, jamais du catalogue actuel : un scan archivé le mois
+dernier décrit ce qui était vrai le mois dernier.
 
-A waived finding is counted here and rendered as `waived`, because a waiver is a decision to not be alerted and not a claim the finding is gone.
+Un constat exclu est compté ici et affiché comme `waived`, car une exclusion
+décide de ne pas déclencher d'alerte ; elle ne prétend pas que le constat a
+disparu.
 
-### Side by side {#side-by-side}
+### Côte à côte {#side-by-side}
 
 ```bash
 check-opencloud-scanner diff before.json after.json --format side-by-side
@@ -183,25 +193,39 @@ Finding                           2026-09-15T17:42:21+00:00  2026-09-22T09:03:11
 - Referrer-Policy                 FAIL low                   ok
 ```
 
-Each row states both sides, so a reader does not have to rebuild them from a list of changes. `--all-findings` adds the findings that did not move, which turns the view from "what changed" into "what the two scans found".
+Chaque ligne présente les deux côtés, afin que la personne qui lit le résultat
+n'ait pas à les reconstituer depuis une liste de changements.
+`--all-findings` ajoute les constats inchangés : la vue passe ainsi de « ce qui
+a changé » à « ce que les deux scans ont trouvé ».
 
-`not measured` and `not listed` are different answers and are never merged: a check absent from a document was not performed ([ADR 0064](https://github.com/sowoi/check-opencloud-security/blob/main/adr/0064-a-scan-records-what-it-did-not-measure.md)), while an advisory absent from one did not match that version. Neither is a pass.
+`not measured` et `not listed` sont des réponses différentes qui ne sont
+jamais fusionnées : un contrôle absent d'un document n'a pas été exécuté
+([ADR 0064](https://github.com/sowoi/check-opencloud-security/blob/main/adr/0064-a-scan-records-what-it-did-not-measure.md)),
+tandis qu'un avis absent ne concernait pas cette version. Aucun des deux ne
+constitue une réussite.
 
-### One area at a time {#one-area-at-a-time}
+### Un domaine à la fois {#one-area-at-a-time}
 
-`--category` narrows the comparison, and takes a value from either of two namespaces:
+`--category` restreint la comparaison et accepte une valeur appartenant à l'un
+de deux espaces de noms :
 
-- **a finding category** - `cookies`, `authentication`, `sharing`, `exposure`, `embedding`, `lifecycle`, `proxy`, `headers`, `transport`, `advisory` - keeps only the findings about that area of the instance.
-- **a change category** - `instance`, `referenceData`, `scanner`, `policy`, `unknown` - keeps only the explanation of *why* the two scans differ. See [Reference data](reference-data.md) for why a grade can move without the instance changing at all.
+- **une catégorie de constat** - `cookies`, `authentication`, `sharing`, `exposure`, `embedding`, `lifecycle`, `proxy`, `headers`, `transport`, `advisory` - ne conserve que les constats concernant ce domaine de l'instance ;
+- **une catégorie de changement** - `instance`, `referenceData`, `scanner`, `policy`, `unknown` - ne conserve que l'explication de *pourquoi* les deux scans diffèrent. Voir [Données de référence](reference-data.md) pour comprendre pourquoi une note peut changer sans modification de l'instance.
 
 ```bash
 check-opencloud-scanner diff before.json after.json --category transport
 check-opencloud-scanner diff before.json after.json --category instance
 ```
 
-Each namespace is filtered only when a value for it is given, so `--category transport` leaves the explanation intact and `--category instance` leaves the findings intact. The flag is repeatable, and an unknown value is refused with exit `2` rather than silently showing nothing - a typo that printed an empty comparison would read as "nothing changed".
+Chaque espace de noms n'est filtré que lorsqu'une valeur lui est fournie :
+`--category transport` laisse l'explication intacte et `--category instance`
+laisse les constats intacts. L'option est répétable et une valeur inconnue est
+refusée avec le code de sortie `2` plutôt que d'afficher silencieusement une
+page vide ; une faute de frappe qui produirait une comparaison vide serait
+interprétée comme « rien n'a changé ».
 
-A filtered explanation omits the `[limitation]` lines, because those qualify the whole comparison rather than one category of it.
+Une explication filtrée omet les lignes `[limitation]`, car elles qualifient
+la comparaison entière et non une seule de ses catégories.
 
 ## `explain` - what a finding means and how to fix it
 
