@@ -12,6 +12,8 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+## [1.29.2] - 2026-09-22
+
 ### Fixed
 
 - **`/llms.txt` and `/llms-full.txt` described an older version of the
