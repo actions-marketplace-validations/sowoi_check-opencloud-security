@@ -16,97 +16,102 @@
 {% endif %}
 
 <article class="docs-article card section-gap" data-reveal lang="fr">
-<p><a href="https://www.icinga.com/docs/icinga-director/latest/">Icinga Director</a> gère
-<code>CheckCommand</code>, <code>Service Template</code> et <code>Service</code> objets via son interface utilisateur web
-au lieu de fichiers de configuration manuscrits. Les étapes ci-dessous travaillent pour
-native install ou l'image <a href="/documentation/installation#docker">Docker</a>. Le directeur du programme</p>
+<p><a href="https://icinga.com/docs/icinga-director/latest/">Icinga Director</a> gère les
+objets <code>CheckCommand</code>, <code>Service Template</code> et <code>Service</code> depuis son interface web
+plutôt que par des fichiers de configuration écrits à la main. Les étapes
+ci-dessous fonctionnent aussi bien pour l'installation native que pour l'image
+<a href="/documentation/installation#docker">Docker</a>.</p>
 <ol>
 <li>
-<p><strong>Create the Command</strong>
-   - Navigate to <em>Icinga Director → Commands → Add</em>.
-   - <strong>Command name:</strong> <code>check_opencloud_security</code>
-   - <strong>Command:</strong></p>
+<p><strong>Créer la commande</strong>
+   - Allez dans <em>Icinga Director → Commands → Add</em>.
+   - <strong>Command name :</strong> <code>check_opencloud_security</code>
+   - <strong>Command :</strong></p>
 <ul>
-<li>Native install: <code>/usr/lib/nagios/plugins/check-opencloud-security</code> (wherever you installed/symlinked it, see <a href="/documentation#installation">Installation</a>).</li>
-<li>Docker: <code>/usr/bin/docker</code> (see the <a href="/documentation/installation#using-the-docker-image-instead">Docker CheckCommand</a> example for the required fixed arguments <code>run</code>, <code>--rm</code>, and the image name).</li>
-<li><strong>Command type:</strong> <em>Plugin Check Command</em>.</li>
+<li>Installation native : <code>/usr/lib/nagios/plugins/check-opencloud-security</code> (là où vous l'avez installé ou lié, voir <a href="/documentation/reference#installation">Installation</a>).</li>
+<li>Docker : <code>/usr/bin/docker</code> (voir l'exemple de <a href="/documentation/installation#using-the-docker-image-instead">CheckCommand Docker</a> pour les arguments fixes requis <code>run</code>, <code>--rm</code> et le nom de l'image).</li>
+<li><strong>Command type :</strong> <em>Plugin Check Command</em>.</li>
 </ul>
 </li>
 <li>
-<p><strong>Add the arguments</strong> on the same Command object (<em>Fields</em> tab → <em>Add argument</em>):</p>
+<p><strong>Ajouter les arguments</strong> sur le même objet Command (onglet <em>Fields</em> → <em>Add argument</em>) :</p>
 </li>
 </ol>
 <table>
 <thead>
 <tr>
 <th>Argument</th>
-<th>Value</th>
+<th>Valeur</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>--host</code></td>
-<td><code>$address$</code> (or a custom Director Data Field, e.g. <code>$opencloud_host$</code>)</td>
-<td>OpenCloud hostname, IP or URL, required</td>
+<td><code>$address$</code> (ou un Data Field Director personnalisé, p. ex. <code>$opencloud_host$</code>)</td>
+<td>Nom d'hôte, IP ou URL OpenCloud, obligatoire</td>
 </tr>
 <tr>
 <td><code>--port</code></td>
-<td>Data Field <code>$opencloud_port$</code>, optional</td>
-<td>Port, e.g. <code>9200</code></td>
+<td>Data Field <code>$opencloud_port$</code>, facultatif</td>
+<td>Port, p. ex. <code>9200</code></td>
 </tr>
 <tr>
 <td><code>--insecure</code></td>
-<td>Set-if Data Field <code>$opencloud_insecure$</code> (boolean), optional</td>
-<td>Self-signed instance</td>
+<td>Data Field conditionnel <code>$opencloud_insecure$</code> (booléen), facultatif</td>
+<td>Instance à certificat auto-signé</td>
 </tr>
 <tr>
 <td><code>--proxy</code></td>
-<td>Data Field <code>$opencloud_proxy$</code>, optional</td>
-<td>HTTP/HTTPS proxy</td>
+<td>Data Field <code>$opencloud_proxy$</code>, facultatif</td>
+<td>Proxy HTTP/HTTPS</td>
 </tr>
 <tr>
 <td><code>--debug</code></td>
-<td>Set-if Data Field <code>$opencloud_debug$</code> (boolean), optional</td>
-<td>Verbose debug output</td>
+<td>Data Field conditionnel <code>$opencloud_debug$</code> (booléen), facultatif</td>
+<td>Sortie de débogage détaillée</td>
 </tr>
 </tbody>
 </table>
-<p>These are the common ones. Every other option, with its variable name,
-   is in <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/icinga2/check_opencloud_security.conf"><code>contrib/icinga2/check_opencloud_security.conf</code></a>;
-   add those the same way.</p>
-<p>For each optional argument, tick <em>Skip this argument on empty value</em> so
-   Director omits the flag entirely when the field isn't set.</p>
+<p>Ce sont les plus courants. Toutes les autres options, avec leur nom de
+   variable, figurent dans <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/icinga2/check_opencloud_security.conf"><code>contrib/icinga2/check_opencloud_security.conf</code></a> ;
+   ajoutez-les de la même manière.</p>
+<p>Pour chaque argument facultatif, cochez <em>Skip this argument on empty value</em>
+   afin que Director omette entièrement l'option lorsque le champ n'est pas
+   renseigné.</p>
 <ol start="3">
 <li>
-<p><strong>Expose the fields to services</strong> by defining matching <em>Data Fields</em> under
-   the Command (<em>Fields</em> tab → <em>Add data field</em>), e.g. <code>opencloud_host</code>,
-   <code>opencloud_port</code>, <code>opencloud_insecure</code>, <code>opencloud_debug</code> - then set their
-   <em>Data Type</em> (<code>String</code> or <code>Boolean</code>) and <em>Var Filter</em> as needed.</p>
+<p><strong>Exposer les champs aux services</strong> en définissant les <em>Data Fields</em>
+   correspondants sous la commande (onglet <em>Fields</em> → <em>Add data field</em>), p. ex.
+   <code>opencloud_host</code>, <code>opencloud_port</code>, <code>opencloud_insecure</code>, <code>opencloud_debug</code> -
+   puis définissez leur <em>Data Type</em> (<code>String</code> ou <code>Boolean</code>) et leur <em>Var Filter</em>
+   selon les besoins.</p>
 </li>
 <li>
-<p><strong>Create a Service Template</strong>
+<p><strong>Créer un Service Template</strong>
    - <em>Icinga Director → Service Templates → Add</em>.
-   - <strong>Check command:</strong> <code>check_opencloud_security</code>.
-   - <strong>Check interval:</strong> <code>24h</code> is a good default; see the note under
-     <a href="/documentation/installation#icinga2--nagios">Icinga2 / Nagios</a> before going much lower.
-   - Leave the Data Fields empty here so they can be filled in per service/host.</p>
+   - <strong>Check command :</strong> <code>check_opencloud_security</code>.
+   - <strong>Check interval :</strong> <code>24h</code> est une bonne valeur par défaut ; lisez la note
+     de la section <a href="/documentation/installation#icinga2--nagios">Icinga2 / Nagios</a> avant de
+     descendre nettement plus bas.
+   - Laissez les Data Fields vides ici, afin qu'ils puissent être renseignés par
+     service ou par hôte.</p>
 </li>
 <li>
-<p><strong>Apply it to a host or host group</strong>
-   - <em>Icinga Director → Services → Add</em> (or a <em>Service Apply Rule</em> for a whole host group).
-   - Import the Service Template created above.
-   - Fill in <code>opencloud_host</code> (or rely on <code>$address$</code> if you didn't override it) and any optional fields.
-   - Deploy the configuration from <em>Icinga Director → Deployments</em>.</p>
+<p><strong>L'appliquer à un hôte ou à un groupe d'hôtes</strong>
+   - <em>Icinga Director → Services → Add</em> (ou une <em>Service Apply Rule</em> pour tout un groupe d'hôtes).
+   - Importez le Service Template créé ci-dessus.
+   - Renseignez <code>opencloud_host</code> (ou appuyez-vous sur <code>$address$</code> si vous ne l'avez pas remplacé) ainsi que les champs facultatifs voulus.
+   - Déployez la configuration depuis <em>Icinga Director → Deployments</em>.</p>
 </li>
 </ol>
-<p>Once deployed, Icinga2 invokes the command exactly as described in the
-<a href="/documentation/installation#icinga2--nagios">Icinga2 / Nagios</a> section, whether that resolves
-to the native binary or <code>docker run</code> under the hood.</p>
-<p>To deploy the same objects without the web UI, see
-<a href="/documentation/ansible">Automated deployment with Ansible</a>.</p>
+<p>Une fois déployé, Icinga2 invoque la commande exactement comme décrit dans la
+section <a href="/documentation/installation#icinga2--nagios">Icinga2 / Nagios</a>, que cela aboutisse
+au binaire natif ou à un <code>docker run</code> en arrière-plan.</p>
+<p>Pour déployer les mêmes objets sans l'interface web, voir
+<a href="/documentation/ansible">Déploiement automatisé avec Ansible</a>.</p>
 <hr>
-<p><a href="/documentation/reference">Back to the documentation index</a> | <a href="/documentation">Back to the main README</a></p>
+<p><a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/fr/README.md">Retour à l'index de la documentation</a> | <a href="/documentation/reference">Retour au README principal</a></p>
 </article>
 
 {% include "_page-nav.html" %}

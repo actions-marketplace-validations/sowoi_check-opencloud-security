@@ -16,75 +16,80 @@
 {% endif %}
 
 <article class="docs-article card section-gap" data-reveal lang="fr">
-<p><a href="https://opencloud.eu/">OpenCloud</a> est une plateforme open source de stockage, de
-synchronisation et de partage de fichiers. Ce scanner vérifie ses canaux de publication,
-sa configuration et ses points d’accès publics. Cette page présente l’architecture qui se
-trouve derrière ces contrôles.</p>
+<p><a href="https://opencloud.eu/">OpenCloud</a> est une plateforme open source de stockage,
+de synchronisation et de partage de fichiers. Ce scanner est conçu pour ses
+branches de versions, sa configuration et ses points d'accès publics. Cette page
+explique l'architecture qui sous-tend ces contrôles.</p>
 <!-- TOC -->
 <ul>
-<li><a href="#what-opencloud-is">What OpenCloud is</a></li>
-<li><a href="#where-opencloud-comes-from">Where OpenCloud comes from</a></li>
-<li><a href="#how-opencloud-is-structured">How OpenCloud is structured</a></li>
-<li><a href="#why-this-matters-for-a-security-scan">Why this matters for a security scan</a></li>
+<li><a href="#what-is-opencloud">Ce qu'est OpenCloud</a></li>
+<li><a href="#where-opencloud-comes-from">D'où vient OpenCloud</a></li>
+<li><a href="#how-opencloud-is-structured">Comment OpenCloud est structuré</a></li>
+<li><a href="#why-this-matters-for-a-security-scan">Pourquoi cela compte pour un scan de sécurité</a></li>
 </ul>
 <!-- TOC -->
 
-<h2 id="where-opencloud-comes-from">Where OpenCloud comes from</h2>
-<p>OpenCloud is developed as an independent open-source project with its own
-releases and support lifecycle. Its Go server uses the CS3 APIs and Reva
-components for storage and collaboration. See the
-<a href="https://docs.opencloud.eu/">OpenCloud documentation</a> for deployment and
-configuration instructions.</p>
-<p>Some public interfaces preserve compatibility with existing clients. For
-example, <code>/status.php</code> still has a PHP-style name even though OpenCloud is a Go
-application. Its response includes both compatibility values and the actual
-OpenCloud release. The <a href="/documentation/status-php">status endpoint guide</a> explains which
-fields are useful to a scanner.</p>
-<h2 id="how-opencloud-is-structured">How OpenCloud is structured</h2>
-<p>OpenCloud combines services for authentication, file access, sharing and its
-web interface. The main deployment choices affect what an external scan can see:</p>
+<h2 id="where-opencloud-comes-from">D'où vient OpenCloud</h2>
+<p>OpenCloud est développé comme un projet open source indépendant, avec ses
+propres versions et son propre cycle de support. Son serveur écrit en Go
+s'appuie sur les API CS3 et les composants Reva pour le stockage et la
+collaboration. Consultez la
+<a href="https://docs.opencloud.eu/">documentation OpenCloud</a> pour les instructions de
+déploiement et de configuration.</p>
+<p>Certaines interfaces publiques conservent la compatibilité avec les clients
+existants. Par exemple, <code>/status.php</code> porte toujours un nom de style PHP alors
+qu'OpenCloud est une application Go. Sa réponse contient à la fois des valeurs
+de compatibilité et la version réelle d'OpenCloud. Le <a href="/documentation/status-php">guide du point d'accès
+d'état</a> explique quels champs sont utiles à un scanner.</p>
+<h2 id="how-opencloud-is-structured">Comment OpenCloud est structuré</h2>
+<p>OpenCloud réunit des services d'authentification, d'accès aux fichiers, de
+partage et son interface web. Les principaux choix de déploiement déterminent ce
+qu'un scan externe peut observer :</p>
 <table>
 <thead>
 <tr>
-<th>Component</th>
-<th>Operational consideration</th>
+<th>Composant</th>
+<th>Point d'attention opérationnel</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Web interface and proxy</td>
-<td>Public URL, TLS termination, security headers and forwarded headers</td>
+<td>Interface web et proxy</td>
+<td>URL publique, terminaison TLS, en-têtes de sécurité et en-têtes transmis</td>
 </tr>
 <tr>
-<td>Identity provider</td>
-<td>Sign-in policy, client registration, account provisioning and second factors</td>
+<td>Fournisseur d'identité</td>
+<td>Politique de connexion, enregistrement des clients, provisionnement des comptes et second facteur</td>
 </tr>
 <tr>
-<td>Storage</td>
-<td>Data and metadata layout, permissions, backups and tested recovery</td>
+<td>Stockage</td>
+<td>Organisation des données et des métadonnées, permissions, sauvegardes et restaurations testées</td>
 </tr>
 <tr>
-<td>Office and calendar integrations</td>
-<td>Separate service configuration, credentials and network boundaries</td>
+<td>Intégrations bureautiques et d'agenda</td>
+<td>Configuration de service distincte, identifiants et cloisonnement réseau</td>
 </tr>
 <tr>
-<td>Release track</td>
-<td>Update recommendations and the period in which fixes are available</td>
+<td>Branche de versions</td>
+<td>Recommandations de mise à jour et période pendant laquelle des correctifs sont disponibles</td>
 </tr>
 </tbody>
 </table>
-<p>The absence of a relational database in OpenCloud’s core storage does not mean
-the whole deployment has no persistent state. Identity providers and other
-integrations can have their own databases and backup requirements.</p>
-<h2 id="why-this-matters-for-a-security-scan">Why this matters for a security scan</h2>
-<p>A familiar endpoint is not enough to identify the software behind it. The
-scanner checks the reported product before applying OpenCloud release data,
-advisories and configuration rules. A different product is refused instead of
-being assigned an OpenCloud grade; see <a href="/documentation/troubleshooting">Troubleshooting</a>.</p>
-<p>The result describes what the scanner could observe at the submitted address.
-It cannot verify private files, account permissions, backup recovery or all of
-an identity provider’s policies. The <a href="/documentation/secure-deployment">secure deployment guide</a>
-covers those separate operational tasks.</p>
+<p>L'absence de base de données relationnelle dans le stockage central d'OpenCloud
+ne signifie pas que l'ensemble du déploiement est sans état persistant. Les
+fournisseurs d'identité et d'autres intégrations peuvent avoir leurs propres
+bases de données et leurs propres besoins de sauvegarde.</p>
+<h2 id="why-this-matters-for-a-security-scan">Pourquoi cela compte pour un scan de sécurité</h2>
+<p>Un point d'accès familier ne suffit pas à identifier le logiciel qui se trouve
+derrière. Le scanner vérifie le produit annoncé avant d'appliquer les données de
+version, les avis de sécurité et les règles de configuration d'OpenCloud. Un
+produit différent est refusé plutôt que de se voir attribuer une note OpenCloud ;
+voir <a href="/documentation/troubleshooting">Dépannage</a>.</p>
+<p>Le résultat décrit ce que le scanner a pu observer à l'adresse soumise. Il ne
+peut pas vérifier les fichiers privés, les permissions des comptes, la
+restauration des sauvegardes ni l'ensemble des politiques d'un fournisseur
+d'identité. Le <a href="/documentation/secure-deployment">guide de déploiement sécurisé</a> traite de
+ces tâches opérationnelles distinctes.</p>
 </article>
 
 {% include "_page-nav.html" %}

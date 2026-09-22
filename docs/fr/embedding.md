@@ -1,60 +1,64 @@
-# Intégrer le scanner
+# Intégrer OpenCloud dans une iframe : ce que ce scanner vérifie, et pourquoi
 
-Une application peut intégrer le client web OpenCloud dans un `iframe`, par exemple comme
-sélecteur de fichiers ou panneau d’aperçu. La page parente et le client intégré échangent
-des messages via `postMessage`; l’authentification déléguée permet aussi à la page parente
-de transmettre une session. Le scanner lit le `/config.json` public pour vérifier les
-origines autorisées du client intégré.
+Une application peut intégrer le client web OpenCloud dans une `iframe`, par
+exemple comme sélecteur de fichiers ou panneau d'aperçu. La page parente et le
+client intégré échangent des messages via `postMessage` ; l'authentification
+déléguée permet en outre à la page parente de fournir une session. Le scanner
+lit le fichier public `/config.json` pour vérifier quelles origines le client
+intégré considère comme fiables.
 
-If `/config.json` cannot be read, or does not publish an `embed` block at
-all, both checks pass - embedding is simply not configured, so there is
-nothing for either origin restriction to fail.
+Si `/config.json` ne peut pas être lu, ou s'il ne publie aucun bloc `embed`,
+les deux contrôles réussissent : l'intégration n'est simplement pas configurée,
+il n'y a donc aucune restriction d'origine susceptible d'échouer.
 
 <!-- TOC -->
-* [Embedding OpenCloud in an iframe: what this scanner checks, and why](#embedding-opencloud-in-an-iframe-what-this-scanner-checks-and-why)
-  * [1. Does the embed accept messages from any origin: `webEmbedMessageOriginRestricted`](#1-does-the-embed-accept-messages-from-any-origin-webembedmessageoriginrestricted)
-  * [2. Does delegated authentication accept an unvalidated origin: `webEmbedDelegatedAuthenticationRestricted`](#2-does-delegated-authentication-accept-an-unvalidated-origin-webembeddelegatedauthenticationrestricted)
-  * [Severity and rating impact](#severity-and-rating-impact)
+* [Intégrer OpenCloud dans une iframe : ce que ce scanner vérifie, et pourquoi](#embedding-opencloud-in-an-iframe-what-this-scanner-checks-and-why)
+  * [1. L'intégration accepte-t-elle les messages de n'importe quelle origine : `webEmbedMessageOriginRestricted`](#1-does-the-embed-accept-messages-from-any-origin-webembedmessageoriginrestricted)
+  * [2. L'authentification déléguée accepte-t-elle une origine non validée : `webEmbedDelegatedAuthenticationRestricted`](#2-does-delegated-authentication-accept-an-unvalidated-origin-webembeddelegatedauthenticationrestricted)
+  * [Gravité et effet sur la note](#severity-and-rating-impact)
 <!-- TOC -->
 
 
-## 1. Does the embed accept messages from any origin: `webEmbedMessageOriginRestricted`
+## 1. L'intégration accepte-t-elle les messages de n'importe quelle origine : `webEmbedMessageOriginRestricted` {#1-does-the-embed-accept-messages-from-any-origin-webembedmessageoriginrestricted}
 
-`options.embed.messagesOrigin` in the public web configuration is read.
-`WEB_OPTION_EMBED_MESSAGES_ORIGIN=*` means the embedded client will exchange
-`postMessage` traffic with **any** page that frames it, not only the
-integration it was set up for. Any site on the internet can then load
-OpenCloud's web client in a hidden or disguised frame and start sending it
-messages the client will treat as coming from a trusted parent.
+Le scanner lit `options.embed.messagesOrigin` dans la configuration web
+publique. `WEB_OPTION_EMBED_MESSAGES_ORIGIN=*` signifie que le client intégré
+échangera du trafic `postMessage` avec **n'importe quelle** page qui l'encadre,
+et non seulement avec l'intégration pour laquelle il a été configuré. N'importe
+quel site sur Internet peut alors charger le client web d'OpenCloud dans un
+cadre masqué ou déguisé et commencer à lui envoyer des messages que le client
+traitera comme provenant d'un parent de confiance.
 
-**Fix:** set `WEB_OPTION_EMBED_MESSAGES_ORIGIN` to the exact origin of the
-page that is allowed to embed the client (scheme, host and port - not a
-wildcard or a path), or unset embedding entirely if nothing actually uses
-it.
+**Correction :** définissez `WEB_OPTION_EMBED_MESSAGES_ORIGIN` sur l'origine
+exacte de la page autorisée à intégrer le client (schéma, hôte et port - pas un
+joker ni un chemin), ou désactivez complètement l'intégration si rien ne
+l'utilise réellement.
 
-## 2. Does delegated authentication accept an unvalidated origin: `webEmbedDelegatedAuthenticationRestricted`
+## 2. L'authentification déléguée accepte-t-elle une origine non validée : `webEmbedDelegatedAuthenticationRestricted` {#2-does-delegated-authentication-accept-an-unvalidated-origin-webembeddelegatedauthenticationrestricted}
 
-Delegated authentication lets the parent page hand its own session to the
-embedded frame, so the visitor does not have to sign in twice. This check
-fails only when **both** conditions hold: `delegateAuthentication` is `true`
-*and* `delegateAuthenticationOrigin` is empty - meaning the client accepts a
-delegated session from a parent frame without checking who that parent
-actually is. Whoever can frame the page can hand it a session, which makes
-this the more serious of the two checks: it is authentication bypass, not
-message-passing overreach, which is why it is rated `critical` against the
-`high` above.
+L'authentification déléguée permet à la page parente de transmettre sa propre
+session au cadre intégré, afin que le visiteur n'ait pas à se connecter deux
+fois. Ce contrôle échoue uniquement lorsque les **deux** conditions sont
+réunies : `delegateAuthentication` vaut `true` *et* `delegateAuthenticationOrigin`
+est vide - autrement dit, le client accepte une session déléguée d'un cadre
+parent sans vérifier qui est réellement ce parent. Quiconque peut encadrer la
+page peut lui transmettre une session, ce qui fait de ce contrôle le plus grave
+des deux : il s'agit d'un contournement d'authentification, et non d'un simple
+excès de portée dans l'échange de messages, d'où sa gravité `critical` face au
+`high` précédent.
 
-**Fix:** set `WEB_OPTION_EMBED_DELEGATE_AUTHENTICATION_ORIGIN` to the exact
-trusted parent origin, or disable delegated authentication outright if the
-embedding integration does not need it. Delegated authentication with an
-origin set is not itself a finding - only the combination of it being on and
-unrestricted is.
+**Correction :** définissez
+`WEB_OPTION_EMBED_DELEGATE_AUTHENTICATION_ORIGIN` sur l'origine parente de
+confiance exacte, ou désactivez purement et simplement l'authentification
+déléguée si l'intégration n'en a pas besoin. L'authentification déléguée avec
+une origine définie n'est pas en soi un constat - seule la combinaison
+« activée et sans restriction » l'est.
 
-## Severity and rating impact
+## Gravité et effet sur la note {#severity-and-rating-impact}
 
-Both are `extraChecks`, reported and rating-capped whenever `/config.json`
-publishes an `embed` block - `webEmbedMessageOriginRestricted` at `high`
-(caps the rating at `C`), `webEmbedDelegatedAuthenticationRestricted` at
-`critical` (caps it at `D`) - see the extra-checks table in [the main
-README](scanner-checks.md#what-the-scanner-checks). Neither requires
-`--check-hardening`.
+Les deux sont des `extraChecks`, signalés et plafonnant la note dès que
+`/config.json` publie un bloc `embed` - `webEmbedMessageOriginRestricted` en
+`high` (plafonne la note à `C`), `webEmbedDelegatedAuthenticationRestricted` en
+`critical` (la plafonne à `D`) - voir le tableau des contrôles supplémentaires
+dans [le README principal](scanner-checks.md#what-the-scanner-checks). Aucun des
+deux ne nécessite `--check-hardening`.

@@ -270,15 +270,12 @@ UNTRANSLATED_GUIDES = frozenset(
         "checkmk",
         "ci",
         "cli-reference",
-        "configuration",
         "cookies",
         "csp",
         "docker",
-        "embedding",
         "examples",
         "exposure",
         "hardening",
-        "icinga-director",
         "identity-providers",
         "installation",
         "kubernetes",
@@ -303,7 +300,6 @@ UNTRANSLATED_GUIDES = frozenset(
         "troubleshooting",
         "web-service",
         "webhooks",
-        "what-is-opencloud",
     )
 )
 
