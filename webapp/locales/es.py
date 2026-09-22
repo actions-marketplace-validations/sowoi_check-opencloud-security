@@ -1524,10 +1524,10 @@ MESSAGES: dict[str, str] = {
     "result.fingerprint.kicker": "Configuración",
     "result.fingerprint.heading": "¿Ha cambiado esta instalación?",
     "result.fingerprint.body": (
-        "Cada grupo de abajo es un resumen criptográfico de cómo está "
-        "configurada esta instancia, nunca de con qué valores. Compáralos con "
-        "un análisis anterior: un grupo con un resumen distinto estaba "
-        "configurado de otra manera, aunque la nota siga siendo la misma."
+        "Cada grupo contiene un hash de la configuración medida, sin exponer "
+        "sus valores. Compare hashes de análisis con la misma cobertura de "
+        "medición para detectar cambios de configuración, aunque la nota "
+        "siga igual."
     ),
     "result.fingerprint.overall": "En todos los grupos: {digest}",
     "result.fingerprint.unmeasured": "No se midió en este análisis",

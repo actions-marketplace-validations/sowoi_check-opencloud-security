@@ -118,4 +118,4 @@ jamais un nom d'hôte de production ni un identifiant dans un fil public - voir
 
 ---
 
-[Retour à l'index de la documentation](README.md) | [Retour au README principal](../../README.md)
+[Retour à l'index de la documentation](../README.md) | [Retour au README principal](../../README.md)

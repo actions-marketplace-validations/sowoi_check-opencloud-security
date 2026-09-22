@@ -12,6 +12,18 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+### Documentation
+
+- Clarified configuration-drift explanations in the English, German, Spanish
+  and French baseline guides. Older baselines lack fingerprints, so an absent
+  drift report does not establish that the configuration is unchanged.
+  Added regression cases for vague and anthropomorphic wording in all four
+  languages. Fixed four French guide links to the documentation index found
+  by the translation tests.
+- Reworded literal German and Spanish translations in the baseline and scanner CLI
+  guides, including severity comparisons and missing measurements. Added
+  regression cases for the awkward phrases found during review.
+
 ### Added
 
 - **`check-opencloud-scanner diff` compares two results finding by finding.**

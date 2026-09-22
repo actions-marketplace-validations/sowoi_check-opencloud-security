@@ -96,15 +96,14 @@ findings both stood still still says so when the deployment did not:
 Baseline: No new findings since 2026-09-14T06:00:00Z, but the configuration changed (headers, proxy)
 ```
 
-The group names are the only thing reported. What the setting now says is not
-in the baseline file, the output or the webhook - only a hash of it - so the
-file can live beside the rest of your monitoring state without publishing how
-the instance is configured.
+The report names the groups whose configuration changed. The baseline file,
+output and webhook contain hashes, without the underlying configuration values.
 
 Drift is reported, never judged: it does not create a finding, it does not
 make a run regress, and it never changes the exit code. A baseline written
-before fingerprints existed simply reports no drift, which is the honest
-answer for a file that cannot say.
+before fingerprints existed cannot detect configuration drift because it has
+no fingerprints to compare. It therefore reports no drift; this does not
+establish that the configuration is unchanged.
 
 ## Points worth knowing
 

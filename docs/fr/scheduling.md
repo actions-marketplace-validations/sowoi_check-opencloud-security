@@ -63,4 +63,4 @@ Sur un cluster, l'équivalent est un `CronJob` - voir
 
 ---
 
-[Retour à l'index de la documentation](README.md) | [Retour au README principal](../../README.md)
+[Retour à l'index de la documentation](../README.md) | [Retour au README principal](../../README.md)

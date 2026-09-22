@@ -183,8 +183,8 @@ Hardening: + Content-Security-Policy
 Rating: A+ (5) -&gt; D (2)
 </code></pre>
 <p>Lee dos archivos y no analiza nada. <code>+</code> marca un hallazgo que ha aparecido,
-<code>-</code> uno que se ha resuelto y <code>~</code> uno que sigue abierto pero ahora pesa de otra
-manera. También notifica cualquier cambio en la nota, la
+<code>-</code> uno que se ha resuelto y <code>~</code> uno que sigue abierto pero cuya gravedad ha
+cambiado. También notifica cualquier cambio en la nota, la
 versión y el horizonte de soporte. Responde a "¿ha funcionado la corrección?"
 y "¿qué ha cambiado la actualización?" sin mantener un archivo de línea base.
 Para una comprobación que recuerda por sí misma su última ejecución, consulte
@@ -223,7 +223,7 @@ Para una comprobación que recuerda por sí misma su última ejecución, consult
 </tr>
 <tr>
 <td><code>--all-findings</code></td>
-<td>Listar todos los hallazgos medidos, no solo los que se movieron</td>
+<td>Listar todos los hallazgos medidos, incluidos los que no han cambiado</td>
 </tr>
 <tr>
 <td><code>--exit-zero</code></td>
@@ -239,7 +239,7 @@ Para una comprobación que recuerda por sí misma su última ejecución, consult
 canalización puede condicionarse a él. Termina con <code>0</code> cuando nada ha
 empeorado, también cuando solo se han resuelto hallazgos. <code>--exit-zero</code>
 desactiva ese control.</p>
-<p>Termina con <code>2</code>, sin comparar nada, cuando no puede dar una respuesta honesta:</p>
+<p>Termina con <code>2</code>, sin comparar los archivos, en estos casos:</p>
 <ul>
 <li><strong>los dos archivos describen instancias distintas.</strong> "¿Ha funcionado la
   corrección?" es una pregunta sobre una sola instancia, y dos hosts comparados
@@ -254,7 +254,13 @@ desactiva ese control.</p>
 <pre><code class="language-text">~ exposed:/config/opencloud.yaml [exposure]: severity high -&gt; critical
 Failing by severity: critical 0 -&gt; 1, high 1 -&gt; 1, medium 0 -&gt; 1, low 1 -&gt; 0
 </code></pre>
-<p>La línea <code>~</code> es lo que una comparación de dos listas de nombres no puede producir. Un control que fallaba en <code>high</code> y ahora falla en <code>critical</code> nunca entra ni sale del conjunto de controles fallidos, así que <a href="/documentation/baseline">la línea base</a> calla al respecto - con razón, porque según su definición nada ha empeorado -, mientras que la calificación que ese control limita ha bajado un grado. La severidad de cada lado procede de los propios documentos, nunca del catálogo de hoy: un análisis archivado el mes pasado es prueba sobre el mes pasado.</p>
+<p>La línea <code>~</code> indica un cambio de gravedad en un hallazgo que sigue abierto.
+Al pasar de <code>high</code> a <code>critical</code>, su identificador sigue en ambas listas de
+comprobaciones fallidas. La comparación de conjuntos de
+<a href="/documentation/baseline">la línea base</a> no detecta un hallazgo nuevo, aunque el límite
+de calificación más estricto puede empeorar la nota. La gravedad se lee de
+los resultados guardados; las modificaciones posteriores del catálogo no
+alteran esos valores históricos.</p>
 <p>Un hallazgo exceptuado se cuenta aquí y se muestra como <code>waived</code>, porque una excepción es la decisión de no recibir alertas y no la afirmación de que el hallazgo haya desaparecido.</p>
 <h3 id="side-by-side">Lado a lado</h3>
 <pre><code class="language-bash">check-opencloud-scanner diff before.json after.json --format side-by-side
@@ -272,7 +278,10 @@ Finding                           2026-09-15T17:42:21+00:00  2026-09-22T09:03:11
 - Referrer-Policy                 FAIL low                   ok
 </code></pre>
 <p>Cada fila indica ambos lados, de modo que quien lee no tiene que reconstruirlos a partir de una lista de cambios. <code>--all-findings</code> añade los hallazgos que no se movieron, lo que convierte la vista de «qué ha cambiado» en «qué encontraron los dos análisis».</p>
-<p><code>not measured</code> y <code>not listed</code> son respuestas distintas y nunca se mezclan: un control ausente de un documento no se realizó (<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0064-a-scan-records-what-it-did-not-measure.md">ADR 0064</a>), mientras que un aviso ausente no afectaba a esa versión. Ninguno de los dos es un resultado correcto.</p>
+<p><code>not measured</code> indica que no hay una medición para esa comprobación
+(<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0064-a-scan-records-what-it-did-not-measure.md">ADR 0064</a>).
+<code>not listed</code> indica que el aviso de seguridad no figura en el resultado.
+Ninguno de estos estados se interpreta como una comprobación superada.</p>
 <h3 id="one-area-at-a-time">Un área cada vez</h3>
 <p><code>--category</code> acota la comparación y toma un valor de uno de dos espacios de nombres:</p>
 <ul>

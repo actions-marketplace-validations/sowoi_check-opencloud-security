@@ -101,4 +101,4 @@ ansible-playbook -i inventory.ini playbooks/deploy_native.yml --syntax-check
 
 ---
 
-[Retour à l'index de la documentation](README.md) | [Retour au README principal](../../README.md)
+[Retour à l'index de la documentation](../README.md) | [Retour au README principal](../../README.md)

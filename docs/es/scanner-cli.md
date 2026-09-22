@@ -121,8 +121,8 @@ Rating: A+ (5) -> D (2)
 ```
 
 Lee dos archivos y no analiza nada. `+` marca un hallazgo que ha aparecido,
-`-` uno que se ha resuelto y `~` uno que sigue abierto pero ahora pesa de otra
-manera. También notifica cualquier cambio en la nota, la
+`-` uno que se ha resuelto y `~` uno que sigue abierto pero cuya gravedad ha
+cambiado. También notifica cualquier cambio en la nota, la
 versión y el horizonte de soporte. Responde a "¿ha funcionado la corrección?"
 y "¿qué ha cambiado la actualización?" sin mantener un archivo de línea base.
 Para una comprobación que recuerda por sí misma su última ejecución, consulte
@@ -136,7 +136,7 @@ Para una comprobación que recuerda por sí misma su última ejecución, consult
 | `--format json` | La comparación estructurada que lleva el webhook del complemento |
 | `--format slack` | JSON de Slack Block Kit |
 | `--category NOMBRE` | Mostrar solo un área. Se puede repetir |
-| `--all-findings` | Listar todos los hallazgos medidos, no solo los que se movieron |
+| `--all-findings` | Listar todos los hallazgos medidos, incluidos los que no han cambiado |
 | `--exit-zero` | Termina siempre con `0` |
 | `--allow-different-hosts` | Compara resultados de dos instancias distintas |
 
@@ -145,7 +145,7 @@ canalización puede condicionarse a él. Termina con `0` cuando nada ha
 empeorado, también cuando solo se han resuelto hallazgos. `--exit-zero`
 desactiva ese control.
 
-Termina con `2`, sin comparar nada, cuando no puede dar una respuesta honesta:
+Termina con `2`, sin comparar los archivos, en estos casos:
 
 - **los dos archivos describen instancias distintas.** "¿Ha funcionado la
   corrección?" es una pregunta sobre una sola instancia, y dos hosts comparados
@@ -164,7 +164,13 @@ Cada comparación termina con los hallazgos fallidos contados por severidad:
 Failing by severity: critical 0 -> 1, high 1 -> 1, medium 0 -> 1, low 1 -> 0
 ```
 
-La línea `~` es lo que una comparación de dos listas de nombres no puede producir. Un control que fallaba en `high` y ahora falla en `critical` nunca entra ni sale del conjunto de controles fallidos, así que [la línea base](../baseline.md) calla al respecto - con razón, porque según su definición nada ha empeorado -, mientras que la calificación que ese control limita ha bajado un grado. La severidad de cada lado procede de los propios documentos, nunca del catálogo de hoy: un análisis archivado el mes pasado es prueba sobre el mes pasado.
+La línea `~` indica un cambio de gravedad en un hallazgo que sigue abierto.
+Al pasar de `high` a `critical`, su identificador sigue en ambas listas de
+comprobaciones fallidas. La comparación de conjuntos de
+[la línea base](../baseline.md) no detecta un hallazgo nuevo, aunque el límite
+de calificación más estricto puede empeorar la nota. La gravedad se lee de
+los resultados guardados; las modificaciones posteriores del catálogo no
+alteran esos valores históricos.
 
 Un hallazgo exceptuado se cuenta aquí y se muestra como `waived`, porque una excepción es la decisión de no recibir alertas y no la afirmación de que el hallazgo haya desaparecido.
 
@@ -190,7 +196,10 @@ Finding                           2026-09-15T17:42:21+00:00  2026-09-22T09:03:11
 
 Cada fila indica ambos lados, de modo que quien lee no tiene que reconstruirlos a partir de una lista de cambios. `--all-findings` añade los hallazgos que no se movieron, lo que convierte la vista de «qué ha cambiado» en «qué encontraron los dos análisis».
 
-`not measured` y `not listed` son respuestas distintas y nunca se mezclan: un control ausente de un documento no se realizó ([ADR 0064](https://github.com/sowoi/check-opencloud-security/blob/main/adr/0064-a-scan-records-what-it-did-not-measure.md)), mientras que un aviso ausente no afectaba a esa versión. Ninguno de los dos es un resultado correcto.
+`not measured` indica que no hay una medición para esa comprobación
+([ADR 0064](https://github.com/sowoi/check-opencloud-security/blob/main/adr/0064-a-scan-records-what-it-did-not-measure.md)).
+`not listed` indica que el aviso de seguridad no figura en el resultado.
+Ninguno de estos estados se interpreta como una comprobación superada.
 
 ### Un área cada vez {#one-area-at-a-time}
 

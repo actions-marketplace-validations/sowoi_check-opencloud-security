@@ -59,25 +59,24 @@ check-opencloud-security -H opencloud.example.com \
 ## Konfigurationsänderungen {#configuration-drift}
 
 
-Eine Baseline merkt sich auch den **Konfigurations-Fingerabdruck** des Scans:
-gruppierte Digests davon, wie die Instanz eingerichtet ist - Transport,
-Header, Freigaben, Anmeldung, Proxy - und nichts davon, worauf. Ein Lauf, bei
-dem Note und Befunde gleich geblieben sind, sagt trotzdem, wenn die
-Installation das nicht ist:
+Eine Baseline speichert auch den **Konfigurations-Fingerabdruck** des Scans:
+Hashes für Transport, Header, Freigaben, Anmeldung und Proxy. Damit lassen
+sich Konfigurationsänderungen erkennen, auch wenn Note und Befunde gleich
+bleiben:
 
 ```text
 Baseline: No new findings since 2026-09-14T06:00:00Z, but the configuration changed (headers, proxy)
 ```
 
-Gemeldet werden nur die Gruppennamen. Was die Einstellung jetzt sagt, steht
-weder in der Baseline-Datei noch in der Ausgabe oder im Webhook - nur ein Hash
-davon -, also kann die Datei neben dem übrigen Monitoring-Zustand liegen, ohne
-zu veröffentlichen, wie die Instanz konfiguriert ist.
+Der Bericht nennt die Gruppen, deren Konfiguration sich geändert hat.
+Baseline-Datei, Ausgabe und Webhook enthalten Hashes ohne die zugrunde
+liegenden Konfigurationswerte.
 
 Eine Änderung wird gemeldet, nicht bewertet: Sie erzeugt keinen Befund, macht
 keinen Lauf zur Verschlechterung und ändert nie den Exit-Code. Eine Baseline
-aus der Zeit vor den Fingerabdrücken meldet schlicht keine Änderung - die
-ehrliche Antwort für eine Datei, die es nicht sagen kann.
+aus der Zeit vor den Fingerabdrücken kann Konfigurationsänderungen nicht
+erkennen, weil ihr die Vergleichswerte fehlen. Sie meldet daher keine Änderung;
+das belegt jedoch nicht, dass die Konfiguration unverändert ist.
 
 ## Verhalten und Dateirechte {#points-worth-knowing}
 

@@ -119,7 +119,13 @@ Jeder Vergleich endet mit einer Zählung der fehlgeschlagenen Befunde nach Schwe
 Failing by severity: critical 0 -> 1, high 1 -> 1, medium 0 -> 1, low 1 -> 0
 ```
 
-Die `~`-Zeile ist das, was ein Vergleich zweier Namenslisten nicht ausdrücken kann. Ein Check, der vorher bei `high` und jetzt bei `critical` fehlschlägt, tritt nie in die Menge der fehlschlagenden Checks ein oder aus ihr heraus - die [Baseline](../baseline.md) schweigt dazu also zu Recht -, während die Bewertung, die er deckelt, eine Note tiefer liegt. Der Schweregrad jeder Seite stammt aus den Dokumenten selbst, nie aus dem heutigen Katalog: Ein letzten Monat archivierter Scan ist ein Beleg für letzten Monat.
+Die `~`-Zeile zeigt einen geänderten Schweregrad bei einem weiterhin offenen
+Befund. Bei einem Wechsel von `high` zu `critical` bleibt die Kennung in
+beiden Listen fehlgeschlagener Prüfungen enthalten. Der Mengenvergleich der
+[Baseline](../baseline.md) erkennt daher keinen neuen Befund; die strengere
+Bewertungsobergrenze kann jedoch die Note verschlechtern. Der Vergleich liest
+die Schweregrade aus den gespeicherten Ergebnissen. Spätere Änderungen am
+Katalog verändern diese historischen Werte nicht.
 
 Ein per Waiver ausgenommener Befund wird hier mitgezählt und als `waived` dargestellt, denn ein Waiver ist die Entscheidung, nicht alarmiert zu werden, und keine Aussage darüber, dass der Befund weg ist.
 
@@ -143,9 +149,13 @@ Finding                           2026-09-15T17:42:21+00:00  2026-09-22T09:03:11
 - Referrer-Policy                 FAIL low                   ok
 ```
 
-Jede Zeile nennt beide Seiten, sodass du sie dir nicht aus einer Änderungsliste zusammensuchen musst. `--all-findings` ergänzt die unveränderten Befunde und macht aus „was hat sich geändert" ein „was haben die beiden Scans gefunden".
+Jede Zeile zeigt den Befund in beiden Scans. Mit `--all-findings` erscheinen
+auch unveränderte Befunde.
 
-`not measured` und `not listed` sind verschiedene Antworten und werden nie vermischt: Ein Check, der im Dokument fehlt, wurde nicht durchgeführt ([ADR 0064](https://github.com/sowoi/check-opencloud-security/blob/main/adr/0064-a-scan-records-what-it-did-not-measure.md)), während ein fehlender Sicherheitshinweis auf diese Version nicht zutraf. Beides ist kein Bestanden.
+`not measured` bedeutet, dass für die Prüfung kein Messwert vorliegt
+([ADR 0064](https://github.com/sowoi/check-opencloud-security/blob/main/adr/0064-a-scan-records-what-it-did-not-measure.md)).
+`not listed` bedeutet, dass der Sicherheitshinweis im Ergebnis nicht aufgeführt
+ist. Keiner dieser Zustände wird als bestandene Prüfung gewertet.
 
 ### Ein Bereich nach dem anderen {#one-area-at-a-time}
 

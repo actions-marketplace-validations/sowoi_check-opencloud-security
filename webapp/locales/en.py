@@ -1624,10 +1624,10 @@ MESSAGES: dict[str, str] = {
     "result.fingerprint.kicker": "Configuration",
     "result.fingerprint.heading": "Has this deployment changed?",
     "result.fingerprint.body": (
-        "Each group below is a digest of how this instance is configured, "
-        "never of what it is configured to. Compare them with an earlier "
-        "scan: a group with a different digest was set up differently, even "
-        "when the grade stayed the same."
+        "Each group contains a hash of the measured configuration without "
+        "exposing its values. Compare hashes from scans with the same "
+        "measurement coverage to detect configuration changes, even when "
+        "the grade stays the same."
     ),
     "result.fingerprint.overall": "Across all groups: {digest}",
     "result.fingerprint.unmeasured": "Not measured in this scan",

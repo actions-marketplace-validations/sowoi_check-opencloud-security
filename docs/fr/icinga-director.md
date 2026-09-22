@@ -61,4 +61,4 @@ Pour déployer les mêmes objets sans l'interface web, voir
 
 ---
 
-[Retour à l'index de la documentation](README.md) | [Retour au README principal](../../README.md)
+[Retour à l'index de la documentation](../README.md) | [Retour au README principal](../../README.md)

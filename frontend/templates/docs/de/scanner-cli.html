@@ -208,7 +208,13 @@ Rating: A+ (5) -&gt; D (2)
 <pre><code class="language-text">~ exposed:/config/opencloud.yaml [exposure]: severity high -&gt; critical
 Failing by severity: critical 0 -&gt; 1, high 1 -&gt; 1, medium 0 -&gt; 1, low 1 -&gt; 0
 </code></pre>
-<p>Die <code>~</code>-Zeile ist das, was ein Vergleich zweier Namenslisten nicht ausdrücken kann. Ein Check, der vorher bei <code>high</code> und jetzt bei <code>critical</code> fehlschlägt, tritt nie in die Menge der fehlschlagenden Checks ein oder aus ihr heraus - die <a href="/documentation/baseline">Baseline</a> schweigt dazu also zu Recht -, während die Bewertung, die er deckelt, eine Note tiefer liegt. Der Schweregrad jeder Seite stammt aus den Dokumenten selbst, nie aus dem heutigen Katalog: Ein letzten Monat archivierter Scan ist ein Beleg für letzten Monat.</p>
+<p>Die <code>~</code>-Zeile zeigt einen geänderten Schweregrad bei einem weiterhin offenen
+Befund. Bei einem Wechsel von <code>high</code> zu <code>critical</code> bleibt die Kennung in
+beiden Listen fehlgeschlagener Prüfungen enthalten. Der Mengenvergleich der
+<a href="/documentation/baseline">Baseline</a> erkennt daher keinen neuen Befund; die strengere
+Bewertungsobergrenze kann jedoch die Note verschlechtern. Der Vergleich liest
+die Schweregrade aus den gespeicherten Ergebnissen. Spätere Änderungen am
+Katalog verändern diese historischen Werte nicht.</p>
 <p>Ein per Waiver ausgenommener Befund wird hier mitgezählt und als <code>waived</code> dargestellt, denn ein Waiver ist die Entscheidung, nicht alarmiert zu werden, und keine Aussage darüber, dass der Befund weg ist.</p>
 <h3 id="side-by-side">Nebeneinander</h3>
 <pre><code class="language-bash">check-opencloud-scanner diff before.json after.json --format side-by-side
@@ -225,8 +231,12 @@ Finding                           2026-09-15T17:42:21+00:00  2026-09-22T09:03:11
 ~ exposed:/config/opencloud.yaml  FAIL high                  FAIL critical
 - Referrer-Policy                 FAIL low                   ok
 </code></pre>
-<p>Jede Zeile nennt beide Seiten, sodass du sie dir nicht aus einer Änderungsliste zusammensuchen musst. <code>--all-findings</code> ergänzt die unveränderten Befunde und macht aus „was hat sich geändert" ein „was haben die beiden Scans gefunden".</p>
-<p><code>not measured</code> und <code>not listed</code> sind verschiedene Antworten und werden nie vermischt: Ein Check, der im Dokument fehlt, wurde nicht durchgeführt (<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0064-a-scan-records-what-it-did-not-measure.md">ADR 0064</a>), während ein fehlender Sicherheitshinweis auf diese Version nicht zutraf. Beides ist kein Bestanden.</p>
+<p>Jede Zeile zeigt den Befund in beiden Scans. Mit <code>--all-findings</code> erscheinen
+auch unveränderte Befunde.</p>
+<p><code>not measured</code> bedeutet, dass für die Prüfung kein Messwert vorliegt
+(<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0064-a-scan-records-what-it-did-not-measure.md">ADR 0064</a>).
+<code>not listed</code> bedeutet, dass der Sicherheitshinweis im Ergebnis nicht aufgeführt
+ist. Keiner dieser Zustände wird als bestandene Prüfung gewertet.</p>
 <h3 id="one-area-at-a-time">Ein Bereich nach dem anderen</h3>
 <p><code>--category</code> schränkt den Vergleich ein und nimmt einen Wert aus einem von zwei Namensräumen:</p>
 <ul>

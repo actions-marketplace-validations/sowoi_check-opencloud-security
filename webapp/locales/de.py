@@ -1557,11 +1557,10 @@ MESSAGES: dict[str, str] = {
     "result.fingerprint.kicker": "Konfiguration",
     "result.fingerprint.heading": "Hat sich diese Installation geändert?",
     "result.fingerprint.body": (
-        "Jede Gruppe unten ist ein Digest davon, wie diese Instanz "
-        "konfiguriert ist - nie davon, worauf sie konfiguriert ist. "
-        "Vergleiche sie mit einem früheren Scan: Eine Gruppe mit einem "
-        "anderen Digest war anders eingerichtet, auch wenn die Note gleich "
-        "geblieben ist."
+        "Jede Gruppe enthält einen Hash der gemessenen Konfiguration, ohne "
+        "deren Werte offenzulegen. Vergleiche Hashes aus Scans mit gleichem "
+        "Messumfang, um Konfigurationsänderungen zu erkennen, auch wenn die "
+        "Note gleich bleibt."
     ),
     "result.fingerprint.overall": "Über alle Gruppen: {digest}",
     "result.fingerprint.unmeasured": "In diesem Scan nicht gemessen",

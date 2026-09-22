@@ -55,21 +55,20 @@ Suppressed by --warn-on-new: this run would otherwise be WARNING (WARNING: 1 har
 <li><strong>Eine Version nach ihrem Supportende, bei jedem Scan.</strong> Da sie keine Sicherheitsupdates mehr erhält, unterdrückt eine Baseline diesen Alarm niemals.</li>
 </ul>
 <h2 id="configuration-drift">Konfigurationsänderungen</h2>
-<p>Eine Baseline merkt sich auch den <strong>Konfigurations-Fingerabdruck</strong> des Scans:
-gruppierte Digests davon, wie die Instanz eingerichtet ist - Transport,
-Header, Freigaben, Anmeldung, Proxy - und nichts davon, worauf. Ein Lauf, bei
-dem Note und Befunde gleich geblieben sind, sagt trotzdem, wenn die
-Installation das nicht ist:</p>
+<p>Eine Baseline speichert auch den <strong>Konfigurations-Fingerabdruck</strong> des Scans:
+Hashes für Transport, Header, Freigaben, Anmeldung und Proxy. Damit lassen
+sich Konfigurationsänderungen erkennen, auch wenn Note und Befunde gleich
+bleiben:</p>
 <pre><code class="language-text">Baseline: No new findings since 2026-09-14T06:00:00Z, but the configuration changed (headers, proxy)
 </code></pre>
-<p>Gemeldet werden nur die Gruppennamen. Was die Einstellung jetzt sagt, steht
-weder in der Baseline-Datei noch in der Ausgabe oder im Webhook - nur ein Hash
-davon -, also kann die Datei neben dem übrigen Monitoring-Zustand liegen, ohne
-zu veröffentlichen, wie die Instanz konfiguriert ist.</p>
+<p>Der Bericht nennt die Gruppen, deren Konfiguration sich geändert hat.
+Baseline-Datei, Ausgabe und Webhook enthalten Hashes ohne die zugrunde
+liegenden Konfigurationswerte.</p>
 <p>Eine Änderung wird gemeldet, nicht bewertet: Sie erzeugt keinen Befund, macht
 keinen Lauf zur Verschlechterung und ändert nie den Exit-Code. Eine Baseline
-aus der Zeit vor den Fingerabdrücken meldet schlicht keine Änderung - die
-ehrliche Antwort für eine Datei, die es nicht sagen kann.</p>
+aus der Zeit vor den Fingerabdrücken kann Konfigurationsänderungen nicht
+erkennen, weil ihr die Vergleichswerte fehlen. Sie meldet daher keine Änderung;
+das belegt jedoch nicht, dass die Konfiguration unverändert ist.</p>
 <h2 id="points-worth-knowing">Verhalten und Dateirechte</h2>
 <ul>
 <li>Der erste Durchlauf meldet den regulären Status und legt die Baseline an. Ohne Vergleichsdaten wird nichts unterdrückt.</li>

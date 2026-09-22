@@ -103,15 +103,15 @@ le signale tout de même lorsque le déploiement, lui, a changé :
 Baseline: No new findings since 2026-09-14T06:00:00Z, but the configuration changed (headers, proxy)
 ```
 
-Seuls les noms de groupes sont signalés. Ce que dit désormais le réglage ne
-figure ni dans le fichier de référence, ni dans la sortie, ni dans le webhook -
-seulement son empreinte - si bien que le fichier peut cohabiter avec le reste de
-votre état de supervision sans publier la configuration de l'instance.
+Le rapport nomme les groupes dont la configuration a changé. Le fichier de
+référence, la sortie et le webhook contiennent des empreintes, sans les valeurs
+de configuration correspondantes.
 
 La dérive est signalée, jamais jugée : elle ne crée pas de constat, ne fait pas
 régresser une exécution et ne modifie jamais le code de sortie. Une référence
-écrite avant l'existence des empreintes signale simplement l'absence de dérive,
-ce qui est la réponse honnête pour un fichier incapable de se prononcer.
+écrite avant l'existence des empreintes ne peut pas détecter les changements
+de configuration, faute d'empreintes à comparer. Elle ne signale donc aucun
+changement ; cela ne prouve pas que la configuration est restée identique.
 
 ## Points à connaître {#points-worth-knowing}
 

@@ -1610,10 +1610,10 @@ MESSAGES: dict[str, str] = {
     "result.fingerprint.kicker": "Configuration",
     "result.fingerprint.heading": "Cette installation a-t-elle changé ?",
     "result.fingerprint.body": (
-        "Chaque groupe ci-dessous est une empreinte de la manière dont cette "
-        "instance est configurée, jamais de ce qu'elle contient. Comparez-les "
-        "avec une analyse plus ancienne : un groupe dont l'empreinte diffère "
-        "était configuré autrement, même si la note n'a pas bougé."
+        "Chaque groupe contient une empreinte de la configuration mesurée, "
+        "sans en exposer les valeurs. Comparez les empreintes d'analyses "
+        "ayant la même couverture de mesure pour détecter les changements "
+        "de configuration, même si la note reste identique."
     ),
     "result.fingerprint.overall": "Tous groupes confondus : {digest}",
     "result.fingerprint.unmeasured": "Non mesuré lors de cette analyse",

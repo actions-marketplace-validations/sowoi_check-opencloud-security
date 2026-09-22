@@ -50,8 +50,16 @@ AI_SLOP = re.compile(
     r"descubre|sans effort|révolutionnaire|à la pointe|il est important de|"
     r"dans le monde actuel|découvrez|simplemente no es la más reciente|"
     r"simplemente no frenaron la calificación|"
-    r"comprehensive security|umfassende sicherheit|"
-    r"not easily unremembered|part of the point|worth relying on"
+    r"comprehensive security|umfassende[rnms]? sicherheit|"
+    r"not easily unremembered|part of the point|worth relying on|"
+    r"the honest\s+answer for a file|ehrliche Antwort für eine Datei|"
+    r"respuesta honesta para un archivo|réponse honnête pour un fichier|"
+    r"what the setting now says|was die Einstellung jetzt sagt|"
+    r"lo que dice ahora el ajuste|ce que dit désormais le réglage|"
+    r"und nichts davon, worauf|Beides ist kein Bestanden|"
+    r"schweigt dazu also zu Recht|ahora pesa de otra|"
+    r"nunca de con qué valores|calla al respecto|"
+    r"Ninguno de los dos es un resultado correcto"
     r")\b",
     re.IGNORECASE,
 )
@@ -128,7 +136,22 @@ def test_handwritten_guides_and_templates_do_not_use_ai_slop_wording():
         "This is not easily unremembered.",
         "Reading the rendered objects is part of the point.",
         "Two properties are worth relying on.",
-        "Kein Nachweis umfassende Sicherheit.",
+        "Kein Nachweis umfassender Sicherheit.",
+        "The honest answer for a file that cannot say.",
+        "Die ehrliche Antwort für eine Datei, die es nicht sagen kann.",
+        "Es la respuesta honesta para un archivo que no puede decirlo.",
+        "La réponse honnête pour un fichier incapable de se prononcer.",
+        "What the setting now says is not in the file.",
+        "Was die Einstellung jetzt sagt, steht nicht in der Datei.",
+        "Lo que dice ahora el ajuste no está en el archivo.",
+        "Ce que dit désormais le réglage ne figure pas dans le fichier.",
+        "Wie die Instanz eingerichtet ist und nichts davon, worauf.",
+        "Beides ist kein Bestanden.",
+        "Die Baseline schweigt dazu also zu Recht.",
+        "El hallazgo ahora pesa de otra manera.",
+        "Describe cómo está montada y nunca de con qué valores.",
+        "La línea base calla al respecto.",
+        "Ninguno de los dos es un resultado correcto.",
     ],
 )
 def test_ai_slop_detector_catches_typical_cliches(value: str):

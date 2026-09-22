@@ -916,8 +916,8 @@ misma instancia que la semana pasada. Una política reescrita sin ganar
 cabeceras, enlaces públicos que dejan de pedir contraseña y vuelven a pedirla,
 un certificado trasladado a otro emisor: nada de eso tiene que mover la nota, y
 quien solo mira la nota no ve nada de ello.</p>
-<p><code>configuration</code> es una <strong>huella</strong>: resúmenes criptográficos agrupados de cómo
-está configurada la instalación, y nunca de con qué valores. Véase
+<p><code>configuration</code> contiene <strong>huellas</strong> de la configuración medida, agrupadas
+por área, sin los valores de configuración originales. Véase
 <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0073-a-result-fingerprints-the-configuration-it-measured.md">ADR 0073</a>.</p>
 <pre><code class="language-json">{
   &quot;configuration&quot;: {
