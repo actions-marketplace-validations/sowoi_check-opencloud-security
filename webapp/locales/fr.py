@@ -1766,6 +1766,16 @@ MESSAGES: dict[str, str] = {
         "hors ligne, n'effectue aucune requête réseau et ne se met pas à "
         "jour."
     ),
+    "result.export.remediation.md": "Kit de correction (Markdown)",
+    "result.export.remediation.md.hint": (
+        "Uniquement ce qui reste ouvert : chaque constat, ce qui a été observé "
+        "et les fragments nginx, Caddy, Traefik, Compose et .env qui le "
+        "corrigent. Pour une pull request ou un runbook."
+    ),
+    "result.export.remediation.html": "Kit de correction (HTML)",
+    "result.export.remediation.html.hint": (
+        "Le même kit sous forme d'une page consultable hors ligne ou imprimable."
+    ),
     "result.export.csv": "CSV",
     "result.export.csv.hint": "Une ligne par constat, pour un tableur.",
     "result.export.sarif": "SARIF",

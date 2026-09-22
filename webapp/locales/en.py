@@ -1759,6 +1759,16 @@ MESSAGES: dict[str, str] = {
         "One file that still reads after this link expires. Opens offline, "
         "makes no network request, and does not update."
     ),
+    "result.export.remediation.md": "Remediation bundle (Markdown)",
+    "result.export.remediation.md.hint": (
+        "Only what is still open: each finding, what was observed, and the "
+        "nginx, Caddy, Traefik, Compose and .env fragments that fix it. For a "
+        "pull request or a runbook."
+    ),
+    "result.export.remediation.html": "Remediation bundle (HTML)",
+    "result.export.remediation.html.hint": (
+        "The same bundle as one page you can open offline or print."
+    ),
     "result.export.csv": "CSV",
     "result.export.csv.hint": "One row per finding, for a spreadsheet.",
     "result.export.sarif": "SARIF",

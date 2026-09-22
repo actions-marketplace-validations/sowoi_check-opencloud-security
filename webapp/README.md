@@ -159,7 +159,7 @@ A small surface, and this is all of it.
 | `GET` | `/api/scans` | Redirects to `/`. It lists nothing - there is no listing |
 | `GET` | `/scan/{uuid}` | The progress and result page |
 | `GET` | `/api/scans/{uuid}` | The state, and the result once there is one |
-| `GET` | `/api/scans/{uuid}/export/{format}` | The finished scan as `json`, `csv`, `sarif` or `pdf` |
+| `GET` | `/api/scans/{uuid}/export/{format}` | The finished scan as `json`, `csv`, `sarif`, `pdf`, `html`, `remediation-md` or `remediation-html` |
 | `GET` | `/api/scans/{uuid}/badge.svg` | The grade as a small SVG, for as long as that scan exists |
 | `DELETE` | `/api/purge` | Erases everything held for one instance and returns a signed receipt; **404** until a token is configured |
 | `GET` | `/arazzo.json` | The API as Arazzo workflows, beside the schema and behind the same switch |
@@ -272,7 +272,7 @@ scan - batching creates no handle over the group.
 ## Taking a result away
 
 `GET /api/scans/{uuid}/export/{format}` renders a finished scan as `json`,
-`csv`, `sarif` or `pdf`:
+`csv`, `sarif`, `pdf`, `html`, `remediation-md` or `remediation-html`:
 
 ```bash
 curl -sS -OJ http://127.0.0.1:8811/api/scans/0f4a1f22-.../export/pdf
@@ -283,6 +283,9 @@ curl -sS -OJ http://127.0.0.1:8811/api/scans/0f4a1f22-.../export/pdf
 | `pdf` | A ticket, a review, a printout. Written by `reports.py` itself - no reporting library, for the same reason the frontend loads nothing from a CDN |
 | `csv` | A spreadsheet: a header block, then one row per finding with a section column |
 | `sarif` | A code-scanning dashboard: SARIF 2.1.0, every result carrying a rule with the catalogue's own explanation |
+| `html` | One self-contained page that still reads after the result link has expired: no stylesheet to fetch, no script, no image |
+| `remediation-md` | The work to do, as Markdown for a pull request or a runbook: **only** the open, actionable findings, the evidence for each, and the nginx, Caddy, Traefik, Compose and `.env` fragments that close them. No grade, no passed checks, no advisories - those are in the report next to it |
+| `remediation-html` | The same bundle as one self-contained page, to open offline or print |
 | `json` | The scanner's document, unchanged |
 
 Each carries the remediation plan the scanner produced: a summary line and one
@@ -620,7 +623,7 @@ A request chooses **what** to scan, never **how hard**:
 | `target_url` | Required. Hostname or URL of the instance |
 | `ignore_hardenings` | Optional. Identifiers to waive, checked against an allow-list; unknown ones are dropped |
 | `release_track` | Optional. `rolling`, `production`, `lts` or `auto`; defaults to `auto`, and an unknown value falls back to it |
-| `output_format` | Optional. `dashboard`, `json`, `csv`, `sarif` or `pdf` |
+| `output_format` | Optional. `dashboard`, `json`, `csv`, `sarif` or `pdf`. The export-only formats (`html`, `remediation-md`, `remediation-html`) are fetched from the export endpoint rather than asked for here |
 
 `release_track` is the web equivalent of the plugin's `--release-track`. It
 decides how long the instance's release is supported and which release it is

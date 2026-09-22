@@ -155,7 +155,7 @@ MESSAGES: dict[str, str] = {
     "admin.state.guard.week": "letzte 7 Tage: {blocks} Sperren, {strikes} Verstöße, {daily}-mal Tageslimit erreicht",
     "admin.state.guard.off": "Scan-Sperre aus",
     "admin.state.schedule": "Release-Zeitplan",
-    "admin.state.advisories": "Advisories",
+    "admin.state.advisories": "Sicherheitsmeldungen",
     "admin.state.checked": "geprüft {when}",
     "admin.state.checked.failed": (
         "geprüft {when} - der letzte Versuch war nicht abrufbar"
@@ -220,7 +220,7 @@ MESSAGES: dict[str, str] = {
     ),
     "admin.surfaces.targets": "Ziele im Klartext protokolliert",
     "admin.update.kicker": "Release",
-    "admin.update.heading": "Updates",
+    "admin.update.heading": "Aktualisierungen",
     "admin.update.running": "Läuft mit {version}.",
     "admin.update.available": "Release {version} ist verfügbar.",
     "admin.update.current": "Das ist das neueste Release.",
@@ -309,7 +309,7 @@ MESSAGES: dict[str, str] = {
         "würde. Es wird nichts gespeichert."
     ),
     "admin.probe.schedule": "Release-Zeitplan: {answer}",
-    "admin.probe.advisories": "Advisories: {answer}",
+    "admin.probe.advisories": "Sicherheitsmeldungen: {answer}",
     "admin.probe.usable": "gelesen, eine Aktualisierung würde ihn übernehmen",
     "admin.probe.rejected": "gelesen, aber die Prüfungen würden ihn ablehnen",
     "admin.probe.unreadable": "nicht lesbar - nicht erreichbar oder nicht mehr in der erwarteten Form",
@@ -352,7 +352,7 @@ MESSAGES: dict[str, str] = {
         "Jeder Pull Request auf main und der Release-Workflow erzeugen den "
         "Index neu und checken ihn ein. In dieser Ansicht kannst du den Index nicht neu erstellen."
     ),
-    "admin.audit.kicker": "Audit",
+    "admin.audit.kicker": "Audit-Log",
     "admin.audit.heading": "Audit-Log",
     "admin.audit.lede": (
         "Scan-Anfragen, Ablehnungen und ausgelöste Limits in Echtzeit. Das "
@@ -1700,6 +1700,16 @@ MESSAGES: dict[str, str] = {
         "Eine Datei, die noch lesbar ist, wenn dieser Link abgelaufen ist. "
         "Sie öffnet offline, stellt keine Netzwerkanfrage und aktualisiert "
         "sich nicht."
+    ),
+    "result.export.remediation.md": "Behebungspaket (Markdown)",
+    "result.export.remediation.md.hint": (
+        "Nur das, was noch offen ist: jeder Befund, was beobachtet wurde, und "
+        "die nginx-, Caddy-, Traefik-, Compose- und .env-Fragmente, die ihn "
+        "beheben. Für einen Pull Request oder ein Runbook."
+    ),
+    "result.export.remediation.html": "Behebungspaket (HTML)",
+    "result.export.remediation.html.hint": (
+        "Dasselbe Paket als eine Seite, die du offline öffnen oder drucken kannst."
     ),
     "result.export.csv": "CSV",
     "result.export.csv.hint": "Eine Zeile pro Befund, für eine Tabellenkalkulation.",

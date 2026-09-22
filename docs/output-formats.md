@@ -55,6 +55,24 @@ check-opencloud-security --host opencloud.example.com --format sarif \
   > opencloud-security.sarif
 ```
 
+Each finding carries what a dashboard needs to act on it without a second
+lookup:
+
+| In the SARIF | What it holds |
+|:-------------|:--------------|
+| `rule.help` / `rule.helpUri` | The catalogue's remediation sentence and the official documentation page for the setting |
+| `rule.properties.security-severity` | The numeric score GitHub code scanning sorts and filters alerts on (`9.5` critical to `1.0` info) |
+| `rule.properties.problem.severity` | `error`, `warning` or `recommendation`, the dashboard's own scale |
+| `rule.properties.catalogueId` | The catalogue entry that explains the finding - `exposed` for `exposed:/opencloud.yaml` |
+| `rule.properties.tags` | `security`, plus `severity/…`, `category/…` and `kind/…` to filter on |
+| `result.properties` | The host, severity, category, remediation, documentation link, and for an advisory `fixedIn` and `affectedRanges` |
+| `result.partialFingerprints` | A stable identity per host and rule, so the same finding stays one alert with a history rather than a new one each night |
+| `run.properties.hosts` | The rating, label, product version and end-of-life state per scanned host |
+
+`affectedRanges` names the release window an advisory covers - `>= 1.0.0, <
+4.0.8` - rather than only the release that ends it, so a reader can tell
+whether an older release was ever affected.
+
 In GitHub Actions, upload it to code scanning. `continue-on-error: true` on
 the scan step keeps a non-zero exit from failing the job before the upload
 step runs - the point of scanning in CI is usually to see the findings even

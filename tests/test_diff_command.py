@@ -177,7 +177,7 @@ def test_a_missing_or_unreadable_file_is_an_error_not_an_empty_diff(tmp_path, re
     assert main(["diff", str(existing), str(rubbish)]) == 2
 
 
-@pytest.mark.parametrize("format_name", ("json", "slack", "markdown"))
+@pytest.mark.parametrize("format_name", ("json", "slack", "markdown", "side-by-side"))
 def test_every_rendering_produces_the_same_verdict(
     tmp_path, capsys, exposed, repaired, format_name
 ):
@@ -208,3 +208,137 @@ def test_the_json_rendering_carries_the_structured_comparison(
     assert document["first_run"] is False
     assert document["summary"]
     assert any("exposed:/.env" in change["change"] for change in document["changes"])
+
+
+def test_the_side_by_side_rendering_states_both_sides(
+    tmp_path, capsys, exposed, repaired
+):
+    """
+    The view exists so a reader does not have to rebuild each side from the
+    changes: every row says what the finding was and what it is.
+    """
+    before = _write(tmp_path / "before.json", exposed)
+    after = _write(tmp_path / "after.json", repaired)
+
+    code = main(["diff", str(before), str(after), "--format", "side-by-side"])
+    printed = capsys.readouterr().out
+
+    assert code == 0
+    row = next(line for line in printed.splitlines() if "exposed:/.env" in line)
+    assert row.startswith("-")
+    assert "FAIL" in row and "ok" in row
+    assert "Failing by severity:" in printed
+
+
+def test_the_side_by_side_rendering_lists_the_unmoved_when_asked(
+    tmp_path, capsys, exposed, repaired
+):
+    """"Nothing else moved" is an answer, and it has to be shown to be given."""
+    before = _write(tmp_path / "before.json", exposed)
+    after = _write(tmp_path / "after.json", repaired)
+    argv = ["diff", str(before), str(after), "--format", "side-by-side"]
+
+    main(argv)
+    changed_only = capsys.readouterr().out
+    main([*argv, "--all-findings"])
+    everything = capsys.readouterr().out
+
+    assert len(everything.splitlines()) > len(changed_only.splitlines())
+    assert "basicAuthDisabled" in everything
+    assert "basicAuthDisabled" not in changed_only
+
+
+def test_a_severity_that_moved_is_reported_although_the_finding_did_not(
+    tmp_path, capsys, repaired
+):
+    """
+    The baseline compares names and is silent here, correctly - nothing entered
+    or left the set of failing checks. The reader still needs to know.
+    """
+    before = _write(
+        tmp_path / "before.json",
+        {**repaired, "extraChecks": [
+            {"id": "exposed:/.env", "severity": "low", "passed": False, "ignored": False}
+        ]},
+    )
+    after = _write(
+        tmp_path / "after.json",
+        {**repaired, "extraChecks": [
+            {"id": "exposed:/.env", "severity": "critical", "passed": False, "ignored": False}
+        ]},
+    )
+
+    main(["diff", str(before), str(after), "--exit-zero"])
+    printed = capsys.readouterr().out
+
+    assert "severity low -> critical" in printed
+    assert "critical 0 -> 1" in printed
+
+
+def test_a_category_filter_narrows_the_findings(tmp_path, capsys, exposed, repaired):
+    """One area at a time, and the summary says which one is being shown."""
+    before = _write(tmp_path / "before.json", exposed)
+    after = _write(tmp_path / "after.json", repaired)
+
+    main(["diff", str(before), str(after), "--category", "exposure"])
+    exposure = capsys.readouterr().out
+    main(["diff", str(before), str(after), "--category", "cookies"])
+    cookies = capsys.readouterr().out
+
+    assert "Findings in exposure:" in exposure
+    assert "exposed:/.env" in exposure
+    assert "exposed:/.env" not in cookies
+
+
+def test_a_change_category_filter_narrows_the_explanation(
+    tmp_path, capsys, exposed, repaired
+):
+    """
+    The other namespace: not what the finding is about, but what kind of thing
+    moved. An operator asking "what did the instance do" does not want the
+    reference data's answer mixed in.
+    """
+    before = _write(tmp_path / "before.json", exposed)
+    after = _write(tmp_path / "after.json", repaired)
+
+    main(["diff", str(before), str(after), "--category", "instance"])
+    printed = capsys.readouterr().out
+
+    assert "[instance]" in printed
+    assert "[referenceData]" not in printed
+    # A filtered explanation drops the limitations too: they qualify the whole
+    # comparison, and printing them under one category would claim they are
+    # that category's limitations.
+    assert "[limitation]" not in printed
+
+
+def test_an_unknown_category_is_refused_with_a_suggestion(
+    tmp_path, caplog, exposed, repaired
+):
+    """A typo that silently showed nothing would read as "nothing changed"."""
+    before = _write(tmp_path / "before.json", exposed)
+    after = _write(tmp_path / "after.json", repaired)
+
+    code = main(["diff", str(before), str(after), "--category", "transprot"])
+
+    assert code == 2
+    assert "Did you mean transport?" in caplog.text
+
+
+def test_the_json_rendering_carries_the_per_finding_severities(
+    tmp_path, capsys, exposed, repaired
+):
+    """What a script gates on: the severity on each side, not only the names."""
+    before = _write(tmp_path / "before.json", repaired)
+    after = _write(tmp_path / "after.json", exposed)
+
+    main(["diff", str(before), str(after), "--format", "json"])
+    document = json.loads(capsys.readouterr().out)
+
+    entry = next(
+        item for item in document["findings"] if item["id"] == "exposed:/.env"
+    )
+    assert entry["status"] == "introduced"
+    assert entry["after"]["severity"]
+    assert entry["category"] == "exposure"
+    assert document["severityTotals"]

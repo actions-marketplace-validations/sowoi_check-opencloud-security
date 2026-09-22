@@ -1675,6 +1675,16 @@ MESSAGES: dict[str, str] = {
         "abre sin conexión, no hace ninguna petición de red y no se "
         "actualiza."
     ),
+    "result.export.remediation.md": "Paquete de correcciones (Markdown)",
+    "result.export.remediation.md.hint": (
+        "Solo lo que sigue abierto: cada hallazgo, lo que se observó y los "
+        "fragmentos de nginx, Caddy, Traefik, Compose y .env que lo corrigen. "
+        "Para una pull request o un runbook."
+    ),
+    "result.export.remediation.html": "Paquete de correcciones (HTML)",
+    "result.export.remediation.html.hint": (
+        "El mismo paquete en una página que se puede abrir sin conexión o imprimir."
+    ),
     "result.export.csv": "CSV",
     "result.export.csv.hint": "Una fila por hallazgo, para una hoja de cálculo.",
     "result.export.sarif": "SARIF",

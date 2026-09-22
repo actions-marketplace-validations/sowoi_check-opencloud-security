@@ -65,11 +65,13 @@ is needed.
 | [`test_change_explanation.py`](test_change_explanation.py) | Why two results differ, claimed only as far as the evidence supports. |
 | [`test_webapp_html_report.py`](test_webapp_html_report.py) | The standalone report: no request on opening, and nothing in it is markup. |
 | [`test_upgrade_rehearsal.py`](test_upgrade_rehearsal.py) | The upgrade rehearsal: each candidate release's fixes, leftovers and rating follow the scanner's own version rules and keep the finding caps. |
+| [`test_webapp_remediation_bundle.py`](test_webapp_remediation_bundle.py) | The remediation bundle: only the open work, every flavour of the fix, and nothing a waiver already accepted. |
 | [`test_remediation.py`](test_remediation.py) | The remediation planner never promises a grade that its fixes would not reach. |
 | [`test_snippets.py`](test_snippets.py) | Configuration fragments for fixes, and that they match the prose describing them. |
 | [`test_explain.py`](test_explain.py) | Debug mode: why a rating is what it is, and what each hardening identifier means. |
 | [`test_cli_explain.py`](test_cli_explain.py) | Looking up a finding identifier from the catalogue without running a scan. |
 | [`test_diff_command.py`](test_diff_command.py) | `check-opencloud-scanner diff`: the changes between two saved scans, and refusing to compare different instances. |
+| [`test_finding_deltas.py`](test_finding_deltas.py) | Two results compared finding by finding: the severity on each side, the category filter, and absent never read as passing. |
 | [`test_service.py`](test_service.py) | The HTTP scan service that runs in the container, including its result cache. |
 | [`test_config.py`](test_config.py) | Layered configuration (file, environment, flags) and the secret providers. |
 | [`test_settings_completeness.py`](test_settings_completeness.py) | A setting is present in the dataclass, `factory.py`, the example config and its flag, with none missing. |

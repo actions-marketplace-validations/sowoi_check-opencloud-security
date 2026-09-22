@@ -73,6 +73,13 @@ forma para que un panel de análisis lo muestre.</p>
 <pre><code class="language-shell">check-opencloud-security --host opencloud.example.com --format sarif \
   &gt; opencloud-security.sarif
 </code></pre>
+<p>Cada hallazgo incluye lo que un panel necesita para actuar: la recomendación y
+el enlace a la documentación del catálogo (<code>help</code>, <code>helpUri</code>), la gravedad y
+la categoría (<code>security-severity</code>, <code>problem.severity</code>, <code>tags</code>), el intervalo
+de versiones afectado por un aviso (<code>affectedRanges</code>, <code>fixedIn</code>) y una huella
+estable (<code>partialFingerprints</code>), de modo que el mismo hallazgo siga siendo una
+única alerta entre ejecuciones. <code>run.properties.hosts</code> indica la nota, la
+versión y el estado de soporte de cada host analizado.</p>
 <p>En GitHub Actions, súbalo al análisis de código. <code>continue-on-error: true</code> en
 el paso de análisis evita que un código de salida distinto de cero haga fallar
 el trabajo antes de que se ejecute el paso de subida; al analizar en CI, lo

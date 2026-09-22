@@ -744,6 +744,23 @@ the reference data differed; it does not establish that it caused any
 particular grade to move, and the sentence says so. Several changes may
 contribute without one being chosen as *the* cause.
 
+`--format json` also carries `findings`, one entry per finding in either
+document, with the severity, the waiver state and the category on each side,
+and `severityTotals`, the failing findings counted by severity before and
+after. That is what `opencloud_local_scan.findings` computes and what the
+`~` lines and `--format side-by-side` render. It keeps what the set of
+failing names throws away: a finding that stayed open and moved from `high`
+to `critical` is not a change to that set, and is a change to the rating it
+caps.
+
+A side is `null` where the document did not record that finding at all, and
+the status says `appeared` or `disappeared` rather than `introduced` or
+`resolved` - absent is not passing ([ADR
+0064](../adr/0064-a-scan-records-what-it-did-not-measure.md)). Severities are
+read from the documents and held to `critical`, `high`, `medium`, `low`,
+`unknown`; an archived report is evidence about when it was written, so the
+current catalogue never overrides it.
+
 `limitations` lists what the comparison could not establish - most often that
 one of the two reports predates these blocks, and so cannot say what it was
 judged against or how much of it ran. That is reported rather than assumed.

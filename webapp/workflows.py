@@ -80,7 +80,20 @@ PENDING_STATES = (STATE_QUEUED, STATE_RUNNING)
 TERMINAL_STATES = (STATE_COMPLETED, STATE_FAILED)
 
 #: Export formats the service renders from a finished scan.
-EXPORT_FORMATS = ("json", "csv", "sarif", "pdf", "html")
+#:
+#: Repeated rather than imported from ``webapp.reports``: this module is the
+#: client side of the HTTP API and deliberately imports nothing that renders.
+#: ``tests/test_webapp_remediation_bundle.py`` asserts the two lists agree, so
+#: the repetition cannot quietly become a disagreement.
+EXPORT_FORMATS = (
+    "json",
+    "csv",
+    "sarif",
+    "pdf",
+    "html",
+    "remediation-md",
+    "remediation-html",
+)
 
 #: Statuses that mean "wait, then try the same call again".
 RETRYABLE_STATUSES = (429, 503)
