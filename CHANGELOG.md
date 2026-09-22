@@ -14,6 +14,9 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ### Documentation
 
+- Listed `tests/test_monitoring_export.py` in the test index, so the
+  scheduler-export tests can be found by purpose.
+
 - Clarified German operator messages about wildcard DNS and temporary
   application updates, and replaced the literal TLS introduction with a
   description of the measured values. Added three wording regression cases.

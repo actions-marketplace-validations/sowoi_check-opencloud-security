@@ -119,6 +119,7 @@ is needed.
 | [`test_completion.py`](test_completion.py) | Shell completion, and a host without `argcomplete` running exactly as before. |
 | [`test_selfupdate.py`](test_selfupdate.py) | `--upgrade-self` uses the right tool (pip, pipx, uv) for the installation. |
 | [`test_wizard.py`](test_wizard.py) | The interactive setup behind `--configure`. |
+| [`test_monitoring_export.py`](test_monitoring_export.py) | What the wizard writes for a scheduler: the Icinga service, cron entry and systemd unit carry the operator's own thresholds and release track, and never a webhook credential in a world-readable file. |
 
 ## Web application (`webapp/` + `frontend/`)
 
