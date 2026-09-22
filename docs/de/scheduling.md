@@ -6,6 +6,8 @@ Auch ohne Icinga2 oder Nagios kannst du Scans zeitgesteuert ausführen. Unter [`
 - [Umgebungsvariablen für systemd](../../contrib/systemd/check-opencloud-security.env.example)
 - [Cronjob](../../contrib/cron/check-opencloud-security.cron)
 
+Damit diese Dateien für dich geschrieben werden, mit den gerade konfigurierten Einstellungen darin, führe `check-opencloud-scanner configure --export-monitoring systemd` aus - siehe [`configure`](scanner-cli.md#configure-write-a-configuration-file). Die folgenden Dateien sind die Vorlagen dafür.
+
 Der separate [Refresh-Timer](../../contrib/systemd/check-opencloud-security-refresh.timer) hält Release-Zeitplan und Schwachstellendatenbank aktuell. Konfiguriere den Scanner vor dem Aktivieren so, dass er beide Dateien unter `/var/lib/check-opencloud-security` liest. Der Aktualisierungsbefehl prüft die Dokumente und schreibt sie atomar.
 
 ## systemd-Timer {#systemd-timer}

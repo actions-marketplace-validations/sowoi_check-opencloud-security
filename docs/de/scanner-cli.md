@@ -265,6 +265,28 @@ Der Assistent erklärt die Einstellungen und speichert sie als JSON mit Dateirec
 | `--all` | Optionale Einstellungen ohne vorherige Auswahl durchgehen |
 | `--force` | Vorhandene Datei ohne Rückfrage ersetzen |
 | `--no-test-scan` | Vor dem Speichern keinen Testscan anbieten |
+| `--export-monitoring` | Zusätzlich die geplante Prüfung schreiben: `icinga`, `systemd`, `both` oder `none` |
+
+Danach bietet er an, auch die geplante Prüfung zu schreiben, neben die gerade gespeicherte Konfiguration:
+
+```text
+Also write a monitoring configuration (Icinga service, systemd timer)? [y/N]
+```
+
+`--export-monitoring` beantwortet diese Frage vorab, was ein Provisionierungsskript braucht. Die Dateien tragen die Schwellwerte, den Release-Track und jede andere gerade gegebene Antwort, damit die täglich laufende Prüfung die konfigurierte ist und kein aus dem Gedächtnis angepasstes Beispiel:
+
+```bash
+check-opencloud-scanner configure --export-monitoring both
+```
+
+| Datei | Was sie ist |
+|:--|:--|
+| `opencloud-security-<host>.conf` | Ein Icinga-2-`Service`-Objekt. Es braucht zusätzlich das `CheckCommand` aus [`contrib/icinga2/`](../../contrib/icinga2/check_opencloud_security.conf) - der Service setzt Variablen, das Kommando macht Flags daraus |
+| `check-opencloud-security.service` | Eine `oneshot`-Unit mit denselben Härtungsdirektiven wie die in [`contrib/systemd/`](../../contrib/systemd/check-opencloud-security.service) |
+| `check-opencloud-security.timer` | `OnCalendar=daily`, mit zufälliger Verzögerung, damit viele Hosts hinter einer Adresse nicht in derselben Sekunde das Ratelimit des Release-Feeds treffen |
+| `check-opencloud-security.env` | Die `COS_`-Variablen für die Unit, nur für den Eigentümer lesbar geschrieben |
+
+Zwei Dinge sind Absicht. **Nichts wird installiert**: Die Dateien entstehen dort, wo auch die Konfiguration liegt, und die Befehle, die sie installieren würden, werden ausgegeben - was nach `/etc` gelangt, hast du also vorher gelesen. Und **es wird kein Zugangsgeheimnis hineingeschrieben**: Eine Webhook-URL oder ein Release-Token bleibt in der Konfigurationsdatei, die nur der Eigentümer lesen kann, während ein Icinga-Objekt und eine Unit-Datei das nicht sind. Beide Artefakte verweisen stattdessen auf diese Datei - `vars.opencloud_config` und `COS_CONFIG_FILE` - und benennen die zurückgehaltenen Einstellungen, damit ein konfigurierter Webhook nie stillschweigend fehlt.
 
 ## Exitcodes {#exit-codes}
 

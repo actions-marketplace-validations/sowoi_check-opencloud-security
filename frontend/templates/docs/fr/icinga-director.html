@@ -108,6 +108,11 @@ ci-dessous fonctionnent aussi bien pour l'installation native que pour l'image
 <p>Une fois déployé, Icinga2 invoque la commande exactement comme décrit dans la
 section <a href="/documentation/installation#icinga2--nagios">Icinga2 / Nagios</a>, que cela aboutisse
 au binaire natif ou à un <code>docker run</code> en arrière-plan.</p>
+<p>Pour faire écrire l'objet <code>Service</code> à partir d'une configuration que tu viens
+de créer, avec ses seuils et sa série de publication déjà renseignés, lance
+<code>check-opencloud-scanner configure --export-monitoring icinga</code> - voir
+<a href="/documentation/scanner-cli#configure-write-a-configuration-file"><code>configure</code></a>. Le
+<code>CheckCommand</code> de l'étape 1 reste nécessaire.</p>
 <p>Pour déployer les mêmes objets sans l'interface web, voir
 <a href="/documentation/ansible">Déploiement automatisé avec Ansible</a>.</p>
 <hr>

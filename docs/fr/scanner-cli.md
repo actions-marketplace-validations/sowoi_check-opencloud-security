@@ -354,6 +354,41 @@ C'est le même assistant que `check-opencloud-security --configure`.
 | `--all` | Parcourir les réglages optionnels sans demander au préalable |
 | `--force` | Remplacer un fichier existant sans confirmation |
 | `--no-test-scan` | Ne pas proposer de scan de test de l'hôte avant l'enregistrement |
+| `--export-monitoring` | Écrire aussi la vérification planifiée : `icinga`, `systemd`, `both` ou `none` |
+
+Il propose ensuite d'écrire également la vérification planifiée, à côté de la
+configuration qu'il vient d'enregistrer :
+
+```text
+Also write a monitoring configuration (Icinga service, systemd timer)? [y/N]
+```
+
+`--export-monitoring` répond à cette question d'avance, ce dont un script de
+provisionnement a besoin. Les fichiers portent les seuils, la série de
+publication et toutes les autres réponses qui viennent d'être données : la
+vérification qui s'exécute chaque jour est donc celle qui a été configurée, et
+non un exemple ajusté de mémoire :
+
+```bash
+check-opencloud-scanner configure --export-monitoring both
+```
+
+| Fichier | Ce que c'est |
+|:--|:--|
+| `opencloud-security-<host>.conf` | Un objet `Service` Icinga 2. Il lui faut aussi le `CheckCommand` de [`contrib/icinga2/`](../../contrib/icinga2/check_opencloud_security.conf) - le service définit des variables, la commande en fait des options |
+| `check-opencloud-security.service` | Une unité `oneshot`, avec les mêmes directives de durcissement que celle de [`contrib/systemd/`](../../contrib/systemd/check-opencloud-security.service) |
+| `check-opencloud-security.timer` | `OnCalendar=daily`, avec un délai aléatoire pour que de nombreux hôtes derrière une même adresse n'atteignent pas la limite de débit du flux de publications à la même seconde |
+| `check-opencloud-security.env` | Les variables `COS_` de l'unité, écrites en lecture réservée au propriétaire |
+
+Deux choix sont délibérés. **Rien n'est installé** : les fichiers sont écrits
+là où est allée la configuration et les commandes qui les installeraient sont
+affichées, de sorte que ce qui arrive dans `/etc` est quelque chose que tu as
+lu d'abord. Et **aucun secret n'y est écrit** : une URL de webhook ou un jeton
+de publication reste dans le fichier de configuration, lisible par le seul
+propriétaire, alors qu'un objet Icinga et un fichier d'unité ne le sont pas.
+Les deux artefacts pointent vers ce fichier à la place - `vars.opencloud_config`
+et `COS_CONFIG_FILE` - et nomment les réglages qu'ils ont retenus, pour qu'un
+webhook configuré ne manque jamais en silence.
 
 ## Codes de sortie {#exit-codes}
 

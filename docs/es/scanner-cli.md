@@ -338,6 +338,41 @@ asistente que `check-opencloud-security --configure`.
 | `--all` | Recorre los ajustes opcionales sin preguntar antes |
 | `--force` | Sustituye un archivo existente sin pedir confirmación |
 | `--no-test-scan` | No ofrece un análisis de prueba del host antes de guardar |
+| `--export-monitoring` | Escribe también la comprobación programada: `icinga`, `systemd`, `both` o `none` |
+
+Después ofrece escribir también la comprobación programada, junto a la
+configuración que acaba de guardar:
+
+```text
+Also write a monitoring configuration (Icinga service, systemd timer)? [y/N]
+```
+
+`--export-monitoring` responde a esa pregunta de antemano, que es lo que
+necesita un script de aprovisionamiento. Los archivos llevan los umbrales, la
+serie de publicación y todas las demás respuestas recién dadas, de modo que la
+comprobación que se ejecuta cada día es la que se configuró y no un ejemplo
+ajustado de memoria:
+
+```bash
+check-opencloud-scanner configure --export-monitoring both
+```
+
+| Archivo | Qué es |
+|:--|:--|
+| `opencloud-security-<host>.conf` | Un objeto `Service` de Icinga 2. También necesita el `CheckCommand` de [`contrib/icinga2/`](../../contrib/icinga2/check_opencloud_security.conf): el servicio define variables y el comando las convierte en opciones |
+| `check-opencloud-security.service` | Una unidad `oneshot`, con las mismas directivas de refuerzo que la de [`contrib/systemd/`](../../contrib/systemd/check-opencloud-security.service) |
+| `check-opencloud-security.timer` | `OnCalendar=daily`, con un retardo aleatorio para que muchos hosts detrás de una misma dirección no alcancen el límite de peticiones del canal de publicaciones en el mismo segundo |
+| `check-opencloud-security.env` | Las variables `COS_` de la unidad, escritas con lectura solo para el propietario |
+
+Dos cosas son deliberadas. **No se instala nada**: los archivos se escriben
+donde fue la configuración y las órdenes que los instalarían se imprimen, así
+que lo que llega a `/etc` es algo que has leído antes. Y **no se escribe
+ninguna credencial en ellos**: una URL de webhook o un token de publicación se
+queda en el archivo de configuración, legible solo por el propietario,
+mientras que un objeto de Icinga y un archivo de unidad no lo son. Ambos
+artefactos apuntan a ese archivo en su lugar - `vars.opencloud_config` y
+`COS_CONFIG_FILE` - y nombran los ajustes que retuvieron, para que un webhook
+configurado nunca falte en silencio.
 
 ## Códigos de salida {#exit-codes}
 

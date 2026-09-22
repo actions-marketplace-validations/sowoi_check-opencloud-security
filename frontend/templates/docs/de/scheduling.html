@@ -22,6 +22,7 @@
 <li><a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/systemd/check-opencloud-security.env.example">Umgebungsvariablen für systemd</a></li>
 <li><a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/cron/check-opencloud-security.cron">Cronjob</a></li>
 </ul>
+<p>Damit diese Dateien für dich geschrieben werden, mit den gerade konfigurierten Einstellungen darin, führe <code>check-opencloud-scanner configure --export-monitoring systemd</code> aus - siehe <a href="/documentation/scanner-cli#configure-write-a-configuration-file"><code>configure</code></a>. Die folgenden Dateien sind die Vorlagen dafür.</p>
 <p>Der separate <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/systemd/check-opencloud-security-refresh.timer">Refresh-Timer</a> hält Release-Zeitplan und Schwachstellendatenbank aktuell. Konfiguriere den Scanner vor dem Aktivieren so, dass er beide Dateien unter <code>/var/lib/check-opencloud-security</code> liest. Der Aktualisierungsbefehl prüft die Dokumente und schreibt sie atomar.</p>
 <h2 id="systemd-timer">systemd-Timer</h2>
 <pre><code class="language-shell">sudo mkdir -p /etc/check-opencloud-security

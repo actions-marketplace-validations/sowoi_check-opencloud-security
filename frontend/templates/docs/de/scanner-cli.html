@@ -400,8 +400,45 @@ check-opencloud-scanner -c /etc/check-opencloud-security/.env.json configure
 <td><code>--no-test-scan</code></td>
 <td>Vor dem Speichern keinen Testscan anbieten</td>
 </tr>
+<tr>
+<td><code>--export-monitoring</code></td>
+<td>Zusätzlich die geplante Prüfung schreiben: <code>icinga</code>, <code>systemd</code>, <code>both</code> oder <code>none</code></td>
+</tr>
 </tbody>
 </table>
+<p>Danach bietet er an, auch die geplante Prüfung zu schreiben, neben die gerade gespeicherte Konfiguration:</p>
+<pre><code class="language-text">Also write a monitoring configuration (Icinga service, systemd timer)? [y/N]
+</code></pre>
+<p><code>--export-monitoring</code> beantwortet diese Frage vorab, was ein Provisionierungsskript braucht. Die Dateien tragen die Schwellwerte, den Release-Track und jede andere gerade gegebene Antwort, damit die täglich laufende Prüfung die konfigurierte ist und kein aus dem Gedächtnis angepasstes Beispiel:</p>
+<pre><code class="language-bash">check-opencloud-scanner configure --export-monitoring both
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Datei</th>
+<th>Was sie ist</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>opencloud-security-&lt;host&gt;.conf</code></td>
+<td>Ein Icinga-2-<code>Service</code>-Objekt. Es braucht zusätzlich das <code>CheckCommand</code> aus <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/icinga2/check_opencloud_security.conf"><code>contrib/icinga2/</code></a> - der Service setzt Variablen, das Kommando macht Flags daraus</td>
+</tr>
+<tr>
+<td><code>check-opencloud-security.service</code></td>
+<td>Eine <code>oneshot</code>-Unit mit denselben Härtungsdirektiven wie die in <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/systemd/check-opencloud-security.service"><code>contrib/systemd/</code></a></td>
+</tr>
+<tr>
+<td><code>check-opencloud-security.timer</code></td>
+<td><code>OnCalendar=daily</code>, mit zufälliger Verzögerung, damit viele Hosts hinter einer Adresse nicht in derselben Sekunde das Ratelimit des Release-Feeds treffen</td>
+</tr>
+<tr>
+<td><code>check-opencloud-security.env</code></td>
+<td>Die <code>COS_</code>-Variablen für die Unit, nur für den Eigentümer lesbar geschrieben</td>
+</tr>
+</tbody>
+</table>
+<p>Zwei Dinge sind Absicht. <strong>Nichts wird installiert</strong>: Die Dateien entstehen dort, wo auch die Konfiguration liegt, und die Befehle, die sie installieren würden, werden ausgegeben - was nach <code>/etc</code> gelangt, hast du also vorher gelesen. Und <strong>es wird kein Zugangsgeheimnis hineingeschrieben</strong>: Eine Webhook-URL oder ein Release-Token bleibt in der Konfigurationsdatei, die nur der Eigentümer lesen kann, während ein Icinga-Objekt und eine Unit-Datei das nicht sind. Beide Artefakte verweisen stattdessen auf diese Datei - <code>vars.opencloud_config</code> und <code>COS_CONFIG_FILE</code> - und benennen die zurückgehaltenen Einstellungen, damit ein konfigurierter Webhook nie stillschweigend fehlt.</p>
 <h2 id="exit-codes">Exitcodes</h2>
 <p>Die Scanner-CLI verwendet eigene Exitcodes. Ein erfolgreich gescannter Host mit Note F führt bei <code>scan</code> weiterhin zu <code>0</code>; die Nagios-Bewertung übernimmt das Plugin.</p>
 <table>

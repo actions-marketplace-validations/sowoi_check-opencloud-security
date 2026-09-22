@@ -474,8 +474,58 @@ asistente que <code>check-opencloud-security --configure</code>.</p>
 <td><code>--no-test-scan</code></td>
 <td>No ofrece un análisis de prueba del host antes de guardar</td>
 </tr>
+<tr>
+<td><code>--export-monitoring</code></td>
+<td>Escribe también la comprobación programada: <code>icinga</code>, <code>systemd</code>, <code>both</code> o <code>none</code></td>
+</tr>
 </tbody>
 </table>
+<p>Después ofrece escribir también la comprobación programada, junto a la
+configuración que acaba de guardar:</p>
+<pre><code class="language-text">Also write a monitoring configuration (Icinga service, systemd timer)? [y/N]
+</code></pre>
+<p><code>--export-monitoring</code> responde a esa pregunta de antemano, que es lo que
+necesita un script de aprovisionamiento. Los archivos llevan los umbrales, la
+serie de publicación y todas las demás respuestas recién dadas, de modo que la
+comprobación que se ejecuta cada día es la que se configuró y no un ejemplo
+ajustado de memoria:</p>
+<pre><code class="language-bash">check-opencloud-scanner configure --export-monitoring both
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Archivo</th>
+<th>Qué es</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>opencloud-security-&lt;host&gt;.conf</code></td>
+<td>Un objeto <code>Service</code> de Icinga 2. También necesita el <code>CheckCommand</code> de <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/icinga2/check_opencloud_security.conf"><code>contrib/icinga2/</code></a>: el servicio define variables y el comando las convierte en opciones</td>
+</tr>
+<tr>
+<td><code>check-opencloud-security.service</code></td>
+<td>Una unidad <code>oneshot</code>, con las mismas directivas de refuerzo que la de <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/systemd/check-opencloud-security.service"><code>contrib/systemd/</code></a></td>
+</tr>
+<tr>
+<td><code>check-opencloud-security.timer</code></td>
+<td><code>OnCalendar=daily</code>, con un retardo aleatorio para que muchos hosts detrás de una misma dirección no alcancen el límite de peticiones del canal de publicaciones en el mismo segundo</td>
+</tr>
+<tr>
+<td><code>check-opencloud-security.env</code></td>
+<td>Las variables <code>COS_</code> de la unidad, escritas con lectura solo para el propietario</td>
+</tr>
+</tbody>
+</table>
+<p>Dos cosas son deliberadas. <strong>No se instala nada</strong>: los archivos se escriben
+donde fue la configuración y las órdenes que los instalarían se imprimen, así
+que lo que llega a <code>/etc</code> es algo que has leído antes. Y <strong>no se escribe
+ninguna credencial en ellos</strong>: una URL de webhook o un token de publicación se
+queda en el archivo de configuración, legible solo por el propietario,
+mientras que un objeto de Icinga y un archivo de unidad no lo son. Ambos
+artefactos apuntan a ese archivo en su lugar - <code>vars.opencloud_config</code> y
+<code>COS_CONFIG_FILE</code> - y nombran los ajustes que retuvieron, para que un webhook
+configurado nunca falte en silencio.</p>
 <h2 id="exit-codes">Códigos de salida</h2>
 <p><strong>No</strong> son los códigos de Nagios del complemento. Un <code>scan</code> que encuentra una
 instancia con nota F sigue terminando con <code>0</code>, porque juzgar el resultado es
