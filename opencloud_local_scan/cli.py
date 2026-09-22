@@ -207,6 +207,19 @@ def build_arg_parser() -> argparse.ArgumentParser:
         default=None,
         help="Do not offer a test scan of the host before saving.",
     )
+    configure_parser.add_argument(
+        "--export-monitoring",
+        dest="export",
+        choices=("icinga", "systemd", "both", "none"),
+        default=None,
+        help=(
+            "Also write the scheduled check next to the configuration: an "
+            "Icinga 2 Service object, a systemd service and timer, or both. "
+            "The files carry the thresholds and release track just answered "
+            "and are written for review - nothing is installed or reloaded. "
+            "Credentials stay in the configuration file. The default asks."
+        ),
+    )
     refresh_parser = sub.add_parser(
         "refresh-data",
         help="Fetch validated release and advisory data for a monitoring host.",
@@ -823,6 +836,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             include_optional=args.include_optional,
             force=args.force,
             verify=args.verify,
+            export=args.export,
         )
     if args.command == "refresh-data":
         try:

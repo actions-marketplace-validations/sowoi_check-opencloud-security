@@ -74,8 +74,8 @@
       "lastmod": "2026-09-17"
     },
     "docs/icinga-director.html": {
-      "digest": "c78d996cad439b9be5abab8041293d68c40a95a18a310686a66e68c996d2bc5b",
-      "lastmod": "2026-09-19"
+      "digest": "241ad7cf24f4d9b5a47255aeb27843e452f29c8038c34be6277608d58af42c92",
+      "lastmod": "2026-09-22"
     },
     "docs/identity-providers.html": {
       "digest": "d2e2c38f46d6652144f903a76af16ce3260c10b447024f93767e1323e249c884",
@@ -138,7 +138,7 @@
       "lastmod": "2026-09-19"
     },
     "docs/scanner-cli.html": {
-      "digest": "d1c65b08d3883342cd6794775c1b70c3301894cccf27f7d41433ba4ab44d4f7b",
+      "digest": "a9f8b723e0015154a135df1aa82c00d6b560014944921f784d32b83a360ed5fd",
       "lastmod": "2026-09-22"
     },
     "docs/scanner.html": {
@@ -146,8 +146,8 @@
       "lastmod": "2026-09-22"
     },
     "docs/scheduling.html": {
-      "digest": "f90e7eaa15fe0085d89798d47db6ab1723945256b8621d82c2965836b1d945a3",
-      "lastmod": "2026-09-17"
+      "digest": "df2857ca044f0fae3c85d3e7b5173cdabc6c3dc7c9d3ef6d7f3bbaf1a113d10f",
+      "lastmod": "2026-09-22"
     },
     "docs/secure-deployment.html": {
       "digest": "7497d192d88fb2bc34454fd839eade2861994df09a21e515c501e3e56802668a",

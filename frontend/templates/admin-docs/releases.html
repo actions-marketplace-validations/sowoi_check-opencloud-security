@@ -67,6 +67,24 @@
 <h3 id="added">Added</h3>
 <ul>
 <li>
+<p><strong>The setup wizard exports the scheduled check, not just the configuration.</strong>
+  <code>check-opencloud-scanner configure</code> now offers to write the monitoring
+  configuration next to the file it saved, and <code>--export-monitoring</code>
+  (<code>icinga</code>, <code>systemd</code>, <code>both</code>, <code>none</code>) answers that question up front for a
+  provisioning script. It produces an Icinga 2 <code>Service</code> object, and a systemd
+  <code>oneshot</code> service, <code>daily</code> timer and <code>COS_</code> environment file, each carrying
+  the thresholds, the release track and every other answer just given - so the
+  check that runs every day is the one that was configured rather than an
+  example adjusted from memory. Two rules shape the output: <strong>nothing is
+  installed</strong> (the files are written for review and the install commands are
+  printed, never run), and <strong>no credential is written into them</strong> - a webhook
+  URL or release token stays in the owner-only configuration file, which both
+  artefacts point at with <code>vars.opencloud_config</code> and <code>COS_CONFIG_FILE</code>, and
+  the settings withheld are named rather than silently dropped. The generated
+  unit carries the same hardening directives as the one in <code>contrib/systemd/</code>,
+  asserted by a test so it cannot quietly become a weaker copy.</p>
+</li>
+<li>
 <p><strong><code>check-opencloud-scanner diff</code> compares two results finding by finding.</strong>
   A new <code>--format side-by-side</code> states both scans as two columns, one finding
   per row, so a reader does not have to rebuild each side from a list of

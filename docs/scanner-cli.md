@@ -344,6 +344,39 @@ automatically. `-c` names the path instead. It is the same wizard as
 | `--all` | Go through the optional settings without asking first |
 | `--force` | Replace an existing file without confirming |
 | `--no-test-scan` | Do not offer a test scan of the host before saving |
+| `--export-monitoring` | Also write the scheduled check: `icinga`, `systemd`, `both` or `none` |
+
+It then offers to write the scheduled check as well, next to the
+configuration it just saved:
+
+```text
+Also write a monitoring configuration (Icinga service, systemd timer)? [y/N]
+```
+
+`--export-monitoring` answers that question up front, which is what a
+provisioning script wants. The files carry the thresholds, the release track
+and every other answer just given, so the check that runs every day is the
+check that was configured rather than an example adjusted from memory:
+
+```bash
+check-opencloud-scanner configure --export-monitoring both
+```
+
+| File | What it is |
+|:--|:--|
+| `opencloud-security-<host>.conf` | An Icinga 2 `Service` object. It needs the `CheckCommand` from [`contrib/icinga2/`](../contrib/icinga2/check_opencloud_security.conf) as well - the service sets variables, the command turns them into flags |
+| `check-opencloud-security.service` | A `oneshot` unit, with the same hardening directives as the one in [`contrib/systemd/`](../contrib/systemd/check-opencloud-security.service) |
+| `check-opencloud-security.timer` | `OnCalendar=daily`, with a randomised delay so many hosts behind one address do not hit the release feed's rate limit at the same second |
+| `check-opencloud-security.env` | The `COS_` variables for the unit, written owner-only |
+
+Two things are deliberate. **Nothing is installed**: the files are written
+where the configuration went and the commands that would install them are
+printed, so what reaches `/etc` is something you read first. And **no
+credential is written into them**: a webhook URL or a release token stays in
+the configuration file, which is owner-only, while an Icinga object and a unit
+file are not. Both artefacts point at that file instead - `vars.opencloud_config`
+and `COS_CONFIG_FILE` - and name the settings they withheld, so a configured
+webhook is never silently missing.
 
 ## Exit codes
 

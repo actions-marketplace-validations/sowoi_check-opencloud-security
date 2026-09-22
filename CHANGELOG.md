@@ -30,6 +30,23 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ### Added
 
+- **The setup wizard exports the scheduled check, not just the configuration.**
+  `check-opencloud-scanner configure` now offers to write the monitoring
+  configuration next to the file it saved, and `--export-monitoring`
+  (`icinga`, `systemd`, `both`, `none`) answers that question up front for a
+  provisioning script. It produces an Icinga 2 `Service` object, and a systemd
+  `oneshot` service, `daily` timer and `COS_` environment file, each carrying
+  the thresholds, the release track and every other answer just given - so the
+  check that runs every day is the one that was configured rather than an
+  example adjusted from memory. Two rules shape the output: **nothing is
+  installed** (the files are written for review and the install commands are
+  printed, never run), and **no credential is written into them** - a webhook
+  URL or release token stays in the owner-only configuration file, which both
+  artefacts point at with `vars.opencloud_config` and `COS_CONFIG_FILE`, and
+  the settings withheld are named rather than silently dropped. The generated
+  unit carries the same hardening directives as the one in `contrib/systemd/`,
+  asserted by a test so it cannot quietly become a weaker copy.
+
 - **`check-opencloud-scanner diff` compares two results finding by finding.**
   A new `--format side-by-side` states both scans as two columns, one finding
   per row, so a reader does not have to rebuild each side from a list of

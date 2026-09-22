@@ -480,8 +480,56 @@ automatically. <code>-c</code> names the path instead. It is the same wizard as
 <td><code>--no-test-scan</code></td>
 <td>Do not offer a test scan of the host before saving</td>
 </tr>
+<tr>
+<td><code>--export-monitoring</code></td>
+<td>Also write the scheduled check: <code>icinga</code>, <code>systemd</code>, <code>both</code> or <code>none</code></td>
+</tr>
 </tbody>
 </table>
+<p>It then offers to write the scheduled check as well, next to the
+configuration it just saved:</p>
+<pre><code class="language-text">Also write a monitoring configuration (Icinga service, systemd timer)? [y/N]
+</code></pre>
+<p><code>--export-monitoring</code> answers that question up front, which is what a
+provisioning script wants. The files carry the thresholds, the release track
+and every other answer just given, so the check that runs every day is the
+check that was configured rather than an example adjusted from memory:</p>
+<pre><code class="language-bash">check-opencloud-scanner configure --export-monitoring both
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>opencloud-security-&lt;host&gt;.conf</code></td>
+<td>An Icinga 2 <code>Service</code> object. It needs the <code>CheckCommand</code> from <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/icinga2/check_opencloud_security.conf"><code>contrib/icinga2/</code></a> as well - the service sets variables, the command turns them into flags</td>
+</tr>
+<tr>
+<td><code>check-opencloud-security.service</code></td>
+<td>A <code>oneshot</code> unit, with the same hardening directives as the one in <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/systemd/check-opencloud-security.service"><code>contrib/systemd/</code></a></td>
+</tr>
+<tr>
+<td><code>check-opencloud-security.timer</code></td>
+<td><code>OnCalendar=daily</code>, with a randomised delay so many hosts behind one address do not hit the release feed's rate limit at the same second</td>
+</tr>
+<tr>
+<td><code>check-opencloud-security.env</code></td>
+<td>The <code>COS_</code> variables for the unit, written owner-only</td>
+</tr>
+</tbody>
+</table>
+<p>Two things are deliberate. <strong>Nothing is installed</strong>: the files are written
+where the configuration went and the commands that would install them are
+printed, so what reaches <code>/etc</code> is something you read first. And <strong>no
+credential is written into them</strong>: a webhook URL or a release token stays in
+the configuration file, which is owner-only, while an Icinga object and a unit
+file are not. Both artefacts point at that file instead - <code>vars.opencloud_config</code>
+and <code>COS_CONFIG_FILE</code> - and name the settings they withheld, so a configured
+webhook is never silently missing.</p>
 <h2 id="exit-codes">Exit codes</h2>
 <p>These are <strong>not</strong> the plugin's Nagios codes. A <code>scan</code> that finds an F-rated
 instance still exits <code>0</code>, because judging the result is the plugin's job.</p>

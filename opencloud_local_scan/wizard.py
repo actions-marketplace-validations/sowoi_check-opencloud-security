@@ -47,6 +47,14 @@ from .config import (
     JSON_SUFFIXES,
     load_config_file,
 )
+from .monitoring import (
+    DEFAULT_EXECUTABLE,
+    DEFAULT_INTERVAL_HOURS,
+    INSTALL_HINTS,
+    icinga_service,
+    service_name,
+    systemd_units,
+)
 from .releases import MODES as UPDATE_MODES
 from .scanner import DEFAULT_CONCURRENCY, MAX_CONCURRENCY
 from .versions import RELEASE_TRACK_CHOICES
@@ -1009,6 +1017,95 @@ def _verify_before_saving(
     return prompter.confirm("The test scan failed. Save anyway?", default=True)
 
 
+def _write_text(path: Path, text: str, *, mode: int | None = None) -> Path:
+    """Write one generated artefact, creating its directory."""
+    path = path.expanduser()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+    if mode is not None:
+        with suppress(OSError):  # pragma: no cover - filesystem without modes
+            os.chmod(path, mode)
+    return path
+
+
+def export_monitoring(
+    prompter: Prompter,
+    data: Mapping[str, Any],
+    config_path: Path,
+    *,
+    export: str | None = None,
+) -> list[Path]:
+    """
+    Offer the scheduled check as files, next to the configuration just saved.
+
+    A configuration file makes a check runnable by hand. What runs it every
+    day is an Icinga service or a systemd timer, and copying one out of the
+    documentation is where the thresholds that were just chosen turn back into
+    whatever the example used. This writes them instead.
+
+    Nothing is installed: the files land beside the configuration, and the
+    commands that would install them are printed. ``export`` skips the
+    question and picks for a non-interactive caller.
+    """
+    if export is None:
+        prompter.say()
+        if not prompter.confirm(
+            "Also write a monitoring configuration (Icinga service, systemd timer)?",
+            default=False,
+        ):
+            return []
+        index = prompter.choose(
+            "Which scheduler runs the check?",
+            ["Icinga 2 service object", "systemd service and timer", "both"],
+        )
+        export = ("icinga", "systemd", "both")[index]
+    if export == "none":
+        return []
+
+    directory = config_path.expanduser().parent
+    written: list[Path] = []
+
+    if export in {"icinga", "both"}:
+        name = f"{service_name(data)}.conf"
+        path = _write_text(
+            directory / name,
+            icinga_service(data, config_path=config_path),
+        )
+        written.append(path)
+        prompter.say()
+        prompter.say(f"Wrote {path}")
+        for hint in INSTALL_HINTS["icinga"]:
+            prompter.say(f"  {hint.format(path=path, name=name)}")
+
+    if export in {"systemd", "both"}:
+        units = systemd_units(data, config_path=config_path)
+        for filename, text in units.items():
+            # The environment file is the one that could grow a credential
+            # later, so it starts owner-only rather than inheriting the umask.
+            mode = FILE_MODE if filename.endswith(".env") else None
+            written.append(_write_text(directory / filename, text, mode=mode))
+        prompter.say()
+        prompter.say(f"Wrote {len(units)} systemd file(s) to {directory}")
+        for hint in INSTALL_HINTS["systemd"]:
+            prompter.say(f"  {hint.format(directory=directory)}")
+
+    prompter.say()
+    prompter.say(
+        f"Review them before installing. The thresholds and release track they "
+        f"carry are the ones answered above; a check runs every "
+        f"{DEFAULT_INTERVAL_HOURS} hours."
+    )
+    if DEFAULT_EXECUTABLE not in "".join(
+        path.read_text(encoding="utf-8") for path in written
+    ):
+        return written
+    prompter.say(
+        f"  The unit runs {DEFAULT_EXECUTABLE}; correct the ExecStart= line if "
+        "the plugin is installed elsewhere."
+    )
+    return written
+
+
 def run(
     prompter: Prompter | None = None,
     *,
@@ -1016,6 +1113,7 @@ def run(
     include_optional: bool | None = None,
     force: bool = False,
     verify: bool | None = None,
+    export: str | None = None,
 ) -> int:
     """
     Run the wizard end to end. Returns a process exit code.
@@ -1026,6 +1124,8 @@ def run(
     ``--configure`` cannot quietly discard a working one.
 
     ``verify`` forces the closing test scan on or off; the default asks.
+    ``export`` does the same for the monitoring artefacts: ``icinga``,
+    ``systemd``, ``both`` or ``none``.
     """
     prompter = prompter or Prompter()
     try:
@@ -1082,4 +1182,16 @@ def run(
         prompter.say(f"Point the check at it with --config {written}")
     prompter.say()
     prompter.say("Try it with:  check-opencloud-security")
+
+    try:
+        export_monitoring(prompter, data, written, export=export)
+    except SetupAborted as exc:
+        # The configuration is already saved and correct; only the optional
+        # artefacts were abandoned, so this is not a failed setup.
+        prompter.say()
+        prompter.say(str(exc))
+    except OSError as exc:
+        prompter.say()
+        prompter.say(f"The monitoring files could not be written: {exc}")
+        prompter.say(f"The configuration at {written} is unaffected.")
     return 0
