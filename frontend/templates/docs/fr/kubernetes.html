@@ -20,11 +20,12 @@
 services</a> lorsque plusieurs consommateurs ont besoin d'un
 résultat partagé. Ce sont des options indépendantes; un CronJob est suffisant pour la plupart des programmes
 des vérifications.</p>
-<p>The image is built from this repository; see
-<a href="/documentation/installation#docker">Docker</a>. Push it to your own registry and replace
-<code>registry.example.com/check-opencloud-security:1.1.0</code> below. Pin a tag rather
-than using <code>latest</code>: the release schedule and the newest known OpenCloud
-version ship <em>inside</em> the image, so which tag you run is part of the verdict.</p>
+<p>L'image est construite depuis ce dépôt ; voir
+<a href="/documentation/installation#docker">Docker</a>. Publiez-la dans votre registre et remplacez
+<code>registry.example.com/check-opencloud-security:1.1.0</code> ci-dessous. Utilisez un
+tag fixe plutôt que <code>latest</code> : le calendrier des versions et la dernière
+version OpenCloud connue sont intégrés à l'image, donc le tag exécuté fait
+partie du résultat.</p>
 <!-- TOC -->
 <ul>
 <li><a href="#kubernetes">Kubernetes</a></li>
@@ -38,7 +39,8 @@ version ship <em>inside</em> the image, so which tag you run is part of the verd
 <h2 id="the-helm-chart">The Helm chart</h2>
 <p><a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/helm/check-opencloud-security"><code>contrib/helm/check-opencloud-security</code></a>
 packages both of the manifests below. Install it from a checkout - it is not
-published to a registry, and reading what it will create is part of the point:</p>
+publié dans un registre, et l'examen des objets rendus avant l'installation
+fait partie du contrôle de sécurité :</p>
 <pre><code class="language-shell">helm install opencloud-security contrib/helm/check-opencloud-security \
   --namespace monitoring --create-namespace \
   --set image.tag=&lt;the release you pinned&gt; \
@@ -73,11 +75,11 @@ omits one is refused rather than rendered:</p>
 </tr>
 </tbody>
 </table>
-<p>Every credential is read from a <code>Secret</code> you created and named; the chart
-writes none, because a values file is committed and copied while a token in
-one is not easily unremembered. The
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/helm/check-opencloud-security/README.md">chart's README</a> has the
-full value table.</p>
+<p>Chaque identifiant est lu dans un <code>Secret</code> que vous avez créé et nommé ; le
+chart n'en écrit aucun, car un fichier de valeurs peut être copié avec le
+projet et un jeton qui s'y trouve aussi. Le
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/helm/check-opencloud-security/README.md">README du chart</a>
+contient le tableau complet des valeurs.</p>
 <p>The rest of this page is what the chart renders, for anyone who would rather
 apply the YAML directly or read it before installing.</p>
 <h2 id="a-scheduled-scan">A scheduled scan</h2>

@@ -621,7 +621,7 @@ excuse. The other two always carry one, from a closed set:
 | `unreadable` | Something answered and could not be understood |
 | `no_route` | There is no route to that address family from where the scan ran |
 
-Two properties are worth relying on:
+Deux propriétés sont importantes ici :
 
 - **The total is what this scan considered**, not a constant. The checks are
   dynamic - which paths are probed, which debug ports are dialled, which
