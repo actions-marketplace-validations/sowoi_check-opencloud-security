@@ -1,79 +1,90 @@
-# Content Security Policy
+# Content-Security-Policy : ce que ce scanner vérifie, et pourquoi
 
-Une politique de contenu-sécurité (CSP) indique au navigateur quelles sources peuvent fournir des scripts,
-styles, cadres et autres contenus. Une politique bien configurée peut limiter les effets
-contenu injecté et scripts. Le scanner vérifie si l'en-tête est présent et
-si sa politique de script permet des formes spécifiques d'exécution dangereuse.
+Une Content-Security-Policy (CSP) indique au navigateur quelles sources sont
+autorisées à fournir des scripts, des styles, des cadres et d'autres contenus.
+Une politique bien configurée peut limiter les effets d'un contenu ou de scripts
+injectés. Le scanner vérifie si l'en-tête est présent et si sa politique
+relative aux scripts autorise certaines formes d'exécution dangereuse.
 
 <!-- TOC -->
-* [Content-Security-Policy: what this scanner checks, and why](#content-security-policy-what-this-scanner-checks-and-why)
-  * [1. Is the header present at all](#1-is-the-header-present-at-all)
-  * [2. Is the policy actually restrictive: `cspWithoutUnsafeInline`](#2-is-the-policy-actually-restrictive-cspwithoutunsafeinline)
-  * [Fixing it](#fixing-it)
-  * [Severity and rating impact](#severity-and-rating-impact)
+* [Content-Security-Policy : ce que ce scanner vérifie, et pourquoi](#content-security-policy-what-this-scanner-checks-and-why)
+  * [1. L'en-tête est-il seulement présent](#1-is-the-header-present-at-all)
+  * [2. La politique est-elle réellement restrictive : `cspWithoutUnsafeInline`](#2-is-the-policy-actually-restrictive-cspwithoutunsafeinline)
+  * [Comment corriger](#fixing-it)
+  * [Gravité et effet sur la note](#severity-and-rating-impact)
 <!-- TOC -->
 
 
-## 1. Is the header present at all
+## 1. L'en-tête est-il seulement présent {#1-is-the-header-present-at-all}
 
-`Content-Security-Policy` is one of the eight headers checked under
-`setup.headers` (with `--check-hardening`, or always in the web result). Its
-absence is a finding on its own:
+`Content-Security-Policy` fait partie des huit en-têtes contrôlés sous
+`setup.headers` (avec `--check-hardening`, ou systématiquement dans le résultat
+web). Son absence constitue à elle seule un constat :
 
-> Nothing restricts where scripts, styles and frames may be loaded from.
+> Rien ne restreint les origines depuis lesquelles scripts, styles et cadres
+> peuvent être chargés.
 
-OpenCloud ships a policy by default, so a missing header on a live instance
-almost always means a reverse proxy in front of it stripped the header rather
-than that OpenCloud failed to send it - see
-[Reverse proxies](reverse-proxy.md) for the header set this check looks for,
-written out for nginx, Apache, Caddy, Traefik and HAProxy.
+OpenCloud fournit une politique par défaut : sur une instance en production, un
+en-tête manquant signifie donc presque toujours qu'un proxy inverse placé devant
+elle l'a supprimé, et non qu'OpenCloud a omis de l'envoyer - voir
+[Proxys inverses](reverse-proxy.md) pour l'ensemble d'en-têtes recherché par ce
+contrôle, détaillé pour nginx, Apache, Caddy, Traefik et HAProxy.
 
-## 2. Is the policy actually restrictive: `cspWithoutUnsafeInline`
+## 2. La politique est-elle réellement restrictive : `cspWithoutUnsafeInline` {#2-is-the-policy-actually-restrictive-cspwithoutunsafeinline}
 
-Having *a* CSP header is not the same as having a useful one. The
-`cspWithoutUnsafeInline` hardening check reads the `script-src` directive
-(falling back to `default-src` when `script-src` is absent) and fails when it
-contains `unsafe-inline` or `unsafe-eval`:
+Avoir *un* en-tête CSP n'est pas la même chose qu'en avoir un utile. Le contrôle
+de durcissement `cspWithoutUnsafeInline` lit la directive `script-src` (à défaut
+`default-src` lorsque `script-src` est absente) et échoue lorsqu'elle contient
+`unsafe-inline` ou `unsafe-eval` :
 
-- **`unsafe-inline`** lets injected markup or an event handler execute
-  outright - the exact thing a CSP exists to stop.
-- **`unsafe-eval`** lets a gadget already present in loaded code turn
-  attacker-controlled input into code via `eval()` or the `Function`
-  constructor.
+- **`unsafe-inline`** permet à du balisage injecté ou à un gestionnaire
+  d'événement de s'exécuter directement - précisément ce qu'une CSP existe pour
+  empêcher.
+- **`unsafe-eval`** permet à un mécanisme déjà présent dans le code chargé de
+  transformer une entrée contrôlée par un attaquant en code, via `eval()` ou le
+  constructeur `Function`.
 
-**This fails on a stock, unmodified OpenCloud instance.** The default
-`csp.yaml` contains `unsafe-inline` in `script-src` and `style-src`, because
-the web frontend currently depends on inline scripts and styles. The check
-reports this rather than excusing it, but fixing it means shipping a custom
-CSP and testing the UI against it - it is not evidence of misconfiguration by
-itself, the way most other findings are.
+**Ce contrôle échoue sur une instance OpenCloud d'origine, non modifiée.** Le
+fichier `csp.yaml` par défaut contient `unsafe-inline` dans `script-src` et
+`style-src`, car l'interface web dépend actuellement de scripts et de styles en
+ligne. Le contrôle le signale plutôt que de l'excuser, mais y remédier suppose
+de fournir une CSP personnalisée et de tester l'interface avec elle : ce n'est
+pas en soi la preuve d'une mauvaise configuration, contrairement à la plupart
+des autres constats.
 
-One exception is built in: a policy that pairs `unsafe-inline` with a nonce or
-a hash (the standard `strict-dynamic` rollout pattern) does **not** fail this
-check. Every browser that understands nonces ignores `unsafe-inline` when one
-is present, so the keyword is only a fallback for browsers too old to
-understand the nonce either - keeping it in that shape is the standards-body
-recommended way to support old and new browsers with the same header.
+Une exception est prévue : une politique qui associe `unsafe-inline` à un nonce
+ou à une empreinte (le schéma de déploiement standard `strict-dynamic`) ne fait
+**pas** échouer ce contrôle. Tout navigateur qui comprend les nonces ignore
+`unsafe-inline` lorsqu'un nonce est présent ; le mot-clé n'est donc qu'une
+solution de repli pour les navigateurs trop anciens pour comprendre le nonce, et
+le conserver sous cette forme est la méthode recommandée par les organismes de
+normalisation pour prendre en charge anciens et nouveaux navigateurs avec le
+même en-tête.
 
-## Fixing it
+## Comment corriger {#fixing-it}
 
-Point `PROXY_CSP_CONFIG_FILE_LOCATION` at a `csp.yaml` without `unsafe-inline`
-or `unsafe-eval`, or `PROXY_CSP_CONFIG_FILE_OVERRIDE_LOCATION` to replace the
-default outright. To keep supporting older browsers, move to a nonce- or
-hash-based policy with `strict-dynamic` instead of dropping `unsafe-inline`
-outright. Test it first: the web interface currently relies on inline scripts
-and styles, so a strict policy is likely to break the UI and any connected
-office or IDP service before it is tuned.
+Faites pointer `PROXY_CSP_CONFIG_FILE_LOCATION` vers un `csp.yaml` dépourvu
+d'`unsafe-inline` et d'`unsafe-eval`, ou
+`PROXY_CSP_CONFIG_FILE_OVERRIDE_LOCATION` pour remplacer entièrement la
+politique par défaut. Pour continuer à prendre en charge les navigateurs plus
+anciens, adoptez une politique fondée sur des nonces ou des empreintes avec
+`strict-dynamic` plutôt que de supprimer purement et simplement
+`unsafe-inline`. Testez d'abord : l'interface web s'appuie actuellement sur des
+scripts et des styles en ligne, une politique stricte risque donc de casser
+l'interface ainsi que tout service bureautique ou fournisseur d'identité
+connecté avant d'avoir été ajustée.
 
-Reference:
-[OpenCloud proxy service environment variables](https://docs.opencloud.eu/docs/dev/server/services/proxy/environment-variables).
+Référence :
+[variables d'environnement du service proxy d'OpenCloud](https://docs.opencloud.eu/docs/dev/server/services/proxy/environment-variables).
 
-## Severity and rating impact
+## Gravité et effet sur la note {#severity-and-rating-impact}
 
-`cspWithoutUnsafeInline` is a hardening flag, reported only with
-`--check-hardening` (or always on the web result), and does not on its own
-cap the rating the way a failed `extraChecks` entry does - see
-[Hardening checks](../README.md#hardening-checks) for how hardening flags and
-capped findings differ. The missing-header finding is a `header:` extra check
-and does cap the rating when `--check-hardening` is set - see the extra-checks
-table in [the main README](scanner-checks.md#what-the-scanner-checks).
+`cspWithoutUnsafeInline` est un indicateur de durcissement, signalé uniquement
+avec `--check-hardening` (ou systématiquement dans le résultat web), et il ne
+plafonne pas à lui seul la note comme le fait une entrée `extraChecks` en échec -
+voir [Contrôles de durcissement](reference.md#hardening-checks) pour la
+différence entre indicateurs de durcissement et constats plafonnants. Le constat
+d'en-tête manquant est, lui, un contrôle supplémentaire `header:` et plafonne
+bien la note lorsque `--check-hardening` est activé - voir le tableau des
+contrôles supplémentaires dans
+[le README principal](scanner-checks.md#what-the-scanner-checks).

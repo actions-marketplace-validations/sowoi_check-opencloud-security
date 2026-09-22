@@ -1,87 +1,94 @@
-# Sécurité des cookies
+# Attributs de cookie : ce que ce scanner vérifie, et pourquoi
 
-Le scanner inspecte les en-têtes `Set-Cookie` dans les réponses publiques pour quatre cookies
-protections. Il lit les attributs définis par OpenCloud ou son proxy inversé et ne
-conserver les valeurs des cookies.
+Le scanner examine les en-têtes `Set-Cookie` des réponses publiques à la
+recherche de quatre protections de cookie. Il lit les attributs définis par
+OpenCloud ou par son proxy inverse et ne conserve aucune valeur de cookie.
 
-If the response sets no cookies, these checks are omitted. An unperformed check is not
-reported as a pass.
+Si la réponse ne définit aucun cookie, ces contrôles sont omis. Un contrôle non
+effectué n'est pas signalé comme réussi.
 
 <!-- TOC -->
-* [Cookie attributes: what this scanner checks, and why](#cookie-attributes-what-this-scanner-checks-and-why)
-  * [1. Does the cookie require HTTPS: `cookieSecure`](#1-does-the-cookie-require-https-cookiesecure)
-  * [2. Can page scripts read the cookie: `cookieHttpOnly`](#2-can-page-scripts-read-the-cookie-cookiehttponly)
-  * [3. Is the cookie sent on cross-site requests: `cookieSameSite`](#3-is-the-cookie-sent-on-cross-site-requests-cookiesamesite)
-  * [4. Does the cookie name carry a prefix: `cookiePrefix`](#4-does-the-cookie-name-carry-a-prefix-cookieprefix)
-  * [Severity and rating impact](#severity-and-rating-impact)
+* [Attributs de cookie : ce que ce scanner vérifie, et pourquoi](#cookie-attributes-what-this-scanner-checks-and-why)
+  * [1. Le cookie exige-t-il HTTPS : `cookieSecure`](#1-does-the-cookie-require-https-cookiesecure)
+  * [2. Les scripts de la page peuvent-ils lire le cookie : `cookieHttpOnly`](#2-can-page-scripts-read-the-cookie-cookiehttponly)
+  * [3. Le cookie est-il envoyé lors de requêtes intersites : `cookieSameSite`](#3-is-the-cookie-sent-on-cross-site-requests-cookiesamesite)
+  * [4. Le nom du cookie porte-t-il un préfixe : `cookiePrefix`](#4-does-the-cookie-name-carry-a-prefix-cookieprefix)
+  * [Gravité et effet sur la note](#severity-and-rating-impact)
 <!-- TOC -->
 
 
-## 1. Does the cookie require HTTPS: `cookieSecure`
+## 1. Le cookie exige-t-il HTTPS : `cookieSecure` {#1-does-the-cookie-require-https-cookiesecure}
 
-A cookie without `Secure` will be sent over a plain HTTP connection if the
-browser ever makes one to the same host - a stray `http://` link, a mixed
-redirect, or a captive portal are all it takes. Once that happens, the cookie
-crosses the network in clear text and can be replayed by anyone who saw it.
+Un cookie dépourvu de `Secure` sera transmis sur une connexion HTTP en clair dès
+que le navigateur en établira une vers le même hôte - un lien `http://` égaré,
+une redirection mixte ou un portail captif suffisent. Dès lors, le cookie
+traverse le réseau en clair et peut être rejoué par quiconque l'a vu passer.
 
-**Fix:** set `Secure` on every cookie the reverse proxy or application issues.
-If the instance terminates TLS in a reverse proxy, this is usually the
-proxy's own session or CSRF cookie rather than one OpenCloud itself sets - see
-[Reverse proxies](reverse-proxy.md) for the header set this check reads.
+**Correction :** activez `Secure` sur chaque cookie émis par le proxy inverse ou
+par l'application. Si l'instance termine le TLS dans un proxy inverse, il s'agit
+généralement du cookie de session ou du cookie CSRF du proxy lui-même plutôt que
+d'un cookie posé par OpenCloud - voir [Proxys inverses](reverse-proxy.md) pour
+l'ensemble d'en-têtes que lit ce contrôle.
 
-## 2. Can page scripts read the cookie: `cookieHttpOnly`
+## 2. Les scripts de la page peuvent-ils lire le cookie : `cookieHttpOnly` {#2-can-page-scripts-read-the-cookie-cookiehttponly}
 
-Without `HttpOnly`, scripts running on the page can read a cookie through
-`document.cookie`. For session cookies this increases the impact of an injected script.
-Some CSRF-token designs deliberately require JavaScript access, so assess the cookie’s
-purpose before changing the attribute.
+Sans `HttpOnly`, les scripts exécutés dans la page peuvent lire un cookie via
+`document.cookie`. Pour les cookies de session, cela aggrave les conséquences
+d'un script injecté. Certaines conceptions de jeton CSRF exigent délibérément un
+accès depuis JavaScript : évaluez donc l'usage du cookie avant de modifier
+l'attribut.
 
-**Fix:** use `HttpOnly` for cookies that scripts do not need to read, especially session
-cookies. Confirm the application’s requirements before applying the attribute to every
-cookie.
+**Correction :** utilisez `HttpOnly` pour les cookies que les scripts n'ont pas
+besoin de lire, en particulier les cookies de session. Vérifiez les besoins de
+l'application avant d'appliquer l'attribut à tous les cookies.
 
-## 3. Is the cookie sent on cross-site requests: `cookieSameSite`
+## 3. Le cookie est-il envoyé lors de requêtes intersites : `cookieSameSite` {#3-is-the-cookie-sent-on-cross-site-requests-cookiesamesite}
 
-`SameSite` controls when the browser includes a cookie in cross-site requests. Many
-current browsers apply a Lax-like default when it is omitted, but an explicit value
-makes the intended behavior clear. The check reports the missing attribute rather than
-proving that a CSRF attack is possible.
+`SameSite` détermine quand le navigateur inclut un cookie dans les requêtes
+intersites. De nombreux navigateurs actuels appliquent une valeur par défaut
+proche de `Lax` lorsque l'attribut est absent, mais une valeur explicite rend le
+comportement voulu sans ambiguïté. Le contrôle signale l'absence de l'attribut ;
+il ne démontre pas qu'une attaque CSRF est possible.
 
-**Fix:** set `SameSite=Lax` or `SameSite=Strict` unless a documented
-cross-site flow genuinely needs `SameSite=None` (which additionally requires
-`Secure`). `Lax` is right for most session cookies: it still allows a
-top-level navigation such as clicking a shared link to arrive signed in.
+**Correction :** définissez `SameSite=Lax` ou `SameSite=Strict`, sauf si un flux
+intersite documenté nécessite réellement `SameSite=None` (qui exige en outre
+`Secure`). `Lax` convient à la plupart des cookies de session : il autorise
+encore une navigation de premier niveau, par exemple l'ouverture d'un lien
+partagé, en arrivant déjà connecté.
 
-## 4. Does the cookie name carry a prefix: `cookiePrefix`
+## 4. Le nom du cookie porte-t-il un préfixe : `cookiePrefix` {#4-does-the-cookie-name-carry-a-prefix-cookieprefix}
 
-Cookie-name prefixes add rules for setting a cookie. Supporting browsers require
-`__Secure-` cookies to be set securely with `Secure`. `__Host-` additionally requires
-`Path=/` and forbids `Domain`, binding the cookie to the host that set it. This helps
-prevent a sibling subdomain from setting a competing parent-domain cookie. It does not
-isolate cookies by port.
+Les préfixes de nom de cookie ajoutent des règles au moment de poser un cookie.
+Les navigateurs qui les prennent en charge exigent que les cookies `__Secure-`
+soient posés de façon sécurisée avec `Secure`. `__Host-` impose en plus `Path=/`
+et interdit `Domain`, liant ainsi le cookie à l'hôte qui l'a posé. Cela
+contribue à empêcher un sous-domaine voisin de poser un cookie concurrent sur le
+domaine parent. En revanche, cela n'isole pas les cookies par port.
 
-The check reports two different failures, because they have one fix:
+Le contrôle signale deux échecs différents, car ils ont une seule et même
+correction :
 
-- **A cookie that claims a prefix it does not honour** - `__Host-` with a
-  `Domain` attribute, with a `Path` other than `/`, or without `Secure`. Supporting
-  browsers reject such a cookie, so this is not a theoretical
-  weakness: the session it carries silently does not work. The detail names
-  which rule was broken.
-- **No observed cookie carrying a prefix at all**, which is the ordinary
-  state of an instance nobody has changed.
+- **Un cookie qui revendique un préfixe dont il ne respecte pas les règles** -
+  `__Host-` accompagné d'un attribut `Domain`, avec un `Path` autre que `/`, ou
+  sans `Secure`. Les navigateurs concernés rejettent un tel cookie : il ne
+  s'agit donc pas d'une faiblesse théorique, car la session qu'il porte cesse
+  silencieusement de fonctionner. Le détail indique quelle règle a été enfreinte.
+- **Aucun cookie observé ne porte de préfixe**, ce qui est l'état ordinaire
+  d'une instance que personne n'a modifiée.
 
-**Fix:** rename the session cookie to `__Host-<name>` and set it with
-`Secure`, `Path=/` and no `Domain` attribute - or `__Secure-<name>` when it
-genuinely has to be shared across subdomains. Where the cookie comes from a
-reverse proxy or an identity provider rather than from OpenCloud, rename it
-there.
+**Correction :** renommez le cookie de session en `__Host-<nom>` et posez-le
+avec `Secure`, `Path=/` et sans attribut `Domain` - ou en `__Secure-<nom>`
+lorsqu'il doit réellement être partagé entre sous-domaines. Lorsque le cookie
+provient d'un proxy inverse ou d'un fournisseur d'identité plutôt que
+d'OpenCloud, renommez-le à cet endroit.
 
-## Severity and rating impact
+## Gravité et effet sur la note {#severity-and-rating-impact}
 
-All four are `extraChecks`, reported whenever a cookie is observed -
-`cookieSecure` at `high`, `cookieHttpOnly` at `medium`, `cookieSameSite` and
-`cookiePrefix` at `low` - and each caps the rating on its own the same way any
-other failed extra check does (`high` -> `C`, `medium` -> `A`, `low` -> `A+`; see the
-extra-checks table in [the main README](scanner-checks.md#what-the-scanner-checks)).
-Set `scanner.extra_checks_rating: false` to report them without touching the
-rating, or `--no-extra-checks` to skip them outright.
+Les quatre sont des `extraChecks`, signalés dès qu'un cookie est observé -
+`cookieSecure` en `high`, `cookieHttpOnly` en `medium`, `cookieSameSite` et
+`cookiePrefix` en `low` - et chacun plafonne la note à lui seul, comme tout
+autre contrôle supplémentaire en échec (`high` -> `C`, `medium` -> `A`,
+`low` -> `A+` ; voir le tableau des contrôles supplémentaires dans
+[le README principal](scanner-checks.md#what-the-scanner-checks)). Définissez
+`scanner.extra_checks_rating: false` pour les signaler sans toucher à la note,
+ou `--no-extra-checks` pour les ignorer purement et simplement.

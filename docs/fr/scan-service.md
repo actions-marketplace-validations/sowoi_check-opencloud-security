@@ -1,26 +1,27 @@
-# Service du scanner
+# Exécuter le scanner comme un service
 
-Exécutez `check-opencloud-scanner serve` pour rendre le scanner intégré disponible comme
-service HTTP persistant. Plusieurs consommateurs peuvent alors partager un résultat mis en
-cache pour chaque instance. Le [README principal](../README.md#running-the-scanner-as-a-service)
-décrit les paramètres et les jetons requis ; ce guide couvre le déploiement.
+Lancez `check-opencloud-scanner serve` pour rendre le scanner intégré
+disponible sous forme de service HTTP persistant. Plusieurs consommateurs
+peuvent alors partager un résultat mis en cache pour chaque instance. Le
+[README principal](reference.md#running-the-scanner-as-a-service) énumère les
+points d'accès et les exigences en matière de jeton ; ce guide traite du
+déploiement.
 
-Il ne s’agit pas de l’application web publique, qui accepte une URL, la place en file
-d’attente et affiche le résultat.
+Pour une interface de navigateur avec file d'attente de scans, utilisez
+l'[application web publique](web-service.md), qui est distincte.
 
 <!-- TOC -->
-* [Running the scanner as a service](#running-the-scanner-as-a-service)
-  * [In a container](#in-a-container)
-  * [The monitoring compose file](#the-monitoring-compose-file)
+* [Exécuter le scanner comme un service](#running-the-scanner-as-a-service)
+  * [Dans un conteneur](#in-a-container)
+  * [Le fichier compose de supervision](#the-monitoring-compose-file)
 <!-- TOC -->
 
 
-## In a container
+## Dans un conteneur {#in-a-container}
 
-The service refuses to bind anything but loopback without a token. In a
-container that means two settings: bind the container's interfaces so the
-published port reaches the process, and set the token that makes doing so
-allowed.
+Le service refuse d'écouter ailleurs que sur la boucle locale sans jeton. Dans
+un conteneur, écoutez sur les interfaces du conteneur afin que le port publié
+atteigne le processus, et définissez un jeton pour authentifier les requêtes.
 
 ```shell
 docker run -d --name opencloud-scanner -p 127.0.0.1:8811:8811 \
@@ -33,11 +34,12 @@ curl -H "Authorization: Bearer <token>" \
   'http://127.0.0.1:8811/api/scan?url=opencloud.example.com'
 ```
 
-## The monitoring compose file
+## Le fichier compose de supervision {#the-monitoring-compose-file}
 
-A ready-made [`docker/docker-compose.monitoring.yml`](../../docker/docker-compose.monitoring.yml)
-starts the scanner plus a check container, including a health check and Docker
-secrets:
+Un fichier prêt à l'emploi,
+[`docker/docker-compose.monitoring.yml`](../../docker/docker-compose.monitoring.yml),
+démarre le scanner ainsi qu'un conteneur de contrôle, avec un contrôle de santé
+et des secrets Docker :
 
 ```shell
 # 1. create the secret files from the templates
@@ -55,16 +57,18 @@ docker compose -f docker-compose.monitoring.yml up -d scanner
 docker compose -f docker-compose.monitoring.yml run --rm check
 ```
 
-The plain `docker compose up` in that directory is the public web application
-instead - see [the web application](../webapp.md). Set that one up with
-**`docker/setup-wizard.py`** rather than by editing a compose file: it asks
-what the service should be reachable at, how hard it may scan, who may erase
-a result and what terminates TLS in front, then writes a commented compose
-file, a `.env` holding the Redis password and every other credential that file
-refers to, and - when you name one - the nginx, Apache, Caddy or Traefik
-configuration to go with it. It is one stdlib-only Python file, so it runs on
-a host with Docker and nothing else -
-see [`docker/README.md`](../../docker/README.md#setting-up-the-whole-stack).
+Le simple `docker compose up` dans ce répertoire démarre en revanche
+l'application web publique - voir [l'application web](web-service.md).
+Installez cette dernière avec **`docker/setup-wizard.py`** plutôt qu'en
+modifiant un fichier compose : l'assistant demande à quelle adresse le service
+doit être joignable, avec quelle intensité il peut scanner, qui peut effacer un
+résultat et ce qui termine le TLS en amont, puis il écrit un fichier compose
+commenté, un `.env` contenant le mot de passe Redis et tous les autres
+identifiants auxquels ce fichier fait référence, et - si vous en nommez un - la
+configuration nginx, Apache, Caddy ou Traefik correspondante. C'est un unique
+fichier Python n'utilisant que la bibliothèque standard : il fonctionne donc sur
+un hôte doté de Docker et de rien d'autre - voir
+[`docker/README.md`](../../docker/README.md#setting-up-the-whole-stack).
 
-Everything in `secrets/` except the `*.example` templates is git-ignored - see
-[`secrets/README.md`](../../secrets/README.md).
+Tout ce qui se trouve dans `secrets/`, à l'exception des modèles `*.example`,
+est ignoré par git - voir [`secrets/README.md`](../../secrets/README.md).

@@ -16,30 +16,31 @@
 {% endif %}
 
 <article class="docs-article card section-gap" data-reveal lang="fr">
-<p>Planifiez des analyses régulières avec un minuteur systemd ou cron lorsque vous n’utilisez
-pas Icinga2 ou Nagios. Les exemples de <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib"><code>contrib/</code></a> fournissent les fichiers
-de service, de minuterie et d’environnement que vous pouvez adapter à votre installation :</p>
+<p>Planifiez des scans réguliers avec un minuteur systemd ou avec cron lorsque vous
+n'utilisez ni Icinga2 ni Nagios. Les exemples de <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib"><code>contrib/</code></a>
+fournissent des fichiers de service, de minuteur et d'environnement que vous
+pouvez adapter à votre installation :</p>
 <ul>
 <li><a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/systemd/check-opencloud-security.service"><code>contrib/systemd/check-opencloud-security.service</code></a>
-  and <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/systemd/check-opencloud-security.timer"><code>.timer</code></a></li>
+  et <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/systemd/check-opencloud-security.timer"><code>.timer</code></a></li>
 <li><a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/systemd/check-opencloud-security.env.example"><code>contrib/systemd/check-opencloud-security.env.example</code></a></li>
 </ul>
-<p>The separate
+<p>Le minuteur distinct
 <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/systemd/check-opencloud-security-refresh.timer"><code>check-opencloud-security-refresh.timer</code></a>
-keeps the scanner's release schedule and advisory database current. Configure
-the scanner to read the two files under <code>/var/lib/check-opencloud-security</code>
-before enabling it; the refresh command validates both documents and writes
-them atomically.
+maintient à jour le calendrier des versions et la base d'avis de sécurité du
+scanner. Configurez le scanner pour qu'il lise les deux fichiers sous
+<code>/var/lib/check-opencloud-security</code> avant de l'activer ; la commande
+d'actualisation valide les deux documents et les écrit de façon atomique.
 - <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/cron/check-opencloud-security.cron"><code>contrib/cron/check-opencloud-security.cron</code></a></p>
 <!-- TOC -->
 <ul>
-<li><a href="#scheduling-without-icinga2--nagios">Scheduling without Icinga2 / Nagios</a></li>
-<li><a href="#systemd-timer">systemd timer</a></li>
+<li><a href="#scheduling-without-icinga2--nagios">Planification sans Icinga2 / Nagios</a></li>
+<li><a href="#systemd-timer">Minuteur systemd</a></li>
 <li><a href="#cron">cron</a></li>
 </ul>
 <!-- TOC -->
 
-<h2 id="systemd-timer">systemd timer</h2>
+<h2 id="systemd-timer">Minuteur systemd</h2>
 <pre><code class="language-shell">sudo mkdir -p /etc/check-opencloud-security
 sudo cp contrib/systemd/check-opencloud-security.env.example /etc/check-opencloud-security/env
 sudo $EDITOR /etc/check-opencloud-security/env   # set COS_HOST (and any other options)
@@ -59,19 +60,19 @@ journalctl -u check-opencloud-security.service
 sudo chmod 644 /etc/cron.d/check-opencloud-security
 sudo $EDITOR /etc/cron.d/check-opencloud-security   # set COS_HOST (and any other options)
 </code></pre>
-<p>Both examples configure the check entirely through
-<a href="/documentation#environment-variables">environment variables</a>, so the same binary
-or Docker image is reused unmodified across hosts - only the environment file
-or cron entry changes.</p>
-<p>Two things catch people out here, and both are covered in
-<a href="/documentation/troubleshooting">Troubleshooting</a>: cron and systemd have neither a login
-shell's <code>PATH</code> nor its environment, so use the full path to
-<code>check-opencloud-security</code> and set <code>COS_HOST</code> explicitly.</p>
-<p>On a cluster, the equivalent is a <code>CronJob</code> - see <a href="/documentation/kubernetes">Kubernetes</a>.
-For more than a handful of instances, see
-<a href="/documentation/many-instances">Checking a fleet of instances</a>.</p>
+<p>Les deux exemples configurent le contrôle entièrement au moyen de
+<a href="/documentation/reference#environment-variables">variables d'environnement</a>, si bien que le
+même binaire ou la même image Docker est réutilisé tel quel d'un hôte à l'autre -
+seuls le fichier d'environnement ou l'entrée cron changent.</p>
+<p>Deux pièges reviennent souvent ici, et tous deux sont traités dans
+<a href="/documentation/troubleshooting">Dépannage</a> : cron et systemd n'ont ni le <code>PATH</code> ni
+l'environnement d'un shell de connexion ; utilisez donc le chemin complet vers
+<code>check-opencloud-security</code> et définissez <code>COS_HOST</code> explicitement.</p>
+<p>Sur un cluster, l'équivalent est un <code>CronJob</code> - voir
+<a href="/documentation/kubernetes">Kubernetes</a>. Pour plus de quelques instances, voir
+<a href="/documentation/many-instances">Contrôler un parc d'instances</a>.</p>
 <hr>
-<p><a href="/documentation/reference">Back to the documentation index</a> | <a href="/documentation">Back to the main README</a></p>
+<p><a href="https://github.com/sowoi/check-opencloud-security/blob/main/docs/fr/README.md">Retour à l'index de la documentation</a> | <a href="/documentation/reference">Retour au README principal</a></p>
 </article>
 
 {% include "_page-nav.html" %}
