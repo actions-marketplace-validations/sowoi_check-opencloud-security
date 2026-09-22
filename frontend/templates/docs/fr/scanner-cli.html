@@ -180,8 +180,9 @@ Hardening: + Content-Security-Policy
 ...
 Rating: A+ (5) -&gt; D (2)
 </code></pre>
-<p>It reads two files and scans nothing. <code>+</code> marks a finding that appeared, and
-<code>-</code> one that was resolved. It also reports any movement in the rating, the
+<p>It reads two files and scans nothing. <code>+</code> marks a finding that appeared, <code>-</code>
+one that was resolved, and <code>~</code> one that is still open but is now weighted
+differently. It also reports any movement in the rating, the
 version and the support horizon. It answers "did the fix work?" and "what
 did the upgrade change?" without keeping a baseline file. For a check that
 remembers its last run by itself, see <a href="/documentation/baseline">Reporting only what changed</a>.</p>
@@ -202,12 +203,24 @@ remembers its last run by itself, see <a href="/documentation/baseline">Reportin
 <td>A Markdown table, for a ticket or a pull request comment</td>
 </tr>
 <tr>
+<td><code>--format side-by-side</code></td>
+<td>Both scans as two columns, one finding per row</td>
+</tr>
+<tr>
 <td><code>--format json</code></td>
 <td>The structured comparison the plugin's webhook carries</td>
 </tr>
 <tr>
 <td><code>--format slack</code></td>
 <td>Slack Block Kit JSON</td>
+</tr>
+<tr>
+<td><code>--category NAME</code></td>
+<td>Show one area only. Repeatable</td>
+</tr>
+<tr>
+<td><code>--all-findings</code></td>
+<td>List every finding measured, not only the ones that moved</td>
 </tr>
 <tr>
 <td><code>--exit-zero</code></td>
@@ -231,6 +244,41 @@ resolved. <code>--exit-zero</code> turns the gate off.</p>
 <li><strong>a file is not a result document</strong> from <code>scan</code>. For example, it has no
   rating, or it is the error entry of an instance that could not be scanned.</li>
 </ul>
+<h3 id="severity-finding-by-finding">Severity, finding by finding</h3>
+<p>Every comparison ends with the failing findings counted by severity:</p>
+<pre><code class="language-text">~ exposed:/config/opencloud.yaml [exposure]: severity high -&gt; critical
+Failing by severity: critical 0 -&gt; 1, high 1 -&gt; 1, medium 0 -&gt; 1, low 1 -&gt; 0
+</code></pre>
+<p>The <code>~</code> line is the one a comparison of two lists of names cannot produce. A check that was failing at <code>high</code> and is failing at <code>critical</code> never entered or left the set of failing checks, so <a href="/documentation/baseline">the baseline</a> is silent about it - correctly, because by its definition nothing regressed - while the rating it caps has dropped a grade. The severity on each side comes from the documents themselves, never from today's catalogue: a scan archived last month is evidence about last month.</p>
+<p>A waived finding is counted here and rendered as <code>waived</code>, because a waiver is a decision to not be alerted and not a claim the finding is gone.</p>
+<h3 id="side-by-side">Side by side</h3>
+<pre><code class="language-bash">check-opencloud-scanner diff before.json after.json --format side-by-side
+</code></pre>
+<pre><code class="language-text">opencloud.example.com
+Rating: A+ (5) -&gt; C (3)
+Lifecycle: EOL: False -&gt; True
+Version: 3.4.0 -&gt; 3.3.0
+
+Finding                           2026-09-15T17:42:21+00:00  2026-09-22T09:03:11+00:00
+--------------------------------  -------------------------  -------------------------
++ CVE-2026-0001                   not listed                 FAIL high
++ cspWithoutUnsafeInline          ok                         FAIL medium
+~ exposed:/config/opencloud.yaml  FAIL high                  FAIL critical
+- Referrer-Policy                 FAIL low                   ok
+</code></pre>
+<p>Each row states both sides, so a reader does not have to rebuild them from a list of changes. <code>--all-findings</code> adds the findings that did not move, which turns the view from "what changed" into "what the two scans found".</p>
+<p><code>not measured</code> and <code>not listed</code> are different answers and are never merged: a check absent from a document was not performed (<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0064-a-scan-records-what-it-did-not-measure.md">ADR 0064</a>), while an advisory absent from one did not match that version. Neither is a pass.</p>
+<h3 id="one-area-at-a-time">One area at a time</h3>
+<p><code>--category</code> narrows the comparison, and takes a value from either of two namespaces:</p>
+<ul>
+<li><strong>a finding category</strong> - <code>cookies</code>, <code>authentication</code>, <code>sharing</code>, <code>exposure</code>, <code>embedding</code>, <code>lifecycle</code>, <code>proxy</code>, <code>headers</code>, <code>transport</code>, <code>advisory</code> - keeps only the findings about that area of the instance.</li>
+<li><strong>a change category</strong> - <code>instance</code>, <code>referenceData</code>, <code>scanner</code>, <code>policy</code>, <code>unknown</code> - keeps only the explanation of <em>why</em> the two scans differ. See <a href="/documentation/reference-data">Reference data</a> for why a grade can move without the instance changing at all.</li>
+</ul>
+<pre><code class="language-bash">check-opencloud-scanner diff before.json after.json --category transport
+check-opencloud-scanner diff before.json after.json --category instance
+</code></pre>
+<p>Each namespace is filtered only when a value for it is given, so <code>--category transport</code> leaves the explanation intact and <code>--category instance</code> leaves the findings intact. The flag is repeatable, and an unknown value is refused with exit <code>2</code> rather than silently showing nothing - a typo that printed an empty comparison would read as "nothing changed".</p>
+<p>A filtered explanation omits the <code>[limitation]</code> lines, because those qualify the whole comparison rather than one category of it.</p>
 <h2 id="explain-what-a-finding-means-and-how-to-fix-it"><code>explain</code> - what a finding means and how to fix it</h2>
 <pre><code class="language-bash">check-opencloud-scanner explain basicAuthDisabled
 </code></pre>

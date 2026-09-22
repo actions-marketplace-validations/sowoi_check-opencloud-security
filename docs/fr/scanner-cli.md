@@ -118,8 +118,9 @@ Hardening: + Content-Security-Policy
 Rating: A+ (5) -> D (2)
 ```
 
-It reads two files and scans nothing. `+` marks a finding that appeared, and
-`-` one that was resolved. It also reports any movement in the rating, the
+It reads two files and scans nothing. `+` marks a finding that appeared, `-`
+one that was resolved, and `~` one that is still open but is now weighted
+differently. It also reports any movement in the rating, the
 version and the support horizon. It answers "did the fix work?" and "what
 did the upgrade change?" without keeping a baseline file. For a check that
 remembers its last run by itself, see [Reporting only what changed](baseline.md).
@@ -128,8 +129,11 @@ remembers its last run by itself, see [Reporting only what changed](baseline.md)
 |:--|:--|
 | `--format text` | Readable lines, as above. The default |
 | `--format markdown` | A Markdown table, for a ticket or a pull request comment |
+| `--format side-by-side` | Both scans as two columns, one finding per row |
 | `--format json` | The structured comparison the plugin's webhook carries |
 | `--format slack` | Slack Block Kit JSON |
+| `--category NAME` | Show one area only. Repeatable |
+| `--all-findings` | List every finding measured, not only the ones that moved |
 | `--exit-zero` | Always exit `0` |
 | `--allow-different-hosts` | Compare results from two different instances |
 
@@ -145,6 +149,59 @@ It exits `2`, and compares nothing, when it cannot give an honest answer:
   meant.
 - **a file is not a result document** from `scan`. For example, it has no
   rating, or it is the error entry of an instance that could not be scanned.
+
+### Severity, finding by finding {#severity-finding-by-finding}
+
+Every comparison ends with the failing findings counted by severity:
+
+```text
+~ exposed:/config/opencloud.yaml [exposure]: severity high -> critical
+Failing by severity: critical 0 -> 1, high 1 -> 1, medium 0 -> 1, low 1 -> 0
+```
+
+The `~` line is the one a comparison of two lists of names cannot produce. A check that was failing at `high` and is failing at `critical` never entered or left the set of failing checks, so [the baseline](../baseline.md) is silent about it - correctly, because by its definition nothing regressed - while the rating it caps has dropped a grade. The severity on each side comes from the documents themselves, never from today's catalogue: a scan archived last month is evidence about last month.
+
+A waived finding is counted here and rendered as `waived`, because a waiver is a decision to not be alerted and not a claim the finding is gone.
+
+### Side by side {#side-by-side}
+
+```bash
+check-opencloud-scanner diff before.json after.json --format side-by-side
+```
+
+```text
+opencloud.example.com
+Rating: A+ (5) -> C (3)
+Lifecycle: EOL: False -> True
+Version: 3.4.0 -> 3.3.0
+
+Finding                           2026-09-15T17:42:21+00:00  2026-09-22T09:03:11+00:00
+--------------------------------  -------------------------  -------------------------
++ CVE-2026-0001                   not listed                 FAIL high
++ cspWithoutUnsafeInline          ok                         FAIL medium
+~ exposed:/config/opencloud.yaml  FAIL high                  FAIL critical
+- Referrer-Policy                 FAIL low                   ok
+```
+
+Each row states both sides, so a reader does not have to rebuild them from a list of changes. `--all-findings` adds the findings that did not move, which turns the view from "what changed" into "what the two scans found".
+
+`not measured` and `not listed` are different answers and are never merged: a check absent from a document was not performed ([ADR 0064](https://github.com/sowoi/check-opencloud-security/blob/main/adr/0064-a-scan-records-what-it-did-not-measure.md)), while an advisory absent from one did not match that version. Neither is a pass.
+
+### One area at a time {#one-area-at-a-time}
+
+`--category` narrows the comparison, and takes a value from either of two namespaces:
+
+- **a finding category** - `cookies`, `authentication`, `sharing`, `exposure`, `embedding`, `lifecycle`, `proxy`, `headers`, `transport`, `advisory` - keeps only the findings about that area of the instance.
+- **a change category** - `instance`, `referenceData`, `scanner`, `policy`, `unknown` - keeps only the explanation of *why* the two scans differ. See [Reference data](reference-data.md) for why a grade can move without the instance changing at all.
+
+```bash
+check-opencloud-scanner diff before.json after.json --category transport
+check-opencloud-scanner diff before.json after.json --category instance
+```
+
+Each namespace is filtered only when a value for it is given, so `--category transport` leaves the explanation intact and `--category instance` leaves the findings intact. The flag is repeatable, and an unknown value is refused with exit `2` rather than silently showing nothing - a typo that printed an empty comparison would read as "nothing changed".
+
+A filtered explanation omits the `[limitation]` lines, because those qualify the whole comparison rather than one category of it.
 
 ## `explain` - what a finding means and how to fix it
 

@@ -89,14 +89,17 @@ Hardening: + Content-Security-Policy
 Rating: A+ (5) -> D (2)
 ```
 
-Der Befehl liest zwei Dateien und führt keinen Scan aus. `+` kennzeichnet neue, `-` behobene Befunde. Er zeigt außerdem Änderungen an Bewertung, Version und Supportzeitraum. Für einen automatisch gespeicherten Vergleich mit dem letzten Lauf verwende stattdessen eine [Baseline](../baseline.md).
+Der Befehl liest zwei Dateien und führt keinen Scan aus. `+` kennzeichnet neue, `-` behobene und `~` weiterhin offene Befunde mit geändertem Schweregrad. Er zeigt außerdem Änderungen an Bewertung, Version und Supportzeitraum. Für einen automatisch gespeicherten Vergleich mit dem letzten Lauf verwende stattdessen eine [Baseline](../baseline.md).
 
 | Option | Funktion |
 |:--|:--|
 | `--format text` | Lesbare Textzeilen; Standard |
 | `--format markdown` | Markdown-Tabelle für Tickets oder Kommentare |
+| `--format side-by-side` | Beide Scans als zwei Spalten, ein Befund je Zeile |
 | `--format json` | Strukturierter Vergleich wie im Plugin-Webhook |
 | `--format slack` | Slack-Block-Kit-JSON |
+| `--category NAME` | Nur einen Bereich zeigen; mehrfach angebbar |
+| `--all-findings` | Alle gemessenen Befunde auflisten, nicht nur die veränderten |
 | `--exit-zero` | Erfolgreiche Vergleiche unabhängig von Verschlechterungen mit `0` beenden |
 | `--allow-different-hosts` | Ergebnisse unterschiedlicher Instanzen vergleichen |
 
@@ -106,6 +109,59 @@ Exitcode `2` bedeutet, dass kein Vergleich möglich ist:
 
 - Die Dateien stammen von unterschiedlichen Instanzen und `--allow-different-hosts` wurde nicht gesetzt.
 - Eine Datei ist kein verwertbares Ergebnis von `scan`, etwa weil die Bewertung fehlt oder sie nur einen Scanfehler enthält.
+
+### Schweregrad, Befund für Befund {#severity-finding-by-finding}
+
+Jeder Vergleich endet mit einer Zählung der fehlgeschlagenen Befunde nach Schweregrad:
+
+```text
+~ exposed:/config/opencloud.yaml [exposure]: severity high -> critical
+Failing by severity: critical 0 -> 1, high 1 -> 1, medium 0 -> 1, low 1 -> 0
+```
+
+Die `~`-Zeile ist das, was ein Vergleich zweier Namenslisten nicht ausdrücken kann. Ein Check, der vorher bei `high` und jetzt bei `critical` fehlschlägt, tritt nie in die Menge der fehlschlagenden Checks ein oder aus ihr heraus - die [Baseline](../baseline.md) schweigt dazu also zu Recht -, während die Bewertung, die er deckelt, eine Note tiefer liegt. Der Schweregrad jeder Seite stammt aus den Dokumenten selbst, nie aus dem heutigen Katalog: Ein letzten Monat archivierter Scan ist ein Beleg für letzten Monat.
+
+Ein per Waiver ausgenommener Befund wird hier mitgezählt und als `waived` dargestellt, denn ein Waiver ist die Entscheidung, nicht alarmiert zu werden, und keine Aussage darüber, dass der Befund weg ist.
+
+### Nebeneinander {#side-by-side}
+
+```bash
+check-opencloud-scanner diff before.json after.json --format side-by-side
+```
+
+```text
+opencloud.example.com
+Rating: A+ (5) -> C (3)
+Lifecycle: EOL: False -> True
+Version: 3.4.0 -> 3.3.0
+
+Finding                           2026-09-15T17:42:21+00:00  2026-09-22T09:03:11+00:00
+--------------------------------  -------------------------  -------------------------
++ CVE-2026-0001                   not listed                 FAIL high
++ cspWithoutUnsafeInline          ok                         FAIL medium
+~ exposed:/config/opencloud.yaml  FAIL high                  FAIL critical
+- Referrer-Policy                 FAIL low                   ok
+```
+
+Jede Zeile nennt beide Seiten, sodass du sie dir nicht aus einer Änderungsliste zusammensuchen musst. `--all-findings` ergänzt die unveränderten Befunde und macht aus „was hat sich geändert" ein „was haben die beiden Scans gefunden".
+
+`not measured` und `not listed` sind verschiedene Antworten und werden nie vermischt: Ein Check, der im Dokument fehlt, wurde nicht durchgeführt ([ADR 0064](https://github.com/sowoi/check-opencloud-security/blob/main/adr/0064-a-scan-records-what-it-did-not-measure.md)), während ein fehlender Sicherheitshinweis auf diese Version nicht zutraf. Beides ist kein Bestanden.
+
+### Ein Bereich nach dem anderen {#one-area-at-a-time}
+
+`--category` schränkt den Vergleich ein und nimmt einen Wert aus einem von zwei Namensräumen:
+
+- **eine Befundkategorie** - `cookies`, `authentication`, `sharing`, `exposure`, `embedding`, `lifecycle`, `proxy`, `headers`, `transport`, `advisory` - behält nur die Befunde zu diesem Bereich der Instanz.
+- **eine Änderungskategorie** - `instance`, `referenceData`, `scanner`, `policy`, `unknown` - behält nur die Erklärung, *warum* sich die beiden Scans unterscheiden. Siehe [Referenzdaten](reference-data.md) dazu, warum sich eine Note ändern kann, ohne dass sich die Instanz verändert hat.
+
+```bash
+check-opencloud-scanner diff before.json after.json --category transport
+check-opencloud-scanner diff before.json after.json --category instance
+```
+
+Jeder Namensraum wird nur gefiltert, wenn du einen Wert dafür angibst: `--category transport` lässt die Erklärung unangetastet, `--category instance` die Befunde. Die Option ist mehrfach angebbar, und ein unbekannter Wert wird mit Exitcode `2` abgelehnt, statt stillschweigend nichts zu zeigen - ein Tippfehler, der einen leeren Vergleich ausgibt, liest sich wie „nichts hat sich geändert".
+
+Eine gefilterte Erklärung lässt die `[limitation]`-Zeilen weg, weil diese den gesamten Vergleich einschränken und nicht eine einzelne Kategorie davon.
 
 ## `explain`: Befunde erklären {#explain-what-a-finding-means-and-how-to-fix-it}
 

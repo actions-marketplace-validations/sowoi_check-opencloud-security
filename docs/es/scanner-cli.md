@@ -120,8 +120,9 @@ Hardening: + Content-Security-Policy
 Rating: A+ (5) -> D (2)
 ```
 
-Lee dos archivos y no analiza nada. `+` marca un hallazgo que ha aparecido, y
-`-` uno que se ha resuelto. También notifica cualquier cambio en la nota, la
+Lee dos archivos y no analiza nada. `+` marca un hallazgo que ha aparecido,
+`-` uno que se ha resuelto y `~` uno que sigue abierto pero ahora pesa de otra
+manera. También notifica cualquier cambio en la nota, la
 versión y el horizonte de soporte. Responde a "¿ha funcionado la corrección?"
 y "¿qué ha cambiado la actualización?" sin mantener un archivo de línea base.
 Para una comprobación que recuerda por sí misma su última ejecución, consulte
@@ -131,8 +132,11 @@ Para una comprobación que recuerda por sí misma su última ejecución, consult
 |:--|:--|
 | `--format text` | Líneas legibles, como arriba. Es el valor predeterminado |
 | `--format markdown` | Una tabla Markdown, para una incidencia o un comentario en una pull request |
+| `--format side-by-side` | Los dos análisis en dos columnas, un hallazgo por fila |
 | `--format json` | La comparación estructurada que lleva el webhook del complemento |
 | `--format slack` | JSON de Slack Block Kit |
+| `--category NOMBRE` | Mostrar solo un área. Se puede repetir |
+| `--all-findings` | Listar todos los hallazgos medidos, no solo los que se movieron |
 | `--exit-zero` | Termina siempre con `0` |
 | `--allow-different-hosts` | Compara resultados de dos instancias distintas |
 
@@ -150,6 +154,59 @@ Termina con `2`, sin comparar nada, cuando no puede dar una respuesta honesta:
 - **un archivo no es un documento de resultado** de `scan`. Por ejemplo, no
   tiene nota, o es la entrada de error de una instancia que no se pudo
   analizar.
+
+### Severidad, hallazgo por hallazgo {#severity-finding-by-finding}
+
+Cada comparación termina con los hallazgos fallidos contados por severidad:
+
+```text
+~ exposed:/config/opencloud.yaml [exposure]: severity high -> critical
+Failing by severity: critical 0 -> 1, high 1 -> 1, medium 0 -> 1, low 1 -> 0
+```
+
+La línea `~` es lo que una comparación de dos listas de nombres no puede producir. Un control que fallaba en `high` y ahora falla en `critical` nunca entra ni sale del conjunto de controles fallidos, así que [la línea base](../baseline.md) calla al respecto - con razón, porque según su definición nada ha empeorado -, mientras que la calificación que ese control limita ha bajado un grado. La severidad de cada lado procede de los propios documentos, nunca del catálogo de hoy: un análisis archivado el mes pasado es prueba sobre el mes pasado.
+
+Un hallazgo exceptuado se cuenta aquí y se muestra como `waived`, porque una excepción es la decisión de no recibir alertas y no la afirmación de que el hallazgo haya desaparecido.
+
+### Lado a lado {#side-by-side}
+
+```bash
+check-opencloud-scanner diff before.json after.json --format side-by-side
+```
+
+```text
+opencloud.example.com
+Rating: A+ (5) -> C (3)
+Lifecycle: EOL: False -> True
+Version: 3.4.0 -> 3.3.0
+
+Finding                           2026-09-15T17:42:21+00:00  2026-09-22T09:03:11+00:00
+--------------------------------  -------------------------  -------------------------
++ CVE-2026-0001                   not listed                 FAIL high
++ cspWithoutUnsafeInline          ok                         FAIL medium
+~ exposed:/config/opencloud.yaml  FAIL high                  FAIL critical
+- Referrer-Policy                 FAIL low                   ok
+```
+
+Cada fila indica ambos lados, de modo que quien lee no tiene que reconstruirlos a partir de una lista de cambios. `--all-findings` añade los hallazgos que no se movieron, lo que convierte la vista de «qué ha cambiado» en «qué encontraron los dos análisis».
+
+`not measured` y `not listed` son respuestas distintas y nunca se mezclan: un control ausente de un documento no se realizó ([ADR 0064](https://github.com/sowoi/check-opencloud-security/blob/main/adr/0064-a-scan-records-what-it-did-not-measure.md)), mientras que un aviso ausente no afectaba a esa versión. Ninguno de los dos es un resultado correcto.
+
+### Un área cada vez {#one-area-at-a-time}
+
+`--category` acota la comparación y toma un valor de uno de dos espacios de nombres:
+
+- **una categoría de hallazgo** - `cookies`, `authentication`, `sharing`, `exposure`, `embedding`, `lifecycle`, `proxy`, `headers`, `transport`, `advisory` - conserva solo los hallazgos sobre esa área de la instancia.
+- **una categoría de cambio** - `instance`, `referenceData`, `scanner`, `policy`, `unknown` - conserva solo la explicación de *por qué* difieren los dos análisis. Véase [Datos de referencia](reference-data.md) para saber por qué una calificación puede moverse sin que la instancia haya cambiado.
+
+```bash
+check-opencloud-scanner diff before.json after.json --category transport
+check-opencloud-scanner diff before.json after.json --category instance
+```
+
+Cada espacio de nombres se filtra solo cuando se le da un valor, así que `--category transport` deja intacta la explicación y `--category instance` deja intactos los hallazgos. La opción se puede repetir, y un valor desconocido se rechaza con el código de salida `2` en lugar de no mostrar nada: una errata que imprimiera una comparación vacía se leería como «no ha cambiado nada».
+
+Una explicación filtrada omite las líneas `[limitation]`, porque estas matizan la comparación entera y no una de sus categorías.
 
 ## `explain`: qué significa un hallazgo y cómo corregirlo {#explain-what-a-finding-means-and-how-to-fix-it}
 
