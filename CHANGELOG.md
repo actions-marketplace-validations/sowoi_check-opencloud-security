@@ -12,6 +12,8 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+## [1.30.0] - 2026-09-22
+
 ### Documentation
 
 - Listed `tests/test_monitoring_export.py` in the test index, so the
