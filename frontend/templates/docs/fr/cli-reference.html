@@ -16,26 +16,28 @@
 {% endif %}
 
 <article class="docs-article card section-gap" data-reveal lang="fr">
-<p>Cette page énumère chaque option de plugin, son défaut et l'environnement correspondant
-variable. Utilisez-le pour regarder un réglage; le <a href="/documentation">principale README</a> explique le
-les flux de travail et fournit des exemples.</p>
-<p>Precedence between the three ways of setting anything is always the same:
-<strong>command-line flag &gt; environment variable &gt; configuration file &gt; default.</strong>
-See <a href="/documentation#configuration-file-and-secrets">Configuration file and secrets</a>
-for the file, and <a href="/documentation#environment-variables">Environment variables</a>
-for the naming rules.</p>
+<p>Cette page énumère chaque option du plugin, sa valeur par défaut et la variable
+d'environnement correspondante. Utilisez-la pour retrouver un réglage ; le
+<a href="/documentation/reference">README principal</a> explique les flux de travail et fournit des
+exemples.</p>
+<p>La priorité entre les trois façons de définir un réglage est toujours la même :
+<strong>option de ligne de commande &gt; variable d'environnement &gt; fichier de
+configuration &gt; valeur par défaut.</strong> Voir <a href="/documentation/reference#configuration-file-and-secrets">Fichier de configuration et
+secrets</a> pour le fichier, et
+<a href="/documentation/reference#environment-variables">Variables d'environnement</a> pour les règles
+de nommage.</p>
 <!-- TOC -->
 <ul>
-<li><a href="#cli-option-reference">CLI option reference</a></li>
-<li><a href="#command">Command</a></li>
+<li><a href="#cli-option-reference">Référence des options de la CLI</a></li>
+<li><a href="#command">Commande</a></li>
 <li><a href="#options">Options</a></li>
-<li><a href="#settings-with-no-flag-of-their-own">Settings with no flag of their own</a></li>
-<li><a href="#where-to-go-next">Where to go next</a></li>
+<li><a href="#settings-with-no-flag-of-their-own">Réglages sans option dédiée</a></li>
+<li><a href="#where-to-go-next">Pour aller plus loin</a></li>
 </ul>
 <!-- TOC -->
 
-<p><code>check-opencloud-security -h</code> prints the same list in the terminal.</p>
-<h2 id="command">Command</h2>
+<p><code>check-opencloud-security -h</code> affiche la même liste dans le terminal.</p>
+<h2 id="command">Commande</h2>
 <pre><code class="language-shell">check-opencloud-security --host &lt;Hostname&gt; --check-hardening
 </code></pre>
 <h2 id="options">Options</h2>
@@ -44,358 +46,370 @@ for the naming rules.</p>
 <tr>
 <th>Option</th>
 <th>Description</th>
-<th>Default</th>
-<th>Environment variable</th>
+<th>Valeur par défaut</th>
+<th>Variable d'environnement</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>-H, --host</code></td>
-<td>OpenCloud server address(es): hostname, IP or URL, optionally with a port. Accepts a comma-separated list to check multiple hosts in one run</td>
-<td><strong>required</strong></td>
+<td>Adresse(s) du serveur OpenCloud : nom d'hôte, IP ou URL, éventuellement avec un port. Accepte une liste séparée par des virgules pour contrôler plusieurs hôtes en une exécution</td>
+<td><strong>obligatoire</strong></td>
 <td><code>COS_HOST</code></td>
 </tr>
 <tr>
 <td><code>-P, --proxy</code></td>
-<td>Proxy server address</td>
-<td><em>None</em></td>
+<td>Adresse du serveur proxy</td>
+<td><em>Aucune</em></td>
 <td><code>COS_PROXY</code></td>
 </tr>
 <tr>
 <td><code>-d, --debug</code></td>
-<td>Explain the rating and every finding; verbose logging</td>
+<td>Expliquer la note et chaque constat ; journalisation détaillée</td>
 <td><em>False</em></td>
 <td><code>COS_DEBUG</code></td>
 </tr>
 <tr>
 <td><code>--profile</code></td>
-<td>Jeu de seuils nommé : <code>strict</code>, <code>ops</code> ou <code>lenient</code>. Décide des réglages de jugement que vous ne fixez pas vous-même</td>
-<td><em>None</em></td>
+<td>Jeu de seuils nommé : <code>strict</code>, <code>ops</code> ou <code>lenient</code>. Détermine les réglages de jugement que vous n'avez pas définis vous-même</td>
+<td><em>Aucun</em></td>
 <td><code>COS_PROFILE</code></td>
 </tr>
 <tr>
+<td><code>--policy</code></td>
+<td>Fichier de politique reprenant les exigences de l'organisation : <code>minimum_rating</code>, <code>required_hardenings</code>, <code>forbidden</code>. Une exigence non satisfaite est CRITICAL</td>
+<td><em>Aucun</em></td>
+<td><code>COS_POLICY</code></td>
+</tr>
+<tr>
 <td><code>-w, --warning</code></td>
-<td>Rating (0-5) at or below which the check warns</td>
+<td>Note (0-5) à laquelle ou en dessous de laquelle le contrôle avertit</td>
 <td><code>3</code> (<code>C</code>)</td>
 <td><code>COS_WARNING</code></td>
 </tr>
 <tr>
 <td><code>-c, --critical</code></td>
-<td>Rating (0-5) at or below which the check is critical</td>
+<td>Note (0-5) à laquelle ou en dessous de laquelle le contrôle est critique</td>
 <td><code>1</code> (<code>E</code>)</td>
 <td><code>COS_CRITICAL</code></td>
 </tr>
 <tr>
 <td><code>--check-hardening</code></td>
-<td>Also report missing hardening measures and security headers</td>
+<td>Signaler aussi les mesures de durcissement et les en-têtes de sécurité manquants</td>
 <td><em>False</em></td>
 <td><code>COS_CHECK_HARDENING</code></td>
 </tr>
 <tr>
 <td><code>--timeout</code></td>
-<td>HTTP timeout in seconds per request</td>
+<td>Délai HTTP en secondes par requête</td>
 <td><code>10</code></td>
 <td><code>COS_TIMEOUT</code></td>
 </tr>
 <tr>
 <td><code>--port</code></td>
-<td>Port the instance listens on (OpenCloud's own proxy uses <code>9200</code>)</td>
-<td>from <code>--host</code>, else <code>443</code></td>
+<td>Port sur lequel écoute l'instance (le proxy d'OpenCloud utilise <code>9200</code>)</td>
+<td>d'après <code>--host</code>, sinon <code>443</code></td>
 <td><code>COS_SCANNER_TARGET_PORT</code></td>
 </tr>
 <tr>
 <td><code>--scheme</code></td>
-<td><code>https</code> or <code>http</code>; <code>https</code> falls back to <code>http</code> automatically</td>
+<td><code>https</code> ou <code>http</code> ; <code>https</code> bascule automatiquement vers <code>http</code> en dernier recours</td>
 <td><code>https</code></td>
 <td><code>COS_SCANNER_SCHEME</code></td>
 </tr>
 <tr>
 <td><code>--insecure</code></td>
-<td>Do not verify the instance's TLS certificate</td>
+<td>Ne pas vérifier le certificat TLS de l'instance</td>
 <td><em>False</em></td>
 <td><code>COS_INSECURE</code></td>
 </tr>
 <tr>
 <td><code>--ca-file</code></td>
-<td>PEM CA bundle used to verify an internal TLS certificate</td>
-<td><em>None</em> (system trust store)</td>
+<td>Paquet d'autorités de certification PEM servant à vérifier un certificat TLS interne</td>
+<td><em>Aucun</em> (magasin de confiance du système)</td>
 <td><code>COS_SCANNER_TLS_CA_FILE</code></td>
 </tr>
 <tr>
 <td><code>--no-extra-checks</code></td>
-<td>Only check product, version and security headers</td>
+<td>Ne contrôler que le produit, la version et les en-têtes de sécurité</td>
 <td><em>False</em></td>
 <td><code>COS_NO_EXTRA_CHECKS</code></td>
 </tr>
 <tr>
 <td><code>--no-debug-ports</code></td>
-<td>Skip probing the OpenCloud debug ports</td>
+<td>Ne pas sonder les ports de débogage d'OpenCloud</td>
 <td><em>False</em></td>
 <td><code>COS_NO_DEBUG_PORTS</code></td>
 </tr>
 <tr>
 <td><code>--all-addresses</code></td>
-<td>Also check version, headers, hardening and demo accounts on every resolved address</td>
+<td>Contrôler aussi la version, les en-têtes, le durcissement et les comptes de démonstration sur chaque adresse résolue</td>
 <td><em>False</em></td>
 <td><code>COS_ALL_ADDRESSES</code></td>
 </tr>
 <tr>
 <td><code>--login-throttling</code></td>
-<td>Send six failed sign-ins for a non-existent account and report whether they were throttled (never rated)</td>
+<td>Envoyer six tentatives de connexion échouées pour un compte inexistant et indiquer si elles ont été limitées (jamais noté)</td>
 <td><em>False</em></td>
 <td><code>COS_LOGIN_THROTTLING</code></td>
 </tr>
 <tr>
 <td><code>--concurrency</code></td>
-<td>Maximum parallel host workers; one is used per host up to this ceiling</td>
+<td>Nombre maximal d'hôtes traités en parallèle ; un par hôte jusqu'à ce plafond</td>
 <td><code>5</code></td>
 <td><code>COS_CONCURRENCY</code></td>
 </tr>
 <tr>
 <td><code>--format</code></td>
-<td>One-shot output format: <code>nagios</code>, <code>prometheus</code>, <code>otlp</code>, <code>checkmk</code>, <code>json</code>, <code>sarif</code> or <code>junit</code></td>
+<td>Format de sortie ponctuel : <code>nagios</code>, <code>prometheus</code>, <code>otlp</code>, <code>checkmk</code>, <code>summary</code>, <code>json</code>, <code>sarif</code> ou <code>junit</code></td>
 <td><code>nagios</code></td>
 <td><code>COS_FORMAT</code></td>
 </tr>
 <tr>
 <td><code>--prometheus-listen-port</code></td>
-<td>Serve native <code>/metrics</code> on this port until stopped</td>
-<td>disabled</td>
+<td>Servir <code>/metrics</code> en natif sur ce port jusqu'à l'arrêt</td>
+<td>désactivé</td>
 <td><code>COS_PROMETHEUS_LISTEN_PORT</code></td>
 </tr>
 <tr>
 <td><code>--prometheus-listen-addr</code></td>
-<td>Bind address for the native Prometheus exporter</td>
+<td>Adresse d'écoute de l'exportateur Prometheus natif</td>
 <td><code>127.0.0.1</code></td>
 <td><code>COS_PROMETHEUS_LISTEN_ADDR</code></td>
 </tr>
 <tr>
 <td><code>--scrape-interval</code></td>
-<td>Seconds to cache exporter scan results (<code>0</code> scans on every scrape)</td>
+<td>Secondes de mise en cache des résultats de l'exportateur (<code>0</code> relance un scan à chaque collecte)</td>
 <td><code>60</code></td>
 <td><code>COS_SCRAPE_INTERVAL</code></td>
 </tr>
 <tr>
 <td><code>--ignore-hardening</code></td>
-<td>Hardening measure or check to accept, repeatable, comma-separated and wildcard capable</td>
-<td><em>None</em></td>
+<td>Mesure de durcissement ou contrôle à accepter ; répétable, séparable par des virgules et acceptant les jokers</td>
+<td><em>Aucun</em></td>
 <td><code>COS_SCANNER_IGNORE_HARDENINGS</code></td>
 </tr>
 <tr>
+<td><code>--waive-until</code></td>
+<td>Accepter un contrôle jusqu'à une échéance, <code>MOTIF|EXPIRATION|RAISON</code>, répétable</td>
+<td><em>Aucun</em></td>
+<td><code>COS_SCANNER_TEMPORARY_WAIVERS</code></td>
+</tr>
+<tr>
 <td><code>--release-track</code></td>
-<td>Release track this instance follows: <code>rolling</code>, <code>production</code>, <code>lts</code> or <code>auto</code></td>
+<td>Branche de versions suivie par cette instance : <code>rolling</code>, <code>production</code>, <code>lts</code> ou <code>auto</code></td>
 <td><code>auto</code></td>
 <td><code>COS_SCANNER_RELEASE_TRACK</code></td>
 </tr>
 <tr>
 <td><code>--update-source</code></td>
-<td>Where the newest release comes from: <code>auto</code>, <code>feed</code>, <code>pinned</code>, <code>bundled</code>, <code>off</code></td>
+<td>Provenance de la version la plus récente : <code>auto</code>, <code>feed</code>, <code>pinned</code>, <code>bundled</code>, <code>off</code></td>
 <td><code>auto</code></td>
 <td><code>COS_UPDATE_SOURCE</code></td>
 </tr>
 <tr>
 <td><code>--release-feed</code></td>
-<td>URL of the release feed</td>
-<td>GitHub releases API of <code>opencloud-eu/opencloud</code></td>
+<td>URL du flux des versions</td>
+<td>API des releases GitHub de <code>opencloud-eu/opencloud</code></td>
 <td><code>COS_RELEASES_FEED_URL</code></td>
 </tr>
 <tr>
 <td><code>--release-token</code></td>
-<td>Token for the release feed (raises GitHub's rate limit)</td>
-<td><em>None</em></td>
+<td>Jeton pour le flux des versions (relève la limite de débit GitHub)</td>
+<td><em>Aucun</em></td>
 <td><code>COS_RELEASES_TOKEN</code></td>
 </tr>
 <tr>
 <td><code>--latest-version</code></td>
-<td>Newest release, given explicitly; implies <code>--update-source pinned</code></td>
-<td><em>None</em></td>
+<td>Version la plus récente, indiquée explicitement ; implique <code>--update-source pinned</code></td>
+<td><em>Aucune</em></td>
 <td><code>COS_RELEASES_LATEST_VERSION</code></td>
 </tr>
 <tr>
 <td><code>--no-update-check</code></td>
-<td>Disable the update check (same as <code>--update-source off</code>)</td>
+<td>Désactiver la vérification des mises à jour (équivaut à <code>--update-source off</code>)</td>
 <td><em>False</em></td>
 <td><code>COS_NO_UPDATE_CHECK</code></td>
 </tr>
 <tr>
 <td><code>--update-warning</code></td>
-<td>Report WARNING when a newer release is available</td>
+<td>Signaler WARNING lorsqu'une version plus récente est disponible</td>
 <td><em>False</em></td>
 <td><code>COS_UPDATE_WARNING</code></td>
 </tr>
 <tr>
 <td><code>--eol-warning DAYS</code></td>
-<td>Report WARNING when the release line reaches end of life within DAYS days (<code>0</code> is off)</td>
+<td>Signaler WARNING lorsque la branche de versions atteint sa fin de vie sous DAYS jours (<code>0</code> désactive)</td>
 <td><code>0</code></td>
 <td><code>COS_EOL_WARNING</code></td>
 </tr>
 <tr>
 <td><code>--baseline</code></td>
-<td>File that remembers the findings of the last run, one entry per host</td>
-<td><em>None</em></td>
+<td>Fichier mémorisant les constats de la dernière exécution, une entrée par hôte</td>
+<td><em>Aucun</em></td>
 <td><code>COS_BASELINE</code></td>
 </tr>
 <tr>
 <td><code>--warn-on-new</code></td>
-<td>Only alert on findings that are new or worse than the baseline; needs <code>--baseline</code></td>
+<td>N'alerter que sur les constats nouveaux ou aggravés par rapport à la référence ; nécessite <code>--baseline</code></td>
 <td><em>False</em></td>
 <td><code>COS_WARN_ON_NEW</code></td>
 </tr>
 <tr>
 <td><code>--verify-remediation</code></td>
-<td>Re-mesure uniquement les identifiants de constat indiqués (répétable, séparés par des virgules) au lieu d'un scan complet</td>
-<td><em>None</em></td>
+<td>Remesurer uniquement les identifiants de constats nommés (répétable, séparable par des virgules) au lieu d'un scan complet ; voir <a href="/documentation/reference#verifying-a-fix">Vérifier une correction</a></td>
+<td><em>Aucun</em></td>
 <td>-</td>
 </tr>
 <tr>
 <td><code>--diff-format</code></td>
-<td>Render baseline changes as <code>text</code>, <code>markdown</code>, or Slack Block Kit <code>slack</code>/<code>json</code></td>
+<td>Afficher les changements par rapport à la référence en <code>text</code>, <code>markdown</code>, ou en Slack Block Kit <code>slack</code>/<code>json</code></td>
 <td><code>text</code></td>
 <td><code>COS_DIFF_FORMAT</code></td>
 </tr>
 <tr>
 <td><code>--self-update-check</code></td>
-<td>Note when a newer version of the plugin is published on PyPI; never changes the exit code</td>
+<td>Signaler qu'une version plus récente du plugin est publiée sur PyPI ; ne change jamais le code de sortie</td>
 <td><em>False</em></td>
 <td><code>COS_SELF_UPDATE_CHECK</code></td>
 </tr>
 <tr>
 <td><code>--webhook-url</code></td>
-<td>Optional endpoint notified when the check reaches the configured state</td>
-<td><em>None</em> (disabled)</td>
+<td>Point d'accès facultatif notifié lorsque le contrôle atteint l'état configuré</td>
+<td><em>Aucun</em> (désactivé)</td>
 <td><code>COS_WEBHOOK_URL</code></td>
 </tr>
 <tr>
 <td><code>--webhook-on</code></td>
-<td>Lowest state that triggers the webhook (<code>critical</code>, <code>warning</code>, <code>unknown</code>, <code>always</code>)</td>
+<td>État le plus bas déclenchant le webhook (<code>critical</code>, <code>warning</code>, <code>unknown</code>, <code>always</code>)</td>
 <td><code>critical</code></td>
 <td><code>COS_WEBHOOK_ON</code></td>
 </tr>
 <tr>
 <td><code>--webhook-format</code></td>
-<td>Webhook body shape: <code>generic</code> (the plugin's own JSON), <code>slack</code>, <code>discord</code>, <code>ntfy</code>, or <code>gotify</code></td>
+<td>Forme du corps du webhook : <code>generic</code> (le JSON propre au plugin), <code>slack</code>, <code>discord</code>, <code>ntfy</code> ou <code>gotify</code></td>
 <td><code>generic</code></td>
 <td><code>COS_WEBHOOK_FORMAT</code></td>
 </tr>
 <tr>
 <td><code>--webhook-header</code></td>
-<td>Extra header for the webhook request, repeatable</td>
-<td><em>None</em></td>
+<td>En-tête supplémentaire pour la requête du webhook, répétable</td>
+<td><em>Aucun</em></td>
 <td><code>COS_WEBHOOK_HEADERS</code></td>
 </tr>
 <tr>
 <td><code>--webhook-secret</code></td>
-<td>Shared secret; signs each webhook body with HMAC-SHA256 in <code>X-COS-Signature</code></td>
-<td><em>None</em> (unsigned)</td>
+<td>Secret partagé ; signe chaque corps de webhook en HMAC-SHA256 dans <code>X-COS-Signature</code></td>
+<td><em>Aucun</em> (non signé)</td>
 <td><code>COS_WEBHOOK_SECRET</code></td>
 </tr>
 <tr>
 <td><code>--webhook-timeout</code></td>
-<td>HTTP timeout in seconds for the webhook call</td>
+<td>Délai HTTP en secondes pour l'appel du webhook</td>
 <td><code>10</code></td>
 <td><code>COS_WEBHOOK_TIMEOUT</code></td>
 </tr>
 <tr>
 <td><code>--allow-private-webhooks</code></td>
-<td>Permit webhooks to private, loopback, or link-local addresses</td>
+<td>Autoriser les webhooks vers des adresses privées, de boucle locale ou link-local</td>
 <td><em>False</em></td>
 <td><code>COS_ALLOW_PRIVATE_WEBHOOKS</code></td>
 </tr>
 <tr>
 <td><code>--webhook-digest</code></td>
-<td>With several <code>--host</code> targets, send one combined webhook instead of one per host</td>
+<td>Avec plusieurs cibles <code>--host</code>, envoyer un seul webhook combiné au lieu d'un par hôte</td>
 <td><em>False</em></td>
 <td><code>COS_WEBHOOK_DIGEST</code></td>
 </tr>
 <tr>
 <td><code>--retries</code></td>
-<td>Retry attempts for transient network errors</td>
+<td>Nombre de nouvelles tentatives en cas d'erreur réseau transitoire</td>
 <td><code>2</code></td>
 <td><code>COS_RETRIES</code></td>
 </tr>
 <tr>
 <td><code>--backoff-factor</code></td>
-<td>Exponential backoff factor (seconds) between retries</td>
+<td>Facteur d'attente exponentielle (secondes) entre deux tentatives</td>
 <td><code>0.5</code></td>
 <td><code>COS_BACKOFF_FACTOR</code></td>
 </tr>
 <tr>
 <td><code>--config</code></td>
-<td>Path to the configuration file (<code>.json</code> as JSON, else YAML)</td>
-<td>auto-discovered</td>
+<td>Chemin du fichier de configuration (<code>.json</code> en JSON, sinon YAML)</td>
+<td>découvert automatiquement</td>
 <td><code>COS_CONFIG_FILE</code></td>
 </tr>
 <tr>
 <td><code>--configure</code></td>
-<td>Ask for the settings interactively and save them, then exit</td>
+<td>Demander les réglages de façon interactive, les enregistrer, puis quitter</td>
 <td>—</td>
 <td>—</td>
 </tr>
 <tr>
 <td><code>--upgrade-self [run\|check]</code></td>
-<td>Upgrade the plugin with pipx, uv or pip, then exit; <code>check</code> prints the command instead of running it</td>
-<td><code>run</code> when given without a value</td>
+<td>Mettre à jour le plugin avec pipx, uv ou pip, puis quitter ; <code>check</code> affiche la commande au lieu de l'exécuter</td>
+<td><code>run</code> lorsqu'il est fourni sans valeur</td>
 <td>—</td>
 </tr>
 <tr>
 <td><code>--check-only</code></td>
-<td>Only with <code>--upgrade-self</code>: another spelling of <code>--upgrade-self check</code></td>
+<td>Uniquement avec <code>--upgrade-self</code> : autre écriture de <code>--upgrade-self check</code></td>
 <td>—</td>
 <td>—</td>
 </tr>
 <tr>
 <td><code>-V, --version</code></td>
-<td>Show the installed version and exit</td>
+<td>Afficher la version installée et quitter</td>
 <td>—</td>
 <td>—</td>
 </tr>
 <tr>
 <td><code>-h, --help</code></td>
-<td>Show help and exit</td>
+<td>Afficher l'aide et quitter</td>
 <td>—</td>
 <td>—</td>
 </tr>
 </tbody>
 </table>
-<h2 id="settings-with-no-flag-of-their-own">Settings with no flag of their own</h2>
-<p>The TLS expiry window, the debug-port list and the advisory sources have no
-command-line flag. They are configured through the
-<a href="/documentation#configuration-file-and-secrets">configuration file</a> or their
-<code>COS_SCANNER_*</code> environment variables, and
+<h2 id="settings-with-no-flag-of-their-own">Réglages sans option dédiée</h2>
+<p>La fenêtre d'expiration TLS, la liste des ports de débogage et les sources
+d'avis de sécurité n'ont pas d'option de ligne de commande. Ils se configurent
+par le <a href="/documentation/reference#configuration-file-and-secrets">fichier de configuration</a>
+ou par leurs variables d'environnement <code>COS_SCANNER_*</code>, et
 <a href="https://github.com/sowoi/check-opencloud-security/blob/main/config/check-opencloud-security.example.yml"><code>config/check-opencloud-security.example.yml</code></a>
-lists every one of them with a comment.</p>
-<h2 id="where-to-go-next">Where to go next</h2>
+les énumère toutes avec un commentaire.</p>
+<h2 id="where-to-go-next">Pour aller plus loin</h2>
 <table>
 <thead>
 <tr>
 <th>Page</th>
-<th>Why</th>
+<th>Pourquoi</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><a href="/documentation">Main README</a></td>
-<td>What each of these options is for, with worked examples</td>
+<td><a href="/documentation/reference">README principal</a></td>
+<td>À quoi sert chacune de ces options, avec des exemples détaillés</td>
 </tr>
 <tr>
-<td><a href="/documentation#configuration-file-and-secrets">Configuration file and secrets</a></td>
-<td>Setting the same things in a file instead</td>
+<td><a href="/documentation/reference#configuration-file-and-secrets">Fichier de configuration et secrets</a></td>
+<td>Définir les mêmes réglages dans un fichier</td>
 </tr>
 <tr>
-<td><a href="/documentation/output-formats">Machine-readable output</a></td>
-<td><code>--format json</code>, <code>sarif</code> and <code>junit</code> in depth</td>
+<td><a href="/documentation/output-formats">Sortie exploitable par une machine</a></td>
+<td><code>--format json</code>, <code>sarif</code> et <code>junit</code> en détail</td>
 </tr>
 <tr>
 <td><a href="/documentation/checkmk">Checkmk</a></td>
-<td><code>--format checkmk</code>, and running the plugin from a Checkmk server instead</td>
+<td><code>--format checkmk</code>, et l'exécution du plugin depuis un serveur Checkmk</td>
 </tr>
 <tr>
-<td><a href="/documentation/many-instances">Checking a fleet of instances</a></td>
-<td><code>--host</code> with many targets, and one config file per instance</td>
+<td><a href="/documentation/many-instances">Contrôler un parc d'instances</a></td>
+<td><code>--host</code> avec de nombreuses cibles, et un fichier de configuration par instance</td>
 </tr>
 <tr>
-<td><a href="/documentation/troubleshooting">Troubleshooting</a></td>
-<td>The exit-code reference</td>
+<td><a href="/documentation/troubleshooting">Dépannage</a></td>
+<td>La référence des codes de sortie</td>
 </tr>
 </tbody>
 </table>

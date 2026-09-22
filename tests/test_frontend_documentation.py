@@ -263,13 +263,11 @@ MAX_ENGLISH_SHARE = 0.35
 UNTRANSLATED_GUIDES = frozenset(
     (slug, "fr")
     for slug in (
-        "ansible",
         "authentication",
         "authentik",
         "baseline",
         "checkmk",
         "ci",
-        "cli-reference",
         "docker",
         "examples",
         "exposure",
@@ -289,10 +287,7 @@ UNTRANSLATED_GUIDES = frozenset(
         "scanner",
         "scanner-checks",
         "secure-deployment",
-        "sharing",
-        "status-php",
         "tls",
-        "troubleshooting",
         "web-service",
         "webhooks",
     )
