@@ -103,7 +103,7 @@ MESSAGES: dict[str, str] = {
     "admin.rules.rule.internal_names.title": "Lokale Namen und Metadaten-Endpunkte",
     "admin.rules.rule.internal_names.body": "Nach Name wie nach Adresse abgelehnt:",
     "admin.rules.rule.wildcard_dns.title": "Wildcard- und Rebinding-DNS-Namen",
-    "admin.rules.rule.wildcard_dns.body": "Namen unter diesen Diensten zeigen dorthin, wo ihre Schreibweise es sagt. Die Adresse dahinter lässt sich weiterhin direkt eingeben:",
+    "admin.rules.rule.wildcard_dns.body": "Diese Dienste lösen Hostnamen zur darin enthaltenen IP-Adresse auf. Du kannst diese IP-Adresse weiterhin direkt eingeben:",
     "admin.rules.rule.dns_consistency.title": "Ein Name muss zweimal gleich auflösen",
     "admin.rules.rule.dns_consistency.body": "Ein eingereichter Name wird zweimal abgefragt und abgelehnt, wenn die Antworten keine Adresse teilen; jede Adresse aus beiden wird geprüft.",
     "admin.rules.rule.redirects.title": "Jede Weiterleitung wird geprüft",
@@ -227,7 +227,7 @@ MESSAGES: dict[str, str] = {
     "admin.update.unknown": "Ob es ein neueres Release gibt, ließ sich nicht herausfinden.",
     "admin.update.off": "Die Update-Prüfung ist ausgeschaltet (COS_WEB_UPDATE_CHECK).",
     "admin.update.install": "{version} jetzt installieren",
-    "admin.update.downtime": "Das Bundle wird gegen seine GitHub-Build-Attestierung geprüft, dann starten Webdienst und Worker damit neu - eine kurze Ausfallzeit, ein laufender Scan bricht ab. Das Update hält, bis die Container neu starten.",
+    "admin.update.downtime": "Das Bundle wird anhand seiner GitHub-Build-Attestierung geprüft. Anschließend starten Webdienst und Worker mit der neuen Version neu. Dabei ist der Dienst kurz nicht verfügbar; laufende Scans werden abgebrochen. Beim nächsten Container-Neustart wird wieder die Version aus dem Image verwendet.",
     "admin.update.manual": "Installieren von hier ist ausgeschaltet (COS_WEB_ADMIN_UPDATE_DIR). Zieh das neue Image und erstelle die Container neu.",
     "admin.update.outcome.requested": "Geprüft und installiert. Der Dienst startet gleich neu - lade die Seite neu.",
     "admin.update.outcome.current": "Es gibt nichts Neueres zu installieren.",
@@ -1654,9 +1654,8 @@ MESSAGES: dict[str, str] = {
     "result.tls.kicker": "Transport",
     "result.tls.heading": "Transportsicherheit",
     "result.tls.lede": (
-        "Was die TLS-Schicht sagte, bevor auch nur ein Byte HTTP ausgetauscht "
-        "wurde. Die obigen Befunde beurteilen dies bereits; dies ist die "
-        "Messung dahinter."
+        "Beim TLS-Verbindungsaufbau erfasste Messwerte. Die oben aufgeführten "
+        "Befunde enthalten bereits die Bewertung dieser Werte."
     ),
     "result.tls.protocol": "Protokoll",
     "result.tls.bits": "({bits} Bit)",

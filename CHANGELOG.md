@@ -14,6 +14,10 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ### Documentation
 
+- Clarified German operator messages about wildcard DNS and temporary
+  application updates, and replaced the literal TLS introduction with a
+  description of the measured values. Added three wording regression cases.
+
 - Clarified configuration-drift explanations in the English, German, Spanish
   and French baseline guides. Older baselines lack fingerprints, so an absent
   drift report does not establish that the configuration is unchanged.

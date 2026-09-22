@@ -59,7 +59,8 @@ AI_SLOP = re.compile(
     r"und nichts davon, worauf|Beides ist kein Bestanden|"
     r"schweigt dazu also zu Recht|ahora pesa de otra|"
     r"nunca de con qué valores|calla al respecto|"
-    r"Ninguno de los dos es un resultado correcto"
+    r"Ninguno de los dos es un resultado correcto|"
+    r"wo ihre Schreibweise es sagt|Das Update hält|Was die TLS-Schicht sagte"
     r")\b",
     re.IGNORECASE,
 )
@@ -148,6 +149,9 @@ def test_handwritten_guides_and_templates_do_not_use_ai_slop_wording():
         "Wie die Instanz eingerichtet ist und nichts davon, worauf.",
         "Beides ist kein Bestanden.",
         "Die Baseline schweigt dazu also zu Recht.",
+        "Namen zeigen dorthin, wo ihre Schreibweise es sagt.",
+        "Das Update hält, bis die Container neu starten.",
+        "Was die TLS-Schicht sagte, bevor HTTP ausgetauscht wurde.",
         "El hallazgo ahora pesa de otra manera.",
         "Describe cómo está montada y nunca de con qué valores.",
         "La línea base calla al respecto.",
