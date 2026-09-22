@@ -51,6 +51,12 @@ Once deployed, Icinga2 invokes the command exactly as described in the
 [Icinga2 / Nagios](installation.md#icinga2--nagios) section, whether that resolves
 to the native binary or `docker run` under the hood.
 
+To have the `Service` object written for you from a configuration you just
+made, with its thresholds and release track already filled in, run
+`check-opencloud-scanner configure --export-monitoring icinga` - see
+[`configure`](scanner-cli.md#configure---write-a-configuration-file). It still
+needs the `CheckCommand` from step 1.
+
 To deploy the same objects without the web UI, see
 [Automated deployment with Ansible](ansible.md).
 

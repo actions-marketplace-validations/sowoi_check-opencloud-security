@@ -1524,10 +1524,10 @@ MESSAGES: dict[str, str] = {
     "result.fingerprint.kicker": "Configuración",
     "result.fingerprint.heading": "¿Ha cambiado esta instalación?",
     "result.fingerprint.body": (
-        "Cada grupo de abajo es un resumen criptográfico de cómo está "
-        "configurada esta instancia, nunca de con qué valores. Compáralos con "
-        "un análisis anterior: un grupo con un resumen distinto estaba "
-        "configurado de otra manera, aunque la nota siga siendo la misma."
+        "Cada grupo contiene un hash de la configuración medida, sin exponer "
+        "sus valores. Compare hashes de análisis con la misma cobertura de "
+        "medición para detectar cambios de configuración, aunque la nota "
+        "siga igual."
     ),
     "result.fingerprint.overall": "En todos los grupos: {digest}",
     "result.fingerprint.unmeasured": "No se midió en este análisis",
@@ -1674,6 +1674,16 @@ MESSAGES: dict[str, str] = {
         "Un fichero que sigue siendo legible cuando este enlace caduque. Se "
         "abre sin conexión, no hace ninguna petición de red y no se "
         "actualiza."
+    ),
+    "result.export.remediation.md": "Paquete de correcciones (Markdown)",
+    "result.export.remediation.md.hint": (
+        "Solo lo que sigue abierto: cada hallazgo, lo que se observó y los "
+        "fragmentos de nginx, Caddy, Traefik, Compose y .env que lo corrigen. "
+        "Para una pull request o un runbook."
+    ),
+    "result.export.remediation.html": "Paquete de correcciones (HTML)",
+    "result.export.remediation.html.hint": (
+        "El mismo paquete en una página que se puede abrir sin conexión o imprimir."
     ),
     "result.export.csv": "CSV",
     "result.export.csv.hint": "Una fila por hallazgo, para una hoja de cálculo.",

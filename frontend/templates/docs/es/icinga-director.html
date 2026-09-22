@@ -103,6 +103,11 @@ sirven tanto para la instalación nativa como para la imagen de
 <p>Una vez desplegado, Icinga2 ejecuta el comando exactamente como se describe en
 la sección <a href="/documentation/installation#icinga2--nagios">Icinga2 / Nagios</a>, tanto si
 detrás está el binario nativo como <code>docker run</code>.</p>
+<p>Para que el objeto <code>Service</code> se escriba a partir de una configuración que
+acaba de crear, con sus umbrales y su serie de publicación ya rellenados,
+ejecute <code>check-opencloud-scanner configure --export-monitoring icinga</code>:
+consulte <a href="/documentation/scanner-cli#configure-write-a-configuration-file"><code>configure</code></a>. El
+<code>CheckCommand</code> del paso 1 sigue haciendo falta.</p>
 <p>Para desplegar los mismos objetos sin la interfaz web, consulte
 <a href="/documentation/ansible">Despliegue automatizado con Ansible</a>.</p>
 <hr>

@@ -183,7 +183,7 @@ Four things, and the list is closed:
 | `target_url` | The main address of the instance: hostname, optional `http://` or `https://`, and optional port. No path, query, fragment or credentials. Required |
 | `ignore_hardenings` | Checks to waive, from a fixed allow-list. Optional, repeatable |
 | `release_track` | `rolling`, `production`, `lts` or `auto`. Optional, defaults to `auto` |
-| `output_format` | `dashboard`, `json`, `csv`, `sarif` or `pdf`. Optional, affects presentation only |
+| `output_format` | `dashboard`, `json`, `csv`, `sarif` or `pdf`. Optional, affects presentation only. The export-only formats (`html`, `remediation-md`, `remediation-html`) are fetched from the export endpoint instead |
 
 `release_track` is the same idea as the plugin's `--release-track`: it decides
 how long the instance's release is supported and which release it is told to
@@ -1032,7 +1032,11 @@ self-hosting hint if it was a limit, **400** or **422** otherwise.
 
 ### `GET /api/scans/{uuid}/export/{format}`
 
-A finished scan as a file: `json`, `csv`, `sarif`, `pdf` or `html`.
+A finished scan as a file: `json`, `csv`, `sarif`, `pdf`, `html`,
+`remediation-md` or `remediation-html`. The two remediation bundles carry
+only the open, actionable findings and the nginx, Caddy, Traefik, Compose
+and `.env` fragments that close them - the grade, the passed checks and the
+advisories stay in the full report.
 
 ```bash
 curl -sS -OJ http://127.0.0.1:8811/api/scans/0f4a1f22-.../export/pdf

@@ -15,6 +15,11 @@ before enabling it; the refresh command validates both documents and writes
 them atomically.
 - [`contrib/cron/check-opencloud-security.cron`](../contrib/cron/check-opencloud-security.cron)
 
+To have these written for you, with the settings you just configured already
+in them, run `check-opencloud-scanner configure --export-monitoring systemd` -
+see [`configure`](scanner-cli.md#configure---write-a-configuration-file). The
+files below are the templates it is based on.
+
 <!-- TOC -->
 * [Scheduling without Icinga2 / Nagios](#scheduling-without-icinga2--nagios)
   * [systemd timer](#systemd-timer)

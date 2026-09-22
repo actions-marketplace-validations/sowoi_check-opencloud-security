@@ -1,74 +1,78 @@
-# Divulgation de version et cycle de vie
+# Divulgation de la version et du cycle de vie : ce que ce scanner vérifie, et pourquoi
 
-Ces vérifications permettent de déterminer si le scanner connaît la version en cours d'exécution et si la
-l'instance le publie dans des endroits inutiles. Ils complètent [la fin de vie]
-détection](../README.md#end-of-life-detection) et la vérification de mise à jour, dont les deux besoins
-un numéro de version fiable.
+Ces contrôles déterminent si le scanner connaît la version en cours d'exécution
+et si l'instance la publie à des endroits inutiles. Ils complètent la
+[détection de fin de vie](reference.md#end-of-life-detection) et la
+vérification des mises à jour, qui ont toutes deux besoin d'un numéro de version
+fiable.
 
 <!-- TOC -->
-* [Version and lifecycle disclosure: what this scanner checks, and why](#version-and-lifecycle-disclosure-what-this-scanner-checks-and-why)
-  * [1. Could the running version be determined at all: `versionDetection`](#1-could-the-running-version-be-determined-at-all-versiondetection)
-  * [2. Does a response header publish the version: `versionDisclosure:<header>`](#2-does-a-response-header-publish-the-version-versiondisclosureheader)
-  * [3. Does the webfinger document publish the version: `webfingerVersionDisclosure`](#3-does-the-webfinger-document-publish-the-version-webfingerversiondisclosure)
-  * [Severity and rating impact](#severity-and-rating-impact)
+* [Divulgation de la version et du cycle de vie : ce que ce scanner vérifie, et pourquoi](#version-and-lifecycle-disclosure-what-this-scanner-checks-and-why)
+  * [1. La version en cours a-t-elle pu être déterminée : `versionDetection`](#1-could-the-running-version-be-determined-at-all-versiondetection)
+  * [2. Un en-tête de réponse publie-t-il la version : `versionDisclosure:<header>`](#2-does-a-response-header-publish-the-version-versiondisclosureheader)
+  * [3. Le document webfinger publie-t-il la version : `webfingerVersionDisclosure`](#3-does-the-webfinger-document-publish-the-version-webfingerversiondisclosure)
+  * [Gravité et effet sur la note](#severity-and-rating-impact)
 <!-- TOC -->
 
 
-## 1. Could the running version be determined at all: `versionDetection`
+## 1. La version en cours a-t-elle pu être déterminée : `versionDetection` {#1-could-the-running-version-be-determined-at-all-versiondetection}
 
-`/status.php` reports up to three version-shaped fields, and only one of
-them is the real release - see [Reading the version
-correctly](scanner-checks.md#reading-the-version-correctly) for what the other
-two are and why they exist, and [Why OpenCloud still answers
-`/status.php`](status-php.md) for where the endpoint and its hardcoded
-fields come from. This check fails when `productversion` is missing and
-only the legacy compatibility `version`/`versionstring` fields came back.
+`/status.php` renvoie jusqu'à trois champs ayant l'apparence d'une version, et
+un seul d'entre eux correspond à la version réelle - voir [Lire correctement la
+version](scanner-checks.md#reading-the-version-correctly) pour savoir ce que
+sont les deux autres et pourquoi ils existent, et [Pourquoi OpenCloud répond
+encore à `/status.php`](status-php.md) pour l'origine de ce point d'accès et de
+ses champs figés. Ce contrôle échoue lorsque `productversion` est absent et que
+seuls les champs de compatibilité historiques `version`/`versionstring` ont été
+renvoyés.
 
-This matters beyond the finding itself: without a real version, no advisory
-can be matched and no end-of-life or update state can be worked out. A
-result missing this field is not merely incomplete - the checks that depend
-on the version did not run at all, and a report that read them as passing
-would be claiming to have verified something it never saw.
+Sans la version réelle, le scanner ne peut ni faire correspondre les avis de
+sécurité ni déterminer le statut de support et les mises à jour disponibles. Ces
+contrôles ne sont pas exécutés lorsque la version manque, et leurs résultats
+restent donc inconnus.
 
-**If this fails:** check whether something in front of the instance rewrites
-or strips fields from the `/status.php` response, and whether the release is
-old enough that it genuinely predates `productversion` being reported at
-all. Until a real version comes back, treat every version-dependent part of
-the result as unknown rather than as clean.
+**En cas d'échec :** vérifiez si un élément placé devant l'instance réécrit ou
+supprime des champs de la réponse `/status.php`, et si la version est
+suffisamment ancienne pour être antérieure à la publication même de
+`productversion`. Tant qu'une version réelle n'est pas renvoyée, considérez
+toute partie du résultat dépendant de la version comme inconnue plutôt que comme
+saine.
 
-## 2. Does a response header publish the version: `versionDisclosure:<header>`
+## 2. Un en-tête de réponse publie-t-il la version : `versionDisclosure:<header>` {#2-does-a-response-header-publish-the-version-versiondisclosureheader}
 
-The `Server` and `X-Powered-By` response headers are each checked for
-anything that looks like a version number (a digit, a dot, another digit).
-Neither is a vulnerability by itself - it tells whoever is looking which
-advisories to try first, nothing more - which is why both are rated `low`
-rather than anything higher.
+Les en-têtes de réponse `Server` et `X-Powered-By` sont examinés chacun à la
+recherche de tout ce qui ressemble à un numéro de version (un chiffre, un point,
+un autre chiffre). Publier un numéro de version n'est pas en soi une
+vulnérabilité, mais cela aide les attaquants à repérer les vulnérabilités
+connues à cibler. Les deux constats sont classés `low`.
 
-**Fix:** strip or flatten the header in the reverse proxy - `server_tokens
-off` in Nginx, `ServerTokens Prod` in Apache - or unset it outright. See
-[Reverse proxies](reverse-proxy.md) for the equivalent directive on Caddy,
-Traefik and HAProxy.
+**Correction :** supprimez ou neutralisez l'en-tête dans le proxy inverse -
+`server_tokens off` sous Nginx, `ServerTokens Prod` sous Apache - ou retirez-le
+purement et simplement. Voir [Proxys inverses](reverse-proxy.md) pour la
+directive équivalente sous Caddy, Traefik et HAProxy.
 
-## 3. Does the webfinger document publish the version: `webfingerVersionDisclosure`
+## 3. Le document webfinger publie-t-il la version : `webfingerVersionDisclosure` {#3-does-the-webfinger-document-publish-the-version-webfingerversiondisclosure}
 
-`/.well-known/webfinger` is requested unauthenticated (as any federation
-client would) and its response is checked for the running version, the same
-way the two response headers above are. It is the same class of finding as
-`versionDisclosure` - low-severity information disclosure, not a
-vulnerability - just read from a JSON document instead of a header.
+`/.well-known/webfinger` est interrogé sans authentification (comme le ferait
+n'importe quel client de fédération) et sa réponse est examinée à la recherche
+de la version en cours, de la même façon que les deux en-têtes ci-dessus. Il
+s'agit de la même catégorie de constat que `versionDisclosure` - une divulgation
+d'information de faible gravité, non une vulnérabilité - simplement lue dans un
+document JSON plutôt que dans un en-tête.
 
-**Fix:** strip the version from the webfinger response in the reverse proxy,
-or accept the disclosure and prioritise keeping the instance current
-instead: the version only matters as intelligence while a known advisory
-against that exact release is still unpatched.
+**Correction :** supprimez la version de la réponse webfinger dans le proxy
+inverse, ou acceptez cette divulgation et donnez plutôt la priorité au maintien
+à jour de l'instance : la version ne présente d'intérêt comme renseignement que
+tant qu'un avis de sécurité connu visant précisément cette version n'est pas
+corrigé.
 
-## Severity and rating impact
+## Gravité et effet sur la note {#severity-and-rating-impact}
 
-All three are `extraChecks`, reported and rating-capped on every scan -
-`versionDetection` at `medium` (caps the rating at `A`), the two disclosure
-checks at `low` (caps it at `A+`) - see the extra-checks table in [the main
-README](scanner-checks.md#what-the-scanner-checks). None require
-`--check-hardening`, and none of them are the same thing as the [end-of-life
-rating](../README.md#end-of-life-detection): a current, fully disclosed
-version and an end-of-life, well-hidden one are graded on entirely different
-axes.
+Les trois sont des `extraChecks`, signalés et plafonnant la note à chaque scan -
+`versionDetection` en `medium` (plafonne la note à `A`), les deux contrôles de
+divulgation en `low` (la plafonnent à `A+`) - voir le tableau des contrôles
+supplémentaires dans [le README principal](scanner-checks.md#what-the-scanner-checks).
+Aucun ne nécessite `--check-hardening`, et aucun ne se confond avec la
+[note de fin de vie](reference.md#end-of-life-detection) : une version à jour
+mais entièrement divulguée et une version en fin de vie mais bien dissimulée
+sont jugées sur des axes totalement différents.

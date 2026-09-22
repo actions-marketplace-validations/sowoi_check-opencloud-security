@@ -182,8 +182,9 @@ Hardening: + Content-Security-Policy
 ...
 Rating: A+ (5) -&gt; D (2)
 </code></pre>
-<p>Lee dos archivos y no analiza nada. <code>+</code> marca un hallazgo que ha aparecido, y
-<code>-</code> uno que se ha resuelto. También notifica cualquier cambio en la nota, la
+<p>Lee dos archivos y no analiza nada. <code>+</code> marca un hallazgo que ha aparecido,
+<code>-</code> uno que se ha resuelto y <code>~</code> uno que sigue abierto pero cuya gravedad ha
+cambiado. También notifica cualquier cambio en la nota, la
 versión y el horizonte de soporte. Responde a "¿ha funcionado la corrección?"
 y "¿qué ha cambiado la actualización?" sin mantener un archivo de línea base.
 Para una comprobación que recuerda por sí misma su última ejecución, consulte
@@ -205,12 +206,24 @@ Para una comprobación que recuerda por sí misma su última ejecución, consult
 <td>Una tabla Markdown, para una incidencia o un comentario en una pull request</td>
 </tr>
 <tr>
+<td><code>--format side-by-side</code></td>
+<td>Los dos análisis en dos columnas, un hallazgo por fila</td>
+</tr>
+<tr>
 <td><code>--format json</code></td>
 <td>La comparación estructurada que lleva el webhook del complemento</td>
 </tr>
 <tr>
 <td><code>--format slack</code></td>
 <td>JSON de Slack Block Kit</td>
+</tr>
+<tr>
+<td><code>--category NOMBRE</code></td>
+<td>Mostrar solo un área. Se puede repetir</td>
+</tr>
+<tr>
+<td><code>--all-findings</code></td>
+<td>Listar todos los hallazgos medidos, incluidos los que no han cambiado</td>
 </tr>
 <tr>
 <td><code>--exit-zero</code></td>
@@ -226,7 +239,7 @@ Para una comprobación que recuerda por sí misma su última ejecución, consult
 canalización puede condicionarse a él. Termina con <code>0</code> cuando nada ha
 empeorado, también cuando solo se han resuelto hallazgos. <code>--exit-zero</code>
 desactiva ese control.</p>
-<p>Termina con <code>2</code>, sin comparar nada, cuando no puede dar una respuesta honesta:</p>
+<p>Termina con <code>2</code>, sin comparar los archivos, en estos casos:</p>
 <ul>
 <li><strong>los dos archivos describen instancias distintas.</strong> "¿Ha funcionado la
   corrección?" es una pregunta sobre una sola instancia, y dos hosts comparados
@@ -236,6 +249,50 @@ desactiva ese control.</p>
   tiene nota, o es la entrada de error de una instancia que no se pudo
   analizar.</li>
 </ul>
+<h3 id="severity-finding-by-finding">Severidad, hallazgo por hallazgo</h3>
+<p>Cada comparación termina con los hallazgos fallidos contados por severidad:</p>
+<pre><code class="language-text">~ exposed:/config/opencloud.yaml [exposure]: severity high -&gt; critical
+Failing by severity: critical 0 -&gt; 1, high 1 -&gt; 1, medium 0 -&gt; 1, low 1 -&gt; 0
+</code></pre>
+<p>La línea <code>~</code> indica un cambio de gravedad en un hallazgo que sigue abierto.
+Al pasar de <code>high</code> a <code>critical</code>, su identificador sigue en ambas listas de
+comprobaciones fallidas. La comparación de conjuntos de
+<a href="/documentation/baseline">la línea base</a> no detecta un hallazgo nuevo, aunque el límite
+de calificación más estricto puede empeorar la nota. La gravedad se lee de
+los resultados guardados; las modificaciones posteriores del catálogo no
+alteran esos valores históricos.</p>
+<p>Un hallazgo exceptuado se cuenta aquí y se muestra como <code>waived</code>, porque una excepción es la decisión de no recibir alertas y no la afirmación de que el hallazgo haya desaparecido.</p>
+<h3 id="side-by-side">Lado a lado</h3>
+<pre><code class="language-bash">check-opencloud-scanner diff before.json after.json --format side-by-side
+</code></pre>
+<pre><code class="language-text">opencloud.example.com
+Rating: A+ (5) -&gt; C (3)
+Lifecycle: EOL: False -&gt; True
+Version: 3.4.0 -&gt; 3.3.0
+
+Finding                           2026-09-15T17:42:21+00:00  2026-09-22T09:03:11+00:00
+--------------------------------  -------------------------  -------------------------
++ CVE-2026-0001                   not listed                 FAIL high
++ cspWithoutUnsafeInline          ok                         FAIL medium
+~ exposed:/config/opencloud.yaml  FAIL high                  FAIL critical
+- Referrer-Policy                 FAIL low                   ok
+</code></pre>
+<p>Cada fila indica ambos lados, de modo que quien lee no tiene que reconstruirlos a partir de una lista de cambios. <code>--all-findings</code> añade los hallazgos que no se movieron, lo que convierte la vista de «qué ha cambiado» en «qué encontraron los dos análisis».</p>
+<p><code>not measured</code> indica que no hay una medición para esa comprobación
+(<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0064-a-scan-records-what-it-did-not-measure.md">ADR 0064</a>).
+<code>not listed</code> indica que el aviso de seguridad no figura en el resultado.
+Ninguno de estos estados se interpreta como una comprobación superada.</p>
+<h3 id="one-area-at-a-time">Un área cada vez</h3>
+<p><code>--category</code> acota la comparación y toma un valor de uno de dos espacios de nombres:</p>
+<ul>
+<li><strong>una categoría de hallazgo</strong> - <code>cookies</code>, <code>authentication</code>, <code>sharing</code>, <code>exposure</code>, <code>embedding</code>, <code>lifecycle</code>, <code>proxy</code>, <code>headers</code>, <code>transport</code>, <code>advisory</code> - conserva solo los hallazgos sobre esa área de la instancia.</li>
+<li><strong>una categoría de cambio</strong> - <code>instance</code>, <code>referenceData</code>, <code>scanner</code>, <code>policy</code>, <code>unknown</code> - conserva solo la explicación de <em>por qué</em> difieren los dos análisis. Véase <a href="/documentation/reference-data">Datos de referencia</a> para saber por qué una calificación puede moverse sin que la instancia haya cambiado.</li>
+</ul>
+<pre><code class="language-bash">check-opencloud-scanner diff before.json after.json --category transport
+check-opencloud-scanner diff before.json after.json --category instance
+</code></pre>
+<p>Cada espacio de nombres se filtra solo cuando se le da un valor, así que <code>--category transport</code> deja intacta la explicación y <code>--category instance</code> deja intactos los hallazgos. La opción se puede repetir, y un valor desconocido se rechaza con el código de salida <code>2</code> en lugar de no mostrar nada: una errata que imprimiera una comparación vacía se leería como «no ha cambiado nada».</p>
+<p>Una explicación filtrada omite las líneas <code>[limitation]</code>, porque estas matizan la comparación entera y no una de sus categorías.</p>
 <h2 id="explain-what-a-finding-means-and-how-to-fix-it"><code>explain</code>: qué significa un hallazgo y cómo corregirlo</h2>
 <pre><code class="language-bash">check-opencloud-scanner explain basicAuthDisabled
 </code></pre>
@@ -417,8 +474,58 @@ asistente que <code>check-opencloud-security --configure</code>.</p>
 <td><code>--no-test-scan</code></td>
 <td>No ofrece un análisis de prueba del host antes de guardar</td>
 </tr>
+<tr>
+<td><code>--export-monitoring</code></td>
+<td>Escribe también la comprobación programada: <code>icinga</code>, <code>systemd</code>, <code>both</code> o <code>none</code></td>
+</tr>
 </tbody>
 </table>
+<p>Después ofrece escribir también la comprobación programada, junto a la
+configuración que acaba de guardar:</p>
+<pre><code class="language-text">Also write a monitoring configuration (Icinga service, systemd timer)? [y/N]
+</code></pre>
+<p><code>--export-monitoring</code> responde a esa pregunta de antemano, que es lo que
+necesita un script de aprovisionamiento. Los archivos llevan los umbrales, la
+serie de publicación y todas las demás respuestas recién dadas, de modo que la
+comprobación que se ejecuta cada día es la que se configuró y no un ejemplo
+ajustado de memoria:</p>
+<pre><code class="language-bash">check-opencloud-scanner configure --export-monitoring both
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Archivo</th>
+<th>Qué es</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>opencloud-security-&lt;host&gt;.conf</code></td>
+<td>Un objeto <code>Service</code> de Icinga 2. También necesita el <code>CheckCommand</code> de <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/icinga2/check_opencloud_security.conf"><code>contrib/icinga2/</code></a>: el servicio define variables y el comando las convierte en opciones</td>
+</tr>
+<tr>
+<td><code>check-opencloud-security.service</code></td>
+<td>Una unidad <code>oneshot</code>, con las mismas directivas de refuerzo que la de <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/systemd/check-opencloud-security.service"><code>contrib/systemd/</code></a></td>
+</tr>
+<tr>
+<td><code>check-opencloud-security.timer</code></td>
+<td><code>OnCalendar=daily</code>, con un retardo aleatorio para que muchos hosts detrás de una misma dirección no alcancen el límite de peticiones del canal de publicaciones en el mismo segundo</td>
+</tr>
+<tr>
+<td><code>check-opencloud-security.env</code></td>
+<td>Las variables <code>COS_</code> de la unidad, escritas con lectura solo para el propietario</td>
+</tr>
+</tbody>
+</table>
+<p>Dos cosas son deliberadas. <strong>No se instala nada</strong>: los archivos se escriben
+donde fue la configuración y las órdenes que los instalarían se imprimen, así
+que lo que llega a <code>/etc</code> es algo que has leído antes. Y <strong>no se escribe
+ninguna credencial en ellos</strong>: una URL de webhook o un token de publicación se
+queda en el archivo de configuración, legible solo por el propietario,
+mientras que un objeto de Icinga y un archivo de unidad no lo son. Ambos
+artefactos apuntan a ese archivo en su lugar - <code>vars.opencloud_config</code> y
+<code>COS_CONFIG_FILE</code> - y nombran los ajustes que retuvieron, para que un webhook
+configurado nunca falte en silencio.</p>
 <h2 id="exit-codes">Códigos de salida</h2>
 <p><strong>No</strong> son los códigos de Nagios del complemento. Un <code>scan</code> que encuentra una
 instancia con nota F sigue terminando con <code>0</code>, porque juzgar el resultado es

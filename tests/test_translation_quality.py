@@ -50,8 +50,17 @@ AI_SLOP = re.compile(
     r"descubre|sans effort|révolutionnaire|à la pointe|il est important de|"
     r"dans le monde actuel|découvrez|simplemente no es la más reciente|"
     r"simplemente no frenaron la calificación|"
-    r"comprehensive security|umfassende sicherheit|"
-    r"not easily unremembered|part of the point|worth relying on"
+    r"comprehensive security|umfassende[rnms]? sicherheit|"
+    r"not easily unremembered|part of the point|worth relying on|"
+    r"the honest\s+answer for a file|ehrliche Antwort für eine Datei|"
+    r"respuesta honesta para un archivo|réponse honnête pour un fichier|"
+    r"what the setting now says|was die Einstellung jetzt sagt|"
+    r"lo que dice ahora el ajuste|ce que dit désormais le réglage|"
+    r"und nichts davon, worauf|Beides ist kein Bestanden|"
+    r"schweigt dazu also zu Recht|ahora pesa de otra|"
+    r"nunca de con qué valores|calla al respecto|"
+    r"Ninguno de los dos es un resultado correcto|"
+    r"wo ihre Schreibweise es sagt|Das Update hält|Was die TLS-Schicht sagte"
     r")\b",
     re.IGNORECASE,
 )
@@ -62,7 +71,9 @@ AI_SLOP = re.compile(
 # a regression check for future generated documentation.
 UNTRANSLATED_GUIDE_SLOP = re.compile(
     r"\b(?:Named threshold set|judging the result|One pitfall is easy to miss|"
-    r"very same scanner|nothing looks quietly dropped|it is just not)\b",
+    r"very same scanner|nothing looks quietly dropped|it is just not|"
+    r"It reads two files and scans nothing|Every comparison ends with|"
+    r"The ~ line is the one|Each row states both sides|One area at a time)\b",
     re.IGNORECASE,
 )
 
@@ -126,7 +137,25 @@ def test_handwritten_guides_and_templates_do_not_use_ai_slop_wording():
         "This is not easily unremembered.",
         "Reading the rendered objects is part of the point.",
         "Two properties are worth relying on.",
-        "Kein Nachweis umfassende Sicherheit.",
+        "Kein Nachweis umfassender Sicherheit.",
+        "The honest answer for a file that cannot say.",
+        "Die ehrliche Antwort für eine Datei, die es nicht sagen kann.",
+        "Es la respuesta honesta para un archivo que no puede decirlo.",
+        "La réponse honnête pour un fichier incapable de se prononcer.",
+        "What the setting now says is not in the file.",
+        "Was die Einstellung jetzt sagt, steht nicht in der Datei.",
+        "Lo que dice ahora el ajuste no está en el archivo.",
+        "Ce que dit désormais le réglage ne figure pas dans le fichier.",
+        "Wie die Instanz eingerichtet ist und nichts davon, worauf.",
+        "Beides ist kein Bestanden.",
+        "Die Baseline schweigt dazu also zu Recht.",
+        "Namen zeigen dorthin, wo ihre Schreibweise es sagt.",
+        "Das Update hält, bis die Container neu starten.",
+        "Was die TLS-Schicht sagte, bevor HTTP ausgetauscht wurde.",
+        "El hallazgo ahora pesa de otra manera.",
+        "Describe cómo está montada y nunca de con qué valores.",
+        "La línea base calla al respecto.",
+        "Ninguno de los dos es un resultado correcto.",
     ],
 )
 def test_ai_slop_detector_catches_typical_cliches(value: str):
@@ -146,6 +175,21 @@ def test_translated_guides_do_not_keep_known_english_placeholders():
                     findings.append((locale, path.name, line_number, match.group(0)))
 
     assert findings == []
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "It reads two files and scans nothing.",
+        "Every comparison ends with the failing findings counted by severity.",
+        "The ~ line is the one a comparison cannot produce.",
+        "Each row states both sides.",
+        "One area at a time",
+    ],
+)
+def test_untranslated_guide_detector_catches_new_english_copy(value: str):
+    """Newly copied guide prose must be caught before it reaches a locale."""
+    assert UNTRANSLATED_GUIDE_SLOP.search(value)
 
 
 def test_no_guide_links_to_a_file_that_is_not_there():

@@ -769,8 +769,8 @@ cabeceras, enlaces públicos que dejan de pedir contraseña y vuelven a pedirla,
 un certificado trasladado a otro emisor: nada de eso tiene que mover la nota, y
 quien solo mira la nota no ve nada de ello.
 
-`configuration` es una **huella**: resúmenes criptográficos agrupados de cómo
-está configurada la instalación, y nunca de con qué valores. Véase
+`configuration` contiene **huellas** de la configuración medida, agrupadas
+por área, sin los valores de configuración originales. Véase
 [ADR 0073](../../adr/0073-a-result-fingerprints-the-configuration-it-measured.md).
 
 ```json

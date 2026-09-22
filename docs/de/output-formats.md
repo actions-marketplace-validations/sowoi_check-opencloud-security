@@ -23,6 +23,15 @@ check-opencloud-security --host opencloud.example.com --format sarif \
   > opencloud-security.sarif
 ```
 
+Jeder Befund bringt mit, was ein Dashboard zum Handeln braucht: die
+Empfehlung und den Dokumentationslink aus dem Katalog (`help`, `helpUri`),
+Schweregrad und Kategorie (`security-severity`, `problem.severity`, `tags`),
+bei einer Sicherheitsmeldung den betroffenen Versionsbereich
+(`affectedRanges`, `fixedIn`) und einen stabilen Fingerabdruck
+(`partialFingerprints`), damit derselbe Befund über mehrere Läufe hinweg eine
+Meldung bleibt. `run.properties.hosts` nennt Bewertung, Version und
+Supportstatus je geprüftem Host.
+
 In GitHub Actions kannst du die Datei anschließend hochladen. `continue-on-error: true` stellt sicher, dass der Upload auch bei einem nicht erfolgreichen Scanstatus ausgeführt wird:
 
 ```yaml

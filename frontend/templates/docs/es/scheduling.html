@@ -32,6 +32,11 @@ seguridad del escáner. Configure el escáner para que lea los dos archivos de
 <code>/var/lib/check-opencloud-security</code> antes de activarlo; el comando de
 actualización valida ambos documentos y los escribe de forma atómica.
 - <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/cron/check-opencloud-security.cron"><code>contrib/cron/check-opencloud-security.cron</code></a></p>
+<p>Para que los escriba por usted, con los ajustes que acaba de configurar ya
+dentro, ejecute
+<code>check-opencloud-scanner configure --export-monitoring systemd</code>: consulte
+<a href="/documentation/scanner-cli#configure-write-a-configuration-file"><code>configure</code></a>. Los
+archivos siguientes son las plantillas en las que se basa.</p>
 <!-- TOC -->
 <ul>
 <li><a href="#scheduling-without-icinga2--nagios">Programación sin Icinga2 / Nagios</a></li>

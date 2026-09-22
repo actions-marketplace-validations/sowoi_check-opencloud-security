@@ -54,6 +54,14 @@ check-opencloud-security --host opencloud.example.com --format sarif \
   > opencloud-security.sarif
 ```
 
+Each finding carries what a dashboard needs to act on it: the catalogue's
+remediation sentence and documentation link (`help`, `helpUri`), the severity
+and category (`security-severity`, `problem.severity`, `tags`), the release
+range an advisory affects (`affectedRanges`, `fixedIn`) and a stable
+fingerprint (`partialFingerprints`), so the same finding stays one alert
+across runs. `run.properties.hosts` reports the rating, version and
+end-of-life state per scanned host.
+
 In GitHub Actions, upload it to code scanning. `continue-on-error: true` on
 the scan step keeps a non-zero exit from failing the job before the upload
 step runs - the point of scanning in CI is usually to see the findings even

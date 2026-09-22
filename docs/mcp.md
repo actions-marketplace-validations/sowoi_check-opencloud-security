@@ -48,7 +48,7 @@ Seven tools, each a whole task rather than one HTTP endpoint:
 | `get_scan_result` | Read a scan by its uuid without waiting - what an agent polls with |
 | `plan_remediation` | The ordered fix list for a finished scan, with the grade each step reaches |
 | `compare_scans` | Two finished scans of one instance, compared: what was fixed, what is still open, what is new. Both must still be here |
-| `export_scan` | A finished scan as `json`, `csv`, `sarif` or `pdf` |
+| `export_scan` | A finished scan as `json`, `csv`, `sarif`, `pdf`, `html`, `remediation-md` or `remediation-html` |
 | `erase_instance_data` | **Destructive.** Erase everything held about one hostname. Needs the operator's credential |
 
 and five resources, so an agent can read the contracts - and the knowledge

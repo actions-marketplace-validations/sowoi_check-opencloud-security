@@ -90,6 +90,7 @@
 </li>
 </ol>
 <p>Icinga2 führt anschließend den nativen Befehl oder <code>docker run</code> wie unter <a href="/documentation/installation#icinga2--nagios">Icinga2 / Nagios</a> beschrieben aus.</p>
+<p>Damit das <code>Service</code>-Objekt aus einer gerade erstellten Konfiguration für dich geschrieben wird, mit bereits eingetragenen Schwellwerten und Release-Track, führe <code>check-opencloud-scanner configure --export-monitoring icinga</code> aus - siehe <a href="/documentation/scanner-cli#configure-write-a-configuration-file"><code>configure</code></a>. Das <code>CheckCommand</code> aus Schritt 1 wird weiterhin benötigt.</p>
 <p>Für die automatisierte Bereitstellung derselben Objekte steht <a href="/documentation/ansible">Ansible</a> zur Verfügung.</p>
 <hr>
 <p><a href="/documentation">Zur Dokumentationsübersicht</a> | <a href="/documentation/reference">Zum Haupt-README</a></p>

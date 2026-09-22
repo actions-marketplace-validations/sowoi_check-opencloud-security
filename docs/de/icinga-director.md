@@ -41,6 +41,8 @@
 
 Icinga2 führt anschließend den nativen Befehl oder `docker run` wie unter [Icinga2 / Nagios](../installation.md#icinga2--nagios) beschrieben aus.
 
+Damit das `Service`-Objekt aus einer gerade erstellten Konfiguration für dich geschrieben wird, mit bereits eingetragenen Schwellwerten und Release-Track, führe `check-opencloud-scanner configure --export-monitoring icinga` aus - siehe [`configure`](scanner-cli.md#configure-write-a-configuration-file). Das `CheckCommand` aus Schritt 1 wird weiterhin benötigt.
+
 Für die automatisierte Bereitstellung derselben Objekte steht [Ansible](../ansible.md) zur Verfügung.
 
 ---

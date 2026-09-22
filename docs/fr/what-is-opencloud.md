@@ -1,62 +1,61 @@
-# Qu’est-ce qu’OpenCloud ?
+# Ce qu'est OpenCloud
 
-[OpenCloud](https://opencloud.eu/) est une plateforme open source de stockage, de
-synchronisation et de partage de fichiers. Ce scanner vérifie ses canaux de publication,
-sa configuration et ses points d’accès publics. Cette page présente l’architecture qui se
-trouve derrière ces contrôles.
+[OpenCloud](https://opencloud.eu/) est une plateforme open source de stockage,
+de synchronisation et de partage de fichiers. Ce scanner est conçu pour ses
+branches de versions, sa configuration et ses points d'accès publics. Cette page
+explique l'architecture qui sous-tend ces contrôles.
 
 <!-- TOC -->
-* [What OpenCloud is](#what-opencloud-is)
-  * [Where OpenCloud comes from](#where-opencloud-comes-from)
-  * [How OpenCloud is structured](#how-opencloud-is-structured)
-  * [Why this matters for a security scan](#why-this-matters-for-a-security-scan)
+* [Ce qu'est OpenCloud](#what-is-opencloud)
+  * [D'où vient OpenCloud](#where-opencloud-comes-from)
+  * [Comment OpenCloud est structuré](#how-opencloud-is-structured)
+  * [Pourquoi cela compte pour un scan de sécurité](#why-this-matters-for-a-security-scan)
 <!-- TOC -->
 
-## Where OpenCloud comes from
+## D'où vient OpenCloud {#where-opencloud-comes-from}
 
-OpenCloud is developed as an independent open-source project with its own
-releases and support lifecycle. Its Go server uses the CS3 APIs and Reva
-components for storage and collaboration. See the
-[OpenCloud documentation](https://docs.opencloud.eu/) for deployment and
-configuration instructions.
+OpenCloud est développé comme un projet open source indépendant, avec ses
+propres versions et son propre cycle de support. Son serveur écrit en Go
+s'appuie sur les API CS3 et les composants Reva pour le stockage et la
+collaboration. Consultez la
+[documentation OpenCloud](https://docs.opencloud.eu/) pour les instructions de
+déploiement et de configuration.
 
-Some public interfaces preserve compatibility with existing clients. For
-example, `/status.php` still has a PHP-style name even though OpenCloud is a Go
-application. Its response includes both compatibility values and the actual
-OpenCloud release. The [status endpoint guide](status-php.md) explains which
-fields are useful to a scanner.
+Certaines interfaces publiques conservent la compatibilité avec les clients
+existants. Par exemple, `/status.php` porte toujours un nom de style PHP alors
+qu'OpenCloud est une application Go. Sa réponse contient à la fois des valeurs
+de compatibilité et la version réelle d'OpenCloud. Le [guide du point d'accès
+d'état](status-php.md) explique quels champs sont utiles à un scanner.
 
-## How OpenCloud is structured
+## Comment OpenCloud est structuré {#how-opencloud-is-structured}
 
-OpenCloud combines services for authentication, file access, sharing and its
-web interface. The main deployment choices affect what an external scan can see:
+OpenCloud réunit des services d'authentification, d'accès aux fichiers, de
+partage et son interface web. Les principaux choix de déploiement déterminent ce
+qu'un scan externe peut observer :
 
-| Component | Operational consideration |
+| Composant | Point d'attention opérationnel |
 |:--|:--|
-| Web interface and proxy | Public URL, TLS termination, security headers and forwarded headers |
-| Identity provider | Sign-in policy, client registration, account provisioning and second factors |
-| Storage | Data and metadata layout, permissions, backups and tested recovery |
-| Office and calendar integrations | Separate service configuration, credentials and network boundaries |
-| Release track | Update recommendations and the period in which fixes are available |
+| Interface web et proxy | URL publique, terminaison TLS, en-têtes de sécurité et en-têtes transmis |
+| Fournisseur d'identité | Politique de connexion, enregistrement des clients, provisionnement des comptes et second facteur |
+| Stockage | Organisation des données et des métadonnées, permissions, sauvegardes et restaurations testées |
+| Intégrations bureautiques et d'agenda | Configuration de service distincte, identifiants et cloisonnement réseau |
+| Branche de versions | Recommandations de mise à jour et période pendant laquelle des correctifs sont disponibles |
 
-The absence of a relational database in OpenCloud’s core storage does not mean
-the whole deployment has no persistent state. Identity providers and other
-integrations can have their own databases and backup requirements.
+L'absence de base de données relationnelle dans le stockage central d'OpenCloud
+ne signifie pas que l'ensemble du déploiement est sans état persistant. Les
+fournisseurs d'identité et d'autres intégrations peuvent avoir leurs propres
+bases de données et leurs propres besoins de sauvegarde.
 
-## Why this matters for a security scan
+## Pourquoi cela compte pour un scan de sécurité {#why-this-matters-for-a-security-scan}
 
-A familiar endpoint is not enough to identify the software behind it. The
-scanner checks the reported product before applying OpenCloud release data,
-advisories and configuration rules. A different product is refused instead of
-being assigned an OpenCloud grade; see [Troubleshooting](troubleshooting.md).
+Un point d'accès familier ne suffit pas à identifier le logiciel qui se trouve
+derrière. Le scanner vérifie le produit annoncé avant d'appliquer les données de
+version, les avis de sécurité et les règles de configuration d'OpenCloud. Un
+produit différent est refusé plutôt que de se voir attribuer une note OpenCloud ;
+voir [Dépannage](troubleshooting.md).
 
-The result describes what the scanner could observe at the submitted address.
-It cannot verify private files, account permissions, backup recovery or all of
-an identity provider’s policies. The [secure deployment guide](secure-deployment.md)
-covers those separate operational tasks.
-
-## Trademarks and affiliation
-
-This is an independent community project, not affiliated with or supported by
-OpenCloud GmbH. OpenCloud and related marks belong to their respective owners
-and are used here to identify the software being checked.
+Le résultat décrit ce que le scanner a pu observer à l'adresse soumise. Il ne
+peut pas vérifier les fichiers privés, les permissions des comptes, la
+restauration des sauvegardes ni l'ensemble des politiques d'un fournisseur
+d'identité. Le [guide de déploiement sécurisé](secure-deployment.md) traite de
+ces tâches opérationnelles distinctes.

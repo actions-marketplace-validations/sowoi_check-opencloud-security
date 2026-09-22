@@ -41,10 +41,14 @@ from pathlib import Path
 from typing import Any
 
 from .baseline import Baseline, Comparison, Snapshot, snapshot_of
+from .changes import CATEGORIES as CHANGE_CATEGORIES
 from .changes import explain
 from .completion import enable as enable_completion
 from .config import ConfigurationError, load_configuration
 from .factory import release_settings_from_config, scanner_settings_from_config
+from .findings import ADVISORY_CATEGORY, Delta, severity_totals
+from .findings import CATEGORIES as FINDING_CATEGORIES
+from .findings import compare as compare_findings
 from .hardening import (
     CATEGORIES,
     Hardening,
@@ -203,6 +207,19 @@ def build_arg_parser() -> argparse.ArgumentParser:
         default=None,
         help="Do not offer a test scan of the host before saving.",
     )
+    configure_parser.add_argument(
+        "--export-monitoring",
+        dest="export",
+        choices=("icinga", "systemd", "both", "none"),
+        default=None,
+        help=(
+            "Also write the scheduled check next to the configuration: an "
+            "Icinga 2 Service object, a systemd service and timer, or both. "
+            "The files carry the thresholds and release track just answered "
+            "and are written for review - nothing is installed or reloaded. "
+            "Credentials stay in the configuration file. The default asks."
+        ),
+    )
     refresh_parser = sub.add_parser(
         "refresh-data",
         help="Fetch validated release and advisory data for a monitoring host.",
@@ -251,12 +268,37 @@ def build_arg_parser() -> argparse.ArgumentParser:
     diff_parser.add_argument(
         "--format",
         dest="diff_format",
-        choices=("text", "markdown", "json", "slack"),
+        choices=("text", "markdown", "side-by-side", "json", "slack"),
         default="text",
         help=(
             "How to render the comparison: readable lines, a Markdown table, "
-            "the structured document the webhook carries, or Slack Block Kit. "
-            "Default: text."
+            "a two-column table of the findings on each side, the structured "
+            "document the webhook carries, or Slack Block Kit. Default: text."
+        ),
+    )
+    diff_parser.add_argument(
+        "--category",
+        dest="diff_categories",
+        action="append",
+        metavar="NAME",
+        default=[],
+        help=(
+            "Show only this area, repeatable. A finding category ("
+            + ", ".join(FINDING_CATEGORIES)
+            + ") narrows the findings; a change category ("
+            + ", ".join(CHANGE_CATEGORIES)
+            + ") narrows the explanation of why they moved. Each namespace is "
+            "filtered only when a value for it is given, so --category "
+            "transport leaves the explanation intact."
+        ),
+    )
+    diff_parser.add_argument(
+        "--all-findings",
+        action="store_true",
+        help=(
+            "List every finding the scans measured, not only the ones that "
+            "moved. Without it a comparison answers what changed; with it, it "
+            "also states what did not."
         ),
     )
     diff_parser.add_argument(
@@ -427,11 +469,154 @@ def _compare_documents(
     return baseline.compare(host, _archived_snapshot(after))
 
 
+#: How one finding's movement is marked in the rendered comparison. The
+#: glyphs are the ones a reader of a patch already knows, with `~` for the
+#: case a patch has no glyph for: the same finding, weighted differently.
+_DELTA_MARKS: dict[str, str] = {
+    "introduced": "+",
+    "appeared": "+",
+    "resolved": "-",
+    "disappeared": "-",
+    "open": "~",
+    "passing": " ",
+}
+
+
+def _split_categories(names: Sequence[str]) -> tuple[list[str], list[str]]:
+    """
+    Split the requested categories into the two namespaces they filter.
+
+    A finding category says what an area of the instance is about; a change
+    category says what kind of thing moved. They are different questions and
+    do not share a value, so one flag can serve both without ambiguity.
+    """
+    findings: list[str] = []
+    changes: list[str] = []
+    unknown: list[str] = []
+    for raw in names:
+        name = raw.strip()
+        if name in FINDING_CATEGORIES:
+            findings.append(name)
+        elif name in CHANGE_CATEGORIES:
+            changes.append(name)
+        else:
+            unknown.append(name)
+    if unknown:
+        known = [*FINDING_CATEGORIES, *CHANGE_CATEGORIES]
+        suggestions = get_close_matches(unknown[0], known, n=3)
+        hint = f" Did you mean {', '.join(suggestions)}?" if suggestions else ""
+        raise DiffError(
+            f"Unknown category {unknown[0]!r}. Known categories: "
+            f"{', '.join(known)}.{hint}"
+        )
+    return findings, changes
+
+
+def _severity_line(deltas: Sequence[Delta]) -> str:
+    """
+    The failing findings by severity, before and after, on one line.
+
+    Printed even when every count is unchanged: "critical 1 -> 1" is the
+    answer to "how bad is it now", which is the question underneath "what
+    changed" and the one a comparison of two lists never states outright.
+    """
+    totals = severity_totals(deltas)
+    if not totals:
+        return ""
+    parts = [
+        f"{severity} {before} -> {after}"
+        for severity, (before, after) in totals.items()
+    ]
+    return "Failing by severity: " + ", ".join(parts)
+
+
+def _delta_lines(deltas: Sequence[Delta], *, markdown: bool = False) -> list[str]:
+    """One line per finding that moved, worst first, severities included."""
+    lines = []
+    for delta in deltas:
+        mark = _DELTA_MARKS.get(delta.status, " ")
+        moved = delta.severity_change
+        if moved:
+            detail = f"severity {moved[0]} -> {moved[1]}"
+        elif delta.status in ("resolved", "disappeared") and delta.before:
+            # What it was, not what it is. "Referrer-Policy: ok" is true and
+            # tells the reader nothing about the line they are reading.
+            detail = f"was {delta.before.label()}"
+        else:
+            side = delta.after or delta.before
+            detail = side.label() if side else ""
+        area = f" [{delta.category}]" if delta.category else ""
+        if markdown:
+            lines.append(f"- `{mark}` `{delta.id}`{area}: {detail}")
+        else:
+            lines.append(f"{mark} {delta.id}{area}: {detail}")
+    if markdown and lines:
+        lines = ["", "### Findings", "", *lines]
+    return lines
+
+
+def _missing(delta: Delta) -> str:
+    """
+    What an empty column means, which is not the same thing for both kinds.
+
+    A check that is not in a document was not measured. An advisory that is
+    not in one did not match the version, which is a measurement and not a
+    gap - :mod:`opencloud_local_scan.findings` explains why the two must not
+    be rendered with the same word.
+    """
+    return "not listed" if delta.category == ADVISORY_CATEGORY else "not measured"
+
+
+def _side_by_side(
+    host: str,
+    before_at: str,
+    after_at: str,
+    deltas: Sequence[Delta],
+    context: Sequence[str] = (),
+) -> str:
+    """
+    The two documents as two columns, one finding per row.
+
+    A reader comparing two scans is holding two states in their head at once,
+    and the itemised list makes them reconstruct each side from the changes.
+    This states both sides outright and leaves the reading to them, which is
+    also why a finding that did not move can be shown here at all: the point
+    of the view is the state, not only the difference.
+    """
+    header = ("Finding", before_at or "before", after_at or "after")
+    rows = [header]
+    for delta in deltas:
+        mark = _DELTA_MARKS.get(delta.status, " ")
+        rows.append(
+            (
+                f"{mark} {delta.id}",
+                delta.before.label() if delta.before else _missing(delta),
+                delta.after.label() if delta.after else _missing(delta),
+            )
+        )
+    widths = [max(len(row[column]) for row in rows) for column in range(3)]
+    rendered = [
+        f"{host}",
+        *context,
+        "",
+        "  ".join(cell.ljust(width) for cell, width in zip(rows[0], widths)).rstrip(),
+        "  ".join("-" * width for width in widths),
+    ]
+    rendered.extend(
+        "  ".join(cell.ljust(width) for cell, width in zip(row, widths)).rstrip()
+        for row in rows[1:]
+    )
+    return "\n".join(rendered)
+
+
 def _run_diff(args: argparse.Namespace) -> int:
     """Report what changed between two saved result documents."""
     try:
         before = _load_result_document(args.before)
         after = _load_result_document(args.after)
+        finding_categories, change_categories = _split_categories(
+            getattr(args, "diff_categories", []) or []
+        )
     except DiffError as exc:
         LOGGER.error("%s", exc)
         return 2
@@ -456,31 +641,105 @@ def _run_diff(args: argparse.Namespace) -> int:
     # comparison uses, so an operator's own monitoring and the service cannot
     # explain the same two documents differently.
     reasons = explain(before, after)
+    # What differs, finding by finding, with the severity on each side. The
+    # baseline above compares sets of names and is silent about a finding
+    # that stayed open and got worse; this is where that movement comes from.
+    deltas = compare_findings(
+        before,
+        after,
+        categories=finding_categories,
+        changed_only=not args.all_findings,
+    )
+    explained = [
+        change
+        for change in reasons.changes
+        if change.code != "ratingChanged"
+        and (not change_categories or change.category in change_categories)
+    ]
+
+    previous = comparison.previous
+    assert previous is not None  # a diff always has both sides
 
     if args.diff_format == "json":
         print(
             json.dumps(
-                {**comparison.as_dict(), "explanation": reasons.as_dict()}, indent=2
+                {
+                    **comparison.as_dict(),
+                    "findings": [delta.as_dict() for delta in deltas],
+                    "severityTotals": {
+                        severity: {"before": counts[0], "after": counts[1]}
+                        for severity, counts in severity_totals(deltas).items()
+                    },
+                    "explanation": reasons.as_dict(),
+                },
+                indent=2,
             )
         )
     elif args.diff_format == "slack":
         print(json.dumps(comparison.slack_blocks(), indent=2))
+    elif args.diff_format == "side-by-side":
+        print(
+            _side_by_side(
+                _document_host(after),
+                previous.recorded_at or "before",
+                comparison.current.recorded_at or "after",
+                deltas,
+                # The rating, the version and the support horizon belong to no
+                # area of the instance, so they have no row in a table of
+                # findings - and a findings table without them would leave the
+                # reader working out the headline from the detail.
+                [
+                    f"{item['category']}: {item['change']}"
+                    for item in comparison.items()
+                    if item["category"] not in ("Security check", "Vulnerability")
+                ],
+            )
+        )
+        severities = _severity_line(deltas)
+        if severities:
+            print(severities)
+        for change in explained:
+            print(f"  [{change.category}] {change.summary}")
+        if not change_categories:
+            for limitation in reasons.limitations:
+                print(f"  [limitation] {limitation}")
     else:
-        previous = comparison.previous
-        assert previous is not None  # a diff always has both sides
+        markdown = args.diff_format == "markdown"
         print(
             f"{_document_host(after)}: {previous.recorded_at or 'unknown'} -> "
             f"{comparison.current.recorded_at or 'unknown'}"
         )
-        print(comparison.summary())
-        changes = comparison.render(args.diff_format)
-        if changes:
-            print(changes)
-        for change in reasons.changes:
-            if change.code != "ratingChanged":
-                print(f"  [{change.category}] {change.summary}")
-        for limitation in reasons.limitations:
-            print(f"  [limitation] {limitation}")
+        if finding_categories:
+            # The summary counts every new finding, which would contradict a
+            # filtered list two lines below it: a reader would be told two is
+            # new and shown one. What is being shown is said instead.
+            print(f"Findings in {', '.join(finding_categories)}:")
+        else:
+            print(comparison.summary())
+        if finding_categories:
+            # The baseline's own itemised list is not filterable - it reports
+            # the rating, the version and the lifecycle alongside the findings,
+            # and none of those belong to an area of the instance. Asking for
+            # one area is asking about findings, so that is what is rendered.
+            for line in _delta_lines(deltas, markdown=markdown):
+                print(line)
+        else:
+            changes = comparison.render(args.diff_format)
+            if changes:
+                print(changes)
+            for line in _delta_lines(
+                [delta for delta in deltas if delta.severity_change],
+                markdown=markdown,
+            ):
+                print(line)
+        severities = _severity_line(deltas)
+        if severities:
+            print(severities)
+        for change in explained:
+            print(f"  [{change.category}] {change.summary}")
+        if not change_categories:
+            for limitation in reasons.limitations:
+                print(f"  [limitation] {limitation}")
 
     if args.exit_zero:
         return 0
@@ -577,6 +836,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             include_optional=args.include_optional,
             force=args.force,
             verify=args.verify,
+            export=args.export,
         )
     if args.command == "refresh-data":
         try:

@@ -19,6 +19,7 @@ stays small enough to be worth reading.
 from __future__ import annotations
 
 import csv
+import hashlib
 import io
 from collections.abc import Mapping, Sequence
 from datetime import datetime, timezone
@@ -32,7 +33,15 @@ from .catalog import rating_label, summarise
 
 PROJECT_URL = "https://github.com/sowoi/check-opencloud-security"
 
-EXPORT_FORMATS = ("json", "csv", "sarif", "pdf", "html")
+EXPORT_FORMATS = (
+    "json",
+    "csv",
+    "sarif",
+    "pdf",
+    "html",
+    "remediation-md",
+    "remediation-html",
+)
 
 MEDIA_TYPES = {
     "json": "application/json",
@@ -40,6 +49,8 @@ MEDIA_TYPES = {
     "sarif": "application/sarif+json",
     "pdf": "application/pdf",
     "html": "text/html; charset=utf-8",
+    "remediation-md": "text/markdown; charset=utf-8",
+    "remediation-html": "text/html; charset=utf-8",
 }
 
 FILE_SUFFIXES = {
@@ -48,6 +59,8 @@ FILE_SUFFIXES = {
     "sarif": "sarif.json",
     "pdf": "pdf",
     "html": "html",
+    "remediation-md": "remediation.md",
+    "remediation-html": "remediation.html",
 }
 
 # A spreadsheet treats a cell starting with one of these as a formula, and
@@ -97,6 +110,63 @@ SARIF_LEVELS = {
     "low": "note",
     "info": "note",
 }
+
+# The numeric score and the three-value scale GitHub code scanning sorts and
+# filters alerts on. They are the dashboard's conventions rather than SARIF's,
+# so they travel in `properties`: a reader that does not know them is
+# unaffected. The plugin's own SARIF export uses the same two tables - see
+# ADR 0026 on why the two renderers mirror each other rather than share code.
+SARIF_SECURITY_SEVERITY = {
+    "critical": "9.5",
+    "high": "7.5",
+    "medium": "5.0",
+    "low": "3.0",
+    "info": "1.0",
+    "unknown": "5.0",
+}
+SARIF_PROBLEM_SEVERITY = {
+    "error": "error",
+    "warning": "warning",
+    "note": "recommendation",
+}
+
+
+def _sarif_fingerprint(target: str, rule_id: str) -> str:
+    """
+    A stable identity for one finding on one instance.
+
+    A code-scanning dashboard uses this to recognise the same finding across
+    uploads, so a header that has been missing for a month stays one alert
+    with a history. Only the target and the rule go in: the detail text
+    carries measured values that change while the finding does not.
+    """
+    return hashlib.sha256(f"{target}\n{rule_id}".encode()).hexdigest()[:32]
+
+
+def _sarif_ranges(advisory: Mapping[str, Any]) -> list[dict[str, str]]:
+    """The release windows an advisory covers, as strings a dashboard can show."""
+    ranges = []
+    for item in advisory.get("affectedRanges") or []:
+        if not isinstance(item, Mapping):
+            continue
+        introduced = str(item.get("introduced") or "")
+        fixed = str(item.get("fixed") or "")
+        ranges.append(
+            {
+                "introduced": introduced,
+                "fixed": fixed,
+                "range": (
+                    f">= {introduced}, < {fixed}"
+                    if introduced and fixed
+                    else f"< {fixed}"
+                    if fixed
+                    else f">= {introduced}"
+                    if introduced
+                    else ""
+                ),
+            }
+        )
+    return ranges
 
 
 def export_filename(identifier: str, fmt: str) -> str:
@@ -305,23 +375,63 @@ def sarif_report(result: dict[str, Any]) -> dict[str, Any]:
     rules: dict[str, dict[str, Any]] = {}
     results: list[dict[str, Any]] = []
 
-    def add(rule_id: str, level: str, text: str, help_text: str, uri: str | None) -> None:
+    def add(
+        rule_id: str,
+        level: str,
+        text: str,
+        help_text: str,
+        uri: str | None,
+        *,
+        severity: str = "",
+        category: str = "",
+        kind: str = "",
+        extra: Mapping[str, Any] | None = None,
+    ) -> None:
+        tags = ["security", f"severity/{severity or 'unknown'}", f"kind/{kind or 'finding'}"]
+        if category:
+            tags.append(f"category/{category}")
         if rule_id not in rules:
+            properties: dict[str, Any] = {
+                "tags": tags,
+                "security-severity": SARIF_SECURITY_SEVERITY.get(severity.lower(), "3.0"),
+                "problem.severity": SARIF_PROBLEM_SEVERITY.get(level, "warning"),
+                "severity": severity,
+            }
+            if category:
+                properties["category"] = category
+            properties.update(extra or {})
             rule: dict[str, Any] = {
                 "id": rule_id,
                 "name": rule_id,
                 "shortDescription": {"text": text[:120]},
                 "fullDescription": {"text": text},
                 "defaultConfiguration": {"level": level},
+                "properties": properties,
             }
             if help_text:
-                rule["help"] = {"text": help_text}
+                rule["help"] = {
+                    "text": help_text,
+                    "markdown": (
+                        f"{help_text}\n\n[Documentation]({uri})" if uri else help_text
+                    ),
+                }
             if uri:
                 rule["helpUri"] = uri
             rules[rule_id] = rule
+        result_properties: dict[str, Any] = {
+            "severity": severity,
+            "category": category,
+            "kind": kind,
+        }
+        if help_text:
+            result_properties["remediation"] = help_text
+        if uri:
+            result_properties["reference"] = uri
+        result_properties.update(extra or {})
         results.append(
             {
                 "ruleId": rule_id,
+                "kind": "fail",
                 "level": level,
                 "message": {"text": text},
                 "locations": [
@@ -331,11 +441,41 @@ def sarif_report(result: dict[str, Any]) -> dict[str, Any]:
                         }
                     }
                 ],
+                "partialFingerprints": {
+                    "checkOpenCloudSecurity/v1": _sarif_fingerprint(str(target), rule_id)
+                },
+                "properties": result_properties,
             }
         )
 
+    advisories = {
+        str(entry.get("id") or entry.get("cve") or "advisory"): entry
+        for entry in summary.get("vulnerabilities") or []
+        if isinstance(entry, Mapping)
+    }
     for identifier, severity, detail in _advisory_rows(summary):
-        add(identifier, SARIF_LEVELS.get(severity.lower(), "warning"), detail, "", None)
+        advisory = advisories.get(identifier, {})
+        ranges = _sarif_ranges(advisory)
+        extra: dict[str, Any] = {}
+        if ranges:
+            extra["affectedRanges"] = ranges
+        if advisory.get("fixedIn"):
+            extra["fixedIn"] = str(advisory["fixedIn"])
+        add(
+            identifier,
+            SARIF_LEVELS.get(severity.lower(), "warning"),
+            detail,
+            (
+                f"Upgrade to {advisory['fixedIn']}."
+                if advisory.get("fixedIn")
+                else ""
+            ),
+            str(advisory.get("url") or "") or None,
+            severity=severity,
+            category="lifecycle",
+            kind="vulnerability",
+            extra=extra,
+        )
 
     for issue in summary.get("issues") or []:
         identifier = str(issue.get("id"))
@@ -345,6 +485,9 @@ def sarif_report(result: dict[str, Any]) -> dict[str, Any]:
             str(issue.get("detail") or issue.get("explanation") or identifier),
             str(issue.get("remediation") or ""),
             str(issue.get("reference") or "") or None,
+            severity=str(issue.get("severity") or ""),
+            category=str(issue.get("category") or describe_hardening(identifier).category),
+            kind="hardening",
         )
 
     for item in (summary.get("missingHardenings") or []) + (
@@ -357,6 +500,9 @@ def sarif_report(result: dict[str, Any]) -> dict[str, Any]:
             str(item.get("title") or identifier),
             str(item.get("remediation") or describe_hardening(identifier).remediation),
             str(item.get("reference") or "") or None,
+            severity=str(item.get("severity") or "low"),
+            category=str(item.get("category") or describe_hardening(identifier).category),
+            kind="hardening",
         )
 
     return {

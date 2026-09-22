@@ -57,6 +57,14 @@ check-opencloud-security --host opencloud.example.com --format sarif \
   > opencloud-security.sarif
 ```
 
+Cada hallazgo incluye lo que un panel necesita para actuar: la recomendación y
+el enlace a la documentación del catálogo (`help`, `helpUri`), la gravedad y
+la categoría (`security-severity`, `problem.severity`, `tags`), el intervalo
+de versiones afectado por un aviso (`affectedRanges`, `fixedIn`) y una huella
+estable (`partialFingerprints`), de modo que el mismo hallazgo siga siendo una
+única alerta entre ejecuciones. `run.properties.hosts` indica la nota, la
+versión y el estado de soporte de cada host analizado.
+
 En GitHub Actions, súbalo al análisis de código. `continue-on-error: true` en
 el paso de análisis evita que un código de salida distinto de cero haga fallar
 el trabajo antes de que se ejecute el paso de subida; al analizar en CI, lo

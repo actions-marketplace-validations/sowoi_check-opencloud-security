@@ -17,89 +17,96 @@
 
 <article class="docs-article card section-gap" data-reveal lang="fr">
 <p><strong><code>UNKNOWN: ... /status.php is unreachable</code></strong>
-Le plugin analyse directement l’instance avec son scanner intégré ; l’hôte de
-supervision doit donc pouvoir la joindre. Vérifiez la connexion et rappelez-vous que le
-proxy d’OpenCloud écoute sur <strong>9200</strong>, pas sur 443 :
-<code>---host opencloud.example.com:9200</code> ou <code>--port 9200</code>.</p>
+Le plugin scanne l'instance lui-même avec son scanner intégré : l'hôte de
+supervision doit donc pouvoir l'atteindre directement. Vérifiez qu'il parvient à
+se connecter, et rappelez-vous que le proxy d'OpenCloud écoute sur <strong>9200</strong>, et
+non sur 443 : <code>--host opencloud.example.com:9200</code> ou <code>--port 9200</code>.</p>
 <p><strong><code>UNKNOWN: No OpenCloud instance found at ...</code></strong>
-<code>/status.php</code> n’a pas renvoyé de document de statut OpenCloud. L’adresse peut
-héberger un autre logiciel, ou le proxy inverse ne transmet pas <code>/status.php</code>.
-Relancez avec <code>--debug</code> pour afficher la réponse.</p>
+<code>/status.php</code> n'a pas répondu par un document d'état OpenCloud. Soit autre chose
+qu'OpenCloud se trouve à cette adresse, soit un proxy inverse placé devant ne
+transmet pas <code>/status.php</code>. Relancez avec <code>--debug</code> pour voir la réponse.</p>
 <p><strong><code>UNKNOWN: ... is not an OpenCloud instance: /status.php reports ownCloud</code></strong>
-ownCloud and Nextcloud serve the same <code>/status.php</code> - OpenCloud inherited the
-endpoint from them - so the address answered, just not for OpenCloud. Their
-releases, advisories and hardening defaults are different, and rating them
-against the OpenCloud release schedule would produce a confident answer about
-the wrong software, so the scan stops instead of guessing. See <a href="/documentation/what-is-opencloud#why-this-matters-for-a-security-scan">What OpenCloud
-is, and how it differs from ownCloud and
-Nextcloud</a> for why
-the three are close enough to share an endpoint but not close enough to share
-a rating.</p>
-<p><strong>Certificate errors on a fresh instance</strong>
-<code>opencloud init</code> creates a self-signed certificate. Pass <code>--insecure</code> (the
-untrusted chain is still reported, it just stops counting against the rating),
-or put a reverse proxy with a real certificate in front of the instance.</p>
-<p><strong>The version looks wrong (<code>0.1.0</code>)</strong>
-That is the hardcoded legacy field, not the release - see
-<a href="/documentation/scanner-checks#reading-the-version-correctly">Reading the version correctly</a>. The plugin
-reports <code>legacyVersion</code> when the instance offered nothing better; upgrading the
-instance or letting the plugin reach
-<code>/ocs/v1.php/cloud/capabilities</code> resolves it.</p>
-<p><strong>Every path is reported as exposed</strong>
-Something in front of the instance answers <code>200</code> for everything, including the
-path the scanner probes to detect exactly that. Check the reverse proxy's
-fallback rule.</p>
-<p><strong>Security headers are reported missing, and OpenCloud sends them</strong>
-A proxy in front of the instance is stripping them, or answering before
-OpenCloud does. <a href="/documentation/reverse-proxy">Reverse proxies</a> has the header set this
-check looks for, written out for nginx, Apache, Caddy, Traefik and HAProxy.</p>
-<p><strong>The check is slow</strong>
-Debug-port probing costs up to <code>debug_port_timeout</code> seconds per port on a
-firewalled host. Use <code>--no-debug-ports</code>, lower
-<code>COS_SCANNER_DEBUG_PORT_TIMEOUT</code>, shorten the port list, or scan in parallel
-with <code>--concurrency</code> (see <a href="/documentation/scanner-checks#speeding-the-scan-up">Speeding the scan up</a>).</p>
-<p><strong><code>UNKNOWN</code> on the update check / GitHub rate limit</strong>
-Sixty anonymous API requests per hour and IP address are shared with everything
-else on that address. Supply <code>--release-token</code>, or use <code>--update-source
-bundled</code> / <code>pinned</code> to avoid the network entirely.</p>
-<p><strong>Docker: <code>permission denied while trying to connect to the Docker socket</code></strong>
-The user running Icinga2/cron/systemd needs permission to talk to the Docker
-daemon - either add it to the <code>docker</code> group, or run the check via <code>sudo</code>,
-depending on your security policy.</p>
-<p><strong>Nothing happens / no output from cron or systemd</strong>
-- Cron and systemd units don't have a login shell's <code>PATH</code> or environment by
-  default - use the full path to <code>check-opencloud-security</code> and set
-  <code>COS_HOST</code> explicitly (see <a href="/documentation/scheduling">Scheduling</a>).
-- Check logs with <code>journalctl -u check-opencloud-security.service</code> (systemd)
-  or your configured log file (cron, see the example cron file).</p>
-<p><strong><code>--warn-on-new</code> reports OK while something is clearly wrong</strong>
-That is what it is for: with a baseline, only findings that are new or worse
-than the last run change the status. The full state is still printed, and the
-line starting <code>Suppressed by --warn-on-new:</code> names the status the run would
-otherwise have had. Delete the baseline file to start again, or drop the flag
-to see the real state on every run. End of life is the one thing it never
-suppresses. See <a href="/documentation#reporting-only-what-changed">Reporting only what changed</a>.</p>
+ownCloud et Nextcloud servent le même <code>/status.php</code> - OpenCloud a hérité ce
+point d'accès d'eux - l'adresse a donc bien répondu, mais pas pour OpenCloud.
+Leurs versions, leurs avis de sécurité et leurs valeurs de durcissement par
+défaut diffèrent, et les noter selon le calendrier de versions d'OpenCloud
+produirait une réponse assurée à propos du mauvais logiciel : le scan s'arrête
+plutôt que de deviner. Voir <a href="/documentation/what-is-opencloud#why-this-matters-for-a-security-scan">Ce qu'est OpenCloud, et en quoi il diffère
+d'ownCloud et de Nextcloud</a>
+pour comprendre pourquoi les trois sont assez proches pour partager un point
+d'accès, mais pas assez pour partager une note.</p>
+<p><strong>Erreurs de certificat sur une instance neuve</strong>
+<code>opencloud init</code> crée un certificat auto-signé. Passez <code>--insecure</code> (la chaîne
+non approuvée reste signalée, elle cesse simplement de peser sur la note), ou
+placez devant l'instance un proxy inverse doté d'un vrai certificat.</p>
+<p><strong>La version semble fausse (<code>0.1.0</code>)</strong>
+C'est le champ historique figé, et non la version - voir <a href="/documentation/scanner-checks#reading-the-version-correctly">Lire correctement la
+version</a>. Le plugin signale
+<code>legacyVersion</code> lorsque l'instance n'a rien proposé de mieux ; mettre l'instance
+à jour, ou laisser le plugin accéder à
+<code>/ocs/v1.php/cloud/capabilities</code>, résout le problème.</p>
+<p><strong>Tous les chemins sont signalés comme exposés</strong>
+Quelque chose devant l'instance répond <code>200</code> à tout, y compris au chemin que le
+scanner sonde précisément pour détecter ce cas. Vérifiez la règle de repli du
+proxy inverse.</p>
+<p><strong>Des en-têtes de sécurité sont signalés manquants alors qu'OpenCloud les envoie</strong>
+Un proxy placé devant l'instance les supprime, ou répond avant OpenCloud.
+<a href="/documentation/reverse-proxy">Proxys inverses</a> donne l'ensemble d'en-têtes recherché par ce
+contrôle, détaillé pour nginx, Apache, Caddy, Traefik et HAProxy.</p>
+<p><strong>Le contrôle est lent</strong>
+Le sondage des ports de débogage coûte jusqu'à <code>debug_port_timeout</code> secondes par
+port sur un hôte protégé par pare-feu. Utilisez <code>--no-debug-ports</code>, abaissez
+<code>COS_SCANNER_DEBUG_PORT_TIMEOUT</code>, raccourcissez la liste des ports, ou scannez
+en parallèle avec <code>--concurrency</code> (voir <a href="/documentation/scanner-checks#speeding-the-scan-up">Accélérer le
+scan</a>).</p>
+<p><strong><code>UNKNOWN</code> sur la vérification des mises à jour / limite de débit GitHub</strong>
+Soixante requêtes API anonymes par heure et par adresse IP sont partagées avec
+tout le reste de cette adresse. Fournissez <code>--release-token</code>, ou utilisez
+<code>--update-source bundled</code> / <code>pinned</code> pour éviter complètement le réseau.</p>
+<p><strong>Docker : <code>permission denied while trying to connect to the Docker socket</code></strong>
+L'utilisateur qui exécute Icinga2, cron ou systemd doit être autorisé à dialoguer
+avec le démon Docker - ajoutez-le au groupe <code>docker</code>, ou exécutez le contrôle
+via <code>sudo</code>, selon votre politique de sécurité.</p>
+<p><strong>Rien ne se passe / aucune sortie depuis cron ou systemd</strong>
+- Les unités cron et systemd n'ont pas, par défaut, le <code>PATH</code> ni l'environnement
+  d'un shell de connexion - utilisez le chemin complet vers
+  <code>check-opencloud-security</code> et définissez <code>COS_HOST</code> explicitement (voir
+  <a href="/documentation/scheduling">Planification</a>).
+- Consultez les journaux avec
+  <code>journalctl -u check-opencloud-security.service</code> (systemd) ou votre fichier de
+  journal configuré (cron, voir le fichier cron d'exemple).</p>
+<p><strong><code>--warn-on-new</code> signale OK alors que quelque chose ne va manifestement pas</strong>
+C'est sa raison d'être : avec une référence, seuls les constats nouveaux ou
+aggravés par rapport à la dernière exécution modifient l'état. L'état complet
+reste affiché, et la ligne commençant par <code>Suppressed by --warn-on-new:</code> nomme
+l'état qu'aurait eu l'exécution sans cela. Supprimez le fichier de référence pour
+repartir de zéro, ou retirez l'option pour voir l'état réel à chaque exécution.
+La fin de vie est la seule chose qu'il ne masque jamais. Voir <a href="/documentation/reference#reporting-only-what-changed">Signaler
+uniquement ce qui a changé</a>.</p>
 <p><strong><code>--warn-on-new needs --baseline PATH</code></strong>
-Without a file to remember the last run in, the flag would report "nothing
-new" forever. Give it a path the monitoring user can write, e.g.
+Sans fichier où mémoriser l'exécution précédente, l'option signalerait
+indéfiniment « rien de nouveau ». Donnez-lui un chemin accessible en écriture à
+l'utilisateur de supervision, p. ex.
 <code>/var/lib/check_opencloud/baseline.json</code>.</p>
 <p><strong><code>Baseline could not be written</code></strong>
-The directory does not exist and cannot be created, or the monitoring user
-cannot write there. The verdict on the instance is unaffected - this line is
-the whole consequence - but until it is fixed nothing is being remembered, so
-<code>--warn-on-new</code> will treat every run as the first.</p>
-<p><strong>No note from <code>--self-update-check</code></strong>
-It is cached for a day: delete
-<code>${XDG_CACHE_HOME:-~/.cache}/check-opencloud-security/pypi-version.json</code> to ask
-again. It also stays silent when PyPI is unreachable, when a proxy blocks it,
-and when the installed version is newer than the published one - which is the
-normal state of a source checkout. It never changes the exit code.</p>
-<p><strong>Exit code reference</strong></p>
+Le répertoire n'existe pas et ne peut pas être créé, ou l'utilisateur de
+supervision ne peut pas y écrire. Le verdict sur l'instance n'en est pas affecté -
+cette ligne en est toute la conséquence - mais tant que ce n'est pas corrigé,
+rien n'est mémorisé et <code>--warn-on-new</code> traitera chaque exécution comme la
+première.</p>
+<p><strong>Aucune note de <code>--self-update-check</code></strong>
+Le résultat est mis en cache pour une journée : supprimez
+<code>${XDG_CACHE_HOME:-~/.cache}/check-opencloud-security/pypi-version.json</code> pour
+interroger de nouveau. L'option reste également silencieuse lorsque PyPI est
+injoignable, lorsqu'un proxy la bloque, et lorsque la version installée est plus
+récente que la version publiée - l'état normal d'une copie de travail du code
+source. Elle ne change jamais le code de sortie.</p>
+<p><strong>Référence des codes de sortie</strong></p>
 <table>
 <thead>
 <tr>
-<th>Exit code</th>
-<th>Meaning</th>
+<th>Code de sortie</th>
+<th>Signification</th>
 </tr>
 </thead>
 <tbody>
@@ -121,14 +128,14 @@ normal state of a source checkout. It never changes the exit code.</p>
 </tr>
 </tbody>
 </table>
-<p><strong>Still stuck?</strong> Open an issue with the output of <code>--debug</code> (tokens are
-redacted from it), using the
+<p><strong>Toujours bloqué ?</strong> Ouvrez un ticket avec la sortie de <code>--debug</code> (les jetons y
+sont masqués), en utilisant le modèle
 <a href="https://github.com/sowoi/check-opencloud-security/issues/new?template=wrong_finding.yml">wrong finding</a>
-template if the check reported something you believe is incorrect. Never paste
-a production hostname or a credential into a public thread - see
+si le contrôle a signalé quelque chose que vous estimez incorrect. Ne collez
+jamais un nom d'hôte de production ni un identifiant dans un fil public - voir
 <a href="https://github.com/sowoi/check-opencloud-security/blob/main/CODE_OF_CONDUCT.md">CODE_OF_CONDUCT.md</a>.</p>
 <hr>
-<p><a href="/documentation/reference">Back to the documentation index</a> | <a href="/documentation">Back to the main README</a></p>
+<p><a href="/documentation">Retour à l'index de la documentation</a> | <a href="/documentation/reference">Retour au README principal</a></p>
 </article>
 
 {% include "_page-nav.html" %}

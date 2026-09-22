@@ -17,6 +17,12 @@ seguridad del escáner. Configure el escáner para que lea los dos archivos de
 actualización valida ambos documentos y los escribe de forma atómica.
 - [`contrib/cron/check-opencloud-security.cron`](../../contrib/cron/check-opencloud-security.cron)
 
+Para que los escriba por usted, con los ajustes que acaba de configurar ya
+dentro, ejecute
+`check-opencloud-scanner configure --export-monitoring systemd`: consulte
+[`configure`](scanner-cli.md#configure-write-a-configuration-file). Los
+archivos siguientes son las plantillas en las que se basa.
+
 <!-- TOC -->
 * [Programación sin Icinga2 / Nagios](#scheduling-without-icinga2--nagios)
   * [Temporizador de systemd](#systemd-timer)
