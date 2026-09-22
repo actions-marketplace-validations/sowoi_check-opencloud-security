@@ -31,6 +31,7 @@
 
 <nav class="docs-toc card section-gap" aria-label="{{ t('docs.guide.toc.aria') }}" data-reveal>
   <p class="kicker">{{ t('docs.guide.toc.heading') }}</p>
+  <a href="#1293-this-release" lang="en">[1.29.3] - this release</a>
   <a href="#1292-2026-09-22" lang="en">[1.29.2] - 2026-09-22</a>
   <a href="#1291-2026-09-21" lang="en">[1.29.1] - 2026-09-21</a>
   <a href="#1290-2026-09-21" lang="en">[1.29.0] - 2026-09-21</a>
@@ -40,10 +41,10 @@
   <a href="#1271-2026-09-19" lang="en">[1.27.1] - 2026-09-19</a>
   <a href="#1270-2026-09-19" lang="en">[1.27.0] - 2026-09-19</a>
   <a href="#1261-2026-09-19" lang="en">[1.26.1] - 2026-09-19</a>
-  <a href="#1260-2026-09-19" lang="en">[1.26.0] - 2026-09-19</a>
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="en">
+<h2 id="1293-this-release">[1.29.3] - this release</h2>
 <h2 id="1292-2026-09-22">[1.29.2] - 2026-09-22</h2>
 <h3 id="fixed">Fixed</h3>
 <ul>
@@ -441,47 +442,6 @@
   ten newest released sections of <code>CHANGELOG.md</code>, newest first, so an
   operator can read what the running release changed without leaving the
   area. The publish workflow regenerates it together with the release notes.</li>
-</ul>
-<h2 id="1260-2026-09-19">[1.26.0] - 2026-09-19</h2>
-<h3 id="added_7">Added</h3>
-<ul>
-<li>
-<p><code>--eol-warning DAYS</code> (<code>COS_EOL_WARNING</code>, YAML <code>eol_warning</code>, and a setup
-  wizard question) turns an otherwise <code>OK</code> result into <code>WARNING</code> once the
-  running release line has <code>DAYS</code> or fewer days of support left, naming the
-  end-of-life date and the upgrade target. Off (<code>0</code>) by default; past end of
-  life stays <code>CRITICAL</code> as before.</p>
-</li>
-<li>
-<p>The scan result records <code>upgradePath</code> when the installed release carries
-  known advisories: which of them the recommended release fixes, which it is
-  still affected by, and <code>safeVersion</code>, the lowest release past every missing
-  fix. The plugin prints it as a detail line, so an update that would leave an
-  advisory open no longer reads as the whole answer.</p>
-</li>
-<li>
-<p>The scan result records <code>alternativeServices</code>, what the instance advertises
-  in its <code>Alt-Svc</code> header, and the plugin prints a detail line when it
-  advertises HTTP/3 - a UDP listener a firewall written for TCP 443 may not
-  cover. It is an observation, never graded, and the advertised address is
-  never probed.</p>
-</li>
-</ul>
-<h3 id="changed_4">Changed</h3>
-<ul>
-<li>
-<p>The "On this page" contents list of a scan report groups its up to twelve
-  entries into three labelled columns - <em>Fix</em>, <em>Details</em> and <em>Keep</em> - instead
-  of one long row of links, so the sections worth acting on stand apart from
-  the reference material and the export and share cards.</p>
-</li>
-<li>
-<p>The Docker setup wizard opens each section with a two-column card: the step
-  counter, progress and the section's purpose on the left, and every section
-  of the walk on the right, marked done, skipped or still ahead, with the
-  current one highlighted. A terminal narrower than the card, a pipe or
-  <code>NO_COLOR</code> keeps the plain heading lines.</p>
-</li>
 </ul>
 </article>
 {% endblock %}
