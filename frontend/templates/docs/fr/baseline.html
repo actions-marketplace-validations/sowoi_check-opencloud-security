@@ -16,101 +16,110 @@
 {% endif %}
 
 <article class="docs-article card section-gap" data-reveal lang="fr">
-<p>Utilisez <code>--baseline</code> pour enregistrer les résultats de chaque balayage et les comparer avec la prochaine exécution. Ajouter
-"--warn-on-new" pour alerter seulement lorsque les conclusions sont nouvelles ou sont devenues pires. Existence
-les problèmes demeurent visibles dans le rapport.</p>
-<p>The <a href="/documentation#reporting-only-what-changed">main README</a> has the short
-version. This page is the full behaviour: the diff formats, what counts as a
-regression, and the rules that keep a baseline from hiding anything.</p>
+<p>Utilisez <code>--baseline</code> pour enregistrer les constats de chaque scan et les
+comparer à ceux de l'exécution suivante. Ajoutez <code>--warn-on-new</code> pour n'alerter
+que lorsque des constats sont nouveaux ou se sont aggravés. Les problèmes
+existants restent visibles dans le rapport.</p>
+<p>Le <a href="/documentation/reference#reporting-only-what-changed">README principal</a> en donne la
+version courte. Cette page décrit le comportement complet : les formats de
+comparaison, ce qui compte comme une régression, et les règles qui empêchent une
+référence de masquer quoi que ce soit.</p>
 <!-- TOC -->
 <ul>
-<li><a href="#reporting-only-what-changed">Reporting only what changed</a></li>
-<li><a href="#writing-and-comparing-a-baseline">Writing and comparing a baseline</a></li>
-<li><a href="#what-counts-as-a-regression">What counts as a regression</a></li>
-<li><a href="#points-worth-knowing">Points worth knowing</a></li>
+<li><a href="#reporting-only-what-changed">Signaler uniquement ce qui a changé</a></li>
+<li><a href="#writing-and-comparing-a-baseline">Écrire et comparer une référence</a></li>
+<li><a href="#what-counts-as-a-regression">Ce qui compte comme une régression</a></li>
+<li><a href="#points-worth-knowing">Points à connaître</a></li>
 </ul>
 <!-- TOC -->
 
-<h2 id="writing-and-comparing-a-baseline">Writing and comparing a baseline</h2>
-<p><code>--baseline</code> names the file the findings of each run are written to, and the
-file the next run is compared against:</p>
+<h2 id="writing-and-comparing-a-baseline">Écrire et comparer une référence</h2>
+<p><code>--baseline</code> désigne le fichier dans lequel les constats de chaque exécution
+sont écrits, et le fichier auquel l'exécution suivante est comparée :</p>
 <pre><code class="language-bash">check-opencloud-security -H opencloud.example.com \
     --check-hardening \
     --baseline /var/lib/check_opencloud/baseline.json
 </code></pre>
-<p>On its own this only adds a line to the output (<code>Baseline: ...</code>). Add
-<code>--warn-on-new</code> to act on it:</p>
+<p>À lui seul, cela n'ajoute qu'une ligne à la sortie (<code>Baseline: ...</code>). Ajoutez
+<code>--warn-on-new</code> pour en tirer parti :</p>
 <pre><code class="language-bash">check-opencloud-security -H opencloud.example.com \
     --check-hardening \
     --baseline /var/lib/check_opencloud/baseline.json \
     --warn-on-new
 </code></pre>
-<p>The check then reports <code>OK</code> while the picture is unchanged, and its normal
-status as soon as anything is new or worse. The full state is still printed
-either way - only the alert is suppressed, never the evidence:</p>
+<p>Le contrôle signale alors <code>OK</code> tant que la situation est inchangée, et son état
+habituel dès que quelque chose est nouveau ou plus grave. L'état complet reste
+affiché dans les deux cas : seule l'alerte est supprimée, jamais les éléments
+constatés :</p>
 <pre><code>OK: nothing new since the last run (WARNING state unchanged).
 OpenCloud 7.2.3 on opencloud.example.com, rating: C, last scanned: 2026-01-14
 Missing hardening: cspWithoutUnsafeInline (run with --debug for what each means and how to fix it)
 Baseline: No new findings since 2026-01-14T09:00:00+00:00 (1 known issue(s) unchanged)
 Suppressed by --warn-on-new: this run would otherwise be WARNING (WARNING: 1 hardening measure(s) missing, but no known vulnerabilities.)
 </code></pre>
-<p>Every comparison also lists added and resolved CVEs, hardening and additional
-check changes, rating/EOL/support-horizon changes, and installed or target
-version shifts. <code>text</code> is the default for logs. For a GitHub Actions step
-summary or pull-request comment, select Markdown:</p>
+<p>Chaque comparaison énumère également les CVE ajoutées et corrigées, les
+changements de durcissement et de contrôles supplémentaires, les variations de
+note, de fin de vie et d'horizon de support, ainsi que les évolutions de la
+version installée ou visée. <code>text</code> est le format par défaut, adapté aux
+journaux. Pour un résumé d'étape GitHub Actions ou un commentaire de pull
+request, choisissez Markdown :</p>
 <pre><code class="language-shell">check-opencloud-security -H opencloud.example.com \
   --baseline /var/lib/check_opencloud/baseline.json \
   --diff-format markdown &gt;&gt; &quot;$GITHUB_STEP_SUMMARY&quot;
 </code></pre>
-<p>Use <code>--diff-format slack</code> (or <code>json</code>) for Slack Block Kit JSON. When a webhook
-is configured, every baseline comparison is included as <code>baseline_diff</code>; Slack
-format additionally puts the blocks and color banner at the top level for
-incoming webhooks:</p>
+<p>Utilisez <code>--diff-format slack</code> (ou <code>json</code>) pour du JSON Slack Block Kit.
+Lorsqu'un webhook est configuré, chaque comparaison de référence y est incluse
+sous <code>baseline_diff</code> ; le format Slack place en outre les blocs et la bannière
+de couleur au niveau racine, pour les webhooks entrants :</p>
 <pre><code class="language-shell">check-opencloud-security -H opencloud.example.com \
   --baseline /var/lib/check_opencloud/baseline.json \
   --diff-format slack --webhook-url 'https://hooks.slack.com/services/&lt;token&gt;' \
   --webhook-on always
 </code></pre>
-<h2 id="what-counts-as-a-regression">What counts as a regression</h2>
+<h2 id="what-counts-as-a-regression">Ce qui compte comme une régression</h2>
 <ul>
-<li>a finding that was not there last time - a new advisory, a hardening measure
-  that has regressed, an additional check that started failing, a newly
-  available update;</li>
-<li>a rating lower than the one recorded;</li>
-<li><strong>a release past its end of life, always.</strong> It receives no security fixes,
-  so it gets worse every day it stays in production and can never be
-  grandfathered in by a baseline.</li>
+<li>un constat absent la fois précédente - un nouvel avis de sécurité, une mesure
+  de durcissement qui a régressé, un contrôle supplémentaire qui s'est mis à
+  échouer, une mise à jour nouvellement disponible ;</li>
+<li>une note inférieure à celle enregistrée ;</li>
+<li><strong>une version au-delà de sa fin de vie, toujours.</strong> Elle ne reçoit plus aucun
+  correctif de sécurité : elle empire donc chaque jour qu'elle passe en
+  production et ne peut jamais être tolérée au titre de l'existant par une
+  référence.</li>
 </ul>
 <h2 id="configuration-drift">Dérive de configuration</h2>
-<p>Une référence retient aussi l'<strong>empreinte de configuration</strong> de l'analyse : des
-condensats groupés de la façon dont l'instance est montée - transport,
-en-têtes, partage, authentification, proxy - et jamais de ce qu'elle contient.
-Une exécution où la note et les constats n'ont pas bougé dit malgré tout que
-l'installation, elle, a changé :</p>
+<p>Une référence mémorise aussi l'<strong>empreinte de configuration</strong> du scan : des
+condensats regroupés décrivant la façon dont l'instance est configurée -
+transport, en-têtes, partage, authentification, proxy - et rien de ce sur quoi
+elle est configurée. Une exécution dont la note et les constats n'ont pas bougé
+le signale tout de même lorsque le déploiement, lui, a changé :</p>
 <pre><code class="language-text">Baseline: No new findings since 2026-09-14T06:00:00Z, but the configuration changed (headers, proxy)
 </code></pre>
-<p>Seuls les noms de groupes sont signalés. Ce que le réglage dit maintenant ne se
-trouve ni dans le fichier de référence, ni dans la sortie, ni dans le webhook -
-seulement un condensat -, si bien que le fichier peut voisiner avec le reste de
-l'état de supervision sans publier la configuration de l'instance.</p>
+<p>Seuls les noms de groupes sont signalés. Ce que dit désormais le réglage ne
+figure ni dans le fichier de référence, ni dans la sortie, ni dans le webhook -
+seulement son empreinte - si bien que le fichier peut cohabiter avec le reste de
+votre état de supervision sans publier la configuration de l'instance.</p>
 <p>La dérive est signalée, jamais jugée : elle ne crée pas de constat, ne fait pas
-régresser une exécution et ne change jamais le code de sortie. Une référence
-écrite avant l'existence des empreintes ne signale aucune dérive, ce qui est la
-réponse honnête pour un fichier qui ne peut pas le dire.</p>
-<h2 id="points-worth-knowing">Points worth knowing</h2>
+régresser une exécution et ne modifie jamais le code de sortie. Une référence
+écrite avant l'existence des empreintes signale simplement l'absence de dérive,
+ce qui est la réponse honnête pour un fichier incapable de se prononcer.</p>
+<h2 id="points-worth-knowing">Points à connaître</h2>
 <ul>
-<li>The first run has nothing to compare against, so it reports normally and
-  becomes the baseline. Starting to use the flag never hides anything.</li>
-<li>One file holds one entry per host, so a comma-separated <code>--host</code> list can
-  share it.</li>
-<li>Findings that are waived with <code>--ignore-hardening</code>, and measures OpenCloud
-  hardcodes, are left out - exactly as they are left out of the alert line.</li>
-<li><code>--warn-on-new</code> without <code>--baseline</code> is rejected: with nowhere to remember
-  the last run it would report "nothing new" forever.</li>
-<li>A baseline that cannot be written is reported as a line of output and
-  nothing more. Bookkeeping never decides the verdict on an instance.</li>
-<li>The file is written atomically with owner-only permissions. Put it somewhere
-  the monitoring user owns, e.g. <code>/var/lib/check_opencloud/</code>.</li>
+<li>La première exécution n'a rien à quoi se comparer : elle signale normalement
+  et devient la référence. Commencer à utiliser l'option ne masque jamais rien.</li>
+<li>Un fichier contient une entrée par hôte : une liste <code>--host</code> séparée par des
+  virgules peut donc le partager.</li>
+<li>Les constats exclus par <code>--ignore-hardening</code>, ainsi que les mesures
+  qu'OpenCloud fige, sont laissés de côté - exactement comme ils le sont dans la
+  ligne d'alerte.</li>
+<li><code>--warn-on-new</code> sans <code>--baseline</code> est refusé : sans endroit où mémoriser
+  l'exécution précédente, l'option signalerait indéfiniment « rien de nouveau ».</li>
+<li>Une référence qui ne peut pas être écrite donne lieu à une ligne de sortie et
+  à rien de plus. La tenue de registres ne décide jamais du verdict sur une
+  instance.</li>
+<li>Le fichier est écrit de façon atomique, avec des permissions réservées au
+  propriétaire. Placez-le à un endroit appartenant à l'utilisateur de
+  supervision, p. ex. <code>/var/lib/check_opencloud/</code>.</li>
 </ul>
 </article>
 

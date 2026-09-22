@@ -265,7 +265,6 @@ UNTRANSLATED_GUIDES = frozenset(
     for slug in (
         "authentication",
         "authentik",
-        "baseline",
         "checkmk",
         "ci",
         "docker",
