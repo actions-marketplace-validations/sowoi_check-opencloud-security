@@ -242,3 +242,163 @@ def test_the_publish_workflow_regenerates_the_release_notes_after_writing_them()
     assert "frontend/templates/admin-docs/releases.html" in committed
     for name in ("", ".de", ".es", ".fr"):
         assert f"webapp/data/admin-search-index{name}.json" in committed
+
+
+# --- a translated guide has to actually be translated
+
+#: How much of a guide's prose may be byte-identical to the English source
+#: before it is not a translation. A real translation shares only identifiers,
+#: option names and the odd proper noun, which lands every finished German and
+#: Spanish page at or below 0.13; a page that is an English copy scores 0.50
+#: and up. Nothing sits in between, so the exact number is not delicate.
+MAX_ENGLISH_SHARE = 0.35
+
+#: Guides that are still an English copy under a translated title.
+#:
+#: This list is debt, not configuration: every entry is a page a reader opens
+#: in their own language and gets English prose from. It may only ever shrink.
+#: The test asserts membership in *both* directions, so translating a page
+#: fails the suite until the page is removed from here - a stale entry cannot
+#: quietly outlive the work it describes.
+UNTRANSLATED_GUIDES = frozenset(
+    (slug, "fr")
+    for slug in (
+        "ansible",
+        "authentication",
+        "authentik",
+        "baseline",
+        "checkmk",
+        "ci",
+        "cli-reference",
+        "configuration",
+        "cookies",
+        "csp",
+        "docker",
+        "embedding",
+        "examples",
+        "exposure",
+        "hardening",
+        "icinga-director",
+        "identity-providers",
+        "installation",
+        "kubernetes",
+        "lifecycle",
+        "many-instances",
+        "mcp",
+        "output-formats",
+        "prometheus",
+        "redis",
+        "reference",
+        "reference-data",
+        "release-lifecycle",
+        "reverse-proxy",
+        "scan-service",
+        "scanner",
+        "scanner-checks",
+        "scheduling",
+        "secure-deployment",
+        "sharing",
+        "status-php",
+        "tls",
+        "troubleshooting",
+        "web-service",
+        "webhooks",
+        "what-is-opencloud",
+    )
+)
+
+
+def _prose_lines(path: Path) -> list[str]:
+    """
+    A guide's prose, with everything a translation legitimately shares removed.
+
+    Code blocks, tables and rules carry commands, option names and sample
+    output that stay in English on purpose, so counting them would make an
+    English page look half translated.
+    """
+    text = path.read_text(encoding="utf-8")
+    text = re.sub(r"```.*?```", "", text, flags=re.DOTALL)
+    text = re.sub(r"<!-- TOC -->.*?<!-- TOC -->", "", text, flags=re.DOTALL)
+    lines = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith(("|", "<!--")):
+            continue
+        if re.fullmatch(r"[-=*_\s|:]+", stripped):
+            continue
+        lines.append(stripped)
+    return lines
+
+
+def _english_share(slug: str, source: str, language: str) -> float | None:
+    """How much of one translated guide is still the English text, 0.0 to 1.0."""
+    translated = REPO_ROOT / "docs" / language / f"{slug}.md"
+    if not translated.exists():
+        return None
+    lines = _prose_lines(translated)
+    if not lines:
+        return None
+    english = set(_prose_lines(REPO_ROOT / source))
+    return sum(1 for line in lines if line in english) / len(lines)
+
+
+def test_a_guide_offered_in_a_language_is_written_in_that_language():
+    """
+    A French title over an English body is worse than an English page.
+
+    The language picker, the search results and the page heading all promise a
+    translation, so nothing tells a reader that the page they are looking at
+    was never translated - and the anchor test above cannot say so either,
+    because an untranslated page's anchors match English perfectly.
+    """
+    for document in DOCUMENTATION_PAGES:
+        for language in GUIDE_LANGUAGES:
+            share = _english_share(document.slug, document.source, language)
+            if share is None:
+                continue
+            known = (document.slug, language) in UNTRANSLATED_GUIDES
+            if known:
+                assert share >= MAX_ENGLISH_SHARE, (
+                    f"docs/{language}/{document.slug}.md reads as translated "
+                    f"({share:.0%} English) - remove it from UNTRANSLATED_GUIDES"
+                )
+            else:
+                assert share < MAX_ENGLISH_SHARE, (
+                    f"docs/{language}/{document.slug}.md is {share:.0%} English "
+                    "prose, so it is a copy rather than a translation"
+                )
+
+
+def test_a_translated_heading_keeps_the_english_anchor_explicitly():
+    """
+    The anchors only line up by accident until a heading is translated.
+
+    An untranslated page passes the anchor test because its headings *are* the
+    English ones. The moment somebody translates one without writing
+    `{#english-anchor}` after it, every link into that section breaks - which
+    is exactly how the French `diff` heading broke. A genuinely translated
+    page must therefore carry each English anchor by hand.
+
+    Only the English page's anchors are required. A translation may add a
+    section of its own, and a section that exists nowhere in English has no
+    anchor to preserve.
+    """
+    for document in DOCUMENTATION_PAGES:
+        english = set(
+            re.findall(
+                r'<h[2-6] id="([^"]+)"', generator.render_page(document.slug, "en")
+            )
+        )
+        for language in GUIDE_LANGUAGES:
+            if (document.slug, language) in UNTRANSLATED_GUIDES:
+                continue
+            path = REPO_ROOT / "docs" / language / f"{document.slug}.md"
+            if not path.exists():
+                continue
+            body = path.read_text(encoding="utf-8")
+            written = set(re.findall(r"\{#([^}]+)\}", body))
+            missing = sorted(english - written)
+            assert not missing, (
+                f"docs/{language}/{document.slug}.md must anchor its headings "
+                f"explicitly; missing {{#...}} for: {', '.join(missing)}"
+            )
