@@ -98,7 +98,7 @@ consume, and what `diff` below compares. The
 [scanner library README](../../opencloud_local_scan/README.md) describes its
 fields.
 
-## `diff` - ce qui a changé entre deux résultats enregistrés
+## `diff` - ce qui a changé entre deux résultats enregistrés {#diff-what-changed-between-two-saved-results}
 
 ```bash
 check-opencloud-scanner scan opencloud.example.com > before.json
