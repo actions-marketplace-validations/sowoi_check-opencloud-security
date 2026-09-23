@@ -30,15 +30,15 @@
       "lastmod": "2026-09-23"
     },
     "docs/checkmk.html": {
-      "digest": "7dae35a6935017098d2ec71a2701063906df05731c95d87fc20ce012f62e286a",
-      "lastmod": "2026-09-19"
+      "digest": "b47d9b2f0e8d0750446c0c2251c66aa755f05b8576b1164bd825cea231f1111c",
+      "lastmod": "2026-09-23"
     },
     "docs/ci.html": {
       "digest": "b2e08d4fd70dd16a16775d68ba67e1d7e2dba552ff1e4b215f5bc09e7920b886",
       "lastmod": "2026-09-17"
     },
     "docs/cli-reference.html": {
-      "digest": "58789e3e446f481b06088e7c443197a92d47eb90182e5bec79617b8ca29f1060",
+      "digest": "46412c3dfad1991bd7faad3f9e8c9296c53b2b06f562a337993a425c2526d363",
       "lastmod": "2026-09-23"
     },
     "docs/configuration.html": {
@@ -106,8 +106,8 @@
       "lastmod": "2026-09-22"
     },
     "docs/prometheus.html": {
-      "digest": "3b0aaacc8d9ff8c40a7f76b72896ae0222a51d32f10a5bc2bd5e854eb7a8755a",
-      "lastmod": "2026-09-19"
+      "digest": "1d3cc304fd960e2097d0afd1580b6892e5525e55287e117dd27d452647c59504",
+      "lastmod": "2026-09-23"
     },
     "docs/redis.html": {
       "digest": "6ebc33cfc449f7806cdd7a859c86b09bd5caf35e8ebb87708106065bb55fbfcd",
@@ -118,7 +118,7 @@
       "lastmod": "2026-09-17"
     },
     "docs/reference.html": {
-      "digest": "90cd9dff1ad7824aa46e2b5d8f70f1f514f06537bf31cb03526b030216872dc3",
+      "digest": "8673aa78a95353882ccf144f4d8dcb2a2b1e39306c143e795bd16b3b70d6c614",
       "lastmod": "2026-09-23"
     },
     "docs/release-lifecycle.html": {
@@ -174,8 +174,8 @@
       "lastmod": "2026-09-23"
     },
     "docs/webhooks.html": {
-      "digest": "15f37d8e0006d0cb905aee8790dcffb7e6e2d274b8ff32670aaaec3f1e7182f7",
-      "lastmod": "2026-09-21"
+      "digest": "804588587cbe5a8705a2d9a08b0550eb702b7e6162735b762248759028ad6d65",
+      "lastmod": "2026-09-23"
     },
     "docs/what-is-opencloud.html": {
       "digest": "33dc03134f80e88bb3be0a82175040242753874d8d2b6a29edd62549f33d2a1a",

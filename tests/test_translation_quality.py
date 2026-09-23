@@ -148,7 +148,7 @@ def test_python_product_strings_do_not_use_known_cliches():
     paths = [REPO_ROOT / "check_opencloud_security.py"]
     for directory in ("opencloud_local_scan", "webapp", "scripts", "docker"):
         paths.extend((REPO_ROOT / directory).rglob("*.py"))
-    findings = []
+    findings: list[tuple[str, int, str]] = []
     for path in paths:
         for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
             if isinstance(node, ast.Constant) and isinstance(node.value, str):
@@ -468,6 +468,17 @@ def test_a_placeholder_name_is_not_a_glossary_term(monkeypatch: pytest.MonkeyPat
     assert [
         finding for finding in checker.style_findings() if finding.rule == "glossary"
     ] == []
+
+
+@pytest.mark.parametrize("term", ["exención", "exenciones", "exclusión", "exclusiones"])
+def test_spanish_waiver_plurals_are_valid_glossary_terms(monkeypatch, term):
+    """Spanish drops the written accent in these plural forms."""
+    monkeypatch.setattr(
+        checker, "OWN_MESSAGES",
+        {"en": {"a": "Chosen waivers."}, "es": {"a": f"Selección: {term}."}},
+    )
+    monkeypatch.setattr(checker, "TRANSLATIONS", ("es",))
+    assert not [f for f in checker.style_findings() if f.rule == "glossary"]
 
 
 # ---------------------------------------------------------------- reports

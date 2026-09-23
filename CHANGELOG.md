@@ -41,7 +41,9 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   technical values and section links.
 - Expanded wording checks to current repository documentation and Python
   product strings, including phrases split across lines. Added regression
-  cases and a translation review checklist.
+  cases and a translation review checklist. Corrected inconsistent exemption
+  terminology and Spanish plural recognition in the glossary check. Recorded
+  reviewed plain-language alternatives so they no longer produce warnings.
 
 ## [1.30.0] - 2026-09-22
 

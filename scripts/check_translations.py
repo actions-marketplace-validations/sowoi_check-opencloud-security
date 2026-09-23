@@ -106,6 +106,16 @@ ACCEPTED: dict[tuple[str, str, str], str] = {
     ): "An example hostname, which is the same in every language."
     for locale in TRANSLATIONS
 }
+ACCEPTED.update({
+    ("glossary", "de", "how.tests.hardening.title"):
+        "Schutzmaßnahmen explains hardening in plain German in this heading.",
+    ("glossary", "de", "index.description"):
+        "Schutzmaßnahmen explains hardening to readers of the landing page.",
+    ("glossary", "es", "index.description"):
+        "Medidas de protección explains hardening to readers of the landing page.",
+    ("glossary", "fr", "index.description"):
+        "Protections explains hardening to readers of the landing page.",
+})
 
 
 # --------------------------------------------------------------- structure
@@ -342,7 +352,7 @@ GLOSSARY: dict[str, dict[str, tuple[str, ...]]] = {
     "waiver": {
         "de": ("Ausnahme", "ausgenommen"),
         "fr": ("exemption", "exempté", "exclusion"),
-        "es": ("exención", "eximid", "exclusión"),
+        "es": ("exención", "exenciones", "eximid", "exclusión", "exclusiones"),
     },
 }
 
