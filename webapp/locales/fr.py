@@ -44,7 +44,7 @@ MESSAGES: dict[str, str] = {
     "admin.rules.variables": "Définie par",
     "admin.rules.rating.kicker": "Notes",
     "admin.rules.rating.heading": "Comment une instance est notée",
-    "admin.rules.rating.lede": "La note est celle du scanner ; ce service ne fait que l'afficher. Voici les règles qu'il applique à chaque analyse ici.",
+    "admin.rules.rating.lede": "Le scanner calcule la note selon ces règles. Le service web affiche le résultat.",
     "admin.rules.rating.scale": "L'échelle",
     "admin.rules.rating.caps": "Comment les échecs des vérifications limitent la note",
     "admin.rules.rating.version.title": "La version fixe la note de départ",
@@ -71,7 +71,7 @@ MESSAGES: dict[str, str] = {
     "admin.rules.group.operator": "Identifiants et actions de l'opérateur",
     "admin.rules.group.operator.lede": "Limites des requêtes nécessitant des identifiants et des actions de l’opérateur.",
     "admin.rules.rule.client_limit.title": "Limite par client",
-    "admin.rules.rule.client_limit.body": "Au plus {limit} soumissions par client toutes les {window}. Une adresse IPv4 est un client ; un client IPv6 est son /{ipv6}.",
+    "admin.rules.rule.client_limit.body": "Au plus {limit} soumissions par client toutes les {window}. Chaque adresse IPv4 compte comme un client. En IPv6, chaque réseau /{ipv6} compte comme un client.",
     "admin.rules.rule.daily_cap.title": "Plafond journalier",
     "admin.rules.rule.daily_cap.body": "Au plus {limit} soumissions par client toutes les {window}, en plus de la limite par client.",
     "admin.rules.rule.target_cooldown.title": "Délai par cible",
@@ -81,7 +81,7 @@ MESSAGES: dict[str, str] = {
     "admin.rules.rule.queue.title": "File d’attente en cas de forte charge",
     "admin.rules.rule.queue.body": "Jusqu’à {workers} analyses s’exécutent en parallèle. Les autres demandes attendent dans leur ordre d’arrivée. Une charge élevée ne provoque pas de refus.",
     "admin.rules.rule.agent_wait.title": "Limite des nouvelles tentatives automatiques",
-    "admin.rules.rule.agent_wait.body": "MCP et les workflows attendent eux-mêmes un Retry-After d'au plus {wait}, dans la limite de {attempts} tentatives. Au-delà, la réponse est renvoyée à l'appelant.",
+    "admin.rules.rule.agent_wait.body": "MCP et les workflows réessaient automatiquement après un délai Retry-After d’au plus {wait}, dans la limite de {attempts} tentatives. Les délais plus longs sont renvoyés à l’appelant.",
     "admin.rules.rule.probe_block.title": "Blocage après des avertissements répétés",
     "admin.rules.rule.probe_block.body": "{limit} avertissements en {window} bloquent le réseau du client pendant {block}.",
     "admin.rules.rule.probe_escalation.title": "Les blocages répétés s'allongent",
@@ -89,7 +89,7 @@ MESSAGES: dict[str, str] = {
     "admin.rules.rule.probe_network.title": "Le blocage couvre un réseau",
     "admin.rules.rule.probe_network.body": "Le blocage couvre le réseau IPv4 /{ipv4} ou IPv6 /{ipv6} du client. Changer d’adresse dans ce réseau ne contourne pas le blocage.",
     "admin.rules.rule.strike_scans.title": "Une analyse qui ne trouve pas OpenCloud est un avertissement",
-    "admin.rules.rule.strike_scans.body": "status.php n'a pas répondu, n'a pas renvoyé de JSON, a nommé un autre produit, ou le délai a expiré. Le même hôte de nouveau est un autre avertissement ; une analyse terminée jamais.",
+    "admin.rules.rule.strike_scans.body": "Un avertissement est enregistré si status.php ne répond pas, renvoie du JSON invalide, indique un autre produit ou si l’analyse dépasse le délai. Répéter la demande pour le même hôte compte de nouveau. Une analyse terminée ne compte pas.",
     "admin.rules.rule.strike_refusals.title": "Une cible refusée est un avertissement",
     "admin.rules.rule.strike_refusals.body": "Une soumission refusée pour ce qu'elle vise compte ; une faute de frappe ou un nom qui ne se résout pas ne compte pas :",
     "admin.rules.refusal.blocked": "une adresse que ce déploiement exclut",
@@ -99,7 +99,7 @@ MESSAGES: dict[str, str] = {
     "admin.rules.refusal.unstable": "un nom dont les résolutions divergent",
     "admin.rules.refusal.wildcard_dns": "un nom DNS joker ou de rebinding",
     "admin.rules.rule.private_addresses.title": "Adresses publiques uniquement",
-    "admin.rules.rule.private_addresses.body": "Chaque adresse vers laquelle un nom se résout doit être publique ; une réponse privée refuse la cible. Au-delà des plages privées, celles-ci sont aussi refusées :",
+    "admin.rules.rule.private_addresses.body": "Chaque adresse résolue doit être publique et unicast. Une seule adresse privée entraîne le refus de la cible. Les adresses suivantes sont aussi refusées :",
     "admin.rules.rule.internal_names.title": "Noms locaux et points de métadonnées",
     "admin.rules.rule.internal_names.body": "Refusés par nom autant que par adresse :",
     "admin.rules.rule.wildcard_dns.title": "Noms DNS joker et de rebinding",
@@ -123,7 +123,7 @@ MESSAGES: dict[str, str] = {
     "admin.rules.rule.load.title": "Charge par analyse",
     "admin.rules.rule.load.body": "Au plus {concurrency} requêtes simultanées, chacune avec {timeout} ; une analyse complète est arrêtée après {job}.",
     "admin.rules.rule.purge_attempts.title": "Tentatives avec l'identifiant d'effacement",
-    "admin.rules.rule.purge_attempts.body": "{limit} identifiants erronés par client en {window}, puis refus jusqu'à la fin de la fenêtre. Les bons ne sont jamais comptés.",
+    "admin.rules.rule.purge_attempts.body": "Après {limit} identifiants erronés reçus d’un client en {window}, les tentatives suivantes sont refusées jusqu’à la fin de cette période. Les identifiants corrects ne comptent pas.",
     "admin.rules.rule.admin_refresh.title": "Boutons d'actualisation",
     "admin.rules.rule.admin_refresh.body": "Chaque actualisation des données de référence peut être lancée une fois toutes les {cooldown}.",
     "admin.docs.kicker": "Documentation d'exploitation",
@@ -140,7 +140,7 @@ MESSAGES: dict[str, str] = {
     "admin.state.worker.down": "Ne répond pas",
     "admin.state.worker.unknown": "Impossible à déterminer",
     "admin.state.store.down": (
-        "Le stockage ne répond pas - impossible de lire le battement"
+        "Le stockage ne répond pas : impossible de lire le signal d’activité du worker."
     ),
     "admin.state.queue": "{depth} en file, {workers} workers",
     "admin.state.ratelimit": "Limite de requêtes",
@@ -154,7 +154,7 @@ MESSAGES: dict[str, str] = {
     "admin.state.advisories": "Avis de sécurité",
     "admin.state.checked": "vérifié {when}",
     "admin.state.checked.failed": (
-        "vérifié {when} - la dernière tentative n'a pas pu être récupérée"
+        "vérifié {when} : la dernière récupération a échoué"
     ),
     "admin.state.checked.rejected": (
         "vérifié {when} - la dernière tentative a été refusée par les garde-fous"
@@ -176,9 +176,7 @@ MESSAGES: dict[str, str] = {
     "admin.surfaces.kicker": "Exposition",
     "admin.surfaces.heading": "Ce que propose ce déploiement",
     "admin.surfaces.lede": (
-        "Les réglages avec lesquels ce processus a démarré, ceux-là mêmes que "
-        "rapporte le document de diagnostic. Aucun ne change sans "
-        "redémarrage, aucun n'est donc interrogé."
+        "Ces réglages de démarrage figurent aussi dans le document de diagnostic. Leur modification exige un redémarrage ; cette page ne vérifie donc pas s’ils ont changé."
     ),
     "admin.surfaces.on": "Activé",
     "admin.surfaces.off": "Désactivé",
@@ -198,8 +196,7 @@ MESSAGES: dict[str, str] = {
     "admin.surfaces.indexed": "Trouvable par les moteurs de recherche",
     "admin.surfaces.private": "Analyses d'adresses réseau privées",
     "admin.surfaces.private.found": (
-        "Autorisé sur un déploiement qui demande à être indexé : qui trouve "
-        "ce service peut le pointer sur le réseau où il se trouve."
+        "Les cibles privées sont autorisées et l’indexation par les moteurs de recherche est activée. Quiconque trouve ce service peut soumettre des cibles sur son réseau interne."
     ),
     "admin.surfaces.private.estate": (
         "Autorisé, ce qui est précisément l'objet d'un déploiement qui "
@@ -208,10 +205,10 @@ MESSAGES: dict[str, str] = {
     "admin.surfaces.encrypt": "Résultats chiffrés au repos",
     "admin.surfaces.audit": "Journal d'audit",
     "admin.surfaces.audit.file": (
-        "Écrit dans un fichier qui survit au conteneur."
+        "Écrit dans un fichier conservé après la suppression du conteneur."
     ),
     "admin.surfaces.audit.memory": (
-        "Un anneau de {count} enregistrements en mémoire de ce processus, et "
+        "Un tampon circulaire de {count} enregistrements en mémoire du processus, et "
         "rien sur disque."
     ),
     "admin.surfaces.targets": "Cibles enregistrées en clair",
@@ -223,7 +220,7 @@ MESSAGES: dict[str, str] = {
     "admin.update.unknown": "Impossible de savoir si une version plus récente existe.",
     "admin.update.off": "La vérification des mises à jour est désactivée (COS_WEB_UPDATE_CHECK).",
     "admin.update.install": "Installer {version} maintenant",
-    "admin.update.downtime": "Le bundle est vérifié par son attestation de build GitHub, puis le service web et les workers redémarrent avec celui-ci - une courte interruption, pendant laquelle toute analyse en cours est interrompue. La mise à jour reste en place jusqu'au redémarrage des conteneurs.",
+    "admin.update.downtime": "Le service vérifie l’archive à l’aide de son attestation de compilation GitHub, puis redémarre le service web et les workers. Cette opération interrompt brièvement le service et arrête les analyses en cours. La mise à jour reste active jusqu’au redémarrage des conteneurs.",
     "admin.update.manual": "L'installation depuis cette page est désactivée (COS_WEB_ADMIN_UPDATE_DIR). Récupérez la nouvelle image et recréez les conteneurs.",
     "admin.update.outcome.requested": "Vérifiée et installée. Le service redémarre dans un instant - rechargez la page.",
     "admin.update.outcome.current": "Rien de plus récent à installer.",
@@ -232,17 +229,14 @@ MESSAGES: dict[str, str] = {
     "admin.exclusions.kicker": "Exclusions",
     "admin.exclusions.heading": "Adresses que ce service n'analysera pas",
     "admin.exclusions.lede": (
-        "Une entrée prend effet dès la requête suivante, dans chaque "
-        "processus et sans redémarrage - et une analyse déjà en file "
-        "d'attente est refusée plutôt qu'exécutée. Rien ici ne fait analyser "
-        "quoi que ce soit : cette liste ne fait que refuser."
+        "Les modifications s’appliquent dès la requête suivante dans chaque processus, sans redémarrage. Les analyses en attente visant des cibles exclues sont aussi refusées. Cette liste peut uniquement bloquer des analyses."
     ),
     "admin.exclusions.add.label": "Nom d'hôte, domaine .suffixe, adresse ou plage CIDR",
     "admin.exclusions.add.placeholder": "opencloud.example.com",
     "admin.exclusions.add.action": "Exclure",
     "admin.exclusions.add.hint": (
-        "Un domaine écrit avec un point initial exclut aussi tout ce qui se "
-        "trouve en dessous. Une plage est comparée à chaque adresse vers "
+        "Un domaine écrit avec un point initial exclut aussi tous ses "
+        "sous-domaines. Une plage est comparée à chaque adresse vers "
         "laquelle un nom d'hôte se résout."
     ),
     "admin.exclusions.remove": "Retirer",
@@ -250,9 +244,7 @@ MESSAGES: dict[str, str] = {
     "admin.exclusions.source.configured": "Depuis l'environnement",
     "admin.exclusions.updated": "Dernière modification ici le {when}.",
     "admin.exclusions.durability": (
-        "Les entrées ajoutées ici vivent dans Redis, que ce déploiement peut "
-        "vider. Celles qui doivent lui survivre vont dans "
-        "COS_WEB_BLOCKED_TARGETS, où cette page ne peut pas les retirer."
+        "Les entrées ajoutées ici sont stockées dans Redis et sont perdues si Redis est vidé. Pour conserver des exclusions, utilisez COS_WEB_BLOCKED_TARGETS. Cette page ne peut pas retirer ces entrées."
     ),
     "admin.exclusions.unreadable": (
         "Le stockage n'a pas répondu : les exclusions ne peuvent être ni "
@@ -273,18 +265,14 @@ MESSAGES: dict[str, str] = {
         "COS_WEB_BLOCKED_TARGETS."
     ),
     "admin.blocklist.error.long": (
-        "Cette entrée est plus longue qu'un nom d'hôte ne peut l'être : ce "
-        "qu'elle viserait n'atteindrait de toute façon jamais ce service."
+        "L’entrée dépasse la longueur maximale d’un nom d’hôte. Saisissez au plus 253 caractères."
     ),
     "admin.outcome.excluded": "Exclue. Refusée dès la requête suivante.",
     "admin.outcome.withdrawn": "Retirée. Elle peut de nouveau être analysée.",
     "admin.actions.kicker": "Données de référence",
     "admin.actions.heading": "Actualiser les données de référence",
     "admin.actions.lede": (
-        "Les deux mêmes mises à jour que le worker exécute chaque jour, avec "
-        "les mêmes règles : un calendrier auquel il manque une ligne de versions est "
-        "refusé, une base d'avis ne peut qu'ajouter des entrées, et une récupération qui "
-        "échoue ne change rien."
+        "Ces actions lancent manuellement les actualisations quotidiennes du worker. Le calendrier doit conserver toutes les lignes de versions connues. Les mises à jour des avis peuvent uniquement ajouter des entrées. Si la récupération échoue, les données existantes sont conservées."
     ),
     "admin.actions.schedule": "Synchroniser le calendrier",
     "admin.actions.schedule.hint": "Relit la page de cycle de vie publiée.",
@@ -326,11 +314,7 @@ MESSAGES: dict[str, str] = {
     "admin.search.detail.changed": "{count} titres ou résumés ont changé depuis sa génération.",
     "admin.search.detail.unreadable": "L'index n'a pas pu être lu.",
     "admin.search.remedy": (
-        "Une version publiée livre toujours un index généré pour elle ; ce "
-        "build n'est donc pas une version telle que publiée - le plus souvent "
-        "une image ou un bundle construit depuis un checkout entre deux "
-        "versions. Déployez une version publiée, ou régénérez l'index dans ce "
-        "checkout et reconstruisez ce que vous déployez :"
+        "Les versions publiées incluent un index de recherche adapté. Pour une version personnalisée, régénérez l’index dans la copie du code source, puis reconstruisez le déploiement. Vous pouvez aussi déployer une version publiée :"
     ),
     "admin.search.remedy.commit": (
         "Rien à valider à la main : chaque pull request vers main régénère "
@@ -339,7 +323,7 @@ MESSAGES: dict[str, str] = {
     "admin.search.fix": "Les workflows de pull request et de publication régénèrent l’index et l’enregistrent dans un commit. Cette page ne permet pas de le reconstruire.",
     "admin.audit.kicker": "Audit",
     "admin.audit.heading": "Journal d’audit",
-    "admin.audit.lede": "Demandes, refus et limites atteintes en temps réel. La connexion s’ouvre lorsque vous activez le suivi du journal.",
+    "admin.audit.lede": "Consultez les demandes d’analyse, les refus et les limites déclenchées au fur et à mesure. Sélectionnez Suivre pour ouvrir la connexion et commencer à recevoir les entrées.",
     "admin.audit.privacy": "Les adresses des clients apparaissent sous forme d’empreintes HMAC tronquées. Ce processus conserve le sel utilisé pour les calculer. Cette vue affiche les entrées existantes du journal et ne permet pas de retrouver les adresses à partir des empreintes.",
     "admin.audit.replicas": "Aucun fichier d’audit n’est configuré. Ces entrées proviennent de la mémoire de ce processus. Avec plusieurs répliques, cette vue ne montre qu’une partie du journal.",
     "admin.audit.follow": "Suivre en direct",
@@ -347,9 +331,7 @@ MESSAGES: dict[str, str] = {
     "admin.audit.clear": "Vider",
     "admin.audit.empty": "Rien pour l'instant.",
     "admin.audit.closed": (
-        "La connexion a atteint sa limite de {minutes} minutes et le service "
-        "l'a fermée. Rien n'a été perdu jusque-là ; « Suivre en direct » en ouvre une "
-        "autre."
+        "Le service a fermé la connexion après {minutes} minutes. Sélectionnez Suivre pour vous reconnecter."
     ),
     "admin.audit.disabled": (
         "Cette installation ne tient pas de journal d'audit, il n'y a donc rien "
@@ -498,7 +480,7 @@ MESSAGES: dict[str, str] = {
     "index.assurance.airgapped.body": "Les polices, scripts et images sont servis ici, sans CDN ni outil d’analyse d’audience.",
     "index.assurance.nostore.title": "Stockage temporaire",
     "index.assurance.nostore.body": (
-        "Le résultat vit en mémoire et est supprimé dès qu'il expire."
+        "Le résultat est conservé en mémoire et supprimé à son expiration."
     ),
     "index.assurance.noaccount.title": "Aucune inscription requise",
     "index.assurance.noaccount.body": "Lancez une analyse sans créer de compte ni fournir d’adresse e-mail.",
@@ -945,7 +927,7 @@ MESSAGES: dict[str, str] = {
         "renvoie le même code de sortie Nagios/Icinga :"
     ),
     "docs.index.quickstart.note": (
-        "Le plugin parle directement à l'instance. Il n'envoie pas l'adresse "
+        "Le plugin contacte directement l'instance. Il n'envoie pas l'adresse "
         "à ce site web ni à un service de verdict distant."
     ),
     "docs.index.commands.kicker": "Deux points d'entrée",
@@ -1336,7 +1318,7 @@ MESSAGES: dict[str, str] = {
     ),
     "error.store_unavailable": (
         "Ce service ne peut pas lire sa propre configuration pour le moment et "
-        "n'analysera rien tant qu'il ne sait pas quelles cibles exclure. "
+        "n'analysera rien tant que la liste des cibles exclues reste inaccessible. "
         "Veuillez réessayer dans quelques minutes."
     ),
     # ----------------------------------------------------------- result page

@@ -44,7 +44,7 @@ MESSAGES: dict[str, str] = {
     "admin.rules.variables": "Definida por",
     "admin.rules.rating.kicker": "Notas",
     "admin.rules.rating.heading": "Cómo se califica una instancia",
-    "admin.rules.rating.lede": "La calificación es del propio escáner; este servicio solo la muestra. Estas son las reglas que aplica a cada análisis aquí.",
+    "admin.rules.rating.lede": "El escáner calcula la calificación según estas reglas. El servicio web muestra el resultado.",
     "admin.rules.rating.scale": "La escala",
     "admin.rules.rating.caps": "Cómo limitan la nota las comprobaciones fallidas",
     "admin.rules.rating.version.title": "La versión fija la nota de partida",
@@ -71,7 +71,7 @@ MESSAGES: dict[str, str] = {
     "admin.rules.group.operator": "Credenciales y acciones del operador",
     "admin.rules.group.operator.lede": "Límites de las solicitudes que requieren credenciales y de las acciones del operador.",
     "admin.rules.rule.client_limit.title": "Límite por cliente",
-    "admin.rules.rule.client_limit.body": "Como máximo {limit} envíos por cliente cada {window}. Una dirección IPv4 es un cliente; un cliente IPv6 es su /{ipv6}.",
+    "admin.rules.rule.client_limit.body": "Como máximo {limit} envíos por cliente cada {window}. Cada dirección IPv4 cuenta como un cliente. En IPv6, cada red /{ipv6} cuenta como un cliente.",
     "admin.rules.rule.daily_cap.title": "Límite diario",
     "admin.rules.rule.daily_cap.body": "Como máximo {limit} envíos por cliente cada {window}, además del límite por cliente.",
     "admin.rules.rule.target_cooldown.title": "Espera por objetivo",
@@ -81,7 +81,7 @@ MESSAGES: dict[str, str] = {
     "admin.rules.rule.queue.title": "Cola de análisis bajo carga",
     "admin.rules.rule.queue.body": "Se ejecutan hasta {workers} análisis a la vez. Las demás solicitudes esperan por orden de llegada. La carga elevada no provoca rechazos.",
     "admin.rules.rule.agent_wait.title": "Límite de reintentos automáticos",
-    "admin.rules.rule.agent_wait.body": "MCP y los flujos esperan por sí mismos un Retry-After de hasta {wait}, con un máximo de {attempts} intentos. Si la espera es mayor, devuelven la respuesta a quien llama.",
+    "admin.rules.rule.agent_wait.body": "MCP y los flujos de trabajo reintentan automáticamente tras una espera Retry-After de hasta {wait}, con un máximo de {attempts} intentos. Si la espera es mayor, se comunica al cliente.",
     "admin.rules.rule.probe_block.title": "Bloqueo tras avisos repetidos",
     "admin.rules.rule.probe_block.body": "{limit} avisos en {window} bloquean la red del cliente durante {block}.",
     "admin.rules.rule.probe_escalation.title": "Los bloqueos repetidos se alargan",
@@ -89,7 +89,7 @@ MESSAGES: dict[str, str] = {
     "admin.rules.rule.probe_network.title": "El bloqueo cubre una red",
     "admin.rules.rule.probe_network.body": "El bloqueo abarca la red IPv4 /{ipv4} o IPv6 /{ipv6} del cliente. Cambiar de dirección dentro de esa red no evita el bloqueo.",
     "admin.rules.rule.strike_scans.title": "Un análisis que no encuentra OpenCloud es un aviso",
-    "admin.rules.rule.strike_scans.body": "status.php no respondió, no devolvió JSON, nombró otro producto, o el análisis agotó el tiempo. El mismo host de nuevo es otro aviso; un análisis terminado nunca lo es.",
+    "admin.rules.rule.strike_scans.body": "Se registra una penalización si status.php no responde, devuelve JSON no válido, identifica otro producto o el análisis agota el tiempo de espera. Repetir el mismo host cuenta de nuevo. Un análisis completado no cuenta.",
     "admin.rules.rule.strike_refusals.title": "Un objetivo rechazado es un aviso",
     "admin.rules.rule.strike_refusals.body": "Cuenta un envío rechazado por aquello a lo que apunta; una errata o un nombre que no resuelve no cuenta:",
     "admin.rules.refusal.blocked": "una dirección que este despliegue excluye",
@@ -99,7 +99,7 @@ MESSAGES: dict[str, str] = {
     "admin.rules.refusal.unstable": "un nombre cuyas consultas no coinciden",
     "admin.rules.refusal.wildcard_dns": "un nombre DNS comodín o de rebinding",
     "admin.rules.rule.private_addresses.title": "Solo direcciones públicas",
-    "admin.rules.rule.private_addresses.body": "Cada dirección a la que resuelve un nombre debe ser pública; una respuesta privada rechaza el objetivo. Además de los rangos privados, también se rechazan estos:",
+    "admin.rules.rule.private_addresses.body": "Todas las direcciones resueltas deben ser públicas y unicast. Una sola dirección privada provoca el rechazo. También se rechazan estas direcciones:",
     "admin.rules.rule.internal_names.title": "Nombres locales y endpoints de metadatos",
     "admin.rules.rule.internal_names.body": "Rechazados por nombre además de por dirección:",
     "admin.rules.rule.wildcard_dns.title": "Nombres DNS comodín y de rebinding",
@@ -123,7 +123,7 @@ MESSAGES: dict[str, str] = {
     "admin.rules.rule.load.title": "Carga por análisis",
     "admin.rules.rule.load.body": "Como máximo {concurrency} peticiones simultáneas, cada una con {timeout}; un análisis completo se detiene tras {job}.",
     "admin.rules.rule.purge_attempts.title": "Intentos con la credencial de borrado",
-    "admin.rules.rule.purge_attempts.body": "{limit} credenciales erróneas por cliente en {window}, después se rechaza hasta que termina la ventana. Las correctas nunca cuentan.",
+    "admin.rules.rule.purge_attempts.body": "Tras {limit} credenciales incorrectas de un cliente en {window}, se rechazan los siguientes intentos hasta que termine ese periodo. Las credenciales correctas no cuentan.",
     "admin.rules.rule.admin_refresh.title": "Botones de actualización",
     "admin.rules.rule.admin_refresh.body": "Cada actualización de datos de referencia puede pulsarse una vez cada {cooldown}.",
     "admin.docs.kicker": "Documentación de operación",
@@ -175,11 +175,7 @@ MESSAGES: dict[str, str] = {
     "admin.state.copy.failed": "No se ha podido copiar",
     "admin.surfaces.kicker": "Exposición",
     "admin.surfaces.heading": "Qué ofrece esta instalación",
-    "admin.surfaces.lede": (
-        "Los ajustes con los que arrancó este proceso, los mismos que indica "
-        "el documento de diagnóstico. Ninguno cambia sin reiniciar, así que "
-        "ninguno se consulta periódicamente."
-    ),
+    "admin.surfaces.lede": "Estos ajustes de arranque también aparecen en el documento de diagnóstico. Los cambios requieren un reinicio, por lo que esta página no consulta periódicamente si han cambiado.",
     "admin.surfaces.on": "Activado",
     "admin.surfaces.off": "Desactivado",
     "admin.surfaces.mcp": "Punto de acceso para agentes en /mcp",
@@ -197,10 +193,7 @@ MESSAGES: dict[str, str] = {
     ),
     "admin.surfaces.indexed": "Localizable por los buscadores",
     "admin.surfaces.private": "Análisis de direcciones de red privadas",
-    "admin.surfaces.private.found": (
-        "Permitido en una instalación que pide ser indexada: quien encuentre "
-        "este servicio puede apuntarlo a la red en la que está."
-    ),
+    "admin.surfaces.private.found": "Se permiten destinos privados y está activada la indexación en buscadores. Cualquiera que encuentre este servicio puede enviar destinos de su red interna.",
     "admin.surfaces.private.estate": (
         "Permitido, que es justo para lo que sirve una instalación que "
         "analiza su propia red."
@@ -223,7 +216,7 @@ MESSAGES: dict[str, str] = {
     "admin.update.unknown": "No se pudo averiguar si existe una versión más reciente.",
     "admin.update.off": "La comprobación de actualizaciones está desactivada (COS_WEB_UPDATE_CHECK).",
     "admin.update.install": "Instalar {version} ahora",
-    "admin.update.downtime": "El paquete se verifica con su atestación de compilación de GitHub y luego el servicio web y los workers se reinician con él: una breve interrupción, y un escaneo en curso se corta. La actualización dura hasta que se reinicien los contenedores.",
+    "admin.update.downtime": "El servicio verifica el paquete mediante su atestación de compilación de GitHub y después reinicia el servicio web y los workers. Esto interrumpe brevemente el servicio y detiene los análisis en curso. La actualización permanece activa hasta que se reinicien los contenedores.",
     "admin.update.manual": "La instalación desde aquí está desactivada (COS_WEB_ADMIN_UPDATE_DIR). Descargue la nueva imagen y vuelva a crear los contenedores.",
     "admin.update.outcome.requested": "Verificada e instalada. El servicio se reinicia en un momento; recargue la página.",
     "admin.update.outcome.current": "No hay nada más reciente que instalar.",
@@ -231,12 +224,7 @@ MESSAGES: dict[str, str] = {
     "admin.update.outcome.failed": "No se pudo descargar o verificar la versión. No ha cambiado nada; el registro indica por qué.",
     "admin.exclusions.kicker": "Exclusiones",
     "admin.exclusions.heading": "Direcciones que este servicio no analizará",
-    "admin.exclusions.lede": (
-        "Una entrada surte efecto desde la siguiente petición, en todos los "
-        "procesos y sin reiniciar - y un análisis que ya esperaba en la cola "
-        "se rechaza en lugar de ejecutarse. Nada de aquí hace que este "
-        "servicio analice algo: la lista solo rechaza."
-    ),
+    "admin.exclusions.lede": "Los cambios se aplican desde la siguiente solicitud en todos los procesos, sin reiniciar. También se rechazan los análisis en cola de destinos excluidos. Esta lista solo puede bloquear análisis.",
     "admin.exclusions.add.label": "Nombre de host, dominio .sufijo, dirección o rango CIDR",
     "admin.exclusions.add.placeholder": "opencloud.example.com",
     "admin.exclusions.add.action": "Excluir",
@@ -249,11 +237,7 @@ MESSAGES: dict[str, str] = {
     "admin.exclusions.empty": "En esta instalación no hay nada excluido.",
     "admin.exclusions.source.configured": "Desde el entorno",
     "admin.exclusions.updated": "Modificado aquí por última vez el {when}.",
-    "admin.exclusions.durability": (
-        "Las entradas añadidas aquí viven en Redis, que esta instalación "
-        "puede vaciar. Las que deban perdurar van en COS_WEB_BLOCKED_TARGETS, "
-        "donde no pueden retirarse desde esta página."
-    ),
+    "admin.exclusions.durability": "Las entradas añadidas aquí se guardan en Redis y se pierden si Redis se vacía. Para exclusiones permanentes, use COS_WEB_BLOCKED_TARGETS. Esta página no permite retirar esas entradas.",
     "admin.exclusions.unreadable": (
         "El almacén no respondió, así que las exclusiones no pueden leerse "
         "ni cambiarse ahora mismo. Siguen vigentes: un análisis que no puede "
@@ -271,20 +255,12 @@ MESSAGES: dict[str, str] = {
         "Esta lista está llena. Pase las entradas permanentes a "
         "COS_WEB_BLOCKED_TARGETS."
     ),
-    "admin.blocklist.error.long": (
-        "Esa entrada es más larga de lo que puede ser un nombre de host, así "
-        "que nada de lo que pretenda designar llegaría a este servicio."
-    ),
+    "admin.blocklist.error.long": "La entrada supera la longitud máxima de un nombre de host. Introduzca un máximo de 253 caracteres.",
     "admin.outcome.excluded": "Excluida. Se rechaza desde la siguiente petición.",
     "admin.outcome.withdrawn": "Retirada. Puede volver a analizarse.",
     "admin.actions.kicker": "Datos de referencia",
     "admin.actions.heading": "Actualizar los datos de referencia",
-    "admin.actions.lede": (
-        "Las mismas dos actualizaciones que el worker ejecuta a diario, con las "
-        "mismas reglas: un calendario al que le falta una línea de versiones se "
-        "rechaza, una base de avisos solo puede añadir entradas y una descarga "
-        "fallida no cambia nada."
-    ),
+    "admin.actions.lede": "Estas acciones ejecutan manualmente las actualizaciones diarias del worker. El calendario debe conservar todas las líneas de versiones conocidas. Las actualizaciones de avisos solo pueden añadir entradas. Si la descarga falla, los datos existentes no cambian.",
     "admin.actions.schedule": "Sincronizar el calendario",
     "admin.actions.schedule.hint": "Vuelve a leer la página publicada del ciclo de vida.",
     "admin.actions.advisories": "Buscar avisos",
@@ -324,13 +300,7 @@ MESSAGES: dict[str, str] = {
     ),
     "admin.search.detail.changed": "{count} títulos o resúmenes han cambiado desde que se generó.",
     "admin.search.detail.unreadable": "No se ha podido leer el índice.",
-    "admin.search.remedy": (
-        "Una versión publicada siempre incluye un índice generado para ella, "
-        "así que esta compilación no es una versión tal como se publicó - "
-        "normalmente una imagen o un paquete construido desde un checkout "
-        "entre versiones. Despliegue una versión publicada, o regenere el "
-        "índice en ese checkout y vuelva a construir lo que despliega:"
-    ),
+    "admin.search.remedy": "Las versiones publicadas incluyen un índice de búsqueda correspondiente a esa versión. Si usa una compilación propia, regenere el índice en la copia del código fuente y reconstruya el despliegue. También puede desplegar una versión publicada:",
     "admin.search.remedy.commit": (
         "No hace falta confirmar nada a mano: cada pull request a main "
         "regenera el índice y lo confirma en su rama."
@@ -338,17 +308,14 @@ MESSAGES: dict[str, str] = {
     "admin.search.fix": "Los flujos de pull requests y de publicación regeneran el índice y lo guardan en un commit. Esta página no permite reconstruirlo.",
     "admin.audit.kicker": "Auditoría",
     "admin.audit.heading": "Registro de auditoría",
-    "admin.audit.lede": "Solicitudes, rechazos y límites alcanzados en tiempo real. La conexión se abre al activar la vista en directo.",
+    "admin.audit.lede": "Consulte las solicitudes de análisis, los rechazos y los límites alcanzados en tiempo real. Seleccione «Ver en directo» para abrir la conexión y empezar a recibir entradas.",
     "admin.audit.privacy": "Las direcciones de los clientes aparecen como huellas HMAC truncadas. Este proceso conserva la sal usada para calcularlas. Esta vista muestra entradas existentes del registro y no permite recuperar direcciones a partir de las huellas.",
     "admin.audit.replicas": "No hay ningún archivo de auditoría configurado. Estas entradas proceden de la memoria de este proceso. Con varias réplicas, la vista muestra solo una parte del registro.",
     "admin.audit.follow": "Ver en directo",
     "admin.audit.stop": "Detener",
     "admin.audit.clear": "Vaciar",
     "admin.audit.empty": "Todavía nada.",
-    "admin.audit.closed": (
-        "La conexión ha alcanzado su límite de {minutes} minutos y el servicio "
-        "la ha cerrado. Hasta ahí no se ha perdido nada; «Ver en directo» abre otra."
-    ),
+    "admin.audit.closed": "El servicio cerró la conexión tras {minutes} minutos. Seleccione «Ver en directo» para volver a conectarse.",
     "admin.audit.disabled": (
         "Esta instalación no mantiene un registro de auditoría, así que no hay "
         "nada que seguir. COS_WEB_AUDIT_LOG lo activa."
@@ -490,7 +457,7 @@ MESSAGES: dict[str, str] = {
     "index.assurance.airgapped.body": "Las fuentes, los scripts y las imágenes se sirven desde aquí, sin CDN ni herramientas de analítica.",
     "index.assurance.nostore.title": "Almacenamiento temporal",
     "index.assurance.nostore.body": (
-        "El resultado vive en memoria y se elimina en cuanto expira."
+        "El resultado se guarda en memoria y se elimina cuando caduca."
     ),
     "index.assurance.noaccount.title": "No se necesita registro",
     "index.assurance.noaccount.body": "Inicie un análisis sin crear una cuenta ni facilitar una dirección de correo.",
@@ -1570,12 +1537,12 @@ MESSAGES: dict[str, str] = {
         "informa de que hay un proveedor de aplicaciones registrado, o de "
         "que algo responde en la ruta CalDAV. Las reglas de compartición, "
         "los secretos WOPI y la configuración propia del segundo servicio "
-        "viven todos detrás de un inicio de sesión y no se comprueban."
+        "requieren autenticación para consultarse y no se comprueban."
     ),
     "result.tls.kicker": "Transporte",
     "result.tls.heading": "Seguridad del transporte",
     "result.tls.lede": (
-        "Lo que dijo la capa TLS antes de intercambiar un solo byte de HTTP. "
+        "Datos de TLS obtenidos antes de intercambiar datos por HTTP. "
         "Los hallazgos anteriores ya valoran esto; aquí está la medición que "
         "hay detrás."
     ),

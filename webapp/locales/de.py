@@ -44,7 +44,7 @@ MESSAGES: dict[str, str] = {
     "admin.rules.variables": "Gesetzt über",
     "admin.rules.rating.kicker": "Noten",
     "admin.rules.rating.heading": "Wie eine Instanz bewertet wird",
-    "admin.rules.rating.lede": "Die Bewertung stammt vom Scanner selbst; dieser Dienst zeigt sie nur an. Diese Regeln gelten für jeden Scan hier.",
+    "admin.rules.rating.lede": 'Der Scanner berechnet die Note nach diesen Regeln. Der Webdienst zeigt das Ergebnis an.',
     "admin.rules.rating.scale": "Die Skala",
     "admin.rules.rating.caps": "Wie fehlgeschlagene Prüfungen die Note begrenzen",
     "admin.rules.rating.version.title": "Die Version bestimmt die Ausgangsnote",
@@ -71,17 +71,17 @@ MESSAGES: dict[str, str] = {
     "admin.rules.group.operator": "Zugangsdaten und Betreiberaktionen",
     "admin.rules.group.operator.lede": "Grenzen für Anfragen mit Zugangsdaten und für Aktionen im Betreiberbereich.",
     "admin.rules.rule.client_limit.title": "Limit pro Client",
-    "admin.rules.rule.client_limit.body": "Höchstens {limit} Einreichungen pro Client alle {window}. Eine IPv4-Adresse ist ein Client; ein IPv6-Client ist sein /{ipv6}.",
+    "admin.rules.rule.client_limit.body": 'Höchstens {limit} Einreichungen pro Client innerhalb von {window}. Jede IPv4-Adresse zählt als ein Client. Bei IPv6 zählt jedes /{ipv6}-Netz als ein Client.',
     "admin.rules.rule.daily_cap.title": "Tageslimit",
     "admin.rules.rule.daily_cap.body": "Höchstens {limit} Einreichungen pro Client alle {window}, zusätzlich zum Limit pro Client.",
     "admin.rules.rule.target_cooldown.title": "Abkühlzeit pro Ziel",
     "admin.rules.rule.target_cooldown.body": "Dieselbe Instanz darf einmal alle {cooldown} gescannt werden, egal wer fragt.",
     "admin.rules.rule.batch.title": "Stapelgröße",
-    "admin.rules.rule.batch.body": "Ein Stapel enthält höchstens {limit} Ziele, und jedes zählt gegen jedes Limit.",
+    "admin.rules.rule.batch.body": 'Ein Stapel enthält höchstens {limit} Ziele. Jedes Ziel wird bei allen Limits einzeln gezählt.',
     "admin.rules.rule.queue.title": "Scan-Warteschlange bei hoher Last",
     "admin.rules.rule.queue.body": "Bis zu {workers} Scans laufen gleichzeitig. Weitere Anfragen warten in der Reihenfolge ihres Eingangs. Hohe Last führt nicht zur Ablehnung.",
     "admin.rules.rule.agent_wait.title": "Grenze automatischer Wiederholungen",
-    "admin.rules.rule.agent_wait.body": "MCP und die Workflows warten eine Retry-After-Zeit von bis zu {wait} selbst ab, höchstens {attempts} Mal. Bei längerer Wartezeit geht die Antwort an den Aufrufer zurück.",
+    "admin.rules.rule.agent_wait.body": 'MCP und die Workflows wiederholen die Anfrage nach einer Retry-After-Wartezeit von bis zu {wait} automatisch, höchstens {attempts} Mal. Längere Wartezeiten werden an den Aufrufer zurückgegeben.',
     "admin.rules.rule.probe_block.title": "Sperre nach wiederholten Verstößen",
     "admin.rules.rule.probe_block.body": "{limit} Verstöße innerhalb von {window} sperren das Netz des Clients für {block}.",
     "admin.rules.rule.probe_escalation.title": "Wiederholte Sperren werden länger",
@@ -89,7 +89,7 @@ MESSAGES: dict[str, str] = {
     "admin.rules.rule.probe_network.title": "Die Sperre gilt für ein Netz",
     "admin.rules.rule.probe_network.body": "Eine Sperre gilt für das IPv4-/{ipv4}- oder IPv6-/{ipv6}-Netz des Clients. Ein Adresswechsel innerhalb dieses Netzes umgeht die Sperre nicht.",
     "admin.rules.rule.strike_scans.title": "Ein Scan ohne OpenCloud ist ein Verstoß",
-    "admin.rules.rule.strike_scans.body": "status.php antwortete nicht, lieferte kein JSON, nannte ein anderes Produkt, oder die Zeit lief ab. Derselbe Host erneut ist ein weiterer Verstoß; ein abgeschlossener Scan nie.",
+    "admin.rules.rule.strike_scans.body": 'Ein Verstoß wird gezählt, wenn status.php nicht antwortet, ungültiges JSON liefert, ein anderes Produkt nennt oder das Zeitlimit des Scans abläuft. Eine erneute Anfrage für denselben Host zählt als weiterer Verstoß. Ein abgeschlossener Scan zählt nicht.',
     "admin.rules.rule.strike_refusals.title": "Ein abgelehntes Ziel ist ein Verstoß",
     "admin.rules.rule.strike_refusals.body": "Eine Einreichung, die wegen ihres Ziels abgelehnt wird, zählt; ein Tippfehler oder ein nicht auflösbarer Name nicht:",
     "admin.rules.refusal.blocked": "eine Adresse, die dieses Deployment ausschließt",
@@ -99,7 +99,7 @@ MESSAGES: dict[str, str] = {
     "admin.rules.refusal.unstable": "ein Name, dessen Abfragen sich widersprechen",
     "admin.rules.refusal.wildcard_dns": "ein Wildcard- oder Rebinding-DNS-Name",
     "admin.rules.rule.private_addresses.title": "Nur öffentliche Adressen",
-    "admin.rules.rule.private_addresses.body": "Jede Adresse, auf die ein Name auflöst, muss öffentlich sein; eine private Antwort lehnt das Ziel ab. Über die privaten Bereiche hinaus werden auch diese abgelehnt:",
+    "admin.rules.rule.private_addresses.body": 'Jede aufgelöste Adresse muss eine öffentliche Unicast-Adresse sein. Schon eine einzige private Adresse führt zur Ablehnung. Auch diese Adressen werden abgelehnt:',
     "admin.rules.rule.internal_names.title": "Lokale Namen und Metadaten-Endpunkte",
     "admin.rules.rule.internal_names.body": "Nach Name wie nach Adresse abgelehnt:",
     "admin.rules.rule.wildcard_dns.title": "Wildcard- und Rebinding-DNS-Namen",
@@ -123,7 +123,7 @@ MESSAGES: dict[str, str] = {
     "admin.rules.rule.load.title": "Last pro Scan",
     "admin.rules.rule.load.body": "Höchstens {concurrency} gleichzeitige Anfragen mit jeweils {timeout} Zeit; ein gesamter Scan wird nach {job} abgebrochen.",
     "admin.rules.rule.purge_attempts.title": "Versuche mit dem Löschzugang",
-    "admin.rules.rule.purge_attempts.body": "{limit} falsche Zugangsdaten pro Client innerhalb von {window}, danach abgelehnt, bis das Fenster endet. Richtige werden nie gezählt.",
+    "admin.rules.rule.purge_attempts.body": 'Nach {limit} Versuchen mit falschen Zugangsdaten pro Client innerhalb von {window} werden weitere Versuche bis zum Ende dieses Zeitraums abgelehnt. Richtige Zugangsdaten werden nicht mitgezählt.',
     "admin.rules.rule.admin_refresh.title": "Aktualisierungsknöpfe",
     "admin.rules.rule.admin_refresh.body": "Jede Aktualisierung der Referenzdaten kann einmal alle {cooldown} ausgelöst werden.",
     "admin.docs.kicker": "Betreiberdokumentation",
@@ -154,10 +154,10 @@ MESSAGES: dict[str, str] = {
     "admin.state.advisories": "Sicherheitsmeldungen",
     "admin.state.checked": "geprüft {when}",
     "admin.state.checked.failed": (
-        "geprüft {when} - der letzte Versuch war nicht abrufbar"
+        'geprüft {when} - der letzte Abruf ist fehlgeschlagen'
     ),
     "admin.state.checked.rejected": (
-        "geprüft {when} - der letzte Versuch wurde von den Prüfungen abgelehnt"
+        'geprüft {when} - die zuletzt abgerufenen Daten wurden bei der Prüfung abgelehnt'
     ),
     "admin.state.refresh.off": "die tägliche Aktualisierung ist aus",
     "admin.state.ago.minutes": "vor {minutes} Min.",
@@ -176,9 +176,7 @@ MESSAGES: dict[str, str] = {
     "admin.surfaces.kicker": "Angriffsfläche",
     "admin.surfaces.heading": "Was diese Installation anbietet",
     "admin.surfaces.lede": (
-        "Die Einstellungen, mit denen dieser Prozess gestartet wurde - "
-        "dieselben, die auch das Diagnosedokument nennt. Keine davon ändert "
-        "sich ohne Neustart, deshalb wird keine davon abgefragt."
+        'Diese beim Start geladenen Einstellungen stehen auch im Diagnosedokument. Änderungen erfordern einen Neustart. Deshalb fragt diese Seite keine Aktualisierungen ab.'
     ),
     "admin.surfaces.on": "An",
     "admin.surfaces.off": "Aus",
@@ -190,16 +188,14 @@ MESSAGES: dict[str, str] = {
         "Kein Token erforderlich: Jeder Agent, der ihn erreicht, kann die "
         "Worker dieses Dienstes belegen."
     ),
-    "admin.surfaces.docs": "Browserbare API-Seiten unter /docs",
+    "admin.surfaces.docs": 'API-Dokumentation im Browser unter /docs',
     "admin.surfaces.docs.contract": (
-        "Aus verbirgt die Seiten, nicht den Vertrag: /openapi.json, "
-        "/arazzo.json und /.well-known/ai.json bleiben öffentlich."
+        'Bei ausgeschalteter Anzeige bleiben die Schnittstellenbeschreibungen /openapi.json, /arazzo.json und /.well-known/ai.json öffentlich.'
     ),
     "admin.surfaces.indexed": "Über Suchmaschinen auffindbar",
     "admin.surfaces.private": "Scans privater Netzwerkadressen",
     "admin.surfaces.private.found": (
-        "Erlaubt auf einer Installation, die indexiert werden möchte: Wer "
-        "diesen Dienst findet, kann ihn auf das Netz richten, in dem er steht."
+        'Private Ziele sind erlaubt, und die Suchmaschinenindexierung ist aktiviert. Wer diesen Dienst findet, kann Ziele in dessen internem Netzwerk einreichen.'
     ),
     "admin.surfaces.private.estate": (
         "Erlaubt - genau dafür ist eine Installation da, die das eigene Netz "
@@ -223,8 +219,8 @@ MESSAGES: dict[str, str] = {
     "admin.update.unknown": "Ob es ein neueres Release gibt, ließ sich nicht herausfinden.",
     "admin.update.off": "Die Update-Prüfung ist ausgeschaltet (COS_WEB_UPDATE_CHECK).",
     "admin.update.install": "{version} jetzt installieren",
-    "admin.update.downtime": "Das Bundle wird anhand seiner GitHub-Build-Attestierung geprüft. Anschließend starten Webdienst und Worker mit der neuen Version neu. Dabei ist der Dienst kurz nicht verfügbar; laufende Scans werden abgebrochen. Beim nächsten Container-Neustart wird wieder die Version aus dem Image verwendet.",
-    "admin.update.manual": "Installieren von hier ist ausgeschaltet (COS_WEB_ADMIN_UPDATE_DIR). Zieh das neue Image und erstelle die Container neu.",
+    "admin.update.downtime": 'Der Dienst prüft das Bundle anhand seiner GitHub-Build-Attestierung und startet anschließend Webdienst und Worker neu. Dabei ist der Dienst kurz nicht verfügbar; laufende Scans werden abgebrochen. Das Update bleibt bis zum nächsten Neustart der Container aktiv.',
+    "admin.update.manual": 'Die Installation über diese Seite ist ausgeschaltet (COS_WEB_ADMIN_UPDATE_DIR). Lade das neue Image herunter und erstelle die Container neu.',
     "admin.update.outcome.requested": "Geprüft und installiert. Der Dienst startet gleich neu - lade die Seite neu.",
     "admin.update.outcome.current": "Es gibt nichts Neueres zu installieren.",
     "admin.update.outcome.disabled": "Automatische Updates sind in dieser Installation nicht eingerichtet.",
@@ -232,10 +228,7 @@ MESSAGES: dict[str, str] = {
     "admin.exclusions.kicker": "Ausschlüsse",
     "admin.exclusions.heading": "Adressen, die dieser Dienst nicht scannt",
     "admin.exclusions.lede": (
-        "Ein Eintrag gilt ab der nächsten Anfrage, in jedem Prozess, ohne "
-        "Neustart - und ein Scan, der bereits in der Warteschlange steht, "
-        "wird abgelehnt statt ausgeführt. Nichts hier bringt diesen Dienst "
-        "dazu, etwas zu scannen: die Liste lehnt ausschließlich ab."
+        'Änderungen gelten ohne Neustart ab der nächsten Anfrage in jedem Prozess. Bereits eingereihte Scans ausgeschlossener Ziele werden ebenfalls abgelehnt. Diese Liste kann Scans ausschließlich sperren.'
     ),
     "admin.exclusions.add.label": "Hostname, .Suffix-Domain, Adresse oder CIDR-Bereich",
     "admin.exclusions.add.placeholder": "opencloud.example.com",
@@ -250,10 +243,7 @@ MESSAGES: dict[str, str] = {
     "admin.exclusions.source.configured": "Aus der Umgebung",
     "admin.exclusions.updated": "Zuletzt hier geändert am {when}.",
     "admin.exclusions.durability": (
-        "Hier hinzugefügte Einträge liegen in Redis, das diese Bereitstellung "
-        "jederzeit leeren kann. Was dauerhaft gelten soll, gehört in "
-        "COS_WEB_BLOCKED_TARGETS - dort kann es auf dieser Seite nicht "
-        "zurückgenommen werden."
+        'Hier hinzugefügte Einträge werden in Redis gespeichert und gehen verloren, wenn Redis geleert wird. Verwende COS_WEB_BLOCKED_TARGETS für dauerhafte Ausschlüsse. Diese Einträge lassen sich auf dieser Seite nicht entfernen.'
     ),
     "admin.exclusions.unreadable": (
         "Der Speicher hat nicht geantwortet, die Ausschlüsse lassen sich "
@@ -273,18 +263,14 @@ MESSAGES: dict[str, str] = {
         "COS_WEB_BLOCKED_TARGETS."
     ),
     "admin.blocklist.error.long": (
-        "Dieser Eintrag ist länger, als ein Hostname sein kann. Was damit "
-        "gemeint sein könnte, erreicht diesen Dienst ohnehin nie."
+        'Der Eintrag überschreitet die maximale Länge eines Hostnamens. Gib höchstens 253 Zeichen ein.'
     ),
     "admin.outcome.excluded": "Ausgeschlossen. Ab der nächsten Anfrage abgelehnt.",
     "admin.outcome.withdrawn": "Zurückgenommen. Kann wieder gescannt werden.",
     "admin.actions.kicker": "Referenzdaten",
     "admin.actions.heading": "Referenzdaten aktualisieren",
     "admin.actions.lede": (
-        "Dieselben zwei Aktualisierungen, die der Worker täglich ausführt, mit "
-        "denselben Regeln: Ein Zeitplan, dem eine Release-Linie fehlt, "
-        "wird abgelehnt, eine Advisory-Datenbank darf nur Einträge hinzugewinnen, und ein "
-        "fehlgeschlagener Abruf ändert nichts."
+        'Diese Aktionen starten die täglichen Aktualisierungen des Workers manuell. Der Zeitplan muss alle bekannten Release-Linien behalten. Aktualisierungen der Sicherheitsmeldungen dürfen nur Einträge ergänzen. Schlägt der Abruf fehl, bleiben die vorhandenen Daten unverändert.'
     ),
     "admin.actions.schedule": "Release-Zeitplan abgleichen",
     "admin.actions.schedule.hint": "Liest die veröffentlichte Lifecycle-Seite neu.",
@@ -303,12 +289,12 @@ MESSAGES: dict[str, str] = {
     "admin.probe.hint": "Ruft beide Quellen ab und prüft, ob die Daten für eine Aktualisierung geeignet sind. Die abgerufenen Daten werden nicht gespeichert.",
     "admin.probe.schedule": "Release-Zeitplan: {answer}",
     "admin.probe.advisories": "Sicherheitsmeldungen: {answer}",
-    "admin.probe.usable": "gelesen, eine Aktualisierung würde ihn übernehmen",
-    "admin.probe.rejected": "gelesen, aber die Prüfungen würden ihn ablehnen",
+    "admin.probe.usable": 'gelesen; die Daten würden bei einer Aktualisierung übernommen',
+    "admin.probe.rejected": 'gelesen; die Daten würden bei der Prüfung abgelehnt',
     "admin.probe.unreadable": "nicht lesbar - nicht erreichbar oder nicht mehr in der erwarteten Form",
     "admin.probe.disabled": "nicht geprüft - diese Aktualisierung ist abgeschaltet",
     "admin.search.kicker": "Suchindex",
-    "admin.search.heading": "Ist der ausgelieferte Index noch aktuell",
+    "admin.search.heading": 'Ist der ausgelieferte Index noch aktuell?',
     "admin.search.lede": "Der Suchindex wird beim Build erzeugt. Diese Ansicht vergleicht seine Seiten, Sprachen und Release-Version mit dem laufenden Dienst. Sie vergleicht keine vollständigen Seitentexte und ändert den Index nicht.",
     "admin.search.fresh": "Aktuell",
     "admin.search.stale": "Veraltet",
@@ -326,11 +312,7 @@ MESSAGES: dict[str, str] = {
     "admin.search.detail.changed": "{count} Seitentitel oder Kurzbeschreibungen haben sich seither geändert.",
     "admin.search.detail.unreadable": "Der Index konnte nicht gelesen werden.",
     "admin.search.remedy": (
-        "Ein veröffentlichtes Release liefert immer einen passend erzeugten "
-        "Index aus, dieser Build ist also kein Release wie veröffentlicht - "
-        "meist ein Image oder Bundle, das zwischen zwei Releases aus einem "
-        "Checkout gebaut wurde. Spiele ein veröffentlichtes Release ein "
-        "oder erzeuge den Index in diesem Checkout neu und baue neu:"
+        'Veröffentlichte Releases enthalten einen passenden Suchindex. Erzeuge bei einem eigenen Build den Index im Quellcode-Checkout neu und erstelle daraus die Bereitstellung erneut. Du kannst auch ein veröffentlichtes Release installieren:'
     ),
     "admin.search.remedy.commit": (
         "Von Hand muss nichts eingecheckt werden: Jeder Pull Request auf main "
@@ -340,9 +322,7 @@ MESSAGES: dict[str, str] = {
     "admin.audit.kicker": "Audit-Log",
     "admin.audit.heading": "Audit-Log",
     "admin.audit.lede": (
-        "Scan-Anfragen, Ablehnungen und ausgelöste Limits in Echtzeit. Das "
-        "Live-Verfolgen öffnet eine Verbindung; ohne Aufforderung wird "
-        "nichts übertragen."
+        'Verfolge Scan-Anfragen, Ablehnungen und ausgelöste Limits in Echtzeit. Wähle „Live verfolgen“, um die Verbindung zu öffnen und Einträge zu empfangen.'
     ),
     "admin.audit.privacy": "Client-Adressen erscheinen als gekürzte HMAC-Fingerabdrücke. Das dafür verwendete Salt bleibt in diesem Prozess. Diese Ansicht zeigt vorhandene Protokolleinträge und kann daraus keine Client-Adressen ermitteln.",
     "admin.audit.replicas": "Es ist keine Audit-Datei konfiguriert. Diese Einträge stammen aus dem Speicher dieses Prozesses. Bei mehreren Replikaten zeigt die Ansicht nur einen Teil des Audit-Logs.",
@@ -351,9 +331,7 @@ MESSAGES: dict[str, str] = {
     "admin.audit.clear": "Leeren",
     "admin.audit.empty": "Noch keine Einträge.",
     "admin.audit.closed": (
-        "Die Verbindung hat ihre Grenze von {minutes} Minuten erreicht und "
-        "wurde vom Dienst geschlossen. Bis dahin ist nichts verloren gegangen; "
-        "„Live verfolgen“ öffnet eine neue."
+        'Der Dienst hat die Verbindung nach {minutes} Minuten geschlossen. Wähle „Live verfolgen“, um sie erneut zu öffnen.'
     ),
     "admin.audit.disabled": (
         "Diese Installation führt kein Audit-Log, es gibt also nichts live zu "
@@ -488,9 +466,9 @@ MESSAGES: dict[str, str] = {
     "index.waivers.summary": "Bestimmte Prüfungen ignorieren (optional)",
     "index.waivers.selected": "Bestimmte Prüfungen ignorieren ({count} ausgewählt)",
     "index.remember.summary": "Einstellungen deines letzten Scans in diesem Browser: {track} · {format} · {waivers}.",
-    "index.remember.waivers.none": "keine ausgesetzten Prüfungen",
-    "index.remember.waivers.one": "1 ausgesetzte Prüfung",
-    "index.remember.waivers.many": "{count} ausgesetzte Prüfungen",
+    "index.remember.waivers.none": 'keine ausgenommenen Prüfungen',
+    "index.remember.waivers.one": '1 ausgenommene Prüfung',
+    "index.remember.waivers.many": '{count} ausgenommene Prüfungen',
     "index.remember.apply": "Wieder verwenden",
     "index.remember.forget": "Vergessen",
     "index.waivers.hint": "Ausgenommene Befunde bleiben im Bericht sichtbar, senken aber die Bewertung nicht. Ausnahmen gelten nur für fehlgeschlagene Prüfungen.",
@@ -774,7 +752,7 @@ MESSAGES: dict[str, str] = {
     "api.limits.cooldown": "einer Wartezeit von {minutes} Minute(n) zwischen Scans desselben Ziels",
     "api.limits.no_cooldown": "keiner Wartezeit zwischen Scans desselben Ziels",
     "api.limits.daily": "Höchstens {count} Scans pro Netz am Tag.",
-    "api.limits.probe": "Ein Netz, dessen Scans immer wieder keine OpenCloud finden, wird eine Weile pausiert.",
+    "api.limits.probe": 'Scans aus einem Netz, dessen Anfragen wiederholt keine OpenCloud-Instanz erreichen, werden vorübergehend gesperrt.',
     "api.limits.none": "Dieses Deployment setzt kein Ratenlimit.",
     "api.limits.self_host": "Du kannst den Scanner auch lokal ausführen und damit unabhängig von diesen Limits nutzen: <a href=\"{project}\" rel=\"noopener noreferrer\">Quellcode auf GitHub</a>.",
     "api.schema.kicker": "Das Schema",
@@ -1122,12 +1100,10 @@ MESSAGES: dict[str, str] = {
     ),
     "compare.upload.source.kicker": "Quelle des früheren Berichts",
     "compare.upload.source.json": (
-        "Die frühere Seite stammt aus einem hochgeladenen JSON-Bericht. Sie hat "
-        "hier keine Ergebnisseite - die Datei wurde gelesen und verworfen."
+        'Das frühere Ergebnis stammt aus einem hochgeladenen JSON-Bericht. Es hat hier keine eigene Ergebnisseite; die Datei wurde gelesen und verworfen.'
     ),
     "compare.upload.source.csv": (
-        "Die frühere Seite stammt aus einem hochgeladenen CSV-Bericht. Sie hat "
-        "hier keine Ergebnisseite - die Datei wurde gelesen und verworfen."
+        'Das frühere Ergebnis stammt aus einem hochgeladenen CSV-Bericht. Es hat hier keine eigene Ergebnisseite; die Datei wurde gelesen und verworfen.'
     ),
     "compare.upload.source.dropped": "{count} Einträge mit unbekannten Befundkennungen wurden beim Vergleich ausgelassen.",
     "compare.upload.source.missing.httpsEnforced": (
@@ -1187,7 +1163,7 @@ MESSAGES: dict[str, str] = {
         "Ergebnisseiten, UUIDs oder übermittelte Adressen."
     ),
     "search.label": "Dokumentation durchsuchen",
-    "search.placeholder": "TLS, Docker, Waiver...",
+    "search.placeholder": 'TLS, Docker, Ausnahmen...',
     "search.submit": "Suchen",
     "search.scope.operator": "Betriebsbereich",
     "search.status.idle": "Gib einen Suchbegriff ein.",
@@ -1393,9 +1369,9 @@ MESSAGES: dict[str, str] = {
     "result.facts.http3.value": "Über UDP {ports} angekündigt - prüfe, ob deine Firewall diesen Verkehr bewusst zulässt (nicht bewertet)",
     "result.facts.http3.noport": "Über UDP angekündigt - prüfe, ob deine Firewall diesen Verkehr bewusst zulässt (nicht bewertet)",
     "result.facts.upgrade_path": "Update-Pfad",
-    "result.facts.upgrade_path.complete": "{target} behebt alle bekannten Sicherheitsmeldungen",
-    "result.facts.upgrade_path.partial": "{target} lässt {open} noch offen; {safe} ist die erste Version, die alle behebt",
-    "result.facts.upgrade_path.unfixed": "{target} lässt {open} noch offen; noch keine veröffentlichte Version behebt alle offenen Meldungen",
+    "result.facts.upgrade_path.complete": '{target} behebt alle bekannten Schwachstellen',
+    "result.facts.upgrade_path.partial": '{target} lässt {open} Schwachstellen offen; {safe} ist die erste Version, die alle behebt',
+    "result.facts.upgrade_path.unfixed": '{target} lässt {open} Schwachstellen offen; noch keine veröffentlichte Version behebt sie alle',
     "result.facts.office": "Office",
     "result.facts.calendar": "Kalender",
     "result.facts.calendar.detected": "Ein Dienst antwortet am CalDAV-Pfad",
@@ -1444,16 +1420,14 @@ MESSAGES: dict[str, str] = {
     "result.rehearsal.fixes": "Behebt",
     "result.rehearsal.still": "Weiterhin betroffen:",
     "result.rehearsal.introduces": "Neu betroffen:",
-    "result.rehearsal.clean": "Behebt alle Sicherheitsmeldungen, die diese Version betreffen.",
-    "result.rehearsal.nothing": "Behebt keine Sicherheitsmeldung, die diese Version betrifft.",
+    "result.rehearsal.clean": 'Behebt alle bekannten Schwachstellen dieser Version.',
+    "result.rehearsal.nothing": 'Behebt keine der bekannten Schwachstellen dieser Version.',
     "result.rehearsal.capped": (
         "Die Version allein würde {label} erreichen; die Befunde auf dieser "
         "Seite halten die Bewertung auf ihrem aktuellen Stand."
     ),
     "result.rehearsal.note": (
-        "Diese Simulation nutzt nur den Releaseplan und die Sicherheitsmeldungs-"
-        "datenbank, die diesem Scan vorlag. Später veröffentlichte Versionen "
-        "oder Meldungen sind nicht enthalten."
+        'Diese Simulation nutzt nur den Release-Zeitplan und die Schwachstellendatenbank, die diesem Scan vorlagen. Später veröffentlichte Versionen oder Sicherheitsmeldungen sind nicht enthalten.'
     ),
     "result.eol.alert": (
         "Dieses Release erhält keine Sicherheitsfixes mehr. Nichts anderes auf "
@@ -1587,11 +1561,7 @@ MESSAGES: dict[str, str] = {
     "result.scope.heading": "Was dieser Scan nicht sehen kann",
     "result.scope.body": "Der Scan prüft öffentlich zugängliche Informationen. <strong>Keine Befunde bedeuten nicht, dass die Instanz sicher ist</strong>, auch bei der besten Note. Nicht geprüft werden Betriebssystem und Pakete, Container-Laufzeit, Reverse-Proxy-Konfiguration, Backups und Wiederherstellung, Speicher, Geheimnisse und Schlüsselverwaltung, Konten, Passwörter, Multi-Faktor-Anmeldung, bestehende Freigabeberechtigungen und die Software-Lieferkette. Auch Daten, die erst nach der Anmeldung zugänglich sind, liegen außerhalb des Prüfumfangs. Prüfe diese beiden Bereiche gesondert:",
     "result.scope.audit": (
-        "<strong>Audit-Logging.</strong> Der Audit-Dienst von OpenCloud "
-        "nutzt nur den internen Event-Bus – er veröffentlicht keinen "
-        "Endpunkt und erscheint in keinem nicht angemeldeten Dokument -, sodass "
-        "von außen überhaupt nicht festgestellt werden kann, ob er läuft. Er "
-        "wird nicht geprüft."
+        '<strong>Audit-Logging.</strong> Der Audit-Dienst von OpenCloud nutzt nur den internen Event-Bus. Er veröffentlicht keinen Endpunkt und wird in keinem ohne Anmeldung zugänglichen Dokument genannt. Von außen lässt sich deshalb nicht feststellen, ob er läuft. Der Scanner prüft ihn nicht.'
     ),
     "result.scope.integrations": (
         "<strong>Ob eine Office- oder Kalender-Integration <em>korrekt</em> "
@@ -1616,7 +1586,7 @@ MESSAGES: dict[str, str] = {
     "result.tls.chain.trusted": "Vertrauenswürdig",
     "result.tls.chain.not_established": "Nicht hergestellt",
     "result.tls.chain.not_trusted": "Nicht vertrauenswürdig",
-    "result.tls.chain.incomplete_note": "- kein Pfad zu einer öffentlichen Wurzel",
+    "result.tls.chain.incomplete_note": '- kein Pfad zu einem öffentlich vertrauenswürdigen Wurzelzertifikat',
     "result.tls.issued_to": "Ausgestellt für",
     "result.tls.unnamed": "unbenannt",
     "result.tls.issued_by": "Ausgestellt von",
@@ -1645,9 +1615,7 @@ MESSAGES: dict[str, str] = {
     "result.export.pdf.hint": "Für ein Ticket, eine Überprüfung oder einen Ausdruck.",
     "result.export.html": "Bericht herunterladen",
     "result.export.html.hint": (
-        "Eine Datei, die noch lesbar ist, wenn dieser Link abgelaufen ist. "
-        "Sie öffnet offline, stellt keine Netzwerkanfrage und aktualisiert "
-        "sich nicht."
+        'Eine Datei, die auch nach Ablauf dieses Links lesbar bleibt. Du kannst sie offline öffnen. Sie stellt keine Netzwerkanfragen und aktualisiert sich nicht.'
     ),
     "result.export.remediation.md": "Behebungspaket (Markdown)",
     "result.export.remediation.md.hint": (
@@ -1688,8 +1656,7 @@ MESSAGES: dict[str, str] = {
     ),
     "result.share.summary": "Zusammenfassung kopieren",
     "result.share.summary.hint": (
-        "Die Befunde als Text, ohne Link darin. Das Sicherere zum Einfügen in "
-        "einen Chat-Kanal."
+        'Die Befunde als Text ohne Berichtslink. So kannst du die Zusammenfassung in einem Chat teilen, ohne Zugriff auf den vollständigen Bericht zu gewähren.'
     ),
     "result.share.summary.body": (
         "OpenCloud-Sicherheitsbericht - {domain}\n"
@@ -1727,7 +1694,7 @@ MESSAGES: dict[str, str] = {
     "tls.fact.expiry.remaining": "noch {days} Tag(e)",
     "tls.fact.chain": "Kette",
     "tls.fact.chain.incomplete": "Unvollständig",
-    "tls.fact.chain.incomplete.detail": "kein Pfad zu einer öffentlichen Wurzel",
+    "tls.fact.chain.incomplete.detail": 'kein Pfad zu einem öffentlich vertrauenswürdigen Wurzelzertifikat',
     "tls.fact.chain.untrusted": "Nicht vertrauenswürdig",
     "tls.fact.chain.untrusted.detail": (
         "selbstsigniert, oder eine unbekannte Zertifizierungsstelle"

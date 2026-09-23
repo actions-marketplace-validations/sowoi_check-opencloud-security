@@ -289,7 +289,7 @@ entender que alguien podría.</p>
 <tr>
 <td><code>COS_WEB_REDIS_URL</code></td>
 <td><code>redis://127.0.0.1:6379/0</code></td>
-<td>Dónde vive el estado efímero. <code>memory://</code> funciona sin Redis, para una evaluación en un solo proceso. Incluya la contraseña cuando Redis la exija: <code>redis://:PASSWORD@redis:6379/0</code></td>
+<td>Dónde se guarda el estado temporal. <code>memory://</code> funciona sin Redis, para una evaluación en un solo proceso. Incluya la contraseña cuando Redis la exija: <code>redis://:PASSWORD@redis:6379/0</code></td>
 </tr>
 <tr>
 <td><code>COS_WEB_RESULT_TTL</code></td>
@@ -689,16 +689,14 @@ se comporta exactamente igual que antes. <code>/healthz</code> indica la fecha d
 calendario y la hora de la última lectura correcta, y
 <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0016-the-release-schedule-refreshes-itself.md">ADR 0016</a> recoge el
 razonamiento.</p>
-<p><code>COS_WEB_ADVISORY_REFRESH</code> hace lo mismo con la otra mitad de lo que compone
-una nota, y es más importante. La base de datos de avisos decide si una
-instancia <em>se notifica como vulnerable</em>, así que una base de datos que no ha
-oído hablar del aviso del mes pasado no solo califica con generosidad: le dice
-al visitante que una instancia vulnerable está bien, y no tiene forma de
-distinguir esa respuesta de una real. Por eso el worker pregunta al canal una
-vez al día, también al arrancar, y los trabajos de análisis evalúan según lo
-último que aceptó.</p>
-<p>Las reglas son la imagen especular de las del calendario, porque esto puede
-fallar en ambos sentidos. Una actualización <strong>solo añade</strong>: la respuesta se
+<p><code>COS_WEB_ADVISORY_REFRESH</code> actualiza la base de datos de avisos. Estos datos
+determinan si una instancia <em>se notifica como vulnerable</em>. Si falta un aviso
+reciente, el servicio puede presentar una instancia vulnerable como segura
+sin que el visitante sepa que el resultado es incorrecto. Por eso el worker
+consulta la fuente una vez al día y al arrancar. Los trabajos de análisis
+usan los últimos datos aceptados.</p>
+<p>Las reglas impiden tanto la pérdida de avisos como la incorporación de avisos
+incorrectos. Una actualización <strong>solo añade</strong>: la respuesta se
 combina con la base de datos que ya tiene el despliegue, así que un canal que
 devuelve una lista vacía no cambia nada y una entrada escrita a mano se
 conserva. Nunca se cree nada <strong>sin límites</strong> (un aviso que no indica versiones
@@ -891,7 +889,7 @@ tabla. Ahora se escriben ambos como filas, pero un archivo descargado antes de
 eso no dice nada de ellos, y el silencio no equivale a "no". Esas mediciones se
 neutralizan en <em>ambos</em> documentos antes de la comparación, y la página indica
 qué ha dejado fuera. JSON es el formato que se recupera sin pérdidas; CSV es
-una hoja de cálculo que casualmente se puede volver a leer.</p>
+una tabla de hallazgos que también se puede importar, con esas limitaciones.</p>
 <p><strong>El archivo nunca se guarda. La comparación sí, durante cinco minutos.</strong> La
 subida se lee una vez en memoria y no se escribe en ningún sitio. Lo que
 sobrevive es la comparación obtenida de ella, guardada con un uuid4 nuevo en su
@@ -971,7 +969,7 @@ destino se comprueba antes de conectarse a nada:</p>
   rechaza el destino, lo que hace inútil el truco de los registros múltiples;</li>
 <li><code>localhost</code>, <code>*.internal</code>, <code>*.local</code> y los nombres de metadatos de la nube se
   rechazan también por su nombre, porque un resolvedor que responde a esos
-  nombres con una dirección pública está roto o miente;</li>
+  nombres con una dirección pública ofrece una respuesta no fiable;</li>
 <li><code>169.254.169.254</code>, <code>100.100.100.200</code> y <code>fd00:ec2::254</code> se rechazan
   explícitamente. La exclusión de enlace local ya cubre la primera, pero
   nombrarlas hace que el rechazo sea legible y sobreviva a una futura
@@ -1043,8 +1041,8 @@ retira entradas, y:</p>
 <li>lo que declara <code>COS_WEB_BLOCKED_TARGETS</code> <strong>no se puede retirar desde ahí</strong>.
   Esas entradas se muestran sin ningún control al lado, y un intento de
   eliminar una se rechaza con una indicación hacia el entorno: su archivo
-  compose sigue siendo la verdad sobre lo que declara;</li>
-<li>las entradas añadidas en el área viven en <strong>Redis</strong>, así que son tan
+  compose conserva el control de esas exclusiones;</li>
+<li>las entradas añadidas en el área se guardan en <strong>Redis</strong>, así que son tan
   duraderas como su Redis. Todo lo que deba sobrevivir a un vaciado pertenece
   a la variable de entorno;</li>
 <li>una entrada tiene como máximo <strong>253 caracteres</strong>, la longitud máxima de un
@@ -1065,7 +1063,7 @@ retira entradas, y:</p>
 las cuatro propiedades que lo hicieron aceptable allí, y
 <a href="https://github.com/sowoi/check-opencloud-security/blob/main/ADMIN.md#the-operators-area-at-admin">ADMIN.md</a> para el área en sí.</p>
 <h2 id="rate-limiting">Limitación de frecuencia</h2>
-<p>Todos los límites viven en Redis y caducan por sí solos:</p>
+<p>Los contadores de todos los límites se guardan en Redis y caducan automáticamente:</p>
 <ul>
 <li><strong>por cliente</strong>: <code>COS_WEB_IP_RATE_LIMIT</code> análisis por
   <code>COS_WEB_IP_RATE_WINDOW</code>, y como máximo <code>COS_WEB_DAILY_SCAN_LIMIT</code> al día.
@@ -1749,7 +1747,7 @@ persona.</p>
 (<code>max-age=3600</code>). No nombran ninguna instancia, no llevan uuid y no aceptan
 parámetros (la condición que fija la
 <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0031-a-response-is-uncacheable-until-a-route-opts-in.md">ADR 0031</a>
-para admitir caché), y nunca deben aprender a aceptarlos: un canal filtrado por
+para admitir caché), y no se debe añadir esa posibilidad: un canal filtrado por
 nombre de host sería una pregunta sobre la instancia de alguien. Los
 identificadores de las entradas son URN del aviso o de la línea de versiones y
 no URL de este despliegue, así que el historial de un lector sobrevive a que el

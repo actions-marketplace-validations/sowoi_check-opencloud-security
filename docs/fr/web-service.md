@@ -292,7 +292,7 @@ Chaque paramètre est une variable d’environnement, lue une fois au démarrage
 | `COS_WEB_AUDIT_LOG` | `false` | Écrire un enregistrement d’audit pour chaque demande d’analyse, refus et limite déclenchée |
 | `COS_WEB_AUDIT_LOG_TARGETS` | `false` | Enregistrer le nom d’hôte de la cible en clair plutôt que sous forme d’empreinte. Déploiements sur site uniquement |
 | `COS_WEB_AUDIT_SALT` | *(aléatoire par processus)* | Sel des empreintes d’audit. En définir un permet de corréler les enregistrements après un redémarrage ; le changer y met fin |
-| `COS_WEB_AUDIT_LOG_FILE` | *(la sortie du processus)* | Écrire plutôt les enregistrements d’audit dans ce fichier, sur un montage qui survit au conteneur. Lisible uniquement par son propriétaire, et le journal ordinaire n’en contient alors aucune copie. Un chemin impossible à écrire empêche le démarrage |
+| `COS_WEB_AUDIT_LOG_FILE` | *(la sortie du processus)* | Écrire plutôt les enregistrements d’audit dans ce fichier, sur un volume conservé après la suppression du conteneur. Lisible uniquement par son propriétaire, et le journal ordinaire n’en contient alors aucune copie. Un chemin impossible à écrire empêche le démarrage |
 | `COS_WEB_AUDIT_LOG_MAX_BYTES` | `10000000` | Taille à partir de laquelle ce fichier est renouvelé. `0` ne le renouvelle jamais |
 | `COS_WEB_AUDIT_LOG_BACKUPS` | `5` | Générations renouvelées conservées à côté. Avec la taille ci-dessus, cela fixe l’espace maximal occupé par la piste |
 | `COS_WEB_AUDIT_LOG_ROTATION` | `service` | Qui renouvelle ce fichier : `service` (ce processus, selon la taille) ou `external` (logrotate sur l’hôte ; ce processus rouvre seulement le fichier remplacé). Une valeur inconnue empêche le démarrage |
@@ -484,7 +484,7 @@ Une clé non nommée à cet endroit n’atteint rien en aval.
 | Imbrication JSON | 20 niveaux |
 | Entrées par bloc, caractères par chaîne | 500 et 300 ; un bloc comportant davantage d’entrées est refusé plutôt que lu en partie |
 | Identifiants de constats | écartés s’ils ne sont pas écrits comme ce scanner écrit les siens, et le nombre d’éléments illisibles est affiché |
-| Limitation du débit | un compteur propre, avec les mêmes valeurs que la limite par client - une analyse de fichier coûte du travail à ce service et rien à l’instance de personne |
+| Limitation du débit | un compteur propre, avec les mêmes valeurs que la limite par client - une analyse de fichier utilise les ressources de ce service sans contacter d’instance |
 | POST intersite | refusé avant le limiteur et avant l’analyse du fichier |
 | Réseau soumis à un blocage des sondes | refusé avant les deux, et avant la lecture du fichier : le blocage est un jugement sur le client, pas sur un point de terminaison |
 
@@ -1192,8 +1192,8 @@ pour un uuid ou un format inconnus.
 
 ### `GET /api/scans/{uuid}/badge.svg` {#get-apiscansuuidbadgesvg}
 
-La note sous forme de petit SVG, à coller là où une image parle plus vite qu’un
-lien.
+La note sous forme de badge SVG, à intégrer dans une page pour afficher
+le résultat sans ouvrir le rapport.
 
 ```bash
 curl -sS http://127.0.0.1:8811/api/scans/0f4a1f22-.../badge.svg

@@ -179,7 +179,7 @@ por el mismo canal sin autenticar y puede falsificarse con ella.</p>
 DNSSEC activado, y lee si el resolvedor validó la respuesta, si la respuesta
 llevaba firmas y si el resolvedor entendió la pregunta.</p>
 <p>Esta última parte explica por qué a veces el hallazgo simplemente no aparece.
-Un resolvedor que no habla DNSSEC produce exactamente el mismo silencio que una
+Un resolvedor que no admite DNSSEC produce exactamente el mismo silencio que una
 zona sin firmar, y notificarlo haría fallar todos los análisis ejecutados
 detrás de un resolvedor así por un motivo que no tiene nada que ver con la
 instancia. Por tanto:</p>
@@ -204,7 +204,7 @@ instancia. Por tanto:</p>
 <td><strong>falla</strong>: la zona no está firmada</td>
 </tr>
 <tr>
-<td>No habla DNSSEC o no respondió</td>
+<td>No admite DNSSEC o no respondió</td>
 <td>no aparece en el resultado</td>
 </tr>
 </tbody>

@@ -42,7 +42,7 @@
 <h3 id="updating">Aktualisieren</h3>
 <pre><code class="language-shell">check-opencloud-security --upgrade-self
 </code></pre>
-<p>Der Befehl erkennt den Installationsweg und wählt den passenden Paketmanager. <code>--upgrade-self=check</code> zeigt den vorgesehenen Befehl nur an. Einen Git-Checkout aktualisiere selbst mit <code>git pull</code>.</p>
+<p>Der Befehl erkennt den Installationsweg und wählt den passenden Paketmanager. <code>--upgrade-self=check</code> zeigt den vorgesehenen Befehl nur an. Aktualisiere einen Git-Checkout selbst mit <code>git pull</code>.</p>
 <p>Die Paketmanager kannst du auch direkt aufrufen:</p>
 <pre><code class="language-shell">pipx upgrade check-opencloud-security          # pipx
 pipx upgrade-all                               # ... or every pipx tool at once
@@ -52,7 +52,7 @@ uv tool upgrade --all                          # ... or every uv tool at once
 
 pip install --upgrade check-opencloud-security # pip
 </code></pre>
-<p><code>check-opencloud-security --version</code> zeigt den installierten Stand, <a href="https://github.com/sowoi/check-opencloud-security/blob/main/CHANGELOG.md">CHANGELOG.md</a> die Änderungen. Eine Installation aus einer Git-URL erneuere sie mit <code>--force</code> bei pipx/uv oder <code>--upgrade --force-reinstall</code> bei pip.</p>
+<p><code>check-opencloud-security --version</code> zeigt den installierten Stand, <a href="https://github.com/sowoi/check-opencloud-security/blob/main/CHANGELOG.md">CHANGELOG.md</a> die Änderungen. Erneuere eine Installation aus einer Git-URL mit <code>--force</code> bei pipx/uv oder <code>--upgrade --force-reinstall</code> bei pip.</p>
 <p>Halte das Paket aktuell: Es enthält auch den Release-Zeitplan und die Referenzdaten für die <a href="/documentation/reference#end-of-life-detection">End-of-Life-Erkennung</a>.</p>
 <p>Zum Entfernen verwende <code>pipx uninstall check-opencloud-security</code>, <code>uv tool uninstall check-opencloud-security</code> oder <code>pip uninstall check-opencloud-security</code>.</p>
 <p><strong>Installation aus einem Checkout:</strong></p>
@@ -91,7 +91,7 @@ uv tool install --with argcomplete check-opencloud-security --force
 <pre><code class="language-shell">eval &quot;$(register-python-argcomplete check-opencloud-security)&quot;
 eval &quot;$(register-python-argcomplete check-opencloud-scanner)&quot;
 </code></pre>
-<p>Unter <strong>zsh</strong> verwende dieselben Zeilen in <code>~/.zshrc</code> und führen davor einmal <code>autoload -U bashcompinit &amp;&amp; bashcompinit</code> aus. Unter <strong>fish</strong> schreibe die Ausgabe in eine Completion-Datei:</p>
+<p>Unter <strong>zsh</strong> verwende dieselben Zeilen in <code>~/.zshrc</code> und führe davor einmal <code>autoload -U bashcompinit &amp;&amp; bashcompinit</code> aus. Unter <strong>fish</strong> schreibe die Ausgabe in eine Completion-Datei:</p>
 <pre><code class="language-shell">register-python-argcomplete --shell fish check-opencloud-security \
   &gt; ~/.config/fish/completions/check-opencloud-security.fish
 </code></pre>

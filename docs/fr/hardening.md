@@ -55,8 +55,8 @@ Deux des lignes ci-dessus échappent à toute action :
 Ces deux mesures restent enregistrées dans le document de résultat, car
 l’observation est réelle, mais elles sont **exclues de la ligne « Missing
 hardening », de la métrique `hardenings_missing` et du webhook**. Un
-avertissement que personne ne peut jamais lever n’est que du bruit, et le bruit
-fait ignorer les vrais constats. `--debug` les liste toujours, avec
+avertissement qu’aucun réglage ne permet de corriger risque de détourner
+l’attention des problèmes qui peuvent être corrigés. `--debug` les liste toujours, avec
 l’explication.
 
 `cspWithoutUnsafeInline` est une version atténuée du même problème : la **CSP

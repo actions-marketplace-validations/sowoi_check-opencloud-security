@@ -101,7 +101,7 @@ Die Messwerte entsprechen den Nagios-Performancedaten mit zwei Anpassungen:
 | `update_available` | `1` bei verfügbarer neuerer Version; fehlt bei deaktivierter Update-Prüfung |
 | `support_days_left` | Tage bis zum Supportende; danach negativ |
 | `cert_days_left` | Tage bis zum Zertifikatsablauf; danach negativ |
-| `upgrade_path_complete` | `1`, wenn das empfohlene Update alle bekannten Sicherheitshinweise behebt, sonst `0`; fehlt ohne Hinweise |
+| `upgrade_path_complete` | `1`, wenn das empfohlene Update alle bekannten Schwachstellen behebt, sonst `0`; fehlt ohne Hinweise |
 | `execution_time` | Scandauer in Sekunden |
 
 Nicht ermittelte Werte werden weggelassen und nicht als Null ausgegeben.

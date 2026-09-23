@@ -37,7 +37,7 @@ sont chacun couverts par leur propre indicateur <code>enforced_for</code>. Ce co
 réussit que lorsque <strong>tous</strong> exigent un mot de passe - si ne serait-ce qu'un
 type de partage peut être créé sans, quiconque détient cette URL dispose des
 données qu'elle expose, indéfiniment, sans le moindre identifiant.</p>
-<p><strong>Il s'agit d'un échec de peu plutôt que d'un tout ou rien.</strong> OpenCloud impose
+<p><strong>L’échec peut concerner certains types de liens seulement.</strong> OpenCloud impose
 un mot de passe sur les liens en lecture seule par défaut, mais pas sur ceux en
 écriture : la raison habituelle de cet échec est donc que les liens en dépôt
 seul ou en modification sont restés à leur valeur par défaut. Un lien en
@@ -60,8 +60,8 @@ toutes les instances renvoient la même valeur, quelle que soit leur
 configuration. <strong>Ce contrôle ne déclenche jamais d'alerte</strong>, précisément pour
 cette raison : il est exclu de la ligne « Missing hardening », de la métrique
 <code>hardenings_missing</code> et de la charge utile du webhook, car un avertissement que
-personne ne peut jamais lever est du bruit, et c'est par le bruit que les
-constats réels finissent ignorés - voir <a href="/documentation/hardening#measures-that-are-not-settings">Mesures qui ne sont pas des
+aucun réglage ne permet de corriger risque de détourner l’attention des
+problèmes qui peuvent être corrigés - voir <a href="/documentation/hardening#measures-that-are-not-settings">Mesures qui ne sont pas des
 réglages</a>. <code>--debug</code> continue de
 l'afficher, avec l'explication.</p>
 <p>Il est conservé dans le catalogue plutôt que supprimé, afin qu'une future
@@ -76,10 +76,9 @@ régie par un élément entièrement extérieur à OpenCloud - par exemple une r
 de proxy inverse ou un processus externe qui révoque les partages selon un
 calendrier.</p>
 <h2 id="what-else-is-in-that-document-and-why-none-of-it-is-checked">Ce que contient encore ce document, et pourquoi rien d'autre n'est contrôlé</h2>
-<p>Le document de capacités décrit bien d'autres aspects du partage que ce que
-lisent ces deux contrôles, et il vaut la peine de consigner pourquoi le reste ne
-mérite pas d'indicateur - sans quoi quelqu'un refera ce raisonnement chaque
-année. Vérifié par rapport à
+<p>Le document de capacités décrit d’autres aspects du partage. Le tableau
+ci-dessous explique pourquoi ils ne font pas l’objet de contrôles. Ces
+explications ont été vérifiées dans
 <code>services/frontend/pkg/revaconfig/config.go</code> dans
 <a href="https://github.com/opencloud-eu/opencloud">opencloud-eu/opencloud</a> :</p>
 <table>
@@ -104,7 +103,7 @@ année. Vérifié par rapport à
 </tr>
 <tr>
 <td><code>public.default_permissions</code></td>
-<td>Réellement configurable (<code>FRONTEND_DEFAULT_LINK_PERMISSIONS</code> : <code>0</code> interne, <code>1</code> visiteur public, <code>1</code> par défaut). Pas <em>encore</em> contrôlée, car toutes les instances par défaut se mettraient à échouer, et savoir si ce compromis en vaut la peine relève d'un jugement sur le bruit plutôt que sur les faits.</td>
+<td>Réellement configurable (<code>FRONTEND_DEFAULT_LINK_PERMISSIONS</code> : <code>0</code> interne, <code>1</code> visiteur public, <code>1</code> par défaut). Pas encore contrôlée : toutes les instances avec la configuration par défaut échoueraient. Il reste à déterminer si cette alerte aiderait les exploitants.</td>
 </tr>
 <tr>
 <td><code>deny_access</code>, <code>search_min_length</code></td>

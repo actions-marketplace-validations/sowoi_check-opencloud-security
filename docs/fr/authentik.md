@@ -26,7 +26,7 @@ ni les contrôles SSRF, ni la file d’attente.
   * [Autoriser une personne à utiliser le point de terminaison](#adding-somebody-who-may-use-the-endpoint)
     * [Un groupe, et l’association qui lui donne un sens](#a-group-and-the-binding-that-makes-it-mean-something)
     * [La personne](#the-person)
-    * [L’agent qui n’est personne](#the-agent-that-is-nobody)
+    * [L’agent avec un compte de service](#the-agent-that-is-nobody)
   * [Obtenir un jeton](#getting-a-token)
     * [En tant que compte de service](#as-a-service-account)
     * [Sans nommer de compte](#without-naming-an-account-at-all)
@@ -130,7 +130,7 @@ Remarques sur la pile, et sur ses différences avec celle d’origine :
   sa file de tâches dans PostgreSQL depuis la version 2025.10. Le Redis du
   scanner est un cache sans persistance avec une politique d’éviction : ce
   serait le mauvais choix même si Authentik en avait besoin.
-- **PostgreSQL est `postgres:18.6-alpine`**, épinglé plutôt que flottant, et
+- **PostgreSQL est `postgres:18.6-alpine`**, fixé à cette version, et
   séparé de tout ce que vous exécutez par ailleurs. Authentik lui-même n’a
   **pas d’image Alpine** : `ghcr.io/goauthentik/server` n’est publié qu’en
   version basée sur Debian, sans variante possible.
@@ -454,7 +454,7 @@ publique d’Authentik - `https://sso.example.com` suivi de ce chemin - et vous
 paramètres de l’utilisateur. À la première connexion, `akadmin` doit
 enregistrer un second facteur comme tout le monde.
 
-**2. Créez la personne.** **Directory → Users → New User → Internal User**. Le
+**2. Créez le compte utilisateur.** **Directory → Users → New User → Internal User**. Le
 nom d’utilisateur doit être écrit exactement comme dans `COS_WEB_ADMIN_USERS` :
 le service compare le nom transmis, pas l’e-mail ni le nom affiché. Donnez-lui
 une adresse e-mail, pour qu’une récupération de mot de passe puisse aboutir
@@ -621,7 +621,7 @@ un lors de sa première connexion - voir
 [un second facteur pour tout le monde](#a-second-factor-for-everybody) -, il n’y a
 donc rien à activer pour elle.
 
-### L’agent qui n’est personne {#the-agent-that-is-nobody}
+### L’agent avec un compte de service {#the-agent-that-is-nobody}
 
 Une tâche cron, un pipeline CI ou un assistant exécuté sur un serveur n’a pas de
 navigateur par lequel passer, et ne devrait pas détenir le mot de passe d’une
@@ -630,9 +630,9 @@ sans connexion interactive.
 
 **Directory → Users → New User → Service Account.** L’écran de confirmation
 affiche le nom d’utilisateur et un **mot de passe d’application**, une seule
-fois : cette chaîne est l’identifiant, et il n’y a pas de seconde chance de la
-lire. Ajoutez le compte à `opencloud-scanner` comme pour une personne, car une
-association ne se soucie pas du type de compte ; *Create group* dans le
+fois : conservez ce secret dès sa création, car vous ne pourrez pas
+l’afficher de nouveau. Ajoutez le compte à `opencloud-scanner` comme pour une personne, car une
+association s’applique aux deux types de comptes ; *Create group* dans le
 formulaire fait l’équivalent dans l’autre sens si vous préférez associer un
 compte isolément.
 
@@ -657,7 +657,7 @@ aboutissent au même point de terminaison des jetons :
 |:-----------|:-----------------|:--------------------------------|
 | Une personne au clavier | Le flux par code d’autorisation, dans un navigateur | Son propre mot de passe et son second facteur |
 | Un agent agissant pour une personne | Le nom d’utilisateur de cette personne et un mot de passe d’application | **Directory → Tokens and App passwords** |
-| Un agent agissant pour personne | Le nom d’utilisateur et le mot de passe d’application d’un compte de service | Affichés une fois à la création du compte de service |
+| Un agent utilisant son propre compte de service | Le nom d’utilisateur et le mot de passe d’application d’un compte de service | Affichés une fois à la création du compte de service |
 
 Pour un compte de service explicitement nommé, utilisez son nom d’utilisateur et
 son mot de passe d’application avec l’ID et le secret client du fournisseur.

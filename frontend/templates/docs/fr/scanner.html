@@ -1224,7 +1224,7 @@ sondes des protocoles obsolètes et de l’agrafage.</p>
 </code></pre>
 <p><strong><code>null</code> signifie « non déterminé », jamais « correct ».</strong> Un contrôle qui n’a
 pas pu être effectué - <code>get_unverified_chain()</code> exige Python 3.13, la sonde des
-protocoles obsolètes exige une build qui en parle encore un, l’agrafage exige la
+protocoles obsolètes exige une version compilée qui les prend encore en charge, l’agrafage exige la
 commande <code>openssl</code> et un certificat qui désigne un répondeur - est entièrement
 omis des constats au lieu d’être enregistré comme réussi. Voir
 <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0013-transport-security-is-measured-not-assumed.md">l’ADR 0013</a>.</p>
@@ -1324,7 +1324,7 @@ l’ordre indiqué :</p>
 </tr>
 <tr>
 <td><code>verifiable</code></td>
-<td>False pour un identifiant que seule une analyse complète peut trancher (<code>eol</code>, <code>vulnerability:...</code>, <code>httpsAvailable</code>, les contrôles de parité d’adresses) ou que cette build ne connaît pas</td>
+<td>False pour un identifiant que seule une analyse complète peut trancher (<code>eol</code>, <code>vulnerability:...</code>, <code>httpsAvailable</code>, les contrôles de parité d’adresses) ou que cette version ne prend pas en charge</td>
 </tr>
 <tr>
 <td><code>passed</code></td>

@@ -182,7 +182,7 @@ que limite los métodos reenviados.
 
 ## 8. ¿Se publica junto a la instancia la consola de un segundo servicio?: `companionAdminConsole` {#8-is-a-second-services-console-published-beside-the-instance-companionadminconsole}
 
-Un editor de documentos que habla WOPI (Collabora Online, OnlyOffice) es el
+Un editor de documentos compatible con WOPI (Collabora Online, OnlyOffice) es el
 segundo servicio habitual en un despliegue de OpenCloud, y un proxy inverso que
 reenvía `/hosting` y `/browser` hacia él publica ese editor en el propio origen
 de la instancia. Es un segundo servidor HTTP, y su consola de administración

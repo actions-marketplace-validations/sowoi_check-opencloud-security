@@ -1046,7 +1046,7 @@ sondes des protocoles obsolètes et de l’agrafage.
 
 **`null` signifie « non déterminé », jamais « correct ».** Un contrôle qui n’a
 pas pu être effectué - `get_unverified_chain()` exige Python 3.13, la sonde des
-protocoles obsolètes exige une build qui en parle encore un, l’agrafage exige la
+protocoles obsolètes exige une version compilée qui les prend encore en charge, l’agrafage exige la
 commande `openssl` et un certificat qui désigne un répondeur - est entièrement
 omis des constats au lieu d’être enregistré comme réussi. Voir
 [l’ADR 0013](../../adr/0013-transport-security-is-measured-not-assumed.md).
@@ -1154,7 +1154,7 @@ l’ordre indiqué :
 | Clé | Signification |
 |:----|:--------|
 | `id` | L’identifiant demandé ; une racine de famille comme `exposed` couvre tous les membres `exposed:...` |
-| `verifiable` | False pour un identifiant que seule une analyse complète peut trancher (`eol`, `vulnerability:...`, `httpsAvailable`, les contrôles de parité d’adresses) ou que cette build ne connaît pas |
+| `verifiable` | False pour un identifiant que seule une analyse complète peut trancher (`eol`, `vulnerability:...`, `httpsAvailable`, les contrôles de parité d’adresses) ou que cette version ne prend pas en charge |
 | `passed` | True ou false lorsqu’il a été mesuré, `None` lorsque rien ne l’a été |
 | `group` | Le groupe de sondes qui l’a mesuré |
 | `checks` | Les constats mesurés, sous la même forme que les entrées d’`extraChecks` |

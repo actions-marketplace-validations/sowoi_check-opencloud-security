@@ -66,7 +66,7 @@ ni les contrôles SSRF, ni la file d’attente.</p>
 <li><a href="#adding-somebody-who-may-use-the-endpoint">Autoriser une personne à utiliser le point de terminaison</a><ul>
 <li><a href="#a-group-and-the-binding-that-makes-it-mean-something">Un groupe, et l’association qui lui donne un sens</a></li>
 <li><a href="#the-person">La personne</a></li>
-<li><a href="#the-agent-that-is-nobody">L’agent qui n’est personne</a></li>
+<li><a href="#the-agent-that-is-nobody">L’agent avec un compte de service</a></li>
 </ul>
 </li>
 <li><a href="#getting-a-token">Obtenir un jeton</a><ul>
@@ -184,7 +184,7 @@ n’ont jamais voulu d’Authentik.</p>
   sa file de tâches dans PostgreSQL depuis la version 2025.10. Le Redis du
   scanner est un cache sans persistance avec une politique d’éviction : ce
   serait le mauvais choix même si Authentik en avait besoin.</li>
-<li><strong>PostgreSQL est <code>postgres:18.6-alpine</code></strong>, épinglé plutôt que flottant, et
+<li><strong>PostgreSQL est <code>postgres:18.6-alpine</code></strong>, fixé à cette version, et
   séparé de tout ce que vous exécutez par ailleurs. Authentik lui-même n’a
   <strong>pas d’image Alpine</strong> : <code>ghcr.io/goauthentik/server</code> n’est publié qu’en
   version basée sur Debian, sans variante possible.</li>
@@ -591,7 +591,7 @@ publique d’Authentik - <code>https://sso.example.com</code> suivi de ce chemin
 êtes connecté en tant qu’<code>akadmin</code> sans mot de passe ; définissez-en un dans les
 paramètres de l’utilisateur. À la première connexion, <code>akadmin</code> doit
 enregistrer un second facteur comme tout le monde.</p>
-<p><strong>2. Créez la personne.</strong> <strong>Directory → Users → New User → Internal User</strong>. Le
+<p><strong>2. Créez le compte utilisateur.</strong> <strong>Directory → Users → New User → Internal User</strong>. Le
 nom d’utilisateur doit être écrit exactement comme dans <code>COS_WEB_ADMIN_USERS</code> :
 le service compare le nom transmis, pas l’e-mail ni le nom affiché. Donnez-lui
 une adresse e-mail, pour qu’une récupération de mot de passe puisse aboutir
@@ -754,16 +754,16 @@ n’est à copier, et il n’y a aucune configuration par utilisateur côté sca
 un lors de sa première connexion - voir
 <a href="#a-second-factor-for-everybody">un second facteur pour tout le monde</a> -, il n’y a
 donc rien à activer pour elle.</p>
-<h3 id="the-agent-that-is-nobody">L’agent qui n’est personne</h3>
+<h3 id="the-agent-that-is-nobody">L’agent avec un compte de service</h3>
 <p>Une tâche cron, un pipeline CI ou un assistant exécuté sur un serveur n’a pas de
 navigateur par lequel passer, et ne devrait pas détenir le mot de passe d’une
 personne. Il reçoit un <strong>compte de service</strong> : un compte doté d’identifiants et
 sans connexion interactive.</p>
 <p><strong>Directory → Users → New User → Service Account.</strong> L’écran de confirmation
 affiche le nom d’utilisateur et un <strong>mot de passe d’application</strong>, une seule
-fois : cette chaîne est l’identifiant, et il n’y a pas de seconde chance de la
-lire. Ajoutez le compte à <code>opencloud-scanner</code> comme pour une personne, car une
-association ne se soucie pas du type de compte ; <em>Create group</em> dans le
+fois : conservez ce secret dès sa création, car vous ne pourrez pas
+l’afficher de nouveau. Ajoutez le compte à <code>opencloud-scanner</code> comme pour une personne, car une
+association s’applique aux deux types de comptes ; <em>Create group</em> dans le
 formulaire fait l’équivalent dans l’autre sens si vous préférez associer un
 compte isolément.</p>
 <p>Deux détails à noter tout de suite plutôt qu’à découvrir plus tard. Le mot de
@@ -799,7 +799,7 @@ aboutissent au même point de terminaison des jetons :</p>
 <td><strong>Directory → Tokens and App passwords</strong></td>
 </tr>
 <tr>
-<td>Un agent agissant pour personne</td>
+<td>Un agent utilisant son propre compte de service</td>
 <td>Le nom d’utilisateur et le mot de passe d’application d’un compte de service</td>
 <td>Affichés une fois à la création du compte de service</td>
 </tr>

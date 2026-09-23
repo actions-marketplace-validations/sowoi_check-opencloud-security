@@ -143,10 +143,10 @@ sortie dans un fichier de complétion :</p>
 <pre><code class="language-shell">register-python-argcomplete --shell fish check-opencloud-security \
   &gt; ~/.config/fish/completions/check-opencloud-security.fish
 </code></pre>
-<p>La complétion connaît les noms des options, les valeurs des options qui
+<p>La complétion propose les noms des options, les valeurs des options qui
 acceptent un ensemble fixe (<code>--webhook-on</code>, <code>--release-track</code>,
-<code>--update-source</code>, <code>--upgrade-self</code>) et - ce qui économise réellement de la
-saisie - les identifiants de durcissement acceptés par <code>--ignore-hardening</code>,
+<code>--update-source</code>, <code>--upgrade-self</code>) et les identifiants de durcissement
+acceptés par <code>--ignore-hardening</code>,
 avec leurs longs noms en camelCase.</p>
 <p>Sans <code>argcomplete</code>, rien n’est enregistré et le plugin se comporte exactement
 comme avant : ce n’est jamais une dépendance obligatoire d’un plugin de

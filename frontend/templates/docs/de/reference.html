@@ -200,13 +200,13 @@ opencloud2.example.com  F      6.9.1    YES   3      -
 
 Checked 2 host(s): overall CRITICAL (1 CRITICAL, 1 OK)
 </code></pre>
-<p>Die Spalten sind die Note, die dieses Plugin vergeben hat, die gemessene
-Version, der Lebenszyklus-Zustand, wie viele Meldungen zutreffen und wie viel
-sich seit der Referenzaufnahme bewegt hat. Die Zeilen behalten die Reihenfolge
-der angegebenen Hosts, und die letzte Zeile ist dieselbe Bilanz, mit der die
-Nagios-Ausgabe beginnt. Der Exit-Code bleibt unverändert - der schlechteste
-Status der Flotte -, also taugt das weiterhin für einen Cronjob, der seine
-Ausgabe verschickt.</p>
+<p>Die Spalten zeigen die Note, die gemessene Version, den Supportstatus, die
+Anzahl zutreffender Sicherheitsmeldungen und neue Befunde seit der
+Referenzaufnahme. Die Zeilen folgen der Reihenfolge der angegebenen Hosts. Die
+letzte Zeile enthält dieselbe Zusammenfassung wie der Beginn der Nagios-Ausgabe.
+Der Exitcode entspricht weiterhin dem schlechtesten Status aller geprüften
+Hosts. Das Format eignet sich daher auch für einen Cronjob, der die Ausgabe
+versendet.</p>
 <p><code>EOL</code> steht auf <code>YES</code> nach dem Support-Ende, auf <code>soon</code> innerhalb des Fensters
 von <a href="#options"><code>--eol-warning-days</code></a> und sonst auf <code>no</code>. <code>NEW</code> braucht
 <a href="#options"><code>--baseline</code></a>: ohne Referenz steht dort <code>-</code>, denn "nichts Neues" und
@@ -219,9 +219,9 @@ seiner Spalte <code>GRADE</code> steht stattdessen der Nagios-Status (<code>UNKN
 mit denselben Befunden in auswertbarer Form.</p>
 <h3 id="ci-policy-mode">CI-Richtlinienmodus</h3>
 <p><code>-w</code>/<code>-c</code> und <code>--profile</code> beurteilen eine Instanz anhand ihrer <strong>Note</strong>, also
-anhand einer einzigen Zahl, die für alles Gemessene einsteht. Für ein
-Monitoring-System ist das die richtige Form und für ein Deployment-Tor die
-falsche: Wenn dein Team erzwungenes HTTPS und keine Demo-Konten verlangt,
+anhand einer einzigen Zahl, die die Messergebnisse zusammenfasst. Für das
+Monitoring ist das nützlich. Als Freigabekriterium für eine Bereitstellung
+reicht die Note aber nicht immer aus: Wenn dein Team erzwungenes HTTPS und keine Demo-Konten verlangt,
 lässt sich das nicht als Note ausdrücken.</p>
 <p><code>--policy</code> verweist auf eine Datei, die das ausdrücklich festhält:</p>
 <pre><code class="language-yaml">minimum_rating: 4
@@ -249,25 +249,22 @@ listet sie für eine Instanz auf und <code>--debug</code> erklärt jeden einzeln
 wird als JSON gelesen, alles andere als YAML, und
 <a href="https://github.com/sowoi/check-opencloud-security/blob/main/config/policy.example.yml"><code>config/policy.example.yml</code></a> ist ein
 kommentierter Ausgangspunkt.</p>
-<p>Ein Verstoß ist <strong>CRITICAL</strong>, denn es bringt wenig, eine Pipeline mit einem
-Status scheitern zu lassen, den sie womöglich toleriert. Eine Richtlinie macht
-ein Urteil nur schlechter, nie besser: Eine Instanz, die alle Anforderungen
-erfüllt, behält das Urteil, das Schwellwerte, Härtung, Lebenszyklus und
-Referenzaufnahme bereits gefällt haben, und in der Ausgabe steht
+<p>Ein Verstoß setzt den Status auf <strong>CRITICAL</strong>. Eine Richtlinie kann den
+Status verschlechtern, aber nicht verbessern. Erfüllt die Instanz alle
+Anforderungen, bleibt der anhand von Schwellenwerten, Härtung, Lebenszyklus und
+Referenzaufnahme ermittelte Status erhalten. In der Ausgabe steht
 <code>Policy: every requirement met</code>. Webhook-Payload und <code>--format json</code> führen
 dasselbe Urteil unter <code>policy</code>.</p>
 <p>Zwei Regeln solltest du kennen, bevor du eine Richtlinie schreibst:</p>
 <ul>
-<li><strong>Ein Waiver entschuldigt keine Anforderung.</strong> <code>--ignore-hardening</code> und
-  <code>--waive-until</code> sind der Betrieb vor Ort, der einen Befund akzeptiert; eine
-  Richtlinie ist die Organisation, die sagt, dass er nicht akzeptiert werden
-  darf. Könnte ein Waiver eine geforderte Maßnahme stummschalten, würde eine
-  Richtlinie nichts Durchsetzbares beschreiben.</li>
-<li><strong>Ein Tippfehler ist ein Nutzungsfehler, kein stilles Durchwinken.</strong> Ein
-  unbekannter Schlüssel, eine Note außerhalb von <code>0</code>-<code>5</code> oder eine Maßnahme,
-  die der Katalog nicht kennt, beenden den Lauf mit <code>UNKNOWN</code> samt Begründung.
-  Eine Richtlinie existiert, um Deployments scheitern zu lassen - eine Regel,
-  die stillschweigend nichts verlangt, wäre das schlechtestmögliche Ergebnis.</li>
+<li><strong>Ausnahmen setzen die Richtlinie nicht außer Kraft.</strong> Mit
+  <code>--ignore-hardening</code> und <code>--waive-until</code> akzeptierte Befunde bleiben für die
+  Richtlinienprüfung relevant. Eine ausdrücklich verlangte Maßnahme muss
+  weiterhin erfüllt sein.</li>
+<li><strong>Ungültige Regeln führen zu <code>UNKNOWN</code>.</strong> Ein unbekannter Schlüssel, eine
+  Note außerhalb von <code>0</code>-<code>5</code> oder eine unbekannte Maßnahme beenden den Lauf
+  mit einer Begründung. So kann ein Tippfehler nicht unbemerkt eine Anforderung
+  außer Kraft setzen.</li>
 </ul>
 <h3 id="prometheus-kubernetes-integration">Prometheus und Kubernetes</h3>
 <p><code>--format=prometheus</code> erzeugt eine einmalige Textausgabe. Der Exporter stellt
@@ -278,7 +275,7 @@ dasselbe Urteil unter <code>policy</code>.</p>
 check-opencloud-security --host opencloud.example.com \
   --prometheus-listen-port 9102
 </code></pre>
-<p>Er bindet standardmäßig an <code>127.0.0.1</code>. Für Container oder Kubernetes verwende bei Bedarf <code>--prometheus-listen-addr 0.0.0.0</code> und beschränken Port 9102 per
+<p>Er bindet standardmäßig an <code>127.0.0.1</code>. Für Container oder Kubernetes verwende bei Bedarf <code>--prometheus-listen-addr 0.0.0.0</code> und beschränke Port 9102 per
 Firewall oder NetworkPolicy.</p>
 <p>Die Metriken erfassen Bewertung, Schwachstellen, fehlende Schutzmaßnahmen,
 fehlgeschlagene Zusatzprüfungen, verbleibenden Support, Updates, Laufzeit und

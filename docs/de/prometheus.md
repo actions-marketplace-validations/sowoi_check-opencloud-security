@@ -191,7 +191,7 @@ Wähle `for:` nach der gewünschten Verzögerung und der Verfügbarkeit der Mess
 
 importiere [`contrib/grafana/dashboard.json`](../../contrib/grafana/dashboard.json) und wähle die Prometheus-Datenquelle. Das Dashboard zeigt Scanstatus, Note und Supportstatus, den Bewertungsverlauf, offene Befunde, Sicherheitshinweise nach Schweregrad und die installierten Versionen.
 
-Für ein eigenes Dashboard verwende eine Skala von `0` bis `5`, bei der höhere Werte besser sind. Schwellwerte bei `3` (gelb) und `1` (rot) entsprechen den Plugin-Standards. ordne die Zahlen den Noten zu: `5 → A+`, `4 → A`, `3 → C`, `2 → D`, `1 → E`, `0 → F`.
+Für ein eigenes Dashboard verwende eine Skala von `0` bis `5`, bei der höhere Werte besser sind. Schwellwerte bei `3` (gelb) und `1` (rot) entsprechen den Plugin-Standards. Ordne die Zahlen den Noten zu: `5 → A+`, `4 → A`, `3 → C`, `2 → D`, `1 → E`, `0 → F`.
 
 Zeige die Version neben der Bewertung an, damit ein möglicher Updatebedarf direkt erkennbar ist.
 

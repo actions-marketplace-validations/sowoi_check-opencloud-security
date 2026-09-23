@@ -204,9 +204,9 @@ seul un intermédiaire ajoute, comme `Via`.
 
 `reverseProxyDetected` échoue lorsque rien n’a été trouvé, et ce **volontairement**
 avec la gravité `low` : Traefik et HAProxy n’annoncent rien par défaut, et
-supprimer l’en-tête `Server` est en soi une bonne pratique. Un déploiement bien
-géré peut donc paraître nu vu de l’extérieur. Le constat mérite d’être affiché,
-jamais de peser sur la note.
+supprimer l’en-tête `Server` est en soi une bonne pratique. L’absence de cet en-tête ne
+prouve donc pas l’absence de proxy. Le constat est affiché, mais ne réduit
+jamais la note.
 
 `forwardedHostIgnored` pose l’autre question sur cette même frontière : non pas
 s’il y a quelque chose devant l’instance, mais si l’instance laisse l’appelant

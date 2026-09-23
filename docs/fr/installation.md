@@ -156,10 +156,10 @@ register-python-argcomplete --shell fish check-opencloud-security \
   > ~/.config/fish/completions/check-opencloud-security.fish
 ```
 
-La complétion connaît les noms des options, les valeurs des options qui
+La complétion propose les noms des options, les valeurs des options qui
 acceptent un ensemble fixe (`--webhook-on`, `--release-track`,
-`--update-source`, `--upgrade-self`) et - ce qui économise réellement de la
-saisie - les identifiants de durcissement acceptés par `--ignore-hardening`,
+`--update-source`, `--upgrade-self`) et les identifiants de durcissement
+acceptés par `--ignore-hardening`,
 avec leurs longs noms en camelCase.
 
 Sans `argcomplete`, rien n’est enregistré et le plugin se comporte exactement

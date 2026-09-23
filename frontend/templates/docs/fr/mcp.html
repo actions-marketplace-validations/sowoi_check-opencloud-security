@@ -26,7 +26,7 @@
   <a href="#zed" lang="fr">Zed</a>
   <a href="#windsurf" lang="fr">Windsurf</a>
   <a href="#any-other-client" lang="fr">Tout autre client</a>
-  <a href="#clients-that-only-speak-stdio" lang="fr">Clients qui ne parlent que stdio</a>
+  <a href="#clients-that-only-speak-stdio" lang="fr">Clients limités au transport stdio</a>
   <a href="#running-your-own-endpoint" lang="fr">Exécuter votre propre point de terminaison</a>
   <a href="#turning-mcp-off" lang="fr">Désactiver MCP</a>
   <a href="#erasure-needs-a-credential" lang="fr">L’effacement exige un identifiant</a>
@@ -36,7 +36,7 @@
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="fr">
-<p>L’application web de ce dépôt parle le
+<p>L’application web de ce dépôt prend en charge le
 <a href="https://modelcontextprotocol.io">Model Context Protocol</a> sur <code>/mcp</code> : un agent
 peut donc analyser une instance OpenCloud par un appel d’outil, sans avoir à
 apprendre une API HTTP.</p>
@@ -78,7 +78,7 @@ identifiant</a>.</p>
 <li><a href="#zed">Zed</a></li>
 <li><a href="#windsurf">Windsurf</a></li>
 <li><a href="#any-other-client">Tout autre client</a></li>
-<li><a href="#clients-that-only-speak-stdio">Clients qui ne parlent que stdio</a></li>
+<li><a href="#clients-that-only-speak-stdio">Clients limités au transport stdio</a></li>
 <li><a href="#running-your-own-endpoint">Exécuter votre propre point de terminaison</a></li>
 <li><a href="#turning-mcp-off">Désactiver MCP</a></li>
 <li><a href="#erasure-needs-a-credential">L’effacement exige un identifiant</a></li>
@@ -252,7 +252,7 @@ session liste les outils découverts.</p>
 </code></pre>
 <p>Redémarrez ensuite l’application. Les versions qui ne peuvent pas joindre
 directement un serveur distant peuvent utiliser la passerelle décrite dans
-<a href="#clients-that-only-speak-stdio">Clients qui ne parlent que stdio</a>.</p>
+<a href="#clients-that-only-speak-stdio">Clients limités au transport stdio</a>.</p>
 <h2 id="github-copilot-in-vs-code">GitHub Copilot dans VS Code</h2>
 <p>VS Code fait exception : la clé de premier niveau est <code>servers</code>, et non
 <code>mcpServers</code>. Placez ceci dans <code>.vscode/mcp.json</code> pour un espace de travail, ou
@@ -327,7 +327,7 @@ Tout client auquel on peut indiquer une URL fonctionnera avec</p>
 <p>ou la même URL saisie dans une boîte de dialogue de paramètres. Si un client
 demande le transport, la réponse est <em>streamable HTTP</em> (parfois appelé « HTTP »
 ou « remote »), ni SSE ni stdio.</p>
-<p>Un agent qui n’a jamais entendu parler de ce service peut trouver lui-même le
+<p>Un agent qui ne dispose d’aucune configuration propre à ce service peut trouver lui-même le
 point de terminaison : <code>https://scan.example.com/.well-known/ai.json</code> le
 désigne, à côté des documents OpenAPI et Arazzo. C’est toute la raison d’être
 du document de découverte - voir <a href="https://scan.example.com/api#api-agents">la page de l’API</a>.
@@ -336,7 +336,7 @@ renvoient au même document pour un outil qui cherche d’abord l’un de ces de
 noms de fichier, selon les conventions informelles que certains frameworks
 d’agents et robots d’indexation utilisent déjà - voir <a href="https://github.com/sowoi/check-opencloud-security/blob/main/AGENTS.md#working-on-the-agent-facing-surfaces">Working on the
 agent-facing surfaces</a>.</p>
-<h2 id="clients-that-only-speak-stdio">Clients qui ne parlent que stdio</h2>
+<h2 id="clients-that-only-speak-stdio">Clients limités au transport stdio</h2>
 <p>Certains clients lancent encore un sous-processus et communiquent avec lui par
 stdin et stdout. La passerelle communautaire <code>mcp-remote</code> relie un tel client à
 un point de terminaison distant :</p>
@@ -351,7 +351,7 @@ un point de terminaison distant :</p>
 </code></pre>
 <p>C’est un paquet tiers sans lien avec ce projet, et il signifie que vos prompts
 passent par du code que ni vous ni nous n’avons écrit. Préférez un client
-capable de parler HTTP directement, et, si vous devez utiliser une passerelle,
+capable d’utiliser HTTP directement, et, si vous devez utiliser une passerelle,
 préférez votre propre point de terminaison au service hébergé.</p>
 <h2 id="running-your-own-endpoint">Exécuter votre propre point de terminaison</h2>
 <p>Le service hébergé est pratique ; le vôtre est illimité, et aucune de vos

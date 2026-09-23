@@ -1,6 +1,6 @@
 # Intégration MCP
 
-L’application web de ce dépôt parle le
+L’application web de ce dépôt prend en charge le
 [Model Context Protocol](https://modelcontextprotocol.io) sur `/mcp` : un agent
 peut donc analyser une instance OpenCloud par un appel d’outil, sans avoir à
 apprendre une API HTTP.
@@ -28,7 +28,7 @@ identifiant](#erasure-needs-a-credential).
   * [Zed](#zed)
   * [Windsurf](#windsurf)
   * [Tout autre client](#any-other-client)
-  * [Clients qui ne parlent que stdio](#clients-that-only-speak-stdio)
+  * [Clients limités au transport stdio](#clients-that-only-speak-stdio)
   * [Exécuter votre propre point de terminaison](#running-your-own-endpoint)
   * [Désactiver MCP](#turning-mcp-off)
   * [L’effacement exige un identifiant](#erasure-needs-a-credential)
@@ -132,7 +132,7 @@ Claude Desktop lit `claude_desktop_config.json` :
 
 Redémarrez ensuite l’application. Les versions qui ne peuvent pas joindre
 directement un serveur distant peuvent utiliser la passerelle décrite dans
-[Clients qui ne parlent que stdio](#clients-that-only-speak-stdio).
+[Clients limités au transport stdio](#clients-that-only-speak-stdio).
 
 ## GitHub Copilot dans VS Code {#github-copilot-in-vs-code}
 
@@ -237,7 +237,7 @@ ou la même URL saisie dans une boîte de dialogue de paramètres. Si un client
 demande le transport, la réponse est *streamable HTTP* (parfois appelé « HTTP »
 ou « remote »), ni SSE ni stdio.
 
-Un agent qui n’a jamais entendu parler de ce service peut trouver lui-même le
+Un agent qui ne dispose d’aucune configuration propre à ce service peut trouver lui-même le
 point de terminaison : `https://scan.example.com/.well-known/ai.json` le
 désigne, à côté des documents OpenAPI et Arazzo. C’est toute la raison d’être
 du document de découverte - voir [la page de l’API](https://scan.example.com/api#api-agents).
@@ -247,7 +247,7 @@ noms de fichier, selon les conventions informelles que certains frameworks
 d’agents et robots d’indexation utilisent déjà - voir [Working on the
 agent-facing surfaces](../../AGENTS.md#working-on-the-agent-facing-surfaces).
 
-## Clients qui ne parlent que stdio {#clients-that-only-speak-stdio}
+## Clients limités au transport stdio {#clients-that-only-speak-stdio}
 
 Certains clients lancent encore un sous-processus et communiquent avec lui par
 stdin et stdout. La passerelle communautaire `mcp-remote` relie un tel client à
@@ -266,7 +266,7 @@ un point de terminaison distant :
 
 C’est un paquet tiers sans lien avec ce projet, et il signifie que vos prompts
 passent par du code que ni vous ni nous n’avons écrit. Préférez un client
-capable de parler HTTP directement, et, si vous devez utiliser une passerelle,
+capable d’utiliser HTTP directement, et, si vous devez utiliser une passerelle,
 préférez votre propre point de terminaison au service hébergé.
 
 ## Exécuter votre propre point de terminaison {#running-your-own-endpoint}

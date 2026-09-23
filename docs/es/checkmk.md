@@ -39,7 +39,7 @@ Nagios plugins**, y cree una regla con
   `check-opencloud-security --host opencloud.example.com --check-hardening`
 
 Asígnela al host en el que quiere que aparezca el servicio. Ese host solo
-indica dónde vive el *servicio*, no adónde va el análisis: el análisis siempre
+indica en qué host se ejecuta el *servicio*, no cuál se analiza: el análisis siempre
 va a `--host`.
 
 Checkmk toma el estado del código de salida, el resumen de la primera línea de

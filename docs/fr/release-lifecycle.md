@@ -227,7 +227,7 @@ ses propres lettres de notation :
 Upgrade rehearsal: 7.2.4 fixes 1 finding, leaves 1, reaches rating D; 7.3.0 fixes 2 findings, leaves 0, reaches rating A+.
 ```
 
-La répétition ne connaît que le calendrier et la base des avis, intégrés ou
+La simulation utilise uniquement le calendrier et la base des avis, intégrés ou
 actualisés. Une version ou un avis publié ultérieurement peut modifier le
 résultat.
 

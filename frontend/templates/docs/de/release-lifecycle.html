@@ -22,7 +22,7 @@
   <a href="#the-recommended-release-follows-your-track" lang="de">Updates folgen dem gewählten Kanal</a>
   <a href="#declaring-your-release-track" lang="de">Den Release-Kanal festlegen</a>
   <a href="#warning-before-the-end-of-life" lang="de">Warnung vor dem Supportende</a>
-  <a href="#does-the-upgrade-clear-the-advisories" lang="de">Behebt das Update die Sicherheitshinweise?</a>
+  <a href="#does-the-upgrade-clear-the-advisories" lang="de">Behebt das Update die bekannten Schwachstellen?</a>
   <a href="#rehearse-every-upgrade" lang="de">Jedes Upgrade vorab durchspielen</a>
 </nav>
 
@@ -150,7 +150,7 @@ laufende Linie höchstens noch <code>TAGE</code> Tage unterstützt wird:</p>
 <p>Es hebt nur <code>OK</code> an; ein Ergebnis, das schon <code>WARNING</code> oder <code>CRITICAL</code> ist,
 behält seine eigene Zeile. Eine Linie ohne veröffentlichtes Supportende warnt
 nie. <code>0</code>, der Standard, schaltet es ab.</p>
-<h2 id="does-the-upgrade-clear-the-advisories">Behebt das Update die Sicherheitshinweise?</h2>
+<h2 id="does-the-upgrade-clear-the-advisories">Behebt das Update die bekannten Schwachstellen?</h2>
 <p>Hat die installierte Version bekannte Sicherheitshinweise, hält der Scan
 <code>upgradePath</code> fest: was das empfohlene Update an jedem davon ändert.</p>
 <pre><code class="language-json">{&quot;upgradePath&quot;: {&quot;target&quot;: &quot;7.2.4&quot;, &quot;fixes&quot;: [&quot;GHSA-aaaa&quot;],
@@ -165,31 +165,30 @@ für einen davon noch keinen gibt. Das Plugin gibt das als Detailzeile aus.</p>
 <code>upgradeRehearsal</code> beschreibt jede Version, auf die sich ein Wechsel lohnt:
 den neuesten Patch der installierten Linie und die neueste Version jeder
 späteren Linie (nur Linien des festgelegten Release-Kanals, wenn die
-Instanz einen Kanal vorgibt). Für jede Version werden die Hinweise genannt,
-die sie <code>fixes</code>, von denen sie noch <code>stillAffected</code> ist, sowie neu eingeführte
-Hinweise (<code>introduces</code>), ob sie <code>endOfLife</code> ist und welches <code>rating</code> der Scan
-für sie vergeben würde.</p>
+Instanz einen Kanal vorgibt). Für jede Version zeigt das Ergebnis behobene Schwachstellen (<code>fixes</code>),
+weiterhin bestehende Schwachstellen (<code>stillAffected</code>) und neu betroffene
+Schwachstellen (<code>introduces</code>). Es nennt außerdem den Supportstatus
+(<code>endOfLife</code>) und die Bewertung (<code>rating</code>), die der Scan vergeben würde.</p>
 <pre><code class="language-json">{&quot;upgradeRehearsal&quot;: [
   {&quot;version&quot;: &quot;7.2.4&quot;, &quot;line&quot;: &quot;7.2&quot;, &quot;recommended&quot;: false,
    &quot;fixes&quot;: [&quot;GHSA-aaaa&quot;], &quot;stillAffected&quot;: [&quot;GHSA-bbbb&quot;], &quot;introduces&quot;: [],
    &quot;endOfLife&quot;: false, &quot;versionRating&quot;: 2, &quot;rating&quot;: 2}
 ]}
 </code></pre>
-<p>Die Bewertung verwendet dieselben Versionsregeln wie der Scan. Fehlende
+<p>Die Bewertung verwendet dieselben Versionsregeln wie der Scan. Fehlgeschlagene
 Prüfungen der Instanz begrenzen sie weiterhin (<code>versionRating</code> zeigt, was
 allein aufgrund der Version möglich wäre), denn ein Upgrade ändert die
 Version, nicht den Proxy davor. Das Plugin gibt eine Detailzeile mit seinen
 eigenen Bewertungsbuchstaben aus:</p>
 <pre><code class="language-text">Upgrade rehearsal: 7.2.4 fixes 1 finding, leaves 1, reaches rating D; 7.3.0 fixes 2 findings, leaves 0, reaches rating A+.
 </code></pre>
-<p>Die Vorabprüfung kennt nur den gebündelten oder aktualisierten Zeitplan und
-die Beratungsdatenbank. Eine später veröffentlichte Version oder ein später
+<p>Die Vorabprüfung verwendet nur den gebündelten oder aktualisierten Zeitplan
+und die Schwachstellendatenbank. Eine später veröffentlichte Version oder ein später
 veröffentlichter Hinweis kann das Ergebnis ändern.</p>
-<p>Die Weboberfläche zeigt dieselben Einträge als <strong>Was dir ein Upgrade bringen
-würde</strong>: eine Zeile pro Kandidat mit den Hinweisen, die sie ausräumt, denen,
-die bleiben, und der Note, die sie erreicht. Wo die Version allein besser
-abschneiden würde, liegt der Unterschied an den Befunden dieser Instanz, die
-ein Upgrade nicht anfasst.</p>
+<p>Die Weboberfläche zeigt dieselben Einträge unter <strong>Was ein Upgrade beheben
+würde</strong>: eine Zeile pro Zielversion mit behobenen und weiterhin bestehenden
+Schwachstellen sowie der erreichbaren Note. Würde die Version allein eine
+bessere Note erhalten, begrenzen unveränderte Befunde der Instanz die Bewertung.</p>
 </article>
 
 {% include "_page-nav.html" %}

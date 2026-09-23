@@ -162,7 +162,7 @@ DNSSEC activado, y lee si el resolvedor validó la respuesta, si la respuesta
 llevaba firmas y si el resolvedor entendió la pregunta.
 
 Esta última parte explica por qué a veces el hallazgo simplemente no aparece.
-Un resolvedor que no habla DNSSEC produce exactamente el mismo silencio que una
+Un resolvedor que no admite DNSSEC produce exactamente el mismo silencio que una
 zona sin firmar, y notificarlo haría fallar todos los análisis ejecutados
 detrás de un resolvedor así por un motivo que no tiene nada que ver con la
 instancia. Por tanto:
@@ -172,7 +172,7 @@ instancia. Por tanto:
 | Validó la respuesta él mismo | se supera |
 | Reenvió las firmas sin validarlas | se supera: la zona está firmada, que es la parte que controla el operador |
 | Ninguna de las dos cosas, pero entendió la pregunta | **falla**: la zona no está firmada |
-| No habla DNSSEC o no respondió | no aparece en el resultado |
+| No admite DNSSEC o no respondió | no aparece en el resultado |
 
 Es un hallazgo de gravedad baja, y la corrección está en la zona del propio
 dominio y no en OpenCloud: firme la zona en el proveedor DNS y publique

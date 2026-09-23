@@ -169,7 +169,7 @@ check-opencloud-scanner diff before.json after.json --category transport
 check-opencloud-scanner diff before.json after.json --category instance
 ```
 
-Jeder Namensraum wird nur gefiltert, wenn du einen Wert dafür angibst: `--category transport` lässt die Erklärung unangetastet, `--category instance` die Befunde. Die Option ist mehrfach angebbar, und ein unbekannter Wert wird mit Exitcode `2` abgelehnt, statt stillschweigend nichts zu zeigen - ein Tippfehler, der einen leeren Vergleich ausgibt, liest sich wie „nichts hat sich geändert".
+Jeder Namensraum wird nur gefiltert, wenn du einen Wert dafür angibst: `--category transport` lässt die Erklärung unangetastet, `--category instance` die Befunde. Du kannst die Option mehrfach angeben. Ein unbekannter Wert führt zu Exitcode `2`. So entsteht bei einem Tippfehler kein leerer Vergleich, der fälschlich den Eindruck erweckt, es habe sich nichts geändert.
 
 Eine gefilterte Erklärung lässt die `[limitation]`-Zeilen weg, weil diese den gesamten Vergleich einschränken und nicht eine einzelne Kategorie davon.
 
@@ -273,7 +273,7 @@ Danach bietet er an, auch die geplante Prüfung zu schreiben, neben die gerade g
 Also write a monitoring configuration (Icinga service, systemd timer)? [y/N]
 ```
 
-`--export-monitoring` beantwortet diese Frage vorab, was ein Provisionierungsskript braucht. Die Dateien tragen die Schwellwerte, den Release-Track und jede andere gerade gegebene Antwort, damit die täglich laufende Prüfung die konfigurierte ist und kein aus dem Gedächtnis angepasstes Beispiel:
+`--export-monitoring` beantwortet diese Frage vorab und eignet sich damit für die automatische Bereitstellung. Die erzeugten Dateien übernehmen die Schwellenwerte, den Release-Kanal und die übrigen gewählten Einstellungen:
 
 ```bash
 check-opencloud-scanner configure --export-monitoring both
@@ -286,7 +286,9 @@ check-opencloud-scanner configure --export-monitoring both
 | `check-opencloud-security.timer` | `OnCalendar=daily`, mit zufälliger Verzögerung, damit viele Hosts hinter einer Adresse nicht in derselben Sekunde das Ratelimit des Release-Feeds treffen |
 | `check-opencloud-security.env` | Die `COS_`-Variablen für die Unit, nur für den Eigentümer lesbar geschrieben |
 
-Zwei Dinge sind Absicht. **Nichts wird installiert**: Die Dateien entstehen dort, wo auch die Konfiguration liegt, und die Befehle, die sie installieren würden, werden ausgegeben - was nach `/etc` gelangt, hast du also vorher gelesen. Und **es wird kein Zugangsgeheimnis hineingeschrieben**: Eine Webhook-URL oder ein Release-Token bleibt in der Konfigurationsdatei, die nur der Eigentümer lesen kann, während ein Icinga-Objekt und eine Unit-Datei das nicht sind. Beide Artefakte verweisen stattdessen auf diese Datei - `vars.opencloud_config` und `COS_CONFIG_FILE` - und benennen die zurückgehaltenen Einstellungen, damit ein konfigurierter Webhook nie stillschweigend fehlt.
+**Der Assistent installiert die Dateien nicht.** Er speichert sie neben der Konfiguration und zeigt die Installationsbefehle an. Prüfe die Dateien, bevor du sie nach `/etc` kopierst.
+
+**Zugangsdaten bleiben in der geschützten Konfigurationsdatei.** Eine Webhook-URL oder ein Release-Token wird nicht in das Icinga-Objekt oder die Unit-Datei übernommen, da diese Dateien auch für andere Benutzer lesbar sein können. Stattdessen verweisen `vars.opencloud_config` und `COS_CONFIG_FILE` auf die nur für den Eigentümer lesbare Konfigurationsdatei. Die Ausgabe nennt die dort verbleibenden Einstellungen, damit du ihre Übernahme prüfen kannst.
 
 ## Exitcodes {#exit-codes}
 

@@ -610,7 +610,7 @@ croire que quelqu’un le pourrait.</p>
 <tr>
 <td><code>COS_WEB_AUDIT_LOG_FILE</code></td>
 <td><em>(la sortie du processus)</em></td>
-<td>Écrire plutôt les enregistrements d’audit dans ce fichier, sur un montage qui survit au conteneur. Lisible uniquement par son propriétaire, et le journal ordinaire n’en contient alors aucune copie. Un chemin impossible à écrire empêche le démarrage</td>
+<td>Écrire plutôt les enregistrements d’audit dans ce fichier, sur un volume conservé après la suppression du conteneur. Lisible uniquement par son propriétaire, et le journal ordinaire n’en contient alors aucune copie. Un chemin impossible à écrire empêche le démarrage</td>
 </tr>
 <tr>
 <td><code>COS_WEB_AUDIT_LOG_MAX_BYTES</code></td>
@@ -865,7 +865,7 @@ Une clé non nommée à cet endroit n’atteint rien en aval.</p>
 </tr>
 <tr>
 <td>Limitation du débit</td>
-<td>un compteur propre, avec les mêmes valeurs que la limite par client - une analyse de fichier coûte du travail à ce service et rien à l’instance de personne</td>
+<td>un compteur propre, avec les mêmes valeurs que la limite par client - une analyse de fichier utilise les ressources de ce service sans contacter d’instance</td>
 </tr>
 <tr>
 <td>POST intersite</td>
@@ -1496,8 +1496,8 @@ n’est pas terminée - elle existe, donc une réponse 404 lancerait l’appelan
 une boucle de nouvelles tentatives sur le mauvais point de terminaison - et <strong>404</strong>
 pour un uuid ou un format inconnus.</p>
 <h3 id="get-apiscansuuidbadgesvg"><code>GET /api/scans/{uuid}/badge.svg</code></h3>
-<p>La note sous forme de petit SVG, à coller là où une image parle plus vite qu’un
-lien.</p>
+<p>La note sous forme de badge SVG, à intégrer dans une page pour afficher
+le résultat sans ouvrir le rapport.</p>
 <pre><code class="language-bash">curl -sS http://127.0.0.1:8811/api/scans/0f4a1f22-.../badge.svg
 </code></pre>
 <pre><code class="language-markdown">![OpenCloud security](https://scan.example.com/api/scans/0f4a1f22-.../badge.svg)
