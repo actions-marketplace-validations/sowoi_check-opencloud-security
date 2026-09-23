@@ -5,7 +5,7 @@ its identity database over HTTP. These checks look for a web server or reverse p
 that exposes those files, and for debug interfaces that should remain private.
 
 Before any of these run, the scan first requests a path that cannot possibly
-exist and remembers what comes back. OpenCloud's web frontend is a
+exist and records the response. OpenCloud's web frontend is a
 single-page application, and unknown paths return the app shell with HTTP
 `200` rather than a `404` - a naive "does this path return `200`?" check
 would flag every healthy instance. Only a response that actually differs from

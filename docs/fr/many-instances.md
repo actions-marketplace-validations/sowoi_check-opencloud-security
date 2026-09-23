@@ -1,55 +1,60 @@
 # Analyser plusieurs instances
 
-Plusieurs instances ont souvent besoin de ports différents, de pistes de libération et de dérogations. Ce guide
-montre quand utiliser une commande partagée, comment conserver un fichier de configuration par instance et
-comment planifier les vérifications qui en résultent.
+Plusieurs instances ont souvent besoin de ports, de canaux de versions et d’exemptions
+différents. Ce guide montre quand utiliser une commande partagée, comment conserver un
+fichier de configuration par instance et comment planifier les vérifications qui en
+résultent.
 
 <!-- TOC -->
-* [Checking a fleet of instances](#checking-a-fleet-of-instances)
-  * [One command, several hosts](#one-command-several-hosts)
-  * [One configuration file per instance](#one-configuration-file-per-instance)
-  * [A loop over the files](#a-loop-over-the-files)
-  * [Where the checks should run from](#where-the-checks-should-run-from)
-  * [Keeping the waivers honest](#keeping-the-waivers-honest)
-  * [Only alerting on what changed](#only-alerting-on-what-changed)
-  * [Scheduling the whole thing](#scheduling-the-whole-thing)
+* [Analyser un parc d’instances](#checking-a-fleet-of-instances)
+  * [Une commande, plusieurs hôtes](#one-command-several-hosts)
+  * [Un fichier de configuration par instance](#one-configuration-file-per-instance)
+  * [Une boucle sur les fichiers](#a-loop-over-the-files)
+  * [D’où lancer les vérifications](#where-the-checks-should-run-from)
+  * [Garder les exemptions sous contrôle](#keeping-the-waivers-honest)
+  * [N’alerter que sur ce qui a changé](#only-alerting-on-what-changed)
+  * [Planifier l’ensemble](#scheduling-the-whole-thing)
 <!-- TOC -->
 
 
-## One command, several hosts
+## Une commande, plusieurs hôtes {#one-command-several-hosts}
 
-`--host` takes a comma-separated list. The plugin scans them in turn, prints a
-one-line summary followed by a block per host, and exits with the worst state
-it found - see [Checking multiple hosts](../README.md#checking-multiple-hosts).
+`--host` accepte une liste séparée par des virgules. Le plugin analyse les hôtes
+l’un après l’autre, affiche un résumé d’une ligne suivi d’un bloc par hôte, et
+se termine avec le pire état rencontré - voir
+[Vérifier plusieurs hôtes](../../README.md#checking-multiple-hosts).
 
 ```shell
 check-opencloud-security --check-hardening \
   --host opencloud1.example.com,opencloud2.example.com:9200,[2001:db8::1]
 ```
 
-This is the right answer when the instances are alike. Everything after
-`--host` applies to all of them, so the moment one instance needs `--insecure`
-or a waiver the others do not, you have outgrown it.
+C’est la bonne solution lorsque les instances se ressemblent. Tout ce qui suit
+`--host` s’applique à toutes : dès qu’une instance a besoin de `--insecure` ou
+d’une exemption que les autres n’ont pas, cette approche ne suffit plus.
 
-Aggregating also loses the per-host history your monitoring system would
-otherwise keep. If you want one red service per broken instance rather than
-one red service for the group, use one check per host instead.
+L’agrégation fait aussi perdre l’historique par hôte que votre système de
+supervision conserverait sinon. Si vous voulez un service en rouge par instance
+défaillante plutôt qu’un seul service en rouge pour le groupe, utilisez plutôt
+une vérification par hôte.
 
-Add `--webhook-digest` here and the webhook fires at most once for the whole
-`--host` list, instead of once per host that meets `--webhook-on` - useful
-when a webhook receiver is a person who would rather get one message about
-three broken instances than three separate pings. It only combines what
-happens *inside this one process*: since it is one flag on one `ScanContext`,
-it has no effect on the "configuration file per instance" and "loop over the
-files" patterns below, where each instance runs as its own separate process
-with nothing to combine across - each of those still sends its own webhook
-per instance, exactly as without the flag.
+Ajoutez ici `--webhook-digest` : le webhook se déclenche alors au plus une fois
+pour toute la liste `--host`, au lieu d’une fois par hôte répondant à
+`--webhook-on`. C’est utile lorsque le destinataire du webhook est une personne
+qui préfère recevoir un seul message sur trois instances défaillantes plutôt
+que trois notifications séparées. L’option ne regroupe que ce qui se passe
+*à l’intérieur de ce seul processus* : comme il s’agit d’une option sur un seul
+`ScanContext`, elle n’a aucun effet sur les méthodes « un fichier de
+configuration par instance » et « une boucle sur les fichiers » ci-dessous, où
+chaque instance s’exécute dans son propre processus sans rien à regrouper.
+Chacune envoie alors toujours son propre webhook, exactement comme sans
+l’option.
 
-## One configuration file per instance
+## Un fichier de configuration par instance {#one-configuration-file-per-instance}
 
-Each instance gets a file, and the file carries everything that makes it
-different. Nothing is repeated on the command line, so a change is a change in
-one place.
+Chaque instance a son fichier, et ce fichier contient tout ce qui la distingue.
+Rien n’est répété sur la ligne de commande : une modification se fait donc à un
+seul endroit.
 
 ```yaml
 # /etc/check-opencloud-security/prod-eu.yml
@@ -73,18 +78,19 @@ releases:
 check-opencloud-security --config /etc/check-opencloud-security/prod-eu.yml
 ```
 
-Precedence is **command line > environment variable > configuration file >
-default**, so a per-instance file can still be overridden for one run without
-editing it. The full syntax, including `secret://`, is in
-[Configuration file and secrets](../README.md#configuration-file-and-secrets).
+L’ordre de priorité est **ligne de commande > variable d’environnement >
+fichier de configuration > valeur par défaut** : un fichier propre à une
+instance peut donc être surchargé le temps d’une exécution sans le modifier. La
+syntaxe complète, y compris `secret://`, est décrite dans
+[Fichier de configuration et secrets](../../README.md#configuration-file-and-secrets).
 
-Write the first file with `check-opencloud-security --configure --config
-/etc/check-opencloud-security/prod-eu.yml` and copy it for the rest.
+Créez le premier fichier avec `check-opencloud-security --configure --config
+/etc/check-opencloud-security/prod-eu.yml`, puis copiez-le pour les autres.
 
-## A loop over the files
+## Une boucle sur les fichiers {#a-loop-over-the-files}
 
-With one file per instance, scanning the fleet is a `for` loop, and the exit
-codes are what you report on:
+Avec un fichier par instance, analyser le parc revient à une boucle `for`, et ce
+sont les codes de sortie qui servent au compte rendu :
 
 ```shell
 #!/bin/sh
@@ -104,42 +110,46 @@ done
 exit "$worst"
 ```
 
-`rank` exists because Nagios exit codes are not ordered by severity:
-`CRITICAL` (2) outranks `WARNING` (1), which outranks `UNKNOWN` (3), which
-outranks `OK` (0). Sorting numerically would report a host that could not be
-reached as worse than a host that is end-of-life.
+`rank` est nécessaire, car les codes de sortie Nagios ne sont pas classés par
+gravité : `CRITICAL` (2) l’emporte sur `WARNING` (1), qui l’emporte sur
+`UNKNOWN` (3), qui l’emporte sur `OK` (0). Un tri numérique présenterait un hôte
+injoignable comme plus grave qu’un hôte en fin de vie.
 
-## Where the checks should run from
+## D’où lancer les vérifications {#where-the-checks-should-run-from}
 
-The plugin scans over the network, from wherever it runs, so where you run it
-decides what it can see:
+Le plugin analyse par le réseau, depuis l’endroit où il s’exécute : cet endroit
+détermine donc ce qu’il peut voir.
 
-- An instance behind a firewall needs a check running inside it, not a check
-  on the monitoring server with a hole punched through.
-- Whether HTTPS is enforced and whether the certificate is trusted depend on
-  the path taken to the instance. Scanning through a load balancer that
-  terminates TLS measures the load balancer.
-- Debug-port probes only mean anything from a network that is *supposed* not
-  to reach them. From inside the instance's own host they will find ports that
-  no outsider could.
+- Une instance derrière un pare-feu a besoin d’une vérification exécutée à
+  l’intérieur de ce pare-feu, pas d’une vérification sur le serveur de
+  supervision passant par une ouverture percée pour l’occasion.
+- L’application de HTTPS et la confiance accordée au certificat dépendent du
+  chemin emprunté jusqu’à l’instance. Une analyse à travers un répartiteur de
+  charge qui termine TLS mesure le répartiteur de charge.
+- Les sondes des ports de débogage n’ont de sens que depuis un réseau qui n’est
+  *pas censé* les atteindre. Depuis l’hôte même de l’instance, elles trouveront
+  des ports qu’aucune personne extérieure ne pourrait atteindre.
 
-If several monitoring consumers need the same result, run the
-[scan service](../README.md#running-the-scanner-as-a-service) close to the
-instances and let them share its cache. The plugin itself never talks to it -
-it always scans in process - so the service is for dashboards and scripts.
+Si plusieurs consommateurs de supervision ont besoin du même résultat, exécutez
+le [service d’analyse](../../README.md#running-the-scanner-as-a-service) près des
+instances et laissez-les partager son cache. Le plugin lui-même ne l’utilise
+jamais (il analyse toujours dans son propre processus) : le service sert donc
+aux tableaux de bord et aux scripts.
 
-## Keeping the waivers honest
+## Garder les exemptions sous contrôle {#keeping-the-waivers-honest}
 
-A fleet accumulates `ignore_hardenings` entries, and a waiver that is never
-revisited is how a regression becomes invisible. Two things keep them honest:
+Réexaminez régulièrement les entrées `ignore_hardenings` pour que les constats
+acceptés ne masquent pas de nouveaux problèmes. Les exemptions disposent de deux
+garde-fous :
 
-- A waiver only ever suppresses the alert. The finding stays in the result
-  document with `"ignored": true`, and `--debug` still explains it - see
-  [Accepting a finding you are not going to fix](hardening.md#accepting-a-finding-you-are-not-going-to-fix).
-- Only a check that *actually failed* can be waived, so a waiver cannot
-  silently cover a measure that later regresses into a different finding.
+- Une exemption ne supprime jamais que l’alerte. Le constat reste dans le
+  document de résultat avec `"ignored": true`, et `--debug` l’explique toujours ;
+  voir [Accepter un constat que vous ne corrigerez pas](hardening.md#accepting-a-finding-you-are-not-going-to-fix).
+- Seul un contrôle *réellement en échec* peut être exempté : une exemption ne
+  peut donc pas couvrir discrètement une mesure qui régresse plus tard en un
+  autre constat.
 
-Review them by scanning with the waivers off and diffing:
+Pour les réexaminer, lancez une analyse sans les exemptions et comparez :
 
 ```shell
 for config in /etc/check-opencloud-security/*.yml; do
@@ -149,18 +159,18 @@ for config in /etc/check-opencloud-security/*.yml; do
 done
 ```
 
-One identifier will never appear in that list, however many instances you
-run: `publicLinkExpirationEnforced` is hardcoded by OpenCloud and fails on
-every instance in existence, so it is recorded but deliberately kept out of
-the alert, the `hardenings_missing` metric and the webhook. Waiving it would
-be waiving nothing - see
-[Measures that are not settings](hardening.md#measures-that-are-not-settings).
+Un identifiant n’apparaîtra jamais dans cette liste, quel que soit le nombre
+d’instances : `publicLinkExpirationEnforced` est codé en dur par OpenCloud et
+échoue sur toutes les instances. Il est donc enregistré mais exclu de l’alerte,
+de la métrique `hardenings_missing` et du webhook. Il n’a pas besoin
+d’exemption ; voir
+[Mesures qui ne sont pas des paramètres](hardening.md#measures-that-are-not-settings).
 
-## Only alerting on what changed
+## N’alerter que sur ce qui a changé {#only-alerting-on-what-changed}
 
-Twenty instances producing the same twenty findings every five minutes is how
-a fleet trains its operators to stop reading the output. Give each host a
-baseline and the check reports only regressions:
+Des alertes répétées pour des constats inchangés peuvent masquer les nouveaux
+problèmes. Donnez à chaque hôte une référence (baseline) pour ne signaler que
+les régressions :
 
 ```shell
 for config in /etc/check-opencloud-security/*.yml; do
@@ -170,42 +180,45 @@ for config in /etc/check-opencloud-security/*.yml; do
 done
 ```
 
-One file is enough for the whole fleet: it stores one entry per host, keyed by
-the host as it was given on the command line. A comma-separated `--host` list
-works the same way.
+Un seul fichier suffit pour tout le parc : il contient une entrée par hôte,
+identifiée par l’hôte tel qu’il a été indiqué sur la ligne de commande. Une
+liste `--host` séparée par des virgules fonctionne de la même façon.
 
-Two things to get right:
+Deux points à respecter :
 
-- The monitoring user must own the directory. The file is written atomically
-  with owner-only permissions, and a baseline that cannot be written is
-  reported as a line of output and nothing more - it never changes the verdict.
-- Use the same spelling of the host everywhere. `opencloud.example.com` and
-  `https://opencloud.example.com/` normalise to the same host, but
-  `10.0.0.5` does not match the name that resolves to it, and the check would
-  treat it as a host it has never seen.
+- L’utilisateur de la supervision doit être propriétaire du répertoire. Le
+  fichier est écrit de façon atomique avec des droits réservés à son
+  propriétaire, et une référence impossible à écrire est signalée par une ligne
+  de sortie, sans plus : elle ne change jamais le verdict.
+- Écrivez l’hôte de la même façon partout. `opencloud.example.com` et
+  `https://opencloud.example.com/` sont normalisés vers le même hôte, mais
+  `10.0.0.5` ne correspond pas au nom qui se résout vers cette adresse, et la
+  vérification le traiterait comme un hôte jamais vu.
 
-A release past its end of life keeps alerting on every run regardless of the
-baseline, which is the point: it receives no security fixes, so it gets worse
-every day it stays up. See
-[Reporting only what changed](../README.md#reporting-only-what-changed).
+Une version ayant dépassé sa fin de vie continue de déclencher une alerte à
+chaque exécution, quelle que soit la référence, et c’est voulu : elle ne reçoit
+plus de correctifs de sécurité et sa situation s’aggrave chaque jour où elle
+reste en service. Voir
+[Ne signaler que ce qui a changé](../../README.md#reporting-only-what-changed).
 
-Add `--self-update-check` on one host in the fleet - not all of them - to be
-told when a newer plugin version is published. It is cached for a day and
-never changes the exit code.
+Ajoutez `--self-update-check` sur un seul hôte du parc - pas sur tous - pour être
+averti lorsqu’une nouvelle version du plugin est publiée. Le résultat est mis en
+cache pendant un jour et ne change jamais le code de sortie.
 
-## Scheduling the whole thing
+## Planifier l’ensemble {#scheduling-the-whole-thing}
 
-- With Icinga2: one `Service` per host, applied from a host group - see
-  [Icinga Director](icinga-director.md) or
-  [Automated deployment with Ansible](ansible.md).
-- Without it: a systemd timer or cron entry running the loop above, see
-  [Scheduling](scheduling.md).
-- On a cluster: a `CronJob`, see [Kubernetes](kubernetes.md).
+- Avec Icinga2 : un `Service` par hôte, appliqué depuis un groupe d’hôtes - voir
+  [Icinga Director](icinga-director.md) ou
+  [Déploiement automatisé avec Ansible](ansible.md).
+- Sans Icinga2 : un timer systemd ou une entrée cron qui exécute la boucle
+  ci-dessus, voir [Planification](scheduling.md).
+- Sur un cluster : un `CronJob`, voir [Kubernetes](kubernetes.md).
 
-Stagger the schedules. Twenty instances scanned at `0 6 * * *` means twenty
-simultaneous scans from one address, and the update check will meet GitHub's
-anonymous rate limit on the way.
+Échelonnez les planifications. Vingt instances analysées à `0 6 * * *`
+signifient vingt analyses simultanées depuis une seule adresse, et la
+vérification des mises à jour atteindra en chemin la limite de requêtes anonymes
+de GitHub.
 
 ---
 
-[Back to the documentation index](../../README.md) | [Back to the main README](../README.md)
+[Retour à l’index de la documentation](../README.md) | [Retour au README principal](../../README.md)

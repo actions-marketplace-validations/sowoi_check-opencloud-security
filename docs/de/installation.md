@@ -34,7 +34,7 @@ Für unveröffentlichte Änderungen kannst du direkt aus dem Repository installi
 check-opencloud-security --upgrade-self
 ```
 
-Der Befehl erkennt den Installationsweg und wählt den passenden Paketmanager. `--upgrade-self=check` zeigt den vorgesehenen Befehl nur an. Einen Git-Checkout aktualisiere selbst mit `git pull`.
+Der Befehl erkennt den Installationsweg und wählt den passenden Paketmanager. `--upgrade-self=check` zeigt den vorgesehenen Befehl nur an. Aktualisiere einen Git-Checkout selbst mit `git pull`.
 
 Die Paketmanager kannst du auch direkt aufrufen:
 
@@ -48,7 +48,7 @@ uv tool upgrade --all                          # ... or every uv tool at once
 pip install --upgrade check-opencloud-security # pip
 ```
 
-`check-opencloud-security --version` zeigt den installierten Stand, [CHANGELOG.md](../../CHANGELOG.md) die Änderungen. Eine Installation aus einer Git-URL erneuere sie mit `--force` bei pipx/uv oder `--upgrade --force-reinstall` bei pip.
+`check-opencloud-security --version` zeigt den installierten Stand, [CHANGELOG.md](../../CHANGELOG.md) die Änderungen. Erneuere eine Installation aus einer Git-URL mit `--force` bei pipx/uv oder `--upgrade --force-reinstall` bei pip.
 
 Halte das Paket aktuell: Es enthält auch den Release-Zeitplan und die Referenzdaten für die [End-of-Life-Erkennung](../../README.md#end-of-life-detection).
 
@@ -108,7 +108,7 @@ eval "$(register-python-argcomplete check-opencloud-security)"
 eval "$(register-python-argcomplete check-opencloud-scanner)"
 ```
 
-Unter **zsh** verwende dieselben Zeilen in `~/.zshrc` und führen davor einmal `autoload -U bashcompinit && bashcompinit` aus. Unter **fish** schreibe die Ausgabe in eine Completion-Datei:
+Unter **zsh** verwende dieselben Zeilen in `~/.zshrc` und führe davor einmal `autoload -U bashcompinit && bashcompinit` aus. Unter **fish** schreibe die Ausgabe in eine Completion-Datei:
 
 ```shell
 register-python-argcomplete --shell fish check-opencloud-security \

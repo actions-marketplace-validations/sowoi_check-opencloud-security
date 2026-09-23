@@ -48,8 +48,8 @@ Two of the rows above cannot be influenced by anyone:
   OpenCloud instance. The capability is a hardcoded constant in the frontend
   service, not a configuration value, so there is no variable to set and no
   version that passes.
-- **`userEnumerationRestricted`** is the same story with the opposite sign:
-  hardcoded to the restricted state, so it always passes.
+- **`userEnumerationRestricted`** is hardcoded to the restricted state,
+  so it always passes.
 
 They are still recorded in the result document, because the observation is
 real, but they are **left out of the "Missing hardening" line, out of the

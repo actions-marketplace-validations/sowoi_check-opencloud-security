@@ -87,10 +87,10 @@ check-opencloud-security -H opencloud.example.com \
 ## Configuration drift
 
 
-A baseline also remembers the scan's **configuration fingerprint**: grouped
-digests of how the instance is set up - transport, headers, sharing,
-authentication, proxy - and nothing it is set up to. A run whose grade and
-findings both stood still still says so when the deployment did not:
+A baseline also stores the scan's **configuration fingerprint**: hashes that
+represent the transport, header, sharing, authentication and proxy configuration.
+The hashes detect changes without storing the configuration values.
+The report identifies changed groups even when the grade and findings stay the same:
 
 ```text
 Baseline: No new findings since 2026-09-14T06:00:00Z, but the configuration changed (headers, proxy)

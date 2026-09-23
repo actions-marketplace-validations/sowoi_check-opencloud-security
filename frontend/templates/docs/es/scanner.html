@@ -385,8 +385,8 @@ como <code>newestRelease</code>.</p>
 <p><code>auto</code> es el valor predeterminado y nunca hace fallar una comprobación: si
 GitHub limita la frecuencia o no está accesible, se recurre a la versión
 incluida, que es tan reciente como el paquete instalado. <code>feed</code> es el modo
-adecuado cuando un respaldo silencioso sería peor que un desconocido
-explícito.</p>
+adecuado cuando se prefiere un estado <code>UNKNOWN</code> explícito a recurrir a los
+datos incluidos sin avisar.</p>
 <p>El canal es por defecto la API de versiones de GitHub. <code>parse_release_feed()</code>
 entiende también un documento simple <code>{"tag_name": ...}</code> y una lista de
 versiones, así que una réplica interna no necesita ningún formato especial. Se
@@ -403,7 +403,7 @@ instalaciones que no pueden esperar a una actualización del paquete:</p>
 <p>Lee ambos documentos del propio repositorio de este proyecto (los archivos
 revisados que ha integrado una persona encargada del mantenimiento, no una
 consulta en directo a un tercero) y <strong>verifica una certificación de Sigstore</strong>
-sobre ellos antes de creerse nada. Después rechaza un documento de ciclo de
+de ambos antes de aceptarlos. Después rechaza un documento de ciclo de
 vida que pierda una línea de versiones incluida, rechaza avisos sin límites y
 sustituye cada archivo de forma atómica. Nunca escribe en el paquete
 instalado. Apunte <code>scanner.release_schedule</code> y <code>scanner.vulnerability_db</code> a los
@@ -565,7 +565,7 @@ servicio de OpenCloud que responde en el puerto directo del backend hace fallar
   <code>PROXY_ENABLE_BASIC_AUTH=true</code>, el proxy añade <code>Basic realm="&lt;host&gt;"</code> a su
   desafío <code>WWW-Authenticate</code> junto a <code>Bearer</code>. Se califica como <code>medium</code>, y como
   <code>low</code> cuando <code>identityProvider.external</code> es verdadero: los clientes CalDAV,
-  CardDAV y WebDAV no hablan OpenID Connect, así que una instancia que los
+  CardDAV y WebDAV no admiten OpenID Connect, así que una instancia que los
   quiera tiene que dejar activada la autenticación básica, y calificarlo como
   un fallo grave decía a los operadores algo que con razón no se creían.</li>
 <li><strong><code>publicLinkExpirationEnforced</code> y <code>userEnumerationRestricted</code> no son
@@ -841,8 +841,8 @@ carga útil del webhook lleva las mismas cifras en <code>coverage</code> y la ap
 web las muestra en <em>Lo que este análisis no midió</em>.</p>
 <h2 id="the-conditions-a-scan-ran-under">En qué condiciones se ejecutó un análisis</h2>
 <p>Dos análisis de la misma instancia pueden diferir sin que la instancia haya
-cambiado: la base de datos de avisos aprendió un CVE, se cerró una ventana de
-soporte, se actualizó el escáner, caducó una exención. <code>provenance</code> registra lo
+cambiado: se añadió un CVE a la base de datos de avisos, terminó un periodo de
+soporte, se actualizó el escáner o caducó una exención. <code>provenance</code> registra lo
 que se sabía en ese momento, para que una comparación pueda distinguir eso de
 un empeoramiento real. Véase
 <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0066-a-result-records-the-conditions-it-was-produced-under.md">ADR 0066</a>.</p>
@@ -941,7 +941,7 @@ hacen útil:</p>
   contenido nombra los orígenes en los que confía una instalación, un documento
   de descubrimiento puede nombrar un inquilino, un banner de servidor nombra una
   compilación interna. Cada dato se resume dentro de su grupo y se descarta: se
-  aprende <em>que</em> la compartición cambió, nunca <em>a qué</em>.</li>
+  registra <em>que</em> la compartición cambió, nunca <em>cuál es la nueva configuración</em>.</li>
 <li><strong>Los grupos son las preguntas que hace quien opera.</strong> "¿Cambió TLS?" sirve;
   "¿cambió el dato 37?" no.</li>
 <li><strong>Solo lo que decide la instalación.</strong> El grupo de transporte resume el
@@ -1121,7 +1121,7 @@ notifica:</p>
 </tr>
 <tr>
 <td><code>tlsDnssec</code></td>
-<td>¿Está firmada la zona, de modo que se pueda confiar en la dirección en la que se basan todas las comprobaciones anteriores? Ausente, no fallida, cuando el resolvedor usado no habla DNSSEC</td>
+<td>¿Está firmada la zona, de modo que se pueda confiar en la dirección en la que se basan todas las comprobaciones anteriores? Ausente, no fallida, cuando el resolvedor usado no admite DNSSEC</td>
 </tr>
 <tr>
 <td><code>cookieSecure</code>, <code>cookieHttpOnly</code>, <code>cookieSameSite</code></td>
@@ -1171,7 +1171,7 @@ y lo que encontraron los sondeos de protocolos obsoletos y de stapling.</p>
 </code></pre>
 <p><strong><code>null</code> significa "no determinado", nunca "correcto".</strong> Una comprobación que
 no se pudo realizar (<code>get_unverified_chain()</code> necesita Python 3.13, el sondeo
-de protocolos obsoletos necesita una compilación que todavía hable alguno, el
+de protocolos obsoletos necesita una compilación que todavía admita alguno, el
 stapling necesita el comando <code>openssl</code> y un certificado que indique un
 servidor OCSP) se omite por completo de los hallazgos en lugar de registrarse
 como superada. Consulte

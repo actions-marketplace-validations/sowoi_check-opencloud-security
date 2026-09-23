@@ -46,7 +46,8 @@ line, the rest of the output as the service's details, and everything after
 the `|` as metrics. Nothing needs converting: the
 [performance data](../README.md#performance-data) this plugin already writes -
 `rating`, `vulnerabilities`, `hardenings_missing`, `extra_checks_failed`,
-`update_available`, `support_days_left`, `cert_days_left`, `upgrade_path_complete`, `time` - is the
+`update_available`, `support_days_left`, `cert_days_left`, `upgrade_path_complete`,
+`waiver_days_left`, `coverage_inconclusive`, `coverage_not_checked`, `time` - is the
 Nagios format Checkmk was built to read, thresholds and all.
 
 One warning about scheduling: the default check interval is one minute, and a
@@ -149,6 +150,9 @@ names, with two differences the format requires:
 | `support_days_left` | Days until the release line stops receiving fixes; negative once it has |
 | `cert_days_left` | Days until the certificate expires; negative once it has |
 | `upgrade_path_complete` | `1` when the recommended upgrade clears every known advisory, `0` when it does not; absent without advisories |
+| `waiver_days_left` | Days until a `--waive-until` waiver ends and lets a failing check alert again; absent when no failing check depends on a deadline |
+| `coverage_inconclusive` | Checks the scan ran and could not decide; absent without a coverage block |
+| `coverage_not_checked` | Checks the scan did not run; absent without a coverage block |
 | `execution_time` | How long the scan took, in seconds |
 
 A metric that was not measured is left out rather than sent as a zero, so a

@@ -32,7 +32,7 @@ an alert is raised; the evidence stays exactly as measured.
 from __future__ import annotations
 
 import fnmatch
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
@@ -269,3 +269,94 @@ def report(
         {**record.as_dict(now), "matched": sorted(set(matched[index]))}
         for index, record in enumerate(waivers)
     ]
+
+
+@dataclass(frozen=True)
+class UpcomingExpiry:
+    """The next moment a waiver stops suppressing a failing check."""
+
+    at: datetime
+    #: The failing checks that lose their last active waiver at ``at``.
+    checks: tuple[str, ...]
+    #: The record whose deadline that is, so the alert can name it.
+    pattern: str
+    reason: str
+
+
+def next_expiry(block: Any) -> UpcomingExpiry | None:
+    """
+    When the result document's waivers next let a failing check alert again.
+
+    Read from the ``waivers`` block the scan wrote, so it answers against the
+    same decisions the scan made. A check is only uncovered once *every*
+    active record matching it has run out: a temporary waiver beneath a
+    permanent wildcard ends without anything changing, and two overlapping
+    temporary waivers end at the later of the two. Records that matched
+    nothing are ignored for the same reason - their deadline passes
+    unnoticed.
+
+    ``None`` when no failing check is suppressed by a temporary waiver alone.
+    """
+    if not isinstance(block, list):
+        return None
+    # check -> the deadlines of the active records covering it; None is a
+    # permanent record, which covers the check for good.
+    covering: dict[str, list[tuple[datetime | None, dict[str, Any]]]] = {}
+    for record in block:
+        if not isinstance(record, dict) or record.get("state") != "active":
+            continue
+        expires = record.get("expiresAt")
+        deadline: datetime | None = None
+        if expires is not None:
+            try:
+                deadline = _parse_expiry(str(expires), str(expires))
+            except WaiverError:
+                continue
+        for check in record.get("matched") or ():
+            covering.setdefault(str(check), []).append((deadline, record))
+
+    ends: dict[str, tuple[datetime, dict[str, Any]]] = {}
+    for check, records in covering.items():
+        if any(deadline is None for deadline, _ in records):
+            continue
+        ends[check] = max(
+            ((deadline, record) for deadline, record in records if deadline is not None),
+            key=lambda item: item[0],
+        )
+    if not ends:
+        return None
+    at, record = min(ends.values(), key=lambda item: item[0])
+    return UpcomingExpiry(
+        at=at,
+        checks=tuple(sorted(check for check, (end, _) in ends.items() if end == at)),
+        pattern=str(record.get("pattern") or ""),
+        reason=str(record.get("reason") or ""),
+    )
+
+
+def scanned_at(result: Mapping[str, Any]) -> datetime | None:
+    """The moment the scan decided its waivers, read back from the document."""
+    scanned = result.get("scannedAt")
+    date = scanned.get("date") if isinstance(scanned, Mapping) else None
+    if not isinstance(date, str):
+        return None
+    try:
+        return datetime.strptime(date, "%Y-%m-%d %H:%M:%S.%f").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+
+
+def days_left(result: Mapping[str, Any], now: datetime | None = None) -> int | None:
+    """
+    Whole days until the next waiver expiry lets a failing check alert again.
+
+    Counted from the scan's own moment, so the number agrees with the
+    ``active`` state beside it, and truncated as the certificate's
+    ``daysRemaining`` is: ``0`` means it ends within the next 24 hours.
+    ``None`` when nothing is suppressed by a temporary waiver alone.
+    """
+    upcoming = next_expiry(result.get("waivers"))
+    if upcoming is None:
+        return None
+    moment = now or scanned_at(result) or scan_clock()
+    return max((upcoming.at - moment).days, 0)

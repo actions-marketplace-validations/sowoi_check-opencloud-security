@@ -117,6 +117,21 @@ promtool check rules /etc/prometheus/rules/opencloud-security.yml
 <td><code>1</code>, wenn das empfohlene Upgrade alle bekannten Schwachstellen behebt; kein Wert ohne Upgrade-Pfad</td>
 </tr>
 <tr>
+<td><code>opencloud_security_waiver_days_remaining</code></td>
+<td><code>host</code></td>
+<td>Tage, bis eine <code>--waive-until</code>-Ausnahme endet und eine fehlgeschlagene Prüfung wieder alarmiert; kein Wert, wenn keine fehlgeschlagene Prüfung an einer Frist hängt</td>
+</tr>
+<tr>
+<td><code>opencloud_security_coverage_inconclusive_total</code></td>
+<td><code>host</code></td>
+<td>Prüfungen, die der Scan ausgeführt, aber nicht entschieden hat</td>
+</tr>
+<tr>
+<td><code>opencloud_security_coverage_not_checked_total</code></td>
+<td><code>host</code></td>
+<td>Prüfungen, die der Scan nicht ausgeführt hat</td>
+</tr>
+<tr>
 <td><code>opencloud_security_scan_duration_seconds</code></td>
 <td><code>host</code></td>
 <td>Scandauer</td>
@@ -169,6 +184,18 @@ promtool check rules /etc/prometheus/rules/opencloud-security.yml
 <tr>
 <td><code>support_days_left</code></td>
 <td>Verbleibende Supporttage; nach dem Enddatum negativ</td>
+</tr>
+<tr>
+<td><code>waiver_days_left</code></td>
+<td>Tage bis zum Ende einer befristeten Ausnahme; fehlt, wenn keine eine fehlgeschlagene Prüfung verdeckt</td>
+</tr>
+<tr>
+<td><code>coverage_inconclusive</code></td>
+<td>Prüfungen, die der Scan nicht entscheiden konnte</td>
+</tr>
+<tr>
+<td><code>coverage_not_checked</code></td>
+<td>Prüfungen, die der Scan nicht ausgeführt hat</td>
 </tr>
 </tbody>
 </table>
@@ -265,7 +292,7 @@ chmod 644 &quot;$OUT&quot;
 <p>Wähle <code>for:</code> nach der gewünschten Verzögerung und der Verfügbarkeit der Messwerte. Ein gecachtes Ergebnis kann eine Bedingung über mehrere Auswertungen erfüllen, ohne dass inzwischen ein neuer Scan stattgefunden hat.</p>
 <h2 id="grafana">Grafana</h2>
 <p>importiere <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/grafana/dashboard.json"><code>contrib/grafana/dashboard.json</code></a> und wähle die Prometheus-Datenquelle. Das Dashboard zeigt Scanstatus, Note und Supportstatus, den Bewertungsverlauf, offene Befunde, Sicherheitshinweise nach Schweregrad und die installierten Versionen.</p>
-<p>Für ein eigenes Dashboard verwende eine Skala von <code>0</code> bis <code>5</code>, bei der höhere Werte besser sind. Schwellwerte bei <code>3</code> (gelb) und <code>1</code> (rot) entsprechen den Plugin-Standards. ordne die Zahlen den Noten zu: <code>5 → A+</code>, <code>4 → A</code>, <code>3 → C</code>, <code>2 → D</code>, <code>1 → E</code>, <code>0 → F</code>.</p>
+<p>Für ein eigenes Dashboard verwende eine Skala von <code>0</code> bis <code>5</code>, bei der höhere Werte besser sind. Schwellwerte bei <code>3</code> (gelb) und <code>1</code> (rot) entsprechen den Plugin-Standards. Ordne die Zahlen den Noten zu: <code>5 → A+</code>, <code>4 → A</code>, <code>3 → C</code>, <code>2 → D</code>, <code>1 → E</code>, <code>0 → F</code>.</p>
 <p>Zeige die Version neben der Bewertung an, damit ein möglicher Updatebedarf direkt erkennbar ist.</p>
 <hr>
 <p><a href="/documentation">Zur Dokumentationsübersicht</a> | <a href="/documentation/reference">Zum Haupt-README</a></p>

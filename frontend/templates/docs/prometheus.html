@@ -148,6 +148,21 @@ match them.</p>
 <td><code>1</code> when the recommended upgrade fixes every known advisory; no sample without one</td>
 </tr>
 <tr>
+<td><code>opencloud_security_waiver_days_remaining</code></td>
+<td><code>host</code></td>
+<td>Days until a <code>--waive-until</code> waiver ends and lets a failing check alert again; no sample when no failing check depends on a deadline</td>
+</tr>
+<tr>
+<td><code>opencloud_security_coverage_inconclusive_total</code></td>
+<td><code>host</code></td>
+<td>Checks the scan ran and could not decide</td>
+</tr>
+<tr>
+<td><code>opencloud_security_coverage_not_checked_total</code></td>
+<td><code>host</code></td>
+<td>Checks the scan did not run</td>
+</tr>
+<tr>
 <td><code>opencloud_security_scan_duration_seconds</code></td>
 <td><code>host</code></td>
 <td>How long the scan took</td>
@@ -206,6 +221,18 @@ not been announced reports no days at all, and "unknown" must not read as
 <tr>
 <td><code>support_days_left</code></td>
 <td>Days of support left; negative once overdue</td>
+</tr>
+<tr>
+<td><code>waiver_days_left</code></td>
+<td>Days until a temporary waiver ends; absent when none hides a failing check</td>
+</tr>
+<tr>
+<td><code>coverage_inconclusive</code></td>
+<td>Checks the scan could not decide</td>
+</tr>
+<tr>
+<td><code>coverage_not_checked</code></td>
+<td>Checks the scan did not run</td>
 </tr>
 </tbody>
 </table>

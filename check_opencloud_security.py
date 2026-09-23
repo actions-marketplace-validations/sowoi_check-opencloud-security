@@ -65,6 +65,7 @@ from opencloud_local_scan.baseline import (
     snapshot_of,
 )
 from opencloud_local_scan.completion import enable as enable_completion
+from opencloud_local_scan.coverage import state_counts as coverage_state_counts
 from opencloud_local_scan.coverage import summary as coverage_summary
 from opencloud_local_scan.coverage import summary_line as coverage_summary_line
 from opencloud_local_scan.fingerprint import digests as configuration_digests
@@ -84,7 +85,13 @@ from opencloud_local_scan.scanner import _NoRedirectSession, _PinnedHTTPAdapter
 from opencloud_local_scan.selfupdate import self_update_note
 from opencloud_local_scan.verification import verify as verify_remediation
 from opencloud_local_scan.versions import RELEASE_TRACK_CHOICES, TRACK_AUTO
-from opencloud_local_scan.waivers import Waiver, WaiverError, parse_waivers
+from opencloud_local_scan.waivers import (
+    Waiver,
+    WaiverError,
+    next_expiry,
+    parse_waivers,
+)
+from opencloud_local_scan.waivers import days_left as waiver_days_left
 
 LOGGER = logging.getLogger("check_opencloud")
 
@@ -395,6 +402,9 @@ class ScanContext:
     # Days before the running line's end of life at which OK becomes WARNING;
     # 0 disables. Past end of life is CRITICAL regardless.
     eol_warning_days: int = 0
+    # Days before a temporary waiver runs out at which OK becomes WARNING;
+    # 0 disables. Once it has run out, the check it covered alerts itself.
+    waiver_warning_days: int = 0
     # Remember the findings of the last run and report only what changed.
     baseline_path: str | None = None
     warn_on_new: bool = False
@@ -711,6 +721,9 @@ def check_vulnerabilities(
         detail_lines.append(
             f"Ignored by configuration ({len(waived)}): {', '.join(waived)}"
         )
+    expiry_sentence = _waiver_expiry_sentence(response_scan)
+    if expiry_sentence:
+        detail_lines.append(f"Next waiver expiry: {expiry_sentence}")
 
     extra_failures = failed_extra_checks(response_scan)
     if response_scan.get("extraChecks"):
@@ -735,6 +748,7 @@ def check_vulnerabilities(
             exit_code = NagiosExitCode.WARNING
 
     msg, exit_code = _apply_eol_warning(context, response_scan, msg, exit_code)
+    msg, exit_code = _apply_waiver_warning(context, response_scan, msg, exit_code)
 
     msg, exit_code, baseline_lines, baseline_diff = _apply_baseline(
         context,
@@ -791,6 +805,8 @@ def check_vulnerabilities(
         support_days_left=_support_days_left(response_scan),
         certificate_days_left=_certificate_days_left(response_scan),
         upgrade_path_complete=_upgrade_path_complete(response_scan),
+        waiver_days_left=waiver_days_left(response_scan),
+        coverage=coverage_state_counts(response_scan),
     )
 
     # Built unconditionally: it is the same document whether it goes out over
@@ -979,6 +995,50 @@ def _apply_eol_warning(
         ),
         NagiosExitCode.WARNING,
     )
+
+
+def _within_waiver_window(context: ScanContext, response_scan: dict[str, Any]) -> bool:
+    """Whether a waiver ends within --waiver-warning days and uncovers a failing check."""
+    if context.waiver_warning_days <= 0:
+        return False
+    remaining = waiver_days_left(response_scan)
+    return remaining is not None and remaining <= context.waiver_warning_days
+
+
+def _waiver_expiry_sentence(response_scan: dict[str, Any]) -> str | None:
+    """Name the waiver that runs out next, when, and what alerts after it."""
+    upcoming = next_expiry(response_scan.get("waivers"))
+    remaining = waiver_days_left(response_scan)
+    if upcoming is None or remaining is None:
+        return None
+    reason = f" ({upcoming.reason})" if upcoming.reason else ""
+    return (
+        f"The waiver {upcoming.pattern}{reason} ends on "
+        f"{upcoming.at.strftime('%Y-%m-%d %H:%M UTC')} ({remaining} days left), "
+        f"after which {', '.join(upcoming.checks)} alerts again."
+    )
+
+
+def _apply_waiver_warning(
+    context: ScanContext,
+    response_scan: dict[str, Any],
+    message: str,
+    exit_code: NagiosExitCode,
+) -> tuple[str, NagiosExitCode]:
+    """
+    Raise an otherwise OK result to WARNING when a waiver runs out soon.
+
+    A temporary waiver is binary: silent until its deadline, an alert on the
+    next run after it. The window gives the same lead time --eol-warning
+    gives an end of life. Only OK is raised, as there: a result that is
+    already WARNING or CRITICAL says something more urgent.
+    """
+    if exit_code is not NagiosExitCode.OK or not _within_waiver_window(context, response_scan):
+        return message, exit_code
+    sentence = _waiver_expiry_sentence(response_scan)
+    if sentence is None:
+        return message, exit_code
+    return f"WARNING: {sentence}", NagiosExitCode.WARNING
 
 
 def _apply_baseline(
@@ -1216,6 +1276,12 @@ def _build_webhook_payload(
         # whether this result is inside it, so a receiver need not redo it.
         "eol_warning_days": context.eol_warning_days,
         "eol_warning": _within_eol_window(context, response_scan),
+        # The same for temporary waivers: days until the next one lets a
+        # failing check alert again (None when none does), the window, and
+        # whether this result is inside it.
+        "waiver_days_left": waiver_days_left(response_scan),
+        "waiver_warning_days": context.waiver_warning_days,
+        "waiver_warning": _within_waiver_window(context, response_scan),
         "upgrade_path": response_scan.get("upgradePath") or None,
         # Every candidate release, simulated; ``rating_label`` is RATE_MAP's.
         "upgrade_rehearsal": _upgrade_rehearsal_payload(response_scan),
@@ -2317,6 +2383,8 @@ def _build_perfdata(
     support_days_left: int | None = None,
     certificate_days_left: int | None = None,
     upgrade_path_complete: bool | None = None,
+    waiver_days_left: int | None = None,
+    coverage: dict[str, int] | None = None,
 ) -> str:
     """
     Build a Nagios/Icinga performance data string.
@@ -2364,6 +2432,19 @@ def _build_perfdata(
         parts.append(f"cert_days_left={certificate_days_left};{warn_range};@~:0;;")
     if upgrade_path_complete is not None:
         parts.append(f"upgrade_path_complete={int(upgrade_path_complete)};;;0;1")
+    if waiver_days_left is not None:
+        # Only an active waiver has days left, so the value never goes
+        # negative: once it runs out the check it covered alerts instead.
+        # With --waiver-warning the graph carries the alert's window.
+        waiver_window = context.waiver_warning_days if context is not None else 0
+        warn_range = f"@~:{waiver_window}" if waiver_window > 0 else ""
+        parts.append(f"waiver_days_left={waiver_days_left};{warn_range};;0;")
+    if coverage is not None:
+        # The two gaps of the coverage block, so a graph shows the morning
+        # three checks became unreadable. They explain the grade and never
+        # change it, so they carry no thresholds.
+        parts.append(f"coverage_inconclusive={coverage['inconclusive']};;;0;")
+        parts.append(f"coverage_not_checked={coverage['not_checked']};;;0;")
     return " ".join(parts)
 
 
@@ -2691,6 +2772,17 @@ def build_arg_parser() -> argparse.ArgumentParser:
             "Report WARNING when the running release line reaches its end of life "
             "within DAYS days; 0 disables. "
             f"Default: 0 (env: {ENV_PREFIX}EOL_WARNING)."
+        ),
+    )
+    scope.add_argument(
+        "--waiver-warning",
+        type=int,
+        default=_env_int("WAIVER_WARNING", 0),
+        metavar="DAYS",
+        help=(
+            "Report WARNING when a --waive-until waiver that suppresses a "
+            "failing check ends within DAYS days; 0 disables. "
+            f"Default: 0 (env: {ENV_PREFIX}WAIVER_WARNING)."
         ),
     )
     baseline.add_argument(
@@ -3123,6 +3215,8 @@ def _validate_thresholds(parser: argparse.ArgumentParser, args: argparse.Namespa
     # "nothing new" forever without ever having compared anything.
     if args.eol_warning < 0:
         parser.error("--eol-warning must be 0 (off) or a number of days.")
+    if args.waiver_warning < 0:
+        parser.error("--waiver-warning must be 0 (off) or a number of days.")
     if args.warn_on_new and not args.baseline:
         parser.error("--warn-on-new needs --baseline PATH to compare this run against.")
     if args.check_only:
@@ -3227,6 +3321,7 @@ def _build_context(host: str, args: argparse.Namespace) -> ScanContext:
         update_check=not args.no_update_check,
         update_warning=args.update_warning,
         eol_warning_days=args.eol_warning,
+        waiver_warning_days=args.waiver_warning,
         baseline_path=args.baseline,
         policy=_load_policy_argument(args),
         warn_on_new=args.warn_on_new,
@@ -3951,6 +4046,13 @@ def _checkmk_metrics(document: dict[str, Any]) -> str:
     complete = _upgrade_path_complete(scan)
     if complete is not None:
         metrics.append(f"upgrade_path_complete={int(complete)}")
+    waiver_days = waiver_days_left(scan)
+    if waiver_days is not None:
+        metrics.append(f"waiver_days_left={waiver_days}")
+    coverage = coverage_state_counts(scan)
+    if coverage is not None:
+        metrics.append(f"coverage_inconclusive={coverage['inconclusive']}")
+        metrics.append(f"coverage_not_checked={coverage['not_checked']}")
 
     duration = payload.get("duration_seconds")
     if isinstance(duration, (int, float)):

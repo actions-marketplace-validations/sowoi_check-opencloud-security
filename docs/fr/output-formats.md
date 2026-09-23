@@ -1,71 +1,65 @@
-# Formats de sortie
+# Formats de sortie {#machine-readable-output---format-json-sarif-junit}
 
-La sortie par défaut du plugin est une ligne d’état Nagios accompagnée de données de performance. Utilisez
-`--format` (`COS_FORMAT`) pour choisir le format destiné aux scripts, tableaux de bord
-et les pipelines CI.
+Par défaut, le plugin affiche une ligne d’état Nagios et des données de performance.
+Utilisez `--format` (`COS_FORMAT`) pour choisir un format destiné aux scripts,
+tableaux de bord ou pipelines CI.
 
-`--format json`, `--format sarif` et `--format junit` produisent tous **un seul
-document combiné pour tous les hôtes analysés**, jamais un document par hôte, même si
-`--host` n’en indique qu’un. La sortie reste donc toujours un JSON, un SARIF ou un XML
-valide, quel que soit le nombre d’adresses fourni.
+`--format json`, `--format sarif` et `--format junit` produisent **un document
+combiné pour tous les hôtes analysés**, même si `--host` n’en contient qu’un.
+La sortie reste donc un document JSON, SARIF ou XML valide, quel que soit le
+nombre d’adresses.
 
-**The exit code keeps its Nagios meaning under every format** - `0`
-(OK), `1` (WARNING), `2` (CRITICAL), `3` (UNKNOWN). A CI step gates on the
-exit code exactly the way an Icinga check does; the document these flags
-produce is a separate, additional artifact, not a replacement for it. The two
-metric formats, `prometheus` and `otlp`, are the exception: they report a
-scan rather than judging it, so a finding travels as a sample and the process
-exits `0`.
+**Le code de sortie conserve sa signification Nagios** : `0` (OK), `1` (WARNING),
+`2` (CRITICAL), `3` (UNKNOWN). Une étape CI peut utiliser ce code comme un contrôle
+Icinga. Le document est un résultat supplémentaire. Les formats de métriques
+`prometheus` et `otlp` font exception : ils rapportent les constats sous forme
+d’échantillons et terminent avec le code `0`.
 
 <!-- TOC -->
-* [Machine-readable output: `--format json`, `sarif`, `junit`](#machine-readable-output---format-json-sarif-junit)
+* [Formats de sortie](#machine-readable-output---format-json-sarif-junit)
   * [`json`](#json)
   * [`sarif`](#sarif)
   * [`junit`](#junit)
   * [`checkmk`](#checkmk)
   * [`otlp`](#otlp)
-  * [Choosing a format](#choosing-a-format)
+  * [Choisir un format](#choosing-a-format)
 <!-- TOC -->
 
+## `json` {#json}
 
-## `json`
-
-A JSON array of the same result document described in [Webhook
-notifications](../README.md#webhook-notifications) - one object per host,
-always an array even for a single host. This is the format to reach for when
-something else is going to parse the result programmatically: a script, a
-dashboard backend, or a second monitoring system this plugin does not speak
-to natively.
+Un tableau JSON contient les documents décrits dans
+[Notifications webhook](../README.md#webhook-notifications), à raison d’un objet
+par hôte. La sortie reste un tableau pour un seul hôte. Utilisez ce format pour
+traiter les résultats dans un script, un tableau de bord ou un autre système de
+supervision.
 
 ```shell
 check-opencloud-security --host opencloud.example.com --format json
 ```
 
-## `sarif`
+## `sarif` {#sarif}
 
-[SARIF](https://sarifweb.azurewebsites.net/) 2.1.0, for a code-scanning
-dashboard - GitHub's included. Findings come from the same
-missing-hardening, failed-extra-check, vulnerability and end-of-life facts as
-the plugin's own text output: a SARIF result never says anything the Nagios
-line would not, it is only reshaped for a scanning dashboard to render.
+[SARIF](https://sarifweb.azurewebsites.net/) 2.1.0 convient aux tableaux de bord
+d’analyse de code, dont celui de GitHub. Les constats proviennent des mêmes données
+que la sortie texte : durcissement manquant, contrôles supplémentaires en échec,
+vulnérabilités et fin de vie. Seule leur présentation change.
 
 ```shell
 check-opencloud-security --host opencloud.example.com --format sarif \
   > opencloud-security.sarif
 ```
 
-Each finding carries what a dashboard needs to act on it: the catalogue's
-remediation sentence and documentation link (`help`, `helpUri`), the severity
-and category (`security-severity`, `problem.severity`, `tags`), the release
-range an advisory affects (`affectedRanges`, `fixedIn`) and a stable
-fingerprint (`partialFingerprints`), so the same finding stays one alert
-across runs. `run.properties.hosts` reports the rating, version and
-end-of-life state per scanned host.
+Chaque constat contient la correction proposée et le lien vers la documentation
+(`help`, `helpUri`), la gravité et la catégorie (`security-severity`,
+`problem.severity`, `tags`), les versions concernées par un avis (`affectedRanges`,
+`fixedIn`) et une empreinte stable (`partialFingerprints`). Cette empreinte permet
+de suivre une même alerte entre les exécutions. `run.properties.hosts` indique la
+note, la version et l’état de fin de vie de chaque hôte.
 
-In GitHub Actions, upload it to code scanning. `continue-on-error: true` on
-the scan step keeps a non-zero exit from failing the job before the upload
-step runs - the point of scanning in CI is usually to see the findings even
-when the scan itself reports a bad rating:
+Dans GitHub Actions, envoyez le fichier à l’analyse de code. Le réglage
+`continue-on-error: true` empêche un code de sortie non nul d’arrêter la tâche avant
+l’envoi. Les constats restent donc consultables même si l’analyse signale une
+mauvaise note :
 
 ```yaml
 - name: Scan OpenCloud
@@ -78,42 +72,40 @@ when the scan itself reports a bad rating:
     sarif_file: opencloud-security.sarif
 ```
 
-## `junit`
+## `junit` {#junit}
 
-JUnit XML with one `<testsuite>` per scanned host and one `<testcase>` per
-finding, plus an **always-present `rating` case** - so a clean host still
-shows up in the report rather than contributing zero test cases, which most
-JUnit-reading tools treat as "nothing ran" rather than "nothing failed".
+Le document JUnit XML contient une `<testsuite>` par hôte et un `<testcase>` par
+constat. Un cas **`rating` est toujours présent**, afin qu’un hôte sans problème
+apparaisse aussi dans le rapport. La plupart des outils JUnit interprètent
+l’absence de cas comme une absence d’exécution.
 
 ```shell
 check-opencloud-security --host opencloud.example.com --format junit \
   > opencloud-security.xml
 ```
 
-The same pattern works for any CI system that turns a JUnit file into a
-check-run summary - the step just needs to point its JUnit reporter at the
-file this command produces.
+La même méthode fonctionne dans tout système CI capable de présenter un rapport
+JUnit. Configurez son outil de rapport pour lire le fichier produit.
 
-## `checkmk`
+## `checkmk` {#checkmk}
 
-One [Checkmk local check](checkmk.md) line per scanned host, for the agent to
-read: the state, the quoted service name, the metrics and the detail text.
+Une ligne de [contrôle local Checkmk](checkmk.md) par hôte contient l’état, le nom
+du service entre guillemets, les métriques et les détails à lire par l’agent.
 
 ```shell
 check-opencloud-security --host opencloud.example.com --format checkmk
 ```
 
-This is the one format that is *not* a single combined document, because the
-protocol it writes is a line per service - several hosts are several
-services. It is also only needed for the agent-side route: a Checkmk server
-running the plugin as an active check reads the default `nagios` output
-natively. [Checkmk](checkmk.md) has both, and the metric table.
+Ce format produit une ligne par service, donc plusieurs lignes pour plusieurs
+hôtes. Il sert uniquement aux contrôles exécutés par l’agent. Un serveur Checkmk
+qui lance le plugin comme contrôle actif lit directement le format `nagios` par
+défaut. Le [guide Checkmk](checkmk.md) décrit les deux méthodes et leurs métriques.
 
-## `otlp`
+## `otlp` {#otlp}
 
-The metrics the Prometheus exposition publishes, rendered as OTLP/JSON: one
-`ExportMetricsServiceRequest` holding every scanned host, which is the body an
-OpenTelemetry collector accepts at `POST /v1/metrics` over OTLP/HTTP.
+Ce format reprend les métriques Prometheus dans un document OTLP/JSON : un
+`ExportMetricsServiceRequest` pour tous les hôtes. Un collecteur OpenTelemetry
+accepte ce document à `POST /v1/metrics` via OTLP/HTTP.
 
 ```shell
 check-opencloud-security --host opencloud.example.com --format otlp \
@@ -121,38 +113,35 @@ check-opencloud-security --host opencloud.example.com --format otlp \
       -H 'Content-Type: application/json' --data-binary @-
 ```
 
-The plugin prints the document and never dials the collector itself: where
-the metrics go, through which proxy and with which credential is the
-collector's configuration, not a scan's. Piping it at `curl` from the same
-timer that already runs the check keeps that split, and keeps the plugin free
-of an instrumentation stack a monitoring host never asked for.
+Le plugin affiche le document sans contacter le collecteur. La destination, le
+proxy et les identifiants d’accès se configurent dans la commande d’envoi. Vous
+pouvez la lancer avec `curl` depuis le même timer que le contrôle, sans installer
+de bibliothèque d’instrumentation dans le plugin.
 
-Several hosts become several data points on the same metrics, distinguished
-by their `host` attribute, exactly as they become repeated samples in a
-scrape. Every metric is a gauge - the current reading of something - and the
-names, attributes and values are the exposition's, so one dashboard query
-works against either pipeline. [Prometheus and Grafana](prometheus.md#what-the-exporter-publishes)
-has the metric table both formats share.
+Plusieurs hôtes produisent plusieurs points par métrique, distingués par l’attribut
+`host`, comme dans une collecte Prometheus. Chaque métrique est une jauge, c’est-à-dire
+une valeur mesurée à un instant donné. Les noms, attributs et valeurs sont identiques
+à ceux de l’exportateur. Le guide [Prometheus et Grafana](prometheus.md#what-the-exporter-publishes)
+contient le tableau commun aux deux formats.
 
-Like `--format prometheus`, **this format exits `0` even for an instance that
-would have alerted**, and reports a failed scan as
-`opencloud_security_scrape_success 0` rather than as an exit code. A metrics
-pipeline has no other way to tell an unreachable instance from a scan that
-stopped running; where the exit code is the point, use `nagios`, `json`,
-`sarif` or `junit`.
+Comme `--format prometheus`, **ce format termine avec le code `0`, même si
+l’instance aurait déclenché une alerte**. Une analyse en échec produit
+`opencloud_security_scrape_success 0`. Le système de métriques peut ainsi distinguer
+une instance inaccessible d’une tâche qui ne s’exécute plus. Si vous avez besoin
+d’un code de sortie d’alerte, utilisez `nagios`, `json`, `sarif` ou `junit`.
 
-## Choosing a format
+## Choisir un format {#choosing-a-format}
 
-| Format     | Use it when...                                                          |
+| Format | Utilisation |
 |:-----------|:-------------------------------------------------------------------------|
-| `nagios`   | Default. A monitoring system reads the exit code and the one-line output |
-| `prometheus` | A scrape target or textfile collector wants metrics directly - see [Prometheus and Grafana](prometheus.md) |
-| `otlp`     | An OpenTelemetry collector should receive those same metrics at `/v1/metrics` |
-| `json`     | Something else parses the result programmatically                        |
-| `sarif`    | A code-scanning dashboard (GitHub, GitLab) should list the findings      |
-| `junit`    | A CI system renders test results and should render findings the same way |
-| `checkmk`  | A Checkmk agent runs the plugin as a local check - see [Checkmk](checkmk.md) |
+| `nagios` | Format par défaut : le système de supervision lit le code de sortie et la ligne d’état |
+| `prometheus` | Collecte directe ou collecteur textfile ; voir [Prometheus et Grafana](prometheus.md) |
+| `otlp` | Envoi des mêmes métriques à un collecteur OpenTelemetry sur `/v1/metrics` |
+| `json` | Traitement automatique du résultat |
+| `sarif` | Affichage des constats dans un tableau de bord d’analyse de code, comme GitHub ou GitLab |
+| `junit` | Affichage des constats sous forme de résultats de tests dans un système CI |
+| `checkmk` | Exécution comme contrôle local par un agent [Checkmk](checkmk.md) |
 
-See [Running the check from CI](ci.md) for a fuller GitHub Actions and
-GitLab CI walkthrough, including gating a pipeline on a field of the JSON
-result rather than only the exit code.
+Le guide [Exécuter le contrôle en CI](ci.md) détaille les étapes GitHub Actions et
+GitLab CI. Il explique aussi comment conditionner un pipeline à un champ JSON du
+résultat.

@@ -191,7 +191,7 @@ lee</strong>, se haya seleccionado o no el servicio que la usa. Como perfil, rom
 <li><strong>El worker no recibe el socket de Docker.</strong> La versión oficial lo monta para
   que el worker pueda gestionar contenedores outpost; esta pila no ejecuta
   ningún outpost, y dar a un contenedor el socket del daemon es darle el host.</li>
-<li><strong>El estado vive en volúmenes con nombre</strong> (<code>authentik_database</code>,
+<li><strong>El estado se guarda en volúmenes con nombre</strong> (<code>authentik_database</code>,
   <code>authentik_media</code>, <code>authentik_templates</code>, <code>authentik_certs</code>) y no en montajes
   de directorios bajo <code>docker/</code>.</li>
 <li><strong>No monte <code>/etc/localtime</code> ni <code>/etc/timezone</code></strong> en estos contenedores.

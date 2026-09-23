@@ -19,6 +19,9 @@ from collections import Counter
 from dataclasses import dataclass
 from typing import Any
 
+from opencloud_local_scan.coverage import INCONCLUSIVE, NOT_CHECKED, state_counts
+from opencloud_local_scan.waivers import days_left as waiver_days_left
+
 # OTLP wants a unit for every metric; Prometheus carries it in the name
 # instead. UCUM, in which "1" is the unit of a dimensionless count.
 UNIT_COUNT = "1"
@@ -273,6 +276,41 @@ def collect(
                             int(not upgrade_path.get("stillAffected")),
                         )
                     ],
+                )
+            )
+
+        # The plugin's waiver_days_left perfdata: days until the next
+        # temporary waiver lets a failing check alert again. No sample when
+        # nothing depends on a deadline.
+        waiver_days = waiver_days_left(outcome)
+        if waiver_days is not None:
+            families.append(
+                _family(
+                    "opencloud_security_waiver_days_remaining",
+                    "Days remaining before a temporary waiver lets a failing check alert again.",
+                    UNIT_DAYS,
+                    [(base_labels, waiver_days)],
+                )
+            )
+
+        # The plugin's coverage_* perfdata: the checks the scan could not
+        # decide or did not run. They explain the grade and never change it.
+        coverage = state_counts(outcome)
+        if coverage is not None:
+            families.append(
+                _family(
+                    "opencloud_security_coverage_inconclusive_total",
+                    "Checks the scan ran and could not decide.",
+                    UNIT_COUNT,
+                    [(base_labels, coverage[INCONCLUSIVE])],
+                )
+            )
+            families.append(
+                _family(
+                    "opencloud_security_coverage_not_checked_total",
+                    "Checks the scan did not run.",
+                    UNIT_COUNT,
+                    [(base_labels, coverage[NOT_CHECKED])],
                 )
             )
 

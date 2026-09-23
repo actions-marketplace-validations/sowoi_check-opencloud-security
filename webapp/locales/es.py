@@ -38,58 +38,58 @@ MESSAGES: dict[str, str] = {
     "admin.config.group.frontend": "Frontend",
     "admin.rules.title": "Reglas en vigor",
     "admin.rules.lede": "Cómo se decide una calificación y qué reglas aplica este despliegue a las solicitudes, con los valores vigentes.",
-    "admin.rules.scope": "Leído de la configuración con la que arrancó este proceso y de las constantes que usa el código que las aplica, así que una regla listada aquí es una que el servicio aplica ahora mismo. Nada en esta página nombra un objetivo ni a un visitante.",
+    "admin.rules.scope": "Esta vista muestra la configuración cargada al iniciar el proceso y las reglas definidas en el código. No muestra direcciones de destinos ni datos de visitantes.",
     "admin.rules.on": "Aplicada",
     "admin.rules.off": "Desactivada",
     "admin.rules.variables": "Definida por",
     "admin.rules.rating.kicker": "Notas",
     "admin.rules.rating.heading": "Cómo se califica una instancia",
-    "admin.rules.rating.lede": "La calificación es del propio escáner; este servicio solo la muestra. Estas son las reglas que aplica a cada análisis aquí.",
+    "admin.rules.rating.lede": "El escáner calcula la calificación según estas reglas. El servicio web muestra el resultado.",
     "admin.rules.rating.scale": "La escala",
-    "admin.rules.rating.caps": "Lo que una comprobación fallida puede hacer con la nota",
+    "admin.rules.rating.caps": "Cómo limitan la nota las comprobaciones fallidas",
     "admin.rules.rating.version.title": "La versión fija la nota de partida",
     "admin.rules.rating.version.body": "El estado de soporte de la línea de versiones y cada aviso publicado que afecta a la versión deciden dónde empieza una nota. Las comprobaciones fallidas solo pueden limitarla.",
     "admin.rules.rating.overrides.title": "Fin de soporte y canal de versiones",
-    "admin.rules.rating.shared.title": "Un techo por gravedad",
+    "admin.rules.rating.shared.title": "Límites de la nota por gravedad",
     "admin.rules.rating.extra.title": "Las comprobaciones adicionales cuentan para la nota",
     "admin.rules.rating.extra.body": "La seguridad del transporte, las cabeceras y el resto de comprobaciones adicionales limitan la nota como las de refuerzo, no solo aparecen en el informe.",
     "admin.rules.rating.waivers.title": "Exenciones que puede elegir un visitante",
-    "admin.rules.rating.waivers.body": "{count} comprobaciones de refuerzo pueden eximirse en el formulario. Una comprobación eximida deja de limitar la nota y sigue en el informe, marcada; el fin de soporte no puede eximirse.",
+    "admin.rules.rating.waivers.body": "El formulario permite exenciones para {count} comprobaciones de refuerzo. Las comprobaciones eximidas siguen identificadas en el informe, pero no limitan la nota. El fin de soporte siempre afecta a la nota.",
     "admin.rules.rating.track.title": "Canal de versiones",
     "admin.rules.rating.track.body": "Sin elegir en el formulario, el canal es {track}. El canal cambia cómo se califica una versión, nunca con qué intensidad se sondea la instancia.",
     "admin.rules.rating.reference.title": "Datos de referencia para calificar",
     "admin.rules.rating.reference.body": "{advisories} avisos en la base de datos; calendario de versiones con fecha {schedule}.",
     "admin.rules.rating.more": "La <a href=\"/grades\">página de notas</a> explica cada nota a los visitantes en los mismos términos.",
     "admin.rules.group.submissions": "Límites de envío",
-    "admin.rules.group.submissions.lede": "Con qué frecuencia puede preguntar un cliente, y cómo se comporta el servicio con carga.",
+    "admin.rules.group.submissions.lede": "Con qué frecuencia puede solicitar un análisis un cliente y cómo gestiona el servicio la carga.",
     "admin.rules.group.probe": "Bloqueo por sondeo",
     "admin.rules.group.probe.lede": "Límites para solicitudes repetidas a destinos que no se pueden analizar.",
     "admin.rules.group.targets": "Qué se puede analizar",
-    "admin.rules.group.targets.lede": "Se comprueba antes de conectar nada, y de nuevo en cada redirección.",
+    "admin.rules.group.targets.lede": "Los destinos se comprueban antes de conectar y antes de seguir cada redirección.",
     "admin.rules.group.scanner": "Con qué intensidad se sondea un host",
     "admin.rules.group.scanner.lede": "Los ajustes con los que se ejecuta cada análisis de este despliegue. Ninguna solicitud puede modificarlos.",
     "admin.rules.group.operator": "Credenciales y acciones del operador",
-    "admin.rules.group.operator.lede": "Límites para las pocas llamadas que necesitan una credencial o pulsan un botón.",
+    "admin.rules.group.operator.lede": "Límites de las solicitudes que requieren credenciales y de las acciones del operador.",
     "admin.rules.rule.client_limit.title": "Límite por cliente",
-    "admin.rules.rule.client_limit.body": "Como máximo {limit} envíos por cliente cada {window}. Una dirección IPv4 es un cliente; un cliente IPv6 es su /{ipv6}.",
+    "admin.rules.rule.client_limit.body": "Como máximo {limit} envíos por cliente cada {window}. Cada dirección IPv4 cuenta como un cliente. En IPv6, cada red /{ipv6} cuenta como un cliente.",
     "admin.rules.rule.daily_cap.title": "Límite diario",
     "admin.rules.rule.daily_cap.body": "Como máximo {limit} envíos por cliente cada {window}, además del límite por cliente.",
     "admin.rules.rule.target_cooldown.title": "Espera por objetivo",
     "admin.rules.rule.target_cooldown.body": "La misma instancia puede analizarse una vez cada {cooldown}, pregunte quien pregunte.",
     "admin.rules.rule.batch.title": "Tamaño del lote",
     "admin.rules.rule.batch.body": "Un lote lleva como máximo {limit} objetivos, y cada uno cuenta contra todos los límites.",
-    "admin.rules.rule.queue.title": "La sobrecarga hace cola",
-    "admin.rules.rule.queue.body": "Se ejecutan {workers} análisis a la vez; los demás envíos esperan en orden y nunca se rechazan por carga.",
+    "admin.rules.rule.queue.title": "Cola de análisis bajo carga",
+    "admin.rules.rule.queue.body": "Se ejecutan hasta {workers} análisis a la vez. Las demás solicitudes esperan por orden de llegada. La carga elevada no provoca rechazos.",
     "admin.rules.rule.agent_wait.title": "Límite de reintentos automáticos",
-    "admin.rules.rule.agent_wait.body": "MCP y los flujos esperan por sí mismos un Retry-After de hasta {wait}, con un máximo de {attempts} intentos. Si la espera es mayor, devuelven la respuesta a quien llama.",
+    "admin.rules.rule.agent_wait.body": "MCP y los flujos de trabajo reintentan automáticamente tras una espera Retry-After de hasta {wait}, con un máximo de {attempts} intentos. Si la espera es mayor, se comunica al cliente.",
     "admin.rules.rule.probe_block.title": "Bloqueo tras avisos repetidos",
     "admin.rules.rule.probe_block.body": "{limit} avisos en {window} bloquean la red del cliente durante {block}.",
     "admin.rules.rule.probe_escalation.title": "Los bloqueos repetidos se alargan",
     "admin.rules.rule.probe_escalation.body": "Una red bloqueada de nuevo dentro de {repeat} tras su último bloqueo espera {factor} veces más cada vez: {steps}.",
     "admin.rules.rule.probe_network.title": "El bloqueo cubre una red",
-    "admin.rules.rule.probe_network.body": "Un bloqueo se aplica a la /{ipv4} IPv4 y la /{ipv6} IPv6 del cliente, para que la siguiente dirección no pueda esquivarlo.",
+    "admin.rules.rule.probe_network.body": "El bloqueo abarca la red IPv4 /{ipv4} o IPv6 /{ipv6} del cliente. Cambiar de dirección dentro de esa red no evita el bloqueo.",
     "admin.rules.rule.strike_scans.title": "Un análisis que no encuentra OpenCloud es un aviso",
-    "admin.rules.rule.strike_scans.body": "status.php no respondió, no devolvió JSON, nombró otro producto, o el análisis agotó el tiempo. El mismo host de nuevo es otro aviso; un análisis terminado nunca lo es.",
+    "admin.rules.rule.strike_scans.body": "Se registra una penalización si status.php no responde, devuelve JSON no válido, identifica otro producto o el análisis agota el tiempo de espera. Repetir el mismo host cuenta de nuevo. Un análisis completado no cuenta.",
     "admin.rules.rule.strike_refusals.title": "Un objetivo rechazado es un aviso",
     "admin.rules.rule.strike_refusals.body": "Cuenta un envío rechazado por aquello a lo que apunta; una errata o un nombre que no resuelve no cuenta:",
     "admin.rules.refusal.blocked": "una dirección que este despliegue excluye",
@@ -99,11 +99,11 @@ MESSAGES: dict[str, str] = {
     "admin.rules.refusal.unstable": "un nombre cuyas consultas no coinciden",
     "admin.rules.refusal.wildcard_dns": "un nombre DNS comodín o de rebinding",
     "admin.rules.rule.private_addresses.title": "Solo direcciones públicas",
-    "admin.rules.rule.private_addresses.body": "Cada dirección a la que resuelve un nombre debe ser pública; una respuesta privada rechaza el objetivo. Además de los rangos privados, también se rechazan estos:",
+    "admin.rules.rule.private_addresses.body": "Todas las direcciones resueltas deben ser públicas y unicast. Una sola dirección privada provoca el rechazo. También se rechazan estas direcciones:",
     "admin.rules.rule.internal_names.title": "Nombres locales y endpoints de metadatos",
     "admin.rules.rule.internal_names.body": "Rechazados por nombre además de por dirección:",
     "admin.rules.rule.wildcard_dns.title": "Nombres DNS comodín y de rebinding",
-    "admin.rules.rule.wildcard_dns.body": "Los nombres bajo estos servicios apuntan donde diga su escritura. La dirección de detrás puede analizarse escribiéndola directamente:",
+    "admin.rules.rule.wildcard_dns.body": "Estos servicios codifican una dirección IP en el nombre de host. Para analizar esa dirección, introduzca la IP directamente:",
     "admin.rules.rule.dns_consistency.title": "Un nombre debe resolver igual dos veces",
     "admin.rules.rule.dns_consistency.body": "Un nombre enviado se consulta dos veces y se rechaza si las respuestas no comparten ninguna dirección; se comprueban todas las de ambas.",
     "admin.rules.rule.redirects.title": "Se comprueba cada redirección",
@@ -123,7 +123,7 @@ MESSAGES: dict[str, str] = {
     "admin.rules.rule.load.title": "Carga por análisis",
     "admin.rules.rule.load.body": "Como máximo {concurrency} peticiones simultáneas, cada una con {timeout}; un análisis completo se detiene tras {job}.",
     "admin.rules.rule.purge_attempts.title": "Intentos con la credencial de borrado",
-    "admin.rules.rule.purge_attempts.body": "{limit} credenciales erróneas por cliente en {window}, después se rechaza hasta que termina la ventana. Las correctas nunca cuentan.",
+    "admin.rules.rule.purge_attempts.body": "Tras {limit} credenciales incorrectas de un cliente en {window}, se rechazan los siguientes intentos hasta que termine ese periodo. Las credenciales correctas no cuentan.",
     "admin.rules.rule.admin_refresh.title": "Botones de actualización",
     "admin.rules.rule.admin_refresh.body": "Cada actualización de datos de referencia puede pulsarse una vez cada {cooldown}.",
     "admin.docs.kicker": "Documentación de operación",
@@ -131,10 +131,7 @@ MESSAGES: dict[str, str] = {
     "admin.band": "Área de operación - sesión iniciada como {user}",
     "admin.band.signout": "Cerrar sesión",
     "admin.lede": "Consulte el estado del servicio y los datos de referencia, o ejecute manualmente las actualizaciones diarias del proceso de trabajo.",
-    "admin.noscript": (
-        "Los valores de arriba los rellena JavaScript. Sin él, recarga la "
-        "página para ver los actuales; los dos botones siguen funcionando."
-    ),
+    "admin.noscript": "JavaScript actualiza los valores anteriores. Sin JavaScript, recargue la página para ver los valores actuales. Ambos botones de actualización siguen funcionando.",
     "admin.state.kicker": "Ahora",
     "admin.state.heading": "Estado del servicio",
     "admin.state.lede": "Recuentos actuales y límites configurados. Aquí no se puede acceder a los detalles de análisis individuales ni a las direcciones de los clientes.",
@@ -178,11 +175,7 @@ MESSAGES: dict[str, str] = {
     "admin.state.copy.failed": "No se ha podido copiar",
     "admin.surfaces.kicker": "Exposición",
     "admin.surfaces.heading": "Qué ofrece esta instalación",
-    "admin.surfaces.lede": (
-        "Los ajustes con los que arrancó este proceso, los mismos que indica "
-        "el documento de diagnóstico. Ninguno cambia sin reiniciar, así que "
-        "ninguno se consulta periódicamente."
-    ),
+    "admin.surfaces.lede": "Estos ajustes de arranque también aparecen en el documento de diagnóstico. Los cambios requieren un reinicio, por lo que esta página no consulta periódicamente si han cambiado.",
     "admin.surfaces.on": "Activado",
     "admin.surfaces.off": "Desactivado",
     "admin.surfaces.mcp": "Punto de acceso para agentes en /mcp",
@@ -200,10 +193,7 @@ MESSAGES: dict[str, str] = {
     ),
     "admin.surfaces.indexed": "Localizable por los buscadores",
     "admin.surfaces.private": "Análisis de direcciones de red privadas",
-    "admin.surfaces.private.found": (
-        "Permitido en una instalación que pide ser indexada: quien encuentre "
-        "este servicio puede apuntarlo a la red en la que está."
-    ),
+    "admin.surfaces.private.found": "Se permiten destinos privados y está activada la indexación en buscadores. Cualquiera que encuentre este servicio puede enviar destinos de su red interna.",
     "admin.surfaces.private.estate": (
         "Permitido, que es justo para lo que sirve una instalación que "
         "analiza su propia red."
@@ -226,7 +216,7 @@ MESSAGES: dict[str, str] = {
     "admin.update.unknown": "No se pudo averiguar si existe una versión más reciente.",
     "admin.update.off": "La comprobación de actualizaciones está desactivada (COS_WEB_UPDATE_CHECK).",
     "admin.update.install": "Instalar {version} ahora",
-    "admin.update.downtime": "El paquete se verifica con su atestación de compilación de GitHub y luego el servicio web y los workers se reinician con él: una breve interrupción, y un escaneo en curso se corta. La actualización dura hasta que se reinicien los contenedores.",
+    "admin.update.downtime": "El servicio verifica el paquete mediante su atestación de compilación de GitHub y después reinicia el servicio web y los workers. Esto interrumpe brevemente el servicio y detiene los análisis en curso. La actualización permanece activa hasta que se reinicien los contenedores.",
     "admin.update.manual": "La instalación desde aquí está desactivada (COS_WEB_ADMIN_UPDATE_DIR). Descargue la nueva imagen y vuelva a crear los contenedores.",
     "admin.update.outcome.requested": "Verificada e instalada. El servicio se reinicia en un momento; recargue la página.",
     "admin.update.outcome.current": "No hay nada más reciente que instalar.",
@@ -234,12 +224,7 @@ MESSAGES: dict[str, str] = {
     "admin.update.outcome.failed": "No se pudo descargar o verificar la versión. No ha cambiado nada; el registro indica por qué.",
     "admin.exclusions.kicker": "Exclusiones",
     "admin.exclusions.heading": "Direcciones que este servicio no analizará",
-    "admin.exclusions.lede": (
-        "Una entrada surte efecto desde la siguiente petición, en todos los "
-        "procesos y sin reiniciar - y un análisis que ya esperaba en la cola "
-        "se rechaza en lugar de ejecutarse. Nada de aquí hace que este "
-        "servicio analice algo: la lista solo rechaza."
-    ),
+    "admin.exclusions.lede": "Los cambios se aplican desde la siguiente solicitud en todos los procesos, sin reiniciar. También se rechazan los análisis en cola de destinos excluidos. Esta lista solo puede bloquear análisis.",
     "admin.exclusions.add.label": "Nombre de host, dominio .sufijo, dirección o rango CIDR",
     "admin.exclusions.add.placeholder": "opencloud.example.com",
     "admin.exclusions.add.action": "Excluir",
@@ -252,11 +237,7 @@ MESSAGES: dict[str, str] = {
     "admin.exclusions.empty": "En esta instalación no hay nada excluido.",
     "admin.exclusions.source.configured": "Desde el entorno",
     "admin.exclusions.updated": "Modificado aquí por última vez el {when}.",
-    "admin.exclusions.durability": (
-        "Las entradas añadidas aquí viven en Redis, que esta instalación "
-        "puede vaciar. Las que deban perdurar van en COS_WEB_BLOCKED_TARGETS, "
-        "donde no pueden retirarse desde esta página."
-    ),
+    "admin.exclusions.durability": "Las entradas añadidas aquí se guardan en Redis y se pierden si Redis se vacía. Para exclusiones permanentes, use COS_WEB_BLOCKED_TARGETS. Esta página no permite retirar esas entradas.",
     "admin.exclusions.unreadable": (
         "El almacén no respondió, así que las exclusiones no pueden leerse "
         "ni cambiarse ahora mismo. Siguen vigentes: un análisis que no puede "
@@ -274,20 +255,12 @@ MESSAGES: dict[str, str] = {
         "Esta lista está llena. Pase las entradas permanentes a "
         "COS_WEB_BLOCKED_TARGETS."
     ),
-    "admin.blocklist.error.long": (
-        "Esa entrada es más larga de lo que puede ser un nombre de host, así "
-        "que nada de lo que pretenda designar llegaría a este servicio."
-    ),
+    "admin.blocklist.error.long": "La entrada supera la longitud máxima de un nombre de host. Introduzca un máximo de 253 caracteres.",
     "admin.outcome.excluded": "Excluida. Se rechaza desde la siguiente petición.",
     "admin.outcome.withdrawn": "Retirada. Puede volver a analizarse.",
     "admin.actions.kicker": "Datos de referencia",
     "admin.actions.heading": "Actualizar los datos de referencia",
-    "admin.actions.lede": (
-        "Las mismas dos actualizaciones que el worker ejecuta a diario, con las "
-        "mismas reglas: un calendario al que le falta una línea de versiones se "
-        "rechaza, una base de avisos solo puede añadir entradas y una descarga "
-        "fallida no cambia nada."
-    ),
+    "admin.actions.lede": "Estas acciones ejecutan manualmente las actualizaciones diarias del worker. El calendario debe conservar todas las líneas de versiones conocidas. Las actualizaciones de avisos solo pueden añadir entradas. Si la descarga falla, los datos existentes no cambian.",
     "admin.actions.schedule": "Sincronizar el calendario",
     "admin.actions.schedule.hint": "Vuelve a leer la página publicada del ciclo de vida.",
     "admin.actions.advisories": "Buscar avisos",
@@ -300,12 +273,9 @@ MESSAGES: dict[str, str] = {
     ),
     "admin.outcome.failed": "No se ha podido descargar. Nada ha cambiado.",
     "admin.outcome.disabled": "Esa actualización está desactivada en la configuración de esta instalación.",
-    "admin.outcome.cooldown": "Acaba de ejecutarse. Inténtelo de nuevo en {seconds}s.",
+    "admin.outcome.cooldown": "Se acaba de ejecutar una actualización. Inténtelo de nuevo en {seconds}s.",
     "admin.probe.action": "Probar las fuentes",
-    "admin.probe.hint": (
-        "Lee ambas fuentes e informa de qué haría con ellas una actualización. "
-        "No se guarda nada."
-    ),
+    "admin.probe.hint": "Descarga ambas fuentes y comprueba si sus datos se pueden aceptar en una actualización. No guarda los datos descargados.",
     "admin.probe.schedule": "Calendario de versiones: {answer}",
     "admin.probe.advisories": "Avisos: {answer}",
     "admin.probe.usable": "leído, y una actualización lo aceptaría",
@@ -314,12 +284,7 @@ MESSAGES: dict[str, str] = {
     "admin.probe.disabled": "sin comprobar - esa actualización está desactivada",
     "admin.search.kicker": "Índice de búsqueda",
     "admin.search.heading": "Sigue siendo válido el índice publicado",
-    "admin.search.lede": (
-        "El índice se construye al publicar una versión y se entrega en solo "
-        "lectura, así que esta vista informa en lugar de reconstruir. Compara "
-        "las páginas, los idiomas y la versión para la que se generó - no el "
-        "cuerpo del texto, que solo el generador puede extraer."
-    ),
+    "admin.search.lede": "El índice de búsqueda se genera durante la compilación. Esta vista compara sus páginas, idiomas y versión con el servicio en ejecución. No compara el texto completo de las páginas ni modifica el índice.",
     "admin.search.fresh": "Al día",
     "admin.search.stale": "Desactualizado",
     "admin.search.unknown": "No se puede saber",
@@ -335,42 +300,22 @@ MESSAGES: dict[str, str] = {
     ),
     "admin.search.detail.changed": "{count} títulos o resúmenes han cambiado desde que se generó.",
     "admin.search.detail.unreadable": "No se ha podido leer el índice.",
-    "admin.search.remedy": (
-        "Una versión publicada siempre incluye un índice generado para ella, "
-        "así que esta compilación no es una versión tal como se publicó - "
-        "normalmente una imagen o un paquete construido desde un checkout "
-        "entre versiones. Despliegue una versión publicada, o regenere el "
-        "índice en ese checkout y vuelva a construir lo que despliega:"
-    ),
+    "admin.search.remedy": "Las versiones publicadas incluyen un índice de búsqueda correspondiente a esa versión. Si usa una compilación propia, regenere el índice en la copia del código fuente y reconstruya el despliegue. También puede desplegar una versión publicada:",
     "admin.search.remedy.commit": (
         "No hace falta confirmar nada a mano: cada pull request a main "
         "regenera el índice y lo confirma en su rama."
     ),
-    "admin.search.fix": (
-        "Cada pull request a main y el flujo de publicación regeneran el "
-        "índice y lo confirman. Aquí no hay nada que pulsar."
-    ),
+    "admin.search.fix": "Los flujos de pull requests y de publicación regeneran el índice y lo guardan en un commit. Esta página no permite reconstruirlo.",
     "admin.audit.kicker": "Auditoría",
     "admin.audit.heading": "Registro de auditoría",
-    "admin.audit.lede": "Solicitudes, rechazos y límites alcanzados en tiempo real. La conexión se abre al activar la vista en directo.",
-    "admin.audit.privacy": (
-        "Una dirección de cliente es un HMAC truncado bajo una sal que guarda "
-        "este proceso, y nada permite volver de ahí a una dirección. Esta vista "
-        "no puede mostrar más de lo que el registro ya decidió anotar."
-    ),
-    "admin.audit.replicas": (
-        "Esta instalación no mantiene un fichero de auditoría, así que estos "
-        "registros vienen de la memoria del único proceso que ha respondido - "
-        "con más de una réplica, eso es una parte del registro y no todo."
-    ),
+    "admin.audit.lede": "Consulte las solicitudes de análisis, los rechazos y los límites alcanzados en tiempo real. Seleccione «Ver en directo» para abrir la conexión y empezar a recibir entradas.",
+    "admin.audit.privacy": "Las direcciones de los clientes aparecen como huellas HMAC truncadas. Este proceso conserva la sal usada para calcularlas. Esta vista muestra entradas existentes del registro y no permite recuperar direcciones a partir de las huellas.",
+    "admin.audit.replicas": "No hay ningún archivo de auditoría configurado. Estas entradas proceden de la memoria de este proceso. Con varias réplicas, la vista muestra solo una parte del registro.",
     "admin.audit.follow": "Ver en directo",
     "admin.audit.stop": "Detener",
     "admin.audit.clear": "Vaciar",
     "admin.audit.empty": "Todavía nada.",
-    "admin.audit.closed": (
-        "La conexión ha alcanzado su límite de {minutes} minutos y el servicio "
-        "la ha cerrado. Hasta ahí no se ha perdido nada; «Ver en directo» abre otra."
-    ),
+    "admin.audit.closed": "El servicio cerró la conexión tras {minutes} minutos. Seleccione «Ver en directo» para volver a conectarse.",
     "admin.audit.disabled": (
         "Esta instalación no mantiene un registro de auditoría, así que no hay "
         "nada que seguir. COS_WEB_AUDIT_LOG lo activa."
@@ -432,16 +377,12 @@ MESSAGES: dict[str, str] = {
     "toc.group.details": "Detalles",
     "toc.group.keep": "Guardar",
     # --------------------------------------------------------- cross-links
-    "pagenav.kicker": "Sigue leyendo",
+    "pagenav.kicker": "Más información",
     "pagenav.aria": "Más sobre este servicio",
     "pagenav.how.title": "Cómo funciona el análisis",
-    "pagenav.how.blurb": (
-        "Qué se comprueba, y los cuatro pasos entre el botón y la calificación."
-    ),
+    "pagenav.how.blurb": "Las comprobaciones y las cuatro etapas de un análisis.",
     "pagenav.grades.title": "Qué significan las calificaciones",
-    "pagenav.grades.blurb": (
-        "Cada nivel de A+ a F, qué frena una calificación y cómo mejorarla."
-    ),
+    "pagenav.grades.blurb": "Qué significan las notas de A+ a F y cómo mejorar una nota.",
     "pagenav.catalogue.title": "Qué comprueba el escáner",
     "pagenav.catalogue.blurb": (
         "Cada indicador de refuerzo, cabecera y comprobación TLS, y cada "
@@ -455,9 +396,7 @@ MESSAGES: dict[str, str] = {
         "endpoint MCP."
     ),
     "pagenav.privacy.title": "Qué conserva este servidor",
-    "pagenav.privacy.blurb": (
-        "En memoria, durante {minutes} minutos, y qué queda fuera del registro."
-    ),
+    "pagenav.privacy.blurb": "Qué datos se conservan en memoria durante {minutes} minutos y cuáles se registran.",
     "pagenav.about.title": "Acerca de OpenCloud",
     "pagenav.about.blurb": (
         "La plataforma que analiza este escáner y por qué este proyecto es "
@@ -518,7 +457,7 @@ MESSAGES: dict[str, str] = {
     "index.assurance.airgapped.body": "Las fuentes, los scripts y las imágenes se sirven desde aquí, sin CDN ni herramientas de analítica.",
     "index.assurance.nostore.title": "Almacenamiento temporal",
     "index.assurance.nostore.body": (
-        "El resultado vive en memoria y se elimina en cuanto expira."
+        "El resultado se guarda en memoria y se elimina cuando caduca."
     ),
     "index.assurance.noaccount.title": "No se necesita registro",
     "index.assurance.noaccount.body": "Inicie un análisis sin crear una cuenta ni facilitar una dirección de correo.",
@@ -622,7 +561,7 @@ MESSAGES: dict[str, str] = {
     ),
     "grades.caps.at_best": "como máximo",
     "grades.caps.shared": "Los hallazgos de la misma gravedad imponen el mismo límite a la nota. Si quedan tres de gravedad media, corregir solo uno no elimina ese límite. El plan incluye los tres pasos e indica cuándo mejoraría la nota.",
-    "grades.caps.rules": "Dos reglas tienen prioridad. <strong>El fin del soporte siempre determina la nota</strong>: una versión sin soporte recibe <strong>F</strong>, aunque se apliquen excepciones. <strong>Una versión más reciente que la de su canal declarado no se considera obsoleta</strong>; el informe indica que va por delante de ese canal.",
+    "grades.caps.rules": "Dos reglas tienen prioridad. <strong>El fin del soporte siempre determina la nota</strong>: una versión sin soporte recibe <strong>F</strong>, aunque se apliquen exenciones. <strong>Una versión más reciente que la de su canal declarado no se considera obsoleta</strong>; el informe indica que va por delante de ese canal.",
     "grades.improve.kicker": "El camino más corto",
     "grades.improve.heading": "Corregir los problemas detectados",
     "grades.improve.intro": "Cada informe incluye la información necesaria para planificar las correcciones:",
@@ -741,7 +680,7 @@ MESSAGES: dict[str, str] = {
     "privacy.lede": "Los resultados están disponibles durante {minutes} minutos y después caducan.",
     "privacy.retention.kicker": "Retención",
     "privacy.retention.heading": "Mientras un análisis está activo",
-    "privacy.retention.body": "La dirección de destino, las excepciones elegidas y el resultado se guardan con el identificador aleatorio del análisis durante {minutes} minutos. Después caducan. El registro operativo normal solo recoge ese identificador y los eventos de creación, inicio y finalización. Los límites de uso utilizan una huella unidireccional de la dirección del cliente. El operador puede configurar además un registro de auditoría independiente.",
+    "privacy.retention.body": "La dirección de destino, las exenciones elegidas y el resultado se guardan con el identificador aleatorio del análisis durante {minutes} minutos. Después caducan. El registro operativo normal solo recoge ese identificador y los eventos de creación, inicio y finalización. Los límites de uso utilizan una huella unidireccional de la dirección del cliente. El operador puede configurar además un registro de auditoría independiente.",
     "privacy.uploads.kicker": "Informes subidos",
     "privacy.uploads.heading": "Informes subidos para comparar",
     "privacy.uploads.body": "El archivo subido se lee en memoria para calcular la comparación. No se conservan su contenido ni su nombre. La comparación permanece disponible mediante un identificador aleatorio durante {minutes} minutos para que pueda volver a abrirla o compartirla. Después caduca y no puede reconstruirse a partir del archivo descartado.",
@@ -878,11 +817,7 @@ MESSAGES: dict[str, str] = {
         'rel="noopener noreferrer">borrador de WebMCP</a> puede descubrir las '
         "acciones de la página abierta. No hace falta configurar otro cliente."
     ),
-    "api.webmcp.landing": (
-        "En la página de inicio, <code>scan_opencloud_security</code> pone un "
-        "análisis en cola. Su esquema contiene los canales de versión, formatos "
-        "de salida y excepciones que ofrece esa página."
-    ),
+    "api.webmcp.landing": "En la página de inicio, <code>scan_opencloud_security</code> pone un análisis en cola. Su esquema contiene los canales de versiones, formatos de salida e identificadores de exenciones que ofrece esa página.",
     "api.webmcp.result": (
         "En una página de resultados, <code>get_scan_result</code> lee el análisis "
         "actual y <code>export_scan_report</code> descarga JSON, CSV, SARIF o PDF "
@@ -1275,7 +1210,7 @@ MESSAGES: dict[str, str] = {
     "error.target.unparsed": "No se pudo interpretar esa dirección.",
     "error.target.scheme": "Solo se pueden analizar destinos http:// y https://.",
     "error.target.credentials": "No se aceptan credenciales dentro de la dirección.",
-    "error.target.address_only": "Introduzca la dirección base, con una subcarpeta sencilla si la necesita. No se aceptan consultas, fragmentos, parámetros ni cambios de directorio.",
+    "error.target.address_only": "Introduzca solo la dirección base de la instancia, con una subcarpeta sencilla si la necesita. No se aceptan consultas, fragmentos, parámetros ni cambios de directorio.",
     "error.target.port": "Esa dirección tiene un puerto no válido.",
     "error.target.no_host": "Esa dirección no tiene nombre de host.",
     "error.target.hostname_shape": (
@@ -1488,7 +1423,7 @@ MESSAGES: dict[str, str] = {
         "esta instancia."
     ),
     "result.hardening.kicker": "Refuerzo",
-    "result.hardening.heading": "Refuerzos que vale la pena añadir",
+    "result.hardening.heading": "Medidas de refuerzo pendientes",
     "result.hardening.lede": "Estos ajustes añaden protección frente a riesgos habituales. Revise la explicación y la corrección propuesta para cada uno.",
     "result.hardening.tag": "refuerzo",
     "result.header.tag": "cabecera",
@@ -1559,11 +1494,7 @@ MESSAGES: dict[str, str] = {
         "Todas las comprobaciones previstas en este análisis llegaron a una "
         "conclusión."
     ),
-    "result.coverage.unavailable": (
-        "Este informe se escribió antes de que los análisis registraran su "
-        "cobertura, así que no dice qué comprobaciones se hicieron. No es lo "
-        "mismo que un análisis sin lagunas."
-    ),
+    "result.coverage.unavailable": "Este informe antiguo no indica qué comprobaciones se ejecutaron. Se desconoce el alcance del análisis.",
     "coverage.reason.not_applicable": "No se aplica a esta instancia",
     "coverage.reason.probe_disabled": (
         "La comprobación estaba desactivada en este análisis"
@@ -1587,28 +1518,12 @@ MESSAGES: dict[str, str] = {
     "coverage.group.integrations": "Integraciones",
     "result.excluded.heading": "Reportado, pero no contabilizado",
     "result.excluded.waived.heading": "Hallazgos excluidos a petición suya",
-    "result.excluded.waived.note": "Siguieron fallando, pero las exenciones impidieron que redujeran la calificación.",
+    "result.excluded.waived.note": "Estas comprobaciones fallaron, pero sus exenciones las excluyen de la nota.",
     "result.excluded.unfixable.heading": "Valores fijos en OpenCloud",
     "result.excluded.unfixable.note": "Estos valores están fijados en el código de OpenCloud y no se pueden configurar. Se muestran como referencia y no afectan a la nota.",
     "result.scope.kicker": "Alcance",
     "result.scope.heading": "Lo que este análisis no puede ver",
-    "result.scope.body": (
-        "Todo lo anterior se leyó sin iniciar sesión, que es precisamente el "
-        "objetivo y también el límite. <strong>La ausencia de un hallazgo no "
-        "es prueba de seguridad</strong>, y la calificación más alta que "
-        "puede dar esta página no es una afirmación de que la instancia sea "
-        "segura, solo de que ninguna de las comprobaciones realizadas aquí falló. Categorías "
-        "enteras quedan totalmente fuera del alcance de un análisis no "
-        "autenticado: el sistema operativo y sus paquetes, el entorno de "
-        "ejecución de contenedores, la configuración propia del proxy "
-        "inverso, las copias de seguridad y sus restauraciones, el "
-        "almacenamiento detrás de la instancia, el manejo de secretos y "
-        "claves, las cuentas, las contraseñas y el inicio de sesión "
-        "multifactor, los permisos de los recursos compartidos existentes, "
-        "la cadena de suministro del software, y cualquier cosa que solo se "
-        "muestre a un usuario que ha iniciado sesión. Lo mismo ocurre con "
-        "estas dos, que parece que deberían ser visibles y no lo son:"
-    ),
+    "result.scope.body": "El análisis comprueba información accesible públicamente. <strong>La ausencia de hallazgos no significa que la instancia sea segura</strong>, ni siquiera con la nota más alta. No examina el sistema operativo y sus paquetes, el entorno de ejecución de contenedores, la configuración del proxy inverso, las copias de seguridad y la recuperación, el almacenamiento, la gestión de secretos y claves, las cuentas, las contraseñas, la autenticación multifactor, los permisos de los recursos compartidos existentes ni la cadena de suministro del software. Los datos que requieren iniciar sesión también quedan fuera de su alcance. Compruebe estos dos aspectos por separado:",
     "result.scope.audit": (
         "<strong>Registro de auditoría.</strong> El servicio de auditoría de "
         "OpenCloud solo consume el bus de eventos interno; no publica ningún "
@@ -1622,12 +1537,12 @@ MESSAGES: dict[str, str] = {
         "informa de que hay un proveedor de aplicaciones registrado, o de "
         "que algo responde en la ruta CalDAV. Las reglas de compartición, "
         "los secretos WOPI y la configuración propia del segundo servicio "
-        "viven todos detrás de un inicio de sesión y no se comprueban."
+        "requieren autenticación para consultarse y no se comprueban."
     ),
     "result.tls.kicker": "Transporte",
     "result.tls.heading": "Seguridad del transporte",
     "result.tls.lede": (
-        "Lo que dijo la capa TLS antes de intercambiar un solo byte de HTTP. "
+        "Datos de TLS obtenidos antes de intercambiar datos por HTTP. "
         "Los hallazgos anteriores ya valoran esto; aquí está la medición que "
         "hay detrás."
     ),

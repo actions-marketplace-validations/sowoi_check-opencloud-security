@@ -45,6 +45,9 @@ Die späteren Beispiele mit `jq` verwenden eigene, kürzere Metriknamen. Die bei
 | `opencloud_security_update_available` | `host`, `target_version` | `1`, wenn eine neuere Version verfügbar ist |
 | `opencloud_security_certificate_days_remaining` | `host` | Tage bis zum Ablauf des vorgelegten Zertifikats; negativ danach, kein Wert über reines HTTP |
 | `opencloud_security_upgrade_path_complete` | `host`, `target_version` | `1`, wenn das empfohlene Upgrade alle bekannten Schwachstellen behebt; kein Wert ohne Upgrade-Pfad |
+| `opencloud_security_waiver_days_remaining` | `host` | Tage, bis eine `--waive-until`-Ausnahme endet und eine fehlgeschlagene Prüfung wieder alarmiert; kein Wert, wenn keine fehlgeschlagene Prüfung an einer Frist hängt |
+| `opencloud_security_coverage_inconclusive_total` | `host` | Prüfungen, die der Scan ausgeführt, aber nicht entschieden hat |
+| `opencloud_security_coverage_not_checked_total` | `host` | Prüfungen, die der Scan nicht ausgeführt hat |
 | `opencloud_security_scan_duration_seconds` | `host` | Scandauer |
 | `opencloud_security_scrape_success` | `host` | `0`, wenn der zugrunde liegende Scan fehlgeschlagen ist |
 
@@ -69,6 +72,9 @@ rating=5;@0:3;@0:1;0;5 vulnerabilities=0;;;0; time=1.234s;;;0;
 | `extra_checks_failed` | Fehlgeschlagene Zusatzprüfungen |
 | `update_available` | `1` bei verfügbarer neuerer Version |
 | `support_days_left` | Verbleibende Supporttage; nach dem Enddatum negativ |
+| `waiver_days_left` | Tage bis zum Ende einer befristeten Ausnahme; fehlt, wenn keine eine fehlgeschlagene Prüfung verdeckt |
+| `coverage_inconclusive` | Prüfungen, die der Scan nicht entscheiden konnte |
+| `coverage_not_checked` | Prüfungen, die der Scan nicht ausgeführt hat |
 
 Mit `support_days_left` kannst du rechtzeitig vor einem bekannten Supportende warnen.
 
@@ -191,7 +197,7 @@ Wähle `for:` nach der gewünschten Verzögerung und der Verfügbarkeit der Mess
 
 importiere [`contrib/grafana/dashboard.json`](../../contrib/grafana/dashboard.json) und wähle die Prometheus-Datenquelle. Das Dashboard zeigt Scanstatus, Note und Supportstatus, den Bewertungsverlauf, offene Befunde, Sicherheitshinweise nach Schweregrad und die installierten Versionen.
 
-Für ein eigenes Dashboard verwende eine Skala von `0` bis `5`, bei der höhere Werte besser sind. Schwellwerte bei `3` (gelb) und `1` (rot) entsprechen den Plugin-Standards. ordne die Zahlen den Noten zu: `5 → A+`, `4 → A`, `3 → C`, `2 → D`, `1 → E`, `0 → F`.
+Für ein eigenes Dashboard verwende eine Skala von `0` bis `5`, bei der höhere Werte besser sind. Schwellwerte bei `3` (gelb) und `1` (rot) entsprechen den Plugin-Standards. Ordne die Zahlen den Noten zu: `5 → A+`, `4 → A`, `3 → C`, `2 → D`, `1 → E`, `0 → F`.
 
 Zeige die Version neben der Bewertung an, damit ein möglicher Updatebedarf direkt erkennbar ist.
 

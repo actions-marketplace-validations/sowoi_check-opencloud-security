@@ -463,6 +463,20 @@ def optional_groups() -> list[Group]:
                     validate=_non_negative_int,
                     cast=int,
                 ),
+                Question(
+                    key="waiver_warning",
+                    prompt="Days before a temporary waiver ends to raise WARNING",
+                    explain=(
+                        "Raise an otherwise OK result to WARNING when a "
+                        "--waive-until waiver that hides a failing check ends "
+                        "within this many days, so the fix or a new decision "
+                        "is not a surprise. 0 turns it off."
+                    ),
+                    example="14",
+                    default="0",
+                    validate=_non_negative_int,
+                    cast=int,
+                ),
             ],
         ),
         Group(

@@ -246,7 +246,7 @@ ist. Keiner dieser Zustände wird als bestandene Prüfung gewertet.</p>
 <pre><code class="language-bash">check-opencloud-scanner diff before.json after.json --category transport
 check-opencloud-scanner diff before.json after.json --category instance
 </code></pre>
-<p>Jeder Namensraum wird nur gefiltert, wenn du einen Wert dafür angibst: <code>--category transport</code> lässt die Erklärung unangetastet, <code>--category instance</code> die Befunde. Die Option ist mehrfach angebbar, und ein unbekannter Wert wird mit Exitcode <code>2</code> abgelehnt, statt stillschweigend nichts zu zeigen - ein Tippfehler, der einen leeren Vergleich ausgibt, liest sich wie „nichts hat sich geändert".</p>
+<p>Jeder Namensraum wird nur gefiltert, wenn du einen Wert dafür angibst: <code>--category transport</code> lässt die Erklärung unangetastet, <code>--category instance</code> die Befunde. Du kannst die Option mehrfach angeben. Ein unbekannter Wert führt zu Exitcode <code>2</code>. So entsteht bei einem Tippfehler kein leerer Vergleich, der fälschlich den Eindruck erweckt, es habe sich nichts geändert.</p>
 <p>Eine gefilterte Erklärung lässt die <code>[limitation]</code>-Zeilen weg, weil diese den gesamten Vergleich einschränken und nicht eine einzelne Kategorie davon.</p>
 <h2 id="explain-what-a-finding-means-and-how-to-fix-it"><code>explain</code>: Befunde erklären</h2>
 <pre><code class="language-bash">check-opencloud-scanner explain basicAuthDisabled
@@ -409,7 +409,7 @@ check-opencloud-scanner -c /etc/check-opencloud-security/.env.json configure
 <p>Danach bietet er an, auch die geplante Prüfung zu schreiben, neben die gerade gespeicherte Konfiguration:</p>
 <pre><code class="language-text">Also write a monitoring configuration (Icinga service, systemd timer)? [y/N]
 </code></pre>
-<p><code>--export-monitoring</code> beantwortet diese Frage vorab, was ein Provisionierungsskript braucht. Die Dateien tragen die Schwellwerte, den Release-Track und jede andere gerade gegebene Antwort, damit die täglich laufende Prüfung die konfigurierte ist und kein aus dem Gedächtnis angepasstes Beispiel:</p>
+<p><code>--export-monitoring</code> beantwortet diese Frage vorab und eignet sich damit für die automatische Bereitstellung. Die erzeugten Dateien übernehmen die Schwellenwerte, den Release-Kanal und die übrigen gewählten Einstellungen:</p>
 <pre><code class="language-bash">check-opencloud-scanner configure --export-monitoring both
 </code></pre>
 <table>
@@ -438,7 +438,8 @@ check-opencloud-scanner -c /etc/check-opencloud-security/.env.json configure
 </tr>
 </tbody>
 </table>
-<p>Zwei Dinge sind Absicht. <strong>Nichts wird installiert</strong>: Die Dateien entstehen dort, wo auch die Konfiguration liegt, und die Befehle, die sie installieren würden, werden ausgegeben - was nach <code>/etc</code> gelangt, hast du also vorher gelesen. Und <strong>es wird kein Zugangsgeheimnis hineingeschrieben</strong>: Eine Webhook-URL oder ein Release-Token bleibt in der Konfigurationsdatei, die nur der Eigentümer lesen kann, während ein Icinga-Objekt und eine Unit-Datei das nicht sind. Beide Artefakte verweisen stattdessen auf diese Datei - <code>vars.opencloud_config</code> und <code>COS_CONFIG_FILE</code> - und benennen die zurückgehaltenen Einstellungen, damit ein konfigurierter Webhook nie stillschweigend fehlt.</p>
+<p><strong>Der Assistent installiert die Dateien nicht.</strong> Er speichert sie neben der Konfiguration und zeigt die Installationsbefehle an. Prüfe die Dateien, bevor du sie nach <code>/etc</code> kopierst.</p>
+<p><strong>Zugangsdaten bleiben in der geschützten Konfigurationsdatei.</strong> Eine Webhook-URL oder ein Release-Token wird nicht in das Icinga-Objekt oder die Unit-Datei übernommen, da diese Dateien auch für andere Benutzer lesbar sein können. Stattdessen verweisen <code>vars.opencloud_config</code> und <code>COS_CONFIG_FILE</code> auf die nur für den Eigentümer lesbare Konfigurationsdatei. Die Ausgabe nennt die dort verbleibenden Einstellungen, damit du ihre Übernahme prüfen kannst.</p>
 <h2 id="exit-codes">Exitcodes</h2>
 <p>Die Scanner-CLI verwendet eigene Exitcodes. Ein erfolgreich gescannter Host mit Note F führt bei <code>scan</code> weiterhin zu <code>0</code>; die Nagios-Bewertung übernimmt das Plugin.</p>
 <table>

@@ -3,263 +3,275 @@
 Le scanner vérifie l'accès aux points de terminaison protégés, l'authentification HTTP Basic,
 les comptes de démonstration documentés et les paramètres publiés dans les capacités OpenCloud
 et les documents de découverte OpenID Connect. Il ne devine pas les identifiants. Le contrôle
-des comptes de démonstration utilise uniquement les identifiants publiés ci-dessous ; voir les
-[limites de l’analyse](../scanner-checks.md#what-the-scan-deliberately-does-not-answer) pour le
+des comptes de démonstration utilise uniquement les identifiants publiés ci-dessous ; voir les
+[limites de l’analyse](scanner-checks.md#what-the-scan-deliberately-does-not-answer) pour le
 périmètre complet.
 
 <!-- TOC -->
-* [Authentication: what this scanner checks, and why](#authentication-what-this-scanner-checks-and-why)
-  * [1. Do protected endpoints actually require a session: `authentication:<path>`](#1-do-protected-endpoints-actually-require-a-session-authenticationpath)
-  * [2. Does the proxy still offer HTTP Basic authentication: `basicAuthDisabled`](#2-does-the-proxy-still-offer-http-basic-authentication-basicauthdisabled)
-  * [3. Do the documented demo accounts still sign in: `demoUsersDisabled`](#3-do-the-documented-demo-accounts-still-sign-in-demousersdisabled)
-  * [4. Is account search restricted to shared groups: `userEnumerationRestricted`](#4-is-account-search-restricted-to-shared-groups-userenumerationrestricted)
-  * [5. Is the link password policy strong enough: `passwordPolicyEnforced`](#5-is-the-link-password-policy-strong-enough-passwordpolicyenforced)
-  * [5a. Does it still ask for more than length: `passwordPolicyComplexity`](#5a-does-it-still-ask-for-more-than-length-passwordpolicycomplexity)
-  * [6. Can the identity provider be found at all: `identityProviderDetected`](#6-can-the-identity-provider-be-found-at-all-identityproviderdetected)
-  * [7. What the discovery document says about how sign-in is protected](#7-what-the-discovery-document-says-about-how-sign-in-is-protected)
-  * [What else is in that document, and why none of it is checked](#what-else-is-in-that-document-and-why-none-of-it-is-checked)
-  * [Severity and rating impact](#severity-and-rating-impact)
+* [Authentification : ce que vérifie ce scanner, et pourquoi](#authentication-what-this-scanner-checks-and-why)
+  * [1. Les points de terminaison protégés exigent-ils vraiment une session : `authentication:<path>`](#1-do-protected-endpoints-actually-require-a-session-authenticationpath)
+  * [2. Le proxy propose-t-il encore l’authentification HTTP Basic : `basicAuthDisabled`](#2-does-the-proxy-still-offer-http-basic-authentication-basicauthdisabled)
+  * [3. Les comptes de démonstration documentés permettent-ils encore de se connecter : `demoUsersDisabled`](#3-do-the-documented-demo-accounts-still-sign-in-demousersdisabled)
+  * [4. La recherche de comptes est-elle limitée aux groupes partagés : `userEnumerationRestricted`](#4-is-account-search-restricted-to-shared-groups-userenumerationrestricted)
+  * [5. La politique de mot de passe des liens est-elle assez stricte : `passwordPolicyEnforced`](#5-is-the-link-password-policy-strong-enough-passwordpolicyenforced)
+  * [5a. Exige-t-elle encore plus qu’une longueur : `passwordPolicyComplexity`](#5a-does-it-still-ask-for-more-than-length-passwordpolicycomplexity)
+  * [6. Le fournisseur d’identité est-il seulement identifiable : `identityProviderDetected`](#6-can-the-identity-provider-be-found-at-all-identityproviderdetected)
+  * [7. Ce que le document de découverte indique sur la protection de la connexion](#7-what-the-discovery-document-says-about-how-sign-in-is-protected)
+  * [Les autres champs de ce document, et pourquoi aucun n’est vérifié](#what-else-is-in-that-document-and-why-none-of-it-is-checked)
+  * [Gravité et effet sur la note](#severity-and-rating-impact)
 <!-- TOC -->
 
 
-## 1. Do protected endpoints actually require a session: `authentication:<path>`
+## 1. Les points de terminaison protégés exigent-ils vraiment une session : `authentication:<path>` {#1-do-protected-endpoints-actually-require-a-session-authenticationpath}
 
-Three endpoints that must never answer an unauthenticated request with
-content are requested without credentials:
+Trois points de terminaison qui ne doivent jamais renvoyer de contenu à une
+requête non authentifiée sont interrogés sans identifiants :
 
-| Path                          | Severity |
+| Chemin                         | Gravité  |
 |:-------------------------------|:---------|
 | `/remote.php/dav/files/`       | critical |
 | `/graph/v1.0/users`             | critical |
 | `/ocs/v1.php/cloud/user`        | high     |
 
-An HTTP `401`, `403`, `405` or `501` response, a redirect to a login page, or
-a `404` all count as "demanded authentication" - `405`/`501` show up when a
-reverse proxy answers a `GET` on a WebDAV collection rather than OpenCloud
-itself, and `404` covers a proxy that hides the path entirely rather than
-challenging it. Anything else - most importantly a `200` carrying the data
-that path is supposed to protect - fails the check. An endpoint that could
-not be reached at all is treated as passing: a network failure is not
-evidence that the endpoint is open, and this scanner would rather stay quiet
-than manufacture a finding out of a timeout.
+Une réponse HTTP `401`, `403`, `405` ou `501`, une redirection vers une page de
+connexion ou une réponse `404` comptent toutes comme « authentification
+exigée ». `405`/`501` apparaissent lorsqu’un reverse proxy, et non OpenCloud
+lui-même, répond à un `GET` sur une collection WebDAV ; `404` couvre un proxy
+qui masque entièrement le chemin au lieu de demander une authentification.
+Toute autre réponse - avant tout un `200` contenant les données que ce chemin
+doit protéger - fait échouer le contrôle. Un point de terminaison injoignable
+est considéré comme réussi : une panne réseau ne prouve pas que le point de
+terminaison est ouvert, et ce scanner préfère se taire plutôt que de fabriquer
+un constat à partir d’un délai d’attente dépassé.
 
-**If this fails:** request the reported path by hand and read what actually
-answers it. A cache, CDN or misconfigured proxy rule serving its own error
-page in front of OpenCloud is the usual explanation; an endpoint genuinely
-reachable without a session is a live incident, not a hardening gap - rotate
-anything the response exposed and fix the routing immediately.
+**En cas d’échec :** interrogez vous-même le chemin signalé et regardez ce qui
+répond réellement. L’explication habituelle est un cache, un CDN ou une règle
+de proxy mal configurée qui sert sa propre page d’erreur devant OpenCloud. Un
+point de terminaison réellement accessible sans session est un incident en
+cours, pas une lacune de durcissement : renouvelez tout ce que la réponse a
+exposé et corrigez immédiatement le routage.
 
-## 2. Does the proxy still offer HTTP Basic authentication: `basicAuthDisabled`
+## 2. Le proxy propose-t-il encore l’authentification HTTP Basic : `basicAuthDisabled` {#2-does-the-proxy-still-offer-http-basic-authentication-basicauthdisabled}
 
-The instance is asked for the `WWW-Authenticate` challenge on a protected
-endpoint. A `Basic` challenge means `PROXY_ENABLE_BASIC_AUTH=true`: a
-username and password can be replayed on every request without going through
-the identity provider at all, bypassing single sign-on and any second factor
-enforced there.
+Le scanner demande à l’instance le défi `WWW-Authenticate` d’un point de
+terminaison protégé. Un défi `Basic` signifie `PROXY_ENABLE_BASIC_AUTH=true` :
+un nom d’utilisateur et un mot de passe peuvent être rejoués à chaque requête
+sans jamais passer par le fournisseur d’identité, ce qui contourne
+l’authentification unique et tout second facteur qu’il impose.
 
-This is not treated as a plain mistake, because the alternative is often
-worse in practice: CalDAV, CardDAV and most WebDAV clients cannot speak
-OpenID Connect and have nothing else to authenticate with. That is why this
-is rated `medium` rather than `critical` - and `low` once an external
-identity provider is confirmed to handle the interactive login (see [Who
-signs users in](scanner-checks.md#who-signs-users-in)), since the account
-passwords those provider-backed logins protect are not the ones being
-replayed here.
+Ce n’est pas traité comme une simple erreur, car l’alternative est souvent
+pire en pratique : les clients CalDAV, CardDAV et la plupart des clients WebDAV
+ne savent pas utiliser OpenID Connect et n’ont aucun autre moyen de
+s’authentifier. C’est pourquoi la gravité est `medium` et non `critical`, et
+`low` dès qu’un fournisseur d’identité externe gère de façon confirmée la
+connexion interactive (voir [Qui connecte les utilisateurs](scanner-checks.md#who-signs-users-in)) :
+les mots de passe de comptes protégés par ce fournisseur ne sont alors pas ceux
+qui sont rejoués ici.
 
-**Fix:** set `PROXY_ENABLE_BASIC_AUTH=false` (the default) if nothing needs
-it. If a calendar, contacts or WebDAV client does, keep it on and issue those
-clients app tokens rather than account passwords, so what gets replayed on
-every request is revocable on its own and never the single sign-on
-credential.
+**Correction :** définissez `PROXY_ENABLE_BASIC_AUTH=false` (la valeur par
+défaut) si rien n’en a besoin. Si un client d’agenda, de contacts ou WebDAV en
+a besoin, laissez-la active et donnez à ces clients des jetons d’application
+plutôt que les mots de passe des comptes : ce qui est rejoué à chaque requête
+peut alors être révoqué séparément et n’est jamais l’identifiant de
+l’authentification unique.
 
-## 3. Do the documented demo accounts still sign in: `demoUsersDisabled`
+## 3. Les comptes de démonstration documentés permettent-ils encore de se connecter : `demoUsersDisabled` {#3-do-the-documented-demo-accounts-still-sign-in-demousersdisabled}
 
-`IDM_CREATE_DEMO_USERS=true` populates a fresh instance with five accounts -
-one of them an administrator - whose names and passwords are printed in
-[OpenCloud's own documentation][opencloud-demo-users]. This check only runs
-once the scan has established that the instance's *own* identity provider
-handles login (an external Keycloak, Authentik or Authelia has no such
-accounts to test), and it sends exactly those published pairs to that
-provider - nothing guessed, and nothing sent to a third party.
+`IDM_CREATE_DEMO_USERS=true` crée sur une nouvelle instance cinq comptes - dont
+un administrateur - dont les noms et mots de passe figurent dans
+[la documentation d’OpenCloud][opencloud-demo-users]. Ce contrôle ne s’exécute
+qu’une fois que l’analyse a établi que le fournisseur d’identité *propre* à
+l’instance gère la connexion (un Keycloak, Authentik ou Authelia externe n’a
+pas de tels comptes à tester). Il envoie à ce fournisseur exactement ces
+couples publiés : rien n’est deviné et rien n’est envoyé à un tiers.
 
-Left on past evaluation, this is a `critical` finding: it is an
-administrator account whose password is public knowledge, and it caps the
-rating at `D` on its own regardless of everything else the scan found.
+Laissé actif au-delà d’une phase d’évaluation, c’est un constat `critical` :
+il s’agit d’un compte administrateur dont le mot de passe est public, et il
+limite à lui seul la note à `D`, quels que soient les autres résultats de
+l’analyse.
 
-**Fix:** set `IDM_CREATE_DEMO_USERS=false` **and** delete the accounts that
-were already created - turning the setting off does not remove them.
-Wherever this fails, treat the instance as compromised until the
-administrator account is gone or has been given a real password: the
-credentials are not secret, they are published.
+**Correction :** définissez `IDM_CREATE_DEMO_USERS=false` **et** supprimez les
+comptes déjà créés : désactiver le paramètre ne les supprime pas. Partout où
+ce contrôle échoue, considérez l’instance comme compromise tant que le compte
+administrateur n’a pas été supprimé ou doté d’un vrai mot de passe : ces
+identifiants ne sont pas secrets, ils sont publiés.
 
-## 4. Is account search restricted to shared groups: `userEnumerationRestricted`
+## 4. La recherche de comptes est-elle limitée aux groupes partagés : `userEnumerationRestricted` {#4-is-account-search-restricted-to-shared-groups-userenumerationrestricted}
 
-OpenCloud's capabilities document reports whether user search is limited to
-members of a shared group. The restricted state is hardcoded in current
-releases, so this check passes on effectively every instance; it is kept so
-that a future release that makes the setting configurable is caught the
-moment it starts reporting something other than restricted.
+Le document des capacités d’OpenCloud indique si la recherche d’utilisateurs
+est limitée aux membres d’un groupe partagé. L’état restreint est codé en dur
+dans les versions actuelles : ce contrôle réussit donc sur pratiquement toutes
+les instances. Il est conservé pour qu’une future version rendant ce paramètre
+configurable soit repérée dès qu’elle annonce autre chose que l’état
+restreint.
 
-**If this fails:** there is currently no setting to change - the finding
-describes OpenCloud's own configuration, not something this scanner's
-`--debug` remediation can point you at.
+**En cas d’échec :** il n’existe actuellement aucun paramètre à modifier. Le
+constat décrit la configuration propre d’OpenCloud, pas un réglage vers lequel
+les indications de correction de `--debug` pourraient vous orienter.
 
-## 5. Is the link password policy strong enough: `passwordPolicyEnforced`
+## 5. La politique de mot de passe des liens est-elle assez stricte : `passwordPolicyEnforced` {#5-is-the-link-password-policy-strong-enough-passwordpolicyenforced}
 
-The capabilities document's `password_policy.min_characters` is read and
-compared against 8. This governs the passwords a user can set on a **public
-share link**, not identity-provider account passwords - see [Public link
-sharing](sharing.md) for the checks that actually gate whether a link needs a
-password at all.
+Le scanner lit `password_policy.min_characters` dans le document des
+capacités et le compare à 8. Cette valeur régit les mots de passe qu’un
+utilisateur peut définir sur un **lien de partage public**, pas ceux des
+comptes du fournisseur d’identité. Consultez [Partage par lien public](sharing.md)
+pour les contrôles qui déterminent si un lien exige un mot de passe.
 
-**Fix:** set `OC_PASSWORD_POLICY_DISABLED=false` and
-`OC_PASSWORD_POLICY_MIN_CHARACTERS` to `8` or higher (`8` is already the
-default, so this usually means something explicitly lowered it).
-`OC_PASSWORD_POLICY_MIN_{LOWERCASE,UPPERCASE,DIGITS,SPECIAL}_CHARACTERS` and a
-banned-password list tighten it further - see [the link password policy
-docs][link-password].
+**Correction :** définissez `OC_PASSWORD_POLICY_DISABLED=false` et
+`OC_PASSWORD_POLICY_MIN_CHARACTERS` à `8` ou plus (`8` est déjà la valeur par
+défaut : un échec signifie donc généralement que quelqu’un l’a abaissée).
+`OC_PASSWORD_POLICY_MIN_{LOWERCASE,UPPERCASE,DIGITS,SPECIAL}_CHARACTERS` et une
+liste de mots de passe interdits la renforcent encore - voir
+[la documentation sur la politique de mot de passe des liens][link-password].
 
-## 5a. Does it still ask for more than length: `passwordPolicyComplexity`
+## 5a. Exige-t-elle encore plus qu’une longueur : `passwordPolicyComplexity` {#5a-does-it-still-ask-for-more-than-length-passwordpolicycomplexity}
 
-A minimum length is not a password policy on its own. OpenCloud's default
-policy also requires **one lowercase letter, one uppercase letter, one digit
-and one special character**, and each of those minimums is a setting somebody
-can lower to zero. A twelve-character policy with all four lowered accepts
-`aaaaaaaaaaaa`, which satisfies `passwordPolicyEnforced` and nothing else.
+Une longueur minimale ne suffit pas à faire une politique de mot de passe. La
+politique par défaut d’OpenCloud exige aussi **une minuscule, une majuscule,
+un chiffre et un caractère spécial**, et chacun de ces minimums est un
+paramètre que quelqu’un peut ramener à zéro. Une politique de douze caractères
+dont les quatre minimums ont été abaissés accepte `aaaaaaaaaaaa`, ce qui
+satisfait `passwordPolicyEnforced` et rien d’autre.
 
-The four `min_*_characters` fields are read from the same capabilities
-document, and the check passes when every one of them is at least 1.
+Les quatre champs `min_*_characters` sont lus dans le même document des
+capacités, et le contrôle réussit lorsque chacun vaut au moins 1.
 
-**This is deliberately a second flag rather than a stricter
-`passwordPolicyEnforced`.** The older flag answers "is there a policy, and is
-it long enough"; this one answers "is it still the policy OpenCloud ships".
-Folding them together would change what an existing alert means without
-changing its name.
+**Il s’agit volontairement d’un second indicateur plutôt que d’un
+`passwordPolicyEnforced` plus strict.** L’ancien indicateur répond à « existe-t-il
+une politique, et est-elle assez longue ? » ; celui-ci répond à « est-ce encore
+la politique livrée avec OpenCloud ? ». Les fusionner changerait le sens d’une
+alerte existante sans changer son nom.
 
-**Reported only when the instance publishes all four minimums.** A policy that
-is switched off publishes none of them - that case is `passwordPolicyEnforced`
-failing, not this one - and an absent measurement stays an unknown rather than
-becoming a failure, as everywhere else in the scan.
+**Signalé uniquement lorsque l’instance publie les quatre minimums.** Une
+politique désactivée n’en publie aucun - ce cas fait échouer
+`passwordPolicyEnforced`, pas celui-ci - et une mesure absente reste une
+inconnue au lieu de devenir un échec, comme partout ailleurs dans l’analyse.
 
-**Fix:** set `OC_PASSWORD_POLICY_MIN_LOWERCASE_CHARACTERS`,
+**Correction :** remettez `OC_PASSWORD_POLICY_MIN_LOWERCASE_CHARACTERS`,
 `OC_PASSWORD_POLICY_MIN_UPPERCASE_CHARACTERS`,
-`OC_PASSWORD_POLICY_MIN_DIGITS` and
-`OC_PASSWORD_POLICY_MIN_SPECIAL_CHARACTERS` back to `1` or more. Each already
-defaults to `1`, so an instance that fails this had them lowered on purpose.
+`OC_PASSWORD_POLICY_MIN_DIGITS` et
+`OC_PASSWORD_POLICY_MIN_SPECIAL_CHARACTERS` à `1` ou plus. Chacun vaut déjà `1`
+par défaut : une instance qui échoue à ce contrôle les a donc abaissés
+volontairement.
 
-## 6. Can the identity provider be found at all: `identityProviderDetected`
+## 6. Le fournisseur d’identité est-il seulement identifiable : `identityProviderDetected` {#6-can-the-identity-provider-be-found-at-all-identityproviderdetected}
 
-Everything above asks whether a credential is accepted. This one asks the
-prior question - *who issues the tokens?* - and answers it by reading
-`/.well-known/openid-configuration` once, without following redirects:
+Tous les contrôles ci-dessus demandent si un identifiant est accepté. Celui-ci
+pose la question préalable - *qui émet les jetons ?* - et y répond en lisant
+une seule fois `/.well-known/openid-configuration`, sans suivre les
+redirections :
 
-- a `200` carrying JSON: the `issuer` field is taken;
-- a redirect: the `Location` header is resolved against the instance and
-  taken instead, which is how a proxy that hands the well-known path to an
-  external provider is recognised;
-- anything else, or an issuer that is not an absolute `http(s)` URL with a
-  hostname: the flag fails.
+- une réponse `200` contenant du JSON : le champ `issuer` est retenu ;
+- une redirection : l’en-tête `Location` est résolu par rapport à l’instance et
+  retenu à la place, ce qui permet de reconnaître un proxy qui confie le chemin
+  well-known à un fournisseur externe ;
+- toute autre réponse, ou un émetteur qui n’est pas une URL `http(s)` absolue
+  avec un nom d’hôte : l’indicateur échoue.
 
-Nothing is submitted to find this out. No login form is filled in and no
-credential is sent - working out who signs users in must not become an
-attempt to sign in.
+Rien n’est soumis pour le découvrir. Aucun formulaire de connexion n’est rempli
+et aucun identifiant n’est envoyé : déterminer qui connecte les utilisateurs ne
+doit pas devenir une tentative de connexion.
 
-A failure is far more often a **proxy not forwarding `/.well-known/`** than
-an instance with no sign-in at all, which is why it never caps the rating.
+Un échec vient bien plus souvent d’un **proxy qui ne transmet pas
+`/.well-known/`** que d’une instance sans aucune connexion. C’est pourquoi il ne
+limite jamais la note.
 
-The issuer that is found is also recorded as context rather than a verdict.
-An issuer on a different host than the instance is reported as an
-**external** provider - Keycloak, Authentik or Authelia in front of
-OpenCloud - and the vendor is named so the result can point at that project's
-security advisories. Using OpenCloud's own built-in provider is not a
-finding: neither arrangement is required, and neither fails anything.
+L’émetteur trouvé est aussi enregistré comme contexte, pas comme verdict. Un
+émetteur situé sur un autre hôte que l’instance est signalé comme fournisseur
+**externe** - Keycloak, Authentik ou Authelia devant OpenCloud - et l’éditeur
+est nommé pour que le résultat puisse renvoyer aux avis de sécurité de ce
+projet. Utiliser le fournisseur intégré d’OpenCloud n’est pas un constat :
+aucune des deux configurations n’est exigée, et aucune ne fait échouer quoi que
+ce soit.
 
-**If this fails:** confirm the reverse proxy forwards `/.well-known/` to
-whatever issues tokens - see [Reverse proxies](reverse-proxy.md). If sign-in
-genuinely is not configured, OpenCloud ships its own provider and can be
-pointed at an external one.
+**En cas d’échec :** vérifiez que le reverse proxy transmet `/.well-known/` au
+service qui émet les jetons - voir [Reverse proxies](reverse-proxy.md). Si la
+connexion n’est réellement pas configurée, OpenCloud fournit son propre
+fournisseur et peut être relié à un fournisseur externe.
 
-## 7. What the discovery document says about how sign-in is protected
+## 7. Ce que le document de découverte indique sur la protection de la connexion {#7-what-the-discovery-document-says-about-how-sign-in-is-protected}
 
-The request above is already paid for. The document it returns is public
-evidence in the sense [ADR 0022](../../adr/0022-identity-provider-versions-require-public-evidence.md)
-means it - unauthenticated, read-only, published on purpose - and four of its
-fields say something an operator can act on. Reading them costs **no extra
-HTTP request**: the same response that yielded the issuer yields all four.
+La requête ci-dessus a déjà été faite. Le document qu’elle renvoie est une
+preuve publique au sens de l’[ADR 0022](../../adr/0022-identity-provider-versions-require-public-evidence.md) -
+non authentifié, en lecture seule, publié volontairement - et quatre de ses
+champs indiquent quelque chose sur quoi un opérateur peut agir. Les lire ne
+coûte **aucune requête HTTP supplémentaire** : la réponse qui a fourni
+l’émetteur fournit aussi les quatre champs.
 
-| Flag | Field | Fails when |
+| Indicateur | Champ | Échoue lorsque |
 |:--|:--|:--|
-| `oidcPkceSupported` | `code_challenge_methods_supported` [^rfc8414] | `S256` is not among the methods |
-| `oidcImplicitFlowDisabled` | `response_types_supported` | a type returns a token from the authorization endpoint (`token`, `id_token`) |
-| `oidcSigningAlgorithmStrong` | `id_token_signing_alg_values_supported` | it contains `none` or an `HS` algorithm |
-| `oidcEndpointsUseHttps` | `issuer` and the endpoint URLs | any of them is an `http://` address |
+| `oidcPkceSupported` | `code_challenge_methods_supported` [^rfc8414] | `S256` ne figure pas parmi les méthodes |
+| `oidcImplicitFlowDisabled` | `response_types_supported` | un type renvoie un jeton depuis le point de terminaison d’autorisation (`token`, `id_token`) |
+| `oidcSigningAlgorithmStrong` | `id_token_signing_alg_values_supported` | il contient `none` ou un algorithme `HS` |
+| `oidcEndpointsUseHttps` | `issuer` et les URL des points de terminaison | l’une d’elles est une adresse `http://` |
 
-[^rfc8414]: Providers publish it in the discovery document, but the field is
-    defined by [OAuth 2.0 Authorization Server Metadata](https://www.rfc-editor.org/rfc/rfc8414.html#section-2)
-    rather than by OpenID Connect Discovery, which is why an OIDC-only provider
-    may legitimately omit it.
+[^rfc8414]: Les fournisseurs le publient dans le document de découverte, mais
+    ce champ est défini par [OAuth 2.0 Authorization Server Metadata](https://www.rfc-editor.org/rfc/rfc8414.html#section-2)
+    et non par OpenID Connect Discovery : un fournisseur purement OIDC peut donc
+    légitimement l’omettre.
 
-**Every one of them is skipped when the document does not publish the field.**
-That is the same rule as `passwordPolicyComplexity`: an absent measurement is
-an unknown, never a failure. It matters more here than usual, because
-OpenCloud's built-in provider omits `code_challenge_methods_supported`
-entirely - rating that absence as "no PKCE" would fail every stock instance
-for something its operator cannot change.
+**Chacun est ignoré lorsque le document ne publie pas le champ.** C’est la même
+règle que pour `passwordPolicyComplexity` : une mesure absente est une
+inconnue, jamais un échec. Cela compte encore plus ici, car le fournisseur
+intégré d’OpenCloud omet entièrement `code_challenge_methods_supported` :
+traiter cette absence comme « pas de PKCE » ferait échouer toutes les instances
+non modifiées pour quelque chose que leur opérateur ne peut pas changer.
 
-**`oidcImplicitFlowDisabled` is reported for an external provider only.**
-OpenCloud's built-in provider ([libregraph/lico][lico]) publishes
-`response_types_supported` as `id_token token`, `id_token`, `code id_token`
-and `code id_token token` - implicit and hybrid, with no plain `code` - and
-none of that is configurable. A finding an operator cannot act on is worse
-than none, so it is raised only where it can be acted on: in front of
-Keycloak, Authentik or Authelia, where the flows really are separate
-switches. [Securing a deployment](secure-deployment.md#keycloak) already
-tells you to require PKCE and the code flow there; this is what finally
-checks that you did.
+**`oidcImplicitFlowDisabled` n’est signalé que pour un fournisseur externe.**
+Le fournisseur intégré d’OpenCloud ([libregraph/lico][lico]) publie
+`response_types_supported` sous la forme `id_token token`, `id_token`,
+`code id_token` et `code id_token token` - flux implicite et hybride, sans
+`code` seul - et rien de cela n’est configurable. Un constat sur lequel un
+opérateur ne peut pas agir est pire que pas de constat : il n’est donc émis que
+là où l’on peut agir, devant Keycloak, Authentik ou Authelia, où les flux sont
+réellement des options distinctes. [Sécuriser un déploiement](secure-deployment.md#keycloak)
+vous demande déjà d’y exiger PKCE et le flux par code ; ce contrôle vérifie
+enfin que vous l’avez fait.
 
-**`oidcEndpointsUseHttps` is measured only when the instance itself answered
-over HTTPS.** An instance scanned over plain HTTP publishes `http://`
-endpoints because that is how it was asked, and reporting that would restate
-what `httpsEnforced` already says once, in the right place. The finding worth
-having is the disagreement: an HTTPS instance whose provider still advertises
-`http://`, which is a provider behind a terminating proxy that was never told
-its public URL.
+**`oidcEndpointsUseHttps` n’est mesuré que lorsque l’instance elle-même a
+répondu en HTTPS.** Une instance analysée en HTTP simple publie des points de
+terminaison `http://` parce que c’est ainsi qu’elle a été interrogée, et le
+signaler répéterait ce que `httpsEnforced` dit déjà une fois, au bon endroit.
+Le constat utile est le désaccord : une instance HTTPS dont le fournisseur
+annonce encore `http://`, c’est-à-dire un fournisseur placé derrière un proxy
+de terminaison TLS à qui l’on n’a jamais indiqué son URL publique.
 
-**Why these four and not the obvious fifth.** `none` in
-`id_token_signing_alg_values_supported` means an unsigned ID token is
-acceptable, so anybody can write one; an `HS` algorithm signs with the client
-secret, and OpenCloud's clients are public clients that cannot keep a secret,
-so every party holding it can mint a token for any user. OpenCloud's built-in
-provider signs with `PS256` and passes.
+**Pourquoi ces quatre-là et pas le cinquième évident.** `none` dans
+`id_token_signing_alg_values_supported` signifie qu’un jeton d’identité non
+signé est acceptable : n’importe qui peut donc en écrire un. Un algorithme `HS`
+signe avec le secret client ; or les clients d’OpenCloud sont des clients
+publics qui ne peuvent pas garder de secret, si bien que toute partie qui le
+détient peut forger un jeton pour n’importe quel utilisateur. Le fournisseur
+intégré d’OpenCloud signe avec `PS256` et réussit ce contrôle.
 
-## What else is in that document, and why none of it is checked
+## Les autres champs de ce document, et pourquoi aucun n’est vérifié {#what-else-is-in-that-document-and-why-none-of-it-is-checked}
 
-The discovery document publishes a good deal more than these four flags read.
-Verified against [libregraph/lico][lico]'s `oidc/provider/provider.go`
-(`InitializeMetadata`), which is what OpenCloud's built-in provider serves:
+Le document de découverte publie bien plus que ce que lisent ces quatre
+indicateurs. Vérifié par rapport à `oidc/provider/provider.go`
+(`InitializeMetadata`) de [libregraph/lico][lico], c’est-à-dire ce que sert le
+fournisseur intégré d’OpenCloud :
 
-| Field | Why there is no check |
+| Champ | Pourquoi il n’y a pas de contrôle |
 |:--|:--|
-| `token_endpoint_auth_methods_supported` | The obvious candidate, and not a finding. Offering only `client_secret_basic` is not a weakness, and `none` - the value that looks alarming - is exactly what OpenCloud's public desktop, mobile and web clients need. lico publishes both. A flag here would either never fire or fire on every instance. |
-| `request_object_signing_alg_values_supported` | lico lists `none` among them, but this governs signed *request objects*, not ID tokens. An unsigned request object is not an unsigned token, and OpenCloud's clients do not send request objects at all. |
-| `scopes_supported`, `claims_supported` | Say what the provider can be asked for, not what it grants. Which scopes a *client* is allowed is per-client configuration the document does not show. |
-| `subject_types_supported` | lico publishes `public` and nothing else. `pairwise` is a privacy feature for multi-tenant providers; requiring it of a single-tenant OpenCloud deployment would be noise. |
-| `registration_endpoint` | Its presence does not mean open dynamic registration - whether registration needs an initial access token is not published. Guessing would be a confident claim from weak evidence, which is the thing [ADR 0022](../../adr/0022-identity-provider-versions-require-public-evidence.md) exists to forbid. |
+| `token_endpoint_auth_methods_supported` | Le candidat évident, et pourtant pas un constat. Ne proposer que `client_secret_basic` n’est pas une faiblesse, et `none` - la valeur qui semble alarmante - est exactement ce dont ont besoin les clients publics d’OpenCloud (bureau, mobile et web). lico publie les deux. Un indicateur ici ne se déclencherait jamais, ou se déclencherait sur toutes les instances. |
+| `request_object_signing_alg_values_supported` | lico y inclut `none`, mais ce champ régit les *objets de requête* signés, pas les jetons d’identité. Un objet de requête non signé n’est pas un jeton non signé, et les clients d’OpenCloud n’envoient aucun objet de requête. |
+| `scopes_supported`, `claims_supported` | Indiquent ce que l’on peut demander au fournisseur, pas ce qu’il accorde. Les portées autorisées pour un *client* relèvent d’une configuration propre à chaque client, que le document ne montre pas. |
+| `subject_types_supported` | lico publie `public` et rien d’autre. `pairwise` est une fonction de confidentialité pour les fournisseurs multi-locataires ; l’exiger d’un déploiement OpenCloud à locataire unique ne serait que du bruit. |
+| `registration_endpoint` | Sa présence ne signifie pas un enregistrement dynamique ouvert : le document ne dit pas si l’enregistrement exige un jeton d’accès initial. Le deviner reviendrait à affirmer avec assurance à partir d’une preuve faible, ce que l’[ADR 0022](../../adr/0022-identity-provider-versions-require-public-evidence.md) existe précisément pour interdire. |
 
-## Severity and rating impact
+## Gravité et effet sur la note {#severity-and-rating-impact}
 
-`authentication:<path>` and `demoUsersDisabled` are `extraChecks`, reported
-and rating-capped whenever they run at all, at their own severities above -
-see the extra-checks table in [the main
-README](scanner-checks.md#what-the-scanner-checks). `basicAuthDisabled`,
-`userEnumerationRestricted`, `passwordPolicyEnforced`,
-`passwordPolicyComplexity`, `identityProviderDetected` and the four `oidc*`
-flags are hardening flags,
-reported only with `--check-hardening` (or always on the web result); a
-failed hardening flag does not cap the rating by itself, it raises an
-otherwise-`OK` Icinga result to `WARNING` and is listed in the
-`hardenings_missing` line - see [Hardening
-checks](../README.md#hardening-checks).
+`authentication:<path>` et `demoUsersDisabled` sont des `extraChecks`,
+signalés et limitant la note chaque fois qu’ils s’exécutent, avec les gravités
+indiquées plus haut - voir le tableau des contrôles supplémentaires dans
+[Contrôles du scanner](scanner-checks.md#what-the-scanner-checks).
+`basicAuthDisabled`, `userEnumerationRestricted`, `passwordPolicyEnforced`,
+`passwordPolicyComplexity`, `identityProviderDetected` et les quatre
+indicateurs `oidc*` sont des indicateurs de durcissement, signalés uniquement
+avec `--check-hardening` (ou toujours dans le résultat web). Un indicateur de
+durcissement en échec ne limite pas la note à lui seul : il fait passer un
+résultat Icinga autrement `OK` à `WARNING` et figure sur la ligne
+`hardenings_missing` - voir [Vérifications de durcissement](../../README.md#hardening-checks).
 
 [opencloud-demo-users]: https://docs.opencloud.eu/docs/admin/resources/demo-user/
 [link-password]: https://docs.opencloud.eu/docs/admin/configuration/link-password-policy

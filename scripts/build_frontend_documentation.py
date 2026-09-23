@@ -55,7 +55,8 @@ def _section(source: str, start: str | None, end: str | None) -> str:
         # localized page title in its header.
         source = re.sub(r"\A(?:# [^\n]+\n+)+", "", source, count=1)
     source = re.split(
-        r"\n## (?:Trademarks and affiliation|Marken und Unabhängigkeit)\n",
+        r"\n## (?:Trademarks and affiliation|Marken und Unabhängigkeit|Marques et affiliation)"
+        r"(?: \{#[^}\n]+\})?\n",
         source,
         maxsplit=1,
     )[0]

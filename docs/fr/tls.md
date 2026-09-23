@@ -1,282 +1,250 @@
-# TLS et certificats
+# TLS et certificats {#tls-and-certificates-what-this-scanner-checks-and-why}
 
-Le scanner examine la connexion TLS, le certificat présenté par le serveur et
-les dossiers DNS connexes. Ces vérifications décrivent la connexion depuis le réseau du scanner.
-position; ils n'énumèrent pas chaque configuration qu'un client différent pourrait rencontrer.
+Le scanner examine la connexion TLS, le certificat du serveur et les
+enregistrements DNS associés. Ces contrôles décrivent la connexion vue depuis
+le réseau du scanner. Ils ne recensent pas toutes les configurations qu’un
+autre client pourrait rencontrer.
 
-<!-- TOC -->
-* [TLS and certificates: what this scanner checks, and why](#tls-and-certificates-what-this-scanner-checks-and-why)
-  * [1. Can a TLS connection be made at all: `tlsHandshake`, `httpsAvailable`](#1-can-a-tls-connection-be-made-at-all-tlshandshake-httpsavailable)
-  * [2. Is the certificate trusted: `tlsTrusted`](#2-is-the-certificate-trusted-tlstrusted)
-  * [3. Is the protocol current: `tlsProtocol`, `tlsDeprecatedProtocol`](#3-is-the-protocol-current-tlsprotocol-tlsdeprecatedprotocol)
-  * [4. Does the certificate cover this name: `tlsHostname`](#4-does-the-certificate-cover-this-name-tlshostname)
-  * [5. Is the chain complete: `tlsChain`](#5-is-the-chain-complete-tlschain)
-  * [6. Is the certificate about to expire, or issued for too long](#6-is-the-certificate-about-to-expire-or-issued-for-too-long)
-  * [7. Is the negotiated cipher suite and certificate policy sound](#7-is-the-negotiated-cipher-suite-and-certificate-policy-sound)
-  * [8. Do IPv4 and IPv6 present the same service: `tlsAddressParity`](#8-do-ipv4-and-ipv6-present-the-same-service-tlsaddressparity)
-  * [9. Is certificate issuance restricted: `tlsCaaRecord`](#9-is-certificate-issuance-restricted-tlscaarecord)
-  * [9a. Can the address itself be trusted: `tlsDnssec`](#9a-can-the-address-itself-be-trusted-tlsdnssec)
-  * [10. Is revocation actually checkable: `tlsOcspStapling`](#10-is-revocation-actually-checkable-tlsocspstapling)
-  * [11. Was the certificate published to a log: `tlsCertificateTransparency`](#11-was-the-certificate-published-to-a-log-tlscertificatetransparency)
-  * [12. Is a replayable 0-RTT flight invited: `tlsEarlyData`](#12-is-a-replayable-0-rtt-flight-invited-tlsearlydata)
-  * [What is deliberately left unmeasured](#what-is-deliberately-left-unmeasured)
-  * [Self-signed instances](#self-signed-instances)
-  * [Severity and rating impact](#severity-and-rating-impact)
-  * [Reference](#reference)
-<!-- TOC -->
+## 1. Peut-on établir une connexion TLS : `tlsHandshake`, `httpsAvailable` {#1-can-a-tls-connection-be-made-at-all-tlshandshake-httpsavailable}
 
+Le scanner commence par tenter une connexion. Deux échecs sont possibles :
 
-## 1. Can a TLS connection be made at all: `tlsHandshake`, `httpsAvailable`
+- **`httpsAvailable`** (critique) : HTTPS est inutilisable et le scanner se
+  replie sur `http://`. Les identifiants, cookies de session et fichiers
+  circulent sans chiffrement. Tout intermédiaire peut les lire ou les
+  modifier. C’est le problème le plus grave décrit sur cette page.
+- **`tlsHandshake`** : un port TLS répond, mais aucune connexion ne peut être
+  établie, même sans vérification du certificat. Tous les autres contrôles TLS
+  nécessitent une connexion. L’instance ne sert peut-être pas TLS sur ce port,
+  ou propose une configuration que le client ne peut pas négocier.
 
-Before anything else, the scan tries to connect. Two ways to fail:
+La redirection de HTTP vers HTTPS relève d’un autre indicateur,
+`httpsEnforced`, évalué au niveau du proxy. Voir
+[Deux constats qui ne portent pas sur les en-têtes](reverse-proxy.md#two-findings-decided-here-that-are-not-headers).
 
-- **`httpsAvailable`** (critical) - HTTPS could not be used at all, and the
-  scan fell back to plain `http://`. Credentials, session cookies and every
-  file travel unencrypted and can be read or altered by anything on the path.
-  Nothing else on this page matters as much.
-- **`tlsHandshake`** - a TLS port answered, but no connection could be
-  established, even with certificate verification switched off. Every other
-  TLS finding below rests on a connection that was made, so this one caps the
-  scan: the instance is either not serving TLS on this port, or is serving
-  something the client could not negotiate at all.
+## 2. Le certificat est-il reconnu : `tlsTrusted` {#2-is-the-certificate-trusted-tlstrusted}
 
-Whether plain HTTP is *redirected* to HTTPS is a separate flag,
-`httpsEnforced`, decided at the proxy rather than in the TLS layer - see
-[Two findings decided here that are not
-headers](reverse-proxy.md#two-findings-decided-here-that-are-not-headers).
+`opencloud init` génère un **certificat autosigné** si aucun autre certificat
+n’est configuré. Une chaîne non reconnue est donc le constat TLS le plus
+courant sur une nouvelle instance. Ce seul constat ne signifie pas que le
+déploiement est défectueux. La section [Instances avec certificat autosigné](#self-signed-instances)
+explique comment le scanner traite ce cas automatiquement.
 
-## 2. Is the certificate trusted: `tlsTrusted`
+## 3. Le protocole est-il à jour : `tlsProtocol`, `tlsDeprecatedProtocol` {#3-is-the-protocol-current-tlsprotocol-tlsdeprecatedprotocol}
 
-`opencloud init` generates a **self-signed certificate** unless real ones are
-configured, so an untrusted chain is the single most common TLS finding on a
-fresh instance - not evidence of a broken deployment by itself. See
-[Self-signed instances](#self-signed-instances) for how the scanner handles
-this without needing to be told which case it is looking at.
+La RFC 8996 a rendu TLS 1.0 et 1.1 obsolètes en 2021. Les navigateurs actuels
+les refusent.
 
-## 3. Is the protocol current: `tlsProtocol`, `tlsDeprecatedProtocol`
+- **`tlsProtocol`** échoue si la connexion du scanner utilise une version
+  antérieure à TLS 1.2.
+- **`tlsDeprecatedProtocol`** répond à une question distincte : après la
+  négociation normale, le scanner ouvre une connexion brève en imposant
+  chacune des versions obsolètes. Un serveur peut négocier TLS 1.3 avec un
+  client récent et accepter encore TLS 1.0 ou 1.1 avec un autre. La version
+  **la plus ancienne acceptée** détermine ce qu’un attaquant peut imposer.
+  Désactivez les anciennes versions ; donner la priorité à la plus récente
+  ne suffit pas.
 
-RFC 8996 deprecated TLS 1.0 and 1.1 in 2021; current browsers refuse them
-outright.
+## 4. Le certificat couvre-t-il ce nom : `tlsHostname` {#4-does-the-certificate-cover-this-name-tlshostname}
 
-- **`tlsProtocol`** fails when the connection this scan made came up on
-  anything older than TLS 1.2.
-- **`tlsDeprecatedProtocol`** is a second, independent question: after the
-  normal handshake, the scan opens one short-lived connection *pinned* to
-  each deprecated version and sees whether the server still accepts it. A
-  server that negotiates TLS 1.3 with a modern client can still leave 1.0 and
-  1.1 on offer for a client that asks for them - and it is the **oldest**
-  version accepted, not the one this scan happened to get, that decides what
-  an attacker can force. Fixing this means removing old versions from the
-  offered set, not just preferring the new one.
+Aucun nom alternatif du certificat ne correspond à l’hôte analysé : mauvais
+domaine, `localhost` ou absence de noms alternatifs. Le nom commun seul ne
+suffit plus depuis des années. Les clients ne peuvent pas distinguer ce cas
+d’une interception et refusent donc la connexion.
 
-## 4. Does the certificate cover this name: `tlsHostname`
+## 5. La chaîne est-elle complète : `tlsChain` {#5-is-the-chain-complete-tlschain}
 
-No subject alternative name in the certificate matches the host that was
-scanned - wrong domain, `localhost`, or no alternative names at all (which
-every client has rejected for years, common name alone is not enough).
-Clients cannot tell this apart from interception, so they are right to
-refuse the connection.
+Les certificats envoyés par le serveur ne permettent pas de remonter à une
+racine du magasin public de confiance. Il manque généralement un certificat
+intermédiaire. Un navigateur de bureau peut masquer ce problème en utilisant
+un intermédiaire en cache ou en le téléchargeant. Les clients mobiles, outils
+en ligne de commande et appels entre machines ne disposent pas toujours de
+ce cache et échouent. Servez la chaîne complète : le certificat du serveur,
+puis tous les intermédiaires, sans la racine. Les autorités la fournissent
+généralement dans un fichier `fullchain`.
 
-## 5. Is the chain complete: `tlsChain`
+## 6. Le certificat expire-t-il bientôt ou a-t-il une durée excessive ? {#6-is-the-certificate-about-to-expire-or-issued-for-too-long}
 
-The certificates the server sent do not reach a root in the public trust
-store on their own - typically a missing intermediate. This is the classic
-finding that looks fine in a desktop browser (which caches and fetches
-intermediates it has seen before) and fails on mobile clients, command-line
-tools, and anything doing machine-to-machine calls that does not have that
-cache. The fix is to serve the full chain - leaf followed by every
-intermediate, without the root - which is what most issuers publish as a
-`fullchain` file.
+Deux contrôles distincts portent sur la durée de validité :
 
-## 6. Is the certificate about to expire, or issued for too long
+- **`tlsCertificate`** : il reste moins de `scanner.tls_min_days` jours de
+  validité (14 par défaut). Le certificat finira par expirer si personne
+  n’agit. Vérifiez le renouvellement automatique et le rechargement du
+  certificat dans le processus qui sert réellement TLS.
+- **`tlsCertificateLifetime`** (faible) : la durée totale dépasse le seuil de
+  398 jours du scanner. Cela peut indiquer une autorité privée ou une émission
+  manuelle. Si la clé est compromise, un certificat valable plusieurs années
+  peut rester utilisable longtemps. Une courte durée impose des
+  renouvellements plus fréquents.
 
-Two independent checks, both about time, in opposite directions:
+## 7. La suite cryptographique et le certificat sont-ils sûrs ? {#7-is-the-negotiated-cipher-suite-and-certificate-policy-sound}
 
-- **`tlsCertificate`** - remaining validity is below `scanner.tls_min_days` (14 by
-  default). Unlike most findings, this one has a date on it: it will fail
-  whether or not anybody acts, so the usual cause is worth checking directly
-  - an automated issuer that stopped renewing, or a reload that never reaches
-  the process actually serving TLS.
-- **`tlsCertificateLifetime`** (low) - the certificate's validity period is
-  *longer* than the scanner’s 398-day lifetime threshold. That points at a private authority or a hand-issued
-  certificate, and the risk is the key: a certificate valid for years stays
-  valid for years after the key behind it leaks, with nothing forcing the
-  rotation that a short-lived certificate does on its own.
+- **`tlsCipherSuite`** évalue la suite négociée par ce scan, sans prétendre
+  recenser toutes celles proposées à d’autres clients. Il échoue en présence
+  d’un mécanisme ancien (`NULL`, `RC4`, `3DES`/`DES-`, `MD5`, `CCM_8`) ou
+  d’une suite sans confidentialité persistante.
+- **`tlsCertificatePolicy`** échoue si le certificat utilise une clé faible
+  (RSA de moins de 2048 bits, EC de moins de 256 bits) ou une signature
+  MD5/SHA-1. Ces paramètres sont insuffisants même si le certificat n’a pas
+  expiré.
 
-## 7. Is the negotiated cipher suite and certificate policy sound
+## 8. IPv4 et IPv6 présentent-ils le même service : `tlsAddressParity` {#8-do-ipv4-and-ipv6-present-the-same-service-tlsaddressparity}
 
-- **`tlsCipherSuite`** judges the suite this specific scan negotiated - it
-  does not claim to enumerate every suite the server might offer to a
-  different client. It fails on a legacy primitive (`NULL`, `RC4`,
-  `3DES`/`DES-`, `MD5`, `CCM_8`) or on a suite that provides no forward
-  secrecy.
-- **`tlsCertificatePolicy`** fails when the certificate itself carries a weak
-  key (RSA below 2048 bits, EC below 256 bits) or an MD5/SHA-1 signature -
-  parameters that are inadequate even on a certificate that has not expired.
+Si un nom d’hôte publie les deux familles d’adresses, le scanner compare leurs
+points d’accès TLS. Les visiteurs peuvent utiliser l’une ou l’autre. Un
+service IPv6 oublié peut présenter un ancien certificat, une configuration
+obsolète du proxy ou ne plus répondre, malgré une configuration IPv4 correcte.
 
-## 8. Do IPv4 and IPv6 present the same service: `tlsAddressParity`
+Le scanner compare une adresse par famille et uniquement l’identité TLS.
+Plusieurs nœuds qui partagent un certificat présentent la même identité,
+quel que soit leur contenu. Pour détecter un nœud dont la configuration n’a
+pas été mise à jour, utilisez `addressParity` avec `--all-addresses`. Voir
+[Toutes les adresses résolues](scanner-checks.md#every-resolved-address).
 
-When a hostname publishes both address families, the scan checks that their
-TLS endpoints agree. Visitors may reach either address, so a stale IPv6
-listener - an old certificate, a forgotten reverse-proxy config, or nothing
-answering at all - can bypass whatever TLS configuration is actually
-maintained on IPv4.
+## 9. L’émission de certificats est-elle restreinte : `tlsCaaRecord` {#9-is-certificate-issuance-restricted-tlscaarecord}
 
-It compares one address per family, and only the TLS identity. Several nodes
-behind one certificate present the same identity whatever they serve, so a
-node that missed a configuration rollout is caught by `addressParity` with
-`--all-addresses` instead - see
-[Every resolved address](scanner-checks.md#every-resolved-address).
-
-## 9. Is certificate issuance restricted: `tlsCaaRecord`
-
-A DNS **CAA** (Certification Authority Authorization) record names which
-certificate authorities may issue for a domain at all. Without one, any
-publicly trusted CA can be asked to issue a certificate for the name -
-not just the one actually in use. This is a low finding, checks only the
-exact name scanned (not the RFC 8659 parent-domain fallback chain), and it
-is a DNS change at the zone, never an OpenCloud setting:
+Un enregistrement DNS **CAA** (Certification Authority Authorization) indique
+quelles autorités peuvent émettre un certificat pour un domaine. Sans cet
+enregistrement, toute autorité publiquement reconnue peut recevoir une
+demande, et pas seulement celle que vous utilisez. Ce constat de gravité
+faible porte uniquement sur le nom exact analysé, sans remonter les domaines
+parents comme le prévoit la RFC 8659. La correction concerne la zone DNS,
+jamais un paramètre OpenCloud :
 
 ```
 example.com. CAA 0 issue "letsencrypt.org"
 ```
 
-## 9a. Can the address itself be trusted: `tlsDnssec`
+## 9a. L’adresse est-elle authentifiée : `tlsDnssec` {#9a-can-the-address-itself-be-trusted-tlsdnssec}
 
-Everything above starts from an address a resolver handed over. Without
-**DNSSEC** that answer carries no signature, so one forged on the way to the
-resolver cannot be told apart from the real one - and the CAA record above,
-which restricts who may issue a certificate for the name, arrives over the
-same unauthenticated channel and can be forged along with it.
+Tous les contrôles précédents utilisent une adresse fournie par un résolveur.
+Sans **DNSSEC**, sa réponse n’est pas signée. Une réponse falsifiée en chemin
+peut donc paraître authentique. L’enregistrement CAA arrive par le même canal
+et peut lui aussi être falsifié.
 
-The check asks the resolver this machine already uses - the one in
-`/etc/resolv.conf`, never a public one - for the scanned name with the DNSSEC
-bit set, and reads whether the resolver validated the answer, whether the
-answer carried signatures, and whether the resolver understood the question
-at all.
+Le scanner interroge le résolveur de la machine, défini dans
+`/etc/resolv.conf`, jamais un résolveur public. Il demande le nom analysé avec
+le bit DNSSEC activé, puis vérifie si le résolveur a validé la réponse, si elle
+contient des signatures et si le résolveur comprend DNSSEC.
 
-That last part is why the finding is sometimes simply absent. A resolver that
-does not speak DNSSEC produces exactly the same silence an unsigned zone
-does, and reporting it would fail every scan run from behind such a resolver
-for a reason that has nothing to do with the instance. So:
+Ce dernier point explique l’absence possible du constat. Un résolveur qui ne
+comprend pas DNSSEC peut donner le même résultat qu’une zone non signée.
+Signaler un échec dans ce cas pénaliserait l’instance pour une limite du réseau
+du scanner.
 
-| What the resolver answered | `tlsDnssec` |
-|:---------------------------|:------------|
-| It validated the answer itself | passes |
-| It forwarded signatures without validating | passes - the zone is signed, which is the part the operator controls |
-| Neither, but it understood the question | **fails** - the zone is not signed |
-| It does not speak DNSSEC, or never answered | absent from the result entirely |
+| Réponse du résolveur | `tlsDnssec` |
+|:--------------------|:------------|
+| Il a validé la réponse | réussi |
+| Il transmet les signatures sans les valider | réussi : la zone est signée, ce qui relève de l’opérateur |
+| Aucun des deux, mais il comprend la question | **échec** : la zone n’est pas signée |
+| Il ne comprend pas DNSSEC ou ne répond pas | absent du résultat |
 
-This is a low finding, and the fix is at the domain's own zone rather than in
-OpenCloud: sign the zone at the DNS provider, then publish the resulting DS
-record at the *parent* zone - an unsigned delegation leaves a signed zone
-unprotected. See
-[ADR 0038](../../adr/0038-a-dnssec-answer-nobody-could-have-given-is-not-a-finding.md).
+Ce constat est de gravité faible. La correction concerne la zone du domaine :
+activez sa signature chez le fournisseur DNS, puis publiez l’enregistrement DS
+dans la zone **parente**. Sans délégation signée, la zone reste sans protection.
+Voir [ADR 0038](../../adr/0038-a-dnssec-answer-nobody-could-have-given-is-not-a-finding.md).
 
-## 10. Is revocation actually checkable: `tlsOcspStapling`
+## 10. La révocation est-elle vérifiable : `tlsOcspStapling` {#10-is-revocation-actually-checkable-tlsocspstapling}
 
-The certificate names an OCSP responder, but the server does not attach the
-revocation answer to the handshake - so every client has to ask the
-authority itself, which tells that authority who is visiting, and is usually
-skipped rather than treated as a failure when the responder is slow. This is
-a low finding for a reason: most current authorities, Let's Encrypt among
-them, no longer publish a responder at all, and the check simply does not
-apply to those certificates.
+Le certificat indique un serveur OCSP, mais le serveur TLS ne joint pas sa
+réponse de révocation à la négociation. Chaque client doit alors interroger
+l’autorité lui-même, ce qui lui révèle les visites. Si le serveur OCSP est
+lent, les clients ignorent souvent la vérification au lieu de refuser la
+connexion. Ce constat est de gravité faible : de nombreuses autorités
+actuelles, dont Let’s Encrypt, ne publient plus de serveur OCSP. Ce contrôle
+ne s’applique pas à leurs certificats.
 
-## 11. Was the certificate published to a log: `tlsCertificateTransparency`
+## 11. Le certificat figure-t-il dans un journal public : `tlsCertificateTransparency` {#11-was-the-certificate-published-to-a-log-tlscertificatetransparency}
 
-Certificate Transparency is the public, append-only record of every
-certificate a public authority issues. It exists so that a domain owner can
-find out that somebody else was issued a certificate for their name - a
-mis-issuance that would otherwise be invisible until it was used.
+Certificate Transparency est un registre public de certificats émis par les
+autorités publiques, auquel on peut uniquement ajouter des entrées. Il permet
+au propriétaire d’un domaine de repérer un certificat émis à tort pour son
+nom avant qu’il ne soit utilisé.
 
-A certificate participates by carrying **signed certificate timestamps**
-(SCTs) embedded by the issuing authority. The scan counts them in the
-certificate it already fetched, using the same `openssl x509 -text` call that
-reads the key and signature algorithm - no extra connection and no extra
-process.
+L’autorité intègre des **horodatages de certificat signés** (SCT) dans le
+certificat. Le scanner les compte dans le certificat déjà reçu, avec le même
+appel `openssl x509 -text` que celui qui lit la clé et l’algorithme de
+signature. Aucun processus ni connexion supplémentaire n’est nécessaire.
 
-The check looks specifically for SCTs embedded in the certificate. Missing embedded SCTs
-produce a `medium` finding, but do not by themselves prove a browser will reject the
-connection: Certificate Transparency evidence can also be delivered through other
-mechanisms.
+Le contrôle cherche précisément les SCT intégrés au certificat. Leur absence
+produit un constat `medium`, mais ne prouve pas à elle seule qu’un navigateur
+refusera la connexion. Les preuves Certificate Transparency peuvent être
+transmises par d’autres mécanismes.
 
-`tlsCertificateTransparency` is evaluated only when the chain reaches a public root.
-Private or self-signed certificates are outside this check’s scope. If the local OpenSSL
-cannot decode the extension, the finding is omitted rather than recorded as a pass.
+`tlsCertificateTransparency` est évalué uniquement si la chaîne aboutit à une
+racine publique. Les certificats privés ou autosignés sont exclus. Si
+l’OpenSSL local ne peut pas décoder l’extension, le constat est omis, sans être
+considéré comme réussi.
 
-**Fix:** reissue through a certificate authority that embeds SCTs. Every
-public one has done so for years, Let's Encrypt included; a trusted
-certificate without them was almost certainly issued by a private CA that is
-nonetheless in the client trust store.
+**Correction :** faites réémettre le certificat par une autorité qui intègre
+les SCT. Les autorités publiques, dont Let’s Encrypt, le font depuis des
+années. Un certificat reconnu sans SCT provient probablement d’une autorité
+privée ajoutée au magasin de confiance du client.
 
-## 12. Is a replayable 0-RTT flight invited: `tlsEarlyData`
+## 12. Le serveur accepte-t-il les données 0-RTT rejouables : `tlsEarlyData` {#12-is-a-replayable-0-rtt-flight-invited-tlsearlydata}
 
-TLS 1.3 lets a resuming client send its first request in the same flight as
-the handshake - "0-RTT", or early data. It saves a round trip and it has no
-replay protection at the TLS layer, by design: anyone who can record that
-flight can send it again, and the server cannot tell the copy from the
-original.
+TLS 1.3 permet à un client qui reprend une session d’envoyer sa première
+requête avec la négociation : ce sont les données anticipées, ou « 0-RTT ».
+Cela économise un aller-retour, mais TLS ne protège pas ces données contre le
+rejeu. Toute personne qui les enregistre peut les renvoyer, sans que le
+serveur puisse distinguer la copie de l’original.
 
-For a file service that means a request to move, copy or delete replayed at a
-moment of somebody else's choosing. A correct server restricts 0-RTT to
-idempotent requests, but nothing on the wire proves that it does, which is
-why this is a `low` finding rather than a higher one.
+Pour un service de fichiers, une requête de déplacement, de copie ou de
+suppression pourrait ainsi être rejouée. Un serveur correctement configuré
+limite 0-RTT aux requêtes idempotentes, dont la répétition ne change pas le
+résultat. Le protocole ne permet toutefois pas de vérifier cette restriction.
+Le constat reste donc de gravité `low`.
 
-The scan reads the `Max Early Data` limit the server's own session tickets
-advertise, from the same `openssl s_client` handshake that answers the
-stapling question. A server that never mentions a limit - a TLS 1.2 server,
-or one whose tickets forbid early data on some builds - is reported as
-unknown rather than as accepting it.
+Le scanner lit la limite `Max Early Data` annoncée dans les tickets de
+session, au cours de la même négociation `openssl s_client` que le contrôle
+OCSP stapling. Si le serveur n’indique aucune limite, par exemple en TLS 1.2
+ou avec certaines configurations interdisant ces données, l’état est inconnu
+et non « accepté ».
 
-**Fix:** switch early data off in whatever terminates TLS. nginx's
-`ssl_early_data` is `off` by default; Caddy and Traefik do not enable it.
-Leave it on only where a measured latency problem justifies it *and* the
-application is known to reject replayed non-idempotent requests.
+**Correction :** désactivez les données anticipées sur le composant qui
+termine TLS. `ssl_early_data` vaut `off` par défaut dans nginx. Caddy et
+Traefik ne l’activent pas. Ne les conservez que si un problème de latence
+mesuré le justifie **et** si l’application rejette les requêtes non
+idempotentes rejouées.
 
-## What is deliberately left unmeasured
+## Ce qui n’est pas mesuré {#what-is-deliberately-left-unmeasured}
 
-**Nothing here reports a pass it did not measure.** A build of OpenSSL that
-refuses to speak TLS 1.0 at all cannot tell the scanner whether the *server*
-would have accepted it, and a missing `openssl` binary means OCSP stapling
-cannot be probed. In both cases the check is left out of the result entirely
-rather than recorded as passed - a gap in the output is honest; a green tick
-for something nobody looked at is not.
+**Un contrôle non effectué n’est jamais déclaré réussi.** Si la version
+locale d’OpenSSL refuse TLS 1.0, elle ne peut pas déterminer si le serveur
+l’accepterait. Sans exécutable `openssl`, le scanner ne peut pas vérifier
+OCSP stapling. Dans les deux cas, le contrôle est absent du résultat.
 
-**A certificate that fails verification is still read.** `getpeercert()`
-returns nothing for an unverified peer, so on the self-signed instances this
-matters most for, the scanner fetches the certificate in DER form and decodes
-it independently - the same expiry date, name coverage and issuer a trusted
-certificate would report, whether or not the chain validates.
+**Un certificat non reconnu reste analysé.** `getpeercert()` ne renvoie rien
+pour un pair non vérifié. Le scanner récupère donc le certificat au format
+DER et le décode séparément. Il peut ainsi lire sa date d’expiration, les noms
+couverts et l’émetteur, même si la chaîne n’est pas reconnue.
 
-## Self-signed instances
+## Instances avec certificat autosigné {#self-signed-instances}
 
-The scanner handles a self-signed or otherwise untrusted certificate without
-needing to be told which case it is looking at:
+Le scanner traite automatiquement les certificats autosignés ou non reconnus :
 
-1. HTTPS with certificate verification. If that works, everything above is
-   evaluated normally.
-2. HTTPS without verification. The scan continues and reports `tlsTrusted`
-   as a failed check - the full result still comes back, plus the fact that
-   the chain is not trusted.
-3. Plain HTTP - `httpsAvailable` (critical).
+1. Il essaie HTTPS avec vérification du certificat. Si la connexion réussit,
+   tous les contrôles précédents s’appliquent normalement.
+2. Il essaie HTTPS sans vérification. Le scan continue et signale l’échec de
+   `tlsTrusted`. Le résultat complet reste disponible avec ce constat.
+3. Il essaie HTTP et signale `httpsAvailable` de gravité critique.
 
-`--insecure` (`COS_INSECURE`) skips step 1's verification requirement. The
-untrusted chain is still listed in the output; it simply stops counting
-against the rating. Use it for an instance you know is self-signed, so that a
-*genuinely* broken certificate elsewhere still stands out rather than being
-lost in an expected finding.
+`--insecure` (`COS_INSECURE`) supprime l’exigence de vérification de l’étape 1.
+La chaîne non reconnue reste dans le résultat, mais ne réduit plus la note.
+Utilisez cette option pour une instance dont vous savez que le certificat
+est autosigné. Les problèmes inattendus sur les autres instances restent
+ainsi visibles.
 
-## Severity and rating impact
+## Gravité et effet sur la note {#severity-and-rating-impact}
 
-Every check on this page is an `extraChecks` entry, so a failure caps the
-rating the way any failed extra check does (critical -> `D`, high -> `C`,
-medium -> `A`, low -> `A+`) - see [Hardening
-checks](../README.md#hardening-checks) for how that differs from a plain
-hardening flag, and the extra-checks table in [the main
-README](scanner-checks.md#what-the-scanner-checks) for the full severity list.
+Chaque contrôle de cette page est une entrée `extraChecks`. Un échec plafonne
+la note : critique → `D`, élevée → `C`, moyenne → `A`, faible → `A+`.
+La section [Contrôles de durcissement](../README.md#hardening-checks) explique
+la différence avec les simples indicateurs de durcissement. Le tableau des
+[contrôles du scanner](scanner-checks.md#what-the-scanner-checks) donne la
+liste complète des gravités.
 
-## Reference
+## Référence {#reference}
 
-[Reverse proxies](reverse-proxy.md) covers the headers a proxy in front of
-OpenCloud should set; this page is only about the TLS layer underneath it.
+Le guide [Proxys inverses](reverse-proxy.md) décrit les en-têtes à configurer
+devant OpenCloud. Cette page concerne uniquement la couche TLS.

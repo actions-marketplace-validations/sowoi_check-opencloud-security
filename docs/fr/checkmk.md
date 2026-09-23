@@ -1,67 +1,63 @@
 # Intégration Checkmk
 
-Checkmk peut lire directement la sortie du plugin Nagios. Vous pouvez l’exécuter comme un contrôle actif
-sur le serveur Checkmk ou comme vérification locale sur un serveur d'agent. Choisissez la machine qui peut
-atteindre l'instance à partir du réseau que vous voulez tester.
+Checkmk peut lire directement la sortie du plugin Nagios. Exécutez-le comme contrôle
+actif sur le serveur Checkmk ou comme contrôle local sur un hôte équipé de l’agent.
+Choisissez la machine qui peut atteindre l’instance depuis le réseau à tester.
 
-| | [Active check](#1-an-active-check-on-the-checkmk-server) | [Local check](#2-a-local-check-on-an-agent-host) |
+| | [Contrôle actif](#1-an-active-check-on-the-checkmk-server) | [Contrôle local](#2-a-local-check-on-an-agent-host) |
 |:--|:--|:--|
-| Runs on | the Checkmk server | a host with the Checkmk agent |
-| Reaches the instance from | the monitoring network | wherever that host sits |
-| Needs the plugin installed on | the Checkmk server | the agent host |
-| Configured in | the web interface | a file the agent runs |
-| Output format | `nagios` (the default) | `--format checkmk` |
+| Exécution | Serveur Checkmk | Hôte équipé de l’agent Checkmk |
+| Réseau d’origine | Réseau de supervision | Réseau de cet hôte |
+| Installation du plugin | Serveur Checkmk | Hôte de l’agent |
+| Configuration | Interface web | Script exécuté par l’agent |
+| Format de sortie | `nagios` (par défaut) | `--format checkmk` |
 
-Use the **active check** unless the instance is unreachable from the Checkmk
-server. It is configured in one place, it needs nothing on any other machine,
-and Checkmk parses the plugin's ordinary output itself.
+Privilégiez le **contrôle actif** si le serveur Checkmk peut atteindre l’instance.
+Sa configuration est centralisée et ne nécessite aucune installation sur un autre
+hôte. Checkmk lit directement la sortie habituelle du plugin.
 
-Everything below uses `opencloud.example.com`. Substitute your own, and scan
-only instances you are responsible for.
+Remplacez `opencloud.example.com` par votre adresse. Analysez uniquement les
+instances dont vous êtes responsable.
 
-## 1. An active check on the Checkmk server
+## 1. Contrôle actif sur le serveur Checkmk {#1-an-active-check-on-the-checkmk-server}
 
-Install the plugin on the Checkmk server, as the site user:
+Installez le plugin sur le serveur Checkmk avec le compte du site :
 
 ```shell
 pipx install check-opencloud-security
 ```
 
-[Installing the plugin](installation.md) covers uv, pip and a checkout;
-`check-opencloud-security --version` confirms which one you got.
+Le guide d’[installation](installation.md) décrit aussi uv, pip et l’installation
+depuis le dépôt. `check-opencloud-security --version` affiche la version installée.
 
-Then, in the web interface: **Setup > Services > Other services > Integrate
-Nagios plugins**, and create a rule with
+Dans l’interface web, ouvrez **Setup > Services > Other services > Integrate
+Nagios plugins**, puis créez une règle :
 
-- **Service description**: `OpenCloud security opencloud.example.com`
-- **Command line**:
-  `check-opencloud-security --host opencloud.example.com --check-hardening`
+- **Service description** : `OpenCloud security opencloud.example.com`
+- **Command line** : `check-opencloud-security --host opencloud.example.com --check-hardening`
 
-Assign it to the host you want the service to appear on. That host is a label
-for where the *service* lives, not where the scan goes - the scan always goes
-to `--host`.
+Affectez-la à l’hôte auquel le service doit être rattaché. Ce rattachement ne définit
+pas la cible : l’analyse vise toujours l’adresse fournie à `--host`.
 
-Checkmk reads the state from the exit code, the summary from the first output
-line, the rest of the output as the service's details, and everything after
-the `|` as metrics. Nothing needs converting: the
-[performance data](../README.md#performance-data) this plugin already writes -
-`rating`, `vulnerabilities`, `hardenings_missing`, `extra_checks_failed`,
-`update_available`, `support_days_left`, `cert_days_left`, `upgrade_path_complete`, `time` - is the
-Nagios format Checkmk was built to read, thresholds and all.
+Checkmk lit l’état dans le code de sortie, le résumé sur la première ligne, les
+détails sur les lignes suivantes et les métriques après `|`. Les
+[données de performance](../README.md#performance-data) utilisent déjà le format
+Nagios, seuils compris : `rating`, `vulnerabilities`, `hardenings_missing`,
+`extra_checks_failed`, `update_available`, `support_days_left`, `cert_days_left`,
+`upgrade_path_complete`, `waiver_days_left`, `coverage_inconclusive`,
+`coverage_not_checked` et `time`.
 
-One warning about scheduling: the default check interval is one minute, and a
-scan makes around twenty HTTP requests and five TCP connects to the instance.
-Set a sensible interval on the service - hourly is plenty for a rating that
-moves when somebody changes a configuration file - under **Setup > Services >
-Service monitoring rules > Normal check interval for service checks**.
+L’intervalle par défaut est d’une minute. Une analyse effectue environ vingt
+requêtes HTTP et cinq connexions TCP. Un contrôle horaire suffit généralement
+pour une note qui évolue avec la configuration. Réglez cet intervalle dans
+**Setup > Services > Service monitoring rules > Normal check interval for service checks**.
 
-## 2. A local check on an agent host
+## 2. Contrôle local sur un hôte équipé de l’agent {#2-a-local-check-on-an-agent-host}
 
-When the Checkmk server cannot reach the instance, the scan has to start
-somewhere that can. A local check is a script the agent runs; its output
-becomes a service on the agent's host.
+Si le serveur Checkmk ne peut pas atteindre l’instance, lancez l’analyse depuis un
+hôte qui le peut. L’agent exécute un script local et transforme sa sortie en service.
 
-`--format checkmk` writes exactly what the agent expects:
+`--format checkmk` produit le format attendu par l’agent :
 
 ```shell
 check-opencloud-security --host opencloud.example.com --format checkmk
@@ -71,35 +67,32 @@ check-opencloud-security --host opencloud.example.com --format checkmk
 0 "OpenCloud_Security_opencloud.example.com" rating=5|vulnerabilities=0|hardenings_missing=0|extra_checks_failed=0|update_available=0|support_days_left=284|cert_days_left=67|execution_time=4.120 OK: Server is up to date. No known vulnerabilities.
 ```
 
-Four fields, separated by single spaces: the state, the quoted service name,
-the metrics, and the detail text. With several hosts in `--host` you get
-several lines, which is several services - one per instance.
+La ligne contient quatre champs séparés par une espace : état, nom du service entre
+guillemets, métriques et description. Plusieurs valeurs `--host` produisent plusieurs
+lignes, donc un service par instance.
 
-### Installing it
+### Installation {#installing-it}
 
-[`contrib/checkmk/opencloud_security`](../../contrib/checkmk/opencloud_security)
-is that call wrapped in a script, configured by the same `COS_` environment
-variables as the [cron and systemd examples](scheduling.md) beside it, so it
-needs no editing to point at your instance:
+Le script [`contrib/checkmk/opencloud_security`](../../contrib/checkmk/opencloud_security)
+exécute cette commande. Il utilise les mêmes variables `COS_` que les
+[exemples cron et systemd](scheduling.md), sans nécessiter de modification du script :
 
 ```shell
 sudo install -m 0755 contrib/checkmk/opencloud_security \
     /usr/lib/check_mk_agent/local/3600/opencloud_security
 ```
 
-**The `3600` is the important part.** A script in `local/` itself runs every
-time the agent is called - once a minute - and that is a scan a minute against
-somebody's production instance. The numeric subdirectory is the agent's cache
-interval in seconds: the scan then runs at most hourly, and every call in
-between is answered from the cached line. Pick the interval you actually want;
-`3600` is a good default for a rating.
+**Le répertoire `3600` définit l’intervalle.** Un script placé directement dans
+`local/` s’exécute à chaque appel de l’agent, soit généralement chaque minute.
+Le sous-répertoire numérique indique la durée du cache en secondes : ici, l’analyse
+s’exécute au plus une fois par heure. Les appels intermédiaires reçoivent le résultat
+mis en cache. Adaptez cette durée à vos besoins ; `3600` convient à la plupart des cas.
 
-Installed from the `.deb` or `.rpm`, the same script is at
-`/usr/share/doc/check-opencloud-security/checkmk-local-check.sh` - as an
-example, deliberately not installed into the agent's directory by a package
-that has no business writing there.
+Les paquets `.deb` et `.rpm` fournissent ce script comme exemple dans
+`/usr/share/doc/check-opencloud-security/checkmk-local-check.sh`. Ils ne l’installent
+pas automatiquement dans le répertoire de l’agent.
 
-Set the target in the script, or in an environment file the agent reads:
+Définissez la cible dans le script ou dans un fichier d’environnement lu par l’agent :
 
 ```shell
 COS_HOST=opencloud.example.com
@@ -107,79 +100,68 @@ COS_HOST=opencloud.example.com
 #COS_SCANNER_VERIFY_TLS=false
 ```
 
-Then discover the new service on that host: **Setup > Hosts**, the host's
-*Services* page, *Full service scan*.
+Lancez ensuite la découverte du service : **Setup > Hosts**, page *Services* de
+l’hôte, puis *Full service scan*.
 
-### What the states mean
+### Signification des états {#what-the-states-mean}
 
-The state on the line is the plugin's, unchanged - the same `0`/`1`/`2`/`3`
-the exit code carries, decided by the same
-[rating thresholds](../README.md#rating-thresholds), waivers and
-end-of-life rules as everywhere else. Checkmk is not asked to judge anything:
+L’état reprend celui du plugin : `0`, `1`, `2` ou `3`. Les mêmes
+[seuils de notation](../README.md#rating-thresholds), exemptions et règles de fin de
+support s’appliquent. Checkmk ne recalcule pas le verdict :
 
-- `0` OK - the rating is above `--warning` and nothing new appeared
-- `1` WARN - at or below `--warning`, or a finding is missing hardening
-- `2` CRIT - at or below `--critical`, or a known vulnerability applies
-- `3` UNKNOWN - the scan could not be completed at all
+- `0` OK : note supérieure à `--warning`, sans nouveau constat.
+- `1` WARN : note inférieure ou égale à `--warning`, ou mesure de durcissement manquante.
+- `2` CRIT : note inférieure ou égale à `--critical`, ou vulnérabilité connue applicable.
+- `3` UNKNOWN : analyse impossible à terminer.
 
-That last one is why the shipped script always prints a line, even when the
-plugin is missing or was killed by the agent's timeout. A local check that
-prints nothing does not go UNKNOWN - it *removes its service from the host*,
-which reads like a check somebody deliberately switched off rather than one
-that broke.
+Le script fourni affiche toujours une ligne, même si le plugin manque ou si l’agent
+l’interrompt après expiration du délai. Sans sortie, Checkmk retirerait le service
+de l’hôte au lieu de le signaler comme UNKNOWN.
 
-### The metrics
+### Métriques {#the-metrics}
 
-The same measurements the Nagios performance data carries, under the same
-names, with two differences the format requires:
+Les mesures portent les mêmes noms que dans la sortie Nagios, avec deux adaptations :
 
-- **No thresholds.** A local check's levels are only evaluated when the state
-  field is `P`, which hands the verdict to Checkmk. Deciding is this plugin's
-  job, so it sends the state it reached and the metrics carry values alone.
-- **No unit suffix.** Every value has to parse as a number, so the Nagios
-  `time=4.120s` is `execution_time=4.120` here.
+- **Sans seuils.** Checkmk n’évalue les seuils d’un contrôle local que si l’état vaut
+  `P`. Le plugin détermine lui-même l’état ; les métriques contiennent donc uniquement les valeurs.
+- **Sans suffixe d’unité.** Chaque valeur doit être numérique.
+  `time=4.120s` devient ainsi `execution_time=4.120`.
 
-| Metric | What it is |
-|:-------|:-----------|
-| `rating` | `0`-`5`, where `5` is A+. Absent when no rating could be established |
-| `vulnerabilities` | Known advisories matching the detected version |
-| `hardenings_missing` | Measures the instance is missing. **Absent without `--check-hardening`**, because an empty list would otherwise be indistinguishable from a perfect one |
-| `extra_checks_failed` | Failed additional checks - TLS, exposed paths, cookies, headers |
-| `update_available` | `1` when a newer release exists. Absent when the update check is off |
-| `support_days_left` | Days until the release line stops receiving fixes; negative once it has |
-| `cert_days_left` | Days until the certificate expires; negative once it has |
-| `upgrade_path_complete` | `1` when the recommended upgrade clears every known advisory, `0` when it does not; absent without advisories |
-| `execution_time` | How long the scan took, in seconds |
+| Métrique | Signification |
+|:--|:--|
+| `rating` | Note de `0` à `5` (`5` = A+). Absente si aucune note n’a pu être établie |
+| `vulnerabilities` | Avis de sécurité connus applicables à la version détectée |
+| `hardenings_missing` | Mesures manquantes. **Absente sans `--check-hardening`**, pour distinguer un contrôle non effectué d’un résultat sans défaut |
+| `extra_checks_failed` | Contrôles supplémentaires en échec : TLS, chemins exposés, cookies, en-têtes |
+| `update_available` | `1` si une version plus récente existe. Absente si la recherche de mises à jour est désactivée |
+| `support_days_left` | Jours avant la fin des correctifs pour cette branche ; valeur négative ensuite |
+| `cert_days_left` | Jours avant expiration du certificat ; valeur négative ensuite |
+| `upgrade_path_complete` | `1` si la mise à jour recommandée corrige tous les avis connus, sinon `0` ; absente sans avis |
+| `waiver_days_left` | Jours avant la fin d’une exemption `--waive-until` qui laisse un contrôle en échec alerter de nouveau ; absente si aucun contrôle en échec ne dépend d’une échéance |
+| `coverage_inconclusive` | Contrôles exécutés par l’analyse sans conclusion ; absente sans bloc de couverture |
+| `coverage_not_checked` | Contrôles que l’analyse n’a pas exécutés ; absente sans bloc de couverture |
+| `execution_time` | Durée de l’analyse en secondes |
 
-A metric that was not measured is left out rather than sent as a zero, so a
-graph never shows a confident zero for something nobody looked at.
+Une mesure non effectuée est omise. Elle n’apparaît donc pas comme un zéro dans les graphiques.
 
-## Alerting on it
+## Alertes {#alerting-on-it}
 
-Both routes produce an ordinary Checkmk service, so notifications, downtimes
-and acknowledgements work as they do for anything else. Two rules worth
-setting up:
+Les deux méthodes produisent un service Checkmk ordinaire. Notifications, périodes
+de maintenance et acquittements fonctionnent comme pour les autres services.
+Deux réglages sont utiles :
 
-- Alert on **CRIT** immediately - a known vulnerability or an end-of-life
-  release is not a tomorrow problem.
-- Graph `support_days_left` and set a level on it. It is the one number that
-  gets worse while nothing about the instance changes, and the day it goes
-  negative the rating drops to F on its own.
+- Déclencher immédiatement une alerte **CRIT** pour une vulnérabilité connue ou une version en fin de support.
+- Tracer `support_days_left` et lui attribuer un seuil. Cette valeur diminue même sans
+  changement sur l’instance. Lorsqu’elle devient négative, la note passe à F.
 
-`--baseline` and `--warn-on-new` ([Reporting only what
-changed](baseline.md)) work under both routes and are worth having on a check
-that runs unattended: the state then reflects what is *new* rather than
-repeating a finding somebody has already decided to live with. An
-end-of-life release and a rating that drops further are never forgiven by
-that, so it cannot quieten the two findings that matter most.
+`--baseline` et `--warn-on-new` ([signaler seulement les changements](baseline.md))
+fonctionnent avec les deux méthodes. Ils évitent de répéter les constats déjà
+acceptés lors d’un contrôle automatisé. Ils ne masquent jamais une fin de support
+ni une nouvelle baisse de la note.
 
-## See also
+## Voir aussi {#see-also}
 
-- [Installing the plugin](installation.md) - and the Icinga2/Nagios object
-  definitions, if Checkmk is not the only thing you run
-- [Machine-readable output](output-formats.md) - every `--format` value
-  compared
-- [Scheduling](scheduling.md) - the systemd timer and cron drop-in the local
-  check's environment variables come from
-- [Prometheus and Grafana](prometheus.md) - the other pull-based route, if you
-  would rather graph this outside Checkmk
+- [Installation](installation.md) : inclut les définitions Icinga2/Nagios.
+- [Formats de sortie](output-formats.md) : comparaison des valeurs de `--format`.
+- [Planification](scheduling.md) : minuterie systemd, cron et variables d’environnement.
+- [Prometheus et Grafana](prometheus.md) : collecte et graphiques en dehors de Checkmk.

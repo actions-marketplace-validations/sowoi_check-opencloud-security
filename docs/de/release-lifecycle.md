@@ -96,7 +96,7 @@ Es hebt nur `OK` an; ein Ergebnis, das schon `WARNING` oder `CRITICAL` ist,
 behält seine eigene Zeile. Eine Linie ohne veröffentlichtes Supportende warnt
 nie. `0`, der Standard, schaltet es ab.
 
-## Behebt das Update die Sicherheitshinweise? {#does-the-upgrade-clear-the-advisories}
+## Behebt das Update die bekannten Schwachstellen? {#does-the-upgrade-clear-the-advisories}
 
 Hat die installierte Version bekannte Sicherheitshinweise, hält der Scan
 `upgradePath` fest: was das empfohlene Update an jedem davon ändert.
@@ -117,10 +117,10 @@ für einen davon noch keinen gibt. Das Plugin gibt das als Detailzeile aus.
 `upgradeRehearsal` beschreibt jede Version, auf die sich ein Wechsel lohnt:
 den neuesten Patch der installierten Linie und die neueste Version jeder
 späteren Linie (nur Linien des festgelegten Release-Kanals, wenn die
-Instanz einen Kanal vorgibt). Für jede Version werden die Hinweise genannt,
-die sie `fixes`, von denen sie noch `stillAffected` ist, sowie neu eingeführte
-Hinweise (`introduces`), ob sie `endOfLife` ist und welches `rating` der Scan
-für sie vergeben würde.
+Instanz einen Kanal vorgibt). Für jede Version zeigt das Ergebnis behobene Schwachstellen (`fixes`),
+weiterhin bestehende Schwachstellen (`stillAffected`) und neu betroffene
+Schwachstellen (`introduces`). Es nennt außerdem den Supportstatus
+(`endOfLife`) und die Bewertung (`rating`), die der Scan vergeben würde.
 
 ```json
 {"upgradeRehearsal": [
@@ -130,7 +130,7 @@ für sie vergeben würde.
 ]}
 ```
 
-Die Bewertung verwendet dieselben Versionsregeln wie der Scan. Fehlende
+Die Bewertung verwendet dieselben Versionsregeln wie der Scan. Fehlgeschlagene
 Prüfungen der Instanz begrenzen sie weiterhin (`versionRating` zeigt, was
 allein aufgrund der Version möglich wäre), denn ein Upgrade ändert die
 Version, nicht den Proxy davor. Das Plugin gibt eine Detailzeile mit seinen
@@ -140,15 +140,14 @@ eigenen Bewertungsbuchstaben aus:
 Upgrade rehearsal: 7.2.4 fixes 1 finding, leaves 1, reaches rating D; 7.3.0 fixes 2 findings, leaves 0, reaches rating A+.
 ```
 
-Die Vorabprüfung kennt nur den gebündelten oder aktualisierten Zeitplan und
-die Beratungsdatenbank. Eine später veröffentlichte Version oder ein später
+Die Vorabprüfung verwendet nur den gebündelten oder aktualisierten Zeitplan
+und die Schwachstellendatenbank. Eine später veröffentlichte Version oder ein später
 veröffentlichter Hinweis kann das Ergebnis ändern.
 
-Die Weboberfläche zeigt dieselben Einträge als **Was dir ein Upgrade bringen
-würde**: eine Zeile pro Kandidat mit den Hinweisen, die sie ausräumt, denen,
-die bleiben, und der Note, die sie erreicht. Wo die Version allein besser
-abschneiden würde, liegt der Unterschied an den Befunden dieser Instanz, die
-ein Upgrade nicht anfasst.
+Die Weboberfläche zeigt dieselben Einträge unter **Was ein Upgrade beheben
+würde**: eine Zeile pro Zielversion mit behobenen und weiterhin bestehenden
+Schwachstellen sowie der erreichbaren Note. Würde die Version allein eine
+bessere Note erhalten, begrenzen unveränderte Befunde der Instanz die Bewertung.
 
 ## Marken und Unabhängigkeit
 

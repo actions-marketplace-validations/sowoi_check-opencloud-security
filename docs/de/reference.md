@@ -172,13 +172,13 @@ opencloud2.example.com  F      6.9.1    YES   3      -
 Checked 2 host(s): overall CRITICAL (1 CRITICAL, 1 OK)
 ```
 
-Die Spalten sind die Note, die dieses Plugin vergeben hat, die gemessene
-Version, der Lebenszyklus-Zustand, wie viele Meldungen zutreffen und wie viel
-sich seit der Referenzaufnahme bewegt hat. Die Zeilen behalten die Reihenfolge
-der angegebenen Hosts, und die letzte Zeile ist dieselbe Bilanz, mit der die
-Nagios-Ausgabe beginnt. Der Exit-Code bleibt unverändert - der schlechteste
-Status der Flotte -, also taugt das weiterhin für einen Cronjob, der seine
-Ausgabe verschickt.
+Die Spalten zeigen die Note, die gemessene Version, den Supportstatus, die
+Anzahl zutreffender Sicherheitsmeldungen und neue Befunde seit der
+Referenzaufnahme. Die Zeilen folgen der Reihenfolge der angegebenen Hosts. Die
+letzte Zeile enthält dieselbe Zusammenfassung wie der Beginn der Nagios-Ausgabe.
+Der Exitcode entspricht weiterhin dem schlechtesten Status aller geprüften
+Hosts. Das Format eignet sich daher auch für einen Cronjob, der die Ausgabe
+versendet.
 
 `EOL` steht auf `YES` nach dem Support-Ende, auf `soon` innerhalb des Fensters
 von [`--eol-warning-days`](#options) und sonst auf `no`. `NEW` braucht
@@ -195,9 +195,9 @@ mit denselben Befunden in auswertbarer Form.
 ## CI-Richtlinienmodus {#ci-policy-mode}
 
 `-w`/`-c` und `--profile` beurteilen eine Instanz anhand ihrer **Note**, also
-anhand einer einzigen Zahl, die für alles Gemessene einsteht. Für ein
-Monitoring-System ist das die richtige Form und für ein Deployment-Tor die
-falsche: Wenn dein Team erzwungenes HTTPS und keine Demo-Konten verlangt,
+anhand einer einzigen Zahl, die die Messergebnisse zusammenfasst. Für das
+Monitoring ist das nützlich. Als Freigabekriterium für eine Bereitstellung
+reicht die Note aber nicht immer aus: Wenn dein Team erzwungenes HTTPS und keine Demo-Konten verlangt,
 lässt sich das nicht als Note ausdrücken.
 
 `--policy` verweist auf eine Datei, die das ausdrücklich festhält:
@@ -235,26 +235,23 @@ wird als JSON gelesen, alles andere als YAML, und
 [`config/policy.example.yml`](../../config/policy.example.yml) ist ein
 kommentierter Ausgangspunkt.
 
-Ein Verstoß ist **CRITICAL**, denn es bringt wenig, eine Pipeline mit einem
-Status scheitern zu lassen, den sie womöglich toleriert. Eine Richtlinie macht
-ein Urteil nur schlechter, nie besser: Eine Instanz, die alle Anforderungen
-erfüllt, behält das Urteil, das Schwellwerte, Härtung, Lebenszyklus und
-Referenzaufnahme bereits gefällt haben, und in der Ausgabe steht
+Ein Verstoß setzt den Status auf **CRITICAL**. Eine Richtlinie kann den
+Status verschlechtern, aber nicht verbessern. Erfüllt die Instanz alle
+Anforderungen, bleibt der anhand von Schwellenwerten, Härtung, Lebenszyklus und
+Referenzaufnahme ermittelte Status erhalten. In der Ausgabe steht
 `Policy: every requirement met`. Webhook-Payload und `--format json` führen
 dasselbe Urteil unter `policy`.
 
 Zwei Regeln solltest du kennen, bevor du eine Richtlinie schreibst:
 
-* **Ein Waiver entschuldigt keine Anforderung.** `--ignore-hardening` und
-  `--waive-until` sind der Betrieb vor Ort, der einen Befund akzeptiert; eine
-  Richtlinie ist die Organisation, die sagt, dass er nicht akzeptiert werden
-  darf. Könnte ein Waiver eine geforderte Maßnahme stummschalten, würde eine
-  Richtlinie nichts Durchsetzbares beschreiben.
-* **Ein Tippfehler ist ein Nutzungsfehler, kein stilles Durchwinken.** Ein
-  unbekannter Schlüssel, eine Note außerhalb von `0`-`5` oder eine Maßnahme,
-  die der Katalog nicht kennt, beenden den Lauf mit `UNKNOWN` samt Begründung.
-  Eine Richtlinie existiert, um Deployments scheitern zu lassen - eine Regel,
-  die stillschweigend nichts verlangt, wäre das schlechtestmögliche Ergebnis.
+* **Ausnahmen setzen die Richtlinie nicht außer Kraft.** Mit
+  `--ignore-hardening` und `--waive-until` akzeptierte Befunde bleiben für die
+  Richtlinienprüfung relevant. Eine ausdrücklich verlangte Maßnahme muss
+  weiterhin erfüllt sein.
+* **Ungültige Regeln führen zu `UNKNOWN`.** Ein unbekannter Schlüssel, eine
+  Note außerhalb von `0`-`5` oder eine unbekannte Maßnahme beenden den Lauf
+  mit einer Begründung. So kann ein Tippfehler nicht unbemerkt eine Anforderung
+  außer Kraft setzen.
 
 ## Prometheus und Kubernetes {#prometheus-kubernetes-integration}
 
@@ -269,7 +266,7 @@ check-opencloud-security --host opencloud.example.com \
   --prometheus-listen-port 9102
 ```
 
-Er bindet standardmäßig an `127.0.0.1`. Für Container oder Kubernetes verwende bei Bedarf `--prometheus-listen-addr 0.0.0.0` und beschränken Port 9102 per
+Er bindet standardmäßig an `127.0.0.1`. Für Container oder Kubernetes verwende bei Bedarf `--prometheus-listen-addr 0.0.0.0` und beschränke Port 9102 per
 Firewall oder NetworkPolicy.
 
 Die Metriken erfassen Bewertung, Schwachstellen, fehlende Schutzmaßnahmen,
@@ -860,10 +857,19 @@ rating=5;@0:3;@0:1;0;5 vulnerabilities=0;;;0; time=1.234s;;;0;
 | `update_available` | 1 bei verfügbarem Update |
 | `support_days_left` | Tage bis Supportende, danach negativ |
 | `cert_days_left` | Tage bis Zertifikatsablauf, danach negativ |
+| `upgrade_path_complete` | `1`, wenn das empfohlene Upgrade alle bekannten Hinweise behebt, sonst `0`; fehlt ohne Hinweise |
+| `waiver_days_left` | Tage, bis eine `--waive-until`-Ausnahme endet und eine fehlgeschlagene Prüfung wieder alarmiert; fehlt, wenn keine an einer Frist hängt |
+| `coverage_inconclusive` | Prüfungen, die der Scan ausgeführt, aber nicht entschieden hat |
+| `coverage_not_checked` | Prüfungen, die der Scan nicht ausgeführt hat |
 
 `rating` enthält die konfigurierten Nagios-Schwellen, etwa `@0:3`.
 `cert_days_left` fehlt, wenn keine verlässliche Messung möglich war. Seine
 Warnschwelle entspricht `scanner.tls_min_days`; nach Ablauf gilt kritisch.
+`waiver_days_left` zählt vom Scan bis zum nächsten Moment, an dem eine befristete
+Ausnahme eine fehlgeschlagene Prüfung nicht mehr verdeckt. Mit `--waiver-warning TAGE`
+trägt der Wert dieses Fenster als Warnbereich. `coverage_inconclusive` und
+`coverage_not_checked` erklären die Bewertung, ändern sie aber nie, und haben
+deshalb keine Schwellen.
 Die [Prometheus-Anleitung](../prometheus.md) zeigt weitere Auswertungen.
 
 ## Cache {#caching}

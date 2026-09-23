@@ -154,6 +154,10 @@ object CheckCommand "{{ opencloud_check_command_name }}" {
             description = "WARNING this many days before the release line's end of life"
             value = "$opencloud_eol_warning$"
         }
+        "--waiver-warning" = {
+            description = "WARNING this many days before a temporary waiver ends"
+            value = "$opencloud_waiver_warning$"
+        }
         "--baseline" = {
             description = "File remembering the last run's findings"
             value = "$opencloud_baseline$"

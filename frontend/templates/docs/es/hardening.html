@@ -44,7 +44,7 @@ medidas a la salida y a las métricas.</p>
 <tbody>
 <tr>
 <td><code>basicAuthDisabled</code></td>
-<td>La instancia ofrece autenticación HTTP Basic, así que las credenciales pueden reutilizarse en cada solicitud y se elude el inicio de sesión único (con cualquier segundo factor). A menudo es deliberado: los clientes CalDAV, CardDAV y WebDAV no hablan OpenID Connect, por eso se califica como <code>medium</code>, y como <code>low</code> cuando un proveedor de identidad externo gestiona el inicio de sesión interactivo.</td>
+<td>La instancia ofrece autenticación HTTP Basic, así que las credenciales pueden reutilizarse en cada solicitud y se elude el inicio de sesión único (con cualquier segundo factor). A menudo es deliberado: los clientes CalDAV, CardDAV y WebDAV no admiten OpenID Connect, por eso se califica como <code>medium</code>, y como <code>low</code> cuando un proveedor de identidad externo gestiona el inicio de sesión interactivo.</td>
 <td><a href="https://docs.opencloud.eu/docs/dev/server/services/proxy/environment-variables"><code>PROXY_ENABLE_BASIC_AUTH=false</code></a> si nada lo necesita; de lo contrario, manténgalo y dé a esos clientes tokens de aplicación en lugar de contraseñas de cuenta.</td>
 </tr>
 <tr>

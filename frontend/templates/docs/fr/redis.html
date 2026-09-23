@@ -17,19 +17,19 @@
 
 <nav class="docs-toc card section-gap" aria-label="{{ t('docs.guide.toc.aria') }}" data-reveal>
   <p class="kicker">{{ t('docs.guide.toc.heading') }}</p>
-  <a href="#table-of-contents" lang="fr">Table of contents</a>
-  <a href="#what-redis-is-used-for" lang="fr">What Redis is used for</a>
-  <a href="#what-is-stored-and-for-how-long" lang="fr">What is stored, and for how long</a>
-  <a href="#configuring-the-connection" lang="fr">Configuring the connection</a>
-  <a href="#running-without-redis" lang="fr">Running without Redis</a>
-  <a href="#the-password" lang="fr">The password</a>
-  <a href="#network-isolation" lang="fr">Network isolation</a>
-  <a href="#persistence-or-the-deliberate-lack-of-it" lang="fr">Persistence, or the deliberate lack of it</a>
-  <a href="#memory-and-eviction" lang="fr">Memory and eviction</a>
-  <a href="#an-external-or-managed-redis" lang="fr">An external or managed Redis</a>
+  <a href="#table-of-contents" lang="fr">Sommaire</a>
+  <a href="#what-redis-is-used-for" lang="fr">Rôle de Redis</a>
+  <a href="#what-is-stored-and-for-how-long" lang="fr">Données et durées de conservation</a>
+  <a href="#configuring-the-connection" lang="fr">Configurer la connexion</a>
+  <a href="#running-without-redis" lang="fr">Fonctionnement sans Redis</a>
+  <a href="#the-password" lang="fr">Mot de passe</a>
+  <a href="#network-isolation" lang="fr">Isolation réseau</a>
+  <a href="#persistence-or-the-deliberate-lack-of-it" lang="fr">Persistance désactivée par défaut</a>
+  <a href="#memory-and-eviction" lang="fr">Mémoire et éviction</a>
+  <a href="#an-external-or-managed-redis" lang="fr">Redis externe ou géré</a>
   <a href="#kubernetes" lang="fr">Kubernetes</a>
-  <a href="#health-and-monitoring" lang="fr">Health and monitoring</a>
-  <a href="#troubleshooting" lang="fr">Troubleshooting</a>
+  <a href="#health-and-monitoring" lang="fr">État et supervision</a>
+  <a href="#troubleshooting" lang="fr">Dépannage</a>
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="fr">
@@ -41,398 +41,384 @@ perte de connexion.</p>
 en ligne de commande n’utilise pas Redis : <code>check-opencloud-security</code> contacte une
 instance OpenCloud, affiche une ligne puis se termine.</p>
 <blockquote>
-<p><strong>Vous voulez simplement corriger l’avertissement ?</strong> Définissez
+<p><strong>Pour corriger l’avertissement d’authentification</strong>, définissez
 <code>COS_REDIS_PASSWORD</code> dans <code>docker/.env</code>, puis lancez <code>docker compose up -d</code>.
-Le reste de cette page explique ce réglage et les autres mesures utiles.</p>
+Les sections suivantes expliquent ce réglage et les autres mesures utiles.</p>
 </blockquote>
-<h2 id="table-of-contents">Table of contents</h2>
+<h2 id="table-of-contents">Sommaire</h2>
 <!-- TOC -->
 <ul>
-<li><a href="#what-redis-is-used-for">What Redis is used for</a></li>
-<li><a href="#what-is-stored-and-for-how-long">What is stored, and for how long</a></li>
-<li><a href="#configuring-the-connection">Configuring the connection</a></li>
-<li><a href="#running-without-redis">Running without Redis</a></li>
-<li><a href="#the-password">The password</a></li>
-<li><a href="#network-isolation">Network isolation</a></li>
-<li><a href="#persistence-or-the-deliberate-lack-of-it">Persistence, or the deliberate lack of it</a></li>
-<li><a href="#memory-and-eviction">Memory and eviction</a></li>
-<li><a href="#an-external-or-managed-redis">An external or managed Redis</a></li>
+<li><a href="#what-redis-is-used-for">Rôle de Redis</a></li>
+<li><a href="#what-is-stored-and-for-how-long">Données et durées de conservation</a></li>
+<li><a href="#configuring-the-connection">Configurer la connexion</a></li>
+<li><a href="#running-without-redis">Fonctionnement sans Redis</a></li>
+<li><a href="#the-password">Mot de passe</a></li>
+<li><a href="#network-isolation">Isolation réseau</a></li>
+<li><a href="#persistence-or-the-deliberate-lack-of-it">Persistance désactivée par défaut</a></li>
+<li><a href="#memory-and-eviction">Mémoire et éviction</a></li>
+<li><a href="#an-external-or-managed-redis">Redis externe ou géré</a></li>
 <li><a href="#kubernetes">Kubernetes</a></li>
-<li><a href="#health-and-monitoring">Health and monitoring</a></li>
-<li><a href="#troubleshooting">Troubleshooting</a></li>
-<li><a href="#trademarks-and-affiliation">Trademarks and affiliation</a></li>
+<li><a href="#health-and-monitoring">État et supervision</a></li>
+<li><a href="#troubleshooting">Dépannage</a></li>
+<li><a href="#trademarks-and-affiliation">Marques et affiliation</a></li>
 </ul>
 <!-- TOC -->
 
-<h2 id="what-redis-is-used-for">What Redis is used for</h2>
-<p>Three jobs, and nothing else:</p>
+<h2 id="what-redis-is-used-for">Rôle de Redis</h2>
+<p>Redis remplit trois fonctions :</p>
 <ol>
-<li><strong>The queue.</strong> A submission is accepted, given a uuid and pushed onto a
-   list. The ARQ worker pops from it. This is what makes an overloaded service
-   queue rather than refuse: the submission past the last free worker waits its
-   turn and is told its position.</li>
-<li><strong>The scan's own state.</strong> Its status, the result document once there is
-   one, and what was asked for. The web application reads these to answer
-   <code>GET /api/scans/{uuid}</code>; it never runs a scan itself.</li>
-<li><strong>Shared reference data and counters.</strong> The release schedule and the
-   advisory database the worker re-reads once a day, the worker's heartbeat,
-   and the rate limit counters.</li>
+<li><strong>La file d’attente.</strong> Chaque demande acceptée reçoit un uuid, puis rejoint une
+   liste lue par le worker ARQ. Si tous les workers sont occupés, la demande attend
+   son tour et sa position est indiquée.</li>
+<li><strong>L’état de chaque analyse.</strong> Redis stocke son statut, ses paramètres et le
+   résultat lorsqu’il est disponible. L’application web lit ces données pour
+   répondre à <code>GET /api/scans/{uuid}</code> ; elle n’exécute pas elle-même l’analyse.</li>
+<li><strong>Les données de référence et compteurs partagés.</strong> Il conserve le calendrier
+   des versions et les avis relus chaque jour, le signal de présence du worker
+   et les compteurs de limitation des requêtes.</li>
 </ol>
-<p>Most Redis state can be recreated, but clearing it discards queued work, readable
-results, rate-limit state and exclusions added through the operator area. Keep
-exclusions that must survive a reset in <code>COS_WEB_BLOCKED_TARGETS</code>. Scan data expires
-automatically; do not assume every operational key has the same lifetime.</p>
-<h2 id="what-is-stored-and-for-how-long">What is stored, and for how long</h2>
+<p>La plupart de ces données peuvent être recréées. Vider Redis supprime toutefois
+les demandes en attente, les résultats consultables, les compteurs et les exclusions
+ajoutées dans l’espace opérateur. Placez les exclusions permanentes dans
+<code>COS_WEB_BLOCKED_TARGETS</code>. Les analyses expirent automatiquement, mais toutes les
+clés opérationnelles n’ont pas la même durée de vie.</p>
+<h2 id="what-is-stored-and-for-how-long">Données et durées de conservation</h2>
 <table>
 <thead>
 <tr>
-<th>Key</th>
-<th>What it holds</th>
-<th>Lifetime</th>
+<th>Clé</th>
+<th>Contenu</th>
+<th>Durée de vie</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>scan:{uuid}:status</code></td>
-<td><code>queued</code>, <code>running</code>, <code>completed</code> or <code>failed</code></td>
-<td><code>COS_WEB_RESULT_TTL</code> (default 3600s)</td>
+<td><code>queued</code>, <code>running</code>, <code>completed</code> ou <code>failed</code></td>
+<td><code>COS_WEB_RESULT_TTL</code> (3600 s par défaut)</td>
 </tr>
 <tr>
 <td><code>scan:{uuid}:result</code></td>
-<td>The result document the scanner produced</td>
+<td>Document produit par le scanner</td>
 <td><code>COS_WEB_RESULT_TTL</code></td>
 </tr>
 <tr>
 <td><code>scan:{uuid}:metadata</code></td>
-<td>The address submitted, the waivers, the release track, the timestamps</td>
+<td>Adresse soumise, exemptions, canal de versions, horodatages</td>
 <td><code>COS_WEB_RESULT_TTL</code></td>
 </tr>
 <tr>
 <td><code>cos:web:queue</code></td>
-<td>The FIFO list of uuids waiting for a worker</td>
-<td>The result TTL, at least an hour</td>
+<td>Liste FIFO des uuid en attente d’un worker</td>
+<td>Durée des résultats, au moins une heure</td>
 </tr>
 <tr>
 <td><code>cos:web:worker:heartbeat</code></td>
-<td>That a worker is alive, for <code>/healthz</code></td>
-<td>Refreshed by the worker</td>
+<td>Signal de présence du worker pour <code>/healthz</code></td>
+<td>Renouvelé par le worker</td>
 </tr>
 <tr>
 <td><code>cos:web:rl:client:{fingerprint}</code></td>
-<td>The per-client request count</td>
+<td>Compteur de requêtes par client</td>
 <td><code>COS_WEB_IP_RATE_WINDOW</code></td>
 </tr>
 <tr>
 <td><code>cos:web:rl:target:{fingerprint}</code></td>
-<td>The per-target cooldown</td>
+<td>Délai entre deux analyses d’une cible</td>
 <td><code>COS_WEB_TARGET_COOLDOWN</code></td>
 </tr>
 <tr>
 <td><code>scan:{uuid}:prober</code></td>
-<td>The client fingerprint a scan's outcome counts against, until a worker starts it</td>
-<td><code>COS_WEB_RESULT_TTL</code> at most</td>
+<td>Empreinte du client auquel attribuer le résultat, jusqu’au démarrage du worker</td>
+<td>Au plus <code>COS_WEB_RESULT_TTL</code></td>
 </tr>
 <tr>
 <td><code>cos:web:rl:probe:{fingerprint}</code></td>
-<td>Strikes against one client network</td>
+<td>Incidents attribués à un réseau client</td>
 <td><code>COS_WEB_PROBE_WINDOW</code></td>
 </tr>
 <tr>
 <td><code>cos:web:rl:blocked:{fingerprint}</code></td>
-<td>A client network blocked for probing</td>
-<td><code>COS_WEB_PROBE_BLOCK</code>, growing to <code>COS_WEB_PROBE_BLOCK_MAX</code></td>
+<td>Blocage d’un réseau client pour sondage abusif</td>
+<td><code>COS_WEB_PROBE_BLOCK</code>, jusqu’à <code>COS_WEB_PROBE_BLOCK_MAX</code></td>
 </tr>
 <tr>
 <td><code>cos:web:rl:blocks:{fingerprint}</code></td>
-<td>How many blocks a network earned recently, for escalation</td>
-<td>The last block plus <code>COS_WEB_PROBE_REPEAT_WINDOW</code></td>
+<td>Nombre récent de blocages d’un réseau, pour prolonger les suivants</td>
+<td>Dernier blocage plus <code>COS_WEB_PROBE_REPEAT_WINDOW</code></td>
 </tr>
 <tr>
 <td><code>cos:web:rl:daily:{fingerprint}</code></td>
-<td>The per-client daily count</td>
-<td>A day</td>
+<td>Compteur quotidien par client</td>
+<td>Un jour</td>
 </tr>
 <tr>
 <td><code>cos:web:stats:{blocks,strikes,daily}:{YYYYMMDD}</code></td>
-<td>Counts for the operator's area: blocks started, strikes, daily caps reached. A number per day, nothing else</td>
-<td>Eight days</td>
+<td>Totaux quotidiens pour l’espace opérateur : blocages, incidents et plafonds atteints</td>
+<td>Huit jours</td>
 </tr>
 <tr>
 <td><code>cos:web:schedule:document</code>, <code>cos:web:schedule:checked</code></td>
-<td>The release lifecycle re-read once a day</td>
-<td>Until the next refresh</td>
+<td>Calendrier des versions relu chaque jour</td>
+<td>Jusqu’à l’actualisation suivante</td>
 </tr>
 <tr>
 <td><code>cos:web:advisories:document</code>, <code>cos:web:advisories:checked</code></td>
-<td>The advisory database re-read once a day</td>
-<td>Until the next refresh</td>
+<td>Base d’avis relue chaque jour</td>
+<td>Jusqu’à l’actualisation suivante</td>
 </tr>
 </tbody>
 </table>
-<p>Two things follow from that table, and both matter more than they look.</p>
-<p><strong>A uuid is the whole of the authorisation.</strong> Each scan owns its own
-<code>scan:{uuid}:*</code> namespace and nothing lists them. Unknown, invalid and expired
-uuids all answer with the same 404, so an expired result is indistinguishable
-from one that never existed. There is no endpoint that enumerates scans, and
-adding one would turn every result into a public document.</p>
-<p><strong>Rate-limit keys contain fingerprints instead of client addresses.</strong> They use
-<code>COS_WEB_RATE_LIMIT_SALT</code>; audit records use the separate <code>COS_WEB_AUDIT_SALT</code>.
-Configure a shared rate-limit salt when running multiple web processes. See
-<a href="/documentation/web-service#what-gets-logged">logging</a>.</p>
-<p>Redis is therefore, for as long as a TTL lasts, a copy of the addresses people
-submitted and the security findings for each. That is the reason for the two
-sections below.</p>
-<h2 id="configuring-the-connection">Configuring the connection</h2>
-<p>One setting, <code>COS_WEB_REDIS_URL</code>, and both processes read it: the web
-application opens it directly, and the worker hands the same URL to ARQ. A
-password or a TLS scheme in the URL therefore configures the whole stack.</p>
+<p><strong>L’uuid suffit pour accéder au résultat.</strong> Chaque analyse possède son espace
+<code>scan:{uuid}:*</code> et aucune route ne permet de les énumérer. Un uuid inconnu, invalide
+ou expiré reçoit le même code 404. Un résultat expiré ne se distingue donc pas
+d’un résultat qui n’a jamais existé. Une route de liste rendrait tous les résultats
+accessibles publiquement.</p>
+<p><strong>Les clés de limitation contiennent des empreintes, pas les adresses des clients.</strong>
+Elles utilisent <code>COS_WEB_RATE_LIMIT_SALT</code>. Le journal d’audit utilise une autre
+valeur, <code>COS_WEB_AUDIT_SALT</code>. Configurez un sel de limitation commun si vous lancez
+plusieurs processus web. Voir la <a href="/documentation/web-service#what-gets-logged">journalisation</a>.</p>
+<p>Pendant la durée de conservation, Redis contient les adresses soumises et les
+constats de sécurité associés. Il faut donc protéger son accès.</p>
+<h2 id="configuring-the-connection">Configurer la connexion</h2>
+<p>Les deux processus lisent <code>COS_WEB_REDIS_URL</code>. L’application web l’utilise
+directement et le worker la transmet à ARQ. Le mot de passe et le schéma TLS de
+cette URL s’appliquent ainsi aux deux connexions.</p>
 <table>
 <thead>
 <tr>
-<th>Form</th>
-<th>When</th>
+<th>Forme</th>
+<th>Utilisation</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>redis://redis:6379/0</code></td>
-<td>The container next door, no password</td>
+<td>Conteneur Redis local, sans mot de passe</td>
 </tr>
 <tr>
 <td><code>redis://:PASSWORD@redis:6379/0</code></td>
-<td>With <code>requirepass</code> set. The username is empty, hence the bare colon</td>
+<td>Avec <code>requirepass</code> ; le nom d’utilisateur est vide</td>
 </tr>
 <tr>
 <td><code>redis://user:PASSWORD@host:6379/0</code></td>
-<td>Redis 6+ ACL user</td>
+<td>Utilisateur ACL de Redis 6 ou ultérieur</td>
 </tr>
 <tr>
 <td><code>rediss://user:PASSWORD@host:6380/0</code></td>
-<td>The same over TLS. Two <code>s</code>, and it is the scheme that turns encryption on</td>
+<td>Connexion TLS ; le second <code>s</code> active le chiffrement</td>
 </tr>
 <tr>
 <td><code>memory://</code></td>
-<td>No Redis at all, see below</td>
+<td>Sans Redis, voir ci-dessous</td>
 </tr>
 </tbody>
 </table>
-<p>Percent-encode a password containing <code>@</code>, <code>:</code>, <code>/</code> or <code>#</code>, or it will be
-parsed as part of the host. The passwords generated by
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docker/setup-wizard.py"><code>docker/setup-wizard.py</code></a> and
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docker/authentik-env.sh"><code>docker/authentik-env.sh</code></a> use only characters
-that are safe in a URL, which is why they are generated rather than asked for.</p>
-<h2 id="running-without-redis">Running without Redis</h2>
-<p><code>COS_WEB_REDIS_URL=memory://</code> selects an in-process stand-in: the same
-interface, backed by a dictionary in the web process. It exists for two
-purposes.</p>
+<p>Encodez les caractères <code>@</code>, <code>:</code>, <code>/</code> et <code>#</code> du mot de passe avec l’encodage pour
+URL, sinon ils seront interprétés comme des éléments de l’adresse.
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docker/setup-wizard.py"><code>docker/setup-wizard.py</code></a> et
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docker/authentik-env.sh"><code>docker/authentik-env.sh</code></a> génèrent des mots de
+passe composés uniquement de caractères utilisables tels quels dans une URL.</p>
+<h2 id="running-without-redis">Fonctionnement sans Redis</h2>
+<p><code>COS_WEB_REDIS_URL=memory://</code> utilise un dictionnaire dans le processus web, avec
+la même interface que Redis. Ce mode sert aux tests et aux essais locaux :</p>
 <ul>
-<li><strong>The test suite.</strong> No test needs a Redis server, which is why
-  <code>tests/webapp_support.py</code> sets it.</li>
-<li><strong>Looking at the thing.</strong> One process, one command, no infrastructure.</li>
+<li><strong>Tests.</strong> <code>tests/webapp_support.py</code> le configure afin qu’aucun test n’ait
+  besoin d’un serveur Redis.</li>
+<li><strong>Essai de l’interface.</strong> Un seul processus et une commande suffisent.</li>
 </ul>
-<p>It is not a deployment option. There is no worker to queue to, the state dies
-with the process, and a second process would not see the first one's scans.
-Anything that serves more than yourself needs a real Redis.</p>
-<h2 id="the-password">The password</h2>
-<p>Redis answers whoever reaches it. Out of the box it has no password, which is
-what a security scan of the host reports as:</p>
+<p>Ce mode ne convient pas à un déploiement. Aucun worker ne reçoit les demandes,
+l’état disparaît à l’arrêt du processus et un second processus ne voit pas les
+analyses du premier. Un service destiné à d’autres utilisateurs nécessite Redis.</p>
+<h2 id="the-password">Mot de passe</h2>
+<p>Sans configuration, Redis répond à tout client qui peut le joindre. Un contrôle
+de sécurité de l’hôte peut alors afficher :</p>
 <pre><code>WARNING: Redis does not require authentication and is not protected by
 network restriction
 </code></pre>
-<p>The finding is fair. "Only our own containers are on this network" is an
-assumption about everything else that will ever run on that host, not a
-control, and what is behind the assumption is every live scan and every result
-still inside its TTL.</p>
-<p>Set one:</p>
+<p>Cet avertissement est justifié. Supposer que seuls vos conteneurs utilisent le
+réseau ne remplace pas un contrôle d’accès. Redis contient toutes les analyses en
+cours et les résultats qui n’ont pas encore expiré.</p>
+<p>Définissez un mot de passe :</p>
 <pre><code class="language-bash">cd docker
 printf 'COS_REDIS_PASSWORD=%s\n' &quot;$(openssl rand -base64 36 | tr -d '/+=')&quot; &gt;&gt; .env
 chmod 600 .env
 docker compose up -d
 </code></pre>
-<p>The compose files read <code>${COS_REDIS_PASSWORD:-}</code> in two places: Redis takes it
-as <code>--requirepass</code>, and both application containers get it in
-<code>COS_WEB_REDIS_URL</code>. Leave the variable unset and the stack behaves exactly as
-it did before, so this is safe to pull without editing anything - but do not
-leave it unset on anything that is not a laptop.</p>
-<p>Two commands do it for you:</p>
+<p>Les fichiers Compose utilisent <code>${COS_REDIS_PASSWORD:-}</code> à deux endroits : Redis
+le reçoit via <code>--requirepass</code>, et les deux conteneurs applicatifs via
+<code>COS_WEB_REDIS_URL</code>. Si la variable reste vide, le comportement antérieur est
+conservé. Définissez-la pour tout déploiement autre qu’un essai local.</p>
+<p>Deux outils le font pour vous :</p>
 <ul>
-<li><a href="https://github.com/sowoi/check-opencloud-security/blob/main/docker/setup-wizard.py"><code>docker/setup-wizard.py</code></a> generates one for
-  every deployment it writes, into a <code>.env</code> created <code>0600</code>. The compose file it
-  writes refers to the name and never carries the value, so it stays something
-  you can commit.</li>
-<li><a href="https://github.com/sowoi/check-opencloud-security/blob/main/docker/authentik-env.sh"><code>docker/authentik-env.sh</code></a> writes one alongside
-  the Authentik secrets, and leaves an existing value alone.</li>
+<li><a href="https://github.com/sowoi/check-opencloud-security/blob/main/docker/setup-wizard.py"><code>docker/setup-wizard.py</code></a> génère le mot de passe
+  dans un fichier <code>.env</code> de mode <code>0600</code>. Le fichier Compose référence la variable,
+  sans contenir sa valeur, et peut donc être versionné.</li>
+<li><a href="https://github.com/sowoi/check-opencloud-security/blob/main/docker/authentik-env.sh"><code>docker/authentik-env.sh</code></a> le génère avec les
+  secrets Authentik et conserve toute valeur existante.</li>
 </ul>
-<p>Verify it took effect:</p>
+<p>Vérifiez son application :</p>
 <pre><code class="language-bash">docker compose exec -e REDISCLI_AUTH= redis redis-cli ping
 # NOAUTH Authentication required.        &lt;- what you want to see
 docker compose exec redis redis-cli ping
 # PONG                                   &lt;- authenticated, via REDISCLI_AUTH
 </code></pre>
-<p>The health check inside the container reads <code>REDISCLI_AUTH</code> from the
-environment rather than taking <code>-a</code> on the command line, so the password does
-not appear in the container's own process list.</p>
-<p>Changing the password later is a restart of all three services together, not a
-rolling one: the application containers read the URL at startup.</p>
-<h2 id="network-isolation">Network isolation</h2>
-<p>The password is one half of the answer to that warning. The other half is that
-Redis has no reason to be reachable at all.</p>
-<p>In the shipped compose files Redis publishes no port and sits alone on a
-network marked <code>internal: true</code>:</p>
+<p>Le contrôle de santé lit <code>REDISCLI_AUTH</code> dans l’environnement. Il ne passe pas le
+mot de passe avec <code>-a</code>, pour éviter de l’exposer dans la liste des processus.</p>
+<p>Après un changement de mot de passe, redémarrez les trois services ensemble : les
+conteneurs applicatifs lisent l’URL au démarrage, ce qui empêche une rotation par
+redémarrages successifs.</p>
+<h2 id="network-isolation">Isolation réseau</h2>
+<p>Limitez aussi l’accès réseau à Redis. Dans les fichiers Compose fournis, Redis
+ne publie aucun port et utilise uniquement un réseau <code>internal: true</code> :</p>
 <pre><code class="language-yaml">networks:
   scanner_internal:
     internal: true
 </code></pre>
-<p><code>internal</code> means Docker gives that network no gateway, so nothing on it can
-reach the outside world and nothing outside can route to it. The two
-application containers are on it <em>and</em> on the default network, because a scan
-is an outbound request and the web service is published on a port. Redis is
-only on the internal one.</p>
-<p>If you run Redis yourself rather than from these files, the equivalents are
-<code>bind 127.0.0.1</code>, a firewall rule, or a private network segment. Never publish
-6379 to a host interface, and never to the internet: an open Redis on a public
-address is found by scanners within minutes.</p>
-<h2 id="persistence-or-the-deliberate-lack-of-it">Persistence, or the deliberate lack of it</h2>
-<p>The shipped Redis runs with <code>--save ""</code> and <code>--appendonly no</code>. It writes
-nothing to disk, on purpose.</p>
-<p>Persistence and backups can retain scan data beyond its expiry in the running store. The
-default stack therefore disables both snapshots and append-only persistence. A restart
-loses temporary results and other Redis-managed state, including operator-added
-exclusions; keep durable exclusions in the environment.</p>
-<p>Do not add a volume to the <code>redis</code> service. If you are using a managed Redis
-that persists by default, either accept that results outlive their TTL in
-somebody else's backups or turn persistence off for that instance.</p>
-<p><code>docker/setup-wizard.py</code> will nonetheless generate a stack that persists, for
-the one deployment where the trade is worth making: a private instance where
-losing a queued scan to a restart matters more than the scans being on a disk
-that somebody may back up. It is never the default, it warns when you choose
-it, and it points at <code>COS_WEB_ENCRYPT_RESULTS</code> — with that on, what reaches
-the disk is ciphertext and the key lives in <code>.env</code> rather than beside it. On
-a deployment strangers can reach, the answer is still <code>none</code>.</p>
-<h2 id="memory-and-eviction">Memory and eviction</h2>
+<p>Docker ne donne pas de passerelle à ce réseau. Ses conteneurs ne peuvent donc pas
+joindre l’extérieur par ce réseau, qui n’est pas routable depuis l’extérieur.
+Les deux conteneurs applicatifs utilisent aussi le réseau par défaut pour les
+requêtes sortantes et le port web publié. Redis reste sur le réseau interne.</p>
+<p>Pour un Redis installé séparément, utilisez <code>bind 127.0.0.1</code>, un pare-feu ou un
+segment réseau privé. Ne publiez pas le port 6379 sur une interface de l’hôte,
+ni sur Internet, où des outils de détection le repéreraient rapidement.</p>
+<h2 id="persistence-or-the-deliberate-lack-of-it">Persistance désactivée par défaut</h2>
+<p>Le Redis fourni utilise <code>--save ""</code> et <code>--appendonly no</code> : il n’écrit pas sur disque.</p>
+<p>La persistance et les sauvegardes peuvent conserver les données après leur
+expiration dans Redis. La configuration par défaut désactive donc les instantanés
+et le journal d’écriture. Un redémarrage supprime les résultats temporaires et
+l’état Redis, y compris les exclusions de l’espace opérateur. Conservez les
+exclusions permanentes dans l’environnement.</p>
+<p>N’ajoutez pas de volume au service <code>redis</code>. Avec un Redis géré qui persiste ses
+données par défaut, désactivez cette fonction ou acceptez que les sauvegardes
+conservent les résultats au-delà de leur durée de vie.</p>
+<p><code>docker/setup-wizard.py</code> peut toutefois produire une configuration persistante
+pour une instance privée où la conservation des demandes en attente est prioritaire.
+Cette option n’est jamais activée par défaut. L’assistant affiche un avertissement
+et propose <code>COS_WEB_ENCRYPT_RESULTS</code> : les données sont alors chiffrées et la clé
+reste dans <code>.env</code>. Pour un service public, conservez le choix <code>none</code>.</p>
+<h2 id="memory-and-eviction">Mémoire et éviction</h2>
 <pre><code>--maxmemory 256mb
 --maxmemory-policy allkeys-lru
 </code></pre>
-<p>The shipped memory limit is a starting point for the default worker count. Monitor
-actual usage as scan volume and retention increase. A memory cap prevents an undrained
-queue from consuming the host’s available memory.</p>
-<p><code>allkeys-lru</code> may evict any key under memory pressure, based on approximate recent use.
-It is not limited to old scan results: queue state, counters and operator-managed data
-can also be affected. Treat eviction as a capacity signal and investigate it rather than
-relying on TTL alone.</p>
-<p>Raise the cap if you raise <code>COS_WEB_RESULT_TTL</code> a long way, or run a fleet
-scan of hundreds of instances. Watch <code>evicted_keys</code>:</p>
+<p>La limite fournie est un point de départ pour le nombre de workers par défaut.
+Surveillez la consommation réelle si le volume d’analyses ou la conservation
+augmente. Cette limite empêche une file qui ne se vide plus d’épuiser la mémoire
+de l’hôte.</p>
+<p><code>allkeys-lru</code> peut supprimer toute clé sous pression mémoire, selon une estimation
+de son utilisation récente. Cela concerne aussi la file, les compteurs et les
+données de l’espace opérateur. Une éviction signale un problème de capacité à
+examiner ; la durée de vie des clés ne suffit pas à le prévenir.</p>
+<p>Augmentez la limite si vous augmentez fortement <code>COS_WEB_RESULT_TTL</code> ou analysez
+des centaines d’instances. Surveillez <code>evicted_keys</code> :</p>
 <pre><code class="language-bash">docker compose exec redis redis-cli info stats | grep evicted_keys
 </code></pre>
-<p>Steady eviction while the TTL is short means the cap is too low, and people
-are losing results before they read them.</p>
-<h2 id="an-external-or-managed-redis">An external or managed Redis</h2>
-<p>Point <code>COS_WEB_REDIS_URL</code> at it and remove the <code>redis</code> service from the
-compose file. Worth checking before you do:</p>
+<p>Des évictions régulières avec une conservation courte indiquent une limite trop
+basse : les utilisateurs perdent leurs résultats avant de les consulter.</p>
+<h2 id="an-external-or-managed-redis">Redis externe ou géré</h2>
+<p>Configurez <code>COS_WEB_REDIS_URL</code> et retirez le service <code>redis</code> du fichier Compose.
+Vérifiez les points suivants :</p>
 <ul>
-<li><strong>Use TLS.</strong> <code>rediss://</code>. The connection carries the result documents and
-  the password.</li>
-<li><strong>Give it its own database number or its own instance.</strong> The key names are
-  namespaced (<code>scan:</code>, <code>cos:web:</code>) but the purge in
-  <code>DELETE /api/purge</code> scans <code>scan:*:metadata</code>, and a busy shared instance
-  makes that slower than it needs to be.</li>
-<li><strong>Check the eviction policy.</strong> A managed Redis defaulting to <code>noeviction</code>
-  will start refusing writes when it fills instead of dropping an old result,
-  and a refused write is a submission that fails rather than queues.</li>
-<li><strong>Check what it persists.</strong> See the section above.</li>
+<li><strong>Utilisez TLS</strong>, avec <code>rediss://</code>, car la connexion transporte les résultats
+  et le mot de passe.</li>
+<li><strong>Réservez une base ou une instance à ce service.</strong> Les clés ont des préfixes
+  (<code>scan:</code>, <code>cos:web:</code>), mais <code>DELETE /api/purge</code> parcourt <code>scan:*:metadata</code>.
+  Une instance partagée très chargée ralentit cette opération.</li>
+<li><strong>Vérifiez la politique d’éviction.</strong> Avec <code>noeviction</code>, Redis refuse les
+  écritures quand il est plein. Une demande peut alors échouer au lieu de rejoindre
+  la file.</li>
+<li><strong>Vérifiez la persistance</strong>, comme décrit plus haut.</li>
 </ul>
 <h2 id="kubernetes">Kubernetes</h2>
-<p>The <a href="/documentation/kubernetes">Kubernetes guide</a> deploys the scan service; Redis there is
-a <code>Deployment</code> and a <code>Service</code> of its own, or a managed instance. The same
-rules apply, expressed differently:</p>
+<p>Le <a href="/documentation/kubernetes">guide Kubernetes</a> déploie le service avec un <code>Deployment</code> et
+un <code>Service</code> Redis distincts, ou avec une instance gérée. Les mêmes règles
+s’appliquent :</p>
 <ul>
-<li>The password goes in a <code>Secret</code>, referenced from the URL through
-  <code>COS_WEB_REDIS_URL</code>, not into a <code>ConfigMap</code>.</li>
-<li>A <code>NetworkPolicy</code> restricting ingress to the web and worker pods is the
-  equivalent of the internal network.</li>
-<li><code>ClusterIP</code> and no <code>Ingress</code>. Never a <code>LoadBalancer</code> or a <code>NodePort</code>.</li>
-<li>No <code>PersistentVolumeClaim</code>, for the reason in
-  <a href="#persistence-or-the-deliberate-lack-of-it">Persistence</a>.</li>
+<li>Stockez le mot de passe dans un <code>Secret</code>, référencé par <code>COS_WEB_REDIS_URL</code>,
+  jamais dans un <code>ConfigMap</code>.</li>
+<li>Limitez les connexions entrantes aux pods web et worker avec une <code>NetworkPolicy</code>.</li>
+<li>Utilisez <code>ClusterIP</code>, sans <code>Ingress</code>, <code>LoadBalancer</code> ni <code>NodePort</code>.</li>
+<li>N’ajoutez pas de <code>PersistentVolumeClaim</code> ; voir la section sur la
+  <a href="#persistence-or-the-deliberate-lack-of-it">persistance</a>.</li>
 </ul>
-<h2 id="health-and-monitoring">Health and monitoring</h2>
-<p><code>GET /healthz</code> answers <code>503</code> when the queue cannot be read or no worker has
-sent a heartbeat, so a probe on it covers Redis without a second check. It
-reports the queue depth and the state of the two daily refreshes, and says
-nothing about any individual scan.</p>
-<p>Worth an alert:</p>
+<h2 id="health-and-monitoring">État et supervision</h2>
+<p><code>GET /healthz</code> répond <code>503</code> si la file est illisible ou si aucun worker n’a envoyé
+son signal de présence. Cette route permet donc de superviser Redis sans contrôle
+séparé. Elle indique la longueur de la file et l’état des deux actualisations
+quotidiennes, sans révéler les analyses individuelles.</p>
 <table>
 <thead>
 <tr>
-<th>Signal</th>
-<th>Why</th>
+<th>Signal d’alerte</th>
+<th>Signification</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>/healthz</code> returning 503</td>
-<td>Redis is unreachable or the worker is gone. Nothing can be scanned</td>
+<td><code>/healthz</code> répond 503</td>
+<td>Redis est inaccessible ou le worker est arrêté ; aucune analyse ne peut s’exécuter</td>
 </tr>
 <tr>
-<td>Queue depth climbing and not falling</td>
-<td>Workers are stuck or too few; submissions are waiting</td>
+<td>La file augmente sans se vider</td>
+<td>Workers bloqués ou trop peu nombreux ; les demandes attendent</td>
 </tr>
 <tr>
-<td><code>evicted_keys</code> rising</td>
-<td>Results are being dropped before their TTL</td>
+<td><code>evicted_keys</code> augmente</td>
+<td>Des clés sont supprimées avant leur expiration</td>
 </tr>
 <tr>
-<td><code>rejected_connections</code></td>
-<td>The connection limit, usually a leak somewhere</td>
+<td><code>rejected_connections</code> augmente</td>
+<td>Limite de connexions atteinte, souvent à cause de connexions non libérées</td>
 </tr>
 </tbody>
 </table>
-<h2 id="troubleshooting">Troubleshooting</h2>
+<h2 id="troubleshooting">Dépannage</h2>
 <table>
 <thead>
 <tr>
-<th>What you see</th>
-<th>What it means</th>
+<th>Symptôme</th>
+<th>Cause ou action</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>NOAUTH Authentication required</code></td>
-<td>Redis has a password and the URL does not. Add <code>:PASSWORD@</code> after the scheme</td>
+<td>L’URL ne contient pas le mot de passe Redis. Ajoutez <code>:PASSWORD@</code> après le schéma</td>
 </tr>
 <tr>
 <td><code>WRONGPASS invalid username-password pair</code></td>
-<td>The URL and <code>--requirepass</code> disagree. Usually <code>.env</code> changed and only one container was restarted</td>
+<td>L’URL et <code>--requirepass</code> diffèrent. Vérifiez que tous les conteneurs ont redémarré après la modification de <code>.env</code></td>
 </tr>
 <tr>
 <td><code>Connection refused</code></td>
-<td>Redis is not up, or not on the network the caller is on. Check <code>docker compose ps</code> and that both application services list <code>scanner_internal</code></td>
+<td>Redis est arrêté ou sur un autre réseau. Consultez <code>docker compose ps</code> et vérifiez que les deux services applicatifs utilisent <code>scanner_internal</code></td>
 </tr>
 <tr>
 <td><code>Name or service not known: redis</code></td>
-<td>The application container is not on the internal network</td>
+<td>Le conteneur applicatif n’est pas sur le réseau interne</td>
 </tr>
 <tr>
 <td><code>MISCONF Redis is configured to save RDB snapshots</code></td>
-<td>Persistence is on somewhere it should not be. See <a href="#persistence-or-the-deliberate-lack-of-it">Persistence</a></td>
+<td>La persistance est activée ; voir la section <a href="#persistence-or-the-deliberate-lack-of-it">Persistance</a></td>
 </tr>
 <tr>
 <td><code>OOM command not allowed when used memory &gt; 'maxmemory'</code></td>
-<td>The cap is reached and the policy is <code>noeviction</code>. It should be <code>allkeys-lru</code></td>
+<td>Limite atteinte avec <code>noeviction</code>. La politique prévue est <code>allkeys-lru</code></td>
 </tr>
 <tr>
-<td><code>/healthz</code> says <code>unavailable</code></td>
-<td>Redis answers but no worker has sent a heartbeat. Look at the worker's logs, not Redis's</td>
+<td><code>/healthz</code> indique <code>unavailable</code></td>
+<td>Redis répond mais aucun worker n’envoie de signal. Consultez les journaux du worker</td>
 </tr>
 <tr>
-<td>A result 404s early</td>
-<td>The TTL expired, or a key was evicted. Both are by design; check <code>evicted_keys</code> if it is happening often</td>
+<td>Un résultat répond 404 trop tôt</td>
+<td>La durée de vie a expiré ou une clé a été évincée. Surveillez <code>evicted_keys</code> si cela se répète</td>
 </tr>
 </tbody>
 </table>
-<p>The service logs lifecycle markers and a uuid, never a target address or a
-result, so a Redis problem shows up in the logs as scans that never leave
-<code>queued</code>. That is the intended trade: the logs are not a record of what
-everybody scanned.</p>
+<p>Les journaux ne contiennent que les étapes du cycle d’exécution et un uuid, jamais
+les adresses cibles ni les résultats. Un problème Redis apparaît donc comme des
+analyses qui restent à l’état <code>queued</code>. Les journaux ne constituent pas un
+historique des cibles analysées.</p>
 </article>
 
 {% include "_page-nav.html" %}

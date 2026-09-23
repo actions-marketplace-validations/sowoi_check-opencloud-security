@@ -16,8 +16,7 @@ scanner. Configurez le scanner pour qu'il lise les deux fichiers sous
 d'actualisation valide les deux documents et les écrit de façon atomique.
 - [`contrib/cron/check-opencloud-security.cron`](../../contrib/cron/check-opencloud-security.cron)
 
-Pour les faire écrire à ta place, avec les réglages que tu viens de
-configurer déjà dedans, lance
+Pour générer ces fichiers avec les paramètres de votre configuration, exécutez
 `check-opencloud-scanner configure --export-monitoring systemd` - voir
 [`configure`](scanner-cli.md#configure-write-a-configuration-file). Les
 fichiers ci-dessous sont les modèles dont il part.

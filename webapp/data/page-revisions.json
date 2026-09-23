@@ -26,20 +26,20 @@
       "lastmod": "2026-09-17"
     },
     "docs/baseline.html": {
-      "digest": "4b897acda9f70bdfa8fdd4aa6d509a2cbcbd28e747fdb17bc6646a40478a6b5d",
-      "lastmod": "2026-09-22"
+      "digest": "0afcd69f2c4a84036bcf33e71b6eaf9406a13a9595a0e98e4088f65f831b5df8",
+      "lastmod": "2026-09-23"
     },
     "docs/checkmk.html": {
-      "digest": "7dae35a6935017098d2ec71a2701063906df05731c95d87fc20ce012f62e286a",
-      "lastmod": "2026-09-19"
+      "digest": "b47d9b2f0e8d0750446c0c2251c66aa755f05b8576b1164bd825cea231f1111c",
+      "lastmod": "2026-09-23"
     },
     "docs/ci.html": {
       "digest": "b2e08d4fd70dd16a16775d68ba67e1d7e2dba552ff1e4b215f5bc09e7920b886",
       "lastmod": "2026-09-17"
     },
     "docs/cli-reference.html": {
-      "digest": "b0586e5ed5120b85f8407a1bfdd1bc5b46828d7ea6eb0858f62a799fb03fee8a",
-      "lastmod": "2026-09-21"
+      "digest": "46412c3dfad1991bd7faad3f9e8c9296c53b2b06f562a337993a425c2526d363",
+      "lastmod": "2026-09-23"
     },
     "docs/configuration.html": {
       "digest": "ada717a6923e5ebd1ad4a22f09050f5656454e9feb3c3457ed5319ea787221a8",
@@ -66,12 +66,12 @@
       "lastmod": "2026-09-17"
     },
     "docs/exposure.html": {
-      "digest": "9cd13fd96dadb661eff99c4490bd008feca4dae297e47893087bffe10ac7609e",
-      "lastmod": "2026-09-17"
+      "digest": "e1626a50818688ecf6378773e5fff444774102e42631d3a2ab981698c31e3884",
+      "lastmod": "2026-09-23"
     },
     "docs/hardening.html": {
-      "digest": "e766e7e421767cd255e7c8db0b3502c5f6e8f4c6e3b7ce6c49bd49aeb8145866",
-      "lastmod": "2026-09-17"
+      "digest": "ebd20f2a025a0a3d903b9b1df337ca1d162cf7f884d969369734427b5eaccd33",
+      "lastmod": "2026-09-23"
     },
     "docs/icinga-director.html": {
       "digest": "241ad7cf24f4d9b5a47255aeb27843e452f29c8038c34be6277608d58af42c92",
@@ -106,8 +106,8 @@
       "lastmod": "2026-09-22"
     },
     "docs/prometheus.html": {
-      "digest": "3b0aaacc8d9ff8c40a7f76b72896ae0222a51d32f10a5bc2bd5e854eb7a8755a",
-      "lastmod": "2026-09-19"
+      "digest": "1d3cc304fd960e2097d0afd1580b6892e5525e55287e117dd27d452647c59504",
+      "lastmod": "2026-09-23"
     },
     "docs/redis.html": {
       "digest": "6ebc33cfc449f7806cdd7a859c86b09bd5caf35e8ebb87708106065bb55fbfcd",
@@ -118,8 +118,8 @@
       "lastmod": "2026-09-17"
     },
     "docs/reference.html": {
-      "digest": "6472479ac4b4cc31504d8adb35c918cf2b2e358a1d408c75cfcef6844ce243cb",
-      "lastmod": "2026-09-22"
+      "digest": "8673aa78a95353882ccf144f4d8dcb2a2b1e39306c143e795bd16b3b70d6c614",
+      "lastmod": "2026-09-23"
     },
     "docs/release-lifecycle.html": {
       "digest": "6b16dc995bf46b86eb440268f4cc6341400f6bf3a2d13fb2708ec2e710ee3246",
@@ -134,8 +134,8 @@
       "lastmod": "2026-09-17"
     },
     "docs/scanner-checks.html": {
-      "digest": "c52956f47405056eee5263784c6772ac9dca4fd2f4b01c004d5d0913ec123acf",
-      "lastmod": "2026-09-19"
+      "digest": "5bd5d84a43a2d0bdb198ecb80cbbdab81a92395fce03fe26eeeb111a501c7bf6",
+      "lastmod": "2026-09-23"
     },
     "docs/scanner-cli.html": {
       "digest": "a9f8b723e0015154a135df1aa82c00d6b560014944921f784d32b83a360ed5fd",
@@ -170,12 +170,12 @@
       "lastmod": "2026-09-17"
     },
     "docs/web-service.html": {
-      "digest": "113a5f3f46de7ae070bfc1c85156ade2af677de95f6441435d8bdfd4c28c07a8",
-      "lastmod": "2026-09-22"
+      "digest": "8c141afd9a14d594427e5069227c0fb5ea81e67908b0fd316823169cb76303ed",
+      "lastmod": "2026-09-23"
     },
     "docs/webhooks.html": {
-      "digest": "15f37d8e0006d0cb905aee8790dcffb7e6e2d274b8ff32670aaaec3f1e7182f7",
-      "lastmod": "2026-09-21"
+      "digest": "804588587cbe5a8705a2d9a08b0550eb702b7e6162735b762248759028ad6d65",
+      "lastmod": "2026-09-23"
     },
     "docs/what-is-opencloud.html": {
       "digest": "33dc03134f80e88bb3be0a82175040242753874d8d2b6a29edd62549f33d2a1a",

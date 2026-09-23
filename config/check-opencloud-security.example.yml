@@ -55,6 +55,11 @@ update_warning: false            # pending OpenCloud update -> WARNING
 # becomes WARNING once the running release line has this many days of support
 # left. 0 turns it off; past end of life is CRITICAL either way.
 # eol_warning: 30
+# A --waive-until deadline gives no lead time: the check is silent until the
+# deadline and alerts on the next run after it. This makes an otherwise OK
+# result WARNING once a waiver that hides a failing check ends within this
+# many days. 0 turns it off.
+# waiver_warning: 14
 
 # Report only what changed since the last run. 'baseline' remembers the
 # findings per host; 'warn_on_new' then alerts only on something new or worse.

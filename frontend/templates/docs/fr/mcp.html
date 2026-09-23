@@ -17,208 +17,210 @@
 
 <nav class="docs-toc card section-gap" aria-label="{{ t('docs.guide.toc.aria') }}" data-reveal>
   <p class="kicker">{{ t('docs.guide.toc.heading') }}</p>
-  <a href="#what-the-agent-gets" lang="fr">What the agent gets</a>
+  <a href="#what-the-agent-gets" lang="fr">Ce que reçoit l’agent</a>
   <a href="#claude-code" lang="fr">Claude Code</a>
   <a href="#claude-desktop" lang="fr">Claude Desktop</a>
-  <a href="#github-copilot-in-vs-code" lang="fr">GitHub Copilot in VS Code</a>
+  <a href="#github-copilot-in-vs-code" lang="fr">GitHub Copilot dans VS Code</a>
   <a href="#github-copilot-cli" lang="fr">GitHub Copilot CLI</a>
   <a href="#cursor" lang="fr">Cursor</a>
   <a href="#zed" lang="fr">Zed</a>
   <a href="#windsurf" lang="fr">Windsurf</a>
-  <a href="#any-other-client" lang="fr">Any other client</a>
-  <a href="#clients-that-only-speak-stdio" lang="fr">Clients that only speak stdio</a>
-  <a href="#running-your-own-endpoint" lang="fr">Running your own endpoint</a>
-  <a href="#turning-mcp-off" lang="fr">Turning MCP off</a>
-  <a href="#erasure-needs-a-credential" lang="fr">Erasure needs a credential</a>
-  <a href="#when-the-endpoint-asks-you-to-sign-in" lang="fr">When the endpoint asks you to sign in</a>
-  <a href="#limits-and-being-a-good-guest" lang="fr">Limits, and being a good guest</a>
-  <a href="#checking-that-it-works" lang="fr">Checking that it works</a>
+  <a href="#any-other-client" lang="fr">Tout autre client</a>
+  <a href="#clients-that-only-speak-stdio" lang="fr">Clients limités au transport stdio</a>
+  <a href="#running-your-own-endpoint" lang="fr">Exécuter votre propre point de terminaison</a>
+  <a href="#turning-mcp-off" lang="fr">Désactiver MCP</a>
+  <a href="#erasure-needs-a-credential" lang="fr">L’effacement exige un identifiant</a>
+  <a href="#when-the-endpoint-asks-you-to-sign-in" lang="fr">Lorsque le point de terminaison demande une connexion</a>
+  <a href="#limits-and-being-a-good-guest" lang="fr">Limites, et bonnes manières</a>
+  <a href="#checking-that-it-works" lang="fr">Vérifier que cela fonctionne</a>
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="fr">
-<p>L'application web dans ce dépôt parle
-<a href="https://modelcontextprotocol.io">Protocole de contexte modèle</a> à <code>/mcp</code>, de sorte qu'un
-agent peut scanner une instance OpenCloud comme un appel d'outil plutôt qu'en étant
-enseigné une API HTTP.</p>
-<p>Two addresses work:</p>
+<p>L’application web de ce dépôt prend en charge le
+<a href="https://modelcontextprotocol.io">Model Context Protocol</a> sur <code>/mcp</code> : un agent
+peut donc analyser une instance OpenCloud par un appel d’outil, sans avoir à
+apprendre une API HTTP.</p>
+<p>Deux adresses fonctionnent :</p>
 <table>
 <thead>
 <tr>
 <th></th>
-<th>Endpoint</th>
-<th>Good for</th>
+<th>Point de terminaison</th>
+<th>Adapté à</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><strong>Hosted</strong></td>
+<td><strong>Hébergé</strong></td>
 <td><code>https://scan.example.com/mcp</code></td>
-<td>Trying it out, and the occasional instance. Rate limited, and every scan runs from that server</td>
+<td>Essayer le service, et une instance de temps en temps. Débit limité, et chaque analyse s’exécute depuis ce serveur</td>
 </tr>
 <tr>
-<td><strong>Self-hosted</strong></td>
+<td><strong>Auto-hébergé</strong></td>
 <td><code>http://127.0.0.1:8811/mcp</code></td>
-<td>An estate of your own, no limits, and nothing about your instances leaving your network</td>
+<td>Votre propre parc, sans limites, et rien concernant vos instances ne quitte votre réseau</td>
 </tr>
 </tbody>
 </table>
-<p>Nothing is required to use either one: no account, no API key, no sign-up.
-The one exception is <code>erase_instance_data</code>, which needs a credential the
-operator of the deployment sets - see <a href="#erasure-needs-a-credential">Erasure needs a
-credential</a>.</p>
+<p>Aucun prérequis pour l’un ou l’autre : ni compte, ni clé d’API, ni inscription.
+La seule exception est <code>erase_instance_data</code>, qui exige un identifiant défini
+par l’opérateur du déploiement - voir <a href="#erasure-needs-a-credential">L’effacement exige un
+identifiant</a>.</p>
 <!-- TOC -->
 <ul>
-<li><a href="#using-the-scanner-from-an-ai-agent-mcp">Using the scanner from an AI agent (MCP)</a></li>
-<li><a href="#what-the-agent-gets">What the agent gets</a></li>
+<li><a href="#using-the-scanner-from-an-ai-agent-mcp">Utiliser le scanner depuis un agent IA (MCP)</a></li>
+<li><a href="#what-the-agent-gets">Ce que reçoit l’agent</a></li>
 <li><a href="#claude-code">Claude Code</a></li>
 <li><a href="#claude-desktop">Claude Desktop</a></li>
-<li><a href="#github-copilot-in-vs-code">GitHub Copilot in VS Code</a></li>
+<li><a href="#github-copilot-in-vs-code">GitHub Copilot dans VS Code</a></li>
 <li><a href="#github-copilot-cli">GitHub Copilot CLI</a></li>
 <li><a href="#cursor">Cursor</a></li>
 <li><a href="#zed">Zed</a></li>
 <li><a href="#windsurf">Windsurf</a></li>
-<li><a href="#any-other-client">Any other client</a></li>
-<li><a href="#clients-that-only-speak-stdio">Clients that only speak stdio</a></li>
-<li><a href="#running-your-own-endpoint">Running your own endpoint</a></li>
-<li><a href="#turning-mcp-off">Turning MCP off</a></li>
-<li><a href="#erasure-needs-a-credential">Erasure needs a credential</a></li>
-<li><a href="#when-the-endpoint-asks-you-to-sign-in">When the endpoint asks you to sign in</a></li>
-<li><a href="#limits-and-being-a-good-guest">Limits, and being a good guest</a></li>
-<li><a href="#checking-that-it-works">Checking that it works</a></li>
+<li><a href="#any-other-client">Tout autre client</a></li>
+<li><a href="#clients-that-only-speak-stdio">Clients limités au transport stdio</a></li>
+<li><a href="#running-your-own-endpoint">Exécuter votre propre point de terminaison</a></li>
+<li><a href="#turning-mcp-off">Désactiver MCP</a></li>
+<li><a href="#erasure-needs-a-credential">L’effacement exige un identifiant</a></li>
+<li><a href="#when-the-endpoint-asks-you-to-sign-in">Lorsque le point de terminaison demande une connexion</a></li>
+<li><a href="#limits-and-being-a-good-guest">Limites, et bonnes manières</a></li>
+<li><a href="#checking-that-it-works">Vérifier que cela fonctionne</a></li>
 </ul>
 <!-- TOC -->
 
-<h2 id="what-the-agent-gets">What the agent gets</h2>
-<p>Seven tools, each a whole task rather than one HTTP endpoint:</p>
+<h2 id="what-the-agent-gets">Ce que reçoit l’agent</h2>
+<p>Sept outils, chacun couvrant une tâche complète plutôt qu’un seul point de
+terminaison HTTP :</p>
 <table>
 <thead>
 <tr>
-<th>Tool</th>
-<th>What it does</th>
+<th>Outil</th>
+<th>Ce qu’il fait</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>scan_instance</code></td>
-<td>Submit one instance, wait for the scan, return the grade and the findings. Reporting progress while it waits</td>
+<td>Soumet une instance, attend la fin de l’analyse, renvoie la note et les constats, en signalant la progression pendant l’attente</td>
 </tr>
 <tr>
 <td><code>scan_instances</code></td>
-<td>The same for a list of instances, in one batch</td>
+<td>La même chose pour une liste d’instances, en un seul lot</td>
 </tr>
 <tr>
 <td><code>get_scan_result</code></td>
-<td>Read a scan by its uuid without waiting - what an agent polls with</td>
+<td>Lit une analyse par son uuid sans attendre - ce qu’un agent utilise pour interroger régulièrement</td>
 </tr>
 <tr>
 <td><code>plan_remediation</code></td>
-<td>The ordered fix list for a finished scan, with the grade each step reaches</td>
+<td>La liste ordonnée des corrections pour une analyse terminée, avec la note atteinte à chaque étape</td>
 </tr>
 <tr>
 <td><code>compare_scans</code></td>
-<td>Two finished scans of one instance, compared: what was fixed, what is still open, what is new. Both must still be here</td>
+<td>Compare deux analyses terminées d’une même instance : ce qui a été corrigé, ce qui reste ouvert, ce qui est nouveau. Les deux doivent encore être disponibles</td>
 </tr>
 <tr>
 <td><code>export_scan</code></td>
-<td>A finished scan as <code>json</code>, <code>csv</code>, <code>sarif</code> or <code>pdf</code></td>
+<td>Une analyse terminée au format <code>json</code>, <code>csv</code>, <code>sarif</code>, <code>pdf</code>, <code>html</code>, <code>remediation-md</code> ou <code>remediation-html</code></td>
 </tr>
 <tr>
 <td><code>erase_instance_data</code></td>
-<td><strong>Destructive.</strong> Erase everything held about one hostname. Needs the operator's credential</td>
+<td><strong>Destructif.</strong> Efface tout ce qui est conservé au sujet d’un nom d’hôte. Exige l’identifiant de l’opérateur</td>
 </tr>
 </tbody>
 </table>
-<p>and five resources, so an agent can read the contracts - and the knowledge
-behind a finding - without leaving the protocol:</p>
+<p>et cinq ressources, pour qu’un agent puisse lire les contrats - et les
+connaissances derrière un constat - sans quitter le protocole :</p>
 <table>
 <thead>
 <tr>
-<th>Resource</th>
-<th>What it is</th>
+<th>Ressource</th>
+<th>Ce que c’est</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>openapi</code></td>
-<td>The OpenAPI 3.1 description of the REST API</td>
+<td>La description OpenAPI 3.1 de l’API REST</td>
 </tr>
 <tr>
 <td><code>arazzo</code></td>
-<td>The Arazzo workflows those operations combine into</td>
+<td>Les workflows Arazzo qui combinent ces opérations</td>
 </tr>
 <tr>
 <td><code>discovery</code></td>
-<td>The <code>/.well-known/ai.json</code> document</td>
+<td>Le document <code>/.well-known/ai.json</code></td>
 </tr>
 <tr>
 <td><code>catalogue</code></td>
-<td>Every hardening flag and extra check the scanner runs, explained: what it means, the OpenCloud setting behind it, how to fix it, and a link to the official documentation. The same knowledge the <a href="https://scan.example.com/catalogue"><code>/catalogue</code></a> page renders</td>
+<td>Chaque indicateur de durcissement et contrôle supplémentaire du scanner, expliqué : sa signification, le paramètre OpenCloud associé, la façon de le corriger et un lien vers la documentation officielle. Les mêmes informations que celles de la page <a href="https://scan.example.com/catalogue"><code>/catalogue</code></a></td>
 </tr>
 <tr>
 <td><code>advisories</code></td>
-<td>The whole advisory database a scan is rated against - not the subset that matched one instance</td>
+<td>Toute la base des avis de sécurité par rapport à laquelle une analyse est notée - pas seulement le sous-ensemble qui concerne une instance</td>
 </tr>
 </tbody>
 </table>
-<p>The last two are a knowledge base rather than a contract: read <code>catalogue</code> to
-explain what a finding id means before or after a scan, and <code>advisories</code> to
-see what the scanner would catch, without ever submitting a target.</p>
-<p>Seven prompts as well - the tasks people actually ask for, written out once so
-every client sends the same well-formed request:</p>
+<p>Les deux dernières forment une base de connaissances plutôt qu’un contrat :
+lisez <code>catalogue</code> pour expliquer la signification d’un identifiant de constat
+avant ou après une analyse, et <code>advisories</code> pour voir ce que le scanner
+détecterait, sans jamais soumettre de cible.</p>
+<p>Sept prompts également - les tâches réellement demandées, rédigées une fois pour
+que chaque client envoie la même requête bien formée :</p>
 <table>
 <thead>
 <tr>
 <th>Prompt</th>
-<th>What it asks for</th>
+<th>Ce qu’il demande</th>
 <th>Arguments</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>audit_instance</code></td>
-<td>Scan one instance, explain the grade and write the remediation plan</td>
-<td><code>target_url</code>, optionally <code>release_track</code></td>
+<td>Analyser une instance, expliquer la note et rédiger le plan de correction</td>
+<td><code>target_url</code>, éventuellement <code>release_track</code></td>
 </tr>
 <tr>
 <td><code>audit_estate</code></td>
-<td>Scan a list of instances and rank them worst first</td>
-<td><code>targets</code>, optionally <code>release_track</code></td>
+<td>Analyser une liste d’instances et les classer de la pire à la meilleure</td>
+<td><code>targets</code>, éventuellement <code>release_track</code></td>
 </tr>
 <tr>
 <td><code>explain_scan_result</code></td>
-<td>Explain a finished scan to a named audience, without rescanning</td>
-<td><code>uuid</code>, optionally <code>audience</code></td>
+<td>Expliquer une analyse terminée à un public donné, sans relancer d’analyse</td>
+<td><code>uuid</code>, éventuellement <code>audience</code></td>
 </tr>
 <tr>
 <td><code>triage_findings</code></td>
-<td>Turn a finished scan into one ticket per step of the plan</td>
-<td><code>uuid</code>, optionally <code>tracker</code></td>
+<td>Transformer une analyse terminée en un ticket par étape du plan</td>
+<td><code>uuid</code>, éventuellement <code>tracker</code></td>
 </tr>
 <tr>
 <td><code>review_transport_security</code></td>
-<td>The certificate, its expiry, the chain and the protocol, on their own</td>
+<td>Le certificat, son expiration, la chaîne et le protocole, pris isolément</td>
 <td><code>target_url</code></td>
 </tr>
 <tr>
 <td><code>check_release_support</code></td>
-<td>Whether the release still gets security fixes, and what to upgrade to</td>
-<td><code>target_url</code>, optionally <code>release_track</code></td>
+<td>Si la version reçoit encore des correctifs de sécurité, et vers quelle version mettre à jour</td>
+<td><code>target_url</code>, éventuellement <code>release_track</code></td>
 </tr>
 <tr>
 <td><code>verify_remediation</code></td>
-<td>Rescan an instance that was fixed, and report what the changes actually achieved</td>
+<td>Réanalyser une instance corrigée et indiquer ce que les modifications ont réellement apporté</td>
 <td><code>baseline_uuid</code>, <code>target_url</code></td>
 </tr>
 </tbody>
 </table>
-<p>In a client that lists them, "Audit an instance and write a remediation plan"
-is one entry to pick - Claude Code offers them as slash commands, VS Code
-under <code>/mcp.opencloud-scan.</code>, and most others in an attachment or prompt menu.
-Picking one asks for the arguments and sends the request; the agent then makes
-the tool calls itself.</p>
-<p>"Scan opencloud.example.com" is one tool call. The submission, the waiting and
-the result are inside <code>scan_instance</code>; an agent does not have to orchestrate
-them.</p>
+<p>Dans un client qui les liste, « Auditer une instance et rédiger un plan de
+correction » est une entrée à choisir : Claude Code les propose comme commandes
+slash, VS Code sous <code>/mcp.opencloud-scan.</code>, et la plupart des autres dans un menu
+de pièces jointes ou de prompts. En choisir un demande les arguments et envoie
+la requête ; l’agent effectue ensuite lui-même les appels d’outils.</p>
+<p>« Analyse opencloud.example.com » correspond à un seul appel d’outil. La
+soumission, l’attente et le résultat se trouvent dans <code>scan_instance</code> ; un agent
+n’a pas à les orchestrer.</p>
 <h2 id="claude-code">Claude Code</h2>
 <pre><code class="language-bash"># Hosted
 claude mcp add --transport http opencloud-scan https://scan.example.com/mcp
@@ -226,18 +228,18 @@ claude mcp add --transport http opencloud-scan https://scan.example.com/mcp
 # Your own
 claude mcp add --transport http opencloud-scan http://127.0.0.1:8811/mcp
 </code></pre>
-<p>Add <code>--scope user</code> to have it available in every project rather than the
-current one. Then, in a session:</p>
+<p>Ajoutez <code>--scope user</code> pour le rendre disponible dans tous les projets plutôt
+que dans le projet courant. Puis, dans une session :</p>
 <pre><code class="language-text">&gt; scan opencloud.example.com and tell me what would improve the grade
 </code></pre>
-<p><code>claude mcp list</code> shows whether the connection came up, and <code>/mcp</code> inside a
-session lists the tools that were discovered.</p>
+<p><code>claude mcp list</code> indique si la connexion s’est établie, et <code>/mcp</code> dans une
+session liste les outils découverts.</p>
 <h2 id="claude-desktop">Claude Desktop</h2>
-<p>Claude Desktop reads <code>claude_desktop_config.json</code>:</p>
+<p>Claude Desktop lit <code>claude_desktop_config.json</code> :</p>
 <ul>
-<li>macOS: <code>~/Library/Application Support/Claude/claude_desktop_config.json</code></li>
-<li>Windows: <code>%APPDATA%\Claude\claude_desktop_config.json</code></li>
-<li>Linux: <code>~/.config/Claude/claude_desktop_config.json</code></li>
+<li>macOS : <code>~/Library/Application Support/Claude/claude_desktop_config.json</code></li>
+<li>Windows : <code>%APPDATA%\Claude\claude_desktop_config.json</code></li>
+<li>Linux : <code>~/.config/Claude/claude_desktop_config.json</code></li>
 </ul>
 <pre><code class="language-json">{
   &quot;mcpServers&quot;: {
@@ -248,13 +250,13 @@ session lists the tools that were discovered.</p>
   }
 }
 </code></pre>
-<p>Restart the application afterwards. Builds that cannot reach a remote server
-directly can use the bridge in <a href="#clients-that-only-speak-stdio">Clients that only speak
-stdio</a>.</p>
-<h2 id="github-copilot-in-vs-code">GitHub Copilot in VS Code</h2>
-<p>VS Code is the odd one out: the top-level key is <code>servers</code>, not <code>mcpServers</code>.
-Put this in <code>.vscode/mcp.json</code> for one workspace, or run <strong>MCP: Open User
-Configuration</strong> from the command palette for all of them:</p>
+<p>Redémarrez ensuite l’application. Les versions qui ne peuvent pas joindre
+directement un serveur distant peuvent utiliser la passerelle décrite dans
+<a href="#clients-that-only-speak-stdio">Clients limités au transport stdio</a>.</p>
+<h2 id="github-copilot-in-vs-code">GitHub Copilot dans VS Code</h2>
+<p>VS Code fait exception : la clé de premier niveau est <code>servers</code>, et non
+<code>mcpServers</code>. Placez ceci dans <code>.vscode/mcp.json</code> pour un espace de travail, ou
+lancez <strong>MCP: Open User Configuration</strong> depuis la palette de commandes pour tous :</p>
 <pre><code class="language-json">{
   &quot;servers&quot;: {
     &quot;opencloud-scan&quot;: {
@@ -264,11 +266,12 @@ Configuration</strong> from the command palette for all of them:</p>
   }
 }
 </code></pre>
-<p>Then open Copilot Chat in <strong>Agent</strong> mode; the tools appear in the tool picker.
-<code>MCP: List Servers</code> shows the connection and its log if it does not.</p>
+<p>Ouvrez ensuite Copilot Chat en mode <strong>Agent</strong> ; les outils apparaissent dans le
+sélecteur d’outils. Sinon, <code>MCP: List Servers</code> affiche la connexion et son
+journal.</p>
 <h2 id="github-copilot-cli">GitHub Copilot CLI</h2>
-<p>Copilot CLI merges configuration from <code>~/.copilot/mcp-config.json</code> (global) and
-<code>.github/mcp.json</code> or <code>.mcp.json</code> in the working directory:</p>
+<p>Copilot CLI fusionne la configuration de <code>~/.copilot/mcp-config.json</code> (globale)
+et celle de <code>.github/mcp.json</code> ou <code>.mcp.json</code> dans le répertoire de travail :</p>
 <pre><code class="language-json">{
   &quot;mcpServers&quot;: {
     &quot;opencloud-scan&quot;: {
@@ -278,9 +281,9 @@ Configuration</strong> from the command palette for all of them:</p>
   }
 }
 </code></pre>
-<p><code>/mcp</code> inside a session lists what was loaded.</p>
+<p><code>/mcp</code> dans une session liste ce qui a été chargé.</p>
 <h2 id="cursor">Cursor</h2>
-<p><code>.cursor/mcp.json</code> in a project, or <code>~/.cursor/mcp.json</code> globally:</p>
+<p><code>.cursor/mcp.json</code> dans un projet, ou <code>~/.cursor/mcp.json</code> globalement :</p>
 <pre><code class="language-json">{
   &quot;mcpServers&quot;: {
     &quot;opencloud-scan&quot;: {
@@ -290,9 +293,10 @@ Configuration</strong> from the command palette for all of them:</p>
   }
 }
 </code></pre>
-<p>Settings → MCP shows the server and lets you toggle individual tools.</p>
+<p>Settings → MCP affiche le serveur et permet d’activer ou de désactiver chaque
+outil.</p>
 <h2 id="zed">Zed</h2>
-<p><code>settings.json</code> (<strong>Zed: Open Settings</strong>), under <code>context_servers</code>:</p>
+<p><code>settings.json</code> (<strong>Zed: Open Settings</strong>), sous <code>context_servers</code> :</p>
 <pre><code class="language-json">{
   &quot;context_servers&quot;: {
     &quot;opencloud-scan&quot;: {
@@ -302,10 +306,10 @@ Configuration</strong> from the command palette for all of them:</p>
   }
 }
 </code></pre>
-<p>Recent Zed versions also accept an <code>.mcp.json</code> with the usual <code>mcpServers</code>
-key.</p>
+<p>Les versions récentes de Zed acceptent aussi un <code>.mcp.json</code> avec la clé
+habituelle <code>mcpServers</code>.</p>
 <h2 id="windsurf">Windsurf</h2>
-<p><code>~/.codeium/windsurf/mcp_config.json</code>:</p>
+<p><code>~/.codeium/windsurf/mcp_config.json</code> :</p>
 <pre><code class="language-json">{
   &quot;mcpServers&quot;: {
     &quot;opencloud-scan&quot;: {
@@ -314,26 +318,28 @@ key.</p>
   }
 }
 </code></pre>
-<h2 id="any-other-client">Any other client</h2>
-<p>The endpoint is ordinary <strong>streamable HTTP</strong> MCP: one URL, <code>POST</code> for
-requests, no session to keep alive, no authentication. Anything that can be
-told a URL will work with</p>
+<h2 id="any-other-client">Tout autre client</h2>
+<p>Le point de terminaison est un MCP <strong>streamable HTTP</strong> ordinaire : une URL,
+<code>POST</code> pour les requêtes, aucune session à maintenir, aucune authentification.
+Tout client auquel on peut indiquer une URL fonctionnera avec</p>
 <pre><code class="language-json">{&quot;type&quot;: &quot;http&quot;, &quot;url&quot;: &quot;https://scan.example.com/mcp&quot;}
 </code></pre>
-<p>or the same URL typed into a settings dialogue. If a client asks which
-transport, the answer is <em>streamable HTTP</em> (sometimes called "HTTP" or
-"remote"), not SSE and not stdio.</p>
-<p>An agent that has never heard of this service can find the endpoint itself:
-<code>https://scan.example.com/.well-known/ai.json</code> names it, alongside the OpenAPI and
-Arazzo documents. That is the whole point of the discovery document - see
-<a href="https://scan.example.com/api#api-agents">the API page</a>. <code>https://scan.example.com/agents.txt</code>
-and <code>https://scan.example.com/llms.txt</code> point at the same document for a fetcher
-that goes looking for one of those two filenames first, in the informal
-conventions some agent frameworks and crawlers already use - see <a href="https://github.com/sowoi/check-opencloud-security/blob/main/AGENTS.md#working-on-the-agent-facing-surfaces">Working on
-the agent-facing surfaces</a>.</p>
-<h2 id="clients-that-only-speak-stdio">Clients that only speak stdio</h2>
-<p>Some clients still launch a subprocess and talk to it over stdin and stdout.
-The community bridge <code>mcp-remote</code> connects such a client to a remote endpoint:</p>
+<p>ou la même URL saisie dans une boîte de dialogue de paramètres. Si un client
+demande le transport, la réponse est <em>streamable HTTP</em> (parfois appelé « HTTP »
+ou « remote »), ni SSE ni stdio.</p>
+<p>Un agent qui ne dispose d’aucune configuration propre à ce service peut trouver lui-même le
+point de terminaison : <code>https://scan.example.com/.well-known/ai.json</code> le
+désigne, à côté des documents OpenAPI et Arazzo. C’est toute la raison d’être
+du document de découverte - voir <a href="https://scan.example.com/api#api-agents">la page de l’API</a>.
+<code>https://scan.example.com/agents.txt</code> et <code>https://scan.example.com/llms.txt</code>
+renvoient au même document pour un outil qui cherche d’abord l’un de ces deux
+noms de fichier, selon les conventions informelles que certains frameworks
+d’agents et robots d’indexation utilisent déjà - voir <a href="https://github.com/sowoi/check-opencloud-security/blob/main/AGENTS.md#working-on-the-agent-facing-surfaces">Working on the
+agent-facing surfaces</a>.</p>
+<h2 id="clients-that-only-speak-stdio">Clients limités au transport stdio</h2>
+<p>Certains clients lancent encore un sous-processus et communiquent avec lui par
+stdin et stdout. La passerelle communautaire <code>mcp-remote</code> relie un tel client à
+un point de terminaison distant :</p>
 <pre><code class="language-json">{
   &quot;mcpServers&quot;: {
     &quot;opencloud-scan&quot;: {
@@ -343,80 +349,82 @@ The community bridge <code>mcp-remote</code> connects such a client to a remote 
   }
 }
 </code></pre>
-<p>That is a third-party package this project has nothing to do with, and it
-means your prompts pass through code neither of us wrote. Prefer a client that
-can speak HTTP directly, and prefer your own endpoint over the hosted one if
-you are going to bridge at all.</p>
-<h2 id="running-your-own-endpoint">Running your own endpoint</h2>
-<p>The hosted service is convenient; your own is unlimited, and no address of
-yours leaves your network. Everything below is the stack from
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docker/README.md"><code>docker/</code></a>, described in full in <a href="/documentation/web-service">the public scan
-service</a>.</p>
+<p>C’est un paquet tiers sans lien avec ce projet, et il signifie que vos prompts
+passent par du code que ni vous ni nous n’avons écrit. Préférez un client
+capable d’utiliser HTTP directement, et, si vous devez utiliser une passerelle,
+préférez votre propre point de terminaison au service hébergé.</p>
+<h2 id="running-your-own-endpoint">Exécuter votre propre point de terminaison</h2>
+<p>Le service hébergé est pratique ; le vôtre est illimité, et aucune de vos
+adresses ne quitte votre réseau. Tout ce qui suit correspond à la pile de
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/docker/README.md"><code>docker/</code></a>, décrite en détail dans <a href="/documentation/web-service">le service
+d’analyse public</a>.</p>
 <pre><code class="language-bash">git clone https://github.com/sowoi/check-opencloud-security
 cd check-opencloud-security/docker
 docker compose up --build -d
 </code></pre>
-<p>That brings up the web application, the ARQ worker and Redis, with <code>/mcp</code>
-already mounted. Point a client at <code>http://127.0.0.1:8811/mcp</code> and nothing
-else changes.</p>
-<p>Without Docker:</p>
+<p>Cela démarre l’application web, le worker ARQ et Redis, avec <code>/mcp</code> déjà monté.
+Faites pointer un client vers <code>http://127.0.0.1:8811/mcp</code>, et rien d’autre ne
+change.</p>
+<p>Sans Docker :</p>
 <pre><code class="language-bash">pip install &quot;check-opencloud-security[web,mcp]&quot;
 uvicorn webapp.app:app --host 127.0.0.1 --port 8811
 </code></pre>
-<p>The <code>mcp</code> extra is what mounts the endpoint. Without it the application starts
-perfectly well and <code>/mcp</code> answers <strong>404</strong>.</p>
-<p>Three settings are worth knowing:</p>
+<p>C’est l’extra <code>mcp</code> qui monte le point de terminaison. Sans lui, l’application
+démarre parfaitement et <code>/mcp</code> répond <strong>404</strong>.</p>
+<p>Trois paramètres sont bons à connaître :</p>
 <table>
 <thead>
 <tr>
-<th>Setting</th>
-<th>Default</th>
-<th>What it does</th>
+<th>Paramètre</th>
+<th>Valeur par défaut</th>
+<th>Effet</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>COS_WEB_ENABLE_MCP</code></td>
 <td><code>true</code></td>
-<td>Serve <code>/mcp</code> at all</td>
+<td>Servir <code>/mcp</code> ou non</td>
 </tr>
 <tr>
 <td><code>COS_WEB_MCP_ALLOWED_HOSTS</code></td>
-<td><em>(empty)</em></td>
-<td><code>Host</code> values the endpoint accepts, separated by <code>;</code> - DNS-rebinding protection. Name your public hostname when it is reachable from a browser</td>
+<td><em>(vide)</em></td>
+<td>Valeurs <code>Host</code> acceptées par le point de terminaison, séparées par <code>;</code> - protection contre le DNS rebinding. Indiquez votre nom d’hôte public lorsqu’il est accessible depuis un navigateur</td>
 </tr>
 <tr>
 <td><code>COS_WEB_MCP_MAX_CONCURRENT_WAITS</code></td>
 <td><code>8</code></td>
-<td>How many tool calls may wait on a scan at once. Past that a call still submits the scan and returns the uuid to poll, rather than being refused</td>
+<td>Nombre d’appels d’outils pouvant attendre une analyse en même temps. Au-delà, un appel soumet quand même l’analyse et renvoie l’uuid à interroger, au lieu d’être refusé</td>
 </tr>
 </tbody>
 </table>
-<p>Exposing it beyond localhost means putting it behind TLS: see <a href="/documentation/reverse-proxy">reverse
-proxies</a>, which covers the one thing MCP needs that a normal
-page does not - an unbuffered response, because the endpoint streams.</p>
-<h2 id="turning-mcp-off">Turning MCP off</h2>
-<p>An operator who does not want an agent interface can remove it. It is a
-setting, not a build:</p>
+<p>L’exposer au-delà de localhost implique de le placer derrière TLS : voir
+<a href="/documentation/reverse-proxy">reverse proxies</a>, qui couvre le seul besoin de MCP qu’une
+page normale n’a pas - une réponse sans mise en tampon, car le point de
+terminaison diffuse en continu.</p>
+<h2 id="turning-mcp-off">Désactiver MCP</h2>
+<p>Un opérateur qui ne veut pas d’interface pour agents peut la supprimer. C’est un
+paramètre, pas une option de construction :</p>
 <pre><code class="language-bash"># docker/, without editing docker-compose.yml
 COS_WEB_ENABLE_MCP=false docker compose up -d
 </code></pre>
-<p>or write it once in a <code>.env</code> file next to <code>docker-compose.yml</code>:</p>
+<p>ou écrivez-le une fois dans un fichier <code>.env</code> à côté de <code>docker-compose.yml</code> :</p>
 <pre><code class="language-dotenv">COS_WEB_ENABLE_MCP=false
 </code></pre>
-<p>or set <code>COS_WEB_ENABLE_MCP=false</code> in the environment of whatever runs
-<code>uvicorn</code>. With it off, <code>/mcp</code> answers <strong>404</strong>, the endpoint disappears from
-<code>/.well-known/ai.json</code> and the "For AI agents" page stops advertising it. The
-HTTP API, the OpenAPI description and the Arazzo workflows are unaffected -
-they are how everything else uses the service, MCP or no MCP.</p>
-<h2 id="erasure-needs-a-credential">Erasure needs a credential</h2>
-<p><code>erase_instance_data</code> deletes every stored scan of one hostname, including
-results other people may be reading. It is marked destructive, and it only
-works when the deployment has <code>COS_WEB_PURGE_TOKEN</code> set - the hosted service
-does not hand that out.</p>
-<p>The tool takes the credential from the <code>Authorization</code> header of the agent's
-own request, never as a tool argument, so the model never sees it. In a client
-that supports headers:</p>
+<p>ou définissez <code>COS_WEB_ENABLE_MCP=false</code> dans l’environnement de ce qui exécute
+<code>uvicorn</code>. Une fois désactivé, <code>/mcp</code> répond <strong>404</strong>, le point de terminaison
+disparaît de <code>/.well-known/ai.json</code> et la page « Pour les agents IA » cesse de
+l’annoncer. L’API HTTP, la description OpenAPI et les workflows Arazzo ne sont
+pas concernés : c’est par eux que tout le reste utilise le service, avec ou sans
+MCP.</p>
+<h2 id="erasure-needs-a-credential">L’effacement exige un identifiant</h2>
+<p><code>erase_instance_data</code> supprime toutes les analyses enregistrées d’un nom d’hôte,
+y compris des résultats que d’autres personnes consultent peut-être. L’outil est
+marqué comme destructif et ne fonctionne que si le déploiement a défini
+<code>COS_WEB_PURGE_TOKEN</code> - le service hébergé ne communique pas cet identifiant.</p>
+<p>L’outil lit l’identifiant dans l’en-tête <code>Authorization</code> de la requête de
+l’agent, jamais dans un argument d’outil : le modèle ne le voit donc jamais. Dans
+un client qui prend en charge les en-têtes :</p>
 <pre><code class="language-json">{
   &quot;servers&quot;: {
     &quot;opencloud-scan&quot;: {
@@ -427,32 +435,34 @@ that supports headers:</p>
   }
 }
 </code></pre>
-<p>Use your client's secret or input mechanism, as above, rather than pasting the
-token into a file you commit. Without the header the tool answers <strong>401</strong>, and
-on a deployment with no token set it answers <strong>404</strong> - as though the feature
-were not there, which for that deployment it is not.</p>
-<p><strong>On a deployment that requires a sign-in</strong> (below), the purge credential
-moves to <code>X-Purge-Authorization</code>: <code>Authorization</code> then carries the agent's
-identity token, and reading one as the other would compare a credential
-against a credential and answer 401 for a reason nobody could see.</p>
+<p>Utilisez le mécanisme de secrets ou de saisie de votre client, comme ci-dessus,
+plutôt que de coller le jeton dans un fichier versionné. Sans l’en-tête, l’outil
+répond <strong>401</strong>, et sur un déploiement sans jeton défini il répond <strong>404</strong>, comme
+si la fonction n’existait pas - ce qui, pour ce déploiement, est le cas.</p>
+<p><strong>Sur un déploiement qui exige une connexion</strong> (ci-dessous), l’identifiant
+d’effacement passe dans <code>X-Purge-Authorization</code> : <code>Authorization</code> transporte
+alors le jeton d’identité de l’agent, et lire l’un à la place de l’autre
+reviendrait à comparer un identifiant à un autre identifiant et à répondre 401
+pour une raison que personne ne pourrait voir.</p>
 <pre><code class="language-json">&quot;headers&quot;: {
   &quot;Authorization&quot;: &quot;Bearer ${input:token}&quot;,
   &quot;X-Purge-Authorization&quot;: &quot;Bearer ${input:purge_token}&quot;
 }
 </code></pre>
-<h2 id="when-the-endpoint-asks-you-to-sign-in">When the endpoint asks you to sign in</h2>
-<p>Neither the hosted service nor the default self-hosted stack does. An operator
-running this for their own estate can, and then <code>/mcp</code> becomes an OAuth 2.0
-protected resource:</p>
+<h2 id="when-the-endpoint-asks-you-to-sign-in">Lorsque le point de terminaison demande une connexion</h2>
+<p>Ni le service hébergé ni la pile auto-hébergée par défaut ne le font. Un
+opérateur qui exécute ce service pour son propre parc peut l’activer ; <code>/mcp</code>
+devient alors une ressource protégée OAuth 2.0 :</p>
 <ul>
-<li>a request without a token gets <strong>401</strong> with a <code>WWW-Authenticate</code> header
-  naming <code>/.well-known/oauth-protected-resource/mcp</code>;</li>
-<li>that document is public, and names the provider to get a token from;</li>
-<li><code>/.well-known/ai.json</code> says the same under <code>mcp.authentication</code>, so a client
-  can know before it connects.</li>
+<li>une requête sans jeton reçoit <strong>401</strong> avec un en-tête <code>WWW-Authenticate</code> qui
+  désigne <code>/.well-known/oauth-protected-resource/mcp</code> ;</li>
+<li>ce document est public et désigne le fournisseur auprès duquel obtenir un
+  jeton ;</li>
+<li><code>/.well-known/ai.json</code> indique la même chose sous <code>mcp.authentication</code>, pour
+  qu’un client le sache avant de se connecter.</li>
 </ul>
-<p>A client that implements the MCP authorization specification needs nothing but
-the URL - it follows that chain itself. Everything else takes a header:</p>
+<p>Un client qui implémente la spécification d’autorisation MCP n’a besoin que de
+l’URL : il suit lui-même cette chaîne. Tous les autres utilisent un en-tête :</p>
 <pre><code class="language-json">{
   &quot;servers&quot;: {
     &quot;opencloud-scan&quot;: {
@@ -463,47 +473,50 @@ the URL - it follows that chain itself. Everything else takes a header:</p>
   }
 }
 </code></pre>
-<p>Signing in changes who may ask and nothing else. The rate limit, the target
-cooldown, the queue and the refusal to scan a private address are identical
-for an authenticated agent - a sign-in that raised a limit would have turned
-itself into a way around it.</p>
-<p>Setting one up is <a href="/documentation/authentik">Authentik in front of the MCP
-endpoint</a>, which ships as a complete Docker stack of its own and
-works the same way with any provider that publishes a JWKS. That page also
-covers the two things an operator needs after the stack is up: <a href="/documentation/authentik#adding-somebody-who-may-use-the-endpoint">who may use
-the endpoint</a> - a
-provisioned application with no bindings admits every account in the directory
-- and <a href="/documentation/authentik#getting-a-token">how a caller gets a token</a>, whether it is
-a person in a browser or an agent with a service account.</p>
-<h2 id="limits-and-being-a-good-guest">Limits, and being a good guest</h2>
-<p>The hosted service applies the same limits to an agent as to a browser:</p>
+<p>La connexion change qui peut faire des demandes, et rien d’autre. La limite de
+débit, le délai de carence par cible, la file d’attente et le refus d’analyser
+une adresse privée sont identiques pour un agent authentifié : une connexion qui
+relèverait une limite deviendrait un moyen de la contourner.</p>
+<p>La mise en place est décrite dans <a href="/documentation/authentik">Authentik devant le point de terminaison
+MCP</a>, fourni sous forme de pile Docker complète, et qui fonctionne
+de la même façon avec tout fournisseur publiant un JWKS. Cette page couvre aussi
+les deux points dont un opérateur a besoin une fois la pile en service :
+<a href="/documentation/authentik#adding-somebody-who-may-use-the-endpoint">qui peut utiliser le point de terminaison</a>
+(une application provisionnée sans aucune association admet tous les comptes de
+l’annuaire) et <a href="/documentation/authentik#getting-a-token">comment un appelant obtient un jeton</a>,
+qu’il s’agisse d’une personne dans un navigateur ou d’un agent avec un compte de
+service.</p>
+<h2 id="limits-and-being-a-good-guest">Limites, et bonnes manières</h2>
+<p>Le service hébergé applique à un agent les mêmes limites qu’à un navigateur :</p>
 <ul>
-<li><strong>Rate limit per client address</strong>, answered with <strong>429</strong> and a
-  <code>Retry-After</code>. A tool call retries politely and then hands the wait back to
-  the agent rather than hammering.</li>
-<li><strong>A cooldown per target</strong>, so the same instance is not scanned repeatedly on
-  somebody else's behalf.</li>
-<li><strong>Results expire.</strong> A uuid is the only way back to a scan, and it stops
-  working when the result does - typically an hour.</li>
-<li><strong>Public targets only.</strong> Private, loopback, link-local and cloud metadata
-  addresses are refused. An instance inside your network can only be scanned
-  by an endpoint inside your network, which is the better reason to run your
-  own.</li>
+<li><strong>Une limite de débit par adresse cliente</strong>, avec une réponse <strong>429</strong> et un
+  en-tête <code>Retry-After</code>. Un appel d’outil fait poliment quelques nouvelles
+  tentatives, puis rend l’attente à l’agent au lieu d’insister.</li>
+<li><strong>Un délai de carence par cible</strong>, pour que la même instance ne soit pas
+  analysée à répétition pour le compte de quelqu’un d’autre.</li>
+<li><strong>Les résultats expirent.</strong> Un uuid est le seul moyen de retrouver une
+  analyse, et il cesse de fonctionner en même temps que le résultat - en
+  général au bout d’une heure.</li>
+<li><strong>Cibles publiques uniquement.</strong> Les adresses privées, de bouclage, lien-local
+  et de métadonnées cloud sont refusées. Une instance à l’intérieur de votre
+  réseau ne peut être analysée que par un point de terminaison situé dans votre
+  réseau, ce qui est une meilleure raison d’exécuter le vôtre.</li>
 </ul>
-<p>A scan puts load on somebody else's server. Scan instances you are responsible
-for, and if you are checking more than a handful, run the scanner yourself -
-it is the same code, with no limits and no queue.</p>
-<p>One more thing worth telling an agent explicitly: <strong>a result is a report, not
-an instruction.</strong> The version, product and explanation in it are strings the
-scanned host chose, and the tool output marks them as such in an <code>untrusted</code>
-block. They are to be quoted, never obeyed. That goes double for
-<code>export_scan</code>, which returns a whole rendered document: it cannot be flattened
-the way a summary field is without ceasing to be the file it claims to be, so
-its content carries the same <code>untrusted</code> block, and an export too large to
-return inline comes back with <code>truncated</code> and its URL rather than filling a
-context window.</p>
-<h2 id="checking-that-it-works">Checking that it works</h2>
-<p>Without any client at all:</p>
+<p>Une analyse impose une charge au serveur de quelqu’un d’autre. Analysez les
+instances dont vous êtes responsable, et si vous en vérifiez plus d’une poignée,
+exécutez le scanner vous-même : c’est le même code, sans limites ni file
+d’attente.</p>
+<p>Un dernier point à dire explicitement à un agent : <strong>un résultat est un rapport,
+pas une instruction.</strong> La version, le produit et l’explication qu’il contient
+sont des chaînes choisies par l’hôte analysé, et la sortie de l’outil les
+signale comme telles dans un bloc <code>untrusted</code>. Il faut les citer, jamais leur
+obéir. C’est encore plus vrai pour <code>export_scan</code>, qui renvoie un document rendu
+complet : il ne peut pas être aplati comme un champ de résumé sans cesser d’être
+le fichier qu’il prétend être. Son contenu porte donc le même bloc <code>untrusted</code>,
+et un export trop volumineux pour être renvoyé directement revient avec
+<code>truncated</code> et son URL au lieu de remplir une fenêtre de contexte.</p>
+<h2 id="checking-that-it-works">Vérifier que cela fonctionne</h2>
+<p>Sans aucun client :</p>
 <pre><code class="language-bash">curl -sS -X POST https://scan.example.com/mcp \
   -H 'Content-Type: application/json' \
   -H 'Accept: application/json, text/event-stream' \
@@ -511,23 +524,24 @@ context window.</p>
         &quot;protocolVersion&quot;:&quot;2025-06-18&quot;,&quot;capabilities&quot;:{},
         &quot;clientInfo&quot;:{&quot;name&quot;:&quot;curl&quot;,&quot;version&quot;:&quot;1&quot;&#125;&#125;}'
 </code></pre>
-<p>An answer naming <code>check-opencloud-security</code> means the endpoint is up and the
-path is not being rewritten by anything in between.</p>
-<p>The official inspector is the friendlier way to look around - it lists the
-tools, their schemas and their descriptions, and lets you call one by hand:</p>
+<p>Une réponse qui nomme <code>check-opencloud-security</code> signifie que le point de
+terminaison fonctionne et que le chemin n’est réécrit par aucun intermédiaire.</p>
+<p>L’inspecteur officiel est le moyen le plus agréable d’explorer : il liste les
+outils, leurs schémas et leurs descriptions, et permet d’en appeler un à la
+main :</p>
 <pre><code class="language-bash">npx @modelcontextprotocol/inspector
 # then connect to https://scan.example.com/mcp with transport &quot;Streamable HTTP&quot;
 </code></pre>
-<p>If a client shows no tools, the usual causes are: the transport set to SSE or
-stdio instead of streamable HTTP; a proxy buffering the response (see <a href="/documentation/reverse-proxy">reverse
-proxies</a>); <code>COS_WEB_MCP_ALLOWED_HOSTS</code> not naming the host
-the client is using, which answers <strong>421</strong>; or the <code>mcp</code> extra missing, which
-answers <strong>404</strong>.</p>
+<p>Si un client n’affiche aucun outil, les causes habituelles sont : un transport
+réglé sur SSE ou stdio au lieu de streamable HTTP ; un proxy qui met la réponse
+en tampon (voir <a href="/documentation/reverse-proxy">reverse proxies</a>) ;
+<code>COS_WEB_MCP_ALLOWED_HOSTS</code> qui ne nomme pas l’hôte utilisé par le client, ce qui
+donne <strong>421</strong> ; ou l’extra <code>mcp</code> manquant, ce qui donne <strong>404</strong>.</p>
 <hr>
-<p>This is an independent community project. It is not affiliated with, endorsed
-by or supported by OpenCloud GmbH. "OpenCloud" and all related marks belong to
-their respective owners and are used here only to identify the software this
-tool checks.</p>
+<p>Ce projet est un projet communautaire indépendant. Il n’est ni affilié à
+OpenCloud GmbH, ni approuvé ou soutenu par elle. « OpenCloud » et toutes les
+marques associées appartiennent à leurs propriétaires respectifs et ne sont
+utilisés ici que pour identifier le logiciel que cet outil vérifie.</p>
 </article>
 
 {% include "_page-nav.html" %}

@@ -48,6 +48,19 @@ COMPLETE_RESULT = {
     "updates": {"available": True, "availableVersion": "7.4.0"},
     "tls": {"certificate": {"daysRemaining": 67}},
     "upgradePath": {"target": "7.4.0", "stillAffected": ["CVE-2026-0001"]},
+    "scannedAt": {"date": "2026-05-01 10:00:00.000000"},
+    "waivers": [
+        {
+            "pattern": "debugPort:9205",
+            "reason": "Firewall change scheduled",
+            "expiresAt": "2026-05-09T10:00:00+00:00",
+            "state": "active",
+            "matched": ["debugPort:9205"],
+        }
+    ],
+    "coverage": {
+        "checks": [{"id": "dnsCaa", "group": "dns", "state": "inconclusive", "reason": "timeout"}],
+    },
 }
 
 # Deliberately requires the underscore: `opencloud` on its own is the tag, the

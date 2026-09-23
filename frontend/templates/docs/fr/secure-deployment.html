@@ -17,75 +17,76 @@
 
 <nav class="docs-toc card section-gap" aria-label="{{ t('docs.guide.toc.aria') }}" data-reveal>
   <p class="kicker">{{ t('docs.guide.toc.heading') }}</p>
-  <a href="#the-shape-of-a-defensible-deployment" lang="fr">The shape of a defensible deployment</a>
-  <a href="#1-put-a-real-identity-provider-in-front" lang="fr">1. Put a real identity provider in front</a>
-  <a href="#2-turn-the-audit-log-on-then-read-it" lang="fr">2. Turn the audit log on, then read it</a>
-  <a href="#3-firewall-it-properly" lang="fr">3. Firewall it properly</a>
-  <a href="#4-underneath-it-all-the-host-and-the-data" lang="fr">4. Underneath it all: the host and the data</a>
-  <a href="#5-what-the-people-using-it-should-know" lang="fr">5. What the people using it should know</a>
-  <a href="#6-where-this-scanner-fits-continuous-monitoring" lang="fr">6. Where this scanner fits: continuous monitoring</a>
-  <a href="#checklist" lang="fr">Checklist</a>
-  <a href="#where-to-go-next" lang="fr">Where to go next</a>
+  <a href="#the-shape-of-a-defensible-deployment" lang="fr">L’architecture d’un déploiement défendable</a>
+  <a href="#1-put-a-real-identity-provider-in-front" lang="fr">1. Placer un vrai fournisseur d’identité devant OpenCloud</a>
+  <a href="#2-turn-the-audit-log-on-then-read-it" lang="fr">2. Activer le journal d’audit, puis le lire</a>
+  <a href="#3-firewall-it-properly" lang="fr">3. Configurer correctement le pare-feu</a>
+  <a href="#4-underneath-it-all-the-host-and-the-data" lang="fr">4. À la base de tout : l’hôte et les données</a>
+  <a href="#5-what-the-people-using-it-should-know" lang="fr">5. Ce que les utilisateurs doivent savoir</a>
+  <a href="#6-where-this-scanner-fits-continuous-monitoring" lang="fr">6. La place de ce scanner : la supervision continue</a>
+  <a href="#checklist" lang="fr">Liste de contrôle</a>
+  <a href="#where-to-go-next" lang="fr">Pour aller plus loin</a>
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="fr">
-<p>Un balayage externe ne couvre qu'une partie de OpenCloud en toute sécurité. Le présent guide couvre les
-travail restant: politiques identitaire-fournisseur, log des audits, règles de pare-feu, hôte
-maintenance, sauvegardes et conseils aux utilisateurs.</p>
-<p>Use these controls alongside scheduled scanning. The final section explains what regular
-scans can detect after the deployment is in place.</p>
+<p>Une analyse externe ne couvre qu’une partie de l’exploitation sécurisée d’OpenCloud. Ce
+guide couvre le reste du travail : politiques du fournisseur d’identité, journalisation
+d’audit, règles de pare-feu, maintenance de l’hôte, sauvegardes et consignes aux
+utilisateurs.</p>
+<p>Appliquez ces mesures en complément des analyses planifiées. La dernière section explique
+ce que des analyses régulières peuvent détecter une fois le déploiement en place.</p>
 <blockquote>
-<p>Every setting below is quoted from OpenCloud's own documentation and links
-to it. OpenCloud moves fast; when a variable here disagrees with the linked
-page, the linked page is right, and
-<a href="https://github.com/sowoi/check-opencloud-security/issues">an issue</a> is
-welcome.</p>
+<p>Chaque paramètre ci-dessous est tiré de la documentation d’OpenCloud et y
+renvoie. OpenCloud évolue vite ; lorsqu’une variable citée ici contredit la
+page liée, c’est la page liée qui a raison, et
+<a href="https://github.com/sowoi/check-opencloud-security/issues">un ticket</a> est le
+bienvenu.</p>
 </blockquote>
 <!-- TOC -->
 <ul>
-<li><a href="#running-opencloud-in-a-secure-infrastructure">Running OpenCloud in a secure infrastructure</a></li>
-<li><a href="#the-shape-of-a-defensible-deployment">The shape of a defensible deployment</a></li>
-<li><a href="#1-put-a-real-identity-provider-in-front">1. Put a real identity provider in front</a><ul>
-<li><a href="#why-before-how">Why, before how</a></li>
-<li><a href="#what-opencloud-needs-whichever-provider-you-pick">What OpenCloud needs, whichever provider you pick</a></li>
+<li><a href="#running-opencloud-in-a-secure-infrastructure">Exploiter OpenCloud dans une infrastructure sécurisée</a></li>
+<li><a href="#the-shape-of-a-defensible-deployment">L’architecture d’un déploiement défendable</a></li>
+<li><a href="#1-put-a-real-identity-provider-in-front">1. Placer un vrai fournisseur d’identité devant OpenCloud</a><ul>
+<li><a href="#why-before-how">Le pourquoi avant le comment</a></li>
+<li><a href="#what-opencloud-needs-whichever-provider-you-pick">Ce dont OpenCloud a besoin, quel que soit le fournisseur</a></li>
 <li><a href="#keycloak">Keycloak</a></li>
 <li><a href="#authentik">Authentik</a></li>
 <li><a href="#authelia">Authelia</a></li>
-<li><a href="#basic-authentication-is-the-hole-in-all-of-this">Basic authentication is the hole in all of this</a></li>
+<li><a href="#basic-authentication-is-the-hole-in-all-of-this">L’authentification Basic, la faille de l’ensemble</a></li>
 </ul>
 </li>
-<li><a href="#2-turn-the-audit-log-on-then-read-it">2. Turn the audit log on, then read it</a><ul>
-<li><a href="#the-audit-service-does-not-run-by-default">The audit service does not run by default</a></li>
-<li><a href="#getting-the-log-off-the-box">Getting the log off the box</a></li>
-<li><a href="#what-to-actually-alert-on">What to actually alert on</a></li>
-<li><a href="#retention-and-the-law">Retention, and the law</a></li>
+<li><a href="#2-turn-the-audit-log-on-then-read-it">2. Activer le journal d’audit, puis le lire</a><ul>
+<li><a href="#the-audit-service-does-not-run-by-default">Le service d’audit ne s’exécute pas par défaut</a></li>
+<li><a href="#getting-the-log-off-the-box">Sortir le journal de la machine</a></li>
+<li><a href="#what-to-actually-alert-on">Sur quoi alerter réellement</a></li>
+<li><a href="#retention-and-the-law">Conservation et obligations légales</a></li>
 </ul>
 </li>
-<li><a href="#3-firewall-it-properly">3. Firewall it properly</a><ul>
-<li><a href="#the-ports-and-which-of-them-belong-on-the-internet">The ports, and which of them belong on the internet</a></li>
-<li><a href="#a-host-firewall-that-works-with-docker">A host firewall that works with Docker</a></li>
-<li><a href="#egress-matters-too">Egress matters too</a></li>
+<li><a href="#3-firewall-it-properly">3. Configurer correctement le pare-feu</a><ul>
+<li><a href="#the-ports-and-which-of-them-belong-on-the-internet">Les ports, et ceux qui ont leur place sur Internet</a></li>
+<li><a href="#a-host-firewall-that-works-with-docker">Un pare-feu d’hôte compatible avec Docker</a></li>
+<li><a href="#egress-matters-too">Le trafic sortant compte aussi</a></li>
 </ul>
 </li>
-<li><a href="#4-underneath-it-all-the-host-and-the-data">4. Underneath it all: the host and the data</a></li>
-<li><a href="#5-what-the-people-using-it-should-know">5. What the people using it should know</a><ul>
-<li><a href="#for-everybody-with-an-account">For everybody with an account</a></li>
-<li><a href="#for-administrators">For administrators</a></li>
+<li><a href="#4-underneath-it-all-the-host-and-the-data">4. À la base de tout : l’hôte et les données</a></li>
+<li><a href="#5-what-the-people-using-it-should-know">5. Ce que les utilisateurs doivent savoir</a><ul>
+<li><a href="#for-everybody-with-an-account">Pour toute personne disposant d’un compte</a></li>
+<li><a href="#for-administrators">Pour les administrateurs</a></li>
 </ul>
 </li>
-<li><a href="#6-where-this-scanner-fits-continuous-monitoring">6. Where this scanner fits: continuous monitoring</a><ul>
-<li><a href="#what-a-scheduled-scan-catches-that-a-one-off-audit-does-not">What a scheduled scan catches that a one-off audit does not</a></li>
-<li><a href="#a-monitoring-setup-that-is-worth-having">A monitoring setup that is worth having</a></li>
-<li><a href="#what-it-deliberately-will-not-tell-you">What it deliberately will not tell you</a></li>
+<li><a href="#6-where-this-scanner-fits-continuous-monitoring">6. La place de ce scanner : la supervision continue</a><ul>
+<li><a href="#what-a-scheduled-scan-catches-that-a-one-off-audit-does-not">Ce qu’une analyse planifiée détecte et qu’un audit ponctuel manque</a></li>
+<li><a href="#a-monitoring-setup-that-is-worth-having">Une supervision qui en vaut la peine</a></li>
+<li><a href="#what-it-deliberately-will-not-tell-you">Ce qu’il ne vous dira volontairement pas</a></li>
 </ul>
 </li>
-<li><a href="#checklist">Checklist</a></li>
-<li><a href="#where-to-go-next">Where to go next</a></li>
-<li><a href="#trademarks-and-affiliation">Trademarks and affiliation</a></li>
+<li><a href="#checklist">Liste de contrôle</a></li>
+<li><a href="#where-to-go-next">Pour aller plus loin</a></li>
+<li><a href="#trademarks-and-affiliation">Marques et affiliation</a></li>
 </ul>
 <!-- TOC -->
 
-<h2 id="the-shape-of-a-defensible-deployment">The shape of a defensible deployment</h2>
+<h2 id="the-shape-of-a-defensible-deployment">L’architecture d’un déploiement défendable</h2>
 <pre><code>                    internet
                         │
                    443/tcp only
@@ -106,254 +107,266 @@ welcome.</p>
    │  storage   │               │  log sink   │  off-host, append-only
    └────────────┘               └─────────────┘
 </code></pre>
-<p>Expose the intended public entry points, enforce your sign-in policy at the identity
-provider and send audit records to a separate system. The sections below describe each
-part.</p>
-<h2 id="1-put-a-real-identity-provider-in-front">1. Put a real identity provider in front</h2>
-<h3 id="why-before-how">Why, before how</h3>
-<p>OpenCloud includes an identity provider (<code>idp</code>) and identity management (<code>idm</code>) for a
-working initial installation. An external provider is useful when an organization needs
-shared account lifecycle, multifactor authentication and consistent policies across
-services:</p>
+<p>N’exposez que les points d’entrée publics prévus, appliquez votre politique de
+connexion au niveau du fournisseur d’identité et envoyez les enregistrements
+d’audit vers un système distinct. Les sections suivantes décrivent chaque
+élément.</p>
+<h2 id="1-put-a-real-identity-provider-in-front">1. Placer un vrai fournisseur d’identité devant OpenCloud</h2>
+<h3 id="why-before-how">Le pourquoi avant le comment</h3>
+<p>OpenCloud inclut un fournisseur d’identité (<code>idp</code>) et une gestion des identités
+(<code>idm</code>) pour qu’une première installation fonctionne. Un fournisseur externe
+est utile lorsqu’une organisation a besoin d’un cycle de vie des comptes
+partagé, d’une authentification multifacteur et de politiques cohérentes entre
+les services :</p>
 <ul>
-<li><strong>Second factors.</strong> An external provider gives you TOTP, WebAuthn or
-  passkeys across every application you run, configured once.</li>
-<li><strong>Lifecycle.</strong> Somebody leaves and you disable one account, not one account
-  per service.</li>
-<li><strong>Session policy.</strong> Lockout after failed attempts, session lifetime,
-  device trust, conditional access - all of it belongs in the provider.</li>
-<li><strong>Audit.</strong> Sign-in attempts are recorded in the place that handles sign-ins,
-  which is where an investigator will look for them.</li>
+<li><strong>Seconds facteurs.</strong> Un fournisseur externe vous offre TOTP, WebAuthn ou
+  les passkeys pour toutes vos applications, configurés une seule fois.</li>
+<li><strong>Cycle de vie.</strong> Quelqu’un part et vous désactivez un seul compte, et non un
+  compte par service.</li>
+<li><strong>Politique de session.</strong> Verrouillage après des tentatives échouées, durée
+  de session, confiance dans les appareils, accès conditionnel : tout cela
+  relève du fournisseur.</li>
+<li><strong>Audit.</strong> Les tentatives de connexion sont enregistrées là où les connexions
+  sont traitées, c’est-à-dire là où un enquêteur les cherchera.</li>
 </ul>
-<p>This scanner reports which provider it found under <code>identityProvider</code>, and
-softens the HTTP Basic authentication finding from medium to low when an
-external one is detected - see
-<a href="/documentation/authentication#6-can-the-identity-provider-be-found-at-all-identityproviderdetected">Authentication</a>.</p>
+<p>Ce scanner indique sous <code>identityProvider</code> quel fournisseur il a trouvé, et
+abaisse le constat sur l’authentification HTTP Basic de medium à low lorsqu’il
+détecte un fournisseur externe - voir
+<a href="/documentation/authentication#6-can-the-identity-provider-be-found-at-all-identityproviderdetected">Authentification</a>.</p>
 <blockquote>
-<p><strong>Step by step, for each of the three:</strong> this section is the summary and the
-reasoning. <a href="/documentation/identity-providers">Putting an identity provider in front of OpenCloud, step by
-step</a> is the tutorial - installing each provider,
-the four OpenCloud clients every one of them needs, verifying it worked, and
-moving an instance that already has accounts.</p>
+<p><strong>Étape par étape, pour chacun des trois :</strong> cette section donne le résumé et
+le raisonnement. <a href="/documentation/identity-providers">Placer un fournisseur d’identité devant OpenCloud, étape par
+étape</a> est le tutoriel : installation de chaque
+fournisseur, les quatre clients OpenCloud dont chacun a besoin, vérification
+du résultat et migration d’une instance qui a déjà des comptes.</p>
 </blockquote>
-<h3 id="what-opencloud-needs-whichever-provider-you-pick">What OpenCloud needs, whichever provider you pick</h3>
-<p>The variables are the same for all three; only the issuer URL and the way you
-create the client differ. From
-<a href="https://docs.opencloud.eu/docs/admin/configuration/authentication-and-user-management/external-idp">OpenCloud's external IdP guide</a>:</p>
+<h3 id="what-opencloud-needs-whichever-provider-you-pick">Ce dont OpenCloud a besoin, quel que soit le fournisseur</h3>
+<p>Les variables sont les mêmes pour les trois ; seuls l’URL de l’émetteur et la
+façon de créer le client diffèrent. D’après
+<a href="https://docs.opencloud.eu/docs/admin/configuration/authentication-and-user-management/external-idp">le guide des IdP externes d’OpenCloud</a> :</p>
 <table>
 <thead>
 <tr>
 <th>Variable</th>
-<th>What it does</th>
+<th>Effet</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>OC_OIDC_ISSUER</code></td>
-<td>The provider's issuer URL, e.g. <code>https://id.example.com/realms/opencloud</code></td>
+<td>L’URL de l’émetteur du fournisseur, par exemple <code>https://id.example.com/realms/opencloud</code></td>
 </tr>
 <tr>
 <td><code>OC_EXCLUDE_RUN_SERVICES</code></td>
-<td>Add <code>idp</code> so the built-in provider does not start</td>
+<td>Ajoutez <code>idp</code> pour que le fournisseur intégré ne démarre pas</td>
 </tr>
 <tr>
 <td><code>PROXY_OIDC_ACCESS_TOKEN_VERIFY_METHOD</code></td>
-<td><code>jwt</code>, so tokens are verified against the provider's published keys rather than by asking it on every request</td>
+<td><code>jwt</code>, pour que les jetons soient vérifiés à l’aide des clés publiées par le fournisseur plutôt qu’en l’interrogeant à chaque requête</td>
 </tr>
 <tr>
 <td><code>PROXY_OIDC_REWRITE_WELLKNOWN</code></td>
-<td><code>true</code>, so clients discovering <code>/.well-known/openid-configuration</code> on the OpenCloud host are pointed at the real provider</td>
+<td><code>true</code>, pour que les clients qui découvrent <code>/.well-known/openid-configuration</code> sur l’hôte OpenCloud soient dirigés vers le vrai fournisseur</td>
 </tr>
 <tr>
 <td><code>PROXY_USER_OIDC_CLAIM</code></td>
-<td>The claim that identifies a user, commonly <code>preferred_username</code></td>
+<td>Le claim qui identifie un utilisateur, généralement <code>preferred_username</code></td>
 </tr>
 <tr>
 <td><code>PROXY_USER_CS3_CLAIM</code></td>
-<td>The OpenCloud attribute it is matched against, commonly <code>username</code></td>
+<td>L’attribut OpenCloud auquel il est comparé, généralement <code>username</code></td>
 </tr>
 <tr>
 <td><code>PROXY_AUTOPROVISION_ACCOUNTS</code></td>
-<td><code>true</code> creates an account on first sign-in</td>
+<td><code>true</code> crée un compte lors de la première connexion</td>
 </tr>
 <tr>
 <td><code>PROXY_ROLE_ASSIGNMENT_DRIVER</code></td>
-<td><code>oidc</code> to take roles from a claim, <code>default</code> to give everybody the same role</td>
+<td><code>oidc</code> pour prendre les rôles dans un claim, <code>default</code> pour donner le même rôle à tout le monde</td>
 </tr>
 <tr>
 <td><code>PROXY_ROLE_ASSIGNMENT_OIDC_CLAIM</code></td>
-<td>Which claim carries them; <code>roles</code> by default</td>
+<td>Le claim qui porte les rôles ; <code>roles</code> par défaut</td>
 </tr>
 <tr>
 <td><code>GRAPH_ASSIGN_DEFAULT_USER_ROLE</code></td>
-<td><code>false</code> when roles come from the provider, or every user quietly gets the default one as well</td>
+<td><code>false</code> lorsque les rôles viennent du fournisseur, sinon chaque utilisateur reçoit discrètement aussi le rôle par défaut</td>
 </tr>
 </tbody>
 </table>
-<p>Review account provisioning and role assignment together:</p>
-<p><strong>Autoprovisioning is an access-control decision.</strong> With
-<code>PROXY_AUTOPROVISION_ACCOUNTS=true</code>, anybody your provider will authenticate
-gets an OpenCloud account the first time they visit. That is right when the
-provider's OpenCloud application is restricted to a group, and wrong when the
-provider authenticates your whole organisation - restrict it on the provider
-side, not by leaving autoprovisioning off and creating accounts by hand.</p>
-<p><strong>Role assignment from a claim needs the default role switched off.</strong> Setting
-<code>PROXY_ROLE_ASSIGNMENT_DRIVER=oidc</code> while leaving
-<code>GRAPH_ASSIGN_DEFAULT_USER_ROLE=true</code> is the misconfiguration that gives
-everyone a role you did not intend.</p>
+<p>Examinez ensemble le provisionnement des comptes et l’attribution des rôles :</p>
+<p><strong>Le provisionnement automatique est une décision de contrôle d’accès.</strong> Avec
+<code>PROXY_AUTOPROVISION_ACCOUNTS=true</code>, toute personne que votre fournisseur
+authentifie obtient un compte OpenCloud lors de sa première visite. C’est
+correct lorsque l’application OpenCloud du fournisseur est limitée à un groupe,
+et incorrect lorsque le fournisseur authentifie toute votre organisation :
+limitez l’accès côté fournisseur, et non en désactivant le provisionnement
+automatique pour créer les comptes à la main.</p>
+<p><strong>L’attribution des rôles depuis un claim exige de désactiver le rôle par
+défaut.</strong> Définir <code>PROXY_ROLE_ASSIGNMENT_DRIVER=oidc</code> en laissant
+<code>GRAPH_ASSIGN_DEFAULT_USER_ROLE=true</code> est l’erreur de configuration qui donne à
+tout le monde un rôle que vous n’aviez pas prévu.</p>
 <h3 id="keycloak">Keycloak</h3>
 <blockquote>
-<p><a href="/documentation/identity-providers#tutorial-a-keycloak">The step-by-step Keycloak tutorial</a> is the whole job;
-what follows is the shape of it.</p>
+<p><a href="/documentation/identity-providers#tutorial-a-keycloak">Le tutoriel Keycloak étape par étape</a>
+couvre tout le travail ; voici les grandes lignes.</p>
 </blockquote>
-<p>The most common choice where an organisation already runs one. Create a realm
-(or reuse yours), then a client:</p>
+<p>Le choix le plus courant lorsqu’une organisation en exploite déjà un. Créez un
+realm (ou réutilisez le vôtre), puis un client :</p>
 <ul>
-<li><strong>Client type</strong> OpenID Connect. Register the web, desktop, Android and iOS
-  clients separately, using the client IDs in the linked provider tutorial.</li>
-<li><strong>Public client</strong> with PKCE - OpenCloud's clients are public clients and
-  cannot keep a secret. Set <em>Proof Key for Code Exchange</em> to <code>S256</code>.</li>
-<li><strong>Valid redirect URIs</strong> must include the desktop client's loopback
-  (<code>http://127.0.0.1:*</code> and <code>http://localhost:*</code>) and your web address.</li>
-<li><strong>Issuer</strong>: <code>https://id.example.com/realms/opencloud</code>.</li>
+<li><strong>Client type</strong> OpenID Connect. Enregistrez séparément les clients web,
+  bureau, Android et iOS, avec les ID client indiqués dans le tutoriel lié.</li>
+<li><strong>Client public</strong> avec PKCE : les clients d’OpenCloud sont des clients publics
+  et ne peuvent pas garder de secret. Réglez <em>Proof Key for Code Exchange</em> sur
+  <code>S256</code>.</li>
+<li>Les <strong>Valid redirect URIs</strong> doivent inclure l’adresse de bouclage du client de
+  bureau (<code>http://127.0.0.1:*</code> et <code>http://localhost:*</code>) ainsi que votre adresse
+  web.</li>
+<li><strong>Émetteur</strong> : <code>https://id.example.com/realms/opencloud</code>.</li>
 </ul>
-<p>For roles, add a <em>User Client Role</em> mapper putting the client roles into a
-<code>roles</code> claim, then set <code>PROXY_ROLE_ASSIGNMENT_OIDC_CLAIM=roles</code>. Give the
-realm a password policy and require OTP for the administrator role at minimum.</p>
+<p>Pour les rôles, ajoutez un mapper <em>User Client Role</em> qui place les rôles du
+client dans un claim <code>roles</code>, puis définissez
+<code>PROXY_ROLE_ASSIGNMENT_OIDC_CLAIM=roles</code>. Donnez au realm une politique de mot
+de passe et exigez au minimum l’OTP pour le rôle administrateur.</p>
 <h3 id="authentik">Authentik</h3>
 <blockquote>
-<p><a href="/documentation/identity-providers#tutorial-b-authentik">The step-by-step Authentik tutorial</a> is the whole job;
-what follows is the shape of it.</p>
+<p><a href="/documentation/identity-providers#tutorial-b-authentik">Le tutoriel Authentik étape par étape</a>
+couvre tout le travail ; voici les grandes lignes.</p>
 </blockquote>
-<p>This repository already ships an Authentik stack, though for a different
-purpose - it protects <a href="/documentation/authentik">the scan service's own MCP endpoint</a>, not
-OpenCloud. The provider configuration is the same shape:</p>
+<p>Ce dépôt fournit déjà une pile Authentik, mais dans un autre but : elle protège
+<a href="/documentation/authentik">le point de terminaison MCP du service d’analyse</a>, pas OpenCloud.
+La configuration du fournisseur a la même forme :</p>
 <ul>
-<li>Create an <strong>OAuth2/OpenID Provider</strong>, authorization flow <code>implicit consent</code>
-  for a trusted internal application.</li>
-<li><strong>Client type</strong> public, with PKCE required.</li>
-<li>Set the redirect URIs as above, using regex for the loopback range.</li>
-<li>The issuer is <code>https://id.example.com/application/o/&lt;application-slug&gt;/</code>.
-  The trailing slash matters.</li>
-<li>Bind the application to a group so that not every Authentik user gets an
-  OpenCloud account, then turn <code>PROXY_AUTOPROVISION_ACCOUNTS</code> on.</li>
+<li>Créez un <strong>OAuth2/OpenID Provider</strong>, avec le flux d’autorisation
+  <code>implicit consent</code> pour une application interne de confiance.</li>
+<li><strong>Client type</strong> public, avec PKCE obligatoire.</li>
+<li>Définissez les URI de redirection comme ci-dessus, avec une expression
+  régulière pour la plage de bouclage.</li>
+<li>L’émetteur est <code>https://id.example.com/application/o/&lt;application-slug&gt;/</code>.
+  La barre oblique finale compte.</li>
+<li>Associez l’application à un groupe pour que tous les utilisateurs Authentik
+  n’obtiennent pas un compte OpenCloud, puis activez
+  <code>PROXY_AUTOPROVISION_ACCOUNTS</code>.</li>
 </ul>
-<p><a href="https://github.com/sowoi/check-opencloud-security/blob/main/authentik/blueprints"><code>authentik/blueprints/</code></a> in this repository is a
-worked example of provisioning a provider from a file rather than by clicking,
-which is worth copying whatever you are configuring.</p>
+<p><a href="https://github.com/sowoi/check-opencloud-security/blob/main/authentik/blueprints"><code>authentik/blueprints/</code></a> dans ce dépôt est un
+exemple complet de provisionnement d’un fournisseur à partir d’un fichier plutôt
+qu’en cliquant, utile à reprendre quel que soit ce que vous configurez.</p>
 <h3 id="authelia">Authelia</h3>
 <blockquote>
-<p><a href="/documentation/identity-providers#tutorial-c-authelia">The step-by-step Authelia tutorial</a> is the whole job;
-what follows is the shape of it.</p>
+<p><a href="/documentation/identity-providers#tutorial-c-authelia">Le tutoriel Authelia étape par étape</a>
+couvre tout le travail ; voici les grandes lignes.</p>
 </blockquote>
-<p>The lightest of the three, and a good fit where the reverse proxy is already
-doing forward authentication. Authelia's OpenID Connect provider is configured
-in <code>configuration.yml</code> rather than a UI:</p>
+<p>Le plus léger des trois, et bien adapté lorsque le reverse proxy assure déjà
+l’authentification déléguée (forward auth). Le fournisseur OpenID Connect
+d’Authelia se configure dans <code>configuration.yml</code> plutôt que dans une interface :</p>
 <ul>
-<li>Register a client under <code>identity_providers.oidc.clients</code> with
-  <code>public: true</code>, <code>require_pkce: true</code> and <code>pkce_challenge_method: S256</code>.</li>
-<li>Scopes <code>openid</code>, <code>profile</code>, <code>email</code>, <code>groups</code>.</li>
-<li>The issuer is <code>https://auth.example.com</code>.</li>
-<li>Map groups to OpenCloud roles with <code>PROXY_ROLE_ASSIGNMENT_OIDC_CLAIM=groups</code>.</li>
+<li>Enregistrez un client sous <code>identity_providers.oidc.clients</code> avec
+  <code>public: true</code>, <code>require_pkce: true</code> et <code>pkce_challenge_method: S256</code>.</li>
+<li>Portées <code>openid</code>, <code>profile</code>, <code>email</code>, <code>groups</code>.</li>
+<li>L’émetteur est <code>https://auth.example.com</code>.</li>
+<li>Faites correspondre les groupes aux rôles OpenCloud avec
+  <code>PROXY_ROLE_ASSIGNMENT_OIDC_CLAIM=groups</code>.</li>
 </ul>
-<p>Authelia's access control rules are the natural place to require two factors
-for OpenCloud specifically:</p>
+<p>Les règles de contrôle d’accès d’Authelia sont l’endroit naturel pour exiger
+deux facteurs spécifiquement pour OpenCloud :</p>
 <pre><code class="language-yaml">access_control:
   rules:
     - domain: opencloud.example.com
       policy: two_factor
 </code></pre>
-<h3 id="basic-authentication-is-the-hole-in-all-of-this">Basic authentication is the hole in all of this</h3>
-<p>None of the above applies to a client that cannot speak OpenID Connect -
-CalDAV and CardDAV calendars, WebDAV mounts, backup jobs. Those authenticate
-with HTTP Basic, and <code>PROXY_ENABLE_BASIC_AUTH=true</code> re-opens a path that
-bypasses your provider and every second factor on it.</p>
-<p>Leave it <code>false</code> if nothing needs it. If something does, the answer is <strong>app
-tokens, not account passwords</strong>: what can be replayed is then revocable and is
-never the credential your identity provider protects. This scanner reports
-<code>basicAuthDisabled</code> as medium, or low when it can see an external provider,
-precisely because the trade is sometimes deliberate - see
-<a href="/documentation/authentication">Authentication</a>.</p>
-<h2 id="2-turn-the-audit-log-on-then-read-it">2. Turn the audit log on, then read it</h2>
-<h3 id="the-audit-service-does-not-run-by-default">The audit service does not run by default</h3>
-<p>OpenCloud has an
-<a href="https://docs.opencloud.eu/docs/dev/server/services/audit/">audit service</a>, and
-it is not in the default run set. Nothing is recording who shared what until
-you start it:</p>
+<h3 id="basic-authentication-is-the-hole-in-all-of-this">L’authentification Basic, la faille de l’ensemble</h3>
+<p>Rien de ce qui précède ne s’applique à un client qui ne sait pas utiliser
+OpenID Connect : agendas CalDAV et CardDAV, montages WebDAV, tâches de
+sauvegarde. Ces clients s’authentifient en HTTP Basic, et
+<code>PROXY_ENABLE_BASIC_AUTH=true</code> rouvre un chemin qui contourne votre fournisseur
+et tous ses seconds facteurs.</p>
+<p>Laissez-la à <code>false</code> si rien n’en a besoin. Si quelque chose en a besoin, la
+solution est <strong>des jetons d’application, pas les mots de passe des comptes</strong> :
+ce qui peut être rejoué est alors révocable et n’est jamais l’identifiant que
+protège votre fournisseur d’identité. Ce scanner signale <code>basicAuthDisabled</code>
+en medium, ou en low lorsqu’il voit un fournisseur externe, précisément parce
+que ce compromis est parfois délibéré - voir
+<a href="/documentation/authentication">Authentification</a>.</p>
+<h2 id="2-turn-the-audit-log-on-then-read-it">2. Activer le journal d’audit, puis le lire</h2>
+<h3 id="the-audit-service-does-not-run-by-default">Le service d’audit ne s’exécute pas par défaut</h3>
+<p>OpenCloud dispose d’un
+<a href="https://docs.opencloud.eu/docs/dev/server/services/audit/">service d’audit</a>,
+mais il ne fait pas partie des services démarrés par défaut. Rien n’enregistre
+qui a partagé quoi tant que vous ne l’avez pas démarré :</p>
 <pre><code class="language-bash"># Add it to the services that run, alongside the default set.
 OC_ADD_RUN_SERVICES=audit
 </code></pre>
-<p>It records three things worth having:</p>
+<p>Il enregistre trois catégories utiles :</p>
 <ul>
-<li><strong>File system operations</strong> - create, delete, move, including the trash bin
-  and versioning.</li>
-<li><strong>User management</strong> - accounts created and deleted.</li>
-<li><strong>Sharing</strong> - user and group shares, public links, permission changes, and
-  calls to the sharing API from clients.</li>
+<li><strong>Opérations sur le système de fichiers</strong> : création, suppression,
+  déplacement, y compris la corbeille et les versions.</li>
+<li><strong>Gestion des utilisateurs</strong> : comptes créés et supprimés.</li>
+<li><strong>Partage</strong> : partages avec des utilisateurs et des groupes, liens publics,
+  modifications de droits et appels à l’API de partage depuis les clients.</li>
 </ul>
-<p>That third category is the one that matters most here. This scanner can tell
-you that public links may be created without a password
-(<a href="/documentation/sharing"><code>publicLinkPasswordEnforced</code></a>); only the audit log can tell you
-that somebody created 4,000 of them last Tuesday.</p>
-<p>Configure it with the variables from
-<a href="https://docs.opencloud.eu/docs/dev/server/services/audit/environment-variables">the audit service reference</a>:</p>
+<p>La troisième catégorie est la plus importante ici. Ce scanner peut vous dire que
+des liens publics peuvent être créés sans mot de passe
+(<a href="/documentation/sharing"><code>publicLinkPasswordEnforced</code></a>) ; seul le journal d’audit peut vous
+dire que quelqu’un en a créé 4 000 mardi dernier.</p>
+<p>Configurez-le avec les variables de
+<a href="https://docs.opencloud.eu/docs/dev/server/services/audit/environment-variables">la référence du service d’audit</a> :</p>
 <table>
 <thead>
 <tr>
 <th>Variable</th>
-<th>Default</th>
-<th>What to set it to</th>
+<th>Valeur par défaut</th>
+<th>Valeur à définir</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>AUDIT_LOG_TO_CONSOLE</code></td>
 <td><code>true</code></td>
-<td>Leave on when a container log driver ships stdout somewhere</td>
+<td>À laisser activé lorsqu’un pilote de journalisation de conteneur envoie stdout ailleurs</td>
 </tr>
 <tr>
 <td><code>AUDIT_LOG_TO_FILE</code></td>
 <td><code>false</code></td>
-<td><code>true</code> if you would rather write a file</td>
+<td><code>true</code> si vous préférez écrire un fichier</td>
 </tr>
 <tr>
 <td><code>AUDIT_FILEPATH</code></td>
-<td><em>(empty)</em></td>
-<td>Required when logging to a file</td>
+<td><em>(vide)</em></td>
+<td>Obligatoire pour la journalisation dans un fichier</td>
 </tr>
 <tr>
 <td><code>AUDIT_FORMAT</code></td>
 <td><code>json</code></td>
-<td>Keep <code>json</code>; the minimal format is for reading by eye, not by a collector</td>
+<td>Conservez <code>json</code> ; le format minimal est fait pour une lecture humaine, pas pour un collecteur</td>
 </tr>
 <tr>
 <td><code>AUDIT_LOG_LEVEL</code></td>
 <td><code>error</code></td>
-<td>Raise it, or you will record almost nothing</td>
+<td>Augmentez-le, sinon vous n’enregistrerez presque rien</td>
 </tr>
 <tr>
 <td><code>OC_EVENTS_ENDPOINT</code></td>
 <td><code>127.0.0.1:9233</code></td>
-<td>The event broker the service reads from</td>
+<td>Le broker d’événements que lit le service</td>
 </tr>
 <tr>
 <td><code>AUDIT_EVENTS_AUTH_USERNAME</code> / <code>_PASSWORD</code></td>
-<td><em>(empty)</em></td>
-<td>Set both once the broker is not on loopback</td>
+<td><em>(vide)</em></td>
+<td>Définissez les deux dès que le broker n’est plus sur l’interface de bouclage</td>
 </tr>
 <tr>
 <td><code>AUDIT_EVENTS_ENABLE_TLS</code></td>
 <td><code>false</code></td>
-<td><code>true</code> when the broker is reached over a network</td>
+<td><code>true</code> lorsque le broker est joint par le réseau</td>
 </tr>
 </tbody>
 </table>
-<p><code>AUDIT_LOG_LEVEL</code> defaulting to <code>error</code> is the detail that catches people out:
-starting the service and leaving the level alone produces a log that is
-technically running and practically empty.</p>
-<h3 id="getting-the-log-off-the-box">Getting the log off the box</h3>
-<p>An audit log stored only on the machine being audited is evidence an attacker
-can edit. Ship it:</p>
+<p>La valeur par défaut <code>error</code> d’<code>AUDIT_LOG_LEVEL</code> est le détail qui piège : démarrer
+le service sans toucher au niveau produit un journal techniquement actif et
+pratiquement vide.</p>
+<h3 id="getting-the-log-off-the-box">Sortir le journal de la machine</h3>
+<p>Un journal d’audit conservé uniquement sur la machine auditée est une preuve
+qu’un attaquant peut modifier. Expédiez-le ailleurs :</p>
 <pre><code class="language-yaml"># docker-compose fragment: hand stdout to the host's journal, which a
 # collector then forwards off the machine.
 services:
@@ -363,107 +376,110 @@ services:
       options:
         tag: opencloud
 </code></pre>
-<p>Whatever collector you use - Loki, Elasticsearch, a syslog server, a managed
-service - the properties to insist on are the same: <strong>append-only from the
-sender's point of view, on a different trust domain from the instance, with
-its own retention.</strong> A collector that OpenCloud's own credentials can delete
-from is not much better than a local file.</p>
-<h3 id="what-to-actually-alert-on">What to actually alert on</h3>
-<p>Alerting on everything means alerting on nothing. A short list that has earned
-its place:</p>
+<p>Quel que soit le collecteur - Loki, Elasticsearch, un serveur syslog, un service
+géré -, les propriétés à exiger sont les mêmes : <strong>ajout seul du point de vue de
+l’émetteur, dans un domaine de confiance différent de l’instance, avec sa
+propre durée de conservation.</strong> Un collecteur dans lequel les identifiants
+d’OpenCloud permettent de supprimer des données ne vaut guère mieux qu’un
+fichier local.</p>
+<h3 id="what-to-actually-alert-on">Sur quoi alerter réellement</h3>
+<p>Alerter sur tout revient à n’alerter sur rien. Une courte liste qui a fait ses
+preuves :</p>
 <ul>
-<li>A <strong>public link created with no password or no expiry</strong>, especially on a
-  space that is not usually shared.</li>
-<li><strong>Share permissions widened</strong> on anything, particularly to a group.</li>
-<li><strong>An account created or given an administrative role</strong> outside your normal
-  provisioning process.</li>
-<li><strong>Bulk download or deletion</strong> - a volume of file operations from one account
-  well above its own baseline.</li>
-<li><strong>Sign-in anomalies</strong>, which come from your identity provider rather than
-  from OpenCloud: impossible travel, a spike in failures, a first sign-in from
-  a new country.</li>
+<li>Un <strong>lien public créé sans mot de passe ou sans expiration</strong>, en particulier
+  sur un espace qui n’est habituellement pas partagé.</li>
+<li><strong>Des droits de partage élargis</strong> sur quoi que ce soit, surtout au profit d’un
+  groupe.</li>
+<li><strong>Un compte créé ou doté d’un rôle d’administration</strong> en dehors de votre
+  processus de provisionnement habituel.</li>
+<li><strong>Un téléchargement ou une suppression en masse</strong> : un volume d’opérations sur
+  les fichiers depuis un compte, nettement supérieur à sa propre référence.</li>
+<li><strong>Des anomalies de connexion</strong>, qui viennent de votre fournisseur d’identité
+  et non d’OpenCloud : déplacement impossible, pic d’échecs, première connexion
+  depuis un nouveau pays.</li>
 </ul>
-<h3 id="retention-and-the-law">Retention, and the law</h3>
-<p>An audit log of a file service is a record of who accessed which documents,
-which in most jurisdictions is personal data with a retention limit rather
-than something to keep forever. Decide the period deliberately, write it down,
-and make the collector enforce it. If you are subject to GDPR, this log is in
-scope for your record of processing activities.</p>
-<h2 id="3-firewall-it-properly">3. Firewall it properly</h2>
-<h3 id="the-ports-and-which-of-them-belong-on-the-internet">The ports, and which of them belong on the internet</h3>
+<h3 id="retention-and-the-law">Conservation et obligations légales</h3>
+<p>Le journal d’audit d’un service de fichiers indique qui a consulté quels
+documents, ce qui, dans la plupart des juridictions, constitue des données
+personnelles soumises à une durée de conservation limitée plutôt qu’à une
+conservation illimitée. Fixez cette durée délibérément, consignez-la et faites-la
+appliquer par le collecteur. Si vous êtes soumis au RGPD, ce journal entre dans
+votre registre des activités de traitement.</p>
+<h2 id="3-firewall-it-properly">3. Configurer correctement le pare-feu</h2>
+<h3 id="the-ports-and-which-of-them-belong-on-the-internet">Les ports, et ceux qui ont leur place sur Internet</h3>
 <table>
 <thead>
 <tr>
 <th>Port</th>
-<th>What it is</th>
-<th>Exposed to the internet?</th>
+<th>Ce que c’est</th>
+<th>Exposé sur Internet ?</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>443</td>
-<td>The reverse proxy</td>
-<td><strong>Yes</strong> - this one, and only this one</td>
+<td>Le reverse proxy</td>
+<td><strong>Oui</strong> - celui-ci, et lui seul</td>
 </tr>
 <tr>
 <td>80</td>
-<td>Plain HTTP</td>
-<td>Only to redirect to 443, or not at all</td>
+<td>HTTP simple</td>
+<td>Uniquement pour rediriger vers 443, ou pas du tout</td>
 </tr>
 <tr>
 <td>9200</td>
-<td>OpenCloud's own proxy service</td>
-<td><strong>No.</strong> Publishing it lets clients bypass your TLS and header policy entirely</td>
+<td>Le service proxy propre à OpenCloud</td>
+<td><strong>Non.</strong> Le publier permet aux clients de contourner entièrement votre politique TLS et d’en-têtes</td>
 </tr>
 <tr>
 <td>9233</td>
-<td>The events broker (NATS)</td>
-<td><strong>No</strong></td>
+<td>Le broker d’événements (NATS)</td>
+<td><strong>Non</strong></td>
 </tr>
 <tr>
 <td>9205, 9141, 9124, 9134, 9239</td>
-<td>Per-service debug listeners - metrics, a config dump, optionally pprof</td>
-<td><strong>No.</strong> They bind to <code>127.0.0.1</code> by default; reaching one from outside means a container port mapping published it</td>
+<td>Écouteurs de débogage par service : métriques, affichage de la configuration, éventuellement pprof</td>
+<td><strong>Non.</strong> Ils sont liés à <code>127.0.0.1</code> par défaut ; en atteindre un depuis l’extérieur signifie qu’un mappage de port de conteneur l’a publié</td>
 </tr>
 <tr>
 <td>22</td>
 <td>SSH</td>
-<td>Management network or VPN only, never the open internet</td>
+<td>Réseau d’administration ou VPN uniquement, jamais l’Internet ouvert</td>
 </tr>
 </tbody>
 </table>
-<p>This scanner checks the bottom three rows from the outside -
-<code>backendPortClosed</code>, <code>debugPort:*</code> and <code>debugEndpoint:*</code>, described in
-<a href="/documentation/exposure">Exposed paths and debug endpoints</a>. It is checking your firewall
-for you, from the one vantage point that counts.</p>
-<h3 id="a-host-firewall-that-works-with-docker">A host firewall that works with Docker</h3>
-<p>The usual mistake is worth stating plainly: <strong>Docker writes its own iptables
-rules and they are evaluated before UFW's.</strong> A container started with
-<code>-p 9200:9200</code> is reachable from the internet no matter what <code>ufw status</code>
-says. Two ways out, and you want one of them:</p>
-<p><strong>Publish to loopback only.</strong> The simplest fix, and it needs no firewall at
-all:</p>
+<p>Ce scanner vérifie depuis l’extérieur les trois dernières lignes -
+<code>backendPortClosed</code>, <code>debugPort:*</code> et <code>debugEndpoint:*</code>, décrits dans
+<a href="/documentation/exposure">Chemins exposés et points de terminaison de débogage</a>. Il vérifie
+votre pare-feu à votre place, depuis le seul point de vue qui compte.</p>
+<h3 id="a-host-firewall-that-works-with-docker">Un pare-feu d’hôte compatible avec Docker</h3>
+<p>L’erreur courante mérite d’être dite clairement : <strong>Docker écrit ses propres
+règles iptables, et elles sont évaluées avant celles d’UFW.</strong> Un conteneur
+démarré avec <code>-p 9200:9200</code> est accessible depuis Internet, quoi qu’indique
+<code>ufw status</code>. Deux solutions, et il vous en faut une :</p>
+<p><strong>Ne publier que sur l’interface de bouclage.</strong> La solution la plus simple, qui
+ne nécessite aucun pare-feu :</p>
 <pre><code class="language-yaml">services:
   opencloud:
     ports:
       # Not &quot;9200:9200&quot; - that binds 0.0.0.0.
       - &quot;127.0.0.1:9200:9200&quot;
 </code></pre>
-<p>Better still, publish nothing and let the reverse proxy reach OpenCloud over a
-Docker network by service name. A port that is not published cannot be
-misconfigured.</p>
-<p><strong>Or make Docker respect the host firewall.</strong> In <code>/etc/docker/daemon.json</code>:</p>
+<p>Mieux encore, ne publiez rien et laissez le reverse proxy joindre OpenCloud par
+son nom de service sur un réseau Docker. Un port qui n’est pas publié ne peut
+pas être mal configuré.</p>
+<p><strong>Ou faire respecter le pare-feu de l’hôte par Docker.</strong> Dans
+<code>/etc/docker/daemon.json</code> :</p>
 <pre><code class="language-json">{
   &quot;iptables&quot;: true,
   &quot;ip-forward&quot;: true
 }
 </code></pre>
-<p>and then filter in <code>DOCKER-USER</code>, which is the one chain Docker leaves for
-you:</p>
+<p>puis filtrez dans <code>DOCKER-USER</code>, la seule chaîne que Docker vous laisse :</p>
 <pre><code class="language-bash"># Everything reaching a container from outside must come via the proxy.
 iptables -I DOCKER-USER -i eth0 -p tcp --dport 9200 -j DROP
 </code></pre>
-<p>The <a href="https://nftables.org/">nftables</a> equivalent, if that is your generation:</p>
+<p>L’équivalent <a href="https://nftables.org/">nftables</a>, si c’est votre génération :</p>
 <pre><code>table inet filter {
   chain input {
     type filter hook input priority 0; policy drop;
@@ -474,96 +490,105 @@ iptables -I DOCKER-USER -i eth0 -p tcp --dport 9200 -j DROP
   }
 }
 </code></pre>
-<p>Whichever you use, verify from somewhere else rather than believing the
-config. <code>nmap -Pn -p 9200,9205,9233 opencloud.example.com</code> from off the host,
-or simply run this scanner, which probes exactly those ports:</p>
+<p>Quelle que soit la méthode, vérifiez depuis une autre machine plutôt que de vous
+fier à la configuration : <code>nmap -Pn -p 9200,9205,9233 opencloud.example.com</code>
+depuis l’extérieur de l’hôte, ou simplement ce scanner, qui sonde exactement ces
+ports :</p>
 <pre><code class="language-bash">check-opencloud-security --host opencloud.example.com --check-hardening --debug
 </code></pre>
-<h3 id="egress-matters-too">Egress matters too</h3>
-<p>Inbound rules are the ones people write. Outbound rules are the ones that
-limit what a compromise can do - exfiltration, a reverse shell, joining a
-botnet. An OpenCloud host needs remarkably little: DNS, NTP, the ACME
-directory if it issues its own certificates, your package mirror, and
-whatever storage or mail backend you have deliberately configured. Default to
-denying the rest.</p>
-<h2 id="4-underneath-it-all-the-host-and-the-data">4. Underneath it all: the host and the data</h2>
-<p>Briefly, because none of it is OpenCloud-specific and all of it is load-bearing:</p>
+<h3 id="egress-matters-too">Le trafic sortant compte aussi</h3>
+<p>Les règles entrantes sont celles que l’on écrit. Les règles sortantes sont
+celles qui limitent ce qu’une compromission permet de faire : exfiltration,
+shell inversé, enrôlement dans un botnet. Un hôte OpenCloud a besoin de
+remarquablement peu : DNS, NTP, l’annuaire ACME s’il émet ses propres
+certificats, votre miroir de paquets, et les backends de stockage ou de
+messagerie que vous avez délibérément configurés. Refusez le reste par défaut.</p>
+<h2 id="4-underneath-it-all-the-host-and-the-data">4. À la base de tout : l’hôte et les données</h2>
+<p>Brièvement, car rien de ceci n’est propre à OpenCloud et tout est essentiel :</p>
 <ul>
-<li><strong>Unattended security updates</strong> on the host, and a real update process for
-  the OpenCloud release itself. This scanner grades the release you are on
-  (<a href="/documentation/lifecycle">lifecycle</a>); it cannot install anything.</li>
-<li><strong>Full-disk encryption</strong> on whatever the storage lives on, so that a
-  decommissioned or stolen disk is not a data breach.</li>
-<li><strong>Backups you have restored from.</strong> A backup nobody has tested is a
-  hypothesis. Keep one copy offline or on write-once storage - ransomware
-  looks for the backup first.</li>
-<li><strong>Least privilege for the service account.</strong> The systemd units in
-  <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/systemd"><code>contrib/systemd/</code></a> show the pattern:
-  <code>DynamicUser=yes</code>, <code>ProtectSystem=strict</code>, <code>NoNewPrivileges=yes</code>, an empty
-  <code>CapabilityBoundingSet=</code>. Run <code>systemd-analyze security &lt;unit&gt;</code> on yours.</li>
-<li><strong>Separate the reverse proxy from OpenCloud</strong>, on different hosts or at
-  least different containers, so that a proxy compromise is not immediately a
-  storage compromise.</li>
+<li><strong>Des mises à jour de sécurité automatiques</strong> sur l’hôte, et un vrai
+  processus de mise à jour pour la version d’OpenCloud elle-même. Ce scanner
+  note la version que vous utilisez (<a href="/documentation/lifecycle">cycle de vie</a>) ; il ne peut
+  rien installer.</li>
+<li><strong>Un chiffrement complet du disque</strong> sur le support du stockage, pour qu’un
+  disque mis au rebut ou volé ne soit pas une fuite de données.</li>
+<li><strong>Des sauvegardes que vous avez déjà restaurées.</strong> Une sauvegarde que personne
+  n’a testée est une hypothèse. Conservez une copie hors ligne ou sur un
+  stockage à écriture unique : un rançongiciel cherche d’abord la sauvegarde.</li>
+<li><strong>Le moindre privilège pour le compte de service.</strong> Les unités systemd de
+  <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/systemd"><code>contrib/systemd/</code></a> montrent le principe :
+  <code>DynamicUser=yes</code>, <code>ProtectSystem=strict</code>, <code>NoNewPrivileges=yes</code>, un
+  <code>CapabilityBoundingSet=</code> vide. Lancez <code>systemd-analyze security &lt;unit&gt;</code> sur
+  les vôtres.</li>
+<li><strong>Séparez le reverse proxy d’OpenCloud</strong>, sur des hôtes différents ou au moins
+  dans des conteneurs différents, pour qu’une compromission du proxy ne soit pas
+  immédiatement une compromission du stockage.</li>
 </ul>
-<h2 id="5-what-the-people-using-it-should-know">5. What the people using it should know</h2>
-<p>Most real incidents at a file service are not exploits. Somebody shares the
-wrong folder with a public link, or reuses a password that was in a breach
-dump. That is a documentation and defaults problem, not a patching problem.</p>
-<h3 id="for-everybody-with-an-account">For everybody with an account</h3>
+<h2 id="5-what-the-people-using-it-should-know">5. Ce que les utilisateurs doivent savoir</h2>
+<p>La plupart des incidents réels sur un service de fichiers ne sont pas des
+exploits. Quelqu’un partage le mauvais dossier par un lien public, ou réutilise
+un mot de passe qui figurait dans une fuite de données. C’est un problème de
+documentation et de valeurs par défaut, pas de correctifs.</p>
+<h3 id="for-everybody-with-an-account">Pour toute personne disposant d’un compte</h3>
 <ul>
-<li><strong>A public link is a password.</strong> Anyone who has the URL has the data -
-  forwarded, pasted into a ticket, or sitting in a mail archive. Put a
-  password on it and set an expiry.</li>
-<li><strong>Check what you are sharing before you share it.</strong> Sharing a parent folder
-  shares everything below it, including what gets added later.</li>
-<li><strong>Enrol a second factor</strong>, and prefer a passkey or a hardware key over TOTP.</li>
-<li><strong>App passwords are for apps.</strong> Your calendar client gets its own
-  revocable token; it never gets your account password.</li>
-<li><strong>Removing a share is not the same as un-sending a file.</strong> Assume anything
-  shared has been downloaded.</li>
-<li><strong>Report a mistaken share immediately.</strong> The window in which an
-  administrator can revoke a link and read the audit log is short, and nobody
-  is in trouble for reporting it fast.</li>
+<li><strong>Un lien public est un mot de passe.</strong> Quiconque possède l’URL a accès aux
+  données - transférée, collée dans un ticket ou conservée dans une archive de
+  messagerie. Protégez-le par un mot de passe et définissez une expiration.</li>
+<li><strong>Vérifiez ce que vous partagez avant de le partager.</strong> Partager un dossier
+  parent partage tout ce qu’il contient, y compris ce qui y sera ajouté plus
+  tard.</li>
+<li><strong>Enregistrez un second facteur</strong>, de préférence une passkey ou une clé
+  matérielle plutôt que TOTP.</li>
+<li><strong>Les mots de passe d’application sont destinés aux applications.</strong> Votre
+  client d’agenda reçoit son propre jeton révocable ; il ne reçoit jamais le mot
+  de passe de votre compte.</li>
+<li><strong>Supprimer un partage n’annule pas l’envoi d’un fichier.</strong> Partez du principe
+  que tout ce qui a été partagé a été téléchargé.</li>
+<li><strong>Signalez immédiatement un partage erroné.</strong> Le délai pendant lequel un
+  administrateur peut révoquer un lien et consulter le journal d’audit est
+  court, et personne n’est sanctionné pour l’avoir signalé rapidement.</li>
 </ul>
-<h3 id="for-administrators">For administrators</h3>
+<h3 id="for-administrators">Pour les administrateurs</h3>
 <ul>
-<li><strong>Review shares periodically.</strong> Public links accumulate; almost none of them
-  are ever deliberately deleted.</li>
-<li><strong>Have an offboarding runbook</strong> that covers the identity provider, the app
-  tokens, and the shares that person created.</li>
-<li><strong>Know your instance's normal.</strong> The alert list above only works against a
-  baseline.</li>
-<li><strong>Write down who to call.</strong> An incident at 03:00 is not the time to discover
-  nobody knows who owns the storage.</li>
+<li><strong>Réexaminez régulièrement les partages.</strong> Les liens publics s’accumulent ;
+  presque aucun n’est jamais supprimé délibérément.</li>
+<li><strong>Disposez d’une procédure de départ</strong> qui couvre le fournisseur d’identité,
+  les jetons d’application et les partages créés par la personne.</li>
+<li><strong>Connaissez le fonctionnement normal de votre instance.</strong> La liste d’alertes
+  ci-dessus ne fonctionne que par rapport à une référence.</li>
+<li><strong>Notez qui appeler.</strong> Un incident à 3 h du matin n’est pas le moment de
+  découvrir que personne ne sait qui est responsable du stockage.</li>
 </ul>
-<h2 id="6-where-this-scanner-fits-continuous-monitoring">6. Where this scanner fits: continuous monitoring</h2>
-<h3 id="what-a-scheduled-scan-catches-that-a-one-off-audit-does-not">What a scheduled scan catches that a one-off audit does not</h3>
-<p>A security review is a photograph. Infrastructure is a film. Everything on
-this page can be true on Monday and false on Thursday, and the ways that
-happens are mundane rather than dramatic:</p>
+<h2 id="6-where-this-scanner-fits-continuous-monitoring">6. La place de ce scanner : la supervision continue</h2>
+<h3 id="what-a-scheduled-scan-catches-that-a-one-off-audit-does-not">Ce qu’une analyse planifiée détecte et qu’un audit ponctuel manque</h3>
+<p>Un audit de sécurité est une photographie. Une infrastructure est un film. Tout
+ce qui figure sur cette page peut être vrai le lundi et faux le jeudi, et les
+causes sont banales plutôt que spectaculaires :</p>
 <ul>
-<li>A <strong>certificate expires</strong>, or renews to one that does not cover every name.</li>
-<li>A <strong>reverse proxy is reconfigured</strong> for an unrelated service and stops
-  sending <code>Strict-Transport-Security</code>, or starts answering <code>TRACE</code>.</li>
-<li>Somebody <strong>publishes a debug port</strong> while chasing a performance problem and
-  does not unpublish it.</li>
-<li>A <strong>release goes end of life</strong>, which is a change in the world rather than a
-  change in your deployment - the instance that was fully supported last month
-  now receives no security fixes, and nothing on your host changed to tell
-  you.</li>
-<li>An <strong>advisory is published</strong> for the version you are running.</li>
-<li>A <strong>new deployment</strong> is stood up from a copied compose file that still
-  publishes 9200.</li>
+<li>Un <strong>certificat expire</strong>, ou est renouvelé par un certificat qui ne couvre pas
+  tous les noms.</li>
+<li>Un <strong>reverse proxy est reconfiguré</strong> pour un service sans rapport et cesse
+  d’envoyer <code>Strict-Transport-Security</code>, ou commence à répondre à <code>TRACE</code>.</li>
+<li>Quelqu’un <strong>publie un port de débogage</strong> en cherchant un problème de
+  performance et oublie de le retirer.</li>
+<li>Une <strong>version arrive en fin de vie</strong>, ce qui est un changement dans le monde
+  plutôt que dans votre déploiement : l’instance entièrement prise en charge le
+  mois dernier ne reçoit plus de correctifs de sécurité, et rien sur votre hôte
+  n’a changé pour vous en avertir.</li>
+<li>Un <strong>avis de sécurité est publié</strong> pour la version que vous utilisez.</li>
+<li>Un <strong>nouveau déploiement</strong> est mis en place à partir d’un fichier compose
+  copié qui publie encore le port 9200.</li>
 </ul>
-<p>Running this plugin on a schedule turns each of those into an alert on the day
-it happens, from outside the instance, which is the same vantage point an
-attacker has. That is the argument for continuous monitoring in one sentence:
-<strong>the gap between a deployment breaking and somebody noticing is where
-incidents live, and the only thing that shortens it is something that looks
-every few minutes.</strong></p>
-<h3 id="a-monitoring-setup-that-is-worth-having">A monitoring setup that is worth having</h3>
-<p>Start here, then read <a href="/documentation/scheduling">Scheduling</a> or
-<a href="/documentation/installation#icinga2--nagios">Icinga2 / Nagios</a> for your platform:</p>
+<p>Exécuter ce plugin de façon planifiée transforme chacun de ces événements en
+alerte le jour même, depuis l’extérieur de l’instance, c’est-à-dire du même
+point de vue qu’un attaquant. C’est l’argument en faveur de la supervision
+continue, en une phrase : <strong>les incidents se logent dans l’intervalle entre la
+panne d’un déploiement et le moment où quelqu’un la remarque, et seule une
+vérification régulière, à quelques minutes d’intervalle, raccourcit cet
+intervalle.</strong></p>
+<h3 id="a-monitoring-setup-that-is-worth-having">Une supervision qui en vaut la peine</h3>
+<p>Commencez ici, puis lisez <a href="/documentation/scheduling">Planification</a> ou
+<a href="/documentation/installation#icinga2-nagios">Icinga2 / Nagios</a> selon votre plateforme :</p>
 <pre><code class="language-bash">check-opencloud-security \
   --host opencloud.example.com \
   --check-hardening \
@@ -572,116 +597,118 @@ every few minutes.</strong></p>
   --webhook-url https://hooks.example.com/opencloud \
   --webhook-on warning
 </code></pre>
-<p>Four choices in there, each earning its place:</p>
+<p>Quatre choix, chacun justifié :</p>
 <ul>
-<li><strong><code>--check-hardening</code></strong> includes the headers and hardening measures, not
-  only the rating.</li>
-<li><strong><code>--baseline</code> with <code>--warn-on-new</code></strong> alerts on what <em>changed</em> rather than
-  on the accepted state of the world. An instance with one finding you have
-  consciously decided to live with stays quiet until a second one appears -
-  see <a href="/documentation#reporting-only-what-changed">Reporting only what changed</a>.</li>
-<li><strong>A webhook</strong> so the alert reaches a human rather than a dashboard nobody
-  opens.</li>
-<li><strong>Findings you accept are waived explicitly</strong>, with
-  <code>--ignore-hardening</code>, which keeps them in the result document and in the
-  report while taking them out of the alert. A waiver is a decision with a
-  name on it, not a silenced check - see
-  <a href="/documentation/hardening#accepting-a-finding-you-are-not-going-to-fix">Accepting a finding you are not going to fix</a>.</li>
+<li><strong><code>--check-hardening</code></strong> inclut les en-têtes et les mesures de durcissement, et
+  pas seulement la note.</li>
+<li><strong><code>--baseline</code> avec <code>--warn-on-new</code></strong> alerte sur ce qui a <em>changé</em> plutôt que
+  sur l’état accepté. Une instance avec un constat que vous avez consciemment
+  décidé d’accepter reste silencieuse jusqu’à l’apparition d’un second - voir
+  <a href="/documentation/reference#reporting-only-what-changed">Ne signaler que ce qui a changé</a>.</li>
+<li><strong>Un webhook</strong>, pour que l’alerte atteigne une personne plutôt qu’un tableau
+  de bord que personne n’ouvre.</li>
+<li><strong>Les constats que vous acceptez sont exemptés explicitement</strong>, avec
+  <code>--ignore-hardening</code>, ce qui les conserve dans le document de résultat et dans
+  le rapport tout en les retirant de l’alerte. Une exemption est une décision
+  qui porte un nom, pas un contrôle réduit au silence - voir
+  <a href="/documentation/hardening#accepting-a-finding-you-are-not-going-to-fix">Accepter un constat que vous ne corrigerez pas</a>.</li>
 </ul>
-<p>For a fleet, <a href="/documentation/many-instances">Checking a fleet of instances</a> covers one
-configuration file per instance and keeping the waivers honest across all of
-them. For graphs and long-run trends, <a href="/documentation/prometheus">Prometheus and
-Grafana</a> - the rating as a time series is a surprisingly good
-summary to put in front of people who do not read alerts.</p>
-<h3 id="what-it-deliberately-will-not-tell-you">What it deliberately will not tell you</h3>
-<p>Being clear about this is what makes the rest of the report trustworthy:</p>
+<p>Pour un parc, <a href="/documentation/many-instances">Analyser plusieurs instances</a> décrit un
+fichier de configuration par instance et la façon de garder les exemptions sous
+contrôle sur l’ensemble. Pour les graphiques et les tendances à long terme,
+consultez <a href="/documentation/prometheus">Prometheus et Grafana</a> : la note sous forme de série
+temporelle est un résumé étonnamment efficace à présenter aux personnes qui ne
+lisent pas les alertes.</p>
+<h3 id="what-it-deliberately-will-not-tell-you">Ce qu’il ne vous dira volontairement pas</h3>
+<p>Être clair sur ce point est ce qui rend le reste du rapport digne de confiance :</p>
 <ul>
-<li><strong>Nothing behind a login.</strong> The scan never authenticates, so it sees what an
-  anonymous visitor sees and nothing more. Your permission model, your space
-  layout and the contents of your shares are all invisible to it.</li>
-<li><strong>Nothing about your identity provider's configuration.</strong> It detects that
-  one is there and names the vendor; whether you require a second factor is
-  between you and the provider.</li>
-<li><strong>Nothing about your audit log.</strong> Whether the service is running, whether
-  anyone reads it, and whether it leaves the host are all outside what an
-  HTTP scan can observe.</li>
-<li><strong>Nothing about your firewall's rules</strong>, only about their effect on the
-  handful of ports it probes.</li>
-<li><strong>No exploitation.</strong> It never tries a payload, never guesses a password, and
-  the one credential probe it does make uses only the demo passwords
-  OpenCloud publishes in its own documentation.</li>
+<li><strong>Rien de ce qui se trouve derrière une connexion.</strong> L’analyse ne
+  s’authentifie jamais : elle voit ce que voit un visiteur anonyme, et rien de
+  plus. Votre modèle de droits, l’organisation de vos espaces et le contenu de
+  vos partages lui sont invisibles.</li>
+<li><strong>Rien sur la configuration de votre fournisseur d’identité.</strong> Elle détecte sa
+  présence et nomme l’éditeur ; l’exigence d’un second facteur se règle entre
+  vous et le fournisseur.</li>
+<li><strong>Rien sur votre journal d’audit.</strong> Que le service tourne, que quelqu’un le
+  lise et qu’il quitte l’hôte échappe à ce qu’une analyse HTTP peut observer.</li>
+<li><strong>Rien sur les règles de votre pare-feu</strong>, seulement sur leur effet sur la
+  poignée de ports qu’elle sonde.</li>
+<li><strong>Aucune exploitation.</strong> Elle n’essaie jamais de charge utile, ne devine
+  jamais de mot de passe, et la seule sonde d’identifiants qu’elle effectue
+  n’utilise que les mots de passe de démonstration publiés par OpenCloud dans sa
+  propre documentation.</li>
 </ul>
-<p><a href="/documentation/scanner-checks#what-the-scan-deliberately-does-not-answer">What the scan deliberately does not
-answer</a> is the full
-version of this list.</p>
-<h2 id="checklist">Checklist</h2>
-<p>Print it, argue with it, cross off what does not apply:</p>
+<p><a href="/documentation/scanner-checks#what-the-scan-deliberately-does-not-answer">Ce à quoi l’analyse ne répond volontairement
+pas</a> donne la
+version complète de cette liste.</p>
+<h2 id="checklist">Liste de contrôle</h2>
+<p>Imprimez-la, discutez-la, rayez ce qui ne s’applique pas :</p>
 <ul>
-<li>[ ] Only 443 (and 80, redirecting) reachable from the internet</li>
-<li>[ ] 9200 and every <code>92xx</code> debug port unreachable from outside - verified
-      from another host, not from the config</li>
-<li>[ ] Outbound traffic restricted to what the instance actually needs</li>
-<li>[ ] An external identity provider handles sign-in</li>
-<li>[ ] Second factor required, at minimum for administrators</li>
-<li>[ ] <code>PROXY_ENABLE_BASIC_AUTH=false</code>, or app tokens issued for the clients
-      that need it</li>
-<li>[ ] <code>GRAPH_ASSIGN_DEFAULT_USER_ROLE=false</code> if roles come from a claim</li>
-<li>[ ] Autoprovisioning scoped by a group on the provider side</li>
-<li>[ ] <code>OC_ADD_RUN_SERVICES=audit</code> and <code>AUDIT_LOG_LEVEL</code> raised above <code>error</code></li>
-<li>[ ] Audit log shipped off the host, with a deliberate retention period</li>
-<li>[ ] Alerts defined for public links, share widening and role changes</li>
-<li>[ ] TLS from a public CA, renewing automatically, with a CAA record</li>
-<li>[ ] Security headers set at the proxy - see <a href="/documentation/reverse-proxy">reverse proxies</a></li>
-<li>[ ] <code>OC_CORS_ALLOW_ORIGINS</code> narrowed from its <code>*</code> default</li>
-<li>[ ] Public links require a password and an expiry</li>
-<li>[ ] Backups exist, leave the host, and have been restored from</li>
-<li>[ ] Host patched automatically; OpenCloud release inside its support window</li>
-<li>[ ] This check runs on a schedule, with a baseline, alerting a human</li>
+<li>[ ] Seul le port 443 (et le 80, pour la redirection) est accessible depuis Internet</li>
+<li>[ ] Le port 9200 et tous les ports de débogage <code>92xx</code> sont inaccessibles depuis
+      l’extérieur - vérifié depuis un autre hôte, pas d’après la configuration</li>
+<li>[ ] Le trafic sortant est limité à ce dont l’instance a réellement besoin</li>
+<li>[ ] Un fournisseur d’identité externe gère la connexion</li>
+<li>[ ] Un second facteur est exigé, au minimum pour les administrateurs</li>
+<li>[ ] <code>PROXY_ENABLE_BASIC_AUTH=false</code>, ou des jetons d’application délivrés aux
+      clients qui en ont besoin</li>
+<li>[ ] <code>GRAPH_ASSIGN_DEFAULT_USER_ROLE=false</code> si les rôles viennent d’un claim</li>
+<li>[ ] Le provisionnement automatique est limité par un groupe côté fournisseur</li>
+<li>[ ] <code>OC_ADD_RUN_SERVICES=audit</code> et <code>AUDIT_LOG_LEVEL</code> relevé au-dessus de <code>error</code></li>
+<li>[ ] Le journal d’audit est expédié hors de l’hôte, avec une durée de conservation délibérée</li>
+<li>[ ] Des alertes sont définies pour les liens publics, l’élargissement des partages et les changements de rôle</li>
+<li>[ ] TLS par une autorité de certification publique, renouvelé automatiquement, avec un enregistrement CAA</li>
+<li>[ ] Les en-têtes de sécurité sont définis au niveau du proxy - voir <a href="/documentation/reverse-proxy">reverse proxies</a></li>
+<li>[ ] <code>OC_CORS_ALLOW_ORIGINS</code> est restreint par rapport à sa valeur par défaut <code>*</code></li>
+<li>[ ] Les liens publics exigent un mot de passe et une expiration</li>
+<li>[ ] Des sauvegardes existent, quittent l’hôte et ont déjà été restaurées</li>
+<li>[ ] L’hôte est corrigé automatiquement ; la version d’OpenCloud est dans sa période de support</li>
+<li>[ ] Cette vérification s’exécute de façon planifiée, avec une référence, et alerte une personne</li>
 </ul>
-<h2 id="where-to-go-next">Where to go next</h2>
+<h2 id="where-to-go-next">Pour aller plus loin</h2>
 <table>
 <thead>
 <tr>
 <th>Page</th>
-<th>Why</th>
+<th>Pourquoi</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><a href="/documentation/reverse-proxy">Reverse proxies</a></td>
-<td>The nginx, Apache, Caddy, Traefik and HAProxy configuration behind most of section 3</td>
+<td>La configuration nginx, Apache, Caddy, Traefik et HAProxy derrière l’essentiel de la section 3</td>
 </tr>
 <tr>
-<td><a href="/documentation/tls">TLS and certificates</a></td>
-<td>Every transport check, and what a good certificate looks like</td>
+<td><a href="/documentation/tls">TLS et certificats</a></td>
+<td>Tous les contrôles de transport, et ce qu’est un bon certificat</td>
 </tr>
 <tr>
-<td><a href="/documentation/exposure">Exposed paths and debug endpoints</a></td>
-<td>What the firewall section is checked against</td>
+<td><a href="/documentation/exposure">Chemins exposés et points de terminaison de débogage</a></td>
+<td>Ce par rapport à quoi la section pare-feu est vérifiée</td>
 </tr>
 <tr>
-<td><a href="/documentation/authentication">Authentication</a></td>
-<td>The identity-provider and Basic-auth findings in detail</td>
+<td><a href="/documentation/authentication">Authentification</a></td>
+<td>Les constats sur le fournisseur d’identité et l’authentification Basic, en détail</td>
 </tr>
 <tr>
-<td><a href="/documentation/sharing">Public link sharing</a></td>
-<td>The sharing policy your users are working within</td>
+<td><a href="/documentation/sharing">Partage par lien public</a></td>
+<td>La politique de partage dans laquelle travaillent vos utilisateurs</td>
 </tr>
 <tr>
-<td><a href="/documentation/scheduling">Scheduling</a></td>
-<td>systemd timers and cron for the monitoring in section 6</td>
+<td><a href="/documentation/scheduling">Planification</a></td>
+<td>Timers systemd et cron pour la supervision de la section 6</td>
 </tr>
 <tr>
-<td><a href="/documentation/many-instances">Checking a fleet of instances</a></td>
-<td>Once there is more than one</td>
+<td><a href="/documentation/many-instances">Analyser plusieurs instances</a></td>
+<td>Dès qu’il y en a plus d’une</td>
 </tr>
 <tr>
-<td><a href="/documentation/prometheus">Prometheus and Grafana</a></td>
-<td>The rating as a time series</td>
+<td><a href="/documentation/prometheus">Prometheus et Grafana</a></td>
+<td>La note sous forme de série temporelle</td>
 </tr>
 <tr>
-<td><a href="/documentation/what-is-opencloud">What OpenCloud is</a></td>
-<td>Background, if you arrived here from ownCloud or Nextcloud</td>
+<td><a href="/documentation/what-is-opencloud">Qu’est-ce qu’OpenCloud</a></td>
+<td>Le contexte, si vous venez d’ownCloud ou de Nextcloud</td>
 </tr>
 </tbody>
 </table>

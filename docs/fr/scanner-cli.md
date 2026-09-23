@@ -380,15 +380,15 @@ check-opencloud-scanner configure --export-monitoring both
 | `check-opencloud-security.timer` | `OnCalendar=daily`, avec un délai aléatoire pour que de nombreux hôtes derrière une même adresse n'atteignent pas la limite de débit du flux de publications à la même seconde |
 | `check-opencloud-security.env` | Les variables `COS_` de l'unité, écrites en lecture réservée au propriétaire |
 
-Deux choix sont délibérés. **Rien n'est installé** : les fichiers sont écrits
-là où est allée la configuration et les commandes qui les installeraient sont
-affichées, de sorte que ce qui arrive dans `/etc` est quelque chose que tu as
-lu d'abord. Et **aucun secret n'y est écrit** : une URL de webhook ou un jeton
-de publication reste dans le fichier de configuration, lisible par le seul
-propriétaire, alors qu'un objet Icinga et un fichier d'unité ne le sont pas.
-Les deux artefacts pointent vers ce fichier à la place - `vars.opencloud_config`
-et `COS_CONFIG_FILE` - et nomment les réglages qu'ils ont retenus, pour qu'un
-webhook configuré ne manque jamais en silence.
+La commande écrit les fichiers à côté du fichier de configuration et affiche
+les commandes d’installation. Elle n’installe rien. Lisez les fichiers avant
+de les installer dans `/etc`.
+
+Les fichiers générés ne contiennent aucun secret. L’URL du webhook et le jeton
+de publication restent dans le fichier de configuration, accessible uniquement
+à son propriétaire. L’objet Icinga et l’unité systemd désignent ce fichier avec
+`vars.opencloud_config` et `COS_CONFIG_FILE`. La commande indique les paramètres
+qu’elle exclut des fichiers générés.
 
 ## Codes de sortie {#exit-codes}
 

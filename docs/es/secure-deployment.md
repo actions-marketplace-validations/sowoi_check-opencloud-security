@@ -215,7 +215,7 @@ access_control:
 
 ### La autenticación básica es el agujero de todo esto {#basic-authentication-is-the-hole-in-all-of-this}
 
-Nada de lo anterior se aplica a un cliente que no habla OpenID Connect:
+Nada de lo anterior se aplica a un cliente que no admite OpenID Connect:
 calendarios CalDAV y CardDAV, montajes WebDAV, trabajos de copia de seguridad.
 Esos se autentican con HTTP Basic, y `PROXY_ENABLE_BASIC_AUTH=true` vuelve a
 abrir una vía que elude su proveedor y todos sus segundos factores.
@@ -297,8 +297,8 @@ archivo local.
 
 ### Sobre qué alertar realmente {#what-to-actually-alert-on}
 
-Alertar sobre todo es no alertar sobre nada. Una lista breve que se ha ganado
-su sitio:
+Un exceso de alertas dificulta detectar los problemas importantes. Dé
+prioridad a los siguientes:
 
 - Un **enlace público creado sin contraseña o sin caducidad**, sobre todo en un
   espacio que no suele compartirse.
@@ -493,10 +493,9 @@ las formas en que ocurre son cotidianas, no dramáticas:
 
 Ejecutar este complemento de forma programada convierte cada una de esas
 situaciones en una alerta el mismo día en que ocurre, desde fuera de la
-instancia, que es el mismo punto de vista que tiene un atacante. Ese es el
-argumento a favor de la monitorización continua en una frase: **el intervalo
-entre que un despliegue se rompe y alguien lo nota es donde viven los
-incidentes, y lo único que lo acorta es algo que mira cada pocos minutos.**
+instancia, que es el mismo punto de vista que tiene un atacante. La
+monitorización continua **reduce el tiempo entre la aparición de un problema
+y su detección al comprobar la instancia cada pocos minutos.**
 
 ### Una configuración de monitorización que merece la pena {#a-monitoring-setup-that-is-worth-having}
 

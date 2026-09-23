@@ -1,120 +1,129 @@
 # Fournisseurs d’identité
 
-[Running OpenCloud dans une infrastructure sécurisée](secure-deployment.md#1-put-a-real-identity-provider-in-front)
-*pourquoi* un fournisseur d'identité externe appartient devant un OpenCloud
-et résume ce dont chacun des trois communs a besoin. Cette page
-est la version longue de ce résumé: trois tutoriels complets, à partir de rien
-à une signature de travail, pour **Keycloak**, **Authentik** et **Authelia**.
+[Exploiter OpenCloud dans une infrastructure sécurisée](secure-deployment.md#1-put-a-real-identity-provider-in-front)
+explique *pourquoi* un fournisseur d’identité externe a sa place devant une
+instance OpenCloud, et résume ce dont chacun des trois fournisseurs courants a
+besoin. Cette page en est la version longue : trois tutoriels complets, de zéro
+jusqu’à une connexion fonctionnelle, pour **Keycloak**, **Authentik** et
+**Authelia**.
 
-Pick one. They do the same job, and running two is a way of having neither
-configured properly.
+Choisissez-en un. Ils font le même travail, et en exécuter deux est le meilleur
+moyen de n’en avoir aucun correctement configuré.
 
-> **This page changes who may sign in, not how OpenCloud is exposed.** An
-> identity provider is one control among several. The firewall, the audit
-> log, the reverse proxy and the release lifecycle are the rest of the job,
-> and [Running OpenCloud in a secure
-> infrastructure](secure-deployment.md) covers them together.
+> **Cette page change qui peut se connecter, pas la façon dont OpenCloud est
+> exposé.** Un fournisseur d’identité n’est qu’une mesure parmi d’autres. Le
+> pare-feu, le journal d’audit, le reverse proxy et le cycle de vie des versions
+> constituent le reste du travail, et [Exploiter OpenCloud dans une
+> infrastructure sécurisée](secure-deployment.md) les traite ensemble.
 
 <!-- TOC -->
-* [Putting an identity provider in front of OpenCloud, step by step](#putting-an-identity-provider-in-front-of-opencloud-step-by-step)
-  * [Before you start](#before-you-start)
-  * [What every provider has to produce](#what-every-provider-has-to-produce)
-    * [The four clients](#the-four-clients)
-    * [Why they are all public clients](#why-they-are-all-public-clients)
-  * [What OpenCloud needs, whichever provider you pick](#what-opencloud-needs-whichever-provider-you-pick)
-  * [Tutorial A: Keycloak](#tutorial-a-keycloak)
-  * [Tutorial B: Authentik](#tutorial-b-authentik)
-  * [Tutorial C: Authelia](#tutorial-c-authelia)
-  * [Verifying it actually worked](#verifying-it-actually-worked)
-  * [Moving an instance that already has accounts](#moving-an-instance-that-already-has-accounts)
-  * [Troubleshooting](#troubleshooting)
-  * [Where to go next](#where-to-go-next)
-  * [Trademarks and affiliation](#trademarks-and-affiliation)
+* [Placer un fournisseur d’identité devant OpenCloud, étape par étape](#putting-an-identity-provider-in-front-of-opencloud-step-by-step)
+  * [Avant de commencer](#before-you-start)
+  * [Ce que chaque fournisseur doit produire](#what-every-provider-has-to-produce)
+    * [Les quatre clients](#the-four-clients)
+    * [Pourquoi ce sont tous des clients publics](#why-they-are-all-public-clients)
+  * [Ce dont OpenCloud a besoin, quel que soit le fournisseur](#what-opencloud-needs-whichever-provider-you-pick)
+  * [Tutoriel A : Keycloak](#tutorial-a-keycloak)
+  * [Tutoriel B : Authentik](#tutorial-b-authentik)
+  * [Tutoriel C : Authelia](#tutorial-c-authelia)
+  * [Vérifier que tout fonctionne réellement](#verifying-it-actually-worked)
+  * [Migrer une instance qui a déjà des comptes](#moving-an-instance-that-already-has-accounts)
+  * [Dépannage](#troubleshooting)
+  * [Pour aller plus loin](#where-to-go-next)
+  * [Marques et affiliation](#trademarks-and-affiliation)
 <!-- TOC -->
 
-## Before you start
+## Avant de commencer {#before-you-start}
 
-Three names, decided now and not changed later. Every URL below is built from
-them, and an issuer that changes after people have signed in invalidates every
-session and every desktop client's stored token at once:
+Trois noms, décidés maintenant et non modifiés ensuite. Toutes les URL
+ci-dessous en sont dérivées, et un émetteur qui change après que des personnes
+se sont connectées invalide d’un coup toutes les sessions et tous les jetons
+enregistrés par les clients de bureau :
 
-| Name | Example | What it is |
+| Nom | Exemple | Ce que c’est |
 |:-----|:--------|:-----------|
-| The instance | `opencloud.example.com` | Where OpenCloud answers |
-| The provider | `id.example.com` | Where the sign-in page lives |
-| The realm or application slug | `opencloud` | The provider's own name for this application |
+| L’instance | `opencloud.example.com` | L’adresse où répond OpenCloud |
+| Le fournisseur | `id.example.com` | L’adresse de la page de connexion |
+| Le realm ou le slug d’application | `opencloud` | Le nom que le fournisseur donne à cette application |
 
-You also need:
+Il vous faut aussi :
 
-- **A working OpenCloud instance over HTTPS.** Not an instance you are
-  building at the same time. If sign-in breaks you want to know it was the
-  provider, and a half-built instance takes that certainty away.
-- **A real certificate on both names.** OpenID Connect discovery is an HTTPS
-  request from OpenCloud to the provider; a self-signed certificate there
-  fails in a way whose error message rarely says so.
-- **Both names resolving from inside the container network as well as
-  outside.** This is the single most common cause of "it works in the browser
-  and the desktop client hangs" - see [Troubleshooting](#troubleshooting).
-- **A way back in.** Keep one local OpenCloud administrator until the new
-  sign-in is proven, and do not remove `idp` from the running services until
-  then.
+- **Une instance OpenCloud fonctionnelle en HTTPS.** Pas une instance que vous
+  construisez en même temps. Si la connexion échoue, vous voulez savoir que le
+  problème vient du fournisseur, et une instance à moitié construite vous prive
+  de cette certitude.
+- **Un vrai certificat sur les deux noms.** La découverte OpenID Connect est
+  une requête HTTPS d’OpenCloud vers le fournisseur ; un certificat auto-signé
+  à cet endroit échoue avec un message d’erreur qui le dit rarement.
+- **Les deux noms résolus depuis le réseau des conteneurs comme depuis
+  l’extérieur.** C’est la cause la plus fréquente du problème « ça fonctionne
+  dans le navigateur mais le client de bureau reste bloqué » - voir
+  [Dépannage](#troubleshooting).
+- **Un moyen de revenir en arrière.** Conservez un administrateur OpenCloud
+  local jusqu’à ce que la nouvelle connexion ait fait ses preuves, et ne retirez
+  pas `idp` des services en cours d’exécution avant cela.
 
-## What every provider has to produce
+## Ce que chaque fournisseur doit produire {#what-every-provider-has-to-produce}
 
-The clients, the redirect URIs and the scopes are properties of **OpenCloud's
-own applications**, not of the provider. They are identical for Keycloak,
-Authentik and Authelia, and getting one of them wrong produces the same
-failure whichever provider you chose. Configure these four, every time.
+Les clients, les URI de redirection et les portées (scopes) sont des propriétés
+des **applications propres à OpenCloud**, pas du fournisseur. Ils sont
+identiques pour Keycloak, Authentik et Authelia, et une erreur sur l’un d’eux
+produit la même défaillance quel que soit le fournisseur choisi. Configurez ces
+quatre clients, à chaque fois.
 
-### The four clients
+### Les quatre clients {#the-four-clients}
 
-| Client | Default client ID | Redirect URIs | Scopes |
+| Client | ID client par défaut | URI de redirection | Portées |
 |:-------|:------------------|:--------------|:-------|
 | Web | `web` | `https://opencloud.example.com/`, `https://opencloud.example.com/oidc-callback.html`, `https://opencloud.example.com/oidc-silent-redirect.html` | `openid profile email groups` |
-| Desktop | `OpenCloudDesktop` | `http://127.0.0.1`, `http://localhost` | `openid profile email groups offline_access` |
+| Bureau | `OpenCloudDesktop` | `http://127.0.0.1`, `http://localhost` | `openid profile email groups offline_access` |
 | Android | `OpenCloudAndroid` | `oc://android.opencloud.eu` | `openid profile email groups offline_access` |
 | iOS | `OpenCloudIOS` | `oc://ios.opencloud.eu`, `oc.ios://ios.opencloud.eu` | `openid profile email groups offline_access` |
 
-Three things in that table are load-bearing:
+Trois éléments de ce tableau sont essentiels :
 
-**The web client needs all three redirect URIs.** `oidc-callback.html` ends
-the sign-in; `oidc-silent-redirect.html` is how the tab renews a token without
-sending somebody back to a login screen mid-upload. Register only the first
-and sign-in works, then sessions start dying at an interval nobody can
-reproduce on purpose.
+**Le client web a besoin des trois URI de redirection.** `oidc-callback.html`
+termine la connexion ; `oidc-silent-redirect.html` permet à l’onglet de
+renouveler un jeton sans renvoyer quelqu’un vers un écran de connexion en plein
+téléversement. N’enregistrez que la première, et la connexion fonctionne, puis
+les sessions commencent à expirer à des intervalles que personne ne parvient à
+reproduire volontairement.
 
-**Only the non-browser clients get `offline_access`.** That scope is what
-issues the refresh token a desktop or mobile client needs to survive a
-restart. The browser deliberately does not have one - a refresh token in a
-tab is a credential sitting in a place that cannot protect it.
+**Seuls les clients hors navigateur reçoivent `offline_access`.** C’est cette
+portée qui délivre le jeton de rafraîchissement dont un client de bureau ou
+mobile a besoin pour survivre à un redémarrage. Le navigateur n’en a
+volontairement pas : un jeton de rafraîchissement dans un onglet est un
+identifiant stocké à un endroit incapable de le protéger.
 
-**The client IDs are configurable, and the two halves must agree.** The
-provider knows them because you typed them there; OpenCloud publishes them to
-its own clients through WebFinger, from
-`WEBFINGER_WEB_OIDC_CLIENT_ID` and its `ANDROID`, `IOS` and `DESKTOP`
-counterparts. Change one without the other and the desktop client asks the
-provider for a client that does not exist.
+**Les ID client sont configurables, et les deux côtés doivent concorder.** Le
+fournisseur les connaît parce que vous les y avez saisis ; OpenCloud les publie
+à ses propres clients par WebFinger, à partir de
+`WEBFINGER_WEB_OIDC_CLIENT_ID` et de ses équivalents `ANDROID`, `IOS` et
+`DESKTOP`. Modifiez l’un sans l’autre, et le client de bureau demande au
+fournisseur un client qui n’existe pas.
 
-### Why they are all public clients
+### Pourquoi ce sont tous des clients publics {#why-they-are-all-public-clients}
 
-Every OpenCloud client - the web app in a tab, the desktop app on a laptop,
-the two mobile apps - runs entirely on somebody else's machine. None of them
-can keep a secret, because anything shipped to all of them is a secret every
-one of their users has a copy of.
+Chaque client OpenCloud - l’application web dans un onglet, l’application de
+bureau sur un portable, les deux applications mobiles - s’exécute entièrement
+sur la machine de quelqu’un d’autre. Aucun ne peut garder de secret, car tout ce
+qui leur est livré est un secret dont chacun de leurs utilisateurs possède une
+copie.
 
-So all four are **public clients using the authorization code flow with
-PKCE**, and PKCE is not optional decoration: it is the thing that replaces
-the client secret those clients cannot hold. Set the challenge method to
-`S256`, never `plain`. Do not issue a client secret to any of them - a
-provider that requires one for a public client is configured wrong, and
-pasting a secret into a desktop app to satisfy it publishes that secret.
+Les quatre sont donc des **clients publics utilisant le flux par code
+d’autorisation avec PKCE**, et PKCE n’est pas une décoration facultative : c’est
+ce qui remplace le secret client que ces clients ne peuvent pas détenir.
+Choisissez la méthode de challenge `S256`, jamais `plain`. Ne délivrez de secret
+client à aucun d’eux : un fournisseur qui en exige un pour un client public est
+mal configuré, et coller un secret dans une application de bureau pour le
+satisfaire revient à publier ce secret.
 
-## What OpenCloud needs, whichever provider you pick
+## Ce dont OpenCloud a besoin, quel que soit le fournisseur {#what-opencloud-needs-whichever-provider-you-pick}
 
-Set these on the OpenCloud side once the provider is up. The
-[external IdP guide](https://docs.opencloud.eu/docs/admin/configuration/authentication-and-user-management/external-idp)
-is the upstream reference; the notes here are the parts worth a second
-thought.
+Définissez ces variables côté OpenCloud une fois le fournisseur en service. Le
+[guide des IdP externes](https://docs.opencloud.eu/docs/admin/configuration/authentication-and-user-management/external-idp)
+est la référence officielle ; les remarques ci-dessous concernent les points qui
+méritent réflexion.
 
 ```shell
 # The provider, and turning the built-in one off.
@@ -150,32 +159,34 @@ WEBFINGER_ANDROID_OIDC_CLIENT_ID="OpenCloudAndroid"
 WEBFINGER_IOS_OIDC_CLIENT_ID="OpenCloudIOS"
 ```
 
-Two of those are access-control decisions wearing the clothes of
-configuration, and both are covered at greater length in
-[secure-deployment.md](secure-deployment.md#what-opencloud-needs-whichever-provider-you-pick):
+Deux de ces variables sont des décisions de contrôle d’accès déguisées en
+configuration, et toutes deux sont traitées plus en détail dans
+[secure-deployment.md](secure-deployment.md#what-opencloud-needs-whichever-provider-you-pick) :
 
-- **`PROXY_AUTOPROVISION_ACCOUNTS=true` means anybody your provider will
-  authenticate gets an OpenCloud account on first visit.** That is correct
-  when the provider restricts this application to a group, and wrong when the
-  provider authenticates your whole organisation. Restrict it on the provider
-  side. Leaving autoprovisioning off and creating accounts by hand is not the
-  fix; it is the same decision, made worse by being manual.
-- **`PROXY_ROLE_ASSIGNMENT_DRIVER=oidc` with
-  `GRAPH_ASSIGN_DEFAULT_USER_ROLE=true` is the misconfiguration that gives
-  everybody a role you did not intend.** Setting the first means switching
-  off the second.
+- **`PROXY_AUTOPROVISION_ACCOUNTS=true` signifie que toute personne
+  authentifiée par votre fournisseur obtient un compte OpenCloud lors de sa
+  première visite.** C’est correct lorsque le fournisseur limite cette
+  application à un groupe, et incorrect lorsqu’il authentifie toute votre
+  organisation. Limitez l’accès côté fournisseur. Désactiver le provisionnement
+  automatique et créer les comptes à la main n’est pas la solution : c’est la
+  même décision, aggravée par le travail manuel.
+- **`PROXY_ROLE_ASSIGNMENT_DRIVER=oidc` avec
+  `GRAPH_ASSIGN_DEFAULT_USER_ROLE=true` est l’erreur de configuration qui donne
+  à tout le monde un rôle que vous n’aviez pas prévu.** Définir la première
+  implique de désactiver la seconde.
 
-Restart OpenCloud after changing any of these. `OC_EXCLUDE_RUN_SERVICES` in
-particular is read once, at startup.
+Redémarrez OpenCloud après avoir modifié l’une de ces variables.
+`OC_EXCLUDE_RUN_SERVICES` en particulier n’est lu qu’une fois, au démarrage.
 
-## Tutorial A: Keycloak
+## Tutoriel A : Keycloak {#tutorial-a-keycloak}
 
-The most common choice where an organisation already runs one, and the
-heaviest of the three. Pick it if you need a full realm - federation, identity
-brokering, fine-grained role mapping - or if Keycloak is already there.
+Le choix le plus courant lorsqu’une organisation en exploite déjà un, et le plus
+lourd des trois. Choisissez-le si vous avez besoin d’un realm complet -
+fédération, courtage d’identité, correspondance fine des rôles - ou si Keycloak
+est déjà en place.
 
-**1. Run it.** A minimal production-shaped compose service, behind whatever
-reverse proxy already terminates TLS for you:
+**1. Lancez-le.** Un service compose minimal, conçu comme en production, derrière
+le reverse proxy qui termine déjà TLS pour vous :
 
 ```yaml
 services:
@@ -198,134 +209,140 @@ services:
     depends_on: [keycloak-db]
 ```
 
-`KC_PROXY_HEADERS: xforwarded` matters: without it Keycloak builds its issuer
-and redirect URLs from the internal address and every one of them is wrong in
-a way that only shows up at the redirect.
+`KC_PROXY_HEADERS: xforwarded` est important : sans cette option, Keycloak
+construit son émetteur et ses URL de redirection à partir de l’adresse interne,
+et toutes sont fausses d’une manière qui n’apparaît qu’au moment de la
+redirection.
 
-**2. Create the realm.** *Realms → Create realm*, named `opencloud`. Do not
-use the `master` realm for applications - it is the realm that administers
-Keycloak itself, and an application client there is an application client on
-your administration plane.
+**2. Créez le realm.** *Realms → Create realm*, nommé `opencloud`. N’utilisez
+pas le realm `master` pour des applications : c’est le realm qui administre
+Keycloak lui-même, et un client d’application à cet endroit est un client
+d’application sur votre plan d’administration.
 
-Your issuer is now:
+Votre émetteur est désormais :
 
 ```
 https://id.example.com/realms/opencloud
 ```
 
-**3. Create the four clients.** *Clients → Create client*, four times, using
-the IDs and redirect URIs from [the table above](#the-four-clients). For each
-one:
+**3. Créez les quatre clients.** *Clients → Create client*, quatre fois, avec
+les ID et URI de redirection du [tableau ci-dessus](#the-four-clients). Pour
+chacun :
 
-- **Client type**: OpenID Connect.
-- **Client authentication**: **off**. This is what makes it a public client.
-- **Authentication flow**: *Standard flow* only. Turn off *Direct access
-  grants* - it is the password grant, and it is a way around every second
-  factor you are about to configure.
-- **Valid redirect URIs**: from the table. The desktop client needs
-  `http://127.0.0.1/*` and `http://localhost/*` - the port is chosen at
-  runtime, so the wildcard is doing real work here rather than being
-  laziness.
-- **Web origins**: `https://opencloud.example.com` for the web client only.
-- Under *Advanced → Advanced settings*, set **Proof Key for Code Exchange
-  Code Challenge Method** to `S256`.
+- **Client type** : OpenID Connect.
+- **Client authentication** : **désactivé**. C’est ce qui en fait un client
+  public.
+- **Authentication flow** : *Standard flow* uniquement. Désactivez *Direct
+  access grants* : c’est l’octroi par mot de passe, et il contourne tous les
+  seconds facteurs que vous allez configurer.
+- **Valid redirect URIs** : celles du tableau. Le client de bureau a besoin de
+  `http://127.0.0.1/*` et `http://localhost/*` : le port est choisi à
+  l’exécution, le joker est donc réellement utile ici et non une facilité.
+- **Web origins** : `https://opencloud.example.com`, pour le client web
+  uniquement.
+- Sous *Advanced → Advanced settings*, réglez **Proof Key for Code Exchange
+  Code Challenge Method** sur `S256`.
 
-**4. Make the claims OpenCloud reads.** *Client scopes → `<client>-dedicated`
-→ Add mapper → By configuration*:
+**4. Créez les claims que lit OpenCloud.** *Client scopes → `<client>-dedicated`
+→ Add mapper → By configuration* :
 
-- **Group Membership** mapper, token claim name `groups`, *Full group path*
-  **off**. Without the last one your groups arrive as `/finance` and every
-  comparison against `finance` fails.
-- **User Client Role** mapper, token claim name `roles`, if you are assigning
-  OpenCloud roles from Keycloak.
+- Mapper **Group Membership**, nom de claim `groups`, *Full group path*
+  **désactivé**. Sans ce dernier réglage, vos groupes arrivent sous la forme
+  `/finance` et toute comparaison avec `finance` échoue.
+- Mapper **User Client Role**, nom de claim `roles`, si vous attribuez les rôles
+  OpenCloud depuis Keycloak.
 
-Add both to the **access token** and the **userinfo** response. OpenCloud
-reads the token; a claim that exists only in the ID token is a claim it never
-sees.
+Ajoutez les deux au **jeton d’accès** et à la réponse **userinfo**. OpenCloud
+lit le jeton ; un claim présent uniquement dans le jeton d’identité est un claim
+qu’il ne voit jamais.
 
-**5. Require a second factor.** *Authentication → Required actions* →
-enable *Configure OTP*, then *Authentication → Flows* → bind a browser flow
-that requires it. A provider without a second factor has moved your sign-in,
-not improved it.
+**5. Exigez un second facteur.** *Authentication → Required actions* → activez
+*Configure OTP*, puis *Authentication → Flows* → associez un flux navigateur qui
+l’exige. Vérifiez que le second facteur est bien demandé lors de la connexion.
 
-**6. Point OpenCloud at it** with the variables above, and restart.
+**6. Faites pointer OpenCloud vers lui** avec les variables ci-dessus, puis
+redémarrez.
 
-## Tutorial B: Authentik
+## Tutoriel B : Authentik {#tutorial-b-authentik}
 
-The middle weight, and the friendliest to configure from a file rather than by
-clicking. Pick it if you want one provider in front of several applications
-with per-application policies.
+Authentik permet une configuration par fichiers et des politiques propres à
+chaque application. Une seule installation peut assurer la connexion de
+plusieurs applications.
 
-> This repository already ships an Authentik stack, but for a different
-> purpose: it protects [the scan service's own MCP endpoint](authentik.md) and
-> [operator's area](../../ADMIN.md), not OpenCloud.
-> [`authentik/blueprints/`](../../authentik/blueprints/) is a worked example of
-> provisioning a provider from a file, which is worth copying whatever you are
-> configuring.
+> Ce dépôt fournit déjà une pile Authentik, mais dans un autre but : elle
+> protège [le point de terminaison MCP du service d’analyse](authentik.md) et
+> l’[espace opérateur](../../ADMIN.md), pas OpenCloud.
+> [`authentik/blueprints/`](../../authentik/blueprints/) est un exemple complet
+> de provisionnement d’un fournisseur à partir d’un fichier, utile à reprendre
+> quel que soit ce que vous configurez.
 
-**1. Run it.** Authentik publishes a compose file and a generator for it;
-follow [their installation
-guide](https://docs.goauthentik.io/install-config/install/docker-compose)
-rather than a copy of it that will be out of date here. What matters
-afterwards is that `https://id.example.com` reaches it and that TLS is real.
+**1. Lancez-le.** Authentik publie un fichier compose et un générateur
+associé ; suivez [leur guide
+d’installation](https://docs.goauthentik.io/install-config/install/docker-compose)
+pour les instructions à jour. Vérifiez ensuite que `https://id.example.com`
+l’atteint en HTTPS avec un certificat valide.
 
-**2. Create the scope mapping for groups.** *Customisation → Property
-mappings → Create → Scope mapping*:
+**2. Créez la correspondance de portée pour les groupes.** *Customisation →
+Property mappings → Create → Scope mapping* :
 
-- **Name**: `OpenCloud groups`
-- **Scope name**: `groups`
-- **Expression**:
+- **Name** : `OpenCloud groups`
+- **Scope name** : `groups`
+- **Expression** :
   ```python
   return {"groups": [group.name for group in request.user.ak_groups.all()]}
   ```
 
-Authentik ships mappings for `openid`, `profile` and `email`; `groups` is the
-one you usually have to add, and it is the one OpenCloud needs for roles.
+Authentik fournit des correspondances pour `openid`, `profile` et `email` ;
+`groups` est celle que vous devez généralement ajouter, et c’est celle dont
+OpenCloud a besoin pour les rôles.
 
-**3. Create four providers.** *Applications → Providers → Create →
-OAuth2/OpenID Provider*, once per client in
-[the table above](#the-four-clients):
+**3. Créez quatre fournisseurs.** *Applications → Providers → Create →
+OAuth2/OpenID Provider*, une fois par client du
+[tableau ci-dessus](#the-four-clients) :
 
-- **Client type**: **Public**.
-- **Client ID**: from the table.
-- **Redirect URIs**: from the table. Authentik matches these as regular
-  expressions, so escape the dots - `http://127\.0\.0\.1(:[0-9]+)?` for the
-  desktop client's loopback range.
-- **Scopes**: the three built-in mappings plus `OpenCloud groups`.
-- **Signing key**: your certificate, so tokens are signed rather than
-  unsigned.
-- **Authorization flow**: `implicit consent` for an internal application -
-  people should not be asked to consent to your own file server on every
-  sign-in.
+- **Client type** : **Public**.
+- **Client ID** : celui du tableau.
+- **Redirect URIs** : celles du tableau. Authentik les compare comme des
+  expressions régulières : échappez donc les points, par exemple
+  `http://127\.0\.0\.1(:[0-9]+)?` pour la plage de bouclage du client de bureau.
+- **Scopes** : les trois correspondances intégrées plus `OpenCloud groups`.
+- **Signing key** : votre certificat, pour que les jetons soient signés.
+- **Authorization flow** : `implicit consent` pour une application interne : on
+  ne devrait pas demander aux gens de consentir à votre propre serveur de
+  fichiers à chaque connexion.
 
-**4. Create the application and bind it to a group.** *Applications →
-Applications → Create*, slug `opencloud`, provider the web one from step 3.
-Then bind it: *Policies / Group / User bindings* → bind the group that should
-have OpenCloud.
+**4. Créez l’application et associez-la à un groupe.** *Applications →
+Applications → Create*, slug `opencloud`, avec comme fournisseur le fournisseur
+web de l’étape 3. Associez-la ensuite : *Policies / Group / User bindings* →
+associez le groupe qui doit avoir accès à OpenCloud.
 
-**This binding is the access control that makes autoprovisioning safe.** With
-it, `PROXY_AUTOPROVISION_ACCOUNTS=true` creates accounts only for people you
-have already decided should have one.
+**Cette association est le contrôle d’accès qui rend le provisionnement
+automatique sûr.** Grâce à elle, `PROXY_AUTOPROVISION_ACCOUNTS=true` ne crée des
+comptes que pour les personnes dont vous avez déjà décidé qu’elles devaient en
+avoir un.
 
-**5. Read the issuer off the provider.** It is:
+**5. Relevez l’émetteur sur le fournisseur.** Il s’agit de :
 
 ```
 https://id.example.com/application/o/opencloud/
 ```
 
-**The trailing slash is part of it.** OpenID Connect compares the issuer
-string exactly, so an issuer configured without it fails validation against
-tokens that carry it, and the error names neither the slash nor the issuer.
+**La barre oblique finale en fait partie.** OpenID Connect compare la chaîne de
+l’émetteur à l’identique : un émetteur configuré sans elle échoue à la
+validation des jetons qui la contiennent, et l’erreur ne mentionne ni la barre
+oblique ni l’émetteur.
 
-**6. Point OpenCloud at it** with the variables above, and restart.
+**6. Faites pointer OpenCloud vers lui** avec les variables ci-dessus, puis
+redémarrez.
 
-## Tutorial C: Authelia
+## Tutoriel C : Authelia {#tutorial-c-authelia}
 
-The lightest of the three, configured entirely in a file, and a good fit where
-the reverse proxy is already doing forward authentication for other services.
-Pick it if you want one small binary rather than a realm server.
+Le plus léger des trois, entièrement configuré dans un fichier, et bien adapté
+lorsque le reverse proxy assure déjà l’authentification déléguée (forward auth)
+pour d’autres services. Choisissez-le si vous voulez un petit binaire plutôt
+qu’un serveur de realms.
 
-**1. Run it**, alongside its session store:
+**1. Lancez-le**, avec son stockage de sessions :
 
 ```yaml
 services:
@@ -339,8 +356,8 @@ services:
     secrets: [oidc_hmac, oidc_key]
 ```
 
-Generate the two secrets before first start - Authelia will not invent them
-for you:
+Générez les deux secrets avant le premier démarrage : Authelia ne les invente
+pas pour vous.
 
 ```shell
 docker run --rm ghcr.io/authelia/authelia:latest \
@@ -349,10 +366,9 @@ docker run --rm -v "$PWD/authelia:/keys" ghcr.io/authelia/authelia:latest \
     authelia crypto pair rsa generate --bits 4096 --directory /keys
 ```
 
-**2. Register the four clients** under
-`identity_providers.oidc.clients` in `configuration.yml`. This is the whole
-web client; the other three differ only in `client_id`, `redirect_uris` and
-their lack of a browser:
+**2. Enregistrez les quatre clients** sous `identity_providers.oidc.clients`
+dans `configuration.yml`. Voici le client web complet ; les trois autres ne
+diffèrent que par `client_id`, `redirect_uris` et l’absence de navigateur :
 
 ```yaml
 identity_providers:
@@ -410,13 +426,13 @@ identity_providers:
         grant_types: ['authorization_code', 'refresh_token']
 ```
 
-`authorization_policy: 'two_factor'` is where the second factor is required,
-per client, and it is the reason to prefer this over a global rule: the
-desktop client and the browser can be held to the same standard without
-depending on anybody remembering an access-control rule.
+`authorization_policy: 'two_factor'` est l’endroit où le second facteur est
+exigé, client par client, et c’est la raison de préférer ce réglage à une règle
+globale : le client de bureau et le navigateur sont soumis à la même exigence
+sans dépendre de quelqu’un qui se souviendrait d’une règle de contrôle d’accès.
 
-**3. Add the access-control rule** for the instance itself, so that anything
-not covered by the OpenID Connect flow is also protected:
+**3. Ajoutez la règle de contrôle d’accès** pour l’instance elle-même, afin que
+tout ce qui n’est pas couvert par le flux OpenID Connect soit aussi protégé :
 
 ```yaml
 access_control:
@@ -426,124 +442,130 @@ access_control:
       policy: 'two_factor'
 ```
 
-**4. The issuer is the bare host**, with no path and no trailing slash:
+**4. L’émetteur est l’hôte seul**, sans chemin ni barre oblique finale :
 
 ```
 https://id.example.com
 ```
 
-**5. Point OpenCloud at it** with the variables above, and restart.
+**5. Faites pointer OpenCloud vers lui** avec les variables ci-dessus, puis
+redémarrez.
 
-## Verifying it actually worked
+## Vérifier que tout fonctionne réellement {#verifying-it-actually-worked}
 
-Four checks, in this order. Each one fails differently, so running them out of
-order costs time.
+Quatre vérifications, dans cet ordre. Chacune échoue différemment : les exécuter
+dans le désordre fait perdre du temps.
 
-**1. The provider publishes a discovery document.**
+**1. Le fournisseur publie un document de découverte.**
 
 ```shell
 curl -fsS https://id.example.com/.well-known/openid-configuration | \
     python3 -m json.tool | head -20
 ```
 
-The `issuer` field in the answer must be **byte-for-byte** what you put in
-`OC_OIDC_ISSUER`. A trailing slash counts.
+Le champ `issuer` de la réponse doit être **identique octet pour octet** à ce
+que vous avez mis dans `OC_OIDC_ISSUER`. Une barre oblique finale compte.
 
-**2. OpenCloud points at it.** With `PROXY_OIDC_REWRITE_WELLKNOWN=true`,
-asking OpenCloud gives the provider's document:
+**2. OpenCloud pointe vers lui.** Avec `PROXY_OIDC_REWRITE_WELLKNOWN=true`,
+interroger OpenCloud renvoie le document du fournisseur :
 
 ```shell
 curl -fsS https://opencloud.example.com/.well-known/openid-configuration | \
     python3 -c 'import json,sys; print(json.load(sys.stdin)["issuer"])'
 ```
 
-If that returns OpenCloud's own address, the built-in `idp` is still running -
-`OC_EXCLUDE_RUN_SERVICES` did not take effect, or the container was not
-restarted.
+Si la réponse est l’adresse propre d’OpenCloud, l’`idp` intégré tourne
+toujours : `OC_EXCLUDE_RUN_SERVICES` n’a pas pris effet, ou le conteneur n’a pas
+été redémarré.
 
-**3. A person can sign in.** In a private window, so you are not testing a
-session you already had. Then check the account appeared, if you turned
-autoprovisioning on.
+**3. Une personne peut se connecter.** Dans une fenêtre de navigation privée,
+pour ne pas tester une session déjà ouverte. Vérifiez ensuite que le compte a
+été créé, si vous avez activé le provisionnement automatique.
 
-**4. Scan it.** This is what the rest of this repository is for. The scanner
-reports which provider it found and reads four properties of the discovery
-document that provider publishes:
+**4. Analysez l’instance.** C’est à cela que sert le reste de ce dépôt. Le
+scanner indique quel fournisseur il a trouvé et lit quatre propriétés du
+document de découverte publié par ce fournisseur :
 
 ```shell
 check-opencloud-security --host opencloud.example.com --check-hardening --debug
 ```
 
-Look for `identityProviderDetected` passing, and for `oidcPkceSupported`,
-`oidcImplicitFlowDisabled`, `oidcSigningAlgorithmStrong` and
-`oidcEndpointsUseHttps`. [Authentication](authentication.md) explains what
-each of them means and why it is checked. A provider that fails
-`oidcImplicitFlowDisabled` is still offering a flow that puts tokens in a URL,
-which is worth fixing before anybody uses it.
+Vérifiez que `identityProviderDetected` réussit, et regardez
+`oidcPkceSupported`, `oidcImplicitFlowDisabled`, `oidcSigningAlgorithmStrong`
+et `oidcEndpointsUseHttps`. [Authentification](authentication.md) explique ce
+que signifie chacun et pourquoi il est vérifié. Un fournisseur qui échoue à
+`oidcImplicitFlowDisabled` propose encore un flux qui place des jetons dans une
+URL, ce qu’il vaut la peine de corriger avant que quiconque l’utilise.
 
-Note what this does **not** prove: the scanner reads what the provider
-publishes without signing in, so it cannot tell you that your group mapping is
-right or that your second factor is enforced. Those are the two things to test
-by hand.
+Notez ce que cela ne prouve **pas** : le scanner lit ce que publie le
+fournisseur sans se connecter, il ne peut donc pas vous dire si votre
+correspondance de groupes est correcte ni si votre second facteur est
+appliqué. Ce sont les deux points à tester à la main.
 
-## Moving an instance that already has accounts
+## Migrer une instance qui a déjà des comptes {#moving-an-instance-that-already-has-accounts}
 
-Switching an instance that people already use is a different job from
-configuring a new one, and the difference is entirely about identity matching.
+Basculer une instance déjà utilisée est un travail différent de la
+configuration d’une nouvelle instance, et toute la différence tient à la
+correspondance des identités.
 
-**The accounts have to line up.** `PROXY_USER_OIDC_CLAIM` and
-`PROXY_USER_CS3_CLAIM` are what connects a person at the provider to their
-existing OpenCloud account and everything in it. If `preferred_username` at
-the provider does not equal `username` in OpenCloud, autoprovisioning creates
-a *second*, empty account for somebody who already had one, and their files
-are still in the first.
+**Les comptes doivent correspondre.** `PROXY_USER_OIDC_CLAIM` et
+`PROXY_USER_CS3_CLAIM` relient une personne connue du fournisseur à son compte
+OpenCloud existant et à tout ce qu’il contient. Si `preferred_username` chez le
+fournisseur n’est pas égal à `username` dans OpenCloud, le provisionnement
+automatique crée un *second* compte, vide, pour une personne qui en avait déjà
+un, et ses fichiers restent dans le premier.
 
-So, in order:
+Dans l’ordre, donc :
 
-1. **Export the existing usernames** and compare them against the provider's,
-   before changing anything. Reconcile the differences at the provider.
-2. **Leave `idp` running** and configure the external provider alongside it.
-3. **Test with one account** that exists in both, and confirm it lands in the
-   existing space rather than a new one.
-4. **Then** add `idp` to `OC_EXCLUDE_RUN_SERVICES` and restart.
-5. **Keep `PROXY_ENABLE_BASIC_AUTH=false`.** WebDAV mounts, CalDAV clients and
-   backup jobs authenticate with HTTP Basic and bypass the provider and every
-   second factor on it. Where something genuinely needs it, the answer is app
-   tokens rather than account passwords - see
+1. **Exportez les noms d’utilisateur existants** et comparez-les à ceux du
+   fournisseur, avant de modifier quoi que ce soit. Corrigez les différences
+   côté fournisseur.
+2. **Laissez `idp` en service** et configurez le fournisseur externe à côté.
+3. **Testez avec un compte** qui existe des deux côtés, et vérifiez qu’il
+   aboutit dans l’espace existant et non dans un nouveau.
+4. **Ensuite seulement**, ajoutez `idp` à `OC_EXCLUDE_RUN_SERVICES` et
+   redémarrez.
+5. **Conservez `PROXY_ENABLE_BASIC_AUTH=false`.** Les montages WebDAV, les
+   clients CalDAV et les tâches de sauvegarde s’authentifient en HTTP Basic et
+   contournent le fournisseur ainsi que tous ses seconds facteurs. Lorsque
+   quelque chose en a réellement besoin, la solution est d’utiliser des jetons
+   d’application plutôt que les mots de passe des comptes - voir
    [secure-deployment.md](secure-deployment.md#basic-authentication-is-the-hole-in-all-of-this).
 
-## Troubleshooting
+## Dépannage {#troubleshooting}
 
-| What you see | What it usually is |
+| Ce que vous constatez | Cause habituelle |
 |:-------------|:-------------------|
-| `invalid issuer` or token validation failures | `OC_OIDC_ISSUER` does not match the provider's own `issuer` string exactly. Authentik needs the trailing slash; Authelia has none |
-| Sign-in works in the browser, desktop client hangs | The provider's name does not resolve from inside the container network, or the desktop redirect URI has no port wildcard |
-| Sign-in works, then sessions die at odd intervals | The web client is missing `oidc-silent-redirect.html` from its redirect URIs |
-| The desktop client never stays signed in | `offline_access` is missing from that client's scopes, so no refresh token is issued |
-| Everybody has more permission than intended | `GRAPH_ASSIGN_DEFAULT_USER_ROLE` is still `true` while roles come from a claim |
-| A second, empty account for somebody who had one | The claim in `PROXY_USER_OIDC_CLAIM` does not equal the attribute in `PROXY_USER_CS3_CLAIM` |
-| Groups arrive but never match | Keycloak's *Full group path* is on, so `finance` is arriving as `/finance` |
-| Users authenticate who should not have accounts | Autoprovisioning is on and the application is not restricted to a group at the provider |
-| Scanner still reports the built-in provider | `OC_EXCLUDE_RUN_SERVICES` does not include `idp`, or OpenCloud was not restarted |
+| `invalid issuer` ou échecs de validation des jetons | `OC_OIDC_ISSUER` ne correspond pas exactement à la chaîne `issuer` du fournisseur. Authentik exige la barre oblique finale ; Authelia n’en a pas |
+| La connexion fonctionne dans le navigateur, le client de bureau reste bloqué | Le nom du fournisseur ne se résout pas depuis le réseau des conteneurs, ou l’URI de redirection du client de bureau n’a pas de joker pour le port |
+| La connexion fonctionne, puis les sessions expirent à des intervalles irréguliers | Il manque `oidc-silent-redirect.html` dans les URI de redirection du client web |
+| Le client de bureau ne reste jamais connecté | `offline_access` manque dans les portées de ce client : aucun jeton de rafraîchissement n’est délivré |
+| Tout le monde a plus de droits que prévu | `GRAPH_ASSIGN_DEFAULT_USER_ROLE` vaut encore `true` alors que les rôles proviennent d’un claim |
+| Un second compte vide pour une personne qui en avait déjà un | Le claim de `PROXY_USER_OIDC_CLAIM` n’est pas égal à l’attribut de `PROXY_USER_CS3_CLAIM` |
+| Les groupes arrivent mais ne correspondent jamais | *Full group path* est activé dans Keycloak : `finance` arrive sous la forme `/finance` |
+| Des personnes qui ne devraient pas avoir de compte s’authentifient | Le provisionnement automatique est activé et l’application n’est pas limitée à un groupe chez le fournisseur |
+| Le scanner signale toujours le fournisseur intégré | `OC_EXCLUDE_RUN_SERVICES` n’inclut pas `idp`, ou OpenCloud n’a pas été redémarré |
 
-## Where to go next
+## Pour aller plus loin {#where-to-go-next}
 
-| Page | Why |
+| Page | Pourquoi |
 |:-----|:----|
-| [Running OpenCloud in a secure infrastructure](secure-deployment.md) | The audit log, the firewall and the rest of the job this page is one part of |
-| [Authentication](authentication.md) | Every authentication and OpenID Connect check the scanner runs, in detail |
-| [Reverse proxies](reverse-proxy.md) | Terminating TLS in front of both names |
-| [TLS and certificates](tls.md) | What a good certificate looks like, and every transport check |
-| [Authentik in front of the MCP endpoint](authentik.md) | The same provider, protecting this scan service rather than OpenCloud |
-| [Hardening measures](hardening.md) | What `basicAuthDisabled` and the rest actually mean |
+| [Exploiter OpenCloud dans une infrastructure sécurisée](secure-deployment.md) | Le journal d’audit, le pare-feu et le reste du travail dont cette page n’est qu’une partie |
+| [Authentification](authentication.md) | Tous les contrôles d’authentification et OpenID Connect du scanner, en détail |
+| [Reverse proxies](reverse-proxy.md) | Terminer TLS devant les deux noms |
+| [TLS et certificats](tls.md) | À quoi ressemble un bon certificat, et tous les contrôles de transport |
+| [Authentik devant le point de terminaison MCP](authentik.md) | Le même fournisseur, qui protège ce service d’analyse plutôt qu’OpenCloud |
+| [Mesures de durcissement](hardening.md) | Ce que signifient réellement `basicAuthDisabled` et les autres |
 
-## Trademarks and affiliation
+## Marques et affiliation {#trademarks-and-affiliation}
 
-This is an independent community project. It is **not** affiliated with,
-endorsed by, sponsored by or supported by OpenCloud GmbH, and nothing on this
-page is an official statement about OpenCloud software.
+Ce projet est un projet communautaire indépendant. Il n’est **pas** affilié à
+OpenCloud GmbH, ni approuvé, parrainé ou soutenu par elle, et rien sur cette
+page ne constitue une déclaration officielle concernant les logiciels
+OpenCloud.
 
-"OpenCloud", the OpenCloud logo and all related names and marks are the
-property of their respective owners. Keycloak, Authentik and Authelia are the
-property of their respective owners likewise. They appear here only to
-identify the software this page describes. All rights in OpenCloud remain with
-OpenCloud GmbH.
+« OpenCloud », le logo OpenCloud ainsi que tous les noms et marques associés
+appartiennent à leurs propriétaires respectifs. Il en va de même pour Keycloak,
+Authentik et Authelia. Ils ne figurent ici que pour identifier les logiciels
+décrits sur cette page. Tous les droits sur OpenCloud restent la propriété
+d’OpenCloud GmbH.

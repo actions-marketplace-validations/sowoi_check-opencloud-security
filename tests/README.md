@@ -110,6 +110,8 @@ is needed.
 | [`test_webhook.py`](test_webhook.py) | The optional webhook notification. |
 | [`test_baseline.py`](test_baseline.py) | `--baseline` and `--warn-on-new`: report only what changed. |
 | [`test_eol_warning.py`](test_eol_warning.py) | `--eol-warning`: an otherwise OK result warns while support is running out, from flag, environment or file. |
+| [`test_waiver_warning.py`](test_waiver_warning.py) | `--waiver-warning` and `waiver_days_left`: lead time before a temporary waiver runs out, and which deadline counts. |
+| [`test_coverage_perfdata.py`](test_coverage_perfdata.py) | `coverage_inconclusive` and `coverage_not_checked`: the coverage block as graphable numbers that never move the state. |
 | [`test_upgrade_path.py`](test_upgrade_path.py) | `upgradePath`: what the recommended release fixes and leaves open, and the plugin lines for it and for an advertised HTTP/3 listener. |
 | [`test_webapp_report_facts.py`](test_webapp_report_facts.py) | The report's facts list: an advertised HTTP/3 listener and the upgrade path, rendered from a real scan. |
 | [`test_webapp_rehearsal.py`](test_webapp_rehearsal.py) | The upgrade rehearsal on the result page: every rating comes from the scan document, an older result renders without the panel, and a version string the host chose stays text. |

@@ -282,3 +282,23 @@ def summary_line(result: Mapping[str, Any]) -> str:
         if totals[key]
     )
     return ", ".join(parts)
+
+
+def state_counts(result: Mapping[str, Any]) -> dict[str, int] | None:
+    """
+    How many recorded checks are in each of the four states.
+
+    The plain split by state, for a graph: ``inconclusive`` and
+    ``not_checked`` are the two gaps, whatever their reason. Counted from the
+    entries, as :func:`summary` is, so a hand-edited ``counts`` block cannot
+    disagree with the checks it claims to count. ``None`` when the report has
+    no coverage block, which is not the same as a report with no gaps.
+    """
+    coverage = coverage_of(result)
+    if coverage is None:
+        return None
+    counts = dict.fromkeys((PASSED, FAILED, NOT_CHECKED, INCONCLUSIVE), 0)
+    for entry in coverage["checks"]:
+        if isinstance(entry, Mapping) and entry.get("state") in counts:
+            counts[entry["state"]] += 1
+    return counts

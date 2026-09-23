@@ -81,6 +81,9 @@ incluidos no coinciden con ellos.
 | `opencloud_security_update_available` | `host`, `target_version` | `1` cuando existe una versión más reciente |
 | `opencloud_security_certificate_days_remaining` | `host` | Días hasta que caduca el certificado presentado; negativo después, sin muestra por HTTP sin cifrar |
 | `opencloud_security_upgrade_path_complete` | `host`, `target_version` | `1` cuando la actualización recomendada corrige todas las vulnerabilidades conocidas; sin muestra si no hay ruta |
+| `opencloud_security_waiver_days_remaining` | `host` | Días hasta que termina una exención `--waive-until` y una comprobación fallida vuelve a alertar; sin muestra si ninguna comprobación fallida depende de un plazo |
+| `opencloud_security_coverage_inconclusive_total` | `host` | Comprobaciones que el análisis ejecutó sin llegar a una conclusión |
+| `opencloud_security_coverage_not_checked_total` | `host` | Comprobaciones que el análisis no ejecutó |
 | `opencloud_security_scan_duration_seconds` | `host` | Duración del análisis |
 | `opencloud_security_scrape_success` | `host` | `0` cuando ha fallado el análisis del que proceden los números |
 
@@ -112,6 +115,9 @@ rating=5;@0:3;@0:1;0;5 vulnerabilities=0;;;0; time=1.234s;;;0;
 | `extra_checks_failed` | Comprobaciones adicionales fallidas |
 | `update_available` | `1` cuando existe una versión más reciente |
 | `support_days_left` | Días de soporte restantes; negativo cuando ya ha vencido |
+| `waiver_days_left` | Días hasta que termina una exención temporal; ausente si ninguna oculta una comprobación fallida |
+| `coverage_inconclusive` | Comprobaciones que el análisis no pudo decidir |
+| `coverage_not_checked` | Comprobaciones que el análisis no ejecutó |
 
 `support_days_left` es la que merece una alerta. Pasa a negativo *antes* de
 que nadie se dé cuenta de que la instancia ha dejado de recibir correcciones.
