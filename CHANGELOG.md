@@ -12,6 +12,8 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+## [1.30.1] - 2026-09-23
+
 ### Added
 
 - `--waiver-warning DAYS` (`COS_WAIVER_WARNING`, YAML `waiver_warning`)
