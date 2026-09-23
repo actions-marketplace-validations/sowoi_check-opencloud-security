@@ -308,7 +308,7 @@ cabeceras <code>Strict-Transport-Security</code> son peores que ninguna.</p>
 <li><strong><code>X-Forwarded-For</code> añadido a partir de un valor enviado por el cliente.</strong>
   Aquí no es un hallazgo, pero convierte en conjeturas todos los límites de
   frecuencia y registros de auditoría detrás del proxy. Sobrescríbalo en el
-  borde.</li>
+  proxy que recibe las solicitudes externas.</li>
 <li><strong><code>X-Forwarded-Host</code> reenviado tal como lo envía el cliente.</strong> Esto <em>sí</em> es
   un hallazgo, <code>forwardedHostIgnored</code>, cuando la instancia construye después
   sus URL públicas a partir de él. El análisis pide el documento de
@@ -318,7 +318,7 @@ cabeceras <code>Strict-Transport-Security</code> son peores que ninguna.</p>
   defina la cabecera desde la configuración del propio proxy
   (<code>proxy_set_header X-Forwarded-Host $host;</code>) en lugar de reenviar lo que
   llegue. Un host virtual predeterminado que rechace los nombres que no
-  reconoce cierra la misma puerta para la cabecera <code>Host</code>.</li>
+  reconoce impide el mismo problema con la cabecera <code>Host</code>.</li>
 <li><strong>Ningún servidor predeterminado.</strong> Sin uno, nginx responde a un <code>Host</code> para
   el que no tiene <code>server_name</code> desde el primer bloque <code>server</code> que cargó para
   ese puerto (a menudo otra aplicación del mismo equipo), y Apache desde el
@@ -357,8 +357,8 @@ cabeceras <code>Strict-Transport-Security</code> son peores que ninguna.</p>
 <p>La aplicación web de este repositorio (<a href="/documentation/web-service"><code>docs/webapp.md</code></a>) es un
 servicio ASGI simple en un puerto. Envía sus propias cabeceras de seguridad,
 incluida una <code>Content-Security-Policy</code> sin <code>unsafe-inline</code>, así que un proxy
-no tiene nada que añadir. Lo que sí necesita es la verdad sobre quién llama y
-la paciencia suficiente para que termine un análisis.</p>
+no tiene nada que añadir. El proxy debe transmitir la dirección real del cliente y
+permitir que la conexión dure lo suficiente para completar un análisis.</p>
 <p><strong>No tiene que copiar nada de esto a mano.</strong>
 <a href="https://github.com/sowoi/check-opencloud-security/blob/main/docker/setup-wizard.py"><code>docker/setup-wizard.py</code></a> escribe la
 configuración de nginx, Apache, Caddy o Traefik para un despliegue generado,

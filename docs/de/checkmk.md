@@ -31,7 +31,7 @@ Lege unter **Setup > Services > Other services > Integrate Nagios plugins** eine
 
 Weise die Regel dem Host zu, unter dem der Service erscheinen soll. Das tatsächliche Scanziel bestimmt weiterhin `--host`.
 
-Checkmk liest den Status aus dem Exitcode, die Zusammenfassung aus der ersten Ausgabezeile, weitere Zeilen als Details und die Werte hinter `|` als Metriken. Die [Performancedaten](../../README.md#performance-data) enthalten `rating`, `vulnerabilities`, `hardenings_missing`, `extra_checks_failed`, `update_available`, `support_days_left`, `cert_days_left` und `time` einschließlich Schwellwerten.
+Checkmk liest den Status aus dem Exitcode, die Zusammenfassung aus der ersten Ausgabezeile, weitere Zeilen als Details und die Werte hinter `|` als Metriken. Die [Performancedaten](../../README.md#performance-data) enthalten `rating`, `vulnerabilities`, `hardenings_missing`, `extra_checks_failed`, `update_available`, `support_days_left`, `cert_days_left`, `upgrade_path_complete`, `waiver_days_left`, `coverage_inconclusive`, `coverage_not_checked` und `time` einschließlich Schwellwerten.
 
 Prüfe das Intervall unter **Setup > Services > Service monitoring rules > Normal check interval for service checks**. Ein Scan erzeugt mehrere HTTP-Anfragen und TCP-Verbindungen; ein minütlicher Check ist für diese Konfigurationsprüfung meist unnötig. Wähle beispielsweise eine Stunde oder länger.
 
@@ -101,7 +101,10 @@ Die Messwerte entsprechen den Nagios-Performancedaten mit zwei Anpassungen:
 | `update_available` | `1` bei verfügbarer neuerer Version; fehlt bei deaktivierter Update-Prüfung |
 | `support_days_left` | Tage bis zum Supportende; danach negativ |
 | `cert_days_left` | Tage bis zum Zertifikatsablauf; danach negativ |
-| `upgrade_path_complete` | `1`, wenn das empfohlene Update alle bekannten Sicherheitshinweise behebt, sonst `0`; fehlt ohne Hinweise |
+| `upgrade_path_complete` | `1`, wenn das empfohlene Update alle bekannten Schwachstellen behebt, sonst `0`; fehlt ohne Hinweise |
+| `waiver_days_left` | Tage, bis eine `--waive-until`-Ausnahme endet und eine fehlgeschlagene Prüfung wieder alarmiert; fehlt, wenn keine fehlgeschlagene Prüfung an einer Frist hängt |
+| `coverage_inconclusive` | Prüfungen, die der Scan ausgeführt, aber nicht entschieden hat; fehlt ohne Coverage-Block |
+| `coverage_not_checked` | Prüfungen, die der Scan nicht ausgeführt hat; fehlt ohne Coverage-Block |
 | `execution_time` | Scandauer in Sekunden |
 
 Nicht ermittelte Werte werden weggelassen und nicht als Null ausgegeben.

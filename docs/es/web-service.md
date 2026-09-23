@@ -231,7 +231,7 @@ Cada ajuste es una variable de entorno que se lee una vez al arrancar.
 
 | Variable | Valor predeterminado | Qué hace |
 |:---------|:--------|:-------------|
-| `COS_WEB_REDIS_URL` | `redis://127.0.0.1:6379/0` | Dónde vive el estado efímero. `memory://` funciona sin Redis, para una evaluación en un solo proceso. Incluya la contraseña cuando Redis la exija: `redis://:PASSWORD@redis:6379/0` |
+| `COS_WEB_REDIS_URL` | `redis://127.0.0.1:6379/0` | Dónde se guarda el estado temporal. `memory://` funciona sin Redis, para una evaluación en un solo proceso. Incluya la contraseña cuando Redis la exija: `redis://:PASSWORD@redis:6379/0` |
 | `COS_WEB_RESULT_TTL` | `3600` | Segundos durante los que se puede leer un análisis. También es el TTL de todas las claves |
 | `COS_WEB_COMPARISON_TTL` | `300` | Segundos durante los que se puede leer una comparación con un informe subido. Limitado a 300; se respeta un valor menor |
 | `COS_WEB_MAX_WORKERS` | `5` | Análisis que se ejecutan a la vez |
@@ -336,17 +336,15 @@ calendario y la hora de la última lectura correcta, y
 [ADR 0016](../../adr/0016-the-release-schedule-refreshes-itself.md) recoge el
 razonamiento.
 
-`COS_WEB_ADVISORY_REFRESH` hace lo mismo con la otra mitad de lo que compone
-una nota, y es más importante. La base de datos de avisos decide si una
-instancia *se notifica como vulnerable*, así que una base de datos que no ha
-oído hablar del aviso del mes pasado no solo califica con generosidad: le dice
-al visitante que una instancia vulnerable está bien, y no tiene forma de
-distinguir esa respuesta de una real. Por eso el worker pregunta al canal una
-vez al día, también al arrancar, y los trabajos de análisis evalúan según lo
-último que aceptó.
+`COS_WEB_ADVISORY_REFRESH` actualiza la base de datos de avisos. Estos datos
+determinan si una instancia *se notifica como vulnerable*. Si falta un aviso
+reciente, el servicio puede presentar una instancia vulnerable como segura
+sin que el visitante sepa que el resultado es incorrecto. Por eso el worker
+consulta la fuente una vez al día y al arrancar. Los trabajos de análisis
+usan los últimos datos aceptados.
 
-Las reglas son la imagen especular de las del calendario, porque esto puede
-fallar en ambos sentidos. Una actualización **solo añade**: la respuesta se
+Las reglas impiden tanto la pérdida de avisos como la incorporación de avisos
+incorrectos. Una actualización **solo añade**: la respuesta se
 combina con la base de datos que ya tiene el despliegue, así que un canal que
 devuelve una lista vacía no cambia nada y una entrada escrita a mano se
 conserva. Nunca se cree nada **sin límites** (un aviso que no indica versiones
@@ -412,7 +410,7 @@ El uuid es una capacidad: conocerlo es la única forma de llegar al análisis.
   idéntico en los tres casos, para que un desconocido no pueda saber que un
   uuid existió;
 - todas las claves llevan el TTL, incluida la que se escribe mientras el
-  análisis sigue en cola. Nada sobrevive a lo que promete la página de inicio.
+  análisis sigue en cola. Los datos caducan al terminar el plazo de conservación indicado en la página de inicio.
 
 ## Comparar dos análisis {#comparing-two-scans}
 
@@ -502,7 +500,7 @@ tabla. Ahora se escriben ambos como filas, pero un archivo descargado antes de
 eso no dice nada de ellos, y el silencio no equivale a "no". Esas mediciones se
 neutralizan en *ambos* documentos antes de la comparación, y la página indica
 qué ha dejado fuera. JSON es el formato que se recupera sin pérdidas; CSV es
-una hoja de cálculo que casualmente se puede volver a leer.
+una tabla de hallazgos que también se puede importar, con esas limitaciones.
 
 **El archivo nunca se guarda. La comparación sí, durante cinco minutos.** La
 subida se lee una vez en memoria y no se escribe en ningún sitio. Lo que
@@ -552,7 +550,7 @@ destino se comprueba antes de conectarse a nada:
   rechaza el destino, lo que hace inútil el truco de los registros múltiples;
 - `localhost`, `*.internal`, `*.local` y los nombres de metadatos de la nube se
   rechazan también por su nombre, porque un resolvedor que responde a esos
-  nombres con una dirección pública está roto o miente;
+  nombres con una dirección pública ofrece una respuesta no fiable;
 - `169.254.169.254`, `100.100.100.200` y `fd00:ec2::254` se rechazan
   explícitamente. La exclusión de enlace local ya cubre la primera, pero
   nombrarlas hace que el rechazo sea legible y sobreviva a una futura
@@ -630,8 +628,8 @@ retira entradas, y:
 - lo que declara `COS_WEB_BLOCKED_TARGETS` **no se puede retirar desde ahí**.
   Esas entradas se muestran sin ningún control al lado, y un intento de
   eliminar una se rechaza con una indicación hacia el entorno: su archivo
-  compose sigue siendo la verdad sobre lo que declara;
-- las entradas añadidas en el área viven en **Redis**, así que son tan
+  compose conserva el control de esas exclusiones;
+- las entradas añadidas en el área se guardan en **Redis**, así que son tan
   duraderas como su Redis. Todo lo que deba sobrevivir a un vaciado pertenece
   a la variable de entorno;
 - una entrada tiene como máximo **253 caracteres**, la longitud máxima de un
@@ -654,7 +652,7 @@ las cuatro propiedades que lo hicieron aceptable allí, y
 
 ## Limitación de frecuencia {#rate-limiting}
 
-Todos los límites viven en Redis y caducan por sí solos:
+Los contadores de todos los límites se guardan en Redis y caducan automáticamente:
 
 - **por cliente**: `COS_WEB_IP_RATE_LIMIT` análisis por
   `COS_WEB_IP_RATE_WINDOW`, y como máximo `COS_WEB_DAILY_SCAN_LIMIT` al día.
@@ -1494,7 +1492,7 @@ Son las únicas rutas de datos de referencia que admiten una caché pública
 (`max-age=3600`). No nombran ninguna instancia, no llevan uuid y no aceptan
 parámetros (la condición que fija la
 [ADR 0031](../../adr/0031-a-response-is-uncacheable-until-a-route-opts-in.md)
-para admitir caché), y nunca deben aprender a aceptarlos: un canal filtrado por
+para admitir caché), y no se debe añadir esa posibilidad: un canal filtrado por
 nombre de host sería una pregunta sobre la instancia de alguien. Los
 identificadores de las entradas son URN del aviso o de la línea de versiones y
 no URL de este despliegue, así que el historial de un lector sobrevive a que el

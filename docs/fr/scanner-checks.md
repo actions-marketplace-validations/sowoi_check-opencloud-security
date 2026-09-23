@@ -5,240 +5,251 @@ consultés, chaque contrôle supplémentaire et son niveau, les observations enr
 mais jamais notées, ainsi que les questions auxquelles une analyse externe ne peut pas
 répondre.
 
-Le [README principal](../README.md#the-built-in-scanner) résume le sujet ; les contrôles
+Le [README principal](../../README.md#the-built-in-scanner) résume le sujet ; les contrôles
 sont expliqués par groupe dans
 [TLS](tls.md), [CSP](csp.md), [cookies](cookies.md),
-[authentication](authentication.md), [sharing](sharing.md),
-[exposure](exposure.md), [embedding](embedding.md) and
-[lifecycle](lifecycle.md).
+[authentification](authentication.md), [partage](sharing.md),
+[exposition](exposure.md), [intégration](embedding.md) et
+[cycle de vie](lifecycle.md).
 
 <!-- TOC -->
-* [What the scanner reads, and what it deliberately does not](#what-the-scanner-reads-and-what-it-deliberately-does-not)
-  * [What the scanner checks](#what-the-scanner-checks)
-  * [Reading the version correctly](#reading-the-version-correctly)
-  * [Debug ports](#debug-ports)
-  * [Every resolved address](#every-resolved-address)
+* [Ce que le scanner lit, et ce qu’il ne lit volontairement pas](#what-the-scanner-reads-and-what-it-deliberately-does-not)
+  * [Ce que vérifie le scanner](#what-the-scanner-checks)
+  * [Lire correctement la version](#reading-the-version-correctly)
+  * [Ports de débogage](#debug-ports)
+  * [Toutes les adresses résolues](#every-resolved-address)
 <!-- TOC -->
 
 
-## What the scanner checks
+## Ce que vérifie le scanner {#what-the-scanner-checks}
 
-Read from the instance itself:
+Lu directement sur l’instance :
 
-- product, `productversion` and edition from `/status.php`. Other products are
-  refused because their releases and advisories do not match this scanner’s
-  database. OpenCloud hardcodes `maintenance`, `installed` and `needsDbUpgrade`,
-  so those fields are not treated as live health checks; see
-  [the status endpoint](status-php.md).
-- the IPv4 and IPv6 addresses the name resolved to while the scan ran,
-  reported as `addresses` in the result document and shown as **Resolved to**
-  on a web result page - context, never a finding, and empty when a name
-  does not resolve or an address was scanned directly
-- capabilities from `/ocs/v1.php/cloud/capabilities` (both endpoints are
-  unauthenticated in OpenCloud)
-- the security headers `Strict-Transport-Security`, `Content-Security-Policy`,
-  `X-Content-Type-Options`, `X-Frame-Options`,
-  `X-Permitted-Cross-Domain-Policies`, `X-Robots-Tag`, `X-XSS-Protection` and
-  `Referrer-Policy`, reported as `setup.headers` - see
-  [`docs/csp.md`](csp.md) for what the `Content-Security-Policy` checks
-  look for and why
-- four further headers that **no** OpenCloud sends - `Permissions-Policy`,
-  `Cross-Origin-Opener-Policy`, `Cross-Origin-Resource-Policy` and
-  `Cross-Origin-Embedder-Policy` - reported separately as
-  `setup.advisoryHeaders`. A reverse proxy can add all four and the instance
-  is better for it, but their absence is the shipped state of every OpenCloud
-  rather than a fact about this deployment, so they are explained by `--debug`
-  and never counted as a missing hardening, never alerted on and never allowed
-  to change an exit code. See
-  [ADR 0028](../../adr/0028-headers-no-opencloud-sends-are-reported-but-never-alerted.md).
-  Rehearse `Cross-Origin-Embedder-Policy: require-corp` before rolling it
-  out - an office integration that embeds Collabora or a WOPI host stops
-  loading unless that origin sends a `Cross-Origin-Resource-Policy` of its own
-- whether `/.well-known/security.txt` tells somebody who finds a flaw where to
-  report it, as `securityTxtPublished` under `setup.advisoryChecks`. The same
-  bargain as the headers above, for what is not a header: OpenCloud publishes
-  none on any instance, so it is explained and never counted. The file has to
-  carry the `Contact` field RFC 9116 requires - a 200 alone means nothing on
-  an instance whose frontend answers every unknown path with its own shell.
-  See [ADR 0034](../../adr/0034-an-advisory-observation-need-not-be-a-header.md)
-- whether the `Strict-Transport-Security` header would actually be accepted
-  for browser preloading, as `hstsPreloadEligible` under the same
-  `setup.advisoryChecks`. `hstsPreload` already reports whether the header
-  *asks* to be preloaded; this reports whether asking could work, which needs
-  a max-age of at least a year, `includeSubDomains` and `preload` together.
-  OpenCloud's own proxy sends ten years and `preload` but no
-  `includeSubDomains`, so every stock instance asks for something the list
-  refuses - a fact about OpenCloud rather than about the deployment, which is
-  why it is explained and never counted. Membership of the list itself is
-  deliberately not measured: the only ways to know are to ask a third party
-  for it or to ship tens of megabytes of it. See
-  [ADR 0037](../../adr/0037-preload-eligibility-is-measured-list-membership-is-not.md)
-- `hardenings` derived from those headers and capabilities
-- known vulnerabilities from the [advisory database](../README.md#advisory-database) and
-  the resulting rating (`0`-`5`)
+- le produit, `productversion` et l’édition depuis `/status.php`. Les autres
+  produits sont refusés, car leurs versions et leurs avis de sécurité ne
+  correspondent pas à la base de ce scanner. OpenCloud code en dur
+  `maintenance`, `installed` et `needsDbUpgrade` : ces champs ne sont donc pas
+  traités comme de véritables contrôles d’état ; voir
+  [le point de terminaison de statut](status-php.md).
+- les adresses IPv4 et IPv6 vers lesquelles le nom s’est résolu pendant
+  l’analyse, indiquées sous `addresses` dans le document de résultat et
+  affichées sous **Résolu en** sur une page de résultat web. C’est un contexte,
+  jamais un constat, et la liste est vide lorsqu’un nom ne se résout pas ou
+  qu’une adresse a été analysée directement.
+- les capacités depuis `/ocs/v1.php/cloud/capabilities` (les deux points de
+  terminaison sont accessibles sans authentification dans OpenCloud)
+- les en-têtes de sécurité `Strict-Transport-Security`,
+  `Content-Security-Policy`, `X-Content-Type-Options`, `X-Frame-Options`,
+  `X-Permitted-Cross-Domain-Policies`, `X-Robots-Tag`, `X-XSS-Protection` et
+  `Referrer-Policy`, indiqués sous `setup.headers` - voir
+  [`docs/csp.md`](csp.md) pour ce que recherchent les contrôles de
+  `Content-Security-Policy`, et pourquoi
+- quatre autres en-têtes qu’**aucune** instance OpenCloud n’envoie -
+  `Permissions-Policy`, `Cross-Origin-Opener-Policy`,
+  `Cross-Origin-Resource-Policy` et `Cross-Origin-Embedder-Policy` - indiqués
+  séparément sous `setup.advisoryHeaders`. Un reverse proxy peut ajouter les
+  quatre, et l’instance s’en porte mieux, mais leur absence est l’état livré de
+  toute instance OpenCloud et non un fait propre à ce déploiement : ils sont
+  donc expliqués par `--debug`, jamais comptés comme durcissement manquant,
+  jamais signalés par une alerte et jamais autorisés à modifier un code de
+  sortie. Voir
+  [l’ADR 0028](../../adr/0028-headers-no-opencloud-sends-are-reported-but-never-alerted.md).
+  Testez `Cross-Origin-Embedder-Policy: require-corp` avant de le déployer :
+  une intégration bureautique qui embarque Collabora ou un hôte WOPI cesse de
+  se charger si cette origine n’envoie pas sa propre
+  `Cross-Origin-Resource-Policy`
+- si `/.well-known/security.txt` indique à quiconque découvre une faille où la
+  signaler, sous `securityTxtPublished` dans `setup.advisoryChecks`. OpenCloud
+  ne publie pas ce fichier par défaut. Comme pour les en-têtes consultatifs
+  ci-dessus, le résultat explique son absence sans affecter la note. Le fichier
+  doit contenir le champ `Contact` exigé par la RFC 9116 : une réponse 200 seule
+  ne signifie rien sur une instance dont le frontend répond à tout chemin
+  inconnu avec sa propre coquille applicative. Voir
+  [l’ADR 0034](../../adr/0034-an-advisory-observation-need-not-be-a-header.md)
+- si l’en-tête `Strict-Transport-Security` serait réellement accepté pour le
+  préchargement par les navigateurs, sous `hstsPreloadEligible` dans le même
+  `setup.advisoryChecks`. `hstsPreload` indique déjà si l’en-tête *demande* le
+  préchargement ; ce contrôle indique si la demande pourrait aboutir, ce qui
+  exige à la fois un max-age d’au moins un an, `includeSubDomains` et `preload`.
+  Le proxy d’OpenCloud envoie dix ans et `preload`, mais pas
+  `includeSubDomains` : toute instance non modifiée demande donc quelque chose
+  que la liste refuse. C’est un fait concernant OpenCloud et non le
+  déploiement, d’où une explication sans comptage. L’inscription sur la liste
+  n’est volontairement pas mesurée : le seul moyen de la connaître serait
+  d’interroger un tiers ou de livrer des dizaines de mégaoctets de liste. Voir
+  [l’ADR 0037](../../adr/0037-preload-eligibility-is-measured-list-membership-is-not.md)
+- les `hardenings` déduits de ces en-têtes et capacités
+- les vulnérabilités connues issues de la [base des avis de sécurité](../../README.md#advisory-database)
+  et la note qui en résulte (`0`-`5`)
 
-Plus the additional checks (`extraChecks` in the JSON, disable with
-`--no-extra-checks`):
+S’y ajoutent les contrôles supplémentaires (`extraChecks` dans le JSON,
+désactivables avec `--no-extra-checks`) :
 
-| Check                                                                                                                                      | Severity      | Purpose                                                                                                     |
+| Contrôle                                                                                                                                   | Gravité       | Objet                                                                                                       |
 |:-------------------------------------------------------------------------------------------------------------------------------------------|:--------------|:------------------------------------------------------------------------------------------------------------|
-| `httpsAvailable`, `tlsHandshake`, `tlsProtocol`                                                                                            | critical/high | Instance only reachable over HTTP, broken TLS, or a protocol older than TLS 1.2                             |
-| `tlsCertificate`, `tlsTrusted`                                                                                                             | high/medium   | Certificate expired, expiring within `scanner.tls_min_days`, or not trusted                                 |
-| `tlsDeprecatedProtocol`                                                                                                                    | high          | The server still accepts TLS 1.0 or 1.1 even though it negotiated something newer with us                   |
-| `tlsHostname`                                                                                                                              | high          | The certificate does not cover the name it was asked for                                                    |
-| `tlsChain`                                                                                                                                 | medium        | The chain is missing an intermediate, so it validates only for clients that happen to have one cached       |
-| `tlsCertificateLifetime`                                                                                                                   | low           | The certificate is valid for longer than the scanner’s 398-day threshold                                       |
-| `tlsCipherSuite`                                                                                                                           | medium        | The cipher suite negotiated by this scan is weak or lacks forward secrecy                                   |
-| `tlsCertificatePolicy`                                                                                                                     | medium        | The certificate has a weak key or an MD5/SHA-1 signature                                                    |
-| `tlsAddressParity`                                                                                                                          | medium        | IPv4 and IPv6 present different TLS services, or one is unreachable                                          |
-| `addressParity`                                                                                                                             | high/medium   | With `--all-addresses`: the resolved addresses serve a different release, headers, hardening or demo-account state, or one does not answer|
-| `tlsCaaRecord`                                                                                                                             | low           | No DNS CAA record restricts which certificate authorities may issue for this name                            |
-| `tlsDnssec`                                                                                                                                | low           | The zone answering for this name is not signed, so a forged address cannot be detected - absent, never failed, when the resolver used does not speak DNSSEC |
-| `companionAdminConsole`                                                                                                                    | high          | A collaboration backend published on this origin answers on its administration console path                  |
-| `companionEditorHttps`                                                                                                                     | high          | That backend advertises editor addresses over plain HTTP in its WOPI discovery document                      |
-| `cookieSecure`, `cookieHttpOnly`, `cookieSameSite`                                                                                        | high - low    | An observed cookie lacks Secure, HttpOnly or SameSite                                                        |
-| `cookiePrefix`                                                                                                                             | low           | No observed cookie uses the `__Host-`/`__Secure-` name prefix, or one claims a prefix it does not honour     |
-| `tlsOcspStapling`                                                                                                                          | low           | No OCSP response stapled to the handshake, although the certificate names a responder                       |
-| `tlsCertificateTransparency`                                                                                                               | medium        | A publicly trusted certificate carries no embedded signed certificate timestamps |
-| `tlsEarlyData`                                                                                                                             | low           | The server's session tickets invite a TLS 1.3 0-RTT flight, which has no replay protection                  |
-| `corsOriginRestricted`                                                                                                                     | critical/medium | Any origin may read the API's responses; critical when credentials are allowed with it                     |
-| `traceMethodDisabled`                                                                                                                      | medium        | The server answers `TRACE` by echoing the request                                  |
-| `forwardedHostIgnored`                                                                                                                     | medium        | A host name the caller supplied comes back in the discovery document, so a caller chooses where a sign-in goes |
-| `header:<name>`                                                                                                                            | high - low    | One of the headers above missing or too weak                                                                |
-| `authentication:/remote.php/dav/files/`, `/graph/v1.0/users`, `/ocs/v1.php/cloud/user`                                                     | critical/high | An endpoint that must demand authentication answered anyway                                                 |
-| `exposed:/opencloud.yaml`, `/proxy/server.key`, `/idm/opencloud.boltdb`, `/.env`, `/docker-compose.yml`, `/storage/users/`, `/.git/config` | critical/high | Deployment internals published by a misconfigured reverse proxy                                             |
-| `directoryListing`                                                                                                                         | critical      | A directory index served instead of the web frontend                                                        |
-| `demoUsersDisabled`                                                                                                                        | critical      | The built-in identity provider still accepts the documented demo accounts, one of which is an administrator |
-| `debugEndpoint:/metrics`, `/config`, `/debug/pprof/`                                                                                       | critical/high | Debug handlers reachable on the public address                                                              |
-| `debugPort:<port>`                                                                                                                         | high          | A service debug port answering from the outside                                                             |
-| `backendPortClosed`                                                                                                                        | high          | The same OpenCloud instance is reachable directly on backend port 9200, bypassing its reverse proxy         |
-| `webEmbedDelegatedAuthenticationRestricted`                                                                                                | critical      | Delegated iframe authentication accepts messages without an explicit trusted origin                         |
-| `webEmbedMessageOriginRestricted`                                                                                                          | high          | The web client's embed messages trust every parent origin                                                   |
-| `basicAuthDisabled`                                                                                                                        | medium        | The proxy still offers HTTP basic authentication                                                            |
-| `identityProviderDetected`                                                                                                                 | low           | No OpenID Connect discovery document and no redirect from it, so who signs users in cannot be established   |
-| `reverseProxyDetected`                                                                                                                     | low           | Nothing suggests a reverse proxy in front of the instance                                                   |
-| `versionDisclosure:Server`, `webfingerVersionDisclosure`                                                                                   | low           | Exact versions leaked to unauthenticated callers                                                            |
+| `httpsAvailable`, `tlsHandshake`, `tlsProtocol`                                                                                            | critical/high | Instance accessible uniquement en HTTP, TLS défaillant ou protocole antérieur à TLS 1.2                     |
+| `tlsCertificate`, `tlsTrusted`                                                                                                             | high/medium   | Certificat expiré, expirant dans moins de `scanner.tls_min_days` jours, ou non reconnu                      |
+| `tlsDeprecatedProtocol`                                                                                                                    | high          | Le serveur accepte encore TLS 1.0 ou 1.1, bien qu’il ait négocié une version plus récente avec le scanner   |
+| `tlsHostname`                                                                                                                              | high          | Le certificat ne couvre pas le nom demandé                                                                  |
+| `tlsChain`                                                                                                                                 | medium        | Il manque un certificat intermédiaire dans la chaîne : elle n’est validée que par les clients qui l’ont déjà en cache |
+| `tlsCertificateLifetime`                                                                                                                   | low           | Le certificat est valide plus longtemps que le seuil de 398 jours du scanner                                |
+| `tlsCipherSuite`                                                                                                                           | medium        | La suite de chiffrement négociée par cette analyse est faible ou n’offre pas de confidentialité persistante |
+| `tlsCertificatePolicy`                                                                                                                     | medium        | Le certificat a une clé faible ou une signature MD5/SHA-1                                                   |
+| `tlsAddressParity`                                                                                                                          | medium        | IPv4 et IPv6 présentent des services TLS différents, ou l’une des deux adresses est injoignable              |
+| `addressParity`                                                                                                                             | high/medium   | Avec `--all-addresses` : les adresses résolues servent une version, des en-têtes, un durcissement ou un état des comptes de démonstration différents, ou l’une ne répond pas |
+| `tlsCaaRecord`                                                                                                                             | low           | Aucun enregistrement DNS CAA ne limite les autorités de certification autorisées à émettre pour ce nom      |
+| `tlsDnssec`                                                                                                                                | low           | La zone qui répond pour ce nom n’est pas signée : une adresse falsifiée ne peut donc pas être détectée. Absent, jamais en échec, lorsque le résolveur utilisé ne gère pas DNSSEC |
+| `companionAdminConsole`                                                                                                                    | high          | Un backend de collaboration publié sur cette origine répond sur le chemin de sa console d’administration    |
+| `companionEditorHttps`                                                                                                                     | high          | Ce backend annonce des adresses d’éditeur en HTTP simple dans son document de découverte WOPI              |
+| `cookieSecure`, `cookieHttpOnly`, `cookieSameSite`                                                                                        | high - low    | Un cookie observé n’a pas l’attribut Secure, HttpOnly ou SameSite                                           |
+| `cookiePrefix`                                                                                                                             | low           | Aucun cookie observé n’utilise le préfixe de nom `__Host-`/`__Secure-`, ou un cookie revendique un préfixe dont il ne respecte pas les règles |
+| `tlsOcspStapling`                                                                                                                          | low           | Aucune réponse OCSP agrafée à la négociation, alors que le certificat désigne un répondeur                  |
+| `tlsCertificateTransparency`                                                                                                               | medium        | Un certificat reconnu publiquement ne contient aucun horodatage de certificat signé intégré                 |
+| `tlsEarlyData`                                                                                                                             | low           | Les tickets de session du serveur invitent à un envoi TLS 1.3 0-RTT, qui n’a pas de protection contre le rejeu |
+| `corsOriginRestricted`                                                                                                                     | critical/medium | N’importe quelle origine peut lire les réponses de l’API ; critical lorsque les identifiants sont autorisés en même temps |
+| `traceMethodDisabled`                                                                                                                      | medium        | Le serveur répond à `TRACE` en renvoyant la requête                                                         |
+| `forwardedHostIgnored`                                                                                                                     | medium        | Un nom d’hôte fourni par l’appelant revient dans le document de découverte : l’appelant choisit donc où aboutit une connexion |
+| `header:<name>`                                                                                                                            | high - low    | L’un des en-têtes ci-dessus est absent ou trop faible                                                       |
+| `authentication:/remote.php/dav/files/`, `/graph/v1.0/users`, `/ocs/v1.php/cloud/user`                                                     | critical/high | Un point de terminaison qui doit exiger une authentification a répondu malgré tout                          |
+| `exposed:/opencloud.yaml`, `/proxy/server.key`, `/idm/opencloud.boltdb`, `/.env`, `/docker-compose.yml`, `/storage/users/`, `/.git/config` | critical/high | Éléments internes du déploiement publiés par un reverse proxy mal configuré                                 |
+| `directoryListing`                                                                                                                         | critical      | Un index de répertoire servi à la place du frontend web                                                     |
+| `demoUsersDisabled`                                                                                                                        | critical      | Le fournisseur d’identité intégré accepte encore les comptes de démonstration documentés, dont l’un est administrateur |
+| `debugEndpoint:/metrics`, `/config`, `/debug/pprof/`                                                                                       | critical/high | Gestionnaires de débogage accessibles sur l’adresse publique                                                |
+| `debugPort:<port>`                                                                                                                         | high          | Un port de débogage de service répond depuis l’extérieur                                                    |
+| `backendPortClosed`                                                                                                                        | high          | La même instance OpenCloud est accessible directement sur le port backend 9200, en contournant son reverse proxy |
+| `webEmbedDelegatedAuthenticationRestricted`                                                                                                | critical      | L’authentification déléguée par iframe accepte des messages sans origine de confiance explicite             |
+| `webEmbedMessageOriginRestricted`                                                                                                          | high          | Les messages d’intégration du client web font confiance à toute origine parente                             |
+| `basicAuthDisabled`                                                                                                                        | medium        | Le proxy propose encore l’authentification HTTP Basic                                                       |
+| `identityProviderDetected`                                                                                                                 | low           | Ni document de découverte OpenID Connect ni redirection depuis celui-ci : impossible d’établir qui connecte les utilisateurs |
+| `reverseProxyDetected`                                                                                                                     | low           | Rien n’indique la présence d’un reverse proxy devant l’instance                                             |
+| `versionDisclosure:Server`, `webfingerVersionDisclosure`                                                                                   | low           | Versions exactes divulguées à des appelants non authentifiés                                                |
 
-A failed additional check caps the rating (critical -> `D`, high -> `C`, medium
--> `A`, low -> `A+`); set `scanner.extra_checks_rating: false` to report them
-without touching the rating. For the reasoning behind each group of checks
-above, see [`docs/cookies.md`](cookies.md),
+Un contrôle supplémentaire en échec limite la note (critical -> `D`, high ->
+`C`, medium -> `A`, low -> `A+`) ; définissez `scanner.extra_checks_rating: false`
+pour les signaler sans toucher à la note. Pour la logique de chaque groupe de
+contrôles ci-dessus, consultez [`docs/cookies.md`](cookies.md),
 [`docs/authentication.md`](authentication.md),
 [`docs/sharing.md`](sharing.md), [`docs/exposure.md`](exposure.md),
-[`docs/embedding.md`](embedding.md) and
-[`docs/lifecycle.md`](lifecycle.md), alongside
-[`docs/csp.md`](csp.md) and [`docs/tls.md`](tls.md) above.
+[`docs/embedding.md`](embedding.md) et
+[`docs/lifecycle.md`](lifecycle.md), en plus de
+[`docs/csp.md`](csp.md) et [`docs/tls.md`](tls.md) cités plus haut.
 
-OpenCloud is a single Go binary that serves its web frontend from embedded
-assets, and its frontend is a single-page application: unknown paths return the
-app shell with HTTP 200 rather than a 404. A naive "does `/opencloud.yaml`
-return 200?" check would therefore flag every healthy instance. The scanner
-first probes a path that cannot exist, learns what the catch-all response looks
-like, and only reports an exposed path whose response actually differs from it.
+OpenCloud est un binaire Go unique qui sert son frontend web à partir de
+ressources intégrées, et ce frontend est une application monopage : les chemins
+inconnus renvoient la coquille de l’application avec HTTP 200 au lieu d’une
+erreur 404. Un contrôle naïf du type « `/opencloud.yaml` renvoie-t-il 200 ? »
+signalerait donc toutes les instances saines. Le scanner demande d’abord un
+chemin qui ne peut pas exister et enregistre la réponse générique. Il ne
+signale un chemin exposé que lorsque sa réponse diffère de cette référence.
 
-### Who signs users in
+### Qui connecte les utilisateurs {#who-signs-users-in}
 
-The scan also reads `/.well-known/openid-configuration` - the OpenID Connect
-discovery document, or the redirect the instance answers it with - to find out
-which identity provider issues its tokens. An issuer on a different host means
-an external provider such as Keycloak, Authentik or Authelia is in front of the
-instance, and the result document records it:
+L’analyse lit aussi `/.well-known/openid-configuration` - le document de
+découverte OpenID Connect, ou la redirection par laquelle l’instance y répond -
+pour savoir quel fournisseur d’identité émet ses jetons. Un émetteur sur un autre
+hôte signifie qu’un fournisseur externe, tel que Keycloak, Authentik ou
+Authelia, se trouve devant l’instance, et le document de résultat l’enregistre :
 
 ```json
 {"identityProvider": {"detected": true, "external": true,
                       "issuer": "https://id.example.com", "vendor": "Keycloak"}}
 ```
 
-This is context, never a verdict: using the built-in provider fails nothing,
-and no check requires an external one. It only softens `basicAuthDisabled`,
-which is `medium` normally and `low` when the interactive login goes through an
-external provider.
+C’est un contexte, jamais un verdict : utiliser le fournisseur intégré ne fait
+rien échouer, et aucun contrôle n’exige de fournisseur externe. Cela atténue
+seulement `basicAuthDisabled`, dont la gravité est normalement `medium` et
+`low` lorsque la connexion interactive passe par un fournisseur externe.
 
-Provider detection reads the discovery document and its `Location` header without
-submitting a login. The separate demo-account check below is the only probe that sends
-credentials.
+La détection du fournisseur lit le document de découverte et son en-tête
+`Location` sans soumettre de connexion. Le contrôle distinct des comptes de
+démonstration, ci-dessous, est la seule sonde qui envoie des identifiants.
 
-When no provider can be found at all, `identityProviderDetected` fails at
-severity `low` and `--debug` points at [OpenCloud's own
-documentation][opencloud-idp] - the usual cause is a reverse proxy that does
-not forward `/.well-known/`.
+Lorsqu’aucun fournisseur n’est trouvé, `identityProviderDetected` échoue avec la
+gravité `low` et `--debug` renvoie à [la documentation
+d’OpenCloud][opencloud-idp] : la cause habituelle est un reverse proxy qui ne
+transmet pas `/.well-known/`.
 
-### The demo accounts
+### Les comptes de démonstration {#the-demo-accounts}
 
-When the discovery document names the instance's *own* provider - the built-in
-identity management rather than a Keycloak or Authentik in front of it - the
-scan additionally checks whether the demo users are still on.
-`IDM_CREATE_DEMO_USERS=true` creates five accounts whose names and passwords
-are printed in [OpenCloud's documentation][opencloud-demo-users], and `dennis`
-is an administrator. Left enabled on a reachable instance, that is an admin
-account whose password everybody already knows, so `demoUsersDisabled` is a
-`critical` finding: it fails the check and caps the rating at `D`.
+Lorsque le document de découverte désigne le fournisseur *propre* à l’instance
+(la gestion d’identité intégrée plutôt qu’un Keycloak ou un Authentik placé
+devant elle), l’analyse vérifie en plus si les utilisateurs de démonstration
+sont toujours actifs. `IDM_CREATE_DEMO_USERS=true` crée cinq comptes dont les
+noms et mots de passe figurent dans [la documentation
+d’OpenCloud][opencloud-demo-users], et `dennis` est administrateur. Laissé
+actif sur une instance accessible, c’est un compte administrateur dont tout le
+monde connaît déjà le mot de passe : `demoUsersDisabled` est donc un constat
+`critical`, qui fait échouer le contrôle et limite la note à `D`.
 
-This is the one place the scan sends a credential, and it does so because
-there is no other way to see those accounts from outside - nothing OpenCloud
-exposes unauthenticated lists its users. What is sent is a published default
-rather than a guess at anybody's password, only the documented pairs are
-tried, and they go only to the instance's own provider: with an external
-identity provider the accounts come from there, the check does not apply, and
-no login is ever pushed at a third party. Switching the setting off does not
-delete accounts that already exist, so a failing instance needs them removed
-as well.
+C’est le seul endroit où l’analyse envoie un identifiant, et elle le fait parce
+qu’il n’existe aucun autre moyen de voir ces comptes depuis l’extérieur : rien
+de ce qu’OpenCloud expose sans authentification ne liste ses utilisateurs. Ce
+qui est envoyé est une valeur par défaut publiée, pas une tentative de deviner
+le mot de passe de quelqu’un. Seuls les couples documentés sont essayés, et
+uniquement auprès du fournisseur propre à l’instance : avec un fournisseur
+d’identité externe, les comptes proviennent de celui-ci, le contrôle ne
+s’applique pas et aucune connexion n’est jamais envoyée à un tiers. Désactiver
+le paramètre ne supprime pas les comptes existants : une instance en échec doit
+donc aussi les supprimer.
 
-### What is in front of the instance
+### Ce qui se trouve devant l’instance {#what-is-in-front-of-the-instance}
 
-`reverseProxy` records whether anything answers before OpenCloud does: a
-`Server` header naming Nginx, Caddy, Cloudflare or another proxy, or a header
-only a forwarder adds such as `Via`.
+`reverseProxy` indique si quelque chose répond avant OpenCloud : un en-tête
+`Server` nommant Nginx, Caddy, Cloudflare ou un autre proxy, ou un en-tête que
+seul un intermédiaire ajoute, comme `Via`.
 
 ```json
 {"reverseProxy": {"detected": true, "vendor": "Nginx", "evidence": "Server: nginx"}}
 ```
 
-`reverseProxyDetected` fails when nothing was found, and does so at severity
-`low` **on purpose**: Traefik and HAProxy announce nothing by default, and
-stripping the `Server` header is itself good practice, so a well-run
-deployment can look bare from outside. The finding is worth showing and is
-never worth a grade.
+`reverseProxyDetected` échoue lorsque rien n’a été trouvé, et ce **volontairement**
+avec la gravité `low` : Traefik et HAProxy n’annoncent rien par défaut, et
+supprimer l’en-tête `Server` est en soi une bonne pratique. L’absence de cet en-tête ne
+prouve donc pas l’absence de proxy. Le constat est affiché, mais ne réduit
+jamais la note.
 
-`forwardedHostIgnored` asks the other question about the same boundary: not
-whether something is in front, but whether the instance lets whoever is
-calling decide what it thinks its own address is. The scan requests
-`/.well-known/openid-configuration` twice with a host that does not exist -
-once as the request's own `Host`, once as `X-Forwarded-Host` - and looks for
-that host coming back in the `Location` it redirects to or in the `issuer`,
-`authorization_endpoint`, `token_endpoint`, `end_session_endpoint` or
-`jwks_uri` the document publishes.
+`forwardedHostIgnored` pose l’autre question sur cette même frontière : non pas
+s’il y a quelque chose devant l’instance, mais si l’instance laisse l’appelant
+décider de ce qu’elle considère comme sa propre adresse. L’analyse demande deux
+fois `/.well-known/openid-configuration` avec un hôte qui n’existe pas - une
+fois comme `Host` de la requête, une fois comme `X-Forwarded-Host` - et vérifie
+si cet hôte revient dans le `Location` de la redirection ou dans les champs
+`issuer`, `authorization_endpoint`, `token_endpoint`, `end_session_endpoint` ou
+`jwks_uri` publiés par le document.
 
 ```json
 {"id": "forwardedHostIgnored", "severity": "medium", "passed": false,
  "detail": "A host name the caller supplied is published back: X-Forwarded-Host comes back as the issuer it publishes"}
 ```
 
-These URLs direct authentication requests. A caller-controlled hostname initially
-affects that caller’s response, which is why the finding is `medium`. A shared cache or
-a proxy forwarding untrusted `X-Forwarded-Host` values can extend the effect to other
-users. Set `OC_URL` and have the proxy supply forwarded headers from its own
-configuration.
+Ces URL orientent les requêtes d’authentification. Un nom d’hôte contrôlé par
+l’appelant affecte d’abord la réponse de cet appelant, d’où la gravité
+`medium`. Un cache partagé ou un proxy qui transmet des valeurs
+`X-Forwarded-Host` non fiables peut étendre l’effet à d’autres utilisateurs.
+Définissez `OC_URL` et faites fournir les en-têtes transmis par le proxy à
+partir de sa propre configuration.
 
-When only `Host` comes back, as the address it redirects to, look at the proxy
-before the instance: with no default server, a name the proxy has no site for
-is answered by whichever site it loaded first for that port, and a redirect
-there built from `$host` repeats the probe host whatever `OC_URL` says. An
-explicit default server that refuses unknown names fixes it - see
-[No default server](reverse-proxy.md#mistakes-that-cost-a-grade).
+Lorsque seul `Host` revient, comme adresse de redirection, examinez le proxy
+avant l’instance : sans serveur par défaut, un nom pour lequel le proxy n’a pas
+de site reçoit la réponse du premier site chargé pour ce port, et une
+redirection construite à partir de `$host` y reprend l’hôte de la sonde, quelle
+que soit la valeur d’`OC_URL`. Un serveur par défaut explicite qui refuse les
+noms inconnus corrige le problème - voir
+[Pas de serveur par défaut](reverse-proxy.md#mistakes-that-cost-a-grade).
 
-Only a URL a client would be *sent* to counts. A default virtual host that
-refuses an unrecognised name commonly prints that name in its error page, and
-reading the body for it would report the correct behaviour as the finding.
-An instance that publishes no discovery document at all is not judged either
-way: two errors are the scan learning nothing, not a pass.
+Seule compte une URL vers laquelle un client serait *envoyé*. Un hôte virtuel
+par défaut qui refuse un nom inconnu affiche souvent ce nom dans sa page
+d’erreur, et chercher ce nom dans le corps de la réponse signalerait le bon
+comportement comme un constat. Une instance qui ne publie aucun document de
+découverte n’est jugée ni dans un sens ni dans l’autre : deux erreurs signifient
+que l’analyse n’a rien appris, pas une réussite.
 
-### Alternative services (HTTP/3)
+### Services alternatifs (HTTP/3) {#alternative-services-http3}
 
-`alternativeServices` records what the instance advertises in its `Alt-Svc`
-header. An `h3` entry tells every browser to try HTTP/3 over **UDP** on the
-named port - a listener a firewall written for TCP 443 may not cover, and one
-a reverse proxy can enable without anybody deciding to.
+`alternativeServices` enregistre ce que l’instance annonce dans son en-tête
+`Alt-Svc`. Une entrée `h3` indique à chaque navigateur d’essayer HTTP/3 sur
+**UDP** au port indiqué : un écouteur qu’un pare-feu conçu pour TCP 443 peut ne
+pas couvrir, et qu’un reverse proxy peut activer sans que personne l’ait décidé.
 
 ```json
 {"alternativeServices": {"advertised": true, "http3": true,
@@ -246,116 +257,129 @@ a reverse proxy can enable without anybody deciding to.
   "header": "h3=\":443\"; ma=86400"}}
 ```
 
-It is an observation and is never graded: HTTP/3 is not a weakness, only
-something to firewall on purpose. The plugin prints a detail line when it sees
-one. The advertised address is never probed - it is the target's word, not an
-origin the scan was pointed at
+C’est une observation, jamais notée : HTTP/3 n’est pas une faiblesse, seulement
+un élément à filtrer délibérément au pare-feu. Le plugin affiche une ligne de
+détail lorsqu’il en voit une. L’adresse annoncée n’est jamais sondée : c’est la
+parole de la cible, pas une origine vers laquelle l’analyse a été dirigée
 ([ADR 0036](../../adr/0036-a-companion-service-is-probed-only-where-the-scan-was-pointed.md)).
-`Alt-Svc: clear` records nothing as advertised, and without a response to read
-the header from the key is `null`.
+`Alt-Svc: clear` n’enregistre aucune annonce, et sans réponse dans laquelle lire
+l’en-tête, la clé vaut `null`.
 
-### Failed sign-ins (opt-in)
+### Connexions échouées (sur demande) {#failed-sign-ins-opt-in}
 
-With `--login-throttling` (`COS_LOGIN_THROTTLING`, or
-`scanner.check_login_throttling`) the scan sends six failed sign-ins, one
-after another, for a random account that cannot exist, and records whether
-the instance slowed them down - an HTTP `429` or a `Retry-After` header:
+Avec `--login-throttling` (`COS_LOGIN_THROTTLING`, ou
+`scanner.check_login_throttling`), l’analyse envoie six connexions échouées à
+la suite, pour un compte aléatoire qui ne peut pas exister, et enregistre si
+l’instance les a ralenties - par une réponse HTTP `429` ou un en-tête
+`Retry-After` :
 
 ```json
 {"loginThrottling": {"tested": true, "attempts": 4, "throttled": true,
   "evidence": "HTTP 429, Retry-After: 30", "statuses": [401, 401, 401, 429]}}
 ```
 
-It is off by default, asks only the built-in identity provider, runs after
-every other probe so it cannot hide the demo accounts behind a `429`, and is
-never graded: many deployments throttle over a longer window or at a layer a
-short burst does not reach, so "not throttled" is a prompt to look, not a
-verdict. The public web service never sends it
+Cette sonde est désactivée par défaut, n’interroge que le fournisseur
+d’identité intégré, s’exécute après toutes les autres sondes pour ne pas masquer
+les comptes de démonstration derrière une réponse `429`, et n’est jamais notée :
+de nombreux déploiements limitent les tentatives sur une période plus longue ou
+à un niveau qu’une courte rafale n’atteint pas. « Non limité » invite donc à
+regarder de plus près, ce n’est pas un verdict. Le service web public ne
+l’envoie jamais
 ([ADR 0069](../../adr/0069-login-throttling-is-observed-only-when-the-operator-asks.md)).
-Without the option the key is `null`.
+Sans l’option, la clé vaut `null`.
 
-### Office and calendar integrations
+### Intégrations bureautiques et d’agenda {#office-and-calendar-integrations}
 
-Two integrations are visible without logging in, and both are reported as
-observations rather than verdicts:
+Deux intégrations sont visibles sans connexion, et toutes deux sont signalées
+comme observations plutôt que comme verdicts :
 
-- `/app/list` is unprotected by OpenCloud's own proxy policy and names the app
-  providers actually registered with the app registry - Collabora, OnlyOffice
-  and the like. The `app_providers` block in the capabilities document is
-  hardcoded and says nothing, so it is not used.
-- `/.well-known/caldav` answers with a redirect or an authentication challenge
-  only when something is wired to it, which is how a proxied Radicale shows up.
-  A stock instance answers 404.
+- `/app/list` n’est pas protégé par la politique du proxy d’OpenCloud et nomme
+  les fournisseurs d’applications réellement enregistrés dans le registre
+  d’applications - Collabora, OnlyOffice, etc. Le bloc `app_providers` du
+  document des capacités est codé en dur et n’indique rien : il n’est donc pas
+  utilisé.
+- `/.well-known/caldav` ne répond par une redirection ou une demande
+  d’authentification que lorsqu’un service y est relié, ce qui permet de
+  repérer un Radicale derrière le proxy. Une instance non modifiée répond 404.
 
 ```json
 {"integrations": {"office": {"detected": true, "apps": ["Collabora"], "groupware": false},
                   "calendar": {"detected": true, "advertised": true}}}
 ```
 
-Neither becomes a check and neither can move the rating.
+Aucune ne devient un contrôle et aucune ne peut modifier la note.
 
-What the deployment *publishes* is a separate question, and it does become a
-check. Where a reverse proxy serves the collaboration backend on the
-instance's own origin, `/hosting/discovery` answers with the document the WOPI
-protocol specifies, and two findings follow from it: whether the editor's
-administration console is reachable (`companionAdminConsole`), and whether
-the editor addresses it advertises use HTTPS (`companionEditorHttps`).
+Ce que le déploiement *publie* est une autre question, et celle-ci devient un
+contrôle. Lorsqu’un reverse proxy sert le backend de collaboration sur
+l’origine même de l’instance, `/hosting/discovery` répond avec le document
+défini par le protocole WOPI, et deux constats en découlent : la console
+d’administration de l’éditeur est-elle accessible (`companionAdminConsole`), et
+les adresses d’éditeur qu’il annonce utilisent-elles HTTPS
+(`companionEditorHttps`) ?
 
-The scanner probes only the submitted origin. It does not follow an editor hostname from
-the discovery document, because that would let the target choose another connection
-destination. A separately hosted editor therefore gets no finding from these checks.
-Assess that service with suitable editor-specific tools; see [ADR
+Le scanner ne sonde que l’origine soumise. Il ne suit pas un nom d’hôte
+d’éditeur indiqué dans le document de découverte, car cela permettrait à la
+cible de choisir une autre destination de connexion. Un éditeur hébergé
+séparément ne reçoit donc aucun constat de ces contrôles. Évaluez ce service
+avec des outils adaptés à l’éditeur ; voir [l’ADR
 0036](../../adr/0036-a-companion-service-is-probed-only-where-the-scan-was-pointed.md).
 
-### What the scan deliberately does not answer
+### Ce à quoi l’analyse ne répond volontairement pas {#what-the-scan-deliberately-does-not-answer}
 
-- **Audit logging.** OpenCloud's audit service only consumes the internal
-  event bus. It publishes no endpoint, and no unauthenticated document
-  mentions it, so whether it is enabled cannot be established from outside at
-  all. **It is not checked**, and a clean report says nothing about it.
-- **Whether an integration is configured *correctly*.** The scan reports that
-  an app provider is registered, or that something answers the CalDAV path.
-  WOPI secrets, share permissions and the other service's own configuration
-  live behind a login and are not checked.
-- **Anything requiring credentials.** No login form is ever submitted and no
-  password is ever guessed. The single exception is the demo accounts above:
-  the passwords OpenCloud publishes are sent, as published, to the instance's
-  own identity provider, because that is the only way to see from outside
-  whether those accounts still exist.
-- **Your firewall, your identity provider's policy, your backups.** All of it
-  matters more than several of the things above, and none of it is visible
-  over HTTP.
+- **La journalisation d’audit.** Le service d’audit d’OpenCloud ne fait que
+  consommer le bus d’événements interne. Il ne publie aucun point de
+  terminaison, et aucun document non authentifié ne le mentionne : il est donc
+  impossible d’établir depuis l’extérieur s’il est activé. **Ce n’est pas
+  vérifié**, et un rapport sans constat n’en dit rien.
+- **Si une intégration est configurée *correctement*.** L’analyse signale qu’un
+  fournisseur d’applications est enregistré, ou que quelque chose répond sur le
+  chemin CalDAV. Les secrets WOPI, les droits de partage et la configuration
+  propre de l’autre service se trouvent derrière une connexion et ne sont pas
+  vérifiés.
+- **Tout ce qui exige des identifiants.** Aucun formulaire de connexion n’est
+  jamais soumis et aucun mot de passe n’est jamais deviné. La seule exception
+  concerne les comptes de démonstration ci-dessus : les mots de passe publiés
+  par OpenCloud sont envoyés, tels que publiés, au fournisseur d’identité propre
+  à l’instance, car c’est le seul moyen de voir depuis l’extérieur si ces
+  comptes existent encore.
+- **Votre pare-feu, la politique de votre fournisseur d’identité, vos
+  sauvegardes.** Tout cela compte davantage que plusieurs des éléments
+  ci-dessus, et rien de cela n’est visible par HTTP.
 
-[Running OpenCloud in a secure infrastructure](secure-deployment.md) covers these
-separate operational checks: identity-provider policies, audit logging, firewall rules,
-user guidance and scheduled monitoring.
+[Exploiter OpenCloud dans une infrastructure sécurisée](secure-deployment.md)
+couvre ces vérifications opérationnelles distinctes : politiques du fournisseur
+d’identité, journalisation d’audit, règles de pare-feu, consignes aux
+utilisateurs et supervision planifiée.
 
 [opencloud-idp]: https://docs.opencloud.eu/docs/admin/configuration/authentication-and-user-management/external-idp
 [opencloud-demo-users]: https://docs.opencloud.eu/docs/admin/resources/demo-user/
 
-## Reading the version correctly
+## Lire correctement la version {#reading-the-version-correctly}
 
-`/status.php` reports three version fields, and two of them are traps:
+`/status.php` indique trois champs de version, dont deux sont des pièges :
 
 ```json
 {"version":"0.1.0.0","versionstring":"0.1.0","productversion":"7.4.0"}
 ```
 
-`version` and `versionstring` are compatibility values. The actual release is
-`productversion`. The scanner prefers that field, falls back to capabilities and sets
-`legacyVersion: true` if only a placeholder is available. Check which field your own
-monitoring scripts read as well.
+`version` et `versionstring` sont des valeurs de compatibilité. La version
+réelle est `productversion`. Le scanner privilégie ce champ, se rabat sur les
+capacités et définit `legacyVersion: true` si seule une valeur de substitution
+est disponible. Vérifiez aussi quel champ lisent vos propres scripts de
+supervision.
 
-## Debug ports
+## Ports de débogage {#debug-ports}
 
-Every OpenCloud service has a debug listener that serves `/healthz`,
-`/readyz`, `/metrics`, `/config` and `/debug/pprof`. `/metrics` includes
-`opencloud_proxy_build_info` (exact version), `/config` dumps the effective
-service configuration, and `/debug/pprof` allows anyone to trigger profiling.
+Chaque service OpenCloud dispose d’un écouteur de débogage qui sert `/healthz`,
+`/readyz`, `/metrics`, `/config` et `/debug/pprof`. `/metrics` contient
+`opencloud_proxy_build_info` (la version exacte), `/config` affiche la
+configuration effective du service, et `/debug/pprof` permet à n’importe qui de
+déclencher un profilage.
 
-These listeners bind to loopback by default, so a debug port that answers from
-your monitoring host is a genuine finding - usually a container that published
-the whole port range. The scanner probes the five most informative ones:
+Ces écouteurs sont liés à l’interface de bouclage par défaut : un port de
+débogage qui répond depuis votre hôte de supervision est donc un vrai constat,
+généralement un conteneur qui a publié toute la plage de ports. Le scanner sonde
+les cinq plus révélateurs :
 
 | Port | Service  |
 |:-----|:---------|
@@ -365,9 +389,10 @@ the whole port range. The scanner probes the five most informative ones:
 | 9134 | idp      |
 | 9239 | idm      |
 
-Each probe is a single TCP connect with a three second timeout, so a firewalled
-host costs up to 15 seconds. Turn the probes off with `--no-debug-ports`, run
-them in parallel with [`--concurrency`](#speeding-the-scan-up), or tune them:
+Chaque sonde est une seule connexion TCP avec un délai d’attente de trois
+secondes : un hôte protégé par un pare-feu coûte donc jusqu’à 15 secondes.
+Désactivez les sondes avec `--no-debug-ports`, exécutez-les en parallèle avec
+[`--concurrency`](#speeding-the-scan-up), ou ajustez-les :
 
 ```yaml
 scanner:
@@ -376,68 +401,74 @@ scanner:
   debug_port_timeout: 1
 ```
 
-### Speeding the scan up
+### Accélérer l’analyse {#speeding-the-scan-up}
 
-A scan spends nearly all of its time waiting for the instance to answer: around
-twenty HTTP requests and five TCP connects, one after the other.
-`scanner.concurrency` runs those probes in parallel for a single-host scan;
-raising it shortens a run considerably, at the price of a burst of parallel
-requests against the instance, and is most noticeable when debug-port probing
-runs into a firewall that swallows the connections. `--concurrency` instead
-controls the outer host-worker ceiling described in
-[Checking multiple hosts](../README.md#checking-multiple-hosts).
+Une analyse passe presque tout son temps à attendre les réponses de
+l’instance : une vingtaine de requêtes HTTP et cinq connexions TCP, l’une après
+l’autre. `scanner.concurrency` exécute ces sondes en parallèle pour l’analyse
+d’un seul hôte ; l’augmenter raccourcit nettement une exécution, au prix d’une
+rafale de requêtes parallèles vers l’instance, et l’effet est le plus sensible
+lorsque les sondes des ports de débogage butent sur un pare-feu qui absorbe les
+connexions. `--concurrency` contrôle en revanche le plafond externe de workers
+par hôte décrit dans
+[Vérifier plusieurs hôtes](../../README.md#checking-multiple-hosts).
 
-The setting changes only the timing, never the verdict: the result document
-lists the same findings in the same order whatever the value is. Values above
-`32` are clamped. It can also be set once for every host:
+Ce paramètre ne change que la durée, jamais le verdict : le document de
+résultat liste les mêmes constats dans le même ordre, quelle que soit la valeur.
+Les valeurs supérieures à `32` sont ramenées à `32`. Il peut aussi être défini
+une fois pour tous les hôtes :
 
 ```yaml
 scanner:
   concurrency: 8
 ```
 
-## Every resolved address
+## Toutes les adresses résolues {#every-resolved-address}
 
-A scan dials the name once and sees whichever address the resolver put first.
-For a name behind a pool of nodes that is one node, and the node that missed a
-configuration rollout - no HSTS, demo accounts still signing in, an older
-release - is invisible. [`tlsAddressParity`](tls.md) compares only the TLS
-identity of one IPv4 and one IPv6 address, which several nodes behind one
-certificate share whatever they serve.
+Une analyse se connecte au nom une seule fois et voit l’adresse que le résolveur
+a placée en premier. Pour un nom derrière un groupe de nœuds, c’est un seul
+nœud, et le nœud qui a manqué un déploiement de configuration - pas de HSTS,
+comptes de démonstration toujours actifs, version plus ancienne - reste
+invisible. [`tlsAddressParity`](tls.md) ne compare que l’identité TLS d’une
+adresse IPv4 et d’une adresse IPv6, que plusieurs nœuds derrière un même
+certificat partagent quoi qu’ils servent.
 
-`--all-addresses` (`COS_ALL_ADDRESSES`, `scanner.check_all_addresses`)
-repeats the part of the scan a rollout changes against each resolved address,
-one after another:
+`--all-addresses` (`COS_ALL_ADDRESSES`, `scanner.check_all_addresses`) répète
+sur chaque adresse résolue, l’une après l’autre, la partie de l’analyse qu’un
+déploiement modifie :
 
-- the release in `/status.php` (or the capabilities document),
-- the graded security headers, compared by verdict rather than value, so a CSP
-  nonce is not a difference,
-- the hardening measures read from the root page, capabilities, the
-  authentication challenge and the identity provider,
-- whether a documented demo account signs in.
+- la version dans `/status.php` (ou dans le document des capacités),
+- les en-têtes de sécurité notés, comparés par verdict et non par valeur, pour
+  qu’un nonce CSP ne compte pas comme une différence,
+- les mesures de durcissement lues sur la page racine, les capacités, la
+  demande d’authentification et le fournisseur d’identité,
+- si un compte de démonstration documenté permet de se connecter.
 
-What the nodes share - certificate chain, CAA, DNSSEC, debug ports - is not
-asked again. Each request keeps the hostname in `Host` and SNI; only the
-address the connection goes to changes, and the addresses are the resolver's
-answer for that name, never anything the instance said. IPv6 addresses are
-skipped when `scanner.ipv6_enabled` is off.
+Ce que les nœuds partagent - chaîne de certificats, CAA, DNSSEC, ports de
+débogage - n’est pas redemandé. Chaque requête conserve le nom d’hôte dans
+`Host` et SNI ; seule l’adresse de connexion change, et les adresses sont la
+réponse du résolveur pour ce nom, jamais une information fournie par
+l’instance. Les adresses IPv6 sont ignorées lorsque `scanner.ipv6_enabled` est
+désactivé.
 
-The result is `addressParity`, with the first address as the reference:
+Le résultat est `addressParity`, avec la première adresse comme référence :
 
-| Difference on another address                  | Severity                                  |
-|:-----------------------------------------------|:------------------------------------------|
-| A demo account signs in where it did not       | as `demoUsersDisabled` on its own         |
-| A different release                            | high                                      |
-| A header or hardening measure passes/fails     | medium                                    |
-| The address resolves but does not answer       | medium                                    |
+| Différence sur une autre adresse                       | Gravité                                   |
+|:-------------------------------------------------------|:------------------------------------------|
+| Un compte de démonstration s’y connecte, contrairement à la référence | celle de `demoUsersDisabled` seul |
+| Une version différente                                 | high                                      |
+| Un en-tête ou une mesure de durcissement réussit/échoue | medium                                   |
+| L’adresse se résout mais ne répond pas                 | medium                                    |
 
-Waived headers and checks are not compared. A name with one address gets no
-finding at all - an absence, not a pass - and no extra requests. What each
-address served is in the result document as `addressObservations`.
+Les en-têtes et contrôles exemptés ne sont pas comparés. Un nom avec une seule
+adresse ne donne lieu à aucun constat - une absence, pas une réussite - ni à
+aucune requête supplémentaire. Ce que chaque adresse a servi figure dans le
+document de résultat sous `addressObservations`.
 
-It is off by default: about a dozen requests per address, a demo sign-in
-among them. It sees what DNS sees - nodes behind a single load-balancer
-address, a resolver returning a rotating subset, or GeoDNS answering for the
-monitoring host's location all limit what can be compared. The public web
-service never runs it
+Cette option est désactivée par défaut : environ une douzaine de requêtes par
+adresse, dont une connexion de démonstration. Elle voit ce que voit le DNS :
+des nœuds derrière une seule adresse de répartiteur de charge, un résolveur qui
+renvoie un sous-ensemble tournant ou un GeoDNS qui répond selon l’emplacement de
+l’hôte de supervision limitent tous ce qui peut être comparé. Le service web
+public ne l’exécute jamais
 ([ADR 0042](../../adr/0042-every-resolved-address-is-compared-only-when-the-operator-asks.md)).

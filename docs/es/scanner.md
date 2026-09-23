@@ -292,8 +292,8 @@ como `newestRelease`.
 `auto` es el valor predeterminado y nunca hace fallar una comprobación: si
 GitHub limita la frecuencia o no está accesible, se recurre a la versión
 incluida, que es tan reciente como el paquete instalado. `feed` es el modo
-adecuado cuando un respaldo silencioso sería peor que un desconocido
-explícito.
+adecuado cuando se prefiere un estado `UNKNOWN` explícito a recurrir a los
+datos incluidos sin avisar.
 
 El canal es por defecto la API de versiones de GitHub. `parse_release_feed()`
 entiende también un documento simple `{"tag_name": ...}` y una lista de
@@ -317,7 +317,7 @@ $ check-opencloud-scanner refresh-data \
 Lee ambos documentos del propio repositorio de este proyecto (los archivos
 revisados que ha integrado una persona encargada del mantenimiento, no una
 consulta en directo a un tercero) y **verifica una certificación de Sigstore**
-sobre ellos antes de creerse nada. Después rechaza un documento de ciclo de
+de ambos antes de aceptarlos. Después rechaza un documento de ciclo de
 vida que pierda una línea de versiones incluida, rechaza avisos sin límites y
 sustituye cada archivo de forma atómica. Nunca escribe en el paquete
 instalado. Apunte `scanner.release_schedule` y `scanner.vulnerability_db` a los
@@ -454,7 +454,7 @@ Conviene conocer algunas de ellas antes de activar `--check-hardening`:
   `PROXY_ENABLE_BASIC_AUTH=true`, el proxy añade `Basic realm="<host>"` a su
   desafío `WWW-Authenticate` junto a `Bearer`. Se califica como `medium`, y como
   `low` cuando `identityProvider.external` es verdadero: los clientes CalDAV,
-  CardDAV y WebDAV no hablan OpenID Connect, así que una instancia que los
+  CardDAV y WebDAV no admiten OpenID Connect, así que una instancia que los
   quiera tiene que dejar activada la autenticación básica, y calificarlo como
   un fallo grave decía a los operadores algo que con razón no se creían.
 - **`publicLinkExpirationEnforced` y `userEnumerationRestricted` no son
@@ -704,8 +704,8 @@ web las muestra en *Lo que este análisis no midió*.
 ## En qué condiciones se ejecutó un análisis {#the-conditions-a-scan-ran-under}
 
 Dos análisis de la misma instancia pueden diferir sin que la instancia haya
-cambiado: la base de datos de avisos aprendió un CVE, se cerró una ventana de
-soporte, se actualizó el escáner, caducó una exención. `provenance` registra lo
+cambiado: se añadió un CVE a la base de datos de avisos, terminó un periodo de
+soporte, se actualizó el escáner o caducó una exención. `provenance` registra lo
 que se sabía en ese momento, para que una comparación pueda distinguir eso de
 un empeoramiento real. Véase
 [ADR 0066](../../adr/0066-a-result-records-the-conditions-it-was-produced-under.md).
@@ -797,7 +797,7 @@ hacen útil:
   contenido nombra los orígenes en los que confía una instalación, un documento
   de descubrimiento puede nombrar un inquilino, un banner de servidor nombra una
   compilación interna. Cada dato se resume dentro de su grupo y se descarta: se
-  aprende *que* la compartición cambió, nunca *a qué*.
+  registra *que* la compartición cambió, nunca *cuál es la nueva configuración*.
 - **Los grupos son las preguntas que hace quien opera.** "¿Cambió TLS?" sirve;
   "¿cambió el dato 37?" no.
 - **Solo lo que decide la instalación.** El grupo de transporte resume el
@@ -940,7 +940,7 @@ notifica:
 | `tlsCertificatePolicy` | ¿El certificado usa una clave de tamaño adecuado y una firma moderna? |
 | `tlsAddressParity` | ¿Los puntos de acceso IPv4 e IPv6 publicados presentan la misma identidad TLS utilizable? |
 | `tlsCaaRecord` | ¿El nombre tiene un registro DNS CAA que indique al menos un emisor autorizado? |
-| `tlsDnssec` | ¿Está firmada la zona, de modo que se pueda confiar en la dirección en la que se basan todas las comprobaciones anteriores? Ausente, no fallida, cuando el resolvedor usado no habla DNSSEC |
+| `tlsDnssec` | ¿Está firmada la zona, de modo que se pueda confiar en la dirección en la que se basan todas las comprobaciones anteriores? Ausente, no fallida, cuando el resolvedor usado no admite DNSSEC |
 | `cookieSecure`, `cookieHttpOnly`, `cookieSameSite` | ¿Las cookies observadas realmente en la respuesta pública llevan estos atributos? |
 | `tlsOcspStapling` | ¿Hay una respuesta de revocación adjunta al handshake? |
 
@@ -985,7 +985,7 @@ y lo que encontraron los sondeos de protocolos obsoletos y de stapling.
 
 **`null` significa "no determinado", nunca "correcto".** Una comprobación que
 no se pudo realizar (`get_unverified_chain()` necesita Python 3.13, el sondeo
-de protocolos obsoletos necesita una compilación que todavía hable alguno, el
+de protocolos obsoletos necesita una compilación que todavía admita alguno, el
 stapling necesita el comando `openssl` y un certificado que indique un
 servidor OCSP) se omite por completo de los hallazgos en lugar de registrarse
 como superada. Consulte

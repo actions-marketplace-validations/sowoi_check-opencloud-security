@@ -1,12 +1,13 @@
-# Prometheus et Grafana
+# Prometheus et Grafana {#prometheus-and-grafana}
 
-Le plugin a un exportateur de Prométhée natif. Exécutez-le avec
-`--prometheus-listen-port 9102` pour servir `/metrics`; il cache un scan pour
-`--crape-interval` secondes (60 par défaut), de sorte que les rayures normales ne déclenchent pas
-un autre scan; définissez-le à `0` seulement quand chaque raclure doit. Il se lie à
-`127.0.0.1` par défaut; set `--prometheus-listen-addr 0.0.0.0` seulement lorsque
-pare-feu ou politique de réseau limite les racleurs à distance - ce qui est également ce qu'un
-les besoins des conteneurs, à côté de la publication du port:
+Le plugin intègre un exportateur Prometheus. Lancez-le avec
+`--prometheus-listen-port 9102` pour exposer `/metrics`. Il conserve le résultat
+pendant `--scrape-interval` secondes (60 par défaut) : une collecte durant ce délai
+ne déclenche pas de nouvelle analyse. Utilisez `0` si chaque collecte doit en lancer
+une. L’adresse d’écoute par défaut est `127.0.0.1`. N’utilisez
+`--prometheus-listen-addr 0.0.0.0` que si un pare-feu ou une politique réseau limite
+l’accès aux collecteurs autorisés. Dans un conteneur, ce réglage est nécessaire,
+ainsi que la publication du port :
 
 ```shell
 docker run --rm -p 9102:9102 check-opencloud-security \
@@ -14,109 +15,111 @@ docker run --rm -p 9102:9102 check-opencloud-security \
   --prometheus-listen-addr 0.0.0.0
 ```
 
-For a batch job, `--format=prometheus` prints one text exposition payload and
-exits, and `--format=otlp` prints the same metrics as the OTLP/JSON body an
-OpenTelemetry collector accepts. Every mode requires no extra dependency.
+Pour une tâche ponctuelle, `--format=prometheus` affiche les métriques au format
+texte puis se termine. `--format=otlp` affiche les mêmes métriques dans le document
+OTLP/JSON attendu par un collecteur OpenTelemetry. Aucun de ces modes ne nécessite
+de dépendance supplémentaire.
 
-The textfile collector and Pushgateway patterns below remain useful when a
-scheduled scan is a better fit than a long-running exporter.
+Les exemples de collecteur textfile et de Pushgateway ci-dessous conviennent
+lorsqu’une analyse planifiée répond mieux au besoin qu’un exportateur permanent.
 
-If you already run Icinga2, you do not need any of this: the
-[performance data](../README.md#performance-data) the plugin prints is picked
-up by Icinga2's Graphite/InfluxDB writers directly.
+Si vous utilisez déjà Icinga2, ses modules Graphite/InfluxDB récupèrent directement
+les [données de performance](../README.md#performance-data) du plugin.
 
 <!-- TOC -->
-* [Prometheus and Grafana](#prometheus-and-grafana)
-  * [The files to copy](#the-files-to-copy)
-  * [What the exporter publishes](#what-the-exporter-publishes)
-  * [What there is to graph](#what-there-is-to-graph)
-  * [node_exporter textfile collector](#node_exporter-textfile-collector)
+* [Prometheus et Grafana](#prometheus-and-grafana)
+  * [Fichiers à copier](#the-files-to-copy)
+  * [Métriques publiées par l’exportateur](#what-the-exporter-publishes)
+  * [Données à représenter](#what-there-is-to-graph)
+  * [Collecteur textfile de node_exporter](#node_exporter-textfile-collector)
   * [Pushgateway](#pushgateway)
-  * [OpenTelemetry collector](#opentelemetry-collector)
-  * [Alerting rules](#alerting-rules)
+  * [Collecteur OpenTelemetry](#opentelemetry-collector)
+  * [Règles d’alerte](#alerting-rules)
   * [Grafana](#grafana)
 <!-- TOC -->
 
+## Fichiers à copier {#the-files-to-copy}
 
-## The files to copy
+Deux fichiers dans [`contrib/`](../../contrib/README.md) utilisent les noms des
+métriques de l’exportateur intégré :
 
-Two of them, both in [`contrib/`](../../contrib/README.md), both reading the
-metric names the native exporter publishes:
-
-| File | What to do with it |
+| Fichier | Utilisation |
 |:--|:--|
-| [`contrib/prometheus/alerts.yml`](../../contrib/prometheus/alerts.yml) | Copy into `/etc/prometheus/rules/` and add it to `rule_files:` |
-| [`contrib/grafana/dashboard.json`](../../contrib/grafana/dashboard.json) | Grafana - Dashboards - New - Import, then pick the data source |
+| [`contrib/prometheus/alerts.yml`](../../contrib/prometheus/alerts.yml) | Copiez-le dans `/etc/prometheus/rules/` et ajoutez-le à `rule_files:` |
+| [`contrib/grafana/dashboard.json`](../../contrib/grafana/dashboard.json) | Dans Grafana, choisissez Dashboards, New, Import, puis la source de données |
 
 ```shell
 cp contrib/prometheus/alerts.yml /etc/prometheus/rules/opencloud-security.yml
 promtool check rules /etc/prometheus/rules/opencloud-security.yml
 ```
 
-The dashboard’s `Instance` selector lets one dashboard cover multiple targets. Set alert
-delays for the response time you need, and account for how often the underlying scan is
-refreshed. Repeated scrapes can contain the same cached scan.
+Le sélecteur `Instance` permet d’utiliser ce tableau de bord pour plusieurs cibles.
+Réglez les délais d’alerte selon le temps de réaction souhaité et la fréquence des
+analyses. Plusieurs collectes peuvent contenir le même résultat en cache.
 
-The sections after the next one are the *other* way to do this: a scheduled
-scan whose JSON is reshaped by `jq` into metric names of your own. Those names
-are shorter and deliberately different, and the two shipped files above do not
-match them.
+Les exemples qui suivent le tableau des métriques proposent une autre méthode :
+une analyse planifiée dont `jq` transforme le JSON en métriques personnalisées.
+Leurs noms, plus courts, diffèrent de ceux des deux fichiers fournis ci-dessus.
 
+## Métriques publiées par l’exportateur {#what-the-exporter-publishes}
 
-## What the exporter publishes
-
-| Metric | Labels | Meaning |
+| Métrique | Étiquettes | Signification |
 |:--|:--|:--|
-| `opencloud_security_rating_score` | `host`, `domain`, `product`, `version` | The grade, `0`-`5`, `5` best |
-| `opencloud_security_end_of_life` | `host`, `release_type` | `1` once the release receives no more fixes |
-| `opencloud_security_support_days_remaining` | `host`, `release_type` | Days of support left; **no sample at all** when the end of life is not dated yet |
-| `opencloud_security_vulnerabilities_total` | `host`, `severity` | Advisories matching the reported version |
-| `opencloud_security_hardenings_missing_total` | `host` | Missing hardening measures |
-| `opencloud_security_failed_extra_checks_total` | `host` | Failed additional checks |
-| `opencloud_security_update_available` | `host`, `target_version` | `1` when a newer release exists |
-| `opencloud_security_certificate_days_remaining` | `host` | Jours avant l'expiration du certificat présenté ; négatif ensuite, aucun échantillon en HTTP simple |
-| `opencloud_security_upgrade_path_complete` | `host`, `target_version` | `1` quand la mise à jour recommandée corrige toutes les vulnérabilités connues ; aucun échantillon sinon |
-| `opencloud_security_scan_duration_seconds` | `host` | How long the scan took |
-| `opencloud_security_scrape_success` | `host` | `0` when the scan behind the numbers failed |
+| `opencloud_security_rating_score` | `host`, `domain`, `product`, `version` | Note de `0` à `5`, où `5` est la meilleure |
+| `opencloud_security_end_of_life` | `host`, `release_type` | `1` lorsque la version ne reçoit plus de correctifs |
+| `opencloud_security_support_days_remaining` | `host`, `release_type` | Jours de support restants ; **aucun échantillon** si la fin de vie n’est pas encore datée |
+| `opencloud_security_vulnerabilities_total` | `host`, `severity` | Avis de sécurité qui concernent la version détectée |
+| `opencloud_security_hardenings_missing_total` | `host` | Mesures de durcissement manquantes |
+| `opencloud_security_failed_extra_checks_total` | `host` | Contrôles supplémentaires en échec |
+| `opencloud_security_update_available` | `host`, `target_version` | `1` si une version plus récente existe |
+| `opencloud_security_certificate_days_remaining` | `host` | Jours avant l’expiration du certificat présenté ; valeur négative après expiration, aucun échantillon en HTTP simple |
+| `opencloud_security_upgrade_path_complete` | `host`, `target_version` | `1` si la mise à jour recommandée corrige toutes les vulnérabilités connues ; aucun échantillon sinon |
+| `opencloud_security_waiver_days_remaining` | `host` | Jours avant la fin d’une exemption `--waive-until` qui laisse un contrôle en échec alerter de nouveau ; aucun échantillon si aucun contrôle en échec ne dépend d’une échéance |
+| `opencloud_security_coverage_inconclusive_total` | `host` | Contrôles exécutés par l’analyse sans conclusion |
+| `opencloud_security_coverage_not_checked_total` | `host` | Contrôles que l’analyse n’a pas exécutés |
+| `opencloud_security_scan_duration_seconds` | `host` | Durée de l’analyse |
+| `opencloud_security_scrape_success` | `host` | `0` si l’analyse a échoué |
 
-A failed scan publishes only the last two. Findings from before the failure
-are **not** re-published, so an instance whose scan is broken has no verdict
-rather than a stale one - which is why `opencloud_security_scrape_success` is
-the first thing the dashboard shows.
+Une analyse en échec ne publie que les deux dernières métriques. Les constats de
+l’analyse précédente ne sont pas republiés. L’instance reste donc sans verdict,
+plutôt qu’avec un verdict périmé. Le tableau de bord affiche pour cette raison
+`opencloud_security_scrape_success` en premier.
 
-`opencloud_security_end_of_life` is a separate family rather than a negative
-day count on purpose. A rolling or production release whose end of life has
-not been announced reports no days at all, and "unknown" must not read as
-"expiring today" in the one alert nobody may miss.
+`opencloud_security_end_of_life` est une métrique distincte du nombre de jours
+restants. Une version rolling ou production sans date de fin de vie annoncée ne
+publie aucun nombre de jours : une date inconnue ne doit pas déclencher une alerte
+qui signifierait « expire aujourd’hui ».
 
+## Données à représenter {#what-there-is-to-graph}
 
-## What there is to graph
-
-Every run prints performance data after a `|`:
+Chaque exécution affiche des données de performance après `|` :
 
 ```
 rating=5;@0:3;@0:1;0;5 vulnerabilities=0;;;0; time=1.234s;;;0;
 ```
 
-| Metric | Meaning |
+| Métrique | Signification |
 |:-------|:--------|
-| `rating` | `0`-`5`, `5` is A+ and `0` is F; `U` when the scan failed |
-| `vulnerabilities` | Known vulnerabilities for the installed version |
-| `time` | Seconds the scan took |
-| `hardenings_missing` | Missing hardening measures, only with `--check-hardening` |
-| `extra_checks_failed` | Failed additional checks |
-| `update_available` | `1` when a newer release exists |
-| `support_days_left` | Days of support left; negative once overdue |
+| `rating` | De `0` à `5` : `5` correspond à A+ et `0` à F ; `U` si l’analyse a échoué |
+| `vulnerabilities` | Vulnérabilités connues de la version installée |
+| `time` | Durée de l’analyse en secondes |
+| `hardenings_missing` | Mesures de durcissement manquantes, uniquement avec `--check-hardening` |
+| `extra_checks_failed` | Contrôles supplémentaires en échec |
+| `update_available` | `1` si une version plus récente existe |
+| `support_days_left` | Jours de support restants ; valeur négative après la fin du support |
+| `waiver_days_left` | Jours avant la fin d’une exemption temporaire ; absente si aucune ne masque un contrôle en échec |
+| `coverage_inconclusive` | Contrôles que l’analyse n’a pas pu trancher |
+| `coverage_not_checked` | Contrôles que l’analyse n’a pas exécutés |
 
-`support_days_left` is the one worth alerting on. It goes negative *before*
-anyone notices the instance stopped receiving fixes.
+Une alerte sur `support_days_left` permet de repérer une version qui ne reçoit
+plus de correctifs.
 
-## node_exporter textfile collector
+## Collecteur textfile de node_exporter {#node_exporter-textfile-collector}
 
-The scanner's JSON is easier to consume than the perfdata line, so this
-uses `check-opencloud-scanner` rather than the plugin, and `jq` to shape it.
-Write to a temporary file and rename, or node_exporter will occasionally read
-a half-written file.
+Le JSON du scanner est plus facile à traiter que la ligne de données de performance.
+Cet exemple utilise donc `check-opencloud-scanner` et transforme le résultat avec
+`jq`. Écrivez dans un fichier temporaire, puis renommez-le : node_exporter ne doit
+pas lire un fichier partiellement écrit.
 
 ```shell
 #!/bin/sh
@@ -147,20 +150,21 @@ mv "$TMP" "$OUT"
 chmod 644 "$OUT"
 ```
 
-`opencloud_scan_success` is not decoration. Without it a failed scan looks
-exactly like a healthy instance, because the other metrics simply keep their
-last value until the file is overwritten.
+`opencloud_scan_success` signale les échecs d’analyse. Sans cette métrique, une
+analyse en échec pourrait sembler saine, car les autres valeurs restent en place
+jusqu’au remplacement du fichier.
 
-`lifecycle.daysRemaining` is `null` for a release whose end of life is not
-dated yet - a current rolling or production release, which expires when its
-successor ships rather than on a date. The `// 0` above turns that into `0`;
-if that reads as "expiring today" in your alerts, drop the line instead with
+`lifecycle.daysRemaining` vaut `null` si la date de fin de vie n’est pas connue.
+C’est le cas d’une version rolling ou production qui expire à la sortie de sa
+successeure. Le `// 0` ci-dessus convertit cette valeur en `0`. Si vos alertes
+interprètent cela comme « expire aujourd’hui », omettez plutôt la ligne avec
 `select(.lifecycle.daysRemaining != null)`.
 
-## Pushgateway
+## Pushgateway {#pushgateway}
 
-Same JSON, different sink. Use one grouping key per host so a scan that stops
-running leaves its last value visible rather than mixing hosts together.
+Utilisez le même JSON avec une autre destination. Prévoyez une clé de regroupement
+par hôte : si les analyses d’un hôte s’arrêtent, sa dernière valeur reste visible
+sans se mélanger à celles des autres hôtes.
 
 ```shell
 check-opencloud-scanner scan --compact opencloud.example.com \
@@ -173,19 +177,20 @@ check-opencloud-scanner scan --compact opencloud.example.com \
       http://pushgateway.example.com:9091/metrics/job/opencloud_security/instance/opencloud.example.com
 ```
 
-Pushgateway never forgets a metric. Delete the group when you retire an
-instance, or it will be alerting on a server that no longer exists:
+Pushgateway ne supprime pas les métriques de lui-même. Quand vous retirez une
+instance, supprimez son groupe pour éviter les alertes sur un serveur qui n’existe
+plus :
 
 ```shell
 curl -X DELETE http://pushgateway.example.com:9091/metrics/job/opencloud_security/instance/opencloud.example.com
 ```
 
-## OpenTelemetry collector
+## Collecteur OpenTelemetry {#opentelemetry-collector}
 
-`--format otlp` renders the metrics in this table as one OTLP/JSON
-`ExportMetricsServiceRequest`, which is what a collector accepts at
-`/v1/metrics` over OTLP/HTTP. The plugin prints it; `curl` posts it, from the
-same [systemd timer or cron job](scheduling.md) that already runs the scan:
+`--format otlp` produit un document OTLP/JSON `ExportMetricsServiceRequest` avec
+les métriques du tableau. Un collecteur le reçoit à `/v1/metrics` via OTLP/HTTP.
+Le plugin affiche le document ; `curl` l’envoie depuis le même
+[timer systemd ou la même tâche cron](scheduling.md) que l’analyse :
 
 ```shell
 check-opencloud-security --host opencloud.example.com,other.example.com \
@@ -194,27 +199,24 @@ check-opencloud-security --host opencloud.example.com,other.example.com \
       -H 'Content-Type: application/json' --data-binary @-
 ```
 
-The metric names and the `host` attribute are the exporter's, so a query
-written against a scrape works against a collector's output too, and the
-alerting rules below need no translation beyond your backend's own label
-conventions. Where the collector lives, which proxy reaches it and what
-credential it wants are the collector's business and stay in `curl`'s
-arguments rather than becoming scanner settings.
+Les noms de métriques et l’attribut `host` sont ceux de l’exportateur. Les requêtes
+prévues pour une collecte fonctionnent donc aussi avec les données du collecteur.
+Seules les conventions d’étiquetage de votre système peuvent nécessiter une
+adaptation des règles d’alerte. L’adresse du collecteur, le proxy et les
+identifiants d’accès restent dans les arguments de `curl`.
 
-A scan that fails still reports: `opencloud_security_scrape_success` arrives
-as `0`, with the duration beside it and no findings at all, so an instance
-that could not be reached is visible as such instead of keeping the numbers
-from the last run that worked.
+Une analyse en échec publie `opencloud_security_scrape_success` à `0`, avec sa
+durée et sans constats. L’échec reste ainsi visible, sans reprendre les chiffres
+de la dernière analyse réussie.
 
-## Alerting rules
+## Règles d’alerte {#alerting-rules}
 
-For the native exporter, copy
-[`contrib/prometheus/alerts.yml`](../../contrib/prometheus/alerts.yml) rather
-than the block below - it is maintained against the real metric names and
-tested against them.
+Pour l’exportateur intégré, copiez
+[`contrib/prometheus/alerts.yml`](../../contrib/prometheus/alerts.yml). Ce fichier
+est maintenu et testé avec les noms de métriques réellement publiés.
 
-The rules below match the **`jq`-shaped** names from the two recipes above,
-which are shorter and different:
+Les règles ci-dessous utilisent les noms personnalisés produits par **`jq`** dans
+les deux exemples précédents :
 
 ```yaml
 groups:
@@ -250,27 +252,27 @@ groups:
           summary: "The OpenCloud security scan has not produced a result"
 ```
 
-Prometheus `for:` measures how long an expression remains true across rule evaluations.
-It does not count fresh scans. With daily scan data, `for: 5m` waits five minutes while
-the same cached failure remains visible; it does not wait for a second daily scan.
+Dans Prometheus, `for:` mesure la durée pendant laquelle une expression reste vraie
+au fil des évaluations. Il ne compte pas les nouvelles analyses. Avec une analyse
+quotidienne, `for: 5m` attend cinq minutes pendant lesquelles le même échec en cache
+reste visible ; il n’attend pas une seconde analyse quotidienne.
 
-## Grafana
+## Grafana {#grafana}
 
-Import [`contrib/grafana/dashboard.json`](../../contrib/grafana/dashboard.json)
-and pick your Prometheus data source. It draws the scan-health tile first, the
-grade and the lifecycle beside it, then the grade over time, the open
-findings, the advisories by severity, and a table of what is running where.
+Importez [`contrib/grafana/dashboard.json`](../../contrib/grafana/dashboard.json)
+et choisissez votre source Prometheus. Le tableau de bord affiche d’abord l’état
+de l’analyse, puis la note et le cycle de vie, l’évolution de la note, les constats
+non résolus, les avis par gravité et les versions de chaque instance.
 
-If you would rather build your own: the rating is a `0`-`5` score where higher
-is better, so a stat panel with thresholds at `3` (yellow) and `1` (red)
-mirrors the plugin's own defaults. Map the values to the letters the rest of
-the output uses: `5 → A+`, `4 → A`, `3 → C`, `2 → D`, `1 → E`, `0 → F` - a
-grade with no letter beside it gets read as a score out of five.
+Pour créer votre propre tableau, utilisez un panneau de type stat avec des seuils
+à `3` (jaune) et `1` (rouge), comme les seuils par défaut du plugin. La note va de
+`0` à `5`, où une valeur élevée est meilleure. Associez les valeurs aux lettres
+utilisées dans la sortie : `5 → A+`, `4 → A`, `3 → C`, `2 → D`, `1 → E`, `0 → F`.
+Cela évite de les lire comme une note scolaire sur cinq.
 
-Put the version in a table panel next to it. The rating tells you that
-something is wrong; the version is what tells you whether an upgrade is the
-answer.
+Affichez la version dans un tableau voisin. La note signale un problème ; la
+version aide à déterminer si une mise à jour peut le résoudre.
 
 ---
 
-[Back to the documentation index](../../README.md) | [Back to the main README](../README.md)
+[Retour à l’index de la documentation](../../README.md) | [Retour au README principal](../README.md)

@@ -17,49 +17,49 @@
 
 <nav class="docs-toc card section-gap" aria-label="{{ t('docs.guide.toc.aria') }}" data-reveal>
   <p class="kicker">{{ t('docs.guide.toc.heading') }}</p>
-  <a href="#1-do-protected-endpoints-actually-require-a-session-authenticationpath" lang="fr">1. Do protected endpoints actually require a session: <code>authentication:&lt;path&gt;</code></a>
-  <a href="#2-does-the-proxy-still-offer-http-basic-authentication-basicauthdisabled" lang="fr">2. Does the proxy still offer HTTP Basic authentication: <code>basicAuthDisabled</code></a>
-  <a href="#3-do-the-documented-demo-accounts-still-sign-in-demousersdisabled" lang="fr">3. Do the documented demo accounts still sign in: <code>demoUsersDisabled</code></a>
-  <a href="#4-is-account-search-restricted-to-shared-groups-userenumerationrestricted" lang="fr">4. Is account search restricted to shared groups: <code>userEnumerationRestricted</code></a>
-  <a href="#5-is-the-link-password-policy-strong-enough-passwordpolicyenforced" lang="fr">5. Is the link password policy strong enough: <code>passwordPolicyEnforced</code></a>
-  <a href="#5a-does-it-still-ask-for-more-than-length-passwordpolicycomplexity" lang="fr">5a. Does it still ask for more than length: <code>passwordPolicyComplexity</code></a>
-  <a href="#6-can-the-identity-provider-be-found-at-all-identityproviderdetected" lang="fr">6. Can the identity provider be found at all: <code>identityProviderDetected</code></a>
-  <a href="#7-what-the-discovery-document-says-about-how-sign-in-is-protected" lang="fr">7. What the discovery document says about how sign-in is protected</a>
-  <a href="#what-else-is-in-that-document-and-why-none-of-it-is-checked" lang="fr">What else is in that document, and why none of it is checked</a>
-  <a href="#severity-and-rating-impact" lang="fr">Severity and rating impact</a>
+  <a href="#1-do-protected-endpoints-actually-require-a-session-authenticationpath" lang="fr">1. Les points de terminaison protégés exigent-ils vraiment une session : <code>authentication:&lt;path&gt;</code></a>
+  <a href="#2-does-the-proxy-still-offer-http-basic-authentication-basicauthdisabled" lang="fr">2. Le proxy propose-t-il encore l’authentification HTTP Basic : <code>basicAuthDisabled</code></a>
+  <a href="#3-do-the-documented-demo-accounts-still-sign-in-demousersdisabled" lang="fr">3. Les comptes de démonstration documentés permettent-ils encore de se connecter : <code>demoUsersDisabled</code></a>
+  <a href="#4-is-account-search-restricted-to-shared-groups-userenumerationrestricted" lang="fr">4. La recherche de comptes est-elle limitée aux groupes partagés : <code>userEnumerationRestricted</code></a>
+  <a href="#5-is-the-link-password-policy-strong-enough-passwordpolicyenforced" lang="fr">5. La politique de mot de passe des liens est-elle assez stricte : <code>passwordPolicyEnforced</code></a>
+  <a href="#5a-does-it-still-ask-for-more-than-length-passwordpolicycomplexity" lang="fr">5a. Exige-t-elle encore plus qu’une longueur : <code>passwordPolicyComplexity</code></a>
+  <a href="#6-can-the-identity-provider-be-found-at-all-identityproviderdetected" lang="fr">6. Le fournisseur d’identité est-il seulement identifiable : <code>identityProviderDetected</code></a>
+  <a href="#7-what-the-discovery-document-says-about-how-sign-in-is-protected" lang="fr">7. Ce que le document de découverte indique sur la protection de la connexion</a>
+  <a href="#what-else-is-in-that-document-and-why-none-of-it-is-checked" lang="fr">Les autres champs de ce document, et pourquoi aucun n’est vérifié</a>
+  <a href="#severity-and-rating-impact" lang="fr">Gravité et effet sur la note</a>
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="fr">
 <p>Le scanner vérifie l'accès aux points de terminaison protégés, l'authentification HTTP Basic,
 les comptes de démonstration documentés et les paramètres publiés dans les capacités OpenCloud
 et les documents de découverte OpenID Connect. Il ne devine pas les identifiants. Le contrôle
-des comptes de démonstration utilise uniquement les identifiants publiés ci-dessous ; voir les
+des comptes de démonstration utilise uniquement les identifiants publiés ci-dessous ; voir les
 <a href="/documentation/scanner-checks#what-the-scan-deliberately-does-not-answer">limites de l’analyse</a> pour le
 périmètre complet.</p>
 <!-- TOC -->
 <ul>
-<li><a href="#authentication-what-this-scanner-checks-and-why">Authentication: what this scanner checks, and why</a></li>
-<li><a href="#1-do-protected-endpoints-actually-require-a-session-authenticationpath">1. Do protected endpoints actually require a session: <code>authentication:&lt;path&gt;</code></a></li>
-<li><a href="#2-does-the-proxy-still-offer-http-basic-authentication-basicauthdisabled">2. Does the proxy still offer HTTP Basic authentication: <code>basicAuthDisabled</code></a></li>
-<li><a href="#3-do-the-documented-demo-accounts-still-sign-in-demousersdisabled">3. Do the documented demo accounts still sign in: <code>demoUsersDisabled</code></a></li>
-<li><a href="#4-is-account-search-restricted-to-shared-groups-userenumerationrestricted">4. Is account search restricted to shared groups: <code>userEnumerationRestricted</code></a></li>
-<li><a href="#5-is-the-link-password-policy-strong-enough-passwordpolicyenforced">5. Is the link password policy strong enough: <code>passwordPolicyEnforced</code></a></li>
-<li><a href="#5a-does-it-still-ask-for-more-than-length-passwordpolicycomplexity">5a. Does it still ask for more than length: <code>passwordPolicyComplexity</code></a></li>
-<li><a href="#6-can-the-identity-provider-be-found-at-all-identityproviderdetected">6. Can the identity provider be found at all: <code>identityProviderDetected</code></a></li>
-<li><a href="#7-what-the-discovery-document-says-about-how-sign-in-is-protected">7. What the discovery document says about how sign-in is protected</a></li>
-<li><a href="#what-else-is-in-that-document-and-why-none-of-it-is-checked">What else is in that document, and why none of it is checked</a></li>
-<li><a href="#severity-and-rating-impact">Severity and rating impact</a></li>
+<li><a href="#authentication-what-this-scanner-checks-and-why">Authentification : ce que vérifie ce scanner, et pourquoi</a></li>
+<li><a href="#1-do-protected-endpoints-actually-require-a-session-authenticationpath">1. Les points de terminaison protégés exigent-ils vraiment une session : <code>authentication:&lt;path&gt;</code></a></li>
+<li><a href="#2-does-the-proxy-still-offer-http-basic-authentication-basicauthdisabled">2. Le proxy propose-t-il encore l’authentification HTTP Basic : <code>basicAuthDisabled</code></a></li>
+<li><a href="#3-do-the-documented-demo-accounts-still-sign-in-demousersdisabled">3. Les comptes de démonstration documentés permettent-ils encore de se connecter : <code>demoUsersDisabled</code></a></li>
+<li><a href="#4-is-account-search-restricted-to-shared-groups-userenumerationrestricted">4. La recherche de comptes est-elle limitée aux groupes partagés : <code>userEnumerationRestricted</code></a></li>
+<li><a href="#5-is-the-link-password-policy-strong-enough-passwordpolicyenforced">5. La politique de mot de passe des liens est-elle assez stricte : <code>passwordPolicyEnforced</code></a></li>
+<li><a href="#5a-does-it-still-ask-for-more-than-length-passwordpolicycomplexity">5a. Exige-t-elle encore plus qu’une longueur : <code>passwordPolicyComplexity</code></a></li>
+<li><a href="#6-can-the-identity-provider-be-found-at-all-identityproviderdetected">6. Le fournisseur d’identité est-il seulement identifiable : <code>identityProviderDetected</code></a></li>
+<li><a href="#7-what-the-discovery-document-says-about-how-sign-in-is-protected">7. Ce que le document de découverte indique sur la protection de la connexion</a></li>
+<li><a href="#what-else-is-in-that-document-and-why-none-of-it-is-checked">Les autres champs de ce document, et pourquoi aucun n’est vérifié</a></li>
+<li><a href="#severity-and-rating-impact">Gravité et effet sur la note</a></li>
 </ul>
 <!-- TOC -->
 
-<h2 id="1-do-protected-endpoints-actually-require-a-session-authenticationpath">1. Do protected endpoints actually require a session: <code>authentication:&lt;path&gt;</code></h2>
-<p>Three endpoints that must never answer an unauthenticated request with
-content are requested without credentials:</p>
+<h2 id="1-do-protected-endpoints-actually-require-a-session-authenticationpath">1. Les points de terminaison protégés exigent-ils vraiment une session : <code>authentication:&lt;path&gt;</code></h2>
+<p>Trois points de terminaison qui ne doivent jamais renvoyer de contenu à une
+requête non authentifiée sont interrogés sans identifiants :</p>
 <table>
 <thead>
 <tr>
-<th>Path</th>
-<th>Severity</th>
+<th>Chemin</th>
+<th>Gravité</th>
 </tr>
 </thead>
 <tbody>
@@ -77,242 +77,254 @@ content are requested without credentials:</p>
 </tr>
 </tbody>
 </table>
-<p>An HTTP <code>401</code>, <code>403</code>, <code>405</code> or <code>501</code> response, a redirect to a login page, or
-a <code>404</code> all count as "demanded authentication" - <code>405</code>/<code>501</code> show up when a
-reverse proxy answers a <code>GET</code> on a WebDAV collection rather than OpenCloud
-itself, and <code>404</code> covers a proxy that hides the path entirely rather than
-challenging it. Anything else - most importantly a <code>200</code> carrying the data
-that path is supposed to protect - fails the check. An endpoint that could
-not be reached at all is treated as passing: a network failure is not
-evidence that the endpoint is open, and this scanner would rather stay quiet
-than manufacture a finding out of a timeout.</p>
-<p><strong>If this fails:</strong> request the reported path by hand and read what actually
-answers it. A cache, CDN or misconfigured proxy rule serving its own error
-page in front of OpenCloud is the usual explanation; an endpoint genuinely
-reachable without a session is a live incident, not a hardening gap - rotate
-anything the response exposed and fix the routing immediately.</p>
-<h2 id="2-does-the-proxy-still-offer-http-basic-authentication-basicauthdisabled">2. Does the proxy still offer HTTP Basic authentication: <code>basicAuthDisabled</code></h2>
-<p>The instance is asked for the <code>WWW-Authenticate</code> challenge on a protected
-endpoint. A <code>Basic</code> challenge means <code>PROXY_ENABLE_BASIC_AUTH=true</code>: a
-username and password can be replayed on every request without going through
-the identity provider at all, bypassing single sign-on and any second factor
-enforced there.</p>
-<p>This is not treated as a plain mistake, because the alternative is often
-worse in practice: CalDAV, CardDAV and most WebDAV clients cannot speak
-OpenID Connect and have nothing else to authenticate with. That is why this
-is rated <code>medium</code> rather than <code>critical</code> - and <code>low</code> once an external
-identity provider is confirmed to handle the interactive login (see <a href="/documentation/scanner-checks#who-signs-users-in">Who
-signs users in</a>), since the account
-passwords those provider-backed logins protect are not the ones being
-replayed here.</p>
-<p><strong>Fix:</strong> set <code>PROXY_ENABLE_BASIC_AUTH=false</code> (the default) if nothing needs
-it. If a calendar, contacts or WebDAV client does, keep it on and issue those
-clients app tokens rather than account passwords, so what gets replayed on
-every request is revocable on its own and never the single sign-on
-credential.</p>
-<h2 id="3-do-the-documented-demo-accounts-still-sign-in-demousersdisabled">3. Do the documented demo accounts still sign in: <code>demoUsersDisabled</code></h2>
-<p><code>IDM_CREATE_DEMO_USERS=true</code> populates a fresh instance with five accounts -
-one of them an administrator - whose names and passwords are printed in
-<a href="https://docs.opencloud.eu/docs/admin/resources/demo-user/">OpenCloud's own documentation</a>. This check only runs
-once the scan has established that the instance's <em>own</em> identity provider
-handles login (an external Keycloak, Authentik or Authelia has no such
-accounts to test), and it sends exactly those published pairs to that
-provider - nothing guessed, and nothing sent to a third party.</p>
-<p>Left on past evaluation, this is a <code>critical</code> finding: it is an
-administrator account whose password is public knowledge, and it caps the
-rating at <code>D</code> on its own regardless of everything else the scan found.</p>
-<p><strong>Fix:</strong> set <code>IDM_CREATE_DEMO_USERS=false</code> <strong>and</strong> delete the accounts that
-were already created - turning the setting off does not remove them.
-Wherever this fails, treat the instance as compromised until the
-administrator account is gone or has been given a real password: the
-credentials are not secret, they are published.</p>
-<h2 id="4-is-account-search-restricted-to-shared-groups-userenumerationrestricted">4. Is account search restricted to shared groups: <code>userEnumerationRestricted</code></h2>
-<p>OpenCloud's capabilities document reports whether user search is limited to
-members of a shared group. The restricted state is hardcoded in current
-releases, so this check passes on effectively every instance; it is kept so
-that a future release that makes the setting configurable is caught the
-moment it starts reporting something other than restricted.</p>
-<p><strong>If this fails:</strong> there is currently no setting to change - the finding
-describes OpenCloud's own configuration, not something this scanner's
-<code>--debug</code> remediation can point you at.</p>
-<h2 id="5-is-the-link-password-policy-strong-enough-passwordpolicyenforced">5. Is the link password policy strong enough: <code>passwordPolicyEnforced</code></h2>
-<p>The capabilities document's <code>password_policy.min_characters</code> is read and
-compared against 8. This governs the passwords a user can set on a <strong>public
-share link</strong>, not identity-provider account passwords - see <a href="/documentation/sharing">Public link
-sharing</a> for the checks that actually gate whether a link needs a
-password at all.</p>
-<p><strong>Fix:</strong> set <code>OC_PASSWORD_POLICY_DISABLED=false</code> and
-<code>OC_PASSWORD_POLICY_MIN_CHARACTERS</code> to <code>8</code> or higher (<code>8</code> is already the
-default, so this usually means something explicitly lowered it).
-<code>OC_PASSWORD_POLICY_MIN_{LOWERCASE,UPPERCASE,DIGITS,SPECIAL}_CHARACTERS</code> and a
-banned-password list tighten it further - see <a href="https://docs.opencloud.eu/docs/admin/configuration/link-password-policy">the link password policy
-docs</a>.</p>
-<h2 id="5a-does-it-still-ask-for-more-than-length-passwordpolicycomplexity">5a. Does it still ask for more than length: <code>passwordPolicyComplexity</code></h2>
-<p>A minimum length is not a password policy on its own. OpenCloud's default
-policy also requires <strong>one lowercase letter, one uppercase letter, one digit
-and one special character</strong>, and each of those minimums is a setting somebody
-can lower to zero. A twelve-character policy with all four lowered accepts
-<code>aaaaaaaaaaaa</code>, which satisfies <code>passwordPolicyEnforced</code> and nothing else.</p>
-<p>The four <code>min_*_characters</code> fields are read from the same capabilities
-document, and the check passes when every one of them is at least 1.</p>
-<p><strong>This is deliberately a second flag rather than a stricter
-<code>passwordPolicyEnforced</code>.</strong> The older flag answers "is there a policy, and is
-it long enough"; this one answers "is it still the policy OpenCloud ships".
-Folding them together would change what an existing alert means without
-changing its name.</p>
-<p><strong>Reported only when the instance publishes all four minimums.</strong> A policy that
-is switched off publishes none of them - that case is <code>passwordPolicyEnforced</code>
-failing, not this one - and an absent measurement stays an unknown rather than
-becoming a failure, as everywhere else in the scan.</p>
-<p><strong>Fix:</strong> set <code>OC_PASSWORD_POLICY_MIN_LOWERCASE_CHARACTERS</code>,
+<p>Une réponse HTTP <code>401</code>, <code>403</code>, <code>405</code> ou <code>501</code>, une redirection vers une page de
+connexion ou une réponse <code>404</code> comptent toutes comme « authentification
+exigée ». <code>405</code>/<code>501</code> apparaissent lorsqu’un reverse proxy, et non OpenCloud
+lui-même, répond à un <code>GET</code> sur une collection WebDAV ; <code>404</code> couvre un proxy
+qui masque entièrement le chemin au lieu de demander une authentification.
+Toute autre réponse - avant tout un <code>200</code> contenant les données que ce chemin
+doit protéger - fait échouer le contrôle. Un point de terminaison injoignable
+est considéré comme réussi : une panne réseau ne prouve pas que le point de
+terminaison est ouvert, et ce scanner préfère se taire plutôt que de fabriquer
+un constat à partir d’un délai d’attente dépassé.</p>
+<p><strong>En cas d’échec :</strong> interrogez vous-même le chemin signalé et regardez ce qui
+répond réellement. L’explication habituelle est un cache, un CDN ou une règle
+de proxy mal configurée qui sert sa propre page d’erreur devant OpenCloud. Un
+point de terminaison réellement accessible sans session est un incident en
+cours, pas une lacune de durcissement : renouvelez tout ce que la réponse a
+exposé et corrigez immédiatement le routage.</p>
+<h2 id="2-does-the-proxy-still-offer-http-basic-authentication-basicauthdisabled">2. Le proxy propose-t-il encore l’authentification HTTP Basic : <code>basicAuthDisabled</code></h2>
+<p>Le scanner demande à l’instance le défi <code>WWW-Authenticate</code> d’un point de
+terminaison protégé. Un défi <code>Basic</code> signifie <code>PROXY_ENABLE_BASIC_AUTH=true</code> :
+un nom d’utilisateur et un mot de passe peuvent être rejoués à chaque requête
+sans jamais passer par le fournisseur d’identité, ce qui contourne
+l’authentification unique et tout second facteur qu’il impose.</p>
+<p>Ce n’est pas traité comme une simple erreur, car l’alternative est souvent
+pire en pratique : les clients CalDAV, CardDAV et la plupart des clients WebDAV
+ne savent pas utiliser OpenID Connect et n’ont aucun autre moyen de
+s’authentifier. C’est pourquoi la gravité est <code>medium</code> et non <code>critical</code>, et
+<code>low</code> dès qu’un fournisseur d’identité externe gère de façon confirmée la
+connexion interactive (voir <a href="/documentation/scanner-checks#who-signs-users-in">Qui connecte les utilisateurs</a>) :
+les mots de passe de comptes protégés par ce fournisseur ne sont alors pas ceux
+qui sont rejoués ici.</p>
+<p><strong>Correction :</strong> définissez <code>PROXY_ENABLE_BASIC_AUTH=false</code> (la valeur par
+défaut) si rien n’en a besoin. Si un client d’agenda, de contacts ou WebDAV en
+a besoin, laissez-la active et donnez à ces clients des jetons d’application
+plutôt que les mots de passe des comptes : ce qui est rejoué à chaque requête
+peut alors être révoqué séparément et n’est jamais l’identifiant de
+l’authentification unique.</p>
+<h2 id="3-do-the-documented-demo-accounts-still-sign-in-demousersdisabled">3. Les comptes de démonstration documentés permettent-ils encore de se connecter : <code>demoUsersDisabled</code></h2>
+<p><code>IDM_CREATE_DEMO_USERS=true</code> crée sur une nouvelle instance cinq comptes - dont
+un administrateur - dont les noms et mots de passe figurent dans
+<a href="https://docs.opencloud.eu/docs/admin/resources/demo-user/">la documentation d’OpenCloud</a>. Ce contrôle ne s’exécute
+qu’une fois que l’analyse a établi que le fournisseur d’identité <em>propre</em> à
+l’instance gère la connexion (un Keycloak, Authentik ou Authelia externe n’a
+pas de tels comptes à tester). Il envoie à ce fournisseur exactement ces
+couples publiés : rien n’est deviné et rien n’est envoyé à un tiers.</p>
+<p>Laissé actif au-delà d’une phase d’évaluation, c’est un constat <code>critical</code> :
+il s’agit d’un compte administrateur dont le mot de passe est public, et il
+limite à lui seul la note à <code>D</code>, quels que soient les autres résultats de
+l’analyse.</p>
+<p><strong>Correction :</strong> définissez <code>IDM_CREATE_DEMO_USERS=false</code> <strong>et</strong> supprimez les
+comptes déjà créés : désactiver le paramètre ne les supprime pas. Partout où
+ce contrôle échoue, considérez l’instance comme compromise tant que le compte
+administrateur n’a pas été supprimé ou doté d’un vrai mot de passe : ces
+identifiants ne sont pas secrets, ils sont publiés.</p>
+<h2 id="4-is-account-search-restricted-to-shared-groups-userenumerationrestricted">4. La recherche de comptes est-elle limitée aux groupes partagés : <code>userEnumerationRestricted</code></h2>
+<p>Le document des capacités d’OpenCloud indique si la recherche d’utilisateurs
+est limitée aux membres d’un groupe partagé. L’état restreint est codé en dur
+dans les versions actuelles : ce contrôle réussit donc sur pratiquement toutes
+les instances. Il est conservé pour qu’une future version rendant ce paramètre
+configurable soit repérée dès qu’elle annonce autre chose que l’état
+restreint.</p>
+<p><strong>En cas d’échec :</strong> il n’existe actuellement aucun paramètre à modifier. Le
+constat décrit la configuration propre d’OpenCloud, pas un réglage vers lequel
+les indications de correction de <code>--debug</code> pourraient vous orienter.</p>
+<h2 id="5-is-the-link-password-policy-strong-enough-passwordpolicyenforced">5. La politique de mot de passe des liens est-elle assez stricte : <code>passwordPolicyEnforced</code></h2>
+<p>Le scanner lit <code>password_policy.min_characters</code> dans le document des
+capacités et le compare à 8. Cette valeur régit les mots de passe qu’un
+utilisateur peut définir sur un <strong>lien de partage public</strong>, pas ceux des
+comptes du fournisseur d’identité. Consultez <a href="/documentation/sharing">Partage par lien public</a>
+pour les contrôles qui déterminent si un lien exige un mot de passe.</p>
+<p><strong>Correction :</strong> définissez <code>OC_PASSWORD_POLICY_DISABLED=false</code> et
+<code>OC_PASSWORD_POLICY_MIN_CHARACTERS</code> à <code>8</code> ou plus (<code>8</code> est déjà la valeur par
+défaut : un échec signifie donc généralement que quelqu’un l’a abaissée).
+<code>OC_PASSWORD_POLICY_MIN_{LOWERCASE,UPPERCASE,DIGITS,SPECIAL}_CHARACTERS</code> et une
+liste de mots de passe interdits la renforcent encore - voir
+<a href="https://docs.opencloud.eu/docs/admin/configuration/link-password-policy">la documentation sur la politique de mot de passe des liens</a>.</p>
+<h2 id="5a-does-it-still-ask-for-more-than-length-passwordpolicycomplexity">5a. Exige-t-elle encore plus qu’une longueur : <code>passwordPolicyComplexity</code></h2>
+<p>Une longueur minimale ne suffit pas à faire une politique de mot de passe. La
+politique par défaut d’OpenCloud exige aussi <strong>une minuscule, une majuscule,
+un chiffre et un caractère spécial</strong>, et chacun de ces minimums est un
+paramètre que quelqu’un peut ramener à zéro. Une politique de douze caractères
+dont les quatre minimums ont été abaissés accepte <code>aaaaaaaaaaaa</code>, ce qui
+satisfait <code>passwordPolicyEnforced</code> et rien d’autre.</p>
+<p>Les quatre champs <code>min_*_characters</code> sont lus dans le même document des
+capacités, et le contrôle réussit lorsque chacun vaut au moins 1.</p>
+<p><strong>Il s’agit volontairement d’un second indicateur plutôt que d’un
+<code>passwordPolicyEnforced</code> plus strict.</strong> L’ancien indicateur répond à « existe-t-il
+une politique, et est-elle assez longue ? » ; celui-ci répond à « est-ce encore
+la politique livrée avec OpenCloud ? ». Les fusionner changerait le sens d’une
+alerte existante sans changer son nom.</p>
+<p><strong>Signalé uniquement lorsque l’instance publie les quatre minimums.</strong> Une
+politique désactivée n’en publie aucun - ce cas fait échouer
+<code>passwordPolicyEnforced</code>, pas celui-ci - et une mesure absente reste une
+inconnue au lieu de devenir un échec, comme partout ailleurs dans l’analyse.</p>
+<p><strong>Correction :</strong> remettez <code>OC_PASSWORD_POLICY_MIN_LOWERCASE_CHARACTERS</code>,
 <code>OC_PASSWORD_POLICY_MIN_UPPERCASE_CHARACTERS</code>,
-<code>OC_PASSWORD_POLICY_MIN_DIGITS</code> and
-<code>OC_PASSWORD_POLICY_MIN_SPECIAL_CHARACTERS</code> back to <code>1</code> or more. Each already
-defaults to <code>1</code>, so an instance that fails this had them lowered on purpose.</p>
-<h2 id="6-can-the-identity-provider-be-found-at-all-identityproviderdetected">6. Can the identity provider be found at all: <code>identityProviderDetected</code></h2>
-<p>Everything above asks whether a credential is accepted. This one asks the
-prior question - <em>who issues the tokens?</em> - and answers it by reading
-<code>/.well-known/openid-configuration</code> once, without following redirects:</p>
+<code>OC_PASSWORD_POLICY_MIN_DIGITS</code> et
+<code>OC_PASSWORD_POLICY_MIN_SPECIAL_CHARACTERS</code> à <code>1</code> ou plus. Chacun vaut déjà <code>1</code>
+par défaut : une instance qui échoue à ce contrôle les a donc abaissés
+volontairement.</p>
+<h2 id="6-can-the-identity-provider-be-found-at-all-identityproviderdetected">6. Le fournisseur d’identité est-il seulement identifiable : <code>identityProviderDetected</code></h2>
+<p>Tous les contrôles ci-dessus demandent si un identifiant est accepté. Celui-ci
+pose la question préalable - <em>qui émet les jetons ?</em> - et y répond en lisant
+une seule fois <code>/.well-known/openid-configuration</code>, sans suivre les
+redirections :</p>
 <ul>
-<li>a <code>200</code> carrying JSON: the <code>issuer</code> field is taken;</li>
-<li>a redirect: the <code>Location</code> header is resolved against the instance and
-  taken instead, which is how a proxy that hands the well-known path to an
-  external provider is recognised;</li>
-<li>anything else, or an issuer that is not an absolute <code>http(s)</code> URL with a
-  hostname: the flag fails.</li>
+<li>une réponse <code>200</code> contenant du JSON : le champ <code>issuer</code> est retenu ;</li>
+<li>une redirection : l’en-tête <code>Location</code> est résolu par rapport à l’instance et
+  retenu à la place, ce qui permet de reconnaître un proxy qui confie le chemin
+  well-known à un fournisseur externe ;</li>
+<li>toute autre réponse, ou un émetteur qui n’est pas une URL <code>http(s)</code> absolue
+  avec un nom d’hôte : l’indicateur échoue.</li>
 </ul>
-<p>Nothing is submitted to find this out. No login form is filled in and no
-credential is sent - working out who signs users in must not become an
-attempt to sign in.</p>
-<p>A failure is far more often a <strong>proxy not forwarding <code>/.well-known/</code></strong> than
-an instance with no sign-in at all, which is why it never caps the rating.</p>
-<p>The issuer that is found is also recorded as context rather than a verdict.
-An issuer on a different host than the instance is reported as an
-<strong>external</strong> provider - Keycloak, Authentik or Authelia in front of
-OpenCloud - and the vendor is named so the result can point at that project's
-security advisories. Using OpenCloud's own built-in provider is not a
-finding: neither arrangement is required, and neither fails anything.</p>
-<p><strong>If this fails:</strong> confirm the reverse proxy forwards <code>/.well-known/</code> to
-whatever issues tokens - see <a href="/documentation/reverse-proxy">Reverse proxies</a>. If sign-in
-genuinely is not configured, OpenCloud ships its own provider and can be
-pointed at an external one.</p>
-<h2 id="7-what-the-discovery-document-says-about-how-sign-in-is-protected">7. What the discovery document says about how sign-in is protected</h2>
-<p>The request above is already paid for. The document it returns is public
-evidence in the sense <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0022-identity-provider-versions-require-public-evidence.md">ADR 0022</a>
-means it - unauthenticated, read-only, published on purpose - and four of its
-fields say something an operator can act on. Reading them costs <strong>no extra
-HTTP request</strong>: the same response that yielded the issuer yields all four.</p>
+<p>Rien n’est soumis pour le découvrir. Aucun formulaire de connexion n’est rempli
+et aucun identifiant n’est envoyé : déterminer qui connecte les utilisateurs ne
+doit pas devenir une tentative de connexion.</p>
+<p>Un échec vient bien plus souvent d’un <strong>proxy qui ne transmet pas
+<code>/.well-known/</code></strong> que d’une instance sans aucune connexion. C’est pourquoi il ne
+limite jamais la note.</p>
+<p>L’émetteur trouvé est aussi enregistré comme contexte, pas comme verdict. Un
+émetteur situé sur un autre hôte que l’instance est signalé comme fournisseur
+<strong>externe</strong> - Keycloak, Authentik ou Authelia devant OpenCloud - et l’éditeur
+est nommé pour que le résultat puisse renvoyer aux avis de sécurité de ce
+projet. Utiliser le fournisseur intégré d’OpenCloud n’est pas un constat :
+aucune des deux configurations n’est exigée, et aucune ne fait échouer quoi que
+ce soit.</p>
+<p><strong>En cas d’échec :</strong> vérifiez que le reverse proxy transmet <code>/.well-known/</code> au
+service qui émet les jetons - voir <a href="/documentation/reverse-proxy">Reverse proxies</a>. Si la
+connexion n’est réellement pas configurée, OpenCloud fournit son propre
+fournisseur et peut être relié à un fournisseur externe.</p>
+<h2 id="7-what-the-discovery-document-says-about-how-sign-in-is-protected">7. Ce que le document de découverte indique sur la protection de la connexion</h2>
+<p>La requête ci-dessus a déjà été faite. Le document qu’elle renvoie est une
+preuve publique au sens de l’<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0022-identity-provider-versions-require-public-evidence.md">ADR 0022</a> -
+non authentifié, en lecture seule, publié volontairement - et quatre de ses
+champs indiquent quelque chose sur quoi un opérateur peut agir. Les lire ne
+coûte <strong>aucune requête HTTP supplémentaire</strong> : la réponse qui a fourni
+l’émetteur fournit aussi les quatre champs.</p>
 <table>
 <thead>
 <tr>
-<th>Flag</th>
-<th>Field</th>
-<th>Fails when</th>
+<th>Indicateur</th>
+<th>Champ</th>
+<th>Échoue lorsque</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>oidcPkceSupported</code></td>
 <td><code>code_challenge_methods_supported</code> [^rfc8414]</td>
-<td><code>S256</code> is not among the methods</td>
+<td><code>S256</code> ne figure pas parmi les méthodes</td>
 </tr>
 <tr>
 <td><code>oidcImplicitFlowDisabled</code></td>
 <td><code>response_types_supported</code></td>
-<td>a type returns a token from the authorization endpoint (<code>token</code>, <code>id_token</code>)</td>
+<td>un type renvoie un jeton depuis le point de terminaison d’autorisation (<code>token</code>, <code>id_token</code>)</td>
 </tr>
 <tr>
 <td><code>oidcSigningAlgorithmStrong</code></td>
 <td><code>id_token_signing_alg_values_supported</code></td>
-<td>it contains <code>none</code> or an <code>HS</code> algorithm</td>
+<td>il contient <code>none</code> ou un algorithme <code>HS</code></td>
 </tr>
 <tr>
 <td><code>oidcEndpointsUseHttps</code></td>
-<td><code>issuer</code> and the endpoint URLs</td>
-<td>any of them is an <code>http://</code> address</td>
+<td><code>issuer</code> et les URL des points de terminaison</td>
+<td>l’une d’elles est une adresse <code>http://</code></td>
 </tr>
 </tbody>
 </table>
-<p>[^rfc8414]: Providers publish it in the discovery document, but the field is
-    defined by <a href="https://www.rfc-editor.org/rfc/rfc8414.html#section-2">OAuth 2.0 Authorization Server Metadata</a>
-    rather than by OpenID Connect Discovery, which is why an OIDC-only provider
-    may legitimately omit it.</p>
-<p><strong>Every one of them is skipped when the document does not publish the field.</strong>
-That is the same rule as <code>passwordPolicyComplexity</code>: an absent measurement is
-an unknown, never a failure. It matters more here than usual, because
-OpenCloud's built-in provider omits <code>code_challenge_methods_supported</code>
-entirely - rating that absence as "no PKCE" would fail every stock instance
-for something its operator cannot change.</p>
-<p><strong><code>oidcImplicitFlowDisabled</code> is reported for an external provider only.</strong>
-OpenCloud's built-in provider (<a href="https://github.com/libregraph/lico">libregraph/lico</a>) publishes
-<code>response_types_supported</code> as <code>id_token token</code>, <code>id_token</code>, <code>code id_token</code>
-and <code>code id_token token</code> - implicit and hybrid, with no plain <code>code</code> - and
-none of that is configurable. A finding an operator cannot act on is worse
-than none, so it is raised only where it can be acted on: in front of
-Keycloak, Authentik or Authelia, where the flows really are separate
-switches. <a href="/documentation/secure-deployment#keycloak">Securing a deployment</a> already
-tells you to require PKCE and the code flow there; this is what finally
-checks that you did.</p>
-<p><strong><code>oidcEndpointsUseHttps</code> is measured only when the instance itself answered
-over HTTPS.</strong> An instance scanned over plain HTTP publishes <code>http://</code>
-endpoints because that is how it was asked, and reporting that would restate
-what <code>httpsEnforced</code> already says once, in the right place. The finding worth
-having is the disagreement: an HTTPS instance whose provider still advertises
-<code>http://</code>, which is a provider behind a terminating proxy that was never told
-its public URL.</p>
-<p><strong>Why these four and not the obvious fifth.</strong> <code>none</code> in
-<code>id_token_signing_alg_values_supported</code> means an unsigned ID token is
-acceptable, so anybody can write one; an <code>HS</code> algorithm signs with the client
-secret, and OpenCloud's clients are public clients that cannot keep a secret,
-so every party holding it can mint a token for any user. OpenCloud's built-in
-provider signs with <code>PS256</code> and passes.</p>
-<h2 id="what-else-is-in-that-document-and-why-none-of-it-is-checked">What else is in that document, and why none of it is checked</h2>
-<p>The discovery document publishes a good deal more than these four flags read.
-Verified against <a href="https://github.com/libregraph/lico">libregraph/lico</a>'s <code>oidc/provider/provider.go</code>
-(<code>InitializeMetadata</code>), which is what OpenCloud's built-in provider serves:</p>
+<p>[^rfc8414]: Les fournisseurs le publient dans le document de découverte, mais
+    ce champ est défini par <a href="https://www.rfc-editor.org/rfc/rfc8414.html#section-2">OAuth 2.0 Authorization Server Metadata</a>
+    et non par OpenID Connect Discovery : un fournisseur purement OIDC peut donc
+    légitimement l’omettre.</p>
+<p><strong>Chacun est ignoré lorsque le document ne publie pas le champ.</strong> C’est la même
+règle que pour <code>passwordPolicyComplexity</code> : une mesure absente est une
+inconnue, jamais un échec. Cela compte encore plus ici, car le fournisseur
+intégré d’OpenCloud omet entièrement <code>code_challenge_methods_supported</code> :
+traiter cette absence comme « pas de PKCE » ferait échouer toutes les instances
+non modifiées pour quelque chose que leur opérateur ne peut pas changer.</p>
+<p><strong><code>oidcImplicitFlowDisabled</code> n’est signalé que pour un fournisseur externe.</strong>
+Le fournisseur intégré d’OpenCloud (<a href="https://github.com/libregraph/lico">libregraph/lico</a>) publie
+<code>response_types_supported</code> sous la forme <code>id_token token</code>, <code>id_token</code>,
+<code>code id_token</code> et <code>code id_token token</code> - flux implicite et hybride, sans
+<code>code</code> seul - et rien de cela n’est configurable. Un constat sur lequel un
+opérateur ne peut pas agir est pire que pas de constat : il n’est donc émis que
+là où l’on peut agir, devant Keycloak, Authentik ou Authelia, où les flux sont
+réellement des options distinctes. <a href="/documentation/secure-deployment#keycloak">Sécuriser un déploiement</a>
+vous demande déjà d’y exiger PKCE et le flux par code ; ce contrôle vérifie
+enfin que vous l’avez fait.</p>
+<p><strong><code>oidcEndpointsUseHttps</code> n’est mesuré que lorsque l’instance elle-même a
+répondu en HTTPS.</strong> Une instance analysée en HTTP simple publie des points de
+terminaison <code>http://</code> parce que c’est ainsi qu’elle a été interrogée, et le
+signaler répéterait ce que <code>httpsEnforced</code> dit déjà une fois, au bon endroit.
+Le constat utile est le désaccord : une instance HTTPS dont le fournisseur
+annonce encore <code>http://</code>, c’est-à-dire un fournisseur placé derrière un proxy
+de terminaison TLS à qui l’on n’a jamais indiqué son URL publique.</p>
+<p><strong>Pourquoi ces quatre-là et pas le cinquième évident.</strong> <code>none</code> dans
+<code>id_token_signing_alg_values_supported</code> signifie qu’un jeton d’identité non
+signé est acceptable : n’importe qui peut donc en écrire un. Un algorithme <code>HS</code>
+signe avec le secret client ; or les clients d’OpenCloud sont des clients
+publics qui ne peuvent pas garder de secret, si bien que toute partie qui le
+détient peut forger un jeton pour n’importe quel utilisateur. Le fournisseur
+intégré d’OpenCloud signe avec <code>PS256</code> et réussit ce contrôle.</p>
+<h2 id="what-else-is-in-that-document-and-why-none-of-it-is-checked">Les autres champs de ce document, et pourquoi aucun n’est vérifié</h2>
+<p>Le document de découverte publie bien plus que ce que lisent ces quatre
+indicateurs. Vérifié par rapport à <code>oidc/provider/provider.go</code>
+(<code>InitializeMetadata</code>) de <a href="https://github.com/libregraph/lico">libregraph/lico</a>, c’est-à-dire ce que sert le
+fournisseur intégré d’OpenCloud :</p>
 <table>
 <thead>
 <tr>
-<th>Field</th>
-<th>Why there is no check</th>
+<th>Champ</th>
+<th>Pourquoi il n’y a pas de contrôle</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>token_endpoint_auth_methods_supported</code></td>
-<td>The obvious candidate, and not a finding. Offering only <code>client_secret_basic</code> is not a weakness, and <code>none</code> - the value that looks alarming - is exactly what OpenCloud's public desktop, mobile and web clients need. lico publishes both. A flag here would either never fire or fire on every instance.</td>
+<td>Le candidat évident, et pourtant pas un constat. Ne proposer que <code>client_secret_basic</code> n’est pas une faiblesse, et <code>none</code> - la valeur qui semble alarmante - est exactement ce dont ont besoin les clients publics d’OpenCloud (bureau, mobile et web). lico publie les deux. Un indicateur ici ne se déclencherait jamais, ou se déclencherait sur toutes les instances.</td>
 </tr>
 <tr>
 <td><code>request_object_signing_alg_values_supported</code></td>
-<td>lico lists <code>none</code> among them, but this governs signed <em>request objects</em>, not ID tokens. An unsigned request object is not an unsigned token, and OpenCloud's clients do not send request objects at all.</td>
+<td>lico y inclut <code>none</code>, mais ce champ régit les <em>objets de requête</em> signés, pas les jetons d’identité. Un objet de requête non signé n’est pas un jeton non signé, et les clients d’OpenCloud n’envoient aucun objet de requête.</td>
 </tr>
 <tr>
 <td><code>scopes_supported</code>, <code>claims_supported</code></td>
-<td>Say what the provider can be asked for, not what it grants. Which scopes a <em>client</em> is allowed is per-client configuration the document does not show.</td>
+<td>Indiquent ce que l’on peut demander au fournisseur, pas ce qu’il accorde. Les portées autorisées pour un <em>client</em> relèvent d’une configuration propre à chaque client, que le document ne montre pas.</td>
 </tr>
 <tr>
 <td><code>subject_types_supported</code></td>
-<td>lico publishes <code>public</code> and nothing else. <code>pairwise</code> is a privacy feature for multi-tenant providers; requiring it of a single-tenant OpenCloud deployment would be noise.</td>
+<td>lico publie <code>public</code> et rien d’autre. <code>pairwise</code> est une fonction de confidentialité pour les fournisseurs multi-locataires ; l’exiger d’un déploiement OpenCloud à locataire unique ne serait que du bruit.</td>
 </tr>
 <tr>
 <td><code>registration_endpoint</code></td>
-<td>Its presence does not mean open dynamic registration - whether registration needs an initial access token is not published. Guessing would be a confident claim from weak evidence, which is the thing <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0022-identity-provider-versions-require-public-evidence.md">ADR 0022</a> exists to forbid.</td>
+<td>Sa présence ne signifie pas un enregistrement dynamique ouvert : le document ne dit pas si l’enregistrement exige un jeton d’accès initial. Le deviner reviendrait à affirmer avec assurance à partir d’une preuve faible, ce que l’<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0022-identity-provider-versions-require-public-evidence.md">ADR 0022</a> existe précisément pour interdire.</td>
 </tr>
 </tbody>
 </table>
-<h2 id="severity-and-rating-impact">Severity and rating impact</h2>
-<p><code>authentication:&lt;path&gt;</code> and <code>demoUsersDisabled</code> are <code>extraChecks</code>, reported
-and rating-capped whenever they run at all, at their own severities above -
-see the extra-checks table in <a href="/documentation/scanner-checks#what-the-scanner-checks">the main
-README</a>. <code>basicAuthDisabled</code>,
-<code>userEnumerationRestricted</code>, <code>passwordPolicyEnforced</code>,
-<code>passwordPolicyComplexity</code>, <code>identityProviderDetected</code> and the four <code>oidc*</code>
-flags are hardening flags,
-reported only with <code>--check-hardening</code> (or always on the web result); a
-failed hardening flag does not cap the rating by itself, it raises an
-otherwise-<code>OK</code> Icinga result to <code>WARNING</code> and is listed in the
-<code>hardenings_missing</code> line - see <a href="/documentation#hardening-checks">Hardening
-checks</a>.</p>
+<h2 id="severity-and-rating-impact">Gravité et effet sur la note</h2>
+<p><code>authentication:&lt;path&gt;</code> et <code>demoUsersDisabled</code> sont des <code>extraChecks</code>,
+signalés et limitant la note chaque fois qu’ils s’exécutent, avec les gravités
+indiquées plus haut - voir le tableau des contrôles supplémentaires dans
+<a href="/documentation/scanner-checks#what-the-scanner-checks">Contrôles du scanner</a>.
+<code>basicAuthDisabled</code>, <code>userEnumerationRestricted</code>, <code>passwordPolicyEnforced</code>,
+<code>passwordPolicyComplexity</code>, <code>identityProviderDetected</code> et les quatre
+indicateurs <code>oidc*</code> sont des indicateurs de durcissement, signalés uniquement
+avec <code>--check-hardening</code> (ou toujours dans le résultat web). Un indicateur de
+durcissement en échec ne limite pas la note à lui seul : il fait passer un
+résultat Icinga autrement <code>OK</code> à <code>WARNING</code> et figure sur la ligne
+<code>hardenings_missing</code> - voir <a href="/documentation/reference#hardening-checks">Vérifications de durcissement</a>.</p>
 </article>
 
 {% include "_page-nav.html" %}

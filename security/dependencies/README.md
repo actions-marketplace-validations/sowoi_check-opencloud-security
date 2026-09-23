@@ -69,7 +69,7 @@ somebody accountable has signed off.
 | `review.install_time` | Wheels available? Build backend? Anything executed at install time. |
 | `review.runtime_network` | What it fetches or sends at runtime: telemetry, update checks, remote config. Must be nothing unexpected. |
 | `review.native_code` | Compiled extensions, subprocesses, `eval`/`pickle` on untrusted input. |
-| `review.transitive_dependencies` | The packages it adds to `uv.lock`, each checked the same way at a glance. |
+| `review.transitive_dependencies` | The packages it adds to `uv.lock`, with a review of each package using the same criteria. |
 | `review.license` | The license, and that it is compatible with this project's. |
 
 ## Template

@@ -133,6 +133,19 @@ groups:
             Renew the certificate before it expires; clients refuse the
             instance once it has. A negative value means it already expired.
 
+      # The plugin's waiver_days_left perfdata: a --waive-until deadline is
+      # binary, so this is the lead time before the hidden check alerts.
+      - alert: OpenCloudWaiverExpiring
+        expr: opencloud_security_waiver_days_remaining < 14
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.host }} has a temporary waiver that ends in {{ $value }} days"
+          description: >-
+            Fix the failing check or decide again before the waiver ends.
+            After that day the check alerts on every run.
+
       - alert: OpenCloudUpgradePathIncomplete
         expr: opencloud_security_upgrade_path_complete == 0
         for: 1h

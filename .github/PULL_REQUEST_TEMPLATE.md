@@ -109,6 +109,17 @@ the negative case as well as the positive one.
       notice from `base.html`.
 - [ ] Screenshots of the before and after, if the change is visual.
 
+## For wording or translation changes
+
+<!-- Delete this section if it does not apply. -->
+
+- [ ] I reviewed the English source and all affected translations together,
+      including table descriptions, instructions and security limits.
+- [ ] The wording states concrete behavior and uses the language's agreed
+      form of address. See [TRANSLATING.md](../TRANSLATING.md).
+- [ ] Translation, wording and documentation checks pass, and I regenerated
+      the affected templates and search indexes.
+
 ## For a new or changed option
 
 <!-- Delete this whole section if it does not apply. -->

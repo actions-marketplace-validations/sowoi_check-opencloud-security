@@ -119,3 +119,35 @@ check that cries wolf is a check people learn to skip.
 
 What no check here can tell you is whether a sentence sounds like something a
 person would write. That still needs somebody who speaks the language.
+
+## Reviewing wording before a commit
+
+Write the behavior first: what the component does, what the result means,
+and what the reader can do next. Avoid metaphors that make a file, setting,
+or queue sound like a person. Translate the meaning into natural sentences.
+Preserve uncertainty and security limits. Do not turn a recommendation into
+a requirement just to shorten a sentence.
+
+When changing an English catalogue entry, read its German, Spanish and French
+values beside it. Update all four in the same change. Check technical terms,
+numbers, negation, form of address and instructions as well as placeholders.
+Read translated table descriptions and headings too. Keep commands, measured
+output and identifiers unchanged.
+
+Run the wording regression tests before committing:
+
+```bash
+uv run pytest tests/test_translation_quality.py tests/test_frontend_documentation.py tests/test_webapp_i18n.py
+```
+
+These tests run in the existing CI test job. They reject known wording defects
+in catalogues, current documentation, templates and Python product strings.
+Phrase checks join wrapped lines, so formatting cannot hide a known defect.
+The translation tests also reject guides that retain too much English prose
+and require translated headings to preserve their section links.
+
+Add a focused regression case when correcting a recurring wording defect.
+Include an acceptable example when a rule could also match correct technical
+language. Do not ban ordinary technical terms or change a correct sentence
+only to satisfy a heuristic. Automated checks catch known patterns; a fluent
+reviewer must still assess meaning and natural phrasing.

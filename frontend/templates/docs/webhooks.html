@@ -146,6 +146,9 @@ end-of-life release:</p>
   },
   &quot;eol_warning_days&quot;: 30,
   &quot;eol_warning&quot;: false,
+  &quot;waiver_days_left&quot;: 8,
+  &quot;waiver_warning_days&quot;: 14,
+  &quot;waiver_warning&quot;: true,
   &quot;upgrade_path&quot;: null,
   &quot;upgrade_rehearsal&quot;: [],
   &quot;vulnerability_count&quot;: 0,
@@ -161,7 +164,10 @@ end-of-life release:</p>
 }
 </code></pre>
 <p><code>eol_warning_days</code> is the <code>--eol-warning</code> window the check ran with (<code>0</code> when
-off) and <code>eol_warning</code> whether this result is inside it. <code>upgrade_path</code> is the
+off) and <code>eol_warning</code> whether this result is inside it. <code>waiver_days_left</code>,
+<code>waiver_warning_days</code> and <code>waiver_warning</code> are the same three facts for the
+next <code>--waive-until</code> deadline; <code>waiver_days_left</code> is <code>null</code> when no failing
+check depends on one. <code>upgrade_path</code> is the
 scan's <code>upgradePath</code> - which advisories the recommended release fixes and which
 it leaves open - or <code>null</code> when there is nothing to clear.
 <code>upgrade_rehearsal</code> lists every candidate release with what it <code>fixes</code>, leaves

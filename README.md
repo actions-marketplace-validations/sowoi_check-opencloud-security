@@ -80,16 +80,14 @@ Paste the address of a publicly reachable OpenCloud, watch the scan run and
 read the same findings the plugin reports, graded **A+** to **F**. No account,
 no API key, no sign-up.
 
-It is the fastest way to see what this project does before deciding whether to
-install anything, and it is genuinely useful on its own for a one-off look at
-a server.
+Use the hosted service to try the scanner or run a one-time check without
+installing it.
 
 ![The hosted scanner's landing page](https://raw.githubusercontent.com/sowoi/check-opencloud-security/refs/heads/main/img/opencloud-scan-landing.png)
 
 ![A completed scan of the OpenCloud demonstration instance](https://raw.githubusercontent.com/sowoi/check-opencloud-security/refs/heads/main/img/opencloud-demo-scan-result.png)
 
-Two things worth knowing, because the paragraph above just said nothing is
-ever sent to a third party - and using a hosted service is exactly that:
+When you use the hosted service, you send the target address to its operator:
 
 - **The scan runs from that server, not from yours.** It sees what any
   anonymous visitor on the internet sees, which is the point, but it cannot
@@ -1089,8 +1087,7 @@ check-opencloud-security --host opencloud.example.com --check-hardening \
     --ignore-hardening 'cspWithoutUnsafeInline,hstsPreload'
 ```
 
-A waiver with no deadline lasts until somebody remembers to remove it, and
-nobody remembers. `--waive-until` accepts the same patterns and adds the two
+A waiver without a deadline remains active until you remove it. `--waive-until` accepts the same patterns and adds the two
 things that fix that - a reason and an expiry:
 
 ```bash
@@ -1103,6 +1100,20 @@ missing either is refused rather than quietly treated as permanent. At
 `2026-12-31T00:00:00Z` the check alerts again with no configuration change.
 Every configured waiver - active, expired, and the ones that matched nothing -
 is listed under `waivers` in the result document.
+
+The deadline gives no lead time by itself: the check is silent until the
+deadline and alerts on the next run after it. The output names the next
+waiver to end, and the `waiver_days_left` performance value counts down to it.
+If you want a WARNING before that day, add `--waiver-warning DAYS`
+(`COS_WAIVER_WARNING`, YAML `waiver_warning`). An otherwise `OK` result then
+becomes `WARNING` once a waiver that hides a failing check ends within `DAYS`
+days:
+
+```bash
+check-opencloud-security --host opencloud.example.com --check-hardening \
+    --waive-until 'debugPort:9205|2026-12-31T00:00:00Z|Firewall change, OPS-412' \
+    --waiver-warning 14
+```
 
 See
 [Accepting a finding you are not going to fix](docs/hardening.md#accepting-a-finding-you-are-not-going-to-fix)
@@ -1287,9 +1298,9 @@ The full state is still printed either way - only the alert is suppressed,
 never the evidence. **An end-of-life release always alerts**, however long it
 has been in the baseline.
 
-A baseline also remembers the scan's **configuration fingerprint** - grouped
-digests of how the instance is set up, never of what it is set to - so a run
-where nothing failed can still report that the deployment changed:
+A baseline stores the scan's **configuration fingerprint**: hashes of the
+configuration, grouped by area. It stores no configuration values. These
+hashes can identify a configuration change even when no check fails:
 
 ```
 Baseline: No new findings since 2026-09-14T06:00:00Z, but the configuration changed (headers, proxy)
@@ -1360,6 +1371,9 @@ the graph without extra configuration.
 | `support_days_left`   | Days until the release line loses support (negative when overdue) |
 | `cert_days_left`      | Days until the TLS certificate expires (negative once expired)    |
 | `upgrade_path_complete` | `1` when the recommended upgrade clears every known advisory, `0` when it leaves one open; absent without advisories |
+| `waiver_days_left`    | Days until a `--waive-until` waiver ends and lets a failing check alert again; absent when no failing check depends on a deadline |
+| `coverage_inconclusive` | Checks the scan ran and could not decide |
+| `coverage_not_checked` | Checks the scan did not run |
 
 `cert_days_left` is absent rather than zero when nothing was measured - a scan
 over plain HTTP, a host that refused the handshake, or a certificate whose
@@ -1367,6 +1381,17 @@ dates would not parse. It carries the scan's own thresholds rather than a
 second opinion invented for the graph: warning at or below
 `scanner.tls_min_days`, the same margin the `tlsCertificate` finding fires at,
 and critical once the certificate has actually expired.
+
+`waiver_days_left` counts from the scan to the next moment a temporary waiver
+stops hiding a failing check. A waiver that a permanent pattern also covers
+does not count, because its end changes nothing. With `--waiver-warning DAYS`
+the value carries that window as its warning range. The value never goes
+negative: after the deadline, the check itself alerts.
+
+`coverage_inconclusive` and `coverage_not_checked` come from the same
+coverage block as the `Coverage:` line. They explain the grade and never
+change it, so they carry no thresholds. They are absent when the result has
+no coverage block.
 
 Outside Icinga2, the same numbers reach Prometheus through the node_exporter
 textfile collector or a Pushgateway - see

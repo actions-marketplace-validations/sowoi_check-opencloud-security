@@ -22,65 +22,60 @@
   <a href="#junit" lang="fr"><code>junit</code></a>
   <a href="#checkmk" lang="fr"><code>checkmk</code></a>
   <a href="#otlp" lang="fr"><code>otlp</code></a>
-  <a href="#choosing-a-format" lang="fr">Choosing a format</a>
+  <a href="#choosing-a-format" lang="fr">Choisir un format</a>
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="fr">
-<p>La sortie par défaut du plugin est une ligne d’état Nagios accompagnée de données de performance. Utilisez
-<code>--format</code> (<code>COS_FORMAT</code>) pour choisir le format destiné aux scripts, tableaux de bord
-et les pipelines CI.</p>
-<p><code>--format json</code>, <code>--format sarif</code> et <code>--format junit</code> produisent tous <strong>un seul
-document combiné pour tous les hôtes analysés</strong>, jamais un document par hôte, même si
-<code>--host</code> n’en indique qu’un. La sortie reste donc toujours un JSON, un SARIF ou un XML
-valide, quel que soit le nombre d’adresses fourni.</p>
-<p><strong>The exit code keeps its Nagios meaning under every format</strong> - <code>0</code>
-(OK), <code>1</code> (WARNING), <code>2</code> (CRITICAL), <code>3</code> (UNKNOWN). A CI step gates on the
-exit code exactly the way an Icinga check does; the document these flags
-produce is a separate, additional artifact, not a replacement for it. The two
-metric formats, <code>prometheus</code> and <code>otlp</code>, are the exception: they report a
-scan rather than judging it, so a finding travels as a sample and the process
-exits <code>0</code>.</p>
+<p>Par défaut, le plugin affiche une ligne d’état Nagios et des données de performance.
+Utilisez <code>--format</code> (<code>COS_FORMAT</code>) pour choisir un format destiné aux scripts,
+tableaux de bord ou pipelines CI.</p>
+<p><code>--format json</code>, <code>--format sarif</code> et <code>--format junit</code> produisent <strong>un document
+combiné pour tous les hôtes analysés</strong>, même si <code>--host</code> n’en contient qu’un.
+La sortie reste donc un document JSON, SARIF ou XML valide, quel que soit le
+nombre d’adresses.</p>
+<p><strong>Le code de sortie conserve sa signification Nagios</strong> : <code>0</code> (OK), <code>1</code> (WARNING),
+<code>2</code> (CRITICAL), <code>3</code> (UNKNOWN). Une étape CI peut utiliser ce code comme un contrôle
+Icinga. Le document est un résultat supplémentaire. Les formats de métriques
+<code>prometheus</code> et <code>otlp</code> font exception : ils rapportent les constats sous forme
+d’échantillons et terminent avec le code <code>0</code>.</p>
 <!-- TOC -->
 <ul>
-<li><a href="#machine-readable-output---format-json-sarif-junit">Machine-readable output: <code>--format json</code>, <code>sarif</code>, <code>junit</code></a></li>
+<li><a href="#machine-readable-output---format-json-sarif-junit">Formats de sortie</a></li>
 <li><a href="#json"><code>json</code></a></li>
 <li><a href="#sarif"><code>sarif</code></a></li>
 <li><a href="#junit"><code>junit</code></a></li>
 <li><a href="#checkmk"><code>checkmk</code></a></li>
 <li><a href="#otlp"><code>otlp</code></a></li>
-<li><a href="#choosing-a-format">Choosing a format</a></li>
+<li><a href="#choosing-a-format">Choisir un format</a></li>
 </ul>
 <!-- TOC -->
 
 <h2 id="json"><code>json</code></h2>
-<p>A JSON array of the same result document described in <a href="/documentation#webhook-notifications">Webhook
-notifications</a> - one object per host,
-always an array even for a single host. This is the format to reach for when
-something else is going to parse the result programmatically: a script, a
-dashboard backend, or a second monitoring system this plugin does not speak
-to natively.</p>
+<p>Un tableau JSON contient les documents décrits dans
+<a href="/documentation#webhook-notifications">Notifications webhook</a>, à raison d’un objet
+par hôte. La sortie reste un tableau pour un seul hôte. Utilisez ce format pour
+traiter les résultats dans un script, un tableau de bord ou un autre système de
+supervision.</p>
 <pre><code class="language-shell">check-opencloud-security --host opencloud.example.com --format json
 </code></pre>
 <h2 id="sarif"><code>sarif</code></h2>
-<p><a href="https://sarifweb.azurewebsites.net/">SARIF</a> 2.1.0, for a code-scanning
-dashboard - GitHub's included. Findings come from the same
-missing-hardening, failed-extra-check, vulnerability and end-of-life facts as
-the plugin's own text output: a SARIF result never says anything the Nagios
-line would not, it is only reshaped for a scanning dashboard to render.</p>
+<p><a href="https://sarifweb.azurewebsites.net/">SARIF</a> 2.1.0 convient aux tableaux de bord
+d’analyse de code, dont celui de GitHub. Les constats proviennent des mêmes données
+que la sortie texte : durcissement manquant, contrôles supplémentaires en échec,
+vulnérabilités et fin de vie. Seule leur présentation change.</p>
 <pre><code class="language-shell">check-opencloud-security --host opencloud.example.com --format sarif \
   &gt; opencloud-security.sarif
 </code></pre>
-<p>Each finding carries what a dashboard needs to act on it: the catalogue's
-remediation sentence and documentation link (<code>help</code>, <code>helpUri</code>), the severity
-and category (<code>security-severity</code>, <code>problem.severity</code>, <code>tags</code>), the release
-range an advisory affects (<code>affectedRanges</code>, <code>fixedIn</code>) and a stable
-fingerprint (<code>partialFingerprints</code>), so the same finding stays one alert
-across runs. <code>run.properties.hosts</code> reports the rating, version and
-end-of-life state per scanned host.</p>
-<p>In GitHub Actions, upload it to code scanning. <code>continue-on-error: true</code> on
-the scan step keeps a non-zero exit from failing the job before the upload
-step runs - the point of scanning in CI is usually to see the findings even
-when the scan itself reports a bad rating:</p>
+<p>Chaque constat contient la correction proposée et le lien vers la documentation
+(<code>help</code>, <code>helpUri</code>), la gravité et la catégorie (<code>security-severity</code>,
+<code>problem.severity</code>, <code>tags</code>), les versions concernées par un avis (<code>affectedRanges</code>,
+<code>fixedIn</code>) et une empreinte stable (<code>partialFingerprints</code>). Cette empreinte permet
+de suivre une même alerte entre les exécutions. <code>run.properties.hosts</code> indique la
+note, la version et l’état de fin de vie de chaque hôte.</p>
+<p>Dans GitHub Actions, envoyez le fichier à l’analyse de code. Le réglage
+<code>continue-on-error: true</code> empêche un code de sortie non nul d’arrêter la tâche avant
+l’envoi. Les constats restent donc consultables même si l’analyse signale une
+mauvaise note :</p>
 <pre><code class="language-yaml">- name: Scan OpenCloud
   run: |
     check-opencloud-security --host opencloud.example.com --format sarif \
@@ -91,93 +86,88 @@ when the scan itself reports a bad rating:</p>
     sarif_file: opencloud-security.sarif
 </code></pre>
 <h2 id="junit"><code>junit</code></h2>
-<p>JUnit XML with one <code>&lt;testsuite&gt;</code> per scanned host and one <code>&lt;testcase&gt;</code> per
-finding, plus an <strong>always-present <code>rating</code> case</strong> - so a clean host still
-shows up in the report rather than contributing zero test cases, which most
-JUnit-reading tools treat as "nothing ran" rather than "nothing failed".</p>
+<p>Le document JUnit XML contient une <code>&lt;testsuite&gt;</code> par hôte et un <code>&lt;testcase&gt;</code> par
+constat. Un cas <strong><code>rating</code> est toujours présent</strong>, afin qu’un hôte sans problème
+apparaisse aussi dans le rapport. La plupart des outils JUnit interprètent
+l’absence de cas comme une absence d’exécution.</p>
 <pre><code class="language-shell">check-opencloud-security --host opencloud.example.com --format junit \
   &gt; opencloud-security.xml
 </code></pre>
-<p>The same pattern works for any CI system that turns a JUnit file into a
-check-run summary - the step just needs to point its JUnit reporter at the
-file this command produces.</p>
+<p>La même méthode fonctionne dans tout système CI capable de présenter un rapport
+JUnit. Configurez son outil de rapport pour lire le fichier produit.</p>
 <h2 id="checkmk"><code>checkmk</code></h2>
-<p>One <a href="/documentation/checkmk">Checkmk local check</a> line per scanned host, for the agent to
-read: the state, the quoted service name, the metrics and the detail text.</p>
+<p>Une ligne de <a href="/documentation/checkmk">contrôle local Checkmk</a> par hôte contient l’état, le nom
+du service entre guillemets, les métriques et les détails à lire par l’agent.</p>
 <pre><code class="language-shell">check-opencloud-security --host opencloud.example.com --format checkmk
 </code></pre>
-<p>This is the one format that is <em>not</em> a single combined document, because the
-protocol it writes is a line per service - several hosts are several
-services. It is also only needed for the agent-side route: a Checkmk server
-running the plugin as an active check reads the default <code>nagios</code> output
-natively. <a href="/documentation/checkmk">Checkmk</a> has both, and the metric table.</p>
+<p>Ce format produit une ligne par service, donc plusieurs lignes pour plusieurs
+hôtes. Il sert uniquement aux contrôles exécutés par l’agent. Un serveur Checkmk
+qui lance le plugin comme contrôle actif lit directement le format <code>nagios</code> par
+défaut. Le <a href="/documentation/checkmk">guide Checkmk</a> décrit les deux méthodes et leurs métriques.</p>
 <h2 id="otlp"><code>otlp</code></h2>
-<p>The metrics the Prometheus exposition publishes, rendered as OTLP/JSON: one
-<code>ExportMetricsServiceRequest</code> holding every scanned host, which is the body an
-OpenTelemetry collector accepts at <code>POST /v1/metrics</code> over OTLP/HTTP.</p>
+<p>Ce format reprend les métriques Prometheus dans un document OTLP/JSON : un
+<code>ExportMetricsServiceRequest</code> pour tous les hôtes. Un collecteur OpenTelemetry
+accepte ce document à <code>POST /v1/metrics</code> via OTLP/HTTP.</p>
 <pre><code class="language-shell">check-opencloud-security --host opencloud.example.com --format otlp \
   | curl -sf -X POST http://collector.example.com:4318/v1/metrics \
       -H 'Content-Type: application/json' --data-binary @-
 </code></pre>
-<p>The plugin prints the document and never dials the collector itself: where
-the metrics go, through which proxy and with which credential is the
-collector's configuration, not a scan's. Piping it at <code>curl</code> from the same
-timer that already runs the check keeps that split, and keeps the plugin free
-of an instrumentation stack a monitoring host never asked for.</p>
-<p>Several hosts become several data points on the same metrics, distinguished
-by their <code>host</code> attribute, exactly as they become repeated samples in a
-scrape. Every metric is a gauge - the current reading of something - and the
-names, attributes and values are the exposition's, so one dashboard query
-works against either pipeline. <a href="/documentation/prometheus#what-the-exporter-publishes">Prometheus and Grafana</a>
-has the metric table both formats share.</p>
-<p>Like <code>--format prometheus</code>, <strong>this format exits <code>0</code> even for an instance that
-would have alerted</strong>, and reports a failed scan as
-<code>opencloud_security_scrape_success 0</code> rather than as an exit code. A metrics
-pipeline has no other way to tell an unreachable instance from a scan that
-stopped running; where the exit code is the point, use <code>nagios</code>, <code>json</code>,
-<code>sarif</code> or <code>junit</code>.</p>
-<h2 id="choosing-a-format">Choosing a format</h2>
+<p>Le plugin affiche le document sans contacter le collecteur. La destination, le
+proxy et les identifiants d’accès se configurent dans la commande d’envoi. Vous
+pouvez la lancer avec <code>curl</code> depuis le même timer que le contrôle, sans installer
+de bibliothèque d’instrumentation dans le plugin.</p>
+<p>Plusieurs hôtes produisent plusieurs points par métrique, distingués par l’attribut
+<code>host</code>, comme dans une collecte Prometheus. Chaque métrique est une jauge, c’est-à-dire
+une valeur mesurée à un instant donné. Les noms, attributs et valeurs sont identiques
+à ceux de l’exportateur. Le guide <a href="/documentation/prometheus#what-the-exporter-publishes">Prometheus et Grafana</a>
+contient le tableau commun aux deux formats.</p>
+<p>Comme <code>--format prometheus</code>, <strong>ce format termine avec le code <code>0</code>, même si
+l’instance aurait déclenché une alerte</strong>. Une analyse en échec produit
+<code>opencloud_security_scrape_success 0</code>. Le système de métriques peut ainsi distinguer
+une instance inaccessible d’une tâche qui ne s’exécute plus. Si vous avez besoin
+d’un code de sortie d’alerte, utilisez <code>nagios</code>, <code>json</code>, <code>sarif</code> ou <code>junit</code>.</p>
+<h2 id="choosing-a-format">Choisir un format</h2>
 <table>
 <thead>
 <tr>
 <th>Format</th>
-<th>Use it when...</th>
+<th>Utilisation</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>nagios</code></td>
-<td>Default. A monitoring system reads the exit code and the one-line output</td>
+<td>Format par défaut : le système de supervision lit le code de sortie et la ligne d’état</td>
 </tr>
 <tr>
 <td><code>prometheus</code></td>
-<td>A scrape target or textfile collector wants metrics directly - see <a href="/documentation/prometheus">Prometheus and Grafana</a></td>
+<td>Collecte directe ou collecteur textfile ; voir <a href="/documentation/prometheus">Prometheus et Grafana</a></td>
 </tr>
 <tr>
 <td><code>otlp</code></td>
-<td>An OpenTelemetry collector should receive those same metrics at <code>/v1/metrics</code></td>
+<td>Envoi des mêmes métriques à un collecteur OpenTelemetry sur <code>/v1/metrics</code></td>
 </tr>
 <tr>
 <td><code>json</code></td>
-<td>Something else parses the result programmatically</td>
+<td>Traitement automatique du résultat</td>
 </tr>
 <tr>
 <td><code>sarif</code></td>
-<td>A code-scanning dashboard (GitHub, GitLab) should list the findings</td>
+<td>Affichage des constats dans un tableau de bord d’analyse de code, comme GitHub ou GitLab</td>
 </tr>
 <tr>
 <td><code>junit</code></td>
-<td>A CI system renders test results and should render findings the same way</td>
+<td>Affichage des constats sous forme de résultats de tests dans un système CI</td>
 </tr>
 <tr>
 <td><code>checkmk</code></td>
-<td>A Checkmk agent runs the plugin as a local check - see <a href="/documentation/checkmk">Checkmk</a></td>
+<td>Exécution comme contrôle local par un agent <a href="/documentation/checkmk">Checkmk</a></td>
 </tr>
 </tbody>
 </table>
-<p>See <a href="/documentation/ci">Running the check from CI</a> for a fuller GitHub Actions and
-GitLab CI walkthrough, including gating a pipeline on a field of the JSON
-result rather than only the exit code.</p>
+<p>Le guide <a href="/documentation/ci">Exécuter le contrôle en CI</a> détaille les étapes GitHub Actions et
+GitLab CI. Il explique aussi comment conditionner un pipeline à un champ JSON du
+résultat.</p>
 </article>
 
 {% include "_page-nav.html" %}

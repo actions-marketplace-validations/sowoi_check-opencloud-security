@@ -58,58 +58,58 @@ MESSAGES: dict[str, str] = {
     "admin.config.group.frontend": "Frontend",
     "admin.rules.title": "Rules in force",
     "admin.rules.lede": "How grades are calculated and which request limits this deployment uses.",
-    "admin.rules.scope": "This overview shows the settings loaded when this process started and the rules defined in the code. Target addresses and visitor details are not shown.",
+    "admin.rules.scope": "This overview shows the configuration loaded at process startup and the rules defined in the code. Target addresses and visitor details are not shown.",
     "admin.rules.on": "Enforced",
     "admin.rules.off": "Off",
     "admin.rules.variables": "Set by",
     "admin.rules.rating.kicker": "Grades",
     "admin.rules.rating.heading": "How an instance is rated",
-    "admin.rules.rating.lede": "The rating is the scanner's own; this service only shows it. These are the rules it applies to every scan here.",
+    "admin.rules.rating.lede": "The scanner calculates the grade using these rules. The web service displays the result.",
     "admin.rules.rating.scale": "The scale",
-    "admin.rules.rating.caps": "What a failed check can do to the grade",
+    "admin.rules.rating.caps": "How failed checks limit the grade",
     "admin.rules.rating.version.title": "The version sets the starting grade",
     "admin.rules.rating.version.body": "The starting grade depends on the release line's support status and known vulnerabilities affecting the version. Failed checks can lower that grade.",
     "admin.rules.rating.overrides.title": "End of life and the release track",
-    "admin.rules.rating.shared.title": "One ceiling per severity",
+    "admin.rules.rating.shared.title": "Grade limits by severity",
     "admin.rules.rating.extra.title": "Extra checks count towards the grade",
     "admin.rules.rating.extra.body": "Transport security, headers and other extra checks limit the grade in the same way as hardening checks.",
     "admin.rules.rating.waivers.title": "Waivers a visitor may choose",
-    "admin.rules.rating.waivers.body": "{count} hardening checks may be waived in the form. A waived check stops capping the grade and stays in the report, marked; end of life cannot be waived.",
+    "admin.rules.rating.waivers.body": "The form allows exemptions for {count} hardening checks. Exempted checks remain marked in the report but do not limit the grade. End of life always affects the grade.",
     "admin.rules.rating.track.title": "Release track",
     "admin.rules.rating.track.body": "Without a choice in the form, the track is {track}. The track changes how a version is rated, never how hard the instance is probed.",
     "admin.rules.rating.reference.title": "Reference data rated against",
     "admin.rules.rating.reference.body": "{advisories} advisories in the database; release schedule dated {schedule}.",
     "admin.rules.rating.more": "The <a href=\"/grades\">grades page</a> explains each grade to visitors in the same terms.",
     "admin.rules.group.submissions": "Submission limits",
-    "admin.rules.group.submissions.lede": "How often a client may ask, and how the service behaves under load.",
+    "admin.rules.group.submissions.lede": "How often a client can submit a scan and how the service handles load.",
     "admin.rules.group.probe": "Probe block",
     "admin.rules.group.probe.lede": "Limits on repeated requests to targets that cannot be scanned.",
     "admin.rules.group.targets": "What may be scanned",
-    "admin.rules.group.targets.lede": "Checked before anything connects, and again for every redirect.",
+    "admin.rules.group.targets.lede": "Target checks run before connecting and before following each redirect.",
     "admin.rules.group.scanner": "How hard a host is probed",
     "admin.rules.group.scanner.lede": "The flags every scan from this deployment is built with. No request can change them.",
     "admin.rules.group.operator": "Credentials and operator actions",
-    "admin.rules.group.operator.lede": "Limits on requests that require credentials and actions in the operator area.",
+    "admin.rules.group.operator.lede": "Limits on requests that require credentials and on operator actions.",
     "admin.rules.rule.client_limit.title": "Per-client limit",
-    "admin.rules.rule.client_limit.body": "At most {limit} submissions per client every {window}. An IPv4 address is one client; an IPv6 client is its /{ipv6}.",
+    "admin.rules.rule.client_limit.body": "At most {limit} submissions per client every {window}. Each IPv4 address counts as one client. For IPv6, each /{ipv6} network counts as one client.",
     "admin.rules.rule.daily_cap.title": "Daily cap",
     "admin.rules.rule.daily_cap.body": "At most {limit} submissions per client every {window}, on top of the per-client limit.",
     "admin.rules.rule.target_cooldown.title": "Per-target cooldown",
     "admin.rules.rule.target_cooldown.body": "The same instance may be scanned once every {cooldown}, whoever asks.",
     "admin.rules.rule.batch.title": "Batch size",
     "admin.rules.rule.batch.body": "A batch carries at most {limit} targets, and each one counts against every limit.",
-    "admin.rules.rule.queue.title": "Queueing under load",
-    "admin.rules.rule.queue.body": "{workers} scans run at once; further submissions wait in order and are never refused for load.",
+    "admin.rules.rule.queue.title": "Scan queue under load",
+    "admin.rules.rule.queue.body": "Up to {workers} scans run at once. Further submissions wait in order of arrival. High load does not cause a rejection.",
     "admin.rules.rule.agent_wait.title": "Automatic retry limit",
-    "admin.rules.rule.agent_wait.body": "MCP and the workflows wait out a Retry-After of up to {wait} themselves, at most {attempts} attempts; a longer one is handed back to the caller.",
+    "admin.rules.rule.agent_wait.body": "MCP and the workflows automatically retry after a Retry-After delay of up to {wait}, for at most {attempts} attempts. Longer delays are returned to the caller.",
     "admin.rules.rule.probe_block.title": "Block after repeated strikes",
     "admin.rules.rule.probe_block.body": "{limit} strikes within {window} block the client's network for {block}.",
     "admin.rules.rule.probe_escalation.title": "Repeated blocks grow",
     "admin.rules.rule.probe_escalation.body": "A network blocked again within {repeat} of its last block waits {factor} times longer each time: {steps}.",
     "admin.rules.rule.probe_network.title": "The block covers a network",
-    "admin.rules.rule.probe_network.body": "A block applies to the client's IPv4 /{ipv4} and IPv6 /{ipv6}, so the next address along cannot step around it.",
+    "admin.rules.rule.probe_network.body": "A block covers the client’s IPv4 /{ipv4} or IPv6 /{ipv6} network. Changing addresses within that network does not bypass the block.",
     "admin.rules.rule.strike_scans.title": "A scan that finds no OpenCloud is a strike",
-    "admin.rules.rule.strike_scans.body": "status.php did not answer, was not JSON, named another product, or the scan ran out of time. The same host again is another strike; a finished scan never is.",
+    "admin.rules.rule.strike_scans.body": "A strike is recorded if status.php does not respond, returns invalid JSON, identifies another product, or the scan times out. Repeating the same host counts again. A completed scan does not count.",
     "admin.rules.rule.strike_refusals.title": "A refused target is a strike",
     "admin.rules.rule.strike_refusals.body": "A submission refused for what it points at counts; a typo or a name that does not resolve does not:",
     "admin.rules.refusal.blocked": "an address this deployment excludes",
@@ -119,11 +119,11 @@ MESSAGES: dict[str, str] = {
     "admin.rules.refusal.unstable": "a name whose lookups disagree",
     "admin.rules.refusal.wildcard_dns": "a wildcard or rebinding DNS name",
     "admin.rules.rule.private_addresses.title": "Public addresses only",
-    "admin.rules.rule.private_addresses.body": "Every address a name resolves to must be public unicast; one private answer refuses the target. Beyond the private ranges, these are refused too:",
+    "admin.rules.rule.private_addresses.body": "Every resolved address must be public unicast. A single private address causes rejection. These addresses are also rejected:",
     "admin.rules.rule.internal_names.title": "Local names and metadata endpoints",
     "admin.rules.rule.internal_names.body": "Refused by name as well as by address:",
     "admin.rules.rule.wildcard_dns.title": "Wildcard and rebinding DNS names",
-    "admin.rules.rule.wildcard_dns.body": "Names under these services point anywhere their spelling says. The address behind one can still be scanned by typing it:",
+    "admin.rules.rule.wildcard_dns.body": "These services encode an IP address in the hostname. To scan that address, enter the IP address directly:",
     "admin.rules.rule.dns_consistency.title": "A name must resolve the same way twice",
     "admin.rules.rule.dns_consistency.body": "A submitted name is looked up twice and refused when the answers share no address; every address from both is checked.",
     "admin.rules.rule.redirects.title": "Every redirect is checked",
@@ -143,7 +143,7 @@ MESSAGES: dict[str, str] = {
     "admin.rules.rule.load.title": "Load per scan",
     "admin.rules.rule.load.body": "At most {concurrency} requests in flight, each allowed {timeout}; a whole scan is stopped after {job}.",
     "admin.rules.rule.purge_attempts.title": "Erasure credential attempts",
-    "admin.rules.rule.purge_attempts.body": "{limit} wrong credentials per client within {window}, then refused until the window ends. Right ones are never counted.",
+    "admin.rules.rule.purge_attempts.body": "After {limit} incorrect credentials from a client within {window}, further attempts are rejected until that period ends. Correct credentials do not count.",
     "admin.rules.rule.admin_refresh.title": "Refresh buttons",
     "admin.rules.rule.admin_refresh.body": "Each reference-data refresh may be pressed once every {cooldown}.",
     "admin.docs.kicker": "Operator documentation",
@@ -153,10 +153,7 @@ MESSAGES: dict[str, str] = {
     # front ends its session. This service has none of its own to end.
     "admin.band.signout": "Sign out",
     "admin.lede": "Check the service state, review the reference data and run the worker’s daily refreshes manually.",
-    "admin.noscript": (
-        "The readings above are filled in by JavaScript. Without it, reload the "
-        "page to see the current ones; both refresh buttons still work."
-    ),
+    "admin.noscript": "JavaScript updates the values above. Without JavaScript, reload the page to see current values. Both refresh buttons still work.",
     "admin.state.kicker": "Now",
     "admin.state.heading": "Service state",
     "admin.state.lede": "Current counts and configured limits. Individual scan details and client addresses are not available here.",
@@ -212,11 +209,7 @@ MESSAGES: dict[str, str] = {
     # neither setting is a mistake on its own.
     "admin.surfaces.kicker": "Exposure",
     "admin.surfaces.heading": "What this deployment offers",
-    "admin.surfaces.lede": (
-        "The settings this process was started with, and the same ones the "
-        "diagnostics document reports. None of them changes without a "
-        "restart, so none of them is polled."
-    ),
+    "admin.surfaces.lede": "These startup settings also appear in the diagnostics document. Changes require a restart, so this page does not poll for updates.",
     "admin.surfaces.on": "On",
     "admin.surfaces.off": "Off",
     "admin.surfaces.mcp": "Agent endpoint at /mcp",
@@ -232,10 +225,7 @@ MESSAGES: dict[str, str] = {
     ),
     "admin.surfaces.indexed": "Findable by search engines",
     "admin.surfaces.private": "Scans of private network addresses",
-    "admin.surfaces.private.found": (
-        "Allowed on a deployment that asks to be indexed: a stranger who "
-        "finds this service can point it at the network it stands in."
-    ),
+    "admin.surfaces.private.found": "Private targets are allowed and search indexing is enabled. Anyone who finds this service can submit targets on its internal network.",
     "admin.surfaces.private.estate": (
         "Allowed, which is what a deployment scanning its own estate is for."
     ),
@@ -255,7 +245,7 @@ MESSAGES: dict[str, str] = {
     "admin.update.unknown": "Could not find out whether a newer release exists.",
     "admin.update.off": "The update check is switched off (COS_WEB_UPDATE_CHECK).",
     "admin.update.install": "Install {version} now",
-    "admin.update.downtime": "The bundle is verified against its GitHub build attestation, then the web service and the workers restart on it - a short downtime, and a running scan is cut short. The update lasts until the containers restart.",
+    "admin.update.downtime": "The service verifies the bundle against its GitHub build attestation, then restarts the web service and workers. This briefly interrupts service and stops running scans. The update remains active until the containers restart.",
     "admin.update.manual": "Installing from here is off (COS_WEB_ADMIN_UPDATE_DIR). Pull the new image and recreate the containers to update.",
     "admin.update.outcome.requested": "Verified and installed. The service restarts in a moment - reload the page.",
     "admin.update.outcome.current": "Nothing newer to install.",
@@ -263,12 +253,7 @@ MESSAGES: dict[str, str] = {
     "admin.update.outcome.failed": "The release could not be downloaded or verified. Nothing changed; the log says why.",
     "admin.exclusions.kicker": "Exclusions",
     "admin.exclusions.heading": "Addresses this service will not scan",
-    "admin.exclusions.lede": (
-        "An entry takes effect from the next request, in every process, "
-        "without a restart - and a scan already waiting in the queue is "
-        "refused rather than run. Nothing here can make this service scan "
-        "something: the list only ever refuses."
-    ),
+    "admin.exclusions.lede": "Changes apply to the next request in every process without a restart. Queued scans of excluded targets are also refused. This list can only block scans.",
     "admin.exclusions.add.label": "Hostname, .suffix domain, address or CIDR range",
     "admin.exclusions.add.placeholder": "opencloud.example.com",
     "admin.exclusions.add.action": "Exclude",
@@ -281,11 +266,7 @@ MESSAGES: dict[str, str] = {
     "admin.exclusions.empty": "Nothing is excluded in this deployment.",
     "admin.exclusions.source.configured": "From the environment",
     "admin.exclusions.updated": "Last changed here {when}.",
-    "admin.exclusions.durability": (
-        "Entries added here live in Redis, which this deployment is free to "
-        "flush. Put the ones that must outlive it in COS_WEB_BLOCKED_TARGETS, "
-        "where they cannot be withdrawn from this page."
-    ),
+    "admin.exclusions.durability": "Entries added here are stored in Redis and are lost if Redis is cleared. For persistent exclusions, use COS_WEB_BLOCKED_TARGETS. This page cannot remove those entries.",
     "admin.exclusions.unreadable": (
         "The store did not answer, so the exclusions cannot be read or "
         "changed right now. They are still in force: a scan that cannot "
@@ -303,19 +284,12 @@ MESSAGES: dict[str, str] = {
         "This list is full. Move the standing entries into "
         "COS_WEB_BLOCKED_TARGETS."
     ),
-    "admin.blocklist.error.long": (
-        "That entry is longer than a hostname can be, so nothing it could be "
-        "meant to match would ever reach this service."
-    ),
+    "admin.blocklist.error.long": "The entry exceeds the maximum hostname length. Enter no more than 253 characters.",
     "admin.outcome.excluded": "Excluded. It is refused from the next request.",
     "admin.outcome.withdrawn": "Withdrawn. It can be scanned again.",
     "admin.actions.kicker": "Reference data",
     "admin.actions.heading": "Update reference data",
-    "admin.actions.lede": (
-        "The same two refreshes the worker runs daily, with the same rules: a "
-        "schedule that lost a release line is refused, an advisory database "
-        "only ever gains entries, and a failed fetch changes nothing."
-    ),
+    "admin.actions.lede": "These actions run the worker’s daily refreshes manually. A schedule must retain all known release lines. Advisory updates can only add entries. A failed fetch leaves the existing data unchanged.",
     "admin.actions.schedule": "Sync release schedule",
     "admin.actions.schedule.hint": "Re-reads the published lifecycle page.",
     "admin.actions.advisories": "Check for advisories",
@@ -328,12 +302,9 @@ MESSAGES: dict[str, str] = {
     ),
     "admin.outcome.failed": "Could not be fetched. Nothing changed.",
     "admin.outcome.disabled": "That refresh is switched off in this deployment's settings.",
-    "admin.outcome.cooldown": "Just ran. Try again in {seconds}s.",
+    "admin.outcome.cooldown": "A refresh just ran. Try again in {seconds}s.",
     "admin.probe.action": "Test the sources",
-    "admin.probe.hint": (
-        "Reads both sources and reports what a refresh would make of them. "
-        "Nothing is stored."
-    ),
+    "admin.probe.hint": "Fetches both sources and checks whether a refresh can accept them. Does not store the fetched data.",
     "admin.probe.schedule": "Release schedule: {answer}",
     "admin.probe.advisories": "Advisories: {answer}",
     "admin.probe.usable": "read, and a refresh would accept it",
@@ -342,11 +313,7 @@ MESSAGES: dict[str, str] = {
     "admin.probe.disabled": "not checked - this refresh is switched off",
     "admin.search.kicker": "Search index",
     "admin.search.heading": "Is the shipped index still current",
-    "admin.search.lede": (
-        "The search index is generated during the build and cannot be changed "
-        "here. This view checks whether its pages, languages and release "
-        "version match the running service. It does not compare full page text."
-    ),
+    "admin.search.lede": "The search index is generated during the build. This view compares its pages, languages and release version with the running service. It does not compare full page text or change the index.",
     "admin.search.fresh": "Current",
     "admin.search.stale": "Out of date",
     # The third verdict, for an index that does not say which release it was
@@ -365,46 +332,22 @@ MESSAGES: dict[str, str] = {
     "admin.search.detail.extra": "Indexed but no longer served: {list}.",
     "admin.search.detail.changed": "{count} page titles or summaries have changed since it was built.",
     "admin.search.detail.unreadable": "The index could not be read.",
-    "admin.search.remedy": (
-        "A published release always ships an index built for it, so this "
-        "build is not a release as published - usually an image or bundle "
-        "built from a checkout between releases. Deploy a published release, "
-        "or regenerate the index in that checkout and rebuild what you deploy:"
-    ),
+    "admin.search.remedy": "Published releases include a matching search index. For a custom build, regenerate the index in the source checkout and rebuild the deployment. You can also deploy a published release:",
     "admin.search.remedy.commit": (
         "Nothing needs committing by hand: every pull request to main "
         "rebuilds the index and commits it to its branch."
     ),
-    "admin.search.fix": (
-        "Every pull request to main and the release workflow regenerate the "
-        "index and commit it. You cannot rebuild the index from this page."
-    ),
+    "admin.search.fix": "The pull request and release workflows regenerate and commit the index. This page cannot rebuild it.",
     "admin.audit.kicker": "Audit",
     "admin.audit.heading": "Audit log",
-    "admin.audit.lede": (
-        "Scan requests, rejections and triggered limits, arriving as they "
-        "happen. Following starts a connection; nothing is streamed until you "
-        "ask for it."
-    ),
-    "admin.audit.privacy": (
-        "Client addresses appear only as truncated HMAC fingerprints, using "
-        "a salt held by this process. This view shows existing audit log "
-        "entries and cannot resolve fingerprints to client addresses."
-    ),
-    "admin.audit.replicas": (
-        "This deployment keeps no audit file, so these records come from the "
-        "memory of the one process that answered - behind more than one "
-        "replica, that is a part of the trail rather than all of it."
-    ),
+    "admin.audit.lede": "View scan requests, rejections and triggered limits as they occur. Select Follow to open the connection and start receiving entries.",
+    "admin.audit.privacy": "Client addresses appear as truncated HMAC fingerprints. This process holds the salt used to calculate them. This view displays existing log entries and cannot recover client addresses from fingerprints.",
+    "admin.audit.replicas": "No audit file is configured. These entries come from this process’s memory. With multiple replicas, this view shows only part of the audit log.",
     "admin.audit.follow": "Follow",
     "admin.audit.stop": "Stop",
     "admin.audit.clear": "Clear",
     "admin.audit.empty": "Nothing yet.",
-    "admin.audit.closed": (
-        "The connection reached its {minutes}-minute limit and was closed by "
-        "the service. Nothing was missed before that; press Follow to start "
-        "another."
-    ),
+    "admin.audit.closed": "The service closed the connection after {minutes} minutes. Select Follow to reconnect.",
     "admin.audit.disabled": (
         "This deployment does not keep an audit trail, so there is nothing to "
         "follow. COS_WEB_AUDIT_LOG switches it on."
@@ -468,13 +411,9 @@ MESSAGES: dict[str, str] = {
     "pagenav.kicker": "Read on",
     "pagenav.aria": "More about this service",
     "pagenav.how.title": "How the scan works",
-    "pagenav.how.blurb": (
-        "What gets tested, and the four steps between the button and the grade."
-    ),
+    "pagenav.how.blurb": "The checks and the four stages of a scan.",
     "pagenav.grades.title": "What the grades mean",
-    "pagenav.grades.blurb": (
-        "Every step from A+ to F, what holds a grade down and how to move it up."
-    ),
+    "pagenav.grades.blurb": "What the grades from A+ to F mean and how to improve a grade.",
     "pagenav.catalogue.title": "What the scanner checks",
     "pagenav.catalogue.blurb": (
         "Every hardening flag, header and TLS check, and every known advisory - "
@@ -487,9 +426,7 @@ MESSAGES: dict[str, str] = {
         "The JSON API, the fair use limits, the OpenAPI schema and the MCP endpoint."
     ),
     "pagenav.privacy.title": "What this server keeps",
-    "pagenav.privacy.blurb": (
-        "In memory, for {minutes} minutes, and what the log leaves out."
-    ),
+    "pagenav.privacy.blurb": "Which data stays in memory for {minutes} minutes and which data is logged.",
     "pagenav.about.title": "About OpenCloud",
     "pagenav.about.blurb": (
         "The platform this checks, and why this project is independent of it."
@@ -1589,7 +1526,7 @@ MESSAGES: dict[str, str] = {
         "Every check this scanner runs passed on this instance."
     ),
     "result.hardening.kicker": "Hardening",
-    "result.hardening.heading": "Hardening worth adding",
+    "result.hardening.heading": "Missing hardening measures",
     "result.hardening.lede": "These settings add protection against common risks. Review the explanation and suggested fix for each one.",
     "result.hardening.tag": "hardening",
     "result.header.tag": "header",
@@ -1655,11 +1592,7 @@ MESSAGES: dict[str, str] = {
     "result.coverage.complete": (
         "Every check this scan considered reached a conclusion."
     ),
-    "result.coverage.unavailable": (
-        "This report was written before scans recorded their coverage, so it "
-        "does not say which checks ran. That is not the same as a scan with "
-        "no gaps."
-    ),
+    "result.coverage.unavailable": "This older report does not record which checks ran. Its scan coverage is unknown.",
     "coverage.reason.not_applicable": "Does not apply to this instance",
     "coverage.reason.probe_disabled": "The probe was turned off for this scan",
     "coverage.reason.prerequisite_missing": (
@@ -1688,16 +1621,7 @@ MESSAGES: dict[str, str] = {
     "result.excluded.unfixable.note": "These flags are hardcoded in OpenCloud and cannot be configured by an operator. They are included for reference and do not affect the grade.",
     "result.scope.kicker": "Scope",
     "result.scope.heading": "What this scan cannot see",
-    "result.scope.body": (
-        "The scan checks publicly accessible information. <strong>No findings "
-        "does not mean the instance is secure</strong>, even with the highest "
-        "grade. It does not inspect the operating system and its packages, "
-        "container runtime, reverse proxy configuration, backups and recovery, "
-        "storage, secrets and key management, accounts, passwords, multi-factor "
-        "sign-in, existing share permissions or the software supply chain. "
-        "Data available only after sign-in is also outside its scope. "
-        "Two further limits are worth checking separately:"
-    ),
+    "result.scope.body": "The scan checks publicly accessible information. <strong>No findings does not mean the instance is secure</strong>, even with the highest grade. It does not inspect the operating system and its packages, container runtime, reverse proxy configuration, backups and recovery, storage, secrets and key management, accounts, passwords, multi-factor sign-in, existing share permissions or the software supply chain. Data available only after sign-in is also outside its scope. Check these two areas separately:",
     "result.scope.audit": (
         "<strong>Audit logging.</strong> OpenCloud's audit service only consumes "
         "the internal event bus - it publishes no endpoint and appears in no "

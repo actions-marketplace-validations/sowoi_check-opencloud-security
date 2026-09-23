@@ -17,95 +17,79 @@
 
 <nav class="docs-toc card section-gap" aria-label="{{ t('docs.guide.toc.aria') }}" data-reveal>
   <p class="kicker">{{ t('docs.guide.toc.heading') }}</p>
-  <a href="#the-payload-in-short" lang="fr">The payload, in short</a>
-  <a href="#the-full-payload" lang="fr">The full payload</a>
-  <a href="#a-generic-receiver" lang="fr">A generic receiver</a>
-  <a href="#verifying-the-signature" lang="fr">Verifying the signature</a>
+  <a href="#the-payload-in-short" lang="fr">Les principaux champs</a>
+  <a href="#the-full-payload" lang="fr">Le document complet</a>
+  <a href="#a-generic-receiver" lang="fr">Récepteur générique</a>
+  <a href="#verifying-the-signature" lang="fr">Vérifier la signature</a>
   <a href="#uptime-kuma" lang="fr">Uptime Kuma</a>
   <a href="#slack-mattermost-discord" lang="fr">Slack, Mattermost, Discord</a>
-  <a href="#ntfy-and-gotify" lang="fr">ntfy and Gotify</a>
+  <a href="#ntfy-and-gotify" lang="fr">ntfy et Gotify</a>
   <a href="#alertmanager" lang="fr">Alertmanager</a>
-  <a href="#testing-a-receiver-without-an-instance" lang="fr">Testing a receiver without an instance</a>
+  <a href="#testing-a-receiver-without-an-instance" lang="fr">Tester un récepteur sans instance</a>
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="fr">
-<p>Le <a href="/documentation#webhook-notifications">webhook</a> envoie par défaut le document JSON
-du plugin, avec le statut et tous les constats. C’est volontaire : le récepteur reçoit
-le verdict complet. <code>--webhook-format</code> permet d’envoyer directement le format Slack ou
-Discord (voir <a href="#slack-matièremost-discord">ci-dessous</a>), ou une notification push pour
-<a href="#ntfy-and-gotify">ntfy ou Gotify</a>. Pour les autres récepteurs, adaptez le document JSON
-générique au format attendu.</p>
-<p>Deux règles s’appliquent à tous les exemples ci-dessous :</p>
+<p>Le <a href="/documentation#webhook-notifications">webhook</a> envoie par défaut le document
+JSON du plugin, avec le statut et tous les constats. Le récepteur reçoit ainsi
+le verdict complet. <code>--webhook-format</code> permet d’envoyer directement le format
+<a href="#slack-mattermost-discord">Slack ou Discord</a>, ou une notification push pour
+<a href="#ntfy-and-gotify">ntfy ou Gotify</a>. Pour les autres récepteurs, adaptez le
+document JSON générique au format attendu.</p>
+<p>Deux règles s’appliquent à tous les exemples :</p>
 <ul>
-<li><strong>A failing webhook never changes the check result.</strong> The plugin appends
-  <code>Webhook delivery failed</code> and still exits with the state it measured, so a
-  broken notification channel can neither hide nor fake a vulnerable instance.</li>
-<li><strong>Never put the URL on the command line.</strong> It usually <em>is</em> the credential.
-  Use <code>COS_WEBHOOK_URL</code>, or <code>secret://</code> in the configuration file - see
-  <a href="/documentation#configuration-file-and-secrets">Configuration file and secrets</a>.</li>
+<li><strong>L’échec d’un webhook ne change jamais le résultat du contrôle.</strong> Le plugin
+  ajoute <code>Webhook delivery failed</code> et conserve le code de sortie mesuré.
+  Une panne de notification ne peut donc ni masquer ni inventer une
+  vulnérabilité.</li>
+<li><strong>Ne mettez jamais l’URL dans la ligne de commande.</strong> Elle contient souvent
+  le secret d’accès. Utilisez <code>COS_WEBHOOK_URL</code> ou <code>secret://</code> dans le fichier
+  de configuration. Voir <a href="/documentation#configuration-file-and-secrets">Configuration et secrets</a>.</li>
 </ul>
-<!-- TOC -->
-<ul>
-<li><a href="#webhook-recipes">Webhook recipes</a></li>
-<li><a href="#the-payload-in-short">The payload, in short</a></li>
-<li><a href="#the-full-payload">The full payload</a></li>
-<li><a href="#a-generic-receiver">A generic receiver</a></li>
-<li><a href="#verifying-the-signature">Verifying the signature</a></li>
-<li><a href="#uptime-kuma">Uptime Kuma</a></li>
-<li><a href="#slack-mattermost-discord">Slack, Mattermost, Discord</a></li>
-<li><a href="#ntfy">ntfy</a></li>
-<li><a href="#alertmanager">Alertmanager</a></li>
-<li><a href="#testing-a-receiver-without-an-instance">Testing a receiver without an instance</a></li>
-</ul>
-<!-- TOC -->
-
-<h2 id="the-payload-in-short">The payload, in short</h2>
-<p>The fields most receivers care about, from
-<a href="#the-full-payload">the full payload</a> below:</p>
+<h2 id="the-payload-in-short">Les principaux champs</h2>
+<p>Voici les champs les plus utiles du <a href="#the-full-payload">document complet</a> :</p>
 <table>
 <thead>
 <tr>
-<th>Field</th>
-<th>Use it for</th>
+<th>Champ</th>
+<th>Utilité</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>status</code>, <code>exit_code</code></td>
-<td><code>OK</code> / <code>WARNING</code> / <code>CRITICAL</code> / <code>UNKNOWN</code> and <code>0</code>-<code>3</code></td>
+<td><code>OK</code> / <code>WARNING</code> / <code>CRITICAL</code> / <code>UNKNOWN</code> et <code>0</code>–<code>3</code></td>
 </tr>
 <tr>
 <td><code>message</code></td>
-<td>The one-line reason, already written for a human</td>
+<td>Explication sur une ligne, lisible par une personne</td>
 </tr>
 <tr>
 <td><code>rating</code>, <code>rating_label</code></td>
-<td>The <code>0</code>-<code>5</code> score and its <code>A+</code>-<code>F</code> label</td>
+<td>Note de <code>0</code> à <code>5</code> et libellé de <code>A+</code> à <code>F</code></td>
 </tr>
 <tr>
 <td><code>host</code>, <code>product_version</code></td>
-<td>Which instance, and which release</td>
+<td>Instance et version analysées</td>
 </tr>
 <tr>
 <td><code>eol</code></td>
-<td>Whether that release still receives security fixes</td>
+<td>Indique si la version ne reçoit plus de correctifs de sécurité</td>
 </tr>
 <tr>
 <td><code>update.availableVersion</code></td>
-<td>What to upgrade to</td>
+<td>Version vers laquelle mettre à jour</td>
 </tr>
 <tr>
 <td><code>failed_extra_checks</code>, <code>missing_hardenings</code></td>
-<td>The findings themselves</td>
+<td>Constats détaillés</td>
 </tr>
 </tbody>
 </table>
-<p>A scan that failed outright carries only <code>plugin</code>, <code>plugin_version</code>,
-<code>timestamp</code>, <code>host</code>, <code>status</code>, <code>exit_code</code> and <code>message</code>. Any receiver that
-reaches for <code>rating</code> must tolerate its absence.</p>
-<h2 id="the-full-payload">The full payload</h2>
-<p>Everything the <code>generic</code> document carries, from a run that found an
-end-of-life release:</p>
+<p>Un scan qui échoue entièrement ne contient que <code>plugin</code>, <code>plugin_version</code>,
+<code>timestamp</code>, <code>host</code>, <code>status</code>, <code>exit_code</code> et <code>message</code>. Tout récepteur qui
+utilise <code>rating</code> doit accepter son absence.</p>
+<h2 id="the-full-payload">Le document complet</h2>
+<p>Exemple du format <code>generic</code> pour une version en fin de vie :</p>
 <pre><code class="language-json">{
   &quot;plugin&quot;: &quot;check-opencloud-security&quot;,
   &quot;plugin_version&quot;: &quot;1.0.0&quot;,
@@ -147,36 +131,35 @@ end-of-life release:</p>
   &quot;duration_seconds&quot;: 1.234
 }
 </code></pre>
-<p><code>scan_backend</code> is always <code>"local"</code> - it records how the result was obtained,
-so a receiver that also handles payloads from scanners with a remote backend
-can tell them apart without special-casing the plugin name.</p>
-<p>Notifications sent for a failed scan carry only the common fields (<code>plugin</code>,
-<code>plugin_version</code>, <code>timestamp</code>, <code>host</code>, <code>status</code>, <code>exit_code</code>, <code>message</code>).</p>
-<h2 id="a-generic-receiver">A generic receiver</h2>
-<p>Anything that accepts arbitrary JSON - a log pipeline, a webhook collector, an
-n8n or Node-RED flow - takes the payload unchanged:</p>
+<p><code>scan_backend</code> vaut toujours <code>"local"</code>. Ce champ indique comment le résultat
+a été obtenu. Un récepteur qui traite aussi les documents de scanners distants
+peut ainsi les distinguer sans se baser sur le nom du plugin.</p>
+<p>Les notifications d’échec du scan ne contiennent que les champs communs :
+<code>plugin</code>, <code>plugin_version</code>, <code>timestamp</code>, <code>host</code>, <code>status</code>, <code>exit_code</code>, <code>message</code>.</p>
+<h2 id="a-generic-receiver">Récepteur générique</h2>
+<p>Tout service qui accepte du JSON arbitraire peut recevoir le document sans
+modification : chaîne de traitement de journaux, collecteur de webhooks ou
+flux n8n ou Node-RED.</p>
 <pre><code class="language-shell">export COS_WEBHOOK_URL='https://collector.example.com/hooks/opencloud'
 export COS_WEBHOOK_HEADERS='Authorization: Bearer abc123; X-Env: prod'
 check-opencloud-security --host opencloud.example.com --webhook-on warning
 </code></pre>
-<p><code>--webhook-on</code> decides how much you hear. Each level includes the more severe
-ones: <code>critical</code>, <code>warning</code>, <code>unknown</code>, <code>always</code>.</p>
-<h2 id="verifying-the-signature">Verifying the signature</h2>
-<p>A webhook URL is usually the only thing standing between an endpoint and
-anyone who guesses it. <code>--webhook-secret</code> (or <code>COS_WEBHOOK_SECRET</code>) adds a
-shared-secret signature so a receiver can tell a real notification from an
-invented one:</p>
+<p><code>--webhook-on</code> détermine quand envoyer une notification. Chaque niveau inclut
+les états plus graves : <code>critical</code>, <code>warning</code>, <code>unknown</code>, <code>always</code>.</p>
+<h2 id="verifying-the-signature">Vérifier la signature</h2>
+<p>L’URL d’un webhook est souvent sa seule protection. <code>--webhook-secret</code> ou
+<code>COS_WEBHOOK_SECRET</code> ajoute une signature avec secret partagé pour que le
+récepteur distingue une notification authentique d’une notification forgée :</p>
 <pre><code class="language-shell">export COS_WEBHOOK_SECRET='a-long-random-string'
 check-opencloud-security --host opencloud.example.com --webhook-on warning
 </code></pre>
-<p>Every POST then carries</p>
+<p>Chaque requête POST contient alors :</p>
 <pre><code>X-COS-Signature: sha256=&lt;hex&gt;
 </code></pre>
-<p>where <code>&lt;hex&gt;</code> is the <strong>HMAC-SHA256 of the raw request body</strong>, keyed with the
-secret. The plugin serialises the body once and posts exactly those bytes, so
-a receiver verifies the bytes it received - it must not re-encode the parsed
-document first, because any difference in key order or spacing changes the
-hash.</p>
+<p><code>&lt;hex&gt;</code> est le <strong>HMAC-SHA256 du corps brut de la requête</strong>, calculé avec le
+secret. Le plugin sérialise le corps une seule fois et envoie exactement ces
+octets. Le récepteur doit vérifier les octets reçus sans réencoder le document
+JSON : une différence d’espacement ou d’ordre des clés change l’empreinte.</p>
 <pre><code class="language-python">import hashlib
 import hmac
 
@@ -187,115 +170,114 @@ def verify(raw_body: bytes, header: str, secret: str) -&gt; bool:
     ).hexdigest()
     return hmac.compare_digest(expected, header or &quot;&quot;)
 </code></pre>
-<p>Use <code>hmac.compare_digest</code> rather than <code>==</code>; comparing hex digests with a
-short-circuiting comparison leaks how much of a guess was correct.</p>
-<p>In a Flask or FastAPI receiver, reach for the raw body rather than the parsed
-JSON - <code>await request.body()</code> in FastAPI, <code>request.get_data()</code> in Flask.
-Frameworks that only hand you a parsed object cannot verify this signature at
-all, and the honest fix is to read the body yourself before parsing.</p>
-<p>Three things worth knowing:</p>
+<p>Utilisez <code>hmac.compare_digest</code> plutôt que <code>==</code>. Une comparaison qui s’arrête
+à la première différence peut révéler la partie correcte d’une signature
+essayée.</p>
+<p>Avec FastAPI, lisez le corps brut avec <code>await request.body()</code> ; avec Flask,
+utilisez <code>request.get_data()</code>. Un framework qui ne fournit qu’un objet déjà
+analysé ne permet pas de vérifier cette signature. Lisez alors le corps avant
+son analyse.</p>
+<p>Trois précisions :</p>
 <ul>
-<li><strong>The signature covers whatever was sent</strong>, including the chat-native and
-  push documents <code>--webhook-format slack</code>, <code>discord</code>, <code>ntfy</code> and <code>gotify</code>
-  produce. Those services ignore the header; it is there for receivers that
-  check it.</li>
-<li><strong>No signature header is sent when no secret is set.</strong> A receiver that
-  requires one should reject the request rather than treat a missing header
-  as valid.</li>
-<li><strong>The secret is a credential.</strong> Keep it out of the command line the same way
-  the URL is kept out - see <a href="/documentation#configuration-file-and-secrets">Configuration file and
-  secrets</a>.</li>
+<li><strong>La signature couvre tout le document envoyé</strong>, y compris les formats
+  <code>--webhook-format slack</code>, <code>discord</code>, <code>ntfy</code> et <code>gotify</code>. Ces services
+  ignorent l’en-tête ; d’autres récepteurs peuvent le vérifier.</li>
+<li><strong>Sans secret configuré, aucun en-tête de signature n’est envoyé.</strong> Un
+  récepteur qui exige une signature doit rejeter les requêtes sans cet en-tête.</li>
+<li><strong>Le secret donne accès au service.</strong> Comme l’URL, gardez-le hors de la
+  ligne de commande. Voir <a href="/documentation#configuration-file-and-secrets">Configuration et secrets</a>.</li>
 </ul>
 <h2 id="uptime-kuma">Uptime Kuma</h2>
-<p>Uptime Kuma has no plugin system, but its <strong>Push</strong> monitor is a URL that
-expects to be called regularly - which is exactly what the webhook does. The
-check becomes a monitor in three steps.</p>
-<p><strong>1. Create the monitor.</strong> In Uptime Kuma choose <em>Add New Monitor</em>, monitor
-type <strong>Push</strong>, and name it after the instance. Uptime Kuma shows a <em>Push URL</em>
-of the form <code>https://kuma.example.com/api/push/&lt;token&gt;</code>. Set <em>Heartbeat
-Interval</em> a little longer than the interval you will run the check at - 300
-seconds for a check every four minutes - so a single slow scan does not
-already count as down.</p>
-<p><strong>2. Point the webhook at it</strong>, and set <code>--webhook-on always</code> so that a
-healthy result also reports in. Without it Uptime Kuma would only ever hear
-from the check when something is wrong, and treat silence as down:</p>
+<p>Uptime Kuma n’a pas de système de plugins. Son moniteur <strong>Push</strong> attend des
+appels réguliers sur une URL, ce que le webhook peut fournir. La configuration
+comporte trois étapes.</p>
+<p><strong>1. Créez le moniteur.</strong> Dans Uptime Kuma, choisissez <em>Add New Monitor</em>, puis
+le type <strong>Push</strong>, et donnez-lui le nom de l’instance. Uptime Kuma affiche une
+<em>Push URL</em> comme <code>https://kuma.example.com/api/push/&lt;token&gt;</code>. Réglez <em>Heartbeat
+Interval</em> légèrement au-dessus de l’intervalle du contrôle : par exemple,
+300 secondes pour un contrôle toutes les quatre minutes. Un scan lent ne sera
+ainsi pas immédiatement signalé comme une panne.</p>
+<p><strong>2. Dirigez le webhook vers cette URL</strong> avec <code>--webhook-on always</code> pour
+signaler aussi les résultats sains. Sinon, Uptime Kuma ne recevrait que les
+échecs et interpréterait le silence comme une panne :</p>
 <pre><code class="language-shell">check-opencloud-security --host opencloud.example.com \
   --webhook-url 'https://kuma.example.com/api/push/&lt;token&gt;' \
   --webhook-on always
 </code></pre>
-<p>Or in the configuration file, so the token is not in the process list:</p>
+<p>Préférez le fichier de configuration pour éviter d’afficher le jeton dans la
+liste des processus :</p>
 <pre><code class="language-yaml">host: opencloud.example.com
 webhook:
   url: secret://kuma_push_url
   on: always
 </code></pre>
-<p><strong>3. Run it on a schedule</strong> - see
-<a href="/documentation/scheduling#systemd-timer">systemd timer</a> or
-<a href="/documentation/scheduling#cron">cron</a>. Uptime Kuma goes red when no push arrives
-within the heartbeat interval, so a plugin that cannot run at all shows up as
-well.</p>
-<p>A Push monitor records the status supplied through its own protocol. Do not rely on it
-to interpret the plugin’s generic JSON as an OpenCloud verdict. To report the measured
-state, map the plugin result to the Push URL’s <code>status</code> and <code>msg</code> parameters. These
-payload fields are useful when writing an adapter:</p>
+<p><strong>3. Planifiez l’exécution.</strong> Voir <a href="/documentation/scheduling#systemd-timer">Minuterie systemd</a>
+ou <a href="/documentation/scheduling#cron">cron</a>. Uptime Kuma signale une panne lorsqu’aucun appel
+n’arrive dans l’intervalle prévu. Il détecte donc aussi un plugin qui ne peut
+plus s’exécuter.</p>
+<p>Un moniteur Push enregistre le statut fourni selon son propre protocole. Ne
+comptez pas sur lui pour interpréter le JSON générique du plugin comme un
+verdict OpenCloud. Pour transmettre l’état mesuré, convertissez le résultat en
+paramètres <code>status</code> et <code>msg</code> de l’URL Push. Ces champs peuvent servir à écrire
+un adaptateur :</p>
 <table>
 <thead>
 <tr>
-<th>Field in the payload</th>
-<th>What it tells you in Uptime Kuma</th>
+<th>Champ du document</th>
+<th>Information pour Uptime Kuma</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>status</code> / <code>exit_code</code></td>
-<td><code>OK</code>, <code>WARNING</code>, <code>CRITICAL</code> or <code>UNKNOWN</code></td>
+<td><code>OK</code>, <code>WARNING</code>, <code>CRITICAL</code> ou <code>UNKNOWN</code></td>
 </tr>
 <tr>
 <td><code>message</code></td>
-<td>The one-line reason, ready to paste into an alert</td>
+<td>Explication sur une ligne pour l’alerte</td>
 </tr>
 <tr>
 <td><code>rating</code>, <code>rating_label</code></td>
-<td>The <code>0</code>-<code>5</code> score and its <code>A</code>-<code>F</code> label</td>
+<td>Note de <code>0</code> à <code>5</code> et libellé de <code>A</code> à <code>F</code></td>
 </tr>
 <tr>
 <td><code>product_version</code>, <code>eol</code></td>
-<td>Which OpenCloud release, and whether it still gets fixes</td>
+<td>Version OpenCloud et fin de sa maintenance</td>
 </tr>
 <tr>
 <td><code>update.availableVersion</code></td>
-<td>What to upgrade to</td>
+<td>Version recommandée pour la mise à jour</td>
 </tr>
 <tr>
 <td><code>duration_seconds</code></td>
-<td>How long the scan took</td>
+<td>Durée du scan</td>
 </tr>
 </tbody>
 </table>
-<p>To mark any non-OK plugin result as down, use a wrapper that sends the appropriate Push
-status:</p>
+<p>Pour signaler tout résultat autre que OK comme une panne, utilisez un script
+qui envoie le statut Push adapté :</p>
 <pre><code class="language-shell">check-opencloud-security --host opencloud.example.com \
   &amp;&amp; curl -fsS 'https://kuma.example.com/api/push/&lt;token&gt;?status=up' \
   || curl -fsS 'https://kuma.example.com/api/push/&lt;token&gt;?status=down&amp;msg=opencloud'
 </code></pre>
-<p>Use the direct heartbeat to detect missing scheduled runs. Use the wrapper or a
-result-aware adapter when the monitor must also reflect the security check’s status.</p>
+<p>Un appel régulier direct permet de détecter les exécutions manquantes.
+Utilisez le script ou un adaptateur qui interprète le résultat si le moniteur
+doit aussi refléter l’état du contrôle de sécurité.</p>
 <h2 id="slack-mattermost-discord">Slack, Mattermost, Discord</h2>
-<p>These expect their own JSON. For the common case, <code>--webhook-format slack</code>
-or <code>--webhook-format discord</code> posts it directly - no adapter needed:</p>
+<p>Ces services attendent leur propre format JSON. <code>--webhook-format slack</code> ou
+<code>--webhook-format discord</code> l’envoie directement, sans adaptateur :</p>
 <pre><code class="language-shell">check-opencloud-security --host opencloud.example.com \
   --webhook-url https://hooks.slack.com/services/... \
   --webhook-format slack
 </code></pre>
-<p>Mattermost accepts the <code>slack</code> format too, and so does the outbound webhook
-connector in the common Matrix bridge, <a href="https://matrix-org.github.io/matrix-hookshot/">matrix-hookshot</a> -
-there is no separate <code>matrix</code> format because none of these has its own
-distinct webhook contract worth targeting instead. Discord also accepts the
-<code>slack</code> format at <code>&lt;webhook-url&gt;/slack</code>, if a plain attachment is preferred
-over an embed.</p>
-<p>The adapter below is for anything the built-in formats do not cover - a
-custom color scheme, extra fields, or a receiver that is <em>almost</em> Slack- or
-Discord-shaped but not quite:</p>
+<p>Mattermost accepte aussi le format <code>slack</code>, ainsi que le connecteur webhook du
+pont Matrix <a href="https://matrix-org.github.io/matrix-hookshot/">matrix-hookshot</a>.
+Il n’existe pas de format <code>matrix</code> séparé, car ces services partagent le même
+contrat de webhook. Discord accepte aussi <code>slack</code> à l’adresse
+<code>&lt;webhook-url&gt;/slack</code> si vous préférez une pièce jointe simple à un encart.</p>
+<p>L’adaptateur suivant sert aux besoins que les formats intégrés ne couvrent
+pas : couleurs personnalisées, champs supplémentaires ou récepteur dont le
+format diffère légèrement de Slack ou Discord.</p>
 <pre><code class="language-python">#!/usr/bin/env python3
 &quot;&quot;&quot;Forward a check-opencloud-security notification to a Slack-style webhook.&quot;&quot;&quot;
 import json
@@ -332,12 +314,13 @@ class Handler(BaseHTTPRequestHandler):
 
 HTTPServer((&quot;127.0.0.1&quot;, 8099), Handler).serve_forever()
 </code></pre>
-<p>Bind it to localhost and run it next to the check. An adapter that is
-reachable from elsewhere is an open relay into your chat system.</p>
-<p>Discord accepts a compatible payload at <code>&lt;webhook-url&gt;/slack</code>. Mattermost
-accepts Slack's format directly.</p>
-<h2 id="ntfy-and-gotify">ntfy and Gotify</h2>
-<p>Both are built in, and neither needs an adapter:</p>
+<p>Écoutez uniquement sur localhost et exécutez l’adaptateur à côté du contrôle.
+Un adaptateur accessible à distance devient un relais ouvert vers votre
+messagerie.</p>
+<p>Discord accepte un document compatible à <code>&lt;webhook-url&gt;/slack</code>. Mattermost
+accepte directement le format Slack.</p>
+<h2 id="ntfy-and-gotify">ntfy et Gotify</h2>
+<p>Ces deux formats sont intégrés et ne nécessitent aucun adaptateur :</p>
 <pre><code class="language-shell">check-opencloud-security --host opencloud.example.com \
   --webhook-url https://ntfy.example.com/opencloud \
   --webhook-format ntfy
@@ -347,28 +330,27 @@ check-opencloud-security --host opencloud.example.com \
   --webhook-header 'X-Gotify-Key: ...' \
   --webhook-format gotify
 </code></pre>
-<p><strong>For ntfy, give the topic URL.</strong> ntfy reads a JSON publication only at its
-server root, taking the topic from the document rather than from the path, so
-the plugin reads the topic off the URL you configured and posts to the root of
-that same server. Scheme, host and port are untouched, so the address checked
-by the SSRF guard is the address posted to. A URL naming no topic is refused
-when the check starts, rather than 400-ing on every notification for the life
-of the configuration. This is the only format whose URL is rewritten, and only
-ever its path - see
+<p><strong>Pour ntfy, indiquez l’URL du sujet.</strong> ntfy ne lit une publication JSON qu’à
+la racine du serveur et prend le sujet dans le document. Le plugin extrait
+donc le sujet de l’URL configurée, puis envoie le document à la racine du même
+serveur. Le schéma, l’hôte et le port restent identiques : la protection SSRF
+vérifie bien l’adresse qui reçoit la requête. Une URL sans sujet est refusée
+au démarrage, au lieu de provoquer une erreur 400 à chaque notification.
+C’est le seul format qui réécrit l’URL, et seul le chemin change. Voir
 <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0040-a-push-format-may-rewrite-the-path-never-the-host.md">ADR 0040</a>.</p>
-<p><strong>For Gotify, keep the token out of the URL if you can.</strong> <code>?token=...</code> works
-and is redacted in the plugin's own logs, but <code>--webhook-header 'X-Gotify-Key:
-...'</code> keeps it out of the URL entirely - and out of any proxy log between the
-two hosts. Either way, <code>--webhook-secret</code> still signs the body, so a receiver
-that verifies <code>X-COS-Signature</code> can do so here as it does everywhere else.</p>
-<p>Priorities follow the state: CRITICAL arrives at ntfy's <code>urgent</code> and Gotify's
-8, WARNING at <code>default</code> and 5, UNKNOWN at <code>high</code> and 5, and an OK - which only
-<code>--webhook-on always</code> ever sends - at the quietest value each service has, so
-a dead-man's switch does not buzz anybody nightly to say nothing is wrong.</p>
-<h3 id="doing-it-in-a-wrapper-instead">Doing it in a wrapper instead</h3>
-<p>Worth keeping if you want the plugin's full text rather than its summary, or a
-priority scheme of your own. This shape also works for any other "notify me if
-it fails" service:</p>
+<p><strong>Pour Gotify, gardez si possible le jeton hors de l’URL.</strong> <code>?token=...</code>
+fonctionne et le plugin le masque dans ses journaux. Toutefois,
+<code>--webhook-header 'X-Gotify-Key: ...'</code> le retire entièrement de l’URL, y
+compris dans les journaux des proxys intermédiaires. Dans les deux cas,
+<code>--webhook-secret</code> signe toujours le corps avec <code>X-COS-Signature</code>.</p>
+<p>La priorité suit l’état : CRITICAL utilise <code>urgent</code> pour ntfy et 8 pour
+Gotify ; WARNING utilise <code>default</code> et 5 ; UNKNOWN utilise <code>high</code> et 5.
+Un état OK, envoyé uniquement avec <code>--webhook-on always</code>, utilise la priorité
+la plus basse pour confirmer l’exécution sans déranger les destinataires.</p>
+<h3 id="doing-it-in-a-wrapper-instead">Utiliser un script intermédiaire</h3>
+<p>Cette solution permet d’envoyer le texte complet du plugin plutôt que son
+résumé, ou de choisir vos propres priorités. Elle convient aussi à d’autres
+services de notification d’échec :</p>
 <pre><code class="language-shell">#!/bin/sh
 set -eu
 output=&quot;$(check-opencloud-security --host opencloud.example.com --check-hardening)&quot; || state=$?
@@ -387,11 +369,12 @@ printf '%s' &quot;$output&quot; | curl -sS \
   -H &quot;Tags: warning&quot; \
   -d @- https://ntfy.example.com/opencloud
 </code></pre>
-<p>Note <code>|| state=$?</code> - the plugin's exit code <em>is</em> the result, and <code>set -e</code>
-would otherwise abandon the script exactly when there is something to report.</p>
+<p>Conservez <code>|| state=$?</code> : le code de sortie du plugin représente le résultat.
+Sans cette clause, <code>set -e</code> arrêterait le script au moment où il faut envoyer
+une notification.</p>
 <h2 id="alertmanager">Alertmanager</h2>
-<p>Alertmanager's v2 API wants a list of alerts, and it wants them to stop
-arriving before it resolves them:</p>
+<p>L’API v2 d’Alertmanager attend une liste d’alertes. Une alerte cesse d’être
+active quand elle n’est plus renouvelée :</p>
 <pre><code class="language-shell">check-opencloud-security --host opencloud.example.com --webhook-url \
   http://127.0.0.1:8098/  # an adapter that posts to /api/v2/alerts
 </code></pre>
@@ -405,24 +388,23 @@ arriving before it resolves them:</p>
   &quot;startsAt&quot;: &quot;&lt;timestamp from the payload&gt;&quot;
 }]
 </code></pre>
-<p>Send an alert only for a state you want paged, and let it time out rather than
-trying to resolve it by hand - the next scan is up to a day away, and an alert
-resolved early is an alert that silently un-pages a still-vulnerable server.
-If you already push metrics, <a href="/documentation/prometheus">Prometheus and Grafana</a> is the
-better route to Alertmanager.</p>
-<h2 id="testing-a-receiver-without-an-instance">Testing a receiver without an instance</h2>
-<p><code>--webhook-on always</code> plus a host that does not exist produces a real
-delivery of the failure-shaped payload, which is the case receivers usually
-get wrong:</p>
+<p>N’envoyez une alerte que pour les états qui doivent déclencher une
+notification. Laissez-la expirer au lieu de la résoudre manuellement : le
+prochain scan peut n’arriver que le lendemain, et une résolution anticipée
+masquerait une instance encore vulnérable. Si vous publiez déjà des
+métriques, passez par <a href="/documentation/prometheus">Prometheus et Grafana</a>.</p>
+<h2 id="testing-a-receiver-without-an-instance">Tester un récepteur sans instance</h2>
+<p><code>--webhook-on always</code> avec un hôte inexistant envoie un vrai document d’échec.
+C’est souvent ce format que les récepteurs traitent mal :</p>
 <pre><code class="language-shell">check-opencloud-security --host does-not-exist.example.com \
   --webhook-url http://127.0.0.1:8099/ --webhook-on always
 </code></pre>
-<p>For the healthy shape, point it at a real instance you own. <code>--debug</code> logs
-that a webhook was posted and to where, but not the body - to see the body,
-point the webhook at something that echoes it, such as
-<code>python3 -m http.server</code> or a one-line receiver of your own.</p>
+<p>Pour tester le format d’un scan réussi, utilisez une instance qui vous
+appartient. <code>--debug</code> indique qu’un webhook a été envoyé et vers quelle
+adresse, mais n’affiche pas le corps. Pour le lire, utilisez un récepteur de
+test qui affiche les requêtes reçues.</p>
 <hr>
-<p><a href="/documentation/reference">Back to the documentation index</a> | <a href="/documentation">Back to the main README</a></p>
+<p><a href="/documentation/reference">Retour à l’index de la documentation</a> | <a href="/documentation">Retour au README principal</a></p>
 </article>
 
 {% include "_page-nav.html" %}

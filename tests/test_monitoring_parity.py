@@ -35,6 +35,9 @@ METRICS = {
     "support_days_left": ("support_days_left", "opencloud_security_support_days_remaining"),
     "cert_days_left": ("cert_days_left", "opencloud_security_certificate_days_remaining"),
     "upgrade_path_complete": ("upgrade_path_complete", "opencloud_security_upgrade_path_complete"),
+    "waiver_days_left": ("waiver_days_left", "opencloud_security_waiver_days_remaining"),
+    "coverage_inconclusive": ("coverage_inconclusive", "opencloud_security_coverage_inconclusive_total"),
+    "coverage_not_checked": ("coverage_not_checked", "opencloud_security_coverage_not_checked_total"),
     "time": ("execution_time", "opencloud_security_scan_duration_seconds"),
 }
 
@@ -71,6 +74,26 @@ RESULT = {
         "target": "7.4.0",
         "fixes": ["CVE-2026-0001"],
         "stillAffected": ["CVE-2026-0002"],
+    },
+    "scannedAt": {"date": "2026-05-01 10:00:00.000000"},
+    "ignored": ["debugPort:9205"],
+    "waivers": [
+        {
+            "pattern": "debugPort:9205",
+            "reason": "Firewall change scheduled",
+            "expiresAt": "2026-05-09T10:00:00+00:00",
+            "state": "active",
+            "matched": ["debugPort:9205"],
+        }
+    ],
+    "coverage": {
+        "schema": 1,
+        "checks": [
+            {"id": "tlsTrusted", "group": "extraCheck", "state": "failed"},
+            {"id": "dnsCaa", "group": "dns", "state": "inconclusive", "reason": "timeout"},
+            {"id": "debugPort:9205", "group": "extraCheck", "state": "not_checked",
+             "reason": "probe_disabled"},
+        ],
     },
 }
 

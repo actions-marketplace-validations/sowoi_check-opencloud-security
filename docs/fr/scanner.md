@@ -11,89 +11,94 @@ de l’instance.
 L’échelle reprend celle de l’API de scan Nextcloud afin de préserver la signification
 des seuils, données de performance, webhooks et tableaux de bord existants.
 
-| Module | Purpose |
+| Module | Rôle |
 |:-------|:--------|
-| `scanner.py` | The scan engine; produces the result document |
-| `releases.py` | Update check against the OpenCloud release feed |
-| `vulndb.py`, `data/` | Advisory database and version-range matching |
-| `versions.py` | Version parsing, comparison and the supported-release window |
-| `config.py`, `secrets.py` | YAML / environment / secret-provider configuration |
-| `service.py`, `cli.py` | The HTTP scan service and the `check-opencloud-scanner` command |
-| `factory.py` | Builds settings objects from a `Configuration` |
-| `tls.py` | Transport security: handshake, protocol, certificate, chain, stapling |
+| `scanner.py` | Le moteur d’analyse ; produit le document de résultat |
+| `releases.py` | Vérification des mises à jour à partir du flux des versions OpenCloud |
+| `vulndb.py`, `data/` | Base des avis de sécurité et correspondance des plages de versions |
+| `versions.py` | Analyse et comparaison des versions, période des versions prises en charge |
+| `config.py`, `secrets.py` | Configuration YAML / environnement / fournisseur de secrets |
+| `service.py`, `cli.py` | Le service d’analyse HTTP et la commande `check-opencloud-scanner` |
+| `factory.py` | Construit les objets de paramètres à partir d’une `Configuration` |
+| `tls.py` | Sécurité du transport : négociation, protocole, certificat, chaîne, agrafage |
 
-## What it reads from the instance
+## Ce qui est lu sur l’instance {#what-it-reads-from-the-instance}
 
-Two endpoints are unauthenticated in OpenCloud, and both are needed:
+Deux points de terminaison sont accessibles sans authentification dans OpenCloud,
+et les deux sont nécessaires :
 
-- **`/status.php`** - product, edition, `productversion`. It also carries
-  `maintenance`, `installed` and `needsDbUpgrade`, but OpenCloud's own handler
-  hardcodes all three rather than reading real state, so this package does not
-  check them - see [`docs/status-php.md`](../status-php.md).
-- **`/ocs/v1.php/cloud/capabilities`** - the feature flags the hardening
-  section below is derived from
+- **`/status.php`** : produit, édition, `productversion`. Il contient aussi
+  `maintenance`, `installed` et `needsDbUpgrade`, mais le gestionnaire
+  d’OpenCloud code ces trois valeurs en dur au lieu de lire l’état réel : ce
+  paquet ne les vérifie donc pas - voir [`docs/status-php.md`](status-php.md).
+- **`/ocs/v1.php/cloud/capabilities`** : les indicateurs de fonctionnalités dont
+  est déduite la section sur le durcissement ci-dessous
 
-Everything else is inferred from response headers, status codes and TCP
-connects.
+Tout le reste est déduit des en-têtes de réponse, des codes de statut et des
+connexions TCP.
 
-A `/status.php` response alone does not identify OpenCloud. The scanner checks the
-reported product and raises `ScanError` for another product, whose releases, advisories
-and defaults would not match this database. See [What OpenCloud
-is](../what-is-opencloud.md).
+Une réponse de `/status.php` seule n’identifie pas OpenCloud. Le scanner vérifie
+le produit annoncé et lève `ScanError` pour un autre produit, dont les versions,
+les avis de sécurité et les valeurs par défaut ne correspondraient pas à cette
+base. Voir [Qu’est-ce qu’OpenCloud](what-is-opencloud.md).
 
-### The version trap
+### Le piège de la version {#the-version-trap}
 
-`/status.php` reports three version fields:
+`/status.php` indique trois champs de version :
 
 ```json
 {"version": "0.1.0.0", "versionstring": "0.1.0", "productversion": "7.4.0"}
 ```
 
-`version` and `versionstring` are **hardcoded constants** (`pkg/version` in the
-OpenCloud source). They exist so old sync clients that expect an ownCloud-style
-version string keep working, and they are identical on every instance ever
-shipped. Only `productversion` is the actual release.
+`version` et `versionstring` sont des **constantes codées en dur** (`pkg/version`
+dans le code source d’OpenCloud). Elles existent pour que les anciens clients de
+synchronisation qui attendent une chaîne de version de type ownCloud continuent
+de fonctionner, et elles sont identiques sur toutes les instances jamais livrées.
+Seul `productversion` correspond à la version réelle.
 
-`versions.select_version()` therefore prefers `productversion`, falls back to
-the capabilities endpoint, and treats the known placeholders as unusable. When
-an instance offers nothing but the placeholder, the result document carries
-`legacyVersion` and the EOL, update and advisory checks are skipped rather than
-run against `0.1.0`.
+`versions.select_version()` privilégie donc `productversion`, se rabat sur le
+point de terminaison des capacités et considère les valeurs de substitution
+connues comme inutilisables. Lorsqu’une instance ne propose que la valeur de
+substitution, le document de résultat contient `legacyVersion` et les contrôles
+de fin de vie, de mise à jour et d’avis de sécurité sont ignorés au lieu d’être
+exécutés sur `0.1.0`.
 
-If you are already parsing `/status.php` in another script, this is the field
-to check.
+Si vous analysez déjà `/status.php` dans un autre script, c’est ce champ qu’il
+faut vérifier.
 
-## Rating algorithm
+## Algorithme de notation {#rating-algorithm}
 
-Evaluated in this order:
+Évalué dans cet ordre :
 
-| Rating | Grade | Condition |
+| Note | Grade | Condition |
 |:------:|:-----:|:----------|
-| 0 | F | End of life |
-| 1 | E | Vulnerability with severity critical or high |
-| 2 | D | Any other known vulnerability |
-| 3 | C | A whole release line behind |
-| 4 | A | Update available within the release line |
-| 5 | A+ | Up to date |
+| 0 | F | Fin de vie |
+| 1 | E | Vulnérabilité de gravité critique ou élevée |
+| 2 | D | Toute autre vulnérabilité connue |
+| 3 | C | En retard d’une ligne de version entière |
+| 4 | A | Mise à jour disponible dans la ligne de version |
+| 5 | A+ | À jour |
 
-then **capped** by the worst failed additional check: `critical` -> at most `2`
-(D), `high` -> `3` (C), `medium` -> `4` (A), `low` -> `5` (A+).
+puis **plafonné** par le pire contrôle supplémentaire en échec : `critical` -> au
+plus `2` (D), `high` -> `3` (C), `medium` -> `4` (A), `low` -> `5` (A+).
 
-A cap can only lower the starting rating, so a configuration finding cannot improve an
-end-of-life result. Note the monitoring consequence: a critical finding caps the score
-at `2` (`D`), which the default `--critical 1` reports as WARNING. Use `--critical 2` to
-make it CRITICAL.
+Un plafond ne peut qu’abaisser la note de départ : un constat de configuration ne
+peut donc pas améliorer un résultat de fin de vie. Notez la conséquence pour la
+supervision : un constat critique plafonne la note à `2` (`D`), ce que la valeur
+par défaut `--critical 1` signale comme WARNING. Utilisez `--critical 2` pour en
+faire un CRITICAL.
 
-To report the findings without touching the rating at all:
+Pour signaler les constats sans toucher du tout à la note :
 
 ```yaml
 scanner:
   extra_checks_rating: false
 ```
 
-Or drop the additional checks entirely with `--no-extra-checks`.
+Ou supprimez entièrement les contrôles supplémentaires avec `--no-extra-checks`.
 
-Every scan records how it arrived at its rating in `ratingExplanation`:
+Chaque analyse enregistre dans `ratingExplanation` comment elle est parvenue à sa
+note :
 
 ```json
 {
@@ -106,17 +111,19 @@ Every scan records how it arrived at its rating in `ratingExplanation`:
 }
 ```
 
-`base` is the rating the version and the advisory database alone produced;
-`caps` lists every failed additional check with the ceiling its severity
-imposes. A check that failed without deciding the outcome is kept with
-`applied: false`, so a finding is never silently absent from the reasoning.
-The list is sorted by severity, which makes the explanation independent of the
-order the checks happened to run in.
+`base` est la note produite par la version et la base des avis de sécurité
+seules ; `caps` liste chaque contrôle supplémentaire en échec avec le plafond
+qu’impose sa gravité. Un contrôle en échec qui n’a pas déterminé le résultat est
+conservé avec `applied: false` : un constat n’est donc jamais absent du
+raisonnement sans le dire. La liste est triée par gravité, ce qui rend
+l’explication indépendante de l’ordre dans lequel les contrôles se sont
+exécutés.
 
-## What would raise the rating
+## Ce qui améliorerait la note {#what-would-raise-the-rating}
 
-The same result carries a `remediationPlan`, built by `remediation.py` from
-the caps above: an ordered fix list with the rating each step would reach.
+Le même résultat contient un `remediationPlan`, construit par `remediation.py` à
+partir des plafonds ci-dessus : une liste ordonnée de corrections, avec la note
+que chaque étape permettrait d’atteindre.
 
 ```json
 {
@@ -134,74 +141,79 @@ the caps above: an ordered fix list with the rating each step would reach.
 }
 ```
 
-It is a replay of `_compute_rating` with one finding removed at a time, not a
-second model of the rating, so a predicted grade cannot disagree with the real
-one. Nothing new is stored: the plan is derived from the document it sits in.
+C’est une réexécution de `_compute_rating` en retirant un constat à la fois, et
+non un second modèle de la note : une note prévue ne peut donc pas contredire la
+note réelle. Rien de nouveau n’est stocké : le plan est déduit du document qui le
+contient.
 
-Three properties are load-bearing and have tests:
+Trois propriétés sont essentielles et couvertes par des tests :
 
-- The **order** is by cap, then severity, then identifier, so it does not
-  depend on the order the checks ran in. A step that gains nothing on its own -
-  the first of several findings sharing one ceiling - stays in the list with
-  `ratingGain: 0` rather than being hidden.
-- An **update is a step too**, inserted at the first position where it starts
-  to gain something. Fixing findings cannot lift a rating above what the
-  installed version allows, so a plan that put the upgrade first would promise
-  a gain it could not deliver.
-- **Findings that cannot be fixed** - `actionable: false`, the flags OpenCloud
-  hardcodes - go to `blocked` and stay in every simulated remainder, which is
-  what bounds `achievableRating` correctly.
+- L’**ordre** suit le plafond, puis la gravité, puis l’identifiant : il ne
+  dépend donc pas de l’ordre d’exécution des contrôles. Une étape qui ne fait
+  rien gagner à elle seule - la première de plusieurs constats partageant un
+  même plafond - reste dans la liste avec `ratingGain: 0` au lieu d’être
+  masquée.
+- Une **mise à jour est aussi une étape**, insérée à la première position où
+  elle commence à apporter quelque chose. Corriger des constats ne peut pas
+  élever une note au-delà de ce que permet la version installée : un plan qui
+  placerait la mise à jour en premier promettrait un gain impossible.
+- **Les constats impossibles à corriger** - `actionable: false`, les indicateurs
+  qu’OpenCloud code en dur - vont dans `blocked` et restent dans chaque reste
+  simulé, ce qui borne correctement `achievableRating`.
 
-An end-of-life release short-circuits the rating to `0` without recording any
-caps, so the plan rebuilds them from `extraChecks` in that one case. Otherwise
-it would promise a perfect score after an upgrade with a critical finding
-still open.
+Une version en fin de vie ramène directement la note à `0` sans enregistrer de
+plafonds : dans ce seul cas, le plan les reconstruit à partir d’`extraChecks`.
+Sinon, il promettrait une note parfaite après une mise à jour alors qu’un
+constat critique resterait ouvert.
 
-## The single-page-application problem
+## Le problème de l’application monopage {#the-single-page-application-problem}
 
-OpenCloud is one Go binary that serves an embedded single-page frontend. That
-frontend answers **unknown paths with HTTP 200 and the app shell** - so the
-naive exposed-path check ("does `/opencloud.yaml` return 200?") reports a
-handful of phantom exposures on every healthy instance.
+OpenCloud est un binaire Go unique qui sert un frontend monopage intégré. Ce
+frontend répond **aux chemins inconnus par HTTP 200 et la coquille de
+l’application** : le contrôle naïf des chemins exposés (« `/opencloud.yaml`
+renvoie-t-il 200 ? ») signale donc quelques expositions fantômes sur toutes les
+instances saines.
 
-Before probing anything, the scanner requests a path that cannot exist
-(`/check-opencloud-security-probe-404`) and records the answer. A path is only
-reported as exposed when its response actually differs from that catch-all
-baseline. The same guard covers reverse proxies configured with a blanket
-fallback.
+Avant toute sonde, le scanner demande un chemin qui ne peut pas exister
+(`/check-opencloud-security-probe-404`) et enregistre la réponse. Un chemin
+n’est signalé comme exposé que lorsque sa réponse diffère réellement de cette
+référence générique. La même protection couvre les reverse proxies configurés
+avec une réponse de repli générale.
 
-## End-of-life detection
+## Détection de fin de vie {#end-of-life-detection}
 
-OpenCloud maintains three kinds of releases at the same time, and each has its
-own support window:
+OpenCloud maintient trois types de versions en même temps, chacun avec sa propre
+période de support :
 
-| Track | Cadence | Supported until |
+| Canal | Rythme | Pris en charge jusqu’à |
 |:------|:--------|:----------------|
-| `rolling` | about every 3 weeks | its successor is released |
-| `production` | about every 6 months | the next production release |
-| `lts` | a production line | 2 years after the line opened |
+| `rolling` | environ toutes les 3 semaines | la sortie de la version suivante |
+| `production` | environ tous les 6 mois | la version de production suivante |
+| `lts` | une ligne de production | 2 ans après l’ouverture de la ligne |
 
-So a version number alone does not answer "is this still supported?". `7.2.3`
-is the current production release while the rolling track is already at
-`7.4.0`, and `7.3.0` - a *higher* version - stopped receiving fixes the day
-`7.4.0` appeared.
+Un numéro de version seul ne répond donc pas à la question « est-ce encore pris
+en charge ? ». `7.2.3` est la version de production actuelle alors que le canal
+rolling en est déjà à `7.4.0`, et `7.3.0` - une version *plus élevée* - a cessé
+de recevoir des correctifs le jour de la sortie de `7.4.0`.
 
-The unit of support is the **release line** (`MAJOR.MINOR`), because that is
-what OpenCloud maintains: `7.2.3` is a patch of the `7.2` line. A line can be
-published on several tracks, and is judged by whichever supports it longest:
+L’unité de support est la **ligne de version** (`MAJOR.MINOR`), car c’est ce
+qu’OpenCloud maintient : `7.2.3` est un correctif de la ligne `7.2`. Une ligne
+peut être publiée sur plusieurs canaux, et elle est jugée selon celui qui la
+prend en charge le plus longtemps :
 
-- `7.2` shipped as a rolling release and was then promoted to production. As a
-  rolling release it is dead (7.3 exists); as the production release it is
-  current. **Current** is the answer that matters.
-- `4.0` is the previous production line *and* the current LTS line. Its
-  production window closed when `7.2` arrived, but its LTS backports run until
-  two years after `4.0.0`.
+- `7.2` est sortie en version rolling puis a été promue en production. En tant
+  que version rolling, elle est abandonnée (7.3 existe) ; en tant que version de
+  production, elle est à jour. **À jour** est la réponse qui compte.
+- `4.0` est la ligne de production précédente *et* la ligne LTS actuelle. Sa
+  période de production a pris fin avec l’arrivée de `7.2`, mais ses
+  rétroportages LTS courent jusqu’à deux ans après `4.0.0`.
 
-`schedule_source.py` reads the release dates off the
-[OpenCloud admin documentation][lifecycle] - the only source that states the
-release *type*; the GitHub release list cannot tell a rolling release from a
-production one. `scripts/update_release_schedule.py` runs it in CI and writes
-the result to `data/release_schedule.json`, which is the file that ships:
+`schedule_source.py` lit les dates de publication dans la
+[documentation d’administration d’OpenCloud][lifecycle] - la seule source qui
+indique le *type* de version ; la liste des versions GitHub ne permet pas de
+distinguer une version rolling d’une version de production.
+`scripts/update_release_schedule.py` l’exécute en CI et écrit le résultat dans
+`data/release_schedule.json`, qui est le fichier livré :
 
 [lifecycle]: https://docs.opencloud.eu/docs/admin/resources/lifecycle/
 
@@ -217,29 +229,32 @@ the result to `data/release_schedule.json`, which is the file that ships:
 }
 ```
 
-Rolling and production lines end when their successor on the same track is
-released; `lifetime_days` bounds the newest line of a track and gives LTS the
-two-year window the documentation promises. A line that is out of support gets
-`EOL: true` and rating `F`.
+Les lignes rolling et production prennent fin à la sortie de la ligne suivante
+sur le même canal ; `lifetime_days` borne la ligne la plus récente d’un canal et
+donne à LTS la période de deux ans promise par la documentation. Une ligne qui
+n’est plus prise en charge reçoit `EOL: true` et la note `F`.
 
-Two cases are deliberately *not* end of life:
+Deux cas ne sont volontairement *pas* considérés comme une fin de vie :
 
-- a version newer than everything in the schedule, because the bundled file
-  ages between updates and a fresh release must not trip the alarm;
-- the newest line of a track, which has nothing to upgrade to.
+- une version plus récente que tout ce que contient le calendrier, car le fichier
+  fourni vieillit entre deux mises à jour et une nouvelle version ne doit pas
+  déclencher l’alarme ;
+- la ligne la plus récente d’un canal, qui n’a rien vers quoi se mettre à jour.
 
-When the instance is newer than the schedule, the result includes `scheduleStale`,
-`scheduleUpdated`, `scheduleSource` and a `scheduleNote` linking to the [lifecycle
-page][lifecycle]. These describe the reference data without changing the rating or
-update recommendation. `ReleaseSchedule.is_behind()` exposes the same comparison.
+Lorsque l’instance est plus récente que le calendrier, le résultat contient
+`scheduleStale`, `scheduleUpdated`, `scheduleSource` et une `scheduleNote` qui
+renvoie à la [page du cycle de vie][lifecycle]. Ces champs décrivent les données
+de référence sans modifier la note ni la recommandation de mise à jour.
+`ReleaseSchedule.is_behind()` expose la même comparaison.
 
-The plugin keeps the schedule that shipped with it: a monitoring host runs the
-check every few minutes and must not turn that into a documentation fetch, so
-the file is refreshed by upgrading. The web application is the other case - a
-process that stays up for months - and re-reads the same page once a day
-through `schedule_source.fetch_schedule_document()`, handing the result to
-`ScannerSettings.release_schedule`. Either way the scanner is *given* a
-schedule and decides nothing new about where it came from.
+Le plugin conserve le calendrier livré avec lui : un hôte de supervision exécute
+la vérification toutes les quelques minutes et ne doit pas la transformer en
+téléchargement de documentation ; le fichier est donc actualisé par une mise à
+jour du paquet. L’application web est l’autre cas - un processus qui reste en
+service pendant des mois - et relit la même page une fois par jour via
+`schedule_source.fetch_schedule_document()`, en transmettant le résultat à
+`ScannerSettings.release_schedule`. Dans les deux cas, le scanner *reçoit* un
+calendrier et ne décide rien de nouveau quant à sa provenance.
 
 ```yaml
 scanner:
@@ -247,46 +262,74 @@ scanner:
   # release_schedule: /etc/check-opencloud-security/release_schedule.json
 ```
 
-The full verdict appears as `lifecycle` in the result document - line, track,
-release date, end of support, days remaining, the release to upgrade to, and
-how old the schedule that decided all of it is - so a stale or overridden
-schedule is visible rather than silent.
+Le verdict complet apparaît sous `lifecycle` dans le document de résultat -
+ligne, canal, date de publication, fin du support, jours restants, version vers
+laquelle mettre à jour, et âge du calendrier qui a décidé de tout cela -, si bien
+qu’un calendrier périmé ou remplacé est visible au lieu de passer inaperçu.
 
-## Update check
+## Vérification des mises à jour {#update-check}
 
-An OpenCloud instance does not report pending updates: there is no `occ`
-command and no updater endpoint. The newest release is therefore looked up
-externally and compared against `productversion`.
+Une instance OpenCloud ne signale pas les mises à jour en attente : il n’y a ni
+commande `occ` ni point de terminaison de mise à jour. La version la plus récente
+est donc recherchée à l’extérieur et comparée à `productversion`.
 
-The recommendation is **track aware**. A feed only knows the newest release
-overall, which is always a rolling one, so offering it to a production or LTS
-instance would move it onto a three-week support window. Those instances are
-offered the newest release of their own track instead, and the newest release
-overall is reported separately as `newestRelease`.
+La recommandation **tient compte du canal**. Un flux ne connaît que la version la
+plus récente tous canaux confondus, qui est toujours une version rolling : la
+proposer à une instance production ou LTS la ferait passer sur une période de
+support de trois semaines. Ces instances se voient donc proposer la version la
+plus récente de leur propre canal, et la version la plus récente tous canaux
+confondus est signalée séparément sous `newestRelease`.
 
-| Mode | Behaviour |
+| Mode | Comportement |
 |:-----|:----------|
-| `auto` | Try the feed; on any failure use `latest_release` from the bundled data |
-| `feed` | Only the feed; a failure is reported as unknown |
-| `pinned` | Use the configured `latest_version`; no network access |
-| `bundled` | Use the shipped `latest_release`; no network access |
-| `off` | Skip the update check |
+| `auto` | Essaie le flux ; en cas d’échec, utilise `latest_release` des données fournies |
+| `feed` | Uniquement le flux ; un échec est signalé comme inconnu |
+| `pinned` | Utilise la `latest_version` configurée ; aucun accès réseau |
+| `bundled` | Utilise la `latest_release` livrée ; aucun accès réseau |
+| `off` | Ignore la vérification des mises à jour |
 
-`auto` is the default and never fails a check: a rate-limited or unreachable
-GitHub degrades to the bundled release, which is as new as the installed
-package. `feed` is the mode to pick when a silent fallback would be worse than
-an explicit unknown.
+`auto` est la valeur par défaut et ne fait jamais échouer une vérification : un
+GitHub limité en débit ou injoignable se rabat sur la version fournie, aussi
+récente que le paquet installé. `feed` est le mode à choisir lorsqu’un repli
+silencieux serait pire qu’un état inconnu explicite.
 
-The feed is the GitHub releases API by default. `parse_release_feed()` also
-understands a plain `{"tag_name": ...}` document and a list of releases, so an
-internal mirror needs no special format. Drafts and prereleases are skipped.
+Le flux est par défaut l’API des versions GitHub. `parse_release_feed()` comprend
+aussi un simple document `{"tag_name": ...}` et une liste de versions : un miroir
+interne n’a donc besoin d’aucun format particulier. Les brouillons et les
+préversions sont ignorés.
 
-## Vulnerabilities
+## Vulnérabilités {#vulnerabilities}
 
-### Refreshing reference data on a monitoring host
+À côté de `vulnerabilities`, un résultat contient `upgradePath` lorsque la
+version installée est concernée par des avis de sécurité connus et qu’une
+version plus récente est recommandée : la `target`, les avis qu’elle `fixes`,
+ceux par lesquels elle reste `stillAffected`, et `safeVersion`, la plus ancienne
+version postérieure à tous les correctifs manquants (`null` lorsque l’un d’eux
+n’en a pas encore). Sinon, il vaut `null`. Voir
+[La mise à niveau lève-t-elle les avis de sécurité ?](release-lifecycle.md#does-the-upgrade-clear-the-advisories)
 
-The package includes a separate `refresh-data` command for installations that
-cannot wait for a package upgrade:
+`upgradeRehearsal` va plus loin : pour chaque version candidate (le dernier
+correctif de la ligne installée et la dernière version de chaque ligne
+ultérieure, limitées au canal déclaré), il indique ce que la version `fixes`,
+laisse `stillAffected` et `introduces`, si elle est `endOfLife`, et la note
+`rating` de 0 à 5 que l’analyse lui attribuerait - les règles de version
+rejouées, toujours plafonnées par les contrôles en échec de l’instance. La liste
+est vide lorsqu’aucune version plus récente n’est connue. Voir
+[Répéter chaque mise à niveau](release-lifecycle.md#rehearse-every-upgrade).
+
+`alternativeServices` enregistre l’en-tête `Alt-Svc` de l’instance - si elle
+annonce HTTP/3 sur UDP - comme une observation jamais notée. Voir
+[Services alternatifs](scanner-checks.md#alternative-services-http3).
+
+`loginThrottling` vaut `null` sauf si `check_login_throttling` est activé ; il
+indique alors si six connexions échouées pour un compte inexistant ont été
+ralenties. Jamais noté. Voir
+[Connexions échouées](scanner-checks.md#failed-sign-ins-opt-in).
+
+### Actualiser les données de référence sur un hôte de supervision {#refreshing-reference-data-on-a-monitoring-host}
+
+Le paquet contient une commande distincte, `refresh-data`, pour les
+installations qui ne peuvent pas attendre une mise à jour du paquet :
 
 ```console
 $ check-opencloud-scanner refresh-data \
@@ -295,51 +338,54 @@ $ check-opencloud-scanner refresh-data \
 /var/lib/check-opencloud-security/vulnerabilities.json
 ```
 
-It reads both documents from this project's own repository - the reviewed
-files a maintainer merged, not a live third-party query - and **verifies a
-Sigstore attestation** over them before believing any of it. It then rejects
-a lifecycle document that loses a bundled release line, refuses unbounded
-advisories, and replaces each file atomically. It never writes into the
-installed package. Point `scanner.release_schedule` and
-`scanner.vulnerability_db` at the two generated files, then run the supplied
-[`check-opencloud-security-refresh.timer`](../../contrib/systemd/check-opencloud-security-refresh.timer)
-daily. A network failure leaves the previous files untouched.
+Elle lit les deux documents dans le dépôt de ce projet - les fichiers examinés
+et fusionnés par un mainteneur, pas une requête en direct vers un tiers - et
+**vérifie une attestation Sigstore** portant sur eux avant de leur faire
+confiance. Elle rejette ensuite un document de cycle de vie qui perd une ligne de
+version fournie, refuse les avis de sécurité sans bornes et remplace chaque
+fichier de façon atomique. Elle n’écrit jamais dans le paquet installé. Faites
+pointer `scanner.release_schedule` et `scanner.vulnerability_db` vers les deux
+fichiers générés, puis exécutez chaque jour le timer fourni
+[`check-opencloud-security-refresh.timer`](../../contrib/systemd/check-opencloud-security-refresh.timer).
+Une panne réseau laisse les fichiers précédents intacts.
 
-Signature verification needs the `signing` extra:
+La vérification de signature nécessite l’extra `signing` :
 
 ```console
 $ pip install 'check-opencloud-security[signing]'
 ```
 
-Without it the refresh still runs - it falls back to the structural guards
-alone and logs a warning saying so. Note what that means: a host without the
-extra is not checking provenance at all, so install it wherever the refresh
-actually matters.
+Sans lui, l’actualisation s’exécute quand même : elle se rabat sur les seules
+protections structurelles et le signale par un avertissement dans le journal.
+Notez ce que cela implique : un hôte sans cet extra ne vérifie pas du tout la
+provenance, installez-le donc partout où l’actualisation compte réellement.
 
-With the extra installed, the three outcomes are deliberately different. A
-verified document is written. A signature that could not be *checked* - the
-attestation is not published yet, GitHub is unreachable, the trust root
-would not load - warns and falls back to the structural guards. A signature
-that is present and *wrong* stops the refresh outright and leaves the
-previous files exactly where they were.
+Avec l’extra installé, les trois issues sont volontairement différentes. Un
+document vérifié est écrit. Une signature qui n’a pas pu être *vérifiée* -
+attestation pas encore publiée, GitHub injoignable, racine de confiance
+impossible à charger - produit un avertissement et un repli sur les protections
+structurelles. Une signature présente et *incorrecte* arrête net l’actualisation
+et laisse les fichiers précédents exactement à leur place.
 
-Passing `--schedule-url` or `--advisory-url` queries that source live and
-unverified, for an air-gapped mirror or a fork, and says so in the log. See
-[ADR 0027](../../adr/0027-refreshed-reference-data-is-attested-not-merely-fetched.md).
+Passer `--schedule-url` ou `--advisory-url` interroge cette source en direct et
+sans vérification, pour un miroir isolé ou un fork, et l’indique dans le
+journal. Voir
+[l’ADR 0027](../../adr/0027-refreshed-reference-data-is-attested-not-merely-fetched.md).
 
-`data/vulnerabilities.json` carries the advisories published against
-OpenCloud, and is regenerated daily by
-`.github/workflows/vulnerability-db.yml`, which runs
-`scripts/update_vulnerability_db.py` against the OSV query API and opens a
-pull request when the answer has changed. The refresh **only ever adds**: an
-advisory the feed has forgotten stays in the file, and a hand-written entry
-survives. Removing one is a deliberate edit.
+`data/vulnerabilities.json` contient les avis de sécurité publiés pour OpenCloud
+et est régénéré chaque jour par `.github/workflows/vulnerability-db.yml`, qui
+exécute `scripts/update_vulnerability_db.py` sur l’API de requête OSV et ouvre
+une pull request lorsque la réponse a changé. L’actualisation **ne fait
+qu’ajouter** : un avis que le flux a oublié reste dans le fichier, et une entrée
+rédigée à la main est conservée. En supprimer une est une modification
+délibérée.
 
-It is still only as complete as the feeds it is built from.
-`vulnerabilities: []` from a scan means *"nothing in the database you
-configured matched"*, not *"this instance has no known vulnerabilities"*, and
-a large part of the rating comes from the configuration checks either way.
-Add your own source if you have one:
+La base n’est toutefois complète que dans la mesure où les flux dont elle est
+issue le sont. `vulnerabilities: []` dans une analyse signifie *« rien dans la
+base configurée n’a correspondu »*, et non *« cette instance n’a aucune
+vulnérabilité connue »*, et une grande partie de la note vient de toute façon
+des contrôles de configuration. Ajoutez votre propre source si vous en avez
+une :
 
 ```yaml
 scanner:
@@ -347,18 +393,19 @@ scanner:
   vulnerability_feed: https://api.osv.dev/v1/query
 ```
 
-Three input formats are accepted - the native one
-(`{"advisories": [{"id": ..., "introduced": ..., "fixed": ...}]}`), the GitHub
-Advisory API format and OSV documents - so an air-gapped setup can mirror a
-feed to a file without conversion. Entries match on the half-open version range
-`[introduced, fixed)` and are de-duplicated by id across sources. The sources
-that were actually loaded appear as `advisorySources` in the result document,
-so a misconfigured path is visible rather than silent.
+Trois formats d’entrée sont acceptés - le format natif
+(`{"advisories": [{"id": ..., "introduced": ..., "fixed": ...}]}`), le format de
+l’API GitHub Advisory et les documents OSV -, si bien qu’une installation isolée
+peut copier un flux dans un fichier sans conversion. Les entrées correspondent à
+la plage de versions semi-ouverte `[introduced, fixed)` et sont dédupliquées par
+identifiant entre les sources. Les sources réellement chargées apparaissent sous
+`advisorySources` dans le document de résultat : un chemin mal configuré est
+donc visible au lieu de passer inaperçu.
 
-One advisory can affect several release lines that were patched separately.
-`GHSA-vf5j-r2hw-2hrw` was fixed in both `4.0.3` and `5.0.2`, and that is one
-advisory with two disjoint ranges rather than two advisories, so an entry may
-carry a `ranges` list:
+Un avis peut concerner plusieurs lignes de version corrigées séparément.
+`GHSA-vf5j-r2hw-2hrw` a été corrigé à la fois dans `4.0.3` et dans `5.0.2` : c’est
+un seul avis avec deux plages disjointes, et non deux avis. Une entrée peut donc
+porter une liste `ranges` :
 
 ```json
 {
@@ -371,145 +418,160 @@ carry a `ranges` list:
 }
 ```
 
-A match reports the fix belonging to the line the scanned instance is on, so a
-`5.0.1` instance is told to upgrade to `5.0.2` rather than to a release that
-fixes nothing for it. `introduced` and `fixed` stay beside it as the first
-range, which is what a single-range advisory has always been.
+Une correspondance indique le correctif propre à la ligne de l’instance
+analysée : une instance `5.0.1` est invitée à passer à `5.0.2` plutôt qu’à une
+version qui ne corrige rien pour elle. `introduced` et `fixed` restent à côté,
+comme première plage, ce qu’a toujours été un avis à plage unique.
 
-**An advisory with no version bounds at all is dropped**, wherever it comes
-from. A range that is open at both ends matches every release there has ever
-been, and public feeds do publish that shape - the Go vulnerability database
-records this very advisory as `introduced: "0"` with no fix. Believing one
-would report every OpenCloud instance in the world as vulnerable, so the
-parser refuses it rather than trusting the feed to be sensible.
+**Un avis sans aucune borne de version est écarté**, quelle que soit sa
+provenance. Une plage ouverte aux deux extrémités correspond à toutes les
+versions ayant jamais existé, et des flux publics publient bien cette forme : la
+base des vulnérabilités Go enregistre cet avis précis avec `introduced: "0"` et
+sans correctif. Le croire reviendrait à signaler toutes les instances OpenCloud
+du monde comme vulnérables : l’analyseur le refuse donc au lieu de compter sur
+le bon sens du flux.
 
-## Hardenings
+## Durcissements {#hardenings}
 
-This package has **no hardening matrix**. It does not infer "this version
-supports feature X, therefore X is enabled" - it reports only what the
-instance actually said:
+Ce paquet n’a **pas de matrice de durcissement**. Il ne déduit pas « cette
+version prend en charge la fonction X, donc X est activée » : il ne signale que
+ce que l’instance a réellement indiqué.
 
-| Hardening | Evidence |
+| Durcissement | Preuve |
 |:----------|:---------|
-| `hstsLongMaxAge` | `Strict-Transport-Security` with `max-age` >= one year |
-| `hstsPreload` | The same header carrying `preload` |
-| `cspWithoutUnsafeInline` | A `Content-Security-Policy` without `'unsafe-inline'` |
-| `basicAuthDisabled` | `WWW-Authenticate` on a protected endpoint not offering `Basic` |
-| `publicLinkPasswordEnforced` | Capabilities: password required for public links |
-| `publicLinkExpirationEnforced` | Capabilities: enforced expiry on public links |
-| `userEnumerationRestricted` | Capabilities: user search restricted |
-| `passwordPolicyEnforced` | Capabilities: policy enabled and minimum password length >= 8 |
-| `passwordPolicyComplexity` | Capabilities: the policy still requires a lowercase letter, an uppercase letter, a digit and a special character |
-| `oidcPkceSupported` | Discovery document: `code_challenge_methods_supported` contains `S256` |
-| `oidcImplicitFlowDisabled` | Discovery document: `response_types_supported` returns no token from the authorization endpoint (external providers only) |
-| `oidcSigningAlgorithmStrong` | Discovery document: `id_token_signing_alg_values_supported` has neither `none` nor an `HS` algorithm |
-| `oidcEndpointsUseHttps` | Discovery document: every published endpoint is `https://` (only measured when the instance itself answered over HTTPS) |
+| `hstsLongMaxAge` | `Strict-Transport-Security` avec un `max-age` >= un an |
+| `hstsPreload` | Le même en-tête contenant `preload` |
+| `cspWithoutUnsafeInline` | Une `Content-Security-Policy` sans `'unsafe-inline'` |
+| `basicAuthDisabled` | `WWW-Authenticate` sur un point de terminaison protégé, sans proposition `Basic` |
+| `publicLinkPasswordEnforced` | Capacités : mot de passe exigé pour les liens publics |
+| `publicLinkExpirationEnforced` | Capacités : expiration imposée sur les liens publics |
+| `userEnumerationRestricted` | Capacités : recherche d’utilisateurs restreinte |
+| `passwordPolicyEnforced` | Capacités : politique activée et longueur minimale du mot de passe >= 8 |
+| `passwordPolicyComplexity` | Capacités : la politique exige encore une minuscule, une majuscule, un chiffre et un caractère spécial |
+| `oidcPkceSupported` | Document de découverte : `code_challenge_methods_supported` contient `S256` |
+| `oidcImplicitFlowDisabled` | Document de découverte : `response_types_supported` ne renvoie aucun jeton depuis le point de terminaison d’autorisation (fournisseurs externes uniquement) |
+| `oidcSigningAlgorithmStrong` | Document de découverte : `id_token_signing_alg_values_supported` ne contient ni `none` ni algorithme `HS` |
+| `oidcEndpointsUseHttps` | Document de découverte : chaque point de terminaison publié est en `https://` (mesuré uniquement lorsque l’instance elle-même a répondu en HTTPS) |
 
-A key is omitted entirely when the corresponding evidence is unavailable - a
-missing header or an instance whose capabilities endpoint does not report that
-feature. An older release therefore does not accumulate phantom findings, and
-`capabilitiesAvailable` in the result document says whether the second half of
-the table could be evaluated at all.
+Une clé est entièrement omise lorsque la preuve correspondante est
+indisponible : en-tête absent, ou instance dont le point de terminaison des
+capacités ne signale pas cette fonction. Une version plus ancienne n’accumule
+donc pas de constats fantômes, et `capabilitiesAvailable` dans le document de
+résultat indique si la seconde moitié du tableau a pu être évaluée.
 
-The additional probes also read the public web configuration: wildcard embed
-message origins fail `webEmbedMessageOriginRestricted`, delegated iframe
-authentication without an explicit origin fails
-`webEmbedDelegatedAuthenticationRestricted`, and a matching OpenCloud listener
-on the direct backend port fails `backendPortClosed`.
+Les clés omises, et la raison de leur omission, sont enregistrées dans
+`coverage` - voir [Ce que l’analyse a couvert](#what-the-scan-covered).
 
-Some of these are worth knowing about before you enable `--check-hardening`:
+Les sondes supplémentaires lisent aussi la configuration web publique : des
+origines de messages d’intégration génériques font échouer
+`webEmbedMessageOriginRestricted`, une authentification déléguée par iframe
+sans origine explicite fait échouer `webEmbedDelegatedAuthenticationRestricted`,
+et un écouteur OpenCloud correspondant sur le port backend direct fait échouer
+`backendPortClosed`.
 
-- **`cspWithoutUnsafeInline` fails on a stock OpenCloud.** The default
-  `csp.yaml` contains `'unsafe-inline'` in `script-src` and `style-src`. It is
-  reported rather than excused, but fixing it means shipping your own CSP, and
-  the web frontend currently depends on inline scripts and styles.
-- **`basicAuthDisabled` is genuinely remotely observable.** With
-  `PROXY_ENABLE_BASIC_AUTH=true` the proxy adds `Basic realm="<host>"` to its
-  `WWW-Authenticate` challenge alongside `Bearer`. It is rated `medium`, and
-  `low` when `identityProvider.external` is true: CalDAV, CardDAV and WebDAV
-  clients cannot speak OpenID Connect, so an instance that wants them has to
-  leave basic authentication on, and rating that as a serious failure told
-  operators something they were right to disbelieve.
-- **`publicLinkExpirationEnforced` and `userEnumerationRestricted` are not
-  settings.** OpenCloud writes both capabilities as hardcoded constants, so the
-  first fails on every instance and the second passes on every instance. They
-  are marked `actionable=False` in the catalogue below, which keeps them out of
-  alerts and counts while leaving them in the result document.
+Certains de ces points méritent d’être connus avant d’activer
+`--check-hardening` :
 
-### Observations that are not findings
+- **`cspWithoutUnsafeInline` échoue sur une instance OpenCloud non modifiée.**
+  Le `csp.yaml` par défaut contient `'unsafe-inline'` dans `script-src` et
+  `style-src`. C’est signalé plutôt qu’excusé, mais le corriger implique de
+  livrer votre propre CSP, et le frontend web dépend actuellement de scripts et
+  de styles en ligne.
+- **`basicAuthDisabled` est réellement observable à distance.** Avec
+  `PROXY_ENABLE_BASIC_AUTH=true`, le proxy ajoute `Basic realm="<host>"` à son
+  défi `WWW-Authenticate`, à côté de `Bearer`. La gravité est `medium`, et
+  `low` lorsque `identityProvider.external` vaut true : les clients CalDAV,
+  CardDAV et WebDAV ne savent pas utiliser OpenID Connect, une instance qui en
+  a besoin doit donc laisser l’authentification Basic active, et la présenter
+  comme une défaillance grave disait aux opérateurs quelque chose qu’ils avaient
+  raison de ne pas croire.
+- **`publicLinkExpirationEnforced` et `userEnumerationRestricted` ne sont pas des
+  paramètres.** OpenCloud écrit ces deux capacités comme des constantes codées
+  en dur : la première échoue sur toutes les instances et la seconde réussit sur
+  toutes. Elles sont marquées `actionable=False` dans le catalogue ci-dessous,
+  ce qui les exclut des alertes et des décomptes tout en les conservant dans le
+  document de résultat.
 
-`scan()` also reports two integrations that are visible without logging in.
-They live under `integrations`, produce no entry in `extraChecks`, and cannot
-move the rating:
+### Observations qui ne sont pas des constats {#observations-that-are-not-findings}
 
-| Key | Evidence |
+`scan()` signale aussi deux intégrations visibles sans connexion. Elles se
+trouvent sous `integrations`, ne produisent aucune entrée dans `extraChecks` et
+ne peuvent pas modifier la note :
+
+| Clé | Preuve |
 |:----|:---------|
-| `integrations.office.detected` | `/app/list` - unprotected by OpenCloud's proxy policy - names at least one registered app provider |
-| `integrations.office.apps` | The provider names it returned, e.g. `Collabora` |
-| `integrations.office.groupware` | The `groupware.enabled` capability |
-| `integrations.calendar.detected` | `/.well-known/caldav` answers with a redirect or a challenge rather than 404 |
-| `integrations.calendar.advertised` | The `core.support_radicale` capability, which defaults to `true` and is therefore only corroborating |
+| `integrations.office.detected` | `/app/list` - non protégé par la politique du proxy d’OpenCloud - nomme au moins un fournisseur d’applications enregistré |
+| `integrations.office.apps` | Les noms de fournisseurs renvoyés, par exemple `Collabora` |
+| `integrations.office.groupware` | La capacité `groupware.enabled` |
+| `integrations.calendar.detected` | `/.well-known/caldav` répond par une redirection ou un défi plutôt que par 404 |
+| `integrations.calendar.advertised` | La capacité `core.support_radicale`, qui vaut `true` par défaut et ne sert donc que de confirmation |
 
-The `files.app_providers` capability is a hardcoded constant and is ignored.
+La capacité `files.app_providers` est une constante codée en dur et est ignorée.
 
-`setup.advisoryChecks` is the other block that cannot move the rating, and for
-a different reason: not that the observation is neutral, but that OpenCloud
-satisfies it on no instance, so counting it would report the shipped state of
-the software as a fault in this deployment. It holds two entries:
+`setup.advisoryChecks` est l’autre bloc qui ne peut pas modifier la note, pour
+une raison différente : non pas parce que l’observation est neutre, mais parce
+qu’OpenCloud ne la satisfait sur aucune instance ; la compter reviendrait à
+présenter l’état livré du logiciel comme un défaut de ce déploiement. Il
+contient deux entrées :
 
-- `securityTxtPublished` - whether `/.well-known/security.txt` carries the
-  `Contact` field RFC 9116 requires, so that somebody who finds a flaw knows
-  where to send it. The body is what is read, not the status code: an
-  instance whose frontend answers every unknown path with its own shell
-  returns 200 for that path too.
-- `hstsPreloadEligible` - whether the `Strict-Transport-Security` header
-  would actually be accepted for browser preloading, which needs a max-age of
-  at least a year, `includeSubDomains` and `preload` together. `hstsPreload`
-  in the `hardenings` block answers the narrower question of whether the
-  directive is present at all; OpenCloud's proxy sends it alongside ten years
-  and no `includeSubDomains`, so the header on every stock instance asks for
-  something the preload list refuses. Whether the domain is *on* the list is
-  deliberately not measured - see
-  [ADR 0037](../../adr/0037-preload-eligibility-is-measured-list-membership-is-not.md).
+- `securityTxtPublished` : si `/.well-known/security.txt` contient le champ
+  `Contact` exigé par la RFC 9116, pour que quelqu’un qui découvre une faille
+  sache où la signaler. C’est le corps qui est lu, pas le code de statut : une
+  instance dont le frontend répond à tout chemin inconnu avec sa propre coquille
+  renvoie aussi 200 pour ce chemin.
+- `hstsPreloadEligible` : si l’en-tête `Strict-Transport-Security` serait
+  réellement accepté pour le préchargement par les navigateurs, ce qui exige à
+  la fois un max-age d’au moins un an, `includeSubDomains` et `preload`.
+  `hstsPreload`, dans le bloc `hardenings`, répond à la question plus étroite de
+  la présence de la directive ; le proxy d’OpenCloud l’envoie avec dix ans et
+  sans `includeSubDomains` : l’en-tête de toute instance non modifiée demande
+  donc quelque chose que la liste de préchargement refuse. La présence du
+  domaine *sur* la liste n’est volontairement pas mesurée - voir
+  [l’ADR 0037](../../adr/0037-preload-eligibility-is-measured-list-membership-is-not.md).
 
-The block is `{}` rather than a dictionary of `false` when the extra checks
-are off, because an observation nobody made is not one that failed. See
-[ADR 0034](../../adr/0034-an-advisory-observation-need-not-be-a-header.md).
+Le bloc vaut `{}` plutôt qu’un dictionnaire de `false` lorsque les contrôles
+supplémentaires sont désactivés, car une observation que personne n’a faite
+n’est pas une observation en échec. Voir
+[l’ADR 0034](../../adr/0034-an-advisory-observation-need-not-be-a-header.md).
 
-The `identityProvider` observation names an external provider when its OIDC
-issuer identifies one. For Keycloak, Authelia and Authentik it also includes
-`advisoryUrl`, which points to the provider's official GitHub Security
-Advisories page. `version` is present but empty because none of these providers
-exposes its product version through an unauthenticated, default-enabled
-endpoint. The scanner does not guess from URL paths, assets or proxy headers;
-if trustworthy public version evidence becomes available, that field can carry
-it without changing the result shape.
+L’observation `identityProvider` nomme un fournisseur externe lorsque son
+émetteur OIDC l’identifie. Pour Keycloak, Authelia et Authentik, elle contient
+aussi `advisoryUrl`, qui renvoie à la page officielle GitHub Security Advisories
+du fournisseur. `version` est présent mais vide, car aucun de ces fournisseurs
+n’expose sa version par un point de terminaison non authentifié et activé par
+défaut. Le scanner ne devine rien à partir des chemins d’URL, des ressources ou
+des en-têtes de proxy ; si une preuve publique fiable de version devient
+disponible, ce champ pourra la porter sans changer la forme du résultat.
 
-### What the scanner cannot measure
+### Ce que le scanner ne peut pas mesurer {#what-the-scanner-cannot-measure}
 
-Two questions come up often enough to be worth stating as non-goals:
+Deux questions reviennent assez souvent pour être présentées comme des
+non-objectifs :
 
-- **Audit logging cannot be checked.** OpenCloud's audit service consumes the
-  internal event bus and exposes no HTTP surface; no capability, header or
-  unauthenticated document reveals whether it is running. There is no signal to
-  read, so no check exists and none can be added without credentials.
-- **"Configured correctly" is out of scope for the integrations above.** That a
-  provider is registered says nothing about WOPI secrets, share permissions or
-  the second service's own configuration, all of which sit behind a login.
+- **La journalisation d’audit ne peut pas être vérifiée.** Le service d’audit
+  d’OpenCloud consomme le bus d’événements interne et n’expose aucune surface
+  HTTP ; aucune capacité, aucun en-tête ni aucun document non authentifié ne
+  révèle s’il fonctionne. Il n’y a aucun signal à lire : aucun contrôle n’existe,
+  et aucun ne peut être ajouté sans identifiants.
+- **« Correctement configuré » est hors du périmètre des intégrations
+  ci-dessus.** Qu’un fournisseur soit enregistré ne dit rien des secrets WOPI,
+  des droits de partage ni de la configuration propre du second service, qui se
+  trouvent tous derrière une connexion.
 
-The scanner does not use ordinary user credentials. The documented exception is
-`_demo_user_finding`: with the built-in provider, it tests the published demo accounts
-through `/ocs/v1.php/cloud/user`. A successful login produces the critical
-`demoUsersDisabled` finding. No credentials go to an external provider. Rejection
-confirms only that those demo credentials failed, not that authentication is secure in
-every respect.
+Le scanner n’utilise pas d’identifiants d’utilisateurs ordinaires. L’exception
+documentée est `_demo_user_finding` : avec le fournisseur intégré, il teste les
+comptes de démonstration publiés via `/ocs/v1.php/cloud/user`. Une connexion
+réussie produit le constat critique `demoUsersDisabled`. Aucun identifiant n’est
+envoyé à un fournisseur externe. Un refus confirme seulement que ces
+identifiants de démonstration ont échoué, pas que l’authentification est sûre à
+tous égards.
 
-### Explaining the flags
+### Expliquer les indicateurs {#explaining-the-flags}
 
-`hardening.py` is the catalogue that turns these identifiers into something an
-operator can act on. For each flag it holds a plain-language meaning, the
-OpenCloud environment variable that governs it, and a link to the official
-documentation:
+`hardening.py` est le catalogue qui transforme ces identifiants en informations
+exploitables par un opérateur. Pour chaque indicateur, il contient une
+signification en langage clair, la variable d’environnement OpenCloud qui le
+régit et un lien vers la documentation officielle :
 
 ```python
 from opencloud_local_scan import describe_hardening
@@ -525,15 +587,16 @@ basicAuthDisabled: HTTP Basic authentication is enabled
     Docs: https://docs.opencloud.eu/docs/dev/server/services/proxy/environment-variables
 ```
 
-The catalogue also covers the security headers from `setup.headers`, the
-advisory observations from `setup.advisoryHeaders` and
-`setup.advisoryChecks`, and `httpsEnforced`, and returns a named placeholder
-for an identifier it does not know, so a future check can never crash a
-report. A test scans the fake instance and asserts that every flag it produces
-has an entry, so adding a hardening without documenting it fails the suite.
+Le catalogue couvre aussi les en-têtes de sécurité de `setup.headers`, les
+observations consultatives de `setup.advisoryHeaders` et
+`setup.advisoryChecks`, ainsi que `httpsEnforced`, et renvoie une entrée de
+substitution nommée pour un identifiant inconnu : un futur contrôle ne peut donc
+jamais faire planter un rapport. Un test analyse l’instance factice et vérifie
+que chaque indicateur produit a une entrée : ajouter un durcissement sans le
+documenter fait échouer la suite de tests.
 
-The same catalogue is a command, for the far more common case of having an
-identifier and no Python prompt:
+Le même catalogue est disponible en commande, pour le cas bien plus fréquent où
+l’on a un identifiant mais pas d’invite Python :
 
 ```shell
 $ check-opencloud-scanner explain basicAuthDisabled
@@ -543,15 +606,16 @@ $ check-opencloud-scanner explain --list
 $ check-opencloud-scanner explain --format json cookieSecure
 ```
 
-The command works offline and reads only the installed catalogue. It accepts header
-names and path-specific identifiers such as `exposed:/config/opencloud.yaml`. With no
-identifier it prints the whole catalogue. An unknown identifier returns exit code 1 and
-suggests nearby names.
+La commande fonctionne hors ligne et ne lit que le catalogue installé. Elle
+accepte les noms d’en-têtes et les identifiants propres à un chemin, comme
+`exposed:/config/opencloud.yaml`. Sans identifiant, elle affiche tout le
+catalogue. Un identifiant inconnu renvoie le code de sortie 1 et suggère des noms
+proches.
 
-### The same fix, as configuration
+### La même correction, sous forme de configuration {#the-same-fix-as-configuration}
 
-`snippets.py` turns the catalogue’s `env_fix` and `header_fix` entries into
-configuration snippets:
+`snippets.py` transforme les entrées `env_fix` et `header_fix` du catalogue en
+extraits de configuration :
 
 ```python
 from opencloud_local_scan import configuration_fragment
@@ -567,23 +631,25 @@ services:
       IDM_CREATE_DEMO_USERS: "false"
 ```
 
-Five flavours: `compose`, `env`, `nginx`, `caddy`, `traefik`. Each expresses
-one kind of fix, because the two kinds live in different files on usually
-different machines - environment assignments go on the OpenCloud instance,
-response headers on whatever terminates TLS in front of it. Rendering a header
-into a Compose environment block would produce a line that does nothing, so a
-flavour reports what it cannot express in `Fragment.elsewhere` instead, and
-`flavours_for` names the flavours that can.
+Cinq variantes : `compose`, `env`, `nginx`, `caddy`, `traefik`. Chacune exprime
+un type de correction, car les deux types se trouvent dans des fichiers
+différents, généralement sur des machines différentes : les affectations de
+variables d’environnement vont sur l’instance OpenCloud, les en-têtes de réponse
+sur ce qui termine TLS devant elle. Rendre un en-tête dans un bloc d’environnement
+Compose produirait une ligne sans effet : une variante indique donc ce qu’elle
+ne peut pas exprimer dans `Fragment.elsewhere`, et `flavours_for` nomme les
+variantes qui le peuvent.
 
-All configuration names and values come from the catalogue. Settings that depend on the
-deployment, such as a CORS origin or CSP file path, appear in `Fragment.undecided`. They
-require an operator’s choice before a usable snippet can be generated.
+Tous les noms et valeurs de configuration proviennent du catalogue. Les
+paramètres qui dépendent du déploiement, comme une origine CORS ou le chemin d’un
+fichier CSP, figurent dans `Fragment.undecided` : ils exigent un choix de
+l’opérateur avant de pouvoir générer un extrait utilisable.
 
-## What the scan covered
+## Ce que l’analyse a couvert {#what-the-scan-covered}
 
-A passed check and a check that never ran leave the same shape in this
-document: nothing. `coverage` is where the difference is written down. See
-[ADR 0064](../../adr/0064-a-scan-records-what-it-did-not-measure.md).
+Un contrôle réussi et un contrôle jamais exécuté laissent la même trace dans ce
+document : rien. `coverage` est l’endroit où la différence est consignée. Voir
+[l’ADR 0064](../../adr/0064-a-scan-records-what-it-did-not-measure.md).
 
 ```json
 {
@@ -600,76 +666,83 @@ document: nothing. `coverage` is where the difference is written down. See
 }
 ```
 
-Every check the scan considered appears exactly once, in one of four states:
+Chaque contrôle envisagé par l’analyse apparaît exactement une fois, dans l’un de
+quatre états :
 
-| State | Meaning |
+| État | Signification |
 |:--|:--|
-| `passed` | The check ran and the instance satisfied it |
-| `failed` | The check ran and the instance did not satisfy it |
-| `not_checked` | The scanner did not run the check |
-| `inconclusive` | The scanner ran the check and could not decide |
+| `passed` | Le contrôle s’est exécuté et l’instance y a satisfait |
+| `failed` | Le contrôle s’est exécuté et l’instance n’y a pas satisfait |
+| `not_checked` | Le scanner n’a pas exécuté le contrôle |
+| `inconclusive` | Le scanner a exécuté le contrôle sans pouvoir trancher |
 
-`passed` and `failed` carry no reason - a measurement that ran needs no
-excuse. The other two always carry one, from a closed set:
+`passed` et `failed` ne portent aucune raison : une mesure effectuée n’a pas
+besoin d’excuse. Les deux autres en portent toujours une, choisie dans un
+ensemble fermé :
 
-| Reason | Meaning |
+| Raison | Signification |
 |:--|:--|
-| `not_applicable` | The check cannot apply to this deployment - no certificate on a plain-HTTP instance, no second address to compare |
-| `probe_disabled` | A setting turned the probe off for this scan |
-| `prerequisite_missing` | The instance did not publish what the check reads |
-| `timeout` | Nothing answered in time |
-| `unreadable` | Something answered and could not be understood |
-| `no_route` | There is no route to that address family from where the scan ran |
+| `not_applicable` | Le contrôle ne peut pas s’appliquer à ce déploiement : pas de certificat sur une instance en HTTP simple, pas de seconde adresse à comparer |
+| `probe_disabled` | Un paramètre a désactivé la sonde pour cette analyse |
+| `prerequisite_missing` | L’instance n’a pas publié ce que lit le contrôle |
+| `timeout` | Rien n’a répondu à temps |
+| `unreadable` | Quelque chose a répondu, mais la réponse n’a pas pu être comprise |
+| `no_route` | Aucune route vers cette famille d’adresses depuis l’endroit où l’analyse s’est exécutée |
 
-Deux propriétés sont importantes ici :
+Deux propriétés comptent ici :
 
-- **The total is what this scan considered**, not a constant. The checks are
-  dynamic - which paths are probed, which debug ports are dialled, which
-  addresses are compared depend on the instance and the settings - so there is
-  no fixed denominator.
-- **Coverage never changes a grade.** Nothing in the block reaches the rating,
-  the severities, the alert line, the exit code or the webhook payload. A
-  waived failure stays `failed` here; the acceptance is in
-  `extraChecks[].ignored`, because a waiver is a decision about alerting and
-  not about evidence.
+- **Le total est ce que cette analyse a envisagé**, pas une constante. Les
+  contrôles sont dynamiques - les chemins sondés, les ports de débogage appelés
+  et les adresses comparées dépendent de l’instance et des paramètres - : il n’y
+  a donc pas de dénominateur fixe.
+- **La couverture ne change jamais une note.** Rien dans ce bloc n’atteint la
+  note, les gravités, la ligne d’alerte ni le code de sortie. La charge utile du
+  webhook contient les décomptes, mais seulement comme compte rendu de ce qui a
+  été mesuré : aucun destinataire n’a besoin de les lire pour connaître le
+  verdict. Un échec exempté reste `failed` ici ; l’acceptation figure dans
+  `extraChecks[].ignored`, car une exemption est une décision sur les alertes,
+  pas sur les preuves.
 
-A document written before this block existed simply has no `coverage` key,
-which is a report that does not say what it covered - not a scan without
-gaps. Read it with `coverage.coverage_of(result)`, which returns `None` for
-both a missing and a malformed block.
+Un document écrit avant l’existence de ce bloc n’a tout simplement pas de clé
+`coverage` : c’est un rapport qui ne dit pas ce qu’il a couvert, pas une analyse
+sans lacune. Lisez-le avec `coverage.coverage_of(result)`, qui renvoie `None`
+pour un bloc absent comme pour un bloc mal formé.
 
 ### Le résumé en une ligne {#the-one-line-summary}
 
-`coverage.summary(result)` réduit le bloc aux quatre nombres dont une lectrice
-a besoin, et `coverage.summary_line(result)` les écrit en une phrase anglaise :
+`coverage.summary(result)` réduit le bloc aux quatre nombres dont un lecteur a
+besoin, et `coverage.summary_line(result)` les écrit sous forme d’une phrase en
+anglais :
 
 ```
 84 checks evaluated, 6 skipped, 2 indeterminate, 1 network-limited
 ```
 
-Chaque vérification se trouve dans exactement l'un des quatre nombres.
-`evaluated` est une conclusion, réussie ou non ; `skipped` est une
-vérification que le scanner a choisi de ne pas lancer ; `indeterminate` est
-une vérification qui s'est exécutée sans pouvoir trancher ; `networkLimited`
-est isolé des deux précédents parce qu'un délai dépassé ou une route absente -
-DNSSEC, un fournisseur d'identité externe, un point d'accès facultatif - est
-la lacune qu'un autre point d'observation pourrait combler. La phrase omet les
-zéros, mais nomme toujours le nombre de vérifications évaluées. Les deux
-fonctions renvoient `None` et `""` pour un document sans bloc de couverture,
-afin que « rien n'a été manqué » et « ce rapport ne le dit pas » ne se lisent
-jamais pareil.
+Chaque contrôle figure dans exactement l’une des quatre catégories. `evaluated`
+est une conclusion, réussite ou échec ; `skipped` est un contrôle que le scanner
+a décidé de ne pas exécuter ; `indeterminate` est un contrôle exécuté qui n’a pas
+pu trancher ; `networkLimited` est extrait des deux derniers, car un délai
+dépassé ou une route manquante est la seule lacune qu’un autre point
+d’observation pourrait combler - DNSSEC depuis un résolveur qui valide, un
+fournisseur d’identité externe accessible depuis ailleurs. Les décomptes nuls
+sont omis de la phrase, mais le nombre de contrôles évalués est toujours
+indiqué. Les deux fonctions renvoient `None` / `""` pour un document sans bloc de
+couverture : « rien n’a été manqué » et « ce rapport ne le dit pas » ne se lisent
+donc jamais de la même façon.
 
-Le greffon imprime la phrase comme une ligne de détail `Coverage:`, la charge
-utile du webhook porte les mêmes nombres sous `coverage`, et l'application web
-les affiche sous *Ce que cette analyse n'a pas mesuré*.
+Le plugin affiche la phrase sur une ligne de détail `Coverage:`, la charge utile
+du webhook contient les mêmes nombres sous `coverage` (en snake_case, comme le
+reste de la charge utile), et l’application web les affiche sous *Ce que cette
+analyse n’a pas mesuré*.
 
-## The conditions a scan ran under
+## Les conditions d’exécution d’une analyse {#the-conditions-a-scan-ran-under}
 
-Two scans of the same instance can disagree without the instance having
-changed: the advisory database learned a CVE, a support window closed, the
-scanner was upgraded, a waiver expired. `provenance` records what was known
-at the time, so a comparison can tell those apart from a real regression. See
-[ADR 0066](../../adr/0066-a-result-records-the-conditions-it-was-produced-under.md).
+Deux analyses de la même instance peuvent diverger sans que l’instance ait
+changé : la base des avis a appris une CVE, une période de support s’est
+terminée, le scanner a été mis à jour, une exemption a expiré. `provenance`
+enregistre ce qui était connu à ce moment-là, pour qu’une comparaison puisse
+distinguer ces cas d’une vraie régression. Voir
+[l’ADR 0066](../../adr/0066-a-result-records-the-conditions-it-was-produced-under.md).
 
 ```json
 {
@@ -686,52 +759,72 @@ at the time, so a comparison can tell those apart from a real regression. See
 }
 ```
 
-`digest` is a SHA-256 over the reference data's own identifying fields in
-canonical form, so the same advisories hash the same however they were
-serialised, merged or ordered. It is a digest rather than a copy - embedding
-the database would put megabytes of other people's advisories in every report -
-and rather than a file path, which would publish where the machine keeps its
-files. `scheduleData.updated` is when the schedule was *generated*, which is
-not when it was read; `scannedAt` is the scan.
+`digest` est un SHA-256 calculé sur les champs d’identification propres aux
+données de référence, sous forme canonique : les mêmes avis donnent donc la même
+empreinte, quelle que soit la façon dont ils ont été sérialisés, fusionnés ou
+ordonnés. C’est une empreinte plutôt qu’une copie - intégrer la base mettrait des
+mégaoctets d’avis rédigés par d’autres dans chaque rapport - et plutôt qu’un
+chemin de fichier, qui révélerait où la machine range ses fichiers.
+`scheduleData.updated` est la date de *génération* du calendrier, pas celle de sa
+lecture ; `scannedAt` est la date de l’analyse.
 
-`waivers` records patterns and states, never the reason text: a reason is
-prose written for a person, and a comparison that diffed it would report a
-corrected typo as a change of policy.
+`waivers` enregistre les motifs et les états, jamais le texte de la raison : une
+raison est de la prose écrite pour une personne, et une comparaison qui la
+confronterait signalerait une faute de frappe corrigée comme un changement de
+politique.
 
-### Comparing two results
+### Comparer deux résultats {#comparing-two-results}
 
-`check-opencloud-scanner diff` prints the contributing changes under the
-existing summary, and `--format json` carries them as `explanation`:
+`check-opencloud-scanner diff` affiche les changements contributifs sous le
+résumé existant, et `--format json` les transmet sous `explanation` :
 
-| Category | What changed |
+| Catégorie | Ce qui a changé |
 |:--|:--|
-| `instance` | The version, or a check that started or stopped failing |
-| `referenceData` | The advisories, the release schedule, the release track, or a support window that simply elapsed |
-| `scanner` | The scanner's version, or how many checks reached a conclusion |
-| `policy` | A waiver expired, was added or was removed |
-| `unknown` | Something moved and nothing recorded accounts for it |
+| `instance` | La version, un contrôle qui a commencé ou cessé d’échouer, ou un groupe de configuration dont l’empreinte a changé |
+| `referenceData` | Les avis de sécurité, le calendrier des versions, le canal de versions, ou une période de support qui s’est simplement écoulée |
+| `scanner` | La version du scanner, ou le nombre de contrôles ayant abouti à une conclusion |
+| `policy` | Une exemption a expiré, a été ajoutée ou retirée |
+| `unknown` | Quelque chose a changé et rien d’enregistré ne l’explique |
 
-The wording is deliberately conservative. A changed digest establishes that
-the reference data differed; it does not establish that it caused any
-particular grade to move, and the sentence says so. Several changes may
-contribute without one being chosen as *the* cause.
+La formulation est volontairement prudente. Une empreinte modifiée établit que
+les données de référence différaient ; elle n’établit pas qu’elles ont provoqué
+le changement d’une note en particulier, et la phrase le dit. Plusieurs
+changements peuvent y contribuer sans que l’un soit désigné comme *la* cause.
 
-`limitations` lists what the comparison could not establish - most often that
-one of the two reports predates these blocks, and so cannot say what it was
-judged against or how much of it ran. That is reported rather than assumed.
+`--format json` contient aussi `findings`, une entrée par constat figurant dans
+l’un ou l’autre document, avec la gravité, l’état d’exemption et la catégorie de
+chaque côté, ainsi que `severityTotals`, les constats en échec comptés par
+gravité avant et après. C’est ce que calcule `opencloud_local_scan.findings` et ce
+qu’affichent les lignes `~` et `--format side-by-side`. Cela conserve ce que
+l’ensemble des noms en échec perd : un constat resté ouvert qui passe de `high` à
+`critical` ne modifie pas cet ensemble, mais modifie la note qu’il plafonne.
 
-## L'installation a-t-elle changé ? {#has-the-deployment-changed}
+Un côté vaut `null` lorsque le document n’a pas du tout enregistré ce constat, et
+le statut indique `appeared` ou `disappeared` plutôt qu’`introduced` ou
+`resolved` : absent ne veut pas dire réussi ([ADR
+0064](../../adr/0064-a-scan-records-what-it-did-not-measure.md)). Les gravités sont
+lues dans les documents et limitées à `critical`, `high`, `medium`, `low` et
+`unknown` ; un rapport archivé est une preuve de ce qui était vrai au moment de
+sa rédaction, et le catalogue actuel ne le remplace donc jamais.
 
-Une note dit si une instance est en bon état. Elle ne dit pas s'il s'agit
+`limitations` liste ce que la comparaison n’a pas pu établir - le plus souvent
+que l’un des deux rapports est antérieur à ces blocs et ne peut donc pas dire
+par rapport à quoi il a été jugé ni quelle part de l’analyse s’est exécutée.
+C’est signalé plutôt que supposé.
+
+## Le déploiement a-t-il changé ? {#has-the-deployment-changed}
+
+Une note indique si une instance est en bon état. Elle ne dit pas s’il s’agit
 encore de la même instance que la semaine dernière. Une politique réécrite sans
-gagner `unsafe-inline`, un proxy remplacé par un autre produit qui pose les
-mêmes en-têtes, des liens publics qui cessent d'exiger un mot de passe puis
-l'exigent de nouveau, un certificat passé chez un autre émetteur : rien de tout
-cela n'a à faire bouger une note, et qui ne regarde que la note n'en voit rien.
+gagner `unsafe-inline`, un proxy remplacé par un autre produit qui définit les
+mêmes en-têtes, des liens publics qui ont cessé d’exiger un mot de passe puis en
+exigent de nouveau un, un certificat passé chez un autre émetteur : rien de tout
+cela n’a à modifier la note, et un opérateur qui ne surveille que la note n’en
+voit rien.
 
-`configuration` est une **empreinte** : des condensats groupés de la manière
-dont l'installation est configurée, jamais de ce qu'elle contient. Voir
-[ADR 0073](../../adr/0073-a-result-fingerprints-the-configuration-it-measured.md).
+`configuration` est une **empreinte** : des condensats groupés de la façon dont
+le déploiement est configuré, et rien de ce sur quoi il est configuré. Voir
+[l’ADR 0073](../../adr/0073-a-result-fingerprints-the-configuration-it-measured.md).
 
 ```json
 {
@@ -749,50 +842,61 @@ dont l'installation est configurée, jamais de ce qu'elle contient. Voir
 }
 ```
 
-Deux analyses dont le condensat de groupe est identique ont vu la même
-configuration ; deux qui diffèrent, non. C'est tout ce qui est affirmé, et ces
-règles sont ce qui rend l'affirmation utile :
+Deux analyses ayant le même condensat de groupe observaient la même
+configuration pour ce groupe ; deux analyses dont les condensats diffèrent, non.
+C’est toute l’affirmation, et les règles suivantes lui donnent sa valeur :
 
-- **Des condensats seulement, jamais la configuration.** Une politique de
-  sécurité du contenu nomme les origines auxquelles une installation fait
+- **Des condensats uniquement, jamais la configuration.** Une politique de
+  sécurité du contenu nomme les origines auxquelles un déploiement fait
   confiance, un document de découverte peut nommer un locataire, une bannière de
-  serveur nomme une compilation interne. Chaque fait est condensé dans son groupe
-  puis oublié : on apprend *que* le partage a changé, jamais *en quoi*.
-- **Les groupes sont les questions que pose l'exploitant.** « TLS a-t-il
-  changé ? » est utile ; « le fait 37 a-t-il changé ? » ne l'est pas.
-- **Seulement ce que l'installation décide.** Le groupe transport condense
-  l'émetteur, la clé, l'algorithme de signature et les protocoles négociés, pas
-  le numéro de série, les dates ni l'empreinte du certificat, car un
-  renouvellement est une routine. Le groupe proxy condense le produit, pas la
-  bannière et son numéro de version.
-- **Ce que décident les réglages de l'analyse n'est jamais un fait.** `scope`
-  est un condensat de *quels* faits un groupe a pu regarder, sans leurs valeurs.
-  Deux groupes ne sont comparés que si leur portée coïncide : une exécution qui a
-  cessé d'inspecter TLS signale « non comparable » plutôt qu'un changement. Un
-  groupe sans aucun fait vaut `none`.
-- **Cela ne change jamais une note.** Rien ici n'atteint la notation, les
-  sévérités, la ligne d'alerte ou le code de sortie.
+  serveur nomme une version interne. Chaque fait est haché dans son groupe puis
+  écarté ; un lecteur apprend *que* le partage a changé, jamais *comment* il est
+  réglé. Le bloc peut figurer sur une page publique pour la même raison qu’il
+  peut figurer dans un ticket.
+- **Les groupes correspondent aux questions que pose un opérateur.** « TLS
+  a-t-il changé ? » est utile ; « le fait 37 a-t-il changé ? » ne l’est pas.
+- **Uniquement ce que le déploiement décide.** Le groupe transport hache
+  l’émetteur, la clé, l’algorithme de signature et les protocoles négociés - pas
+  le numéro de série, les dates ni l’empreinte du certificat, car un
+  renouvellement est une routine. Le groupe proxy hache l’éditeur, pas la
+  bannière, dont le numéro de build change à chaque correctif.
+- **Les paramètres propres à une analyse ne sont jamais un fait.** `scope` est
+  un condensat des faits *examinés* par un groupe, sans leurs valeurs. Deux
+  groupes ne sont comparés que si leurs portées concordent : une exécution qui a
+  cessé d’inspecter TLS signale donc « non comparable » plutôt qu’une dérive. Un
+  groupe sans rien à hacher vaut `none`.
+- **Elle ne change jamais une note.** Rien ici n’atteint la note, les gravités,
+  la ligne d’alerte ni le code de sortie.
 
-Lisez le bloc avec `fingerprint.fingerprint_of(result)`, qui renvoie `None`
-pour un bloc absent comme pour un bloc malformé : un rapport qui ne peut pas le
-dire n'est pas une installation qui n'a pas changé. `fingerprint.digests(result)`
-le réduit à une chaîne opaque `scope:digest` par groupe, et
-`fingerprint.drift(before, after)` nomme les groupes qui diffèrent.
+Lisez-la avec `fingerprint.fingerprint_of(result)`, qui renvoie `None` pour un
+bloc absent comme pour un bloc mal formé : un rapport qui ne peut pas le dire
+n’est pas un déploiement qui n’a pas changé. `fingerprint.digests(result)` la
+réduit à une chaîne opaque `scope:digest` par groupe, ce que stockent un fichier
+de référence, un destinataire de webhook et une comparaison, et
+`fingerprint.drift(before, after)` nomme les groupes qui diffèrent :
 
-Le greffon imprime `Configuration fingerprint: 9e3c4428` à chaque analyse, et
-`--baseline` en fait `No new findings, but the configuration changed
-(headers)`.
+```python
+from opencloud_local_scan.fingerprint import digests, drift
 
-## Debug ports
+changed = drift(digests(last_week), digests(today))  # ('headers',)
+```
 
-Every OpenCloud service runs a debug listener serving `/healthz`, `/readyz`,
-`/metrics`, `/config` and `/debug/pprof`. `/metrics` exposes the exact version
-via `opencloud_proxy_build_info`, `/config` dumps the effective service
-configuration, and `/debug/pprof` lets anyone trigger profiling.
+Le plugin affiche `Configuration fingerprint: 9e3c4428` à chaque analyse, et
+`--baseline` transforme les mêmes condensats en `No new findings, but the
+configuration changed (headers)`.
 
-They bind to loopback unless `<SERVICE>_DEBUG_ADDR` says otherwise, so one
-answering from a monitoring host is a real finding - most often a container
-that published a port range wholesale. Five are probed by default:
+## Ports de débogage {#debug-ports}
+
+Chaque service OpenCloud exécute un écouteur de débogage qui sert `/healthz`,
+`/readyz`, `/metrics`, `/config` et `/debug/pprof`. `/metrics` expose la version
+exacte via `opencloud_proxy_build_info`, `/config` affiche la configuration
+effective du service, et `/debug/pprof` permet à n’importe qui de déclencher un
+profilage.
+
+Ils sont liés à l’interface de bouclage sauf si `<SERVICE>_DEBUG_ADDR` en
+dispose autrement : un écouteur qui répond depuis un hôte de supervision est donc
+un vrai constat, le plus souvent un conteneur qui a publié toute une plage de
+ports. Cinq sont sondés par défaut :
 
 | Port | Service |
 |:-----|:--------|
@@ -802,25 +906,26 @@ that published a port range wholesale. Five are probed by default:
 | 9134 | idp |
 | 9239 | idm |
 
-Each probe is one TCP connect with a three second timeout, so a firewalled host
-costs up to fifteen seconds per scan. `check_debug_ports: false`,
-`debug_port_timeout`, a shorter `debug_ports` list and `concurrency` are all
-available.
+Chaque sonde est une seule connexion TCP avec un délai d’attente de trois
+secondes : un hôte protégé par un pare-feu coûte donc jusqu’à quinze secondes
+par analyse. `check_debug_ports: false`, `debug_port_timeout`, une liste
+`debug_ports` plus courte et `concurrency` sont tous disponibles.
 
-The same handlers are also probed on the main address, where they must never
-appear at all (`debugEndpoint:` findings).
+Les mêmes gestionnaires sont aussi sondés sur l’adresse principale, où ils ne
+doivent jamais apparaître (constats `debugEndpoint:`).
 
-## Every resolved address
+## Toutes les adresses résolues {#every-resolved-address}
 
-`check_all_addresses=True` (`--all-addresses` on `scan`) repeats the
-node-dependent part of a scan - `status.php`, the root page's graded headers,
-capabilities, the authentication challenge, the identity provider and the demo
-accounts - against each address the name resolved to, one after another, and
-emits `addressParity`. Each request keeps the hostname in `Host` and SNI and is
-pinned to one address through its own session. The addresses are the
-resolver's answer, or `pinned_addresses` when given, so a pinned scan never
-widens past what the caller vetted; IPv6 is skipped when `ipv6_enabled` is
-false. What each address served is listed under `addressObservations`:
+`check_all_addresses=True` (`--all-addresses` pour `scan`) répète la partie de
+l’analyse qui dépend du nœud - `status.php`, les en-têtes notés de la page
+racine, les capacités, le défi d’authentification, le fournisseur d’identité et
+les comptes de démonstration - sur chaque adresse vers laquelle le nom s’est
+résolu, l’une après l’autre, et produit `addressParity`. Chaque requête conserve
+le nom d’hôte dans `Host` et SNI et est rattachée à une adresse par sa propre
+session. Les adresses sont la réponse du résolveur, ou `pinned_addresses`
+lorsqu’elles sont fournies : une analyse épinglée ne va donc jamais au-delà de ce
+que l’appelant a validé ; IPv6 est ignoré lorsque `ipv6_enabled` vaut false. Ce
+que chaque adresse a servi est listé sous `addressObservations` :
 
 ```json
 {"addressObservations": [
@@ -830,75 +935,80 @@ false. What each address served is listed under `addressObservations`:
 ]}
 ```
 
-The first address is the reference; severity follows the worst difference
-(demo accounts as `demoUsersDisabled`, another release `high`, anything else
-`medium`); waived names are not compared. With one address, or with the
-setting off (the default), there is no finding and the list is empty. See
-[ADR 0042](../../adr/0042-every-resolved-address-is-compared-only-when-the-operator-asks.md).
+La première adresse sert de référence ; la gravité suit la pire différence
+(comptes de démonstration comme `demoUsersDisabled`, autre version `high`, tout
+le reste `medium`) ; les noms exemptés ne sont pas comparés. Avec une seule
+adresse, ou avec le paramètre désactivé (valeur par défaut), il n’y a aucun
+constat et la liste est vide. Voir
+[l’ADR 0042](../../adr/0042-every-resolved-address-is-compared-only-when-the-operator-asks.md).
 
-## Concurrency
+## Concurrence {#concurrency}
 
-A scan is dominated by waiting: around twenty HTTP requests plus the debug-port
-connects, issued one after the other. `concurrency` runs the independent ones
-in parallel:
+Une analyse est dominée par l’attente : une vingtaine de requêtes HTTP plus les
+connexions aux ports de débogage, émises l’une après l’autre. `concurrency`
+exécute en parallèle celles qui sont indépendantes :
 
 ```python
 result = scan("opencloud.example.com", settings=ScannerSettings(concurrency=8))
 ```
 
-The default is `1`, which uses no threads at all, and values above `32` are
-clamped. Each worker gets its own `requests.Session`, since a session is not
-safe to share across threads.
+La valeur par défaut est `1`, qui n’utilise aucun thread, et les valeurs
+supérieures à `32` sont ramenées à `32`. Chaque worker reçoit sa propre
+`requests.Session`, car une session ne peut pas être partagée sans risque entre
+threads.
 
-The setting affects timing only. Results are collected back in the order the
-probes were issued, so a parallel scan reports exactly the same findings, in
-exactly the same order, as a sequential one.
+Le paramètre n’affecte que la durée. Les résultats sont rassemblés dans l’ordre
+d’émission des sondes : une analyse parallèle signale donc exactement les mêmes
+constats, exactement dans le même ordre, qu’une analyse séquentielle.
 
-## TLS
+## TLS {#tls}
 
-OpenCloud's proxy terminates TLS itself on port 9200, and `opencloud init`
-generates a self-signed certificate. The scanner degrades in three steps rather
-than failing on the first one:
+Le proxy d’OpenCloud termine lui-même TLS sur le port 9200, et `opencloud init`
+génère un certificat auto-signé. Le scanner se dégrade en trois étapes au lieu
+d’échouer à la première :
 
-1. HTTPS with certificate verification.
-2. HTTPS without verification - the scan proceeds and `tlsTrusted` is reported
-   as failed.
-3. Plain HTTP - reported as `httpsAvailable` (critical).
+1. HTTPS avec vérification du certificat.
+2. HTTPS sans vérification : l’analyse se poursuit et `tlsTrusted` est signalé
+   en échec.
+3. HTTP simple : signalé comme `httpsAvailable` (critical).
 
-`verify_tls: false` (or `--insecure`) starts at step 2. The untrusted chain
-still shows up in the findings; it just stops counting against the rating, so
-a self-signed instance can be monitored without a permanently degraded grade
-while a genuinely broken certificate elsewhere still stands out.
+`verify_tls: false` (ou `--insecure`) commence à l’étape 2. La chaîne non
+reconnue apparaît toujours dans les constats ; elle cesse simplement de peser
+sur la note : une instance auto-signée peut ainsi être supervisée sans note
+dégradée en permanence, tandis qu’un certificat réellement défaillant ailleurs
+reste visible.
 
-For an internal CA, keep verification on and set `scanner.tls_ca_file` (or
-`COS_SCANNER_TLS_CA_FILE`) to its PEM bundle; `check-opencloud-scanner scan`
-also accepts `--ca-file`. This trusts that CA without turning verification off.
+Pour une autorité de certification interne, laissez la vérification active et
+définissez `scanner.tls_ca_file` (ou `COS_SCANNER_TLS_CA_FILE`) sur son paquet
+PEM ; `check-opencloud-scanner scan` accepte aussi `--ca-file`. Cette autorité
+est alors reconnue sans désactiver la vérification.
 
-### What is measured
+### Ce qui est mesuré {#what-is-measured}
 
-`tls.py` does the inspecting and hands `scanner.py` a list of checks; it knows
-nothing about ratings. Beyond the handshake and trust it reports:
+`tls.py` effectue l’inspection et transmet à `scanner.py` une liste de
+contrôles ; il ne sait rien des notes. En plus de la négociation et de la
+confiance, il signale :
 
-| Finding | What it asks |
+| Constat | Question posée |
 |:--------|:-------------|
-| `tlsProtocol` | Is the negotiated version at least TLS 1.2? |
-| `tlsDeprecatedProtocol` | Does the server *still accept* TLS 1.0 or 1.1, having negotiated something newer with us? |
-| `tlsHostname` | Does the certificate cover the name it was asked for, wildcards and IP addresses included? |
-| `tlsChain` | Does the server send its intermediates, or only a leaf that validates by luck? |
-| `tlsCertificate` | Does it expire within `tls_min_days`, or has it already? |
-| `tlsCertificateLifetime` | Is it valid for longer than the scanner’s 398-day threshold? |
-| `tlsCipherSuite` | Is the cipher suite negotiated by this scan modern and forward-secret? |
-| `tlsCertificatePolicy` | Does the certificate use an adequately sized key and a modern signature? |
-| `tlsAddressParity` | Do the published IPv4 and IPv6 endpoints present the same usable TLS identity? |
-| `tlsCaaRecord` | Does the name have a DNS CAA record naming at least one authorized issuer? |
-| `tlsDnssec` | Is the zone signed, so that the address every check above rests on can be trusted? Absent rather than failed when the resolver in use does not speak DNSSEC |
-| `cookieSecure`, `cookieHttpOnly`, `cookieSameSite` | Do cookies actually observed on the public response carry these attributes? |
-| `tlsOcspStapling` | Is a revocation response stapled to the handshake? |
+| `tlsProtocol` | La version négociée est-elle au moins TLS 1.2 ? |
+| `tlsDeprecatedProtocol` | Le serveur *accepte-t-il encore* TLS 1.0 ou 1.1, alors qu’il a négocié une version plus récente avec le scanner ? |
+| `tlsHostname` | Le certificat couvre-t-il le nom demandé, jokers et adresses IP compris ? |
+| `tlsChain` | Le serveur envoie-t-il ses certificats intermédiaires, ou seulement un certificat final qui n’est validé que par chance ? |
+| `tlsCertificate` | Expire-t-il dans moins de `tls_min_days` jours, ou a-t-il déjà expiré ? |
+| `tlsCertificateLifetime` | Est-il valide plus longtemps que le seuil de 398 jours du scanner ? |
+| `tlsCipherSuite` | La suite de chiffrement négociée par cette analyse est-elle moderne et offre-t-elle la confidentialité persistante ? |
+| `tlsCertificatePolicy` | Le certificat utilise-t-il une clé de taille suffisante et une signature moderne ? |
+| `tlsAddressParity` | Les points de terminaison IPv4 et IPv6 publiés présentent-ils la même identité TLS utilisable ? |
+| `tlsCaaRecord` | Le nom a-t-il un enregistrement DNS CAA désignant au moins un émetteur autorisé ? |
+| `tlsDnssec` | La zone est-elle signée, pour que l’adresse sur laquelle reposent tous les contrôles ci-dessus soit digne de confiance ? Absent plutôt qu’en échec lorsque le résolveur utilisé ne gère pas DNSSEC |
+| `cookieSecure`, `cookieHttpOnly`, `cookieSameSite` | Les cookies réellement observés dans la réponse publique portent-ils ces attributs ? |
+| `tlsOcspStapling` | Une réponse de révocation est-elle agrafée à la négociation ? |
 
-The measurements behind them are in a `tls` block in the result document: the
-protocol and cipher, the certificate's subject, issuer, validity window,
-remaining days and names, the chain length, and what the deprecated-protocol
-and stapling probes found.
+Les mesures correspondantes figurent dans un bloc `tls` du document de résultat :
+protocole et suite de chiffrement, sujet, émetteur, période de validité, jours
+restants et noms du certificat, longueur de la chaîne, et ce qu’ont trouvé les
+sondes des protocoles obsolètes et de l’agrafage.
 
 ```json
 {
@@ -934,39 +1044,41 @@ and stapling probes found.
 }
 ```
 
-**`null` means "not determined", never "fine".** A check that could not be
-performed - `get_unverified_chain()` needs Python 3.13, the deprecated-protocol
-probe needs a build that still speaks one, stapling needs the `openssl`
-command and a certificate that names a responder - is left out of the findings
-entirely rather than recorded as passed. See
-[ADR 0013](../../adr/0013-transport-security-is-measured-not-assumed.md).
+**`null` signifie « non déterminé », jamais « correct ».** Un contrôle qui n’a
+pas pu être effectué - `get_unverified_chain()` exige Python 3.13, la sonde des
+protocoles obsolètes exige une version compilée qui les prend encore en charge, l’agrafage exige la
+commande `openssl` et un certificat qui désigne un répondeur - est entièrement
+omis des constats au lieu d’être enregistré comme réussi. Voir
+[l’ADR 0013](../../adr/0013-transport-security-is-measured-not-assumed.md).
 
-The certificate is decoded from what the server presented whether or not it
-verified, so an instance with the self-signed certificate `opencloud init`
-generates still gets its expiry, names and lifetime checked. Two probes are
-optional at the call: `probe_deprecated` opens one extra handshake per old
-protocol, and `check_stapling` runs one `openssl s_client` with a fixed
-argument list and no shell.
+Le certificat est décodé à partir de ce que le serveur a présenté, qu’il ait été
+vérifié ou non : une instance avec le certificat auto-signé généré par
+`opencloud init` voit donc quand même son expiration, ses noms et sa durée de
+validité vérifiés. Deux sondes sont facultatives à l’appel : `probe_deprecated`
+ouvre une négociation supplémentaire par ancien protocole, et `check_stapling`
+exécute un `openssl s_client` avec une liste d’arguments fixe et sans shell.
 
-## What this package does not do
+## Ce que ce paquet ne fait pas {#what-this-package-does-not-do}
 
-- **No backend choice.** There is no remote scanner to select, so there is no
-  `--scan-backend`, `--scan-url` or `--scan-token`, and nothing to force a
-  rescan of, because nothing is ever cached.
-- **No audit-log check.** The audit service has no HTTP surface and no
-  capability of its own, so there is nothing to observe. See [What the scanner
-  cannot measure](#what-the-scanner-cannot-measure).
-- **No hardening matrix.** Hardenings are observed, not derived from the
-  version (see above).
-- **No credentials on the instance.** Every check works with what an
-  unauthenticated client can see. The update check reads a public feed.
-- **No PHP-era assumptions.** OpenCloud is a single Go binary with embedded
-  assets: there is no `config/config.php`, no `/data/` and no `/3rdparty/`.
-  The findings target what OpenCloud actually exposes - Graph API and OCS
-  authentication, debug ports, `opencloud.yaml`, `proxy/server.key` and the
-  idm boltdb.
+- **Pas de choix de backend.** Il n’y a pas de scanner distant à sélectionner :
+  il n’y a donc ni `--scan-backend`, ni `--scan-url`, ni `--scan-token`, et rien
+  dont il faudrait forcer une nouvelle analyse, puisque rien n’est jamais mis en
+  cache.
+- **Pas de contrôle du journal d’audit.** Le service d’audit n’a ni surface HTTP
+  ni capacité propre : il n’y a rien à observer. Voir [Ce que le scanner ne peut
+  pas mesurer](#what-the-scanner-cannot-measure).
+- **Pas de matrice de durcissement.** Les durcissements sont observés, pas
+  déduits de la version (voir ci-dessus).
+- **Pas d’identifiants sur l’instance.** Chaque contrôle fonctionne avec ce que
+  peut voir un client non authentifié. La vérification des mises à jour lit un
+  flux public.
+- **Aucune hypothèse héritée de l’ère PHP.** OpenCloud est un binaire Go unique
+  avec des ressources intégrées : il n’y a ni `config/config.php`, ni `/data/`,
+  ni `/3rdparty/`. Les constats visent ce qu’OpenCloud expose réellement :
+  l’authentification de l’API Graph et d’OCS, les ports de débogage,
+  `opencloud.yaml`, `proxy/server.key` et la base boltdb d’idm.
 
-## Using it directly
+## Utilisation directe {#using-it-directly}
 
 ```python
 from opencloud_local_scan import ScannerSettings, scan
@@ -975,35 +1087,37 @@ result = scan("opencloud.example.com", settings=ScannerSettings(timeout=10))
 print(result["rating"], result["version"], result["extraChecks"])
 ```
 
-`scan()` raises `ScanError` when it cannot identify OpenCloud: the endpoint is
-unreachable, its response is not suitable JSON, version fields are missing or the
-product is different. Cases where a service answered raise `NotOpenCloud`. By default
-the scanner retries an unsuitable HTTPS response without certificate verification and
-then over HTTP. `ScannerSettings(stop_when_not_opencloud=True)` stops after the first
-such response; the public web application enables it.
+`scan()` lève `ScanError` lorsqu’il ne peut pas identifier OpenCloud : point de
+terminaison injoignable, réponse qui n’est pas un JSON exploitable, champs de
+version manquants ou produit différent. Les cas où un service a répondu lèvent
+`NotOpenCloud`. Par défaut, après une réponse HTTPS inexploitable, le scanner
+fait une nouvelle tentative sans vérification du certificat, puis en HTTP.
+`ScannerSettings(stop_when_not_opencloud=True)` s’arrête après la première
+réponse de ce type ; l’application web publique l’active.
 
-The document also carries `addresses`, the IPv4 and IPv6 the hostname resolved
-to while the scan ran:
+Le document contient aussi `addresses`, les adresses IPv4 et IPv6 vers
+lesquelles le nom d’hôte s’est résolu pendant l’analyse :
 
 ```json
 {"addresses": {"ipv4": ["198.51.100.7"], "ipv6": ["2001:db8::7"]}}
 ```
 
-It is context rather than a finding, and never moves the rating. Addresses
-pinned through `ScannerSettings.pinned_addresses` are reported as they are:
-the web application validates a name before it lets a scan start and dials
-exactly those, so resolving a second time here could name an address the scan
-never connected to.
+C’est un contexte plutôt qu’un constat, et cela ne modifie jamais la note. Les
+adresses épinglées via `ScannerSettings.pinned_addresses` sont signalées telles
+quelles : l’application web valide un nom avant de lancer une analyse et se
+connecte exactement à ces adresses, si bien qu’une seconde résolution ici
+pourrait nommer une adresse à laquelle l’analyse ne s’est jamais connectée.
 
-Every setting in `ScannerSettings` and `ReleaseSettings` can also come from a
-configuration file (YAML, or JSON when the name ends in `.json`), an
-environment variable or a secret provider - see
+Chaque paramètre de `ScannerSettings` et de `ReleaseSettings` peut aussi provenir
+d’un fichier de configuration (YAML, ou JSON lorsque le nom se termine par
+`.json`), d’une variable d’environnement ou d’un fournisseur de secrets - voir
 [`config/check-opencloud-security.example.yml`](../../config/check-opencloud-security.example.yml)
-and the [Configuration file and secrets](../README.md#configuration-file-and-secrets)
-section of the main README. `check-opencloud-scanner configure` writes such a
-file interactively.
+et la section [Fichier de configuration et secrets](../../README.md#configuration-file-and-secrets)
+du README principal. `check-opencloud-scanner configure` écrit un tel fichier de
+façon interactive.
 
-For a scan that must not touch the network beyond the instance itself:
+Pour une analyse qui ne doit pas accéder au réseau au-delà de l’instance
+elle-même :
 
 ```python
 from opencloud_local_scan import ReleaseSettings, ScannerSettings, scan
@@ -1015,11 +1129,12 @@ result = scan(
 )
 ```
 
-## Vérifier une correction sans scan complet {#verifying-a-fix-without-a-full-scan}
+## Vérifier une correction sans analyse complète {#verifying-a-fix-without-a-full-scan}
 
-`opencloud_local_scan.verification.verify` re-mesure uniquement les constats
-indiqués, en n'exécutant que les sondes du scanner qui les produisent. C'est
-la base de `--verify-remediation` (voir [ADR 0072](../../adr/0072-remediation-verification-re-measures-named-findings-without-a-full-scan.md)).
+`opencloud_local_scan.verification.verify` ne remesure que les constats qui lui
+sont indiqués, en exécutant pour eux les sondes propres du scanner et rien
+d’autre. C’est la base de `--verify-remediation` (voir
+[l’ADR 0072](../../adr/0072-remediation-verification-re-measures-named-findings-without-a-full-scan.md)).
 
 ```python
 from opencloud_local_scan.verification import verify
@@ -1032,21 +1147,31 @@ for entry in document["results"]:
     print(entry["id"], entry["passed"], entry["reason"])
 ```
 
-Le document contient `domain`, `url`, `verifiedAt`, `probeGroups` (les
-groupes réellement exécutés) et `results`, une entrée par identifiant : `id`,
-`verifiable` (false si seul un scan complet peut trancher, comme `eol` ou
-`vulnerability:...`), `passed` (`None` si rien n'a été mesuré), `group`,
-`checks` au format des entrées `extraChecks` et `reason`. Comme `scan()`, la
-fonction mesure sans juger : ni note, ni dérogation. `probe_group(id)`
-indique à l'avance quel groupe mesure un identifiant.
+Le document contient `domain`, `url`, `verifiedAt`, `probeGroups` (les groupes
+réellement exécutés) et `results`, une entrée par identifiant demandé, dans
+l’ordre indiqué :
 
-## Comparing a scan with the last one
+| Clé | Signification |
+|:----|:--------|
+| `id` | L’identifiant demandé ; une racine de famille comme `exposed` couvre tous les membres `exposed:...` |
+| `verifiable` | False pour un identifiant que seule une analyse complète peut trancher (`eol`, `vulnerability:...`, `httpsAvailable`, les contrôles de parité d’adresses) ou que cette version ne prend pas en charge |
+| `passed` | True ou false lorsqu’il a été mesuré, `None` lorsque rien ne l’a été |
+| `group` | Le groupe de sondes qui l’a mesuré |
+| `checks` | Les constats mesurés, sous la même forme que les entrées d’`extraChecks` |
+| `reason` | Pourquoi `passed` vaut `None`, vide sinon |
 
-`opencloud_local_scan.baseline` reduces a result document to the findings that
-are worth comparing - vulnerabilities, missing hardening measures that are
-actionable and not waived, failed additional checks and a pending update - and
-remembers them per host. It is what `--baseline` / `--warn-on-new` are built
-on.
+Comme `scan()`, cette fonction mesure et ne juge jamais : ni note, ni exemptions,
+ni plan de correction. `probe_group(id)` indique à l’avance à quel groupe
+correspond un identifiant, le cas échéant. Elle lève `ScanError` lorsque
+l’instance est injoignable.
+
+## Comparer une analyse avec la précédente {#comparing-a-scan-with-the-last-one}
+
+`opencloud_local_scan.baseline` réduit un document de résultat aux constats qui
+méritent d’être comparés - vulnérabilités, mesures de durcissement manquantes
+exploitables et non exemptées, contrôles supplémentaires en échec et mise à jour
+en attente - et les mémorise par hôte. C’est la base de `--baseline` /
+`--warn-on-new`.
 
 ```python
 from opencloud_local_scan import load_baseline, scan, snapshot_of
@@ -1062,25 +1187,29 @@ store.record("opencloud.example.com", snapshot_of(result))
 store.save()
 ```
 
-`Comparison.regressed` is true on the first run (there is nothing to compare
-against, so staying quiet would hide a real problem), when a finding is new,
-when the rating has dropped, and whenever the release is past its end of life -
-that last one however long it has been true, because a release that receives
-no security fixes gets worse every day it stays in production.
+`Comparison.regressed` est vrai à la première exécution (il n’y a rien à quoi
+comparer, et rester silencieux masquerait un vrai problème), lorsqu’un constat
+est nouveau, lorsque la note a baissé, et chaque fois que la version a dépassé sa
+fin de vie - ce dernier cas quelle que soit sa durée, car une version qui ne
+reçoit plus de correctifs de sécurité se dégrade chaque jour où elle reste en
+production.
 
-The scan timestamp, the duration and the version string are deliberately not
-part of a snapshot: they change on their own and would make every run look
-new. Writing is atomic and owner-only, and a corrupt or future-format file is
-read as "no baseline yet" rather than raising - degrading to the normal check
-is never worse than refusing to run.
+L’horodatage de l’analyse, sa durée et la chaîne de version ne font
+volontairement pas partie d’un instantané : ils changent d’eux-mêmes et feraient
+paraître chaque exécution nouvelle. L’écriture est atomique et réservée au
+propriétaire, et un fichier corrompu ou d’un format futur est lu comme « pas
+encore de référence » au lieu de lever une erreur : revenir à la vérification
+normale n’est jamais pire que refuser de s’exécuter.
 
-## Trademarks and affiliation
+## Marques et affiliation {#trademarks-and-affiliation}
 
-This is an independent community project. It is **not** affiliated with,
-endorsed by, sponsored by or supported by OpenCloud GmbH, and nothing it
-reports is an official statement about OpenCloud software.
+Ce projet est un projet communautaire indépendant. Il n’est **pas** affilié à
+OpenCloud GmbH, ni approuvé, parrainé ou soutenu par elle, et rien de ce qu’il
+signale ne constitue une déclaration officielle concernant les logiciels
+OpenCloud.
 
-"OpenCloud", the OpenCloud logo and all related names and marks are the
-property of their respective owners. They appear here only to identify the
-software this tool checks, which is nominative use and implies no
-relationship. All rights in OpenCloud remain with OpenCloud GmbH.
+« OpenCloud », le logo OpenCloud ainsi que tous les noms et marques associés
+appartiennent à leurs propriétaires respectifs. Ils ne figurent ici que pour
+identifier le logiciel que vérifie cet outil, ce qui constitue un usage nominatif
+et n’implique aucune relation. Tous les droits sur OpenCloud restent la propriété
+d’OpenCloud GmbH.

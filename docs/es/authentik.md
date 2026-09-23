@@ -137,7 +137,7 @@ Notas sobre la pila, y en qué se diferencia de la oficial:
 - **El worker no recibe el socket de Docker.** La versión oficial lo monta para
   que el worker pueda gestionar contenedores outpost; esta pila no ejecuta
   ningún outpost, y dar a un contenedor el socket del daemon es darle el host.
-- **El estado vive en volúmenes con nombre** (`authentik_database`,
+- **El estado se guarda en volúmenes con nombre** (`authentik_database`,
   `authentik_media`, `authentik_templates`, `authentik_certs`) y no en montajes
   de directorios bajo `docker/`.
 - **No monte `/etc/localtime` ni `/etc/timezone`** en estos contenedores.

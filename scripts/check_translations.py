@@ -106,6 +106,16 @@ ACCEPTED: dict[tuple[str, str, str], str] = {
     ): "An example hostname, which is the same in every language."
     for locale in TRANSLATIONS
 }
+ACCEPTED.update({
+    ("glossary", "de", "how.tests.hardening.title"):
+        "Schutzmaßnahmen explains hardening in plain German in this heading.",
+    ("glossary", "de", "index.description"):
+        "Schutzmaßnahmen explains hardening to readers of the landing page.",
+    ("glossary", "es", "index.description"):
+        "Medidas de protección explains hardening to readers of the landing page.",
+    ("glossary", "fr", "index.description"):
+        "Protections explains hardening to readers of the landing page.",
+})
 
 
 # --------------------------------------------------------------- structure
@@ -276,13 +286,19 @@ REGISTER: dict[str, tuple[str, str, re.Pattern[str], bool]] = {
     "fr": (
         "polite (vous)",
         "familiar (tu)",
-        re.compile(r"\b(?:tu|toi|ton|ta|tes|tien(?:ne)?s?)\b"),
+        re.compile(
+            r"\b(?:tu|toi|ton|ta|tes|tien(?:ne)?s?|réessaie|recharge\s+la\s+page)\b",
+            re.IGNORECASE,
+        ),
         False,
     ),
     "es": (
         "polite (usted)",
         "familiar (tú)",
-        re.compile(r"\b(?:t[úu]|tus|tuyos?|tuyas?|vosotros|vuestr[oa]s?)\b"),
+        re.compile(
+            r"\b(?:t[úu]|tus|tuyos?|tuyas?|vosotros|vuestr[oa]s?|sigue\s+leyendo)\b",
+            re.IGNORECASE,
+        ),
         False,
     ),
 }
@@ -336,7 +352,7 @@ GLOSSARY: dict[str, dict[str, tuple[str, ...]]] = {
     "waiver": {
         "de": ("Ausnahme", "ausgenommen"),
         "fr": ("exemption", "exempté", "exclusion"),
-        "es": ("exención", "eximid", "exclusión"),
+        "es": ("exención", "exenciones", "eximid", "exclusión", "exclusiones"),
     },
 }
 

@@ -1,9 +1,9 @@
 # Kubernetes
 
-Lancer le scanner comme un `CronJob` programmé, ou déployer le [HTTP scan
-services](../README.md#running-the-scanner-as-a-service) lorsque plusieurs consommateurs ont besoin d'un
-résultat partagé. Ce sont des options indépendantes; un CronJob est suffisant pour la plupart des programmes
-des vérifications.
+Exécutez le scanner comme un `CronJob` planifié, ou déployez le [service
+d’analyse HTTP](../../README.md#running-the-scanner-as-a-service) lorsque plusieurs
+consommateurs ont besoin d’un résultat partagé. Ces deux options sont indépendantes ;
+un CronJob suffit pour la plupart des vérifications planifiées.
 
 L'image est construite depuis ce dépôt ; voir
 [Docker](installation.md#docker). Publiez-la dans votre registre et remplacez
@@ -14,19 +14,19 @@ partie du résultat.
 
 <!-- TOC -->
 * [Kubernetes](#kubernetes)
-  * [The Helm chart](#the-helm-chart)
-  * [A scheduled scan](#a-scheduled-scan)
-  * [Sending the result somewhere](#sending-the-result-somewhere)
-  * [The scan service](#the-scan-service)
+  * [Le chart Helm](#the-helm-chart)
+  * [Une analyse planifiée](#a-scheduled-scan)
+  * [Transmettre le résultat](#sending-the-result-somewhere)
+  * [Le service d’analyse](#the-scan-service)
 <!-- TOC -->
 
 
-## The Helm chart
+## Le chart Helm {#the-helm-chart}
 
 [`contrib/helm/check-opencloud-security`](../../contrib/helm/check-opencloud-security)
-packages both of the manifests below. Install it from a checkout - it is not
-publié dans un registre, et l'examen des objets rendus avant l'installation
-fait partie du contrôle de sécurité :
+regroupe les deux manifestes ci-dessous. Installez-le depuis une copie du dépôt :
+il n’est pas publié dans un registre, et l’examen des objets rendus avant
+l’installation fait partie du contrôle de sécurité :
 
 ```shell
 helm install opencloud-security contrib/helm/check-opencloud-security \
@@ -35,33 +35,33 @@ helm install opencloud-security contrib/helm/check-opencloud-security \
   --set 'cronJob.hosts={opencloud.example.com,other.example.com}'
 ```
 
-That is the scheduled scan and nothing else; `scanService.enabled=true` adds
-the service further down. Four values have no default and an install that
-omits one is refused rather than rendered:
+Cela installe l’analyse planifiée et rien d’autre ; `scanService.enabled=true`
+ajoute le service décrit plus bas. Quatre valeurs n’ont pas de valeur par
+défaut, et une installation qui en omet une est refusée au lieu d’être rendue :
 
-| Value | Why it is not defaulted |
+| Valeur | Pourquoi elle n’a pas de valeur par défaut |
 |:--|:--|
-| `image.tag` | The release schedule ships inside the image, so `latest` would let the verdict change under a running alert |
-| `cronJob.hosts` | A Job with no host scans nothing, daily, while looking like monitoring |
-| `scanService.existingSecret` | An untokened scan service scans any host anyone who reaches the pod names |
-| `scanService.networkPolicy.allowedTargets` | A policy with no egress rule is a different policy, not an unfinished one |
+| `image.tag` | Le calendrier des versions est livré dans l’image : `latest` permettrait au verdict de changer sous une alerte en cours |
+| `cronJob.hosts` | Un Job sans hôte n’analyse rien, chaque jour, tout en ayant l’air d’une supervision |
+| `scanService.existingSecret` | Un service d’analyse sans jeton analyse n’importe quel hôte indiqué par quiconque atteint le pod |
+| `scanService.networkPolicy.allowedTargets` | Une politique sans règle de sortie est une autre politique, pas une politique inachevée |
 
 Chaque identifiant est lu dans un `Secret` que vous avez créé et nommé ; le
-chart n'en écrit aucun, car un fichier de valeurs peut être copié avec le
-projet et un jeton qui s'y trouve aussi. Le
+chart n’en écrit aucun, car un fichier de valeurs peut être versionné et copié,
+et un jeton qu’il contient serait copié avec lui. Le
 [README du chart](../../contrib/helm/check-opencloud-security/README.md)
 contient le tableau complet des valeurs.
 
-The rest of this page is what the chart renders, for anyone who would rather
-apply the YAML directly or read it before installing.
+La suite de cette page montre ce que rend le chart, pour qui préfère appliquer
+directement le YAML ou le lire avant l’installation.
 
 
-## A scheduled scan
+## Une analyse planifiée {#a-scheduled-scan}
 
-A `CronJob` is the closest thing to the systemd timer in
-[Scheduling](scheduling.md). The exit code is what decides whether the job
-failed, so Kubernetes surfaces a WARNING or CRITICAL result as a failed job
-without any extra glue.
+Un `CronJob` est l’équivalent le plus proche du timer systemd décrit dans
+[Planification](scheduling.md). Le code de sortie décide si la tâche a échoué :
+Kubernetes présente donc un résultat WARNING ou CRITICAL comme une tâche en
+échec, sans aucun intermédiaire.
 
 ```yaml
 apiVersion: batch/v1
@@ -107,13 +107,13 @@ spec:
                   drop: ["ALL"]
 ```
 
-The image already runs as the unprivileged `nagios` user and writes nothing,
-so `readOnlyRootFilesystem` costs nothing.
+L’image s’exécute déjà avec l’utilisateur non privilégié `nagios` et n’écrit
+rien : `readOnlyRootFilesystem` ne coûte donc rien.
 
-`COS_RELEASES_TOKEN` is optional. Without it the update check uses GitHub
-anonymously, and sixty requests per hour are shared with everything else
-leaving that address - see
-[Update check](../README.md#update-check).
+`COS_RELEASES_TOKEN` est facultatif. Sans lui, la vérification des mises à jour
+interroge GitHub de façon anonyme, et soixante requêtes par heure sont
+partagées avec tout le reste du trafic sortant de cette adresse - voir
+[Vérification des mises à jour](../../README.md#update-check).
 
 ```shell
 kubectl create secret generic opencloud-security \
@@ -125,11 +125,11 @@ kubectl create job --from=cronjob/opencloud-security opencloud-security-now \
 kubectl logs job/opencloud-security-now --namespace monitoring
 ```
 
-## Sending the result somewhere
+## Transmettre le résultat {#sending-the-result-somewhere}
 
-A failed job is a blunt signal. Add the webhook and the result arrives with
-the reason attached - see [Webhook recipes](../webhook-recipes.md) and
-[Uptime Kuma](../webhook-recipes.md#uptime-kuma):
+Une tâche en échec est un signal grossier. Ajoutez le webhook : le résultat
+arrive alors accompagné de sa raison - voir les [exemples de webhooks](webhooks.md)
+et [Uptime Kuma](webhooks.md#uptime-kuma) :
 
 ```yaml
               args:
@@ -143,15 +143,17 @@ the reason attached - see [Webhook recipes](../webhook-recipes.md) and
                     secretKeyRef: {name: opencloud-security, key: webhook-url}
 ```
 
-`--webhook-on=always` matters for a push-style receiver: with the default
-`critical` it only ever hears from the check when something is wrong, and
-cannot tell a healthy instance from a job that never ran.
+`--webhook-on=always` compte pour un récepteur de type push : avec la valeur
+par défaut `critical`, il n’a de nouvelles du contrôle qu’en cas de problème et
+ne peut pas distinguer une instance saine d’une tâche qui ne s’est jamais
+exécutée.
 
-## The scan service
+## Le service d’analyse {#the-scan-service}
 
-Run this only if several consumers need the same result. The plugin does not
-talk to it - it always scans in process - so this is for dashboards, scripts
-and second monitoring systems.
+Ne l’exécutez que si plusieurs consommateurs ont besoin du même résultat. Le
+plugin ne l’utilise pas (il analyse toujours dans son propre processus) : ce
+service sert donc aux tableaux de bord, aux scripts et aux systèmes de
+supervision secondaires.
 
 ```yaml
 apiVersion: apps/v1
@@ -204,8 +206,8 @@ spec:
       targetPort: 8811
 ```
 
-`/healthz` needs no token, which is what makes it usable as a probe. Every
-other endpoint does:
+`/healthz` ne demande pas de jeton, ce qui permet de l’utiliser comme sonde.
+Tous les autres points de terminaison en exigent un :
 
 ```shell
 kubectl run curl --rm -it --image=curlimages/curl --restart=Never -- \
@@ -213,10 +215,10 @@ kubectl run curl --rm -it --image=curlimages/curl --restart=Never -- \
   'http://opencloud-scanner.monitoring:8811/api/scan?url=opencloud.example.com'
 ```
 
-Give the pod a `NetworkPolicy` that lets it reach only the instances you
-actually scan. A scan service that can reach the whole cluster is a request
-forgery engine with a REST API.
+Donnez au pod une `NetworkPolicy` qui ne lui permet d’atteindre que les
+instances que vous analysez réellement. Un service d’analyse qui peut atteindre
+tout le cluster est une machine à falsifier des requêtes dotée d’une API REST.
 
 ---
 
-[Back to the documentation index](../../README.md) | [Back to the main README](../README.md)
+[Retour à l’index de la documentation](../README.md) | [Retour au README principal](../../README.md)

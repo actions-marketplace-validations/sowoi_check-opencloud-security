@@ -1,4 +1,4 @@
-# Docker
+# Docker {#scanning-from-the-command-line-in-one-line}
 
 Lancez le scanner sur votre machine avec l’image Docker publiée. Il utilise le même
 scanner que le [service web](../webapp.md), se connecte directement à votre instance et n’est
@@ -9,8 +9,7 @@ docker run --rm --entrypoint check-opencloud-security \
   okxo/opencloud-scanner:latest --host opencloud.example.com
 ```
 
-That is the whole thing. It prints the same line a monitoring system would
-get:
+La commande affiche la même sortie que celle reçue par un système de supervision :
 
 ```text
 OK: Server is up to date. No known vulnerabilities.
@@ -18,52 +17,40 @@ OpenCloud 7.2.3 on opencloud.example.com, rating: A+, last scanned: 2026-08-25 0
 Release lifecycle: 7.2 (production, track detected), current release
 ```
 
-The exit code is the Nagios one - `0` OK, `1` WARNING, `2` CRITICAL, `3`
-UNKNOWN - so the same line works in a script, a pipeline or a cron job without
-anything else around it.
+Le code de sortie suit la convention Nagios : `0` OK, `1` WARNING, `2` CRITICAL,
+`3` UNKNOWN. Vous pouvez donc utiliser cette commande dans un script, un pipeline
+ou une tâche cron.
 
-> **Trademark notice.** This project is independent. It is not affiliated
-> with, endorsed by or supported by OpenCloud GmbH. "OpenCloud" and all
-> related marks belong to their respective owners and are used here only to
-> identify the software being checked.
+> **Marques déposées.** Ce projet est indépendant. Il n’est ni affilié à OpenCloud
+> GmbH, ni approuvé ou pris en charge par cette société. « OpenCloud » et les marques
+> associées appartiennent à leurs propriétaires respectifs. Elles servent ici
+> uniquement à identifier le logiciel analysé.
 
-<!-- TOC -->
-* [Scanning from the command line, in one line](#scanning-from-the-command-line-in-one-line)
-  * [What the image is](#what-the-image-is)
-  * [The same scan, as JSON](#the-same-scan-as-json)
-  * [Useful variations](#useful-variations)
-  * [Make it shorter](#make-it-shorter)
-  * [Without Docker](#without-docker)
-  * [Where to go next](#where-to-go-next)
-<!-- TOC -->
+## Contenu de l’image {#what-the-image-is}
 
+L’image [`okxo/opencloud-scanner`](https://hub.docker.com/r/okxo/opencloud-scanner)
+est construite à partir de ce dépôt et contient deux commandes :
 
-## What the image is
+| Commande | Fonction |
+|:--|:--|
+| `check-opencloud-security` | Plugin Nagios/Icinga : état, données de performance et code de sortie |
+| `check-opencloud-scanner` | Scanner autonome : résultat complet en JSON ou service HTTP |
 
-[`okxo/opencloud-scanner`](https://hub.docker.com/r/okxo/opencloud-scanner) is
-built from this repository and carries both entry points:
+Par défaut, l’image démarre l’application web. Chaque exemple utilise donc
+`--entrypoint`. Pour conserver le même comportement lors des prochaines exécutions,
+choisissez une version précise, comme `okxo/opencloud-scanner:1.9`, au lieu de `latest`.
 
-| Entry point | What it does |
-|:------------|:-------------|
-| `check-opencloud-security` | The Nagios/Icinga plugin: one status line, perfdata, an exit code |
-| `check-opencloud-scanner` | The scanner on its own: the whole result document as JSON, or an HTTP service |
+## Obtenir le résultat en JSON {#the-same-scan-as-json}
 
-The image's default command starts the web application, which is why every
-line here passes `--entrypoint`. Pin a version instead of `latest`
-(`okxo/opencloud-scanner:1.9`) if you want the command to keep behaving the
-same next month.
-
-## The same scan, as JSON
-
-Everything the web interface draws comes from this document - the rating, the
-release lifecycle, the advisories, every check and the remediation plan:
+Ce document contient toutes les données affichées par l’interface web : note,
+cycle de vie de la version, avis de sécurité, contrôles et mesures correctives.
 
 ```shell
 docker run --rm --entrypoint check-opencloud-scanner \
   okxo/opencloud-scanner:latest scan opencloud.example.com
 ```
 
-Pipe it into `jq` for the parts you care about:
+Utilisez `jq` pour sélectionner les champs utiles :
 
 ```shell
 docker run --rm --entrypoint check-opencloud-scanner \
@@ -71,22 +58,20 @@ docker run --rm --entrypoint check-opencloud-scanner \
   | jq '{rating, version, addresses, failed: [.extraChecks[] | select(.passed | not) | .id]}'
 ```
 
-`addresses` is the IPv4 and IPv6 the name resolved to when the scan ran - the
-same pair the result page shows under **Resolved to**, and worth a second look
-when a scan reports something you did not expect: a name pointing at an old
-address explains a surprising number of surprising results.
+`addresses` contient les adresses IPv4 et IPv6 obtenues lors de la résolution du nom.
+La page de résultat les affiche aussi sous **Resolved to**. Vérifiez-les si le résultat
+vous surprend : le nom peut encore pointer vers une ancienne adresse.
 
-## Useful variations
+## Variantes utiles {#useful-variations}
 
-Explain every finding rather than only naming it:
+Afficher l’explication de chaque constat :
 
 ```shell
 docker run --rm --entrypoint check-opencloud-security \
   okxo/opencloud-scanner:latest --host opencloud.example.com --debug
 ```
 
-Accept a finding you have decided to live with, exactly as the tick boxes on
-the website do:
+Accepter un constat, comme avec les cases à cocher du site :
 
 ```shell
 docker run --rm --entrypoint check-opencloud-security \
@@ -94,8 +79,8 @@ docker run --rm --entrypoint check-opencloud-security \
   --ignore-hardening basicAuthDisabled
 ```
 
-Rate the version against a particular release track rather than the one the
-scan infers:
+Évaluer la version selon un canal de publication précis au lieu du canal déduit
+par le scanner :
 
 ```shell
 docker run --rm --entrypoint check-opencloud-security \
@@ -103,37 +88,37 @@ docker run --rm --entrypoint check-opencloud-security \
   --release-track lts
 ```
 
-Scan an instance that is not on the internet - a staging box on your own
-network, or one behind a name only your resolver knows:
+Analyser une instance privée, par exemple un serveur de préproduction sur votre réseau
+ou un nom connu uniquement de votre résolveur DNS :
 
 ```shell
 docker run --rm --network host --entrypoint check-opencloud-security \
   okxo/opencloud-scanner:latest --host opencloud.internal.example.com
 ```
 
-The hosted service refuses a private address on purpose; your own machine has
-no reason to.
+Le service hébergé refuse les adresses privées. Une analyse lancée sur votre propre
+machine peut les atteindre.
 
-Configure it with environment variables instead of flags, which is easier to
-template over a list of hosts - every option has a `COS_` variable, listed in
-the [main README](../README.md#environment-variables):
+Utiliser des variables d’environnement facilite la configuration d’une liste d’hôtes.
+Chaque option possède une variable `COS_`, décrite dans le
+[README principal](../README.md#environment-variables) :
 
 ```shell
 docker run --rm -e COS_HOST=opencloud.example.com \
   --entrypoint check-opencloud-security okxo/opencloud-scanner:latest
 ```
 
-Skip the update check when the machine has no internet access, or when you do
-not want the release feed contacted at all:
+Désactiver la recherche de mises à jour si la machine n’a pas accès à Internet ou
+si vous ne souhaitez pas contacter le flux des versions :
 
 ```shell
 docker run --rm --entrypoint check-opencloud-security \
   okxo/opencloud-scanner:latest --host opencloud.example.com --no-update-check
 ```
 
-## Make it shorter
+## Raccourcir la commande {#make-it-shorter}
 
-If you run this often, a shell function turns it into one word:
+Pour un usage fréquent, ajoutez une fonction à votre shell :
 
 ```shell
 # ~/.bashrc or ~/.zshrc
@@ -147,11 +132,10 @@ opencloud-scan() {
 opencloud-scan opencloud.example.com --debug
 ```
 
-## Without Docker
+## Sans Docker {#without-docker}
 
-The check is on PyPI and is a normal Python program, so
-[`uv`](https://docs.astral.sh/uv/) or `pipx` will run it with no container at
-all:
+Le plugin est un programme Python publié sur PyPI. Vous pouvez l’exécuter avec
+[`uv`](https://docs.astral.sh/uv/) ou `pipx`, sans conteneur :
 
 ```shell
 uvx --from check-opencloud-security check-opencloud-security \
@@ -163,14 +147,10 @@ pipx run --spec check-opencloud-security check-opencloud-security \
   --host opencloud.example.com
 ```
 
-## Where to go next
+## Pour aller plus loin {#where-to-go-next}
 
-- [The main README](../README.md) - every option, and what each check means.
-- [Scheduling](scheduling.md) - the same command on a timer, with a systemd
-  unit or a cron entry.
-- [Running the check from CI](ci.md) - gating a pipeline on a field of the
-  result document.
-- [Checking a fleet of instances](many-instances.md) - one file per instance,
-  and alerting only on what changed.
-- [The public scan service](../webapp.md) - running the web interface yourself,
-  if you would like the pages as well as the command.
+- [README principal](../README.md) : options et signification des contrôles.
+- [Planification](scheduling.md) : exécution périodique avec systemd ou cron.
+- [Analyse en CI](ci.md) : conditionner un pipeline à un champ du résultat.
+- [Parc d’instances](many-instances.md) : un fichier par instance et des alertes sur les changements.
+- [Service d’analyse public](../webapp.md) : héberger vous-même l’interface web.

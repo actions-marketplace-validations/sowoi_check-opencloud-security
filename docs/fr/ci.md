@@ -1,38 +1,22 @@
-# Pipelines CI
+# Pipelines CI {#running-the-check-from-ci}
 
-Utilisez un pipeline d'IC programmé pour des analyses régulières ou pour vérifier une instance d'un autre
-réseau. Vérifier que le pipeline fonctionne et comprendre ce qu’il signale : un travail manqué
-ne produit aucun résultat d'analyse.
+Un pipeline d’intégration continue (CI) peut analyser régulièrement une instance ou
+la vérifier depuis un autre réseau. Surveillez aussi son exécution : une tâche qui
+ne démarre pas ne produit aucun résultat.
 
-Whatever the platform, three things decide whether it works:
+Trois points s’appliquent à toutes les plateformes :
 
-- **The runner has to reach the instance.** A hosted runner cannot scan
-  something behind your firewall - use a self-hosted runner for that.
-- **The scan is from the runner's vantage point.** What it measures about TLS,
-  enforced HTTPS and reachable debug ports is what an outsider on that network
-  sees, which is usually the interesting answer.
-- **The exit code is the result**: `0` OK, `1` WARNING, `2` CRITICAL, `3`
-  UNKNOWN. A pipeline fails on anything non-zero, so `--warning` and
-  `--critical` decide how strict it is.
+- **L’exécuteur doit atteindre l’instance.** Pour une instance derrière votre pare-feu,
+  utilisez un exécuteur que vous hébergez sur le réseau concerné.
+- **L’analyse reflète le réseau de l’exécuteur.** Les contrôles TLS, HTTPS et des ports
+  de débogage mesurent ce qui est accessible depuis ce réseau.
+- **Le code de sortie représente le résultat :** `0` OK, `1` WARNING, `2` CRITICAL,
+  `3` UNKNOWN. Un code non nul fait échouer le pipeline. Les options `--warning`
+  et `--critical` définissent donc ses seuils.
 
-<!-- TOC -->
-* [Running the check from CI](#running-the-check-from-ci)
-  * [GitHub Actions](#github-actions)
-    * [The action](#the-action)
-    * [Feeding the code-scanning dashboard](#feeding-the-code-scanning-dashboard)
-    * [Installing it yourself instead](#installing-it-yourself-instead)
-    * [OpenCloud compatibility evidence](#opencloud-compatibility-evidence)
-    * [Reporting rather than failing](#reporting-rather-than-failing)
-    * [The JSON document instead](#the-json-document-instead)
-  * [GitLab CI](#gitlab-ci)
-  * [Using the container image instead of installing](#using-the-container-image-instead-of-installing)
-  * [Do not put the token on the command line](#do-not-put-the-token-on-the-command-line)
-<!-- TOC -->
+## GitHub Actions {#github-actions}
 
-
-## GitHub Actions
-
-### The action
+### Utiliser l’action {#the-action}
 
 ```yaml
 name: OpenCloud security check
@@ -57,33 +41,33 @@ jobs:
           releases-token: ${{ github.token }}
 ```
 
-That is the whole thing. The step installs the pinned release, scans the
-instance, writes `opencloud-security.json`, puts the result in the job
-summary, and fails the job on WARNING, CRITICAL or UNKNOWN.
+Cette étape installe la version indiquée, analyse l’instance, écrit
+`opencloud-security.json` et ajoute le résultat au résumé de la tâche. Elle fait
+échouer la tâche pour WARNING, CRITICAL ou UNKNOWN.
 
-**Pin the tag.** The release schedule and the newest known OpenCloud version
-ship *inside* the package, so which release runs is part of the verdict.
-`@v1.16.0` installs exactly 1.16.0; a branch or SHA ref installs the newest
-release and says so in a warning annotation.
+**Choisissez un tag précis.** Le paquet contient le calendrier des versions et la
+dernière version OpenCloud connue. La version du plugin influence donc le verdict.
+`@v1.16.0` installe exactement la version 1.16.0. Une référence de branche ou de
+commit SHA installe la dernière version publiée et le signale par un avertissement.
 
-| Input | Default | What it does |
+| Entrée | Valeur par défaut | Fonction |
 |:--|:--|:--|
-| `target` | *required* | The instance, as a hostname or URL |
-| `version` | the pinned tag | Which release of the check to install |
-| `format` | `json` | `json`, `sarif`, `junit` or `nagios` |
-| `output-file` | `opencloud-security.json` | Where the output is written |
-| `fail-on` | `warning` | `warning`, `critical` or `never` |
-| `warning` / `critical` | plugin defaults | Rating thresholds |
-| `check-hardening` | `true` | Count hardening measures towards the result |
-| `ignore-hardening` | *none* | Identifiers to waive, comma-separated |
-| `release-track` | `auto` | `auto`, `rolling`, `production` or `lts` |
-| `releases-token` | *none* | A token for the release feed's rate limit |
-| `summary` | `true` | Write the result to the job summary |
-| `extra-args` | *none* | Any other flag, passed verbatim |
+| `target` | *obligatoire* | Nom d’hôte ou URL de l’instance |
+| `version` | Tag choisi | Version du plugin à installer |
+| `format` | `json` | `json`, `sarif`, `junit` ou `nagios` |
+| `output-file` | `opencloud-security.json` | Fichier de sortie |
+| `fail-on` | `warning` | `warning`, `critical` ou `never` |
+| `warning` / `critical` | Valeurs du plugin | Seuils de notation |
+| `check-hardening` | `true` | Inclure les mesures de durcissement dans le résultat |
+| `ignore-hardening` | *aucune* | Identifiants exemptés, séparés par des virgules |
+| `release-track` | `auto` | `auto`, `rolling`, `production` ou `lts` |
+| `releases-token` | *aucun* | Jeton pour augmenter la limite de requêtes du flux des versions |
+| `summary` | `true` | Ajouter le résultat au résumé de la tâche |
+| `extra-args` | *aucun* | Autres arguments, transmis tels quels |
 
-The outputs are `exit-code`, `status`, `rating`, `rating-label`, `message` and
-`result-file`. All but the first two are empty unless `format` is `json`,
-because they are read out of that document:
+Les sorties sont `exit-code`, `status`, `rating`, `rating-label`, `message` et
+`result-file`. Seules les deux premières sont disponibles hors du format `json` ;
+les autres sont lues dans le document JSON :
 
 ```yaml
       - uses: sowoi/check-opencloud-security@v1.16.0
@@ -99,19 +83,17 @@ because they are read out of that document:
           GH_TOKEN: ${{ github.token }}
 ```
 
-`fail-on: never` is what makes that possible: the step succeeds, and the
-decision moves to a later step that can do something more useful than turning
-the run red.
+Avec `fail-on: never`, l’étape réussit toujours. Une étape suivante peut alors agir
+selon le résultat, par exemple ouvrir un ticket.
 
-Note that the runner has to be able to reach the instance. A hosted runner
-cannot see anything behind your firewall - use a self-hosted one for that, or
-scan from the network the instance actually publishes to.
+L’exécuteur doit pouvoir atteindre l’instance. Un exécuteur hébergé ne peut pas
+traverser votre pare-feu. Utilisez un exécuteur local ou analysez l’instance depuis
+le réseau sur lequel elle est publiée.
 
-### Feeding the code-scanning dashboard
+### Alimenter le tableau des analyses de sécurité {#feeding-the-code-scanning-dashboard}
 
-`format: sarif` writes SARIF 2.1.0, which is what GitHub's Security tab
-ingests. The findings then live where the rest of your security findings do,
-with their own history, rather than in a log nobody opens:
+`format: sarif` produit un document SARIF 2.1.0 accepté par l’onglet Security de
+GitHub. Les constats y apparaissent avec leur historique :
 
 ```yaml
 permissions:
@@ -136,14 +118,14 @@ jobs:
           category: opencloud-security
 ```
 
-Keep `fail-on: never` here and gate on the uploaded findings instead. A step
-that fails before the upload throws away the very findings that failed it.
+Conservez `fail-on: never` pour permettre l’envoi du fichier, puis appliquez votre
+politique aux constats importés. Sinon, l’échec de l’étape peut empêcher leur envoi.
 
-### Installing it yourself instead
+### Installer le plugin directement {#installing-it-yourself-instead}
 
-Nothing about the action is privileged - it installs the same package and runs
-the same command. Do it by hand when you need a step the action does not
-model, or when you would rather not depend on an action at all.
+L’action installe le même paquet et lance la même commande que vous pouvez utiliser
+vous-même. Une installation directe convient si vous avez besoin d’une étape que
+l’action ne propose pas ou si vous souhaitez éviter cette dépendance.
 
 ```yaml
 name: OpenCloud security check
@@ -174,18 +156,17 @@ jobs:
         run: check-opencloud-security
 ```
 
-Pin the version rather than tracking `latest`. The release schedule and the
-newest known OpenCloud version ship inside the package, so which version you
-install is part of the verdict - and an unpinned install turns an upstream
-release into an unexplained pipeline failure.
+Fixez la version installée. Le calendrier fourni et la dernière version OpenCloud
+connue participent au verdict. Sans version fixe, une nouvelle publication du
+plugin peut modifier le résultat du pipeline.
 
-`workflow_dispatch` is worth keeping: it is how you re-run the check after
-fixing something without waiting for tomorrow.
+Conservez `workflow_dispatch` pour relancer le contrôle après une correction sans
+attendre la prochaine exécution planifiée.
 
-### Reporting rather than failing
+### Publier le résultat sans faire échouer la tâche {#reporting-rather-than-failing}
 
-A failed scheduled workflow only notifies the person who last touched it. To
-get the result somewhere people look, keep the job green and post the outcome:
+L’échec d’un workflow planifié ne notifie que la personne qui l’a modifié en dernier.
+Vous pouvez laisser la tâche réussir et publier son résultat dans le résumé :
 
 ```yaml
       - name: Scan the instance
@@ -212,16 +193,16 @@ get the result somewhere people look, keep the job green and post the outcome:
           } >> "$GITHUB_STEP_SUMMARY"
 ```
 
-Alternatively, set `--webhook-url` to deliver the result directly; see [Webhook
-recipes](../webhook-recipes.md). Delivery still depends on the workflow running. If
-scheduled runs are disabled, neither summaries nor webhooks are produced.
+Vous pouvez aussi utiliser `--webhook-url` pour envoyer directement le résultat ;
+voir les [exemples de webhooks](../webhook-recipes.md). Ces deux méthodes nécessitent
+que le workflow s’exécute. Si les exécutions planifiées sont désactivées, aucun
+résumé ni webhook n’est produit.
 
-### The JSON document instead
+### Exploiter le document JSON {#the-json-document-instead}
 
-For anything that has to make a decision - a policy gate, a dashboard, an
-issue filed automatically - use the scanner rather than the plugin. It prints
-the full result document, and every field in it is documented in
-[the library README](../../opencloud_local_scan/README.md).
+Pour appliquer une règle, alimenter un tableau de bord ou créer automatiquement
+un ticket, utilisez le scanner autonome. Il affiche le résultat complet, dont les
+champs sont décrits dans le [README de la bibliothèque](../../opencloud_local_scan/README.md).
 
 ```yaml
       - name: Scan and keep the result
@@ -236,42 +217,40 @@ the full result document, and every field in it is documented in
           path: scan.json
 ```
 
-`jq -e` exits non-zero when the expression is false, which is what turns a
-field of the document into a pipeline gate. `.EOL`, `.rating`,
-`.updates.available` and `.lifecycle.daysRemaining` are the four worth gating
-on.
+`jq -e` renvoie un code non nul si l’expression est fausse. Vous pouvez ainsi faire
+dépendre la réussite du pipeline d’un champ. Les champs `.EOL`, `.rating`,
+`.updates.available` et `.lifecycle.daysRemaining` sont particulièrement utiles.
 
-### OpenCloud compatibility evidence
+### Preuves de compatibilité OpenCloud {#opencloud-compatibility-evidence}
 
-The repository's **real OpenCloud container** workflow keeps one reviewed,
-immutable rolling-image digest as its baseline and runs the scanner against it
-weekly. It verifies that the container still initializes, exposes the expected
-public status endpoint, identifies itself as OpenCloud, reports a version, and
-produces a bounded rating. The image reports its exact OpenCloud version during
-the test; the workflow intentionally does not claim compatibility for a new
-release until that evidence has been reviewed.
+Le workflow du dépôt utilisant un **véritable conteneur OpenCloud** conserve comme
+référence l’empreinte immuable d’une image rolling examinée. Chaque semaine, il
+vérifie que le conteneur démarre, publie le chemin de statut attendu, s’identifie
+comme OpenCloud, annonce une version et produit une note dans les limites prévues.
+L’image indique sa version exacte pendant le test. La compatibilité avec une
+nouvelle version n’est déclarée qu’après examen de ces résultats.
 
-| Evidence | Baseline | Compatible when | Review path |
+| Preuve | Référence | Conditions de compatibilité | Examen |
 |:--|:--|:--|:--|
-| Vendor container integration | `opencloudeu/opencloud-rolling@sha256:0bb9038f4c01ab187a014e97550435f5d45630731aed9341d87a0b40fe72fe3d` | The complete integration test passes and its reported version and externally observable behaviour are reviewed | Dispatch the workflow with `candidate_image`; update the baseline only in a reviewed pull request |
-| Release lifecycle | Bundled schedule plus the daily conservative refresh | New or changed lines retain existing support facts and pass lifecycle regressions | Review the release-schedule refresh PR |
-| Advisories | Bundled database plus the daily conservative refresh | New advisories add evidence without removing known affected ranges | Review the advisory-database refresh PR |
+| Intégration avec le conteneur officiel | `opencloudeu/opencloud-rolling@sha256:0bb9038f4c01ab187a014e97550435f5d45630731aed9341d87a0b40fe72fe3d` | Test complet réussi, version annoncée et comportement observable examinés | Lancer le workflow avec `candidate_image` ; modifier la référence dans une pull request examinée |
+| Cycle de vie des versions | Calendrier fourni et actualisation quotidienne conservatrice | Conservation des informations de support existantes et réussite des tests de non-régression | Examiner la pull request d’actualisation du calendrier |
+| Avis de sécurité | Base fournie et actualisation quotidienne conservatrice | Ajout de preuves sans supprimer les plages de versions déjà connues comme affectées | Examiner la pull request d’actualisation des avis |
 
-The automation never rewrites fixtures, grades, or security expectations to
-turn a candidate green. A changed response, header, endpoint, or security
-property must have release evidence and a reviewable test change naming that
-evidence.
+L’automatisation ne modifie jamais les données de test, les notes ni les attentes
+de sécurité pour faire réussir une image candidate. Tout changement de réponse,
+d’en-tête, de chemin ou de propriété de sécurité exige des preuves liées à la
+version et une modification de test qui les cite.
 
-The repository's `Supply-chain checks` workflow runs on pull requests, pushes
-to `main` and weekly. It exports the fully resolved `uv.lock` dependency set,
-runs `pip-audit` over core, web and MCP dependencies, and publishes a
-CycloneDX SBOM as a workflow artifact. Pushes and scheduled runs also receive
-a GitHub Sigstore attestation, so the SBOM can be verified with
-`gh attestation verify`. The release workflow repeats this for the exact
-runtime environment shipped with each package and attests the package files
-and web bundle.
+Le workflow `Supply-chain checks` s’exécute sur les pull requests, les envois vers
+`main` et chaque semaine. Il exporte les dépendances résolues de `uv.lock`, exécute
+`pip-audit` sur les dépendances du cœur, du web et de MCP, puis publie un inventaire
+logiciel SBOM CycloneDX comme artefact. Les exécutions planifiées et celles déclenchées
+par un envoi reçoivent aussi une attestation GitHub Sigstore. Vérifiez-la avec
+`gh attestation verify`. Le workflow de publication répète ces contrôles sur
+l’environnement d’exécution exact livré avec chaque paquet et atteste les paquets
+ainsi que l’archive web.
 
-## GitLab CI
+## GitLab CI {#gitlab-ci}
 
 ```yaml
 opencloud-security:
@@ -290,18 +269,17 @@ opencloud-security:
     exit_codes: [1]
 ```
 
-`allow_failure.exit_codes` maps the plugin's states onto GitLab's directly:
-list `1` to tolerate WARNING, add `3` to tolerate a scan that could not
-complete - though a scan that cannot complete is usually the thing you most
-want to know about.
+`allow_failure.exit_codes` associe directement les états du plugin aux règles
+GitLab. La valeur `1` tolère WARNING. Ajouter `3` tolère une analyse inachevée,
+mais cet échec mérite généralement une intervention.
 
-Add the schedule under *Build → Pipeline schedules*; the `rules` block above
-keeps the job out of ordinary commit pipelines.
+Ajoutez la planification dans *Build → Pipeline schedules*. Le bloc `rules` évite
+l’exécution de cette tâche dans les pipelines ordinaires de commit.
 
-## Using the container image instead of installing
+## Utiliser une image de conteneur {#using-the-container-image-instead-of-installing}
 
-This example builds the plugin image from the checkout. The published
-`okxo/opencloud-scanner` image is another option when you select the plugin with
+Cet exemple construit l’image du plugin depuis le dépôt. Vous pouvez aussi utiliser
+l’image publiée `okxo/opencloud-scanner` avec
 `--entrypoint check-opencloud-security`.
 
 ```shell
@@ -315,14 +293,14 @@ docker run --rm \
   registry.example.com/check-opencloud-security:1.1.0
 ```
 
-## Do not put the token on the command line
+## Ne pas placer les jetons dans la ligne de commande {#do-not-put-the-token-on-the-command-line}
 
-CI logs are readable by more people than you think, and `--release-token` on a
-command line ends up in them. Pass secrets as environment variables
-(`COS_RELEASES_TOKEN`, `COS_WEBHOOK_URL`) or as a
-[secret reference](../README.md#configuration-file-and-secrets). The plugin
-redacts tokens from its own debug output; it cannot redact your shell trace.
+Les journaux CI peuvent être accessibles à plusieurs personnes. Un jeton passé
+avec `--release-token` peut y apparaître. Utilisez les variables d’environnement
+`COS_RELEASES_TOKEN`, `COS_WEBHOOK_URL` ou une
+[référence de secret](../README.md#configuration-file-and-secrets). Le plugin masque
+les jetons dans sa propre sortie de débogage, mais pas dans les traces du shell.
 
 ---
 
-[Back to the documentation index](../../README.md) | [Back to the main README](../README.md)
+[Retour à l’index de documentation](../../README.md) | [Retour au README principal](../README.md)

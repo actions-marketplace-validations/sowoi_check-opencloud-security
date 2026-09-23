@@ -274,7 +274,7 @@ dos factores específicamente para OpenCloud:</p>
       policy: two_factor
 </code></pre>
 <h3 id="basic-authentication-is-the-hole-in-all-of-this">La autenticación básica es el agujero de todo esto</h3>
-<p>Nada de lo anterior se aplica a un cliente que no habla OpenID Connect:
+<p>Nada de lo anterior se aplica a un cliente que no admite OpenID Connect:
 calendarios CalDAV y CardDAV, montajes WebDAV, trabajos de copia de seguridad.
 Esos se autentican con HTTP Basic, y <code>PROXY_ENABLE_BASIC_AUTH=true</code> vuelve a
 abrir una vía que elude su proveedor y todos sus segundos factores.</p>
@@ -380,8 +380,8 @@ distinto del de la instancia y con su propia retención.</strong> Un recolector 
 pueden borrar las propias credenciales de OpenCloud no es mucho mejor que un
 archivo local.</p>
 <h3 id="what-to-actually-alert-on">Sobre qué alertar realmente</h3>
-<p>Alertar sobre todo es no alertar sobre nada. Una lista breve que se ha ganado
-su sitio:</p>
+<p>Un exceso de alertas dificulta detectar los problemas importantes. Dé
+prioridad a los siguientes:</p>
 <ul>
 <li>Un <strong>enlace público creado sin contraseña o sin caducidad</strong>, sobre todo en un
   espacio que no suele compartirse.</li>
@@ -578,10 +578,9 @@ las formas en que ocurre son cotidianas, no dramáticas:</p>
 </ul>
 <p>Ejecutar este complemento de forma programada convierte cada una de esas
 situaciones en una alerta el mismo día en que ocurre, desde fuera de la
-instancia, que es el mismo punto de vista que tiene un atacante. Ese es el
-argumento a favor de la monitorización continua en una frase: <strong>el intervalo
-entre que un despliegue se rompe y alguien lo nota es donde viven los
-incidentes, y lo único que lo acorta es algo que mira cada pocos minutos.</strong></p>
+instancia, que es el mismo punto de vista que tiene un atacante. La
+monitorización continua <strong>reduce el tiempo entre la aparición de un problema
+y su detección al comprobar la instancia cada pocos minutos.</strong></p>
 <h3 id="a-monitoring-setup-that-is-worth-having">Una configuración de monitorización que merece la pena</h3>
 <p>Empiece por aquí y después lea <a href="/documentation/scheduling">Programación</a> o
 <a href="/documentation/installation#icinga2--nagios">Icinga2 / Nagios</a> para su plataforma:</p>

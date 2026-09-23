@@ -273,7 +273,7 @@ cabeceras `Strict-Transport-Security` son peores que ninguna.
 - **`X-Forwarded-For` añadido a partir de un valor enviado por el cliente.**
   Aquí no es un hallazgo, pero convierte en conjeturas todos los límites de
   frecuencia y registros de auditoría detrás del proxy. Sobrescríbalo en el
-  borde.
+  proxy que recibe las solicitudes externas.
 - **`X-Forwarded-Host` reenviado tal como lo envía el cliente.** Esto *sí* es
   un hallazgo, `forwardedHostIgnored`, cuando la instancia construye después
   sus URL públicas a partir de él. El análisis pide el documento de
@@ -283,7 +283,7 @@ cabeceras `Strict-Transport-Security` son peores que ninguna.
   defina la cabecera desde la configuración del propio proxy
   (`proxy_set_header X-Forwarded-Host $host;`) en lugar de reenviar lo que
   llegue. Un host virtual predeterminado que rechace los nombres que no
-  reconoce cierra la misma puerta para la cabecera `Host`.
+  reconoce impide el mismo problema con la cabecera `Host`.
 - **Ningún servidor predeterminado.** Sin uno, nginx responde a un `Host` para
   el que no tiene `server_name` desde el primer bloque `server` que cargó para
   ese puerto (a menudo otra aplicación del mismo equipo), y Apache desde el
@@ -329,8 +329,8 @@ cabeceras `Strict-Transport-Security` son peores que ninguna.
 La aplicación web de este repositorio ([`docs/webapp.md`](../webapp.md)) es un
 servicio ASGI simple en un puerto. Envía sus propias cabeceras de seguridad,
 incluida una `Content-Security-Policy` sin `unsafe-inline`, así que un proxy
-no tiene nada que añadir. Lo que sí necesita es la verdad sobre quién llama y
-la paciencia suficiente para que termine un análisis.
+no tiene nada que añadir. El proxy debe transmitir la dirección real del cliente y
+permitir que la conexión dure lo suficiente para completar un análisis.
 
 **No tiene que copiar nada de esto a mano.**
 [`docker/setup-wizard.py`](../../docker/setup-wizard.py) escribe la

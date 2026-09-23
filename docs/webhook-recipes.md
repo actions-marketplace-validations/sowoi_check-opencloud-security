@@ -89,6 +89,9 @@ end-of-life release:
   },
   "eol_warning_days": 30,
   "eol_warning": false,
+  "waiver_days_left": 8,
+  "waiver_warning_days": 14,
+  "waiver_warning": true,
   "upgrade_path": null,
   "upgrade_rehearsal": [],
   "vulnerability_count": 0,
@@ -105,7 +108,10 @@ end-of-life release:
 ```
 
 `eol_warning_days` is the `--eol-warning` window the check ran with (`0` when
-off) and `eol_warning` whether this result is inside it. `upgrade_path` is the
+off) and `eol_warning` whether this result is inside it. `waiver_days_left`,
+`waiver_warning_days` and `waiver_warning` are the same three facts for the
+next `--waive-until` deadline; `waiver_days_left` is `null` when no failing
+check depends on one. `upgrade_path` is the
 scan's `upgradePath` - which advisories the recommended release fixes and which
 it leaves open - or `null` when there is nothing to clear.
 `upgrade_rehearsal` lists every candidate release with what it `fixes`, leaves

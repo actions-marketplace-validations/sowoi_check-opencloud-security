@@ -76,6 +76,9 @@ match them.
 | `opencloud_security_update_available` | `host`, `target_version` | `1` when a newer release exists |
 | `opencloud_security_certificate_days_remaining` | `host` | Days until the presented certificate expires; negative once it has, no sample over plain HTTP |
 | `opencloud_security_upgrade_path_complete` | `host`, `target_version` | `1` when the recommended upgrade fixes every known advisory; no sample without one |
+| `opencloud_security_waiver_days_remaining` | `host` | Days until a `--waive-until` waiver ends and lets a failing check alert again; no sample when no failing check depends on a deadline |
+| `opencloud_security_coverage_inconclusive_total` | `host` | Checks the scan ran and could not decide |
+| `opencloud_security_coverage_not_checked_total` | `host` | Checks the scan did not run |
 | `opencloud_security_scan_duration_seconds` | `host` | How long the scan took |
 | `opencloud_security_scrape_success` | `host` | `0` when the scan behind the numbers failed |
 
@@ -107,6 +110,9 @@ rating=5;@0:3;@0:1;0;5 vulnerabilities=0;;;0; time=1.234s;;;0;
 | `extra_checks_failed` | Failed additional checks |
 | `update_available` | `1` when a newer release exists |
 | `support_days_left` | Days of support left; negative once overdue |
+| `waiver_days_left` | Days until a temporary waiver ends; absent when none hides a failing check |
+| `coverage_inconclusive` | Checks the scan could not decide |
+| `coverage_not_checked` | Checks the scan did not run |
 
 `support_days_left` is the one worth alerting on. It goes negative *before*
 anyone notices the instance stopped receiving fixes.

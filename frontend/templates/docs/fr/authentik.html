@@ -17,242 +17,250 @@
 
 <nav class="docs-toc card section-gap" aria-label="{{ t('docs.guide.toc.aria') }}" data-reveal>
   <p class="kicker">{{ t('docs.guide.toc.heading') }}</p>
-  <a href="#how-it-works" lang="fr">How it works</a>
-  <a href="#running-the-stack" lang="fr">Running the stack</a>
-  <a href="#sending-mail" lang="fr">Sending mail</a>
-  <a href="#what-the-blueprint-created" lang="fr">What the blueprint created</a>
-  <a href="#a-second-factor-for-everybody" lang="fr">A second factor for everybody</a>
-  <a href="#accounts-without-the-admin-interface" lang="fr">Accounts without the admin interface</a>
-  <a href="#an-operator-for-admin" lang="fr">An operator for /admin</a>
-  <a href="#pointing-the-scanner-at-it" lang="fr">Pointing the scanner at it</a>
-  <a href="#adding-somebody-who-may-use-the-endpoint" lang="fr">Adding somebody who may use the endpoint</a>
-  <a href="#getting-a-token" lang="fr">Getting a token</a>
-  <a href="#configuring-an-agent" lang="fr">Configuring an agent</a>
-  <a href="#erasure-which-is-a-different-credential" lang="fr">Erasure, which is a different credential</a>
-  <a href="#behind-a-reverse-proxy" lang="fr">Behind a reverse proxy</a>
-  <a href="#backing-it-up" lang="fr">Backing it up</a>
-  <a href="#restoring-it" lang="fr">Restoring it</a>
-  <a href="#when-it-does-not-work" lang="fr">When it does not work</a>
-  <a href="#using-a-provider-that-is-not-authentik" lang="fr">Using a provider that is not Authentik</a>
+  <a href="#how-it-works" lang="fr">Fonctionnement</a>
+  <a href="#running-the-stack" lang="fr">Lancer la pile</a>
+  <a href="#sending-mail" lang="fr">Envoyer des e-mails</a>
+  <a href="#what-the-blueprint-created" lang="fr">Ce que le blueprint a créé</a>
+  <a href="#a-second-factor-for-everybody" lang="fr">Un second facteur pour tout le monde</a>
+  <a href="#accounts-without-the-admin-interface" lang="fr">Des comptes sans l’interface d’administration</a>
+  <a href="#an-operator-for-admin" lang="fr">Un opérateur pour /admin</a>
+  <a href="#pointing-the-scanner-at-it" lang="fr">Relier le scanner au fournisseur</a>
+  <a href="#adding-somebody-who-may-use-the-endpoint" lang="fr">Autoriser une personne à utiliser le point de terminaison</a>
+  <a href="#getting-a-token" lang="fr">Obtenir un jeton</a>
+  <a href="#configuring-an-agent" lang="fr">Configurer un agent</a>
+  <a href="#erasure-which-is-a-different-credential" lang="fr">L’effacement, qui est un autre identifiant</a>
+  <a href="#behind-a-reverse-proxy" lang="fr">Derrière un reverse proxy</a>
+  <a href="#backing-it-up" lang="fr">Sauvegarder</a>
+  <a href="#restoring-it" lang="fr">Restaurer</a>
+  <a href="#when-it-does-not-work" lang="fr">Quand cela ne fonctionne pas</a>
+  <a href="#using-a-provider-that-is-not-authentik" lang="fr">Utiliser un autre fournisseur qu’Authentik</a>
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="fr">
-<p>Ce guide exécute le service de numérisation et Authentik dans une pile Compose, avec jeton
-authentification activée sur <code>/mcp</code> depuis le démarrage. Utilisez-le quand MCP devrait être disponible seulement
-aux agents autorisés par votre fournisseur d'identité.</p>
-<p>The website and HTTP API remain public. Authentication controls access to MCP; it does
-not increase scan allowances or bypass the target cooldown, SSRF checks or queue.</p>
+<p>Ce guide exécute le service d’analyse et Authentik dans une seule pile Compose, avec
+l’authentification par jeton activée sur <code>/mcp</code> dès le démarrage. Utilisez-le lorsque MCP
+ne doit être accessible qu’aux agents autorisés par votre fournisseur d’identité.</p>
+<p>Le site web et l’API HTTP restent publics. L’authentification contrôle l’accès à MCP ;
+elle n’augmente pas les quotas d’analyse et ne contourne ni le délai de carence par cible,
+ni les contrôles SSRF, ni la file d’attente.</p>
 <!-- TOC -->
 <ul>
-<li><a href="#authentik-in-front-of-the-mcp-endpoint">Authentik in front of the MCP endpoint</a></li>
-<li><a href="#how-it-works">How it works</a></li>
-<li><a href="#running-the-stack">Running the stack</a></li>
-<li><a href="#sending-mail">Sending mail</a></li>
-<li><a href="#what-the-blueprint-created">What the blueprint created</a></li>
-<li><a href="#a-second-factor-for-everybody">A second factor for everybody</a><ul>
-<li><a href="#what-the-person-sees">What the person sees</a></li>
-<li><a href="#how-it-is-enforced">How it is enforced</a></li>
+<li><a href="#authentik-in-front-of-the-mcp-endpoint">Authentik devant le point de terminaison MCP</a></li>
+<li><a href="#how-it-works">Fonctionnement</a></li>
+<li><a href="#running-the-stack">Lancer la pile</a></li>
+<li><a href="#sending-mail">Envoyer des e-mails</a></li>
+<li><a href="#what-the-blueprint-created">Ce que le blueprint a créé</a></li>
+<li><a href="#a-second-factor-for-everybody">Un second facteur pour tout le monde</a><ul>
+<li><a href="#what-the-person-sees">Ce que voit la personne</a></li>
+<li><a href="#how-it-is-enforced">Comment il est imposé</a></li>
 </ul>
 </li>
-<li><a href="#accounts-without-the-admin-interface">Accounts without the admin interface</a></li>
-<li><a href="#an-operator-for-admin">An operator for /admin</a><ul>
-<li><a href="#with-the-wizard">With the wizard</a></li>
-<li><a href="#by-hand-in-the-authentik-interface">By hand, in the Authentik interface</a></li>
-<li><a href="#checking-it">Checking it</a></li>
+<li><a href="#accounts-without-the-admin-interface">Des comptes sans l’interface d’administration</a></li>
+<li><a href="#an-operator-for-admin">Un opérateur pour /admin</a><ul>
+<li><a href="#with-the-wizard">Avec l’assistant</a></li>
+<li><a href="#by-hand-in-the-authentik-interface">À la main, dans l’interface Authentik</a></li>
+<li><a href="#checking-it">Vérifier</a></li>
 </ul>
 </li>
-<li><a href="#pointing-the-scanner-at-it">Pointing the scanner at it</a></li>
-<li><a href="#adding-somebody-who-may-use-the-endpoint">Adding somebody who may use the endpoint</a><ul>
-<li><a href="#a-group-and-the-binding-that-makes-it-mean-something">A group, and the binding that makes it mean something</a></li>
-<li><a href="#the-person">The person</a></li>
-<li><a href="#the-agent-that-is-nobody">The agent that is nobody</a></li>
+<li><a href="#pointing-the-scanner-at-it">Relier le scanner au fournisseur</a></li>
+<li><a href="#adding-somebody-who-may-use-the-endpoint">Autoriser une personne à utiliser le point de terminaison</a><ul>
+<li><a href="#a-group-and-the-binding-that-makes-it-mean-something">Un groupe, et l’association qui lui donne un sens</a></li>
+<li><a href="#the-person">La personne</a></li>
+<li><a href="#the-agent-that-is-nobody">L’agent avec un compte de service</a></li>
 </ul>
 </li>
-<li><a href="#getting-a-token">Getting a token</a><ul>
-<li><a href="#as-a-service-account">As a service account</a></li>
-<li><a href="#without-naming-an-account-at-all">Without naming an account at all</a></li>
-<li><a href="#as-a-person">As a person</a></li>
-<li><a href="#reading-the-token-you-got">Reading the token you got</a></li>
+<li><a href="#getting-a-token">Obtenir un jeton</a><ul>
+<li><a href="#as-a-service-account">En tant que compte de service</a></li>
+<li><a href="#without-naming-an-account-at-all">Sans nommer de compte</a></li>
+<li><a href="#as-a-person">En tant que personne</a></li>
+<li><a href="#reading-the-token-you-got">Lire le jeton obtenu</a></li>
 </ul>
 </li>
-<li><a href="#configuring-an-agent">Configuring an agent</a></li>
-<li><a href="#erasure-which-is-a-different-credential">Erasure, which is a different credential</a></li>
-<li><a href="#behind-a-reverse-proxy">Behind a reverse proxy</a></li>
-<li><a href="#backing-it-up">Backing it up</a></li>
-<li><a href="#restoring-it">Restoring it</a></li>
-<li><a href="#when-it-does-not-work">When it does not work</a></li>
-<li><a href="#using-a-provider-that-is-not-authentik">Using a provider that is not Authentik</a></li>
+<li><a href="#configuring-an-agent">Configurer un agent</a></li>
+<li><a href="#erasure-which-is-a-different-credential">L’effacement, qui est un autre identifiant</a></li>
+<li><a href="#behind-a-reverse-proxy">Derrière un reverse proxy</a></li>
+<li><a href="#backing-it-up">Sauvegarder</a></li>
+<li><a href="#restoring-it">Restaurer</a></li>
+<li><a href="#when-it-does-not-work">Quand cela ne fonctionne pas</a></li>
+<li><a href="#using-a-provider-that-is-not-authentik">Utiliser un autre fournisseur qu’Authentik</a></li>
 </ul>
 <!-- TOC -->
 
-<h2 id="how-it-works">How it works</h2>
-<p>The scan service acts as an OAuth 2.0 resource server. It verifies tokens issued by the
-provider and has no login page, sessions, user database or client secret:</p>
+<h2 id="how-it-works">Fonctionnement</h2>
+<p>Le service d’analyse joue le rôle de serveur de ressources OAuth 2.0. Il vérifie les
+jetons émis par le fournisseur et n’a ni page de connexion, ni sessions, ni base
+d’utilisateurs, ni secret client :</p>
 <ol>
-<li>An agent presents <code>Authorization: Bearer &lt;token&gt;</code> on its MCP requests.</li>
-<li>The service fetches the provider's published signing keys - the JWKS - and
-   verifies the token's signature against them.</li>
-<li>It checks the issuer, the audience, the expiry, and any scopes the
-   deployment requires.</li>
-<li>Anything that fails any of those is not a token, and the request gets a
-   <strong>401</strong> naming where to go for a real one.</li>
+<li>Un agent présente <code>Authorization: Bearer &lt;token&gt;</code> dans ses requêtes MCP.</li>
+<li>Le service récupère les clés de signature publiées par le fournisseur - le
+   JWKS - et vérifie la signature du jeton avec elles.</li>
+<li>Il vérifie l’émetteur, l’audience, l’expiration et les portées éventuellement
+   exigées par le déploiement.</li>
+<li>Tout ce qui échoue à l’une de ces vérifications n’est pas un jeton, et la
+   requête reçoit une réponse <strong>401</strong> qui indique où en obtenir un vrai.</li>
 </ol>
-<p>Nothing is stored, nothing is logged, and no request is made to the provider
-per token: the keys are cached, and verification is offline. A rotated signing
-key is picked up without a restart.</p>
-<p>An agent that arrives without a token gets the RFC 9728 treatment: a <code>401</code>
-whose <code>WWW-Authenticate</code> header names
-<code>/.well-known/oauth-protected-resource/mcp</code>, a public document naming the
-authorisation server. <code>/.well-known/ai.json</code> says the same thing before the
-first request, so a well-behaved agent knows it needs a token without
-spending a round trip finding out.</p>
-<h2 id="running-the-stack">Running the stack</h2>
-<p><code>docker/docker-compose.authentik.yml</code> is not an overlay on the ordinary stack;
-it is the whole deployment in one file. Six services - the web application,
-the worker, Redis, Authentik, its own PostgreSQL, and Authentik's worker - and
-one command:</p>
+<p>Rien n’est stocké, rien n’est journalisé, et aucune requête n’est envoyée au
+fournisseur pour chaque jeton : les clés sont mises en cache et la vérification
+se fait hors ligne. Une clé de signature renouvelée est prise en compte sans
+redémarrage.</p>
+<p>Un agent qui arrive sans jeton reçoit le traitement prévu par la RFC 9728 : une
+réponse <code>401</code> dont l’en-tête <code>WWW-Authenticate</code> désigne
+<code>/.well-known/oauth-protected-resource/mcp</code>, un document public qui nomme le
+serveur d’autorisation. <code>/.well-known/ai.json</code> indique la même chose avant la
+première requête : un agent bien conçu sait donc qu’il lui faut un jeton sans
+dépenser un aller-retour pour le découvrir.</p>
+<h2 id="running-the-stack">Lancer la pile</h2>
+<p><code>docker/docker-compose.authentik.yml</code> n’est pas une surcouche de la pile
+ordinaire ; c’est le déploiement complet en un seul fichier. Six services -
+l’application web, le worker, Redis, Authentik, sa propre base PostgreSQL et le
+worker d’Authentik - et une seule commande :</p>
 <pre><code class="language-bash">cd docker
 ./authentik-env.sh                                  # writes .env, once
 docker compose -f docker-compose.authentik.yml up -d
 </code></pre>
-<p>Then open <strong><a href="http://127.0.0.1:9000/if/flow/initial-setup/">http://127.0.0.1:9000/if/flow/initial-setup/</a></strong> - the trailing
-slash is required, without it you get a 404 - and set the password for the
-<code>akadmin</code> account. That flow is offered once.</p>
-<p>The first sign-in after that asks <code>akadmin</code> to enrol a second factor - an
-authenticator app or a security key - before it completes; see
-<a href="#a-second-factor-for-everybody">a second factor for everybody</a>.</p>
-<p>The blueprint creates the provider and application. In this Compose file,
-<code>COS_WEB_MCP_AUTH_ENABLED</code> follows <code>${COS_WEB_ENABLE_MCP:-true}</code>, so enabling MCP also
-requires authentication. Disabling MCP disables both together.</p>
-<p><code>authentik-env.sh</code> writes six secrets into <code>docker/.env</code> and never overwrites
-one it finds, so running it twice is safe:</p>
+<p>Ouvrez ensuite <strong><a href="http://127.0.0.1:9000/if/flow/initial-setup/">http://127.0.0.1:9000/if/flow/initial-setup/</a></strong> - la barre
+oblique finale est obligatoire, sans elle vous obtenez une erreur 404 - et
+définissez le mot de passe du compte <code>akadmin</code>. Ce flux n’est proposé qu’une
+fois.</p>
+<p>La première connexion suivante demande à <code>akadmin</code> d’enregistrer un second
+facteur - une application d’authentification ou une clé de sécurité - avant de
+se terminer ; voir <a href="#a-second-factor-for-everybody">un second facteur pour tout le monde</a>.</p>
+<p>Le blueprint crée le fournisseur et l’application. Dans ce fichier Compose,
+<code>COS_WEB_MCP_AUTH_ENABLED</code> suit <code>${COS_WEB_ENABLE_MCP:-true}</code> : activer MCP
+exige donc aussi l’authentification, et désactiver MCP désactive les deux.</p>
+<p><code>authentik-env.sh</code> écrit six secrets dans <code>docker/.env</code> et n’écrase jamais un
+secret existant : l’exécuter deux fois est sans danger.</p>
 <table>
 <thead>
 <tr>
 <th>Variable</th>
-<th>What it is</th>
+<th>Ce que c’est</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>COS_REDIS_PASSWORD</code></td>
-<td>The password Redis requires. It holds every live scan and every result still inside its TTL - see <a href="/documentation/redis">Redis</a></td>
+<td>Le mot de passe exigé par Redis. Redis contient chaque analyse en cours et chaque résultat encore dans sa durée de vie - voir <a href="/documentation/redis">Redis</a></td>
 </tr>
 <tr>
 <td><code>AUTHENTIK_SECRET_KEY</code></td>
-<td>Signs everything in Authentik's database</td>
+<td>Signe tout le contenu de la base de données d’Authentik</td>
 </tr>
 <tr>
 <td><code>AUTHENTIK_PG_PASS</code></td>
-<td>The password for Authentik's PostgreSQL</td>
+<td>Le mot de passe de la base PostgreSQL d’Authentik</td>
 </tr>
 <tr>
 <td><code>AUTHENTIK_CLIENT_ID</code></td>
-<td>The OAuth client ID, and therefore the audience</td>
+<td>L’ID client OAuth, et donc l’audience</td>
 </tr>
 <tr>
 <td><code>AUTHENTIK_CLIENT_SECRET</code></td>
-<td>The OAuth client secret</td>
+<td>Le secret client OAuth</td>
 </tr>
 <tr>
 <td><code>COS_WEB_PURGE_TOKEN</code></td>
-<td>The operator credential for erasure, which is a different thing entirely</td>
+<td>L’identifiant d’opérateur pour l’effacement, qui est tout autre chose</td>
 </tr>
 </tbody>
 </table>
-<p>Back up <code>.env</code> with the Authentik data. Preserve <code>AUTHENTIK_SECRET_KEY</code> during a restore
-so that the restored installation can use its existing cryptographic state.</p>
-<p>Reachable from somewhere other than your laptop? Two variables, and nothing
-else changes:</p>
+<p>Sauvegardez <code>.env</code> avec les données d’Authentik. Conservez <code>AUTHENTIK_SECRET_KEY</code>
+lors d’une restauration, pour que l’installation restaurée puisse utiliser son
+état cryptographique existant.</p>
+<p>Accessible depuis ailleurs que votre ordinateur portable ? Deux variables, et
+rien d’autre ne change :</p>
 <pre><code class="language-bash">AUTHENTIK_URL=https://sso.example.com \
 COS_WEB_PUBLIC_BASE_URL=https://scanner.example.com \
   docker compose -f docker-compose.authentik.yml up -d
 </code></pre>
-<p>It is a separate file rather than a Compose profile because those secrets are
-declared <em>required</em>, and Compose validates a required variable in <strong>every file
-it reads</strong>, whether or not the service using it was selected. As a profile it
-would break <code>docker compose up</code> for everybody who never wanted Authentik.</p>
-<p>Notes on the stack, and where it differs from the upstream one:</p>
+<p>C’est un fichier séparé plutôt qu’un profil Compose, car ces secrets sont
+déclarés <em>obligatoires</em>, et Compose valide une variable obligatoire dans
+<strong>chaque fichier qu’il lit</strong>, que le service qui l’utilise soit sélectionné ou
+non. Sous forme de profil, il casserait <code>docker compose up</code> pour tous ceux qui
+n’ont jamais voulu d’Authentik.</p>
+<p>Remarques sur la pile, et sur ses différences avec celle d’origine :</p>
 <ul>
-<li><strong>Authentik needs no Redis.</strong> It has kept sessions, caching and its task
-  queue in PostgreSQL since 2025.10. The scanner's own Redis is a cache with
-  no persistence and an eviction policy, and would be the wrong thing to point
-  it at even if it did.</li>
-<li><strong>PostgreSQL is <code>postgres:18.6-alpine</code></strong>, pinned rather than floating, and
-  separate from anything else you run. Authentik itself has <strong>no Alpine
-  image</strong> - <code>ghcr.io/goauthentik/server</code> is published Debian-based only, and
-  there is no variant to switch to.</li>
-<li><strong>The worker does not get the Docker socket.</strong> Upstream mounts it so the
-  worker can manage outpost containers; this stack runs no outposts, and
-  handing a container the daemon socket is handing it the host.</li>
-<li><strong>State lives in named volumes</strong> - <code>authentik_database</code>, <code>authentik_media</code>,
-  <code>authentik_templates</code>, <code>authentik_certs</code> - rather than in bind mounts under
-  <code>docker/</code>.</li>
-<li><strong>Do not mount <code>/etc/localtime</code> or <code>/etc/timezone</code></strong> into these containers.
-  Authentik needs UTC internally, and mounting a timezone breaks OAuth.</li>
+<li><strong>Authentik n’a pas besoin de Redis.</strong> Il conserve les sessions, le cache et
+  sa file de tâches dans PostgreSQL depuis la version 2025.10. Le Redis du
+  scanner est un cache sans persistance avec une politique d’éviction : ce
+  serait le mauvais choix même si Authentik en avait besoin.</li>
+<li><strong>PostgreSQL est <code>postgres:18.6-alpine</code></strong>, fixé à cette version, et
+  séparé de tout ce que vous exécutez par ailleurs. Authentik lui-même n’a
+  <strong>pas d’image Alpine</strong> : <code>ghcr.io/goauthentik/server</code> n’est publié qu’en
+  version basée sur Debian, sans variante possible.</li>
+<li><strong>Le worker ne reçoit pas le socket Docker.</strong> La pile d’origine le monte pour
+  que le worker puisse gérer les conteneurs d’avant-postes (outposts) ; cette
+  pile n’exécute aucun outpost, et donner à un conteneur le socket du démon
+  revient à lui donner l’hôte.</li>
+<li><strong>L’état se trouve dans des volumes nommés</strong> - <code>authentik_database</code>,
+  <code>authentik_media</code>, <code>authentik_templates</code>, <code>authentik_certs</code> - et non dans des
+  montages liés sous <code>docker/</code>.</li>
+<li><strong>Ne montez pas <code>/etc/localtime</code> ni <code>/etc/timezone</code></strong> dans ces conteneurs.
+  Authentik a besoin d’UTC en interne, et monter un fuseau horaire casse OAuth.</li>
 </ul>
-<h2 id="sending-mail">Sending mail</h2>
-<p>Configure SMTP before relying on account recovery. Without an external mail server,
-recovery messages are delivered locally inside the container and do not reach users’
-inboxes.</p>
-<p>Every setting is a variable in <code>docker/.env</code>, and both Authentik services read
-them - the server sends the test message, the worker sends everything else, so
-configuring one and not the other works until the day it matters:</p>
+<h2 id="sending-mail">Envoyer des e-mails</h2>
+<p>Configurez SMTP avant de compter sur la récupération de compte. Sans serveur de
+messagerie externe, les messages de récupération sont livrés localement dans le
+conteneur et n’atteignent pas les boîtes de réception des utilisateurs.</p>
+<p>Chaque paramètre est une variable de <code>docker/.env</code>, et les deux services
+Authentik les lisent : le serveur envoie le message de test, le worker envoie
+tout le reste. Configurer l’un sans l’autre fonctionne jusqu’au jour où cela
+compte.</p>
 <table>
 <thead>
 <tr>
 <th>Variable</th>
-<th>Default</th>
-<th>What it is</th>
+<th>Valeur par défaut</th>
+<th>Ce que c’est</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>AUTHENTIK_EMAIL_HOST</code></td>
-<td><em>(empty)</em></td>
-<td>The mail server. Empty leaves local delivery in place</td>
+<td><em>(vide)</em></td>
+<td>Le serveur de messagerie. Vide, la livraison locale reste en place</td>
 </tr>
 <tr>
 <td><code>AUTHENTIK_EMAIL_PORT</code></td>
 <td><code>587</code></td>
-<td><code>587</code> for STARTTLS, <code>465</code> for implicit TLS, <code>25</code> for neither</td>
+<td><code>587</code> pour STARTTLS, <code>465</code> pour TLS implicite, <code>25</code> pour aucun des deux</td>
 </tr>
 <tr>
 <td><code>AUTHENTIK_EMAIL_USERNAME</code></td>
-<td><em>(empty)</em></td>
-<td>The account it authenticates as, if it authenticates</td>
+<td><em>(vide)</em></td>
+<td>Le compte utilisé pour s’authentifier, le cas échéant</td>
 </tr>
 <tr>
 <td><code>AUTHENTIK_EMAIL_PASSWORD</code></td>
-<td><em>(empty)</em></td>
-<td>That account's password</td>
+<td><em>(vide)</em></td>
+<td>Le mot de passe de ce compte</td>
 </tr>
 <tr>
 <td><code>AUTHENTIK_EMAIL_USE_TLS</code></td>
 <td><code>true</code></td>
-<td>STARTTLS on a plain connection</td>
+<td>STARTTLS sur une connexion en clair</td>
 </tr>
 <tr>
 <td><code>AUTHENTIK_EMAIL_USE_SSL</code></td>
 <td><code>false</code></td>
-<td>TLS from the first byte</td>
+<td>TLS dès le premier octet</td>
 </tr>
 <tr>
 <td><code>AUTHENTIK_EMAIL_TIMEOUT</code></td>
 <td><code>10</code></td>
-<td>Seconds before it gives up</td>
+<td>Secondes avant d’abandonner</td>
 </tr>
 <tr>
 <td><code>AUTHENTIK_EMAIL_FROM</code></td>
 <td><code>authentik@localhost</code></td>
-<td>The <code>From:</code> address recipients see</td>
+<td>L’adresse <code>From:</code> que voient les destinataires</td>
 </tr>
 </tbody>
 </table>
-<p><strong><code>USE_TLS</code> and <code>USE_SSL</code> are not two names for the same thing, and never both
-<code>true</code>.</strong> STARTTLS begins in the clear on 587 and upgrades; implicit TLS is
-encrypted from the first byte on 465. Setting both leaves a session that
-negotiates neither.</p>
+<p><strong><code>USE_TLS</code> et <code>USE_SSL</code> ne sont pas deux noms pour la même chose, et ne valent
+jamais <code>true</code> tous les deux.</strong> STARTTLS commence en clair sur le port 587 puis
+passe en chiffré ; TLS implicite est chiffré dès le premier octet, sur le
+port 465. Activer les deux donne une session qui ne négocie ni l’un ni l’autre.</p>
 <pre><code class="language-bash">cat &gt;&gt; docker/.env &lt;&lt;'EOF'
 AUTHENTIK_EMAIL_HOST=smtp.example.com
 AUTHENTIK_EMAIL_PORT=587
@@ -264,33 +272,35 @@ AUTHENTIK_EMAIL_FROM=authentik@example.com
 EOF
 docker compose -f docker-compose.authentik.yml up -d
 </code></pre>
-<p><code>authentik-env.sh</code> writes these names into <code>docker/.env</code> commented out, so the
-list is in front of you when you go looking, and it never uncomments or
-overwrites what you put there. Check it worked from
-<strong>System → Settings → Email</strong> in the Authentik interface, which sends a test
-message through the server container, and read the worker's log for the rest:</p>
+<p><code>authentik-env.sh</code> écrit ces noms en commentaire dans <code>docker/.env</code>, pour que la
+liste soit sous vos yeux quand vous la cherchez, et ne décommente ni n’écrase
+jamais ce que vous y avez mis. Vérifiez le résultat depuis <strong>System → Settings →
+Email</strong> dans l’interface d’Authentik, qui envoie un message de test par le
+conteneur serveur, et lisez le journal du worker pour le reste :</p>
 <pre><code class="language-bash">docker compose -f docker-compose.authentik.yml logs -f authentik_worker
 </code></pre>
-<p><code>docker/setup-wizard.py</code> asks all of this when it generates a stack of its
-own, and takes the password from <code>AUTHENTIK_EMAIL_PASSWORD</code> in the environment
-rather than from a flag - a password on a command line is a password in <code>ps</code>
-and in the shell history.</p>
-<h2 id="what-the-blueprint-created">What the blueprint created</h2>
-<p><code>authentik/blueprints/opencloud-scanner.yaml</code> is mounted into both Authentik
-containers at <code>/blueprints/custom</code>, and the worker applies it on start. That
-is what makes the setup above one command rather than a page of clicking: the
-OAuth2 provider, its signing key, its scopes and the application whose slug
-becomes the issuer all exist before you first log in.</p>
-<p>It provisions <strong>once</strong>. Every entry is <code>state: created</code>, which means Authentik
-creates what is missing and then leaves it alone - change a redirect URI, a
-flow or a scope in the admin interface afterwards and it stays changed. The
-blueprint will not put it back on the next start.</p>
-<p>What it makes, under <strong>Applications → Applications</strong>:</p>
+<p><code>docker/setup-wizard.py</code> pose toutes ces questions lorsqu’il génère sa propre
+pile, et lit le mot de passe dans la variable d’environnement
+<code>AUTHENTIK_EMAIL_PASSWORD</code> plutôt que dans une option : un mot de passe sur une
+ligne de commande est un mot de passe visible dans <code>ps</code> et dans l’historique du
+shell.</p>
+<h2 id="what-the-blueprint-created">Ce que le blueprint a créé</h2>
+<p><code>authentik/blueprints/opencloud-scanner.yaml</code> est monté dans les deux conteneurs
+Authentik sous <code>/blueprints/custom</code>, et le worker l’applique au démarrage. C’est
+ce qui réduit la mise en place ci-dessus à une commande au lieu d’une page de
+clics : le fournisseur OAuth2, sa clé de signature, ses portées et l’application
+dont le slug devient l’émetteur existent tous avant votre première connexion.</p>
+<p>Il ne provisionne <strong>qu’une fois</strong>. Chaque entrée est en <code>state: created</code> :
+Authentik crée ce qui manque puis n’y touche plus. Modifiez ensuite une URI de
+redirection, un flux ou une portée dans l’interface d’administration, et la
+modification reste. Le blueprint ne rétablit pas l’ancienne valeur au démarrage
+suivant.</p>
+<p>Ce qu’il crée, sous <strong>Applications → Applications</strong> :</p>
 <table>
 <thead>
 <tr>
 <th></th>
-<th>Value</th>
+<th>Valeur</th>
 </tr>
 </thead>
 <tbody>
@@ -299,56 +309,57 @@ blueprint will not put it back on the next start.</p>
 <td><code>OpenCloud security scanner</code>, slug <code>opencloud-scanner</code></td>
 </tr>
 <tr>
-<td><strong>Provider</strong></td>
-<td><code>check-opencloud-security</code>, OAuth2/OpenID Connect, confidential</td>
+<td><strong>Fournisseur</strong></td>
+<td><code>check-opencloud-security</code>, OAuth2/OpenID Connect, confidentiel</td>
 </tr>
 <tr>
-<td><strong>Client ID / secret</strong></td>
-<td><code>AUTHENTIK_CLIENT_ID</code> and <code>AUTHENTIK_CLIENT_SECRET</code> from <code>.env</code></td>
+<td><strong>ID / secret client</strong></td>
+<td><code>AUTHENTIK_CLIENT_ID</code> et <code>AUTHENTIK_CLIENT_SECRET</code> depuis <code>.env</code></td>
 </tr>
 <tr>
-<td><strong>Grant types</strong></td>
+<td><strong>Types d’octroi</strong></td>
 <td><code>authorization_code</code>, <code>refresh_token</code>, <code>client_credentials</code></td>
 </tr>
 <tr>
-<td><strong>Signing key</strong></td>
+<td><strong>Clé de signature</strong></td>
 <td><code>authentik Self-signed Certificate</code></td>
 </tr>
 <tr>
-<td><strong>Scopes</strong></td>
+<td><strong>Portées</strong></td>
 <td><code>openid</code>, <code>profile</code>, <code>email</code>, <code>offline_access</code></td>
 </tr>
 <tr>
-<td><strong>Issuer mode</strong></td>
-<td>per-provider</td>
+<td><strong>Mode d’émetteur</strong></td>
+<td>par fournisseur</td>
 </tr>
 </tbody>
 </table>
-<p>Two of those rows are worth dwelling on.</p>
-<p><strong>The signing key is the setting that matters most on this page.</strong> With one,
-tokens are signed asymmetrically and verified against the published JWKS.
-<em>Without</em> one, Authentik signs with the client secret (HS256), and no resource
-server can verify such a token without being handed that secret - which this
-service will not accept. The blueprint sets it; if you ever recreate the
-provider by hand, set it too.</p>
-<p><strong>The client ID is the audience.</strong> It lives in <code>.env</code>, which is where the web
-application reads it from as <code>COS_WEB_MCP_AUTH_AUDIENCE</code> - the two sides agree
-because they read the same line, not because you copied one into the other.</p>
-<p>Per-provider issuer mode gives:</p>
+<p>Deux de ces lignes méritent qu’on s’y attarde.</p>
+<p><strong>La clé de signature est le paramètre le plus important de cette page.</strong> Avec
+elle, les jetons sont signés de façon asymétrique et vérifiés à l’aide du JWKS
+publié. <em>Sans</em> elle, Authentik signe avec le secret client (HS256), et aucun
+serveur de ressources ne peut vérifier un tel jeton sans recevoir ce secret - ce
+que ce service refuse. Le blueprint la définit ; si vous recréez un jour le
+fournisseur à la main, définissez-la aussi.</p>
+<p><strong>L’ID client est l’audience.</strong> Il se trouve dans <code>.env</code>, où l’application web
+le lit sous le nom <code>COS_WEB_MCP_AUTH_AUDIENCE</code> : les deux côtés concordent parce
+qu’ils lisent la même ligne, et non parce que vous avez recopié l’un dans
+l’autre.</p>
+<p>Le mode d’émetteur par fournisseur donne :</p>
 <table>
 <thead>
 <tr>
 <th></th>
-<th>Value</th>
+<th>Valeur</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><strong>Issuer</strong></td>
+<td><strong>Émetteur</strong></td>
 <td><code>https://sso.example.com/application/o/opencloud-scanner/</code></td>
 </tr>
 <tr>
-<td><strong>Discovery document</strong></td>
+<td><strong>Document de découverte</strong></td>
 <td><code>https://sso.example.com/application/o/opencloud-scanner/.well-known/openid-configuration</code></td>
 </tr>
 <tr>
@@ -356,234 +367,251 @@ because they read the same line, not because you copied one into the other.</p>
 <td><code>https://sso.example.com/application/o/opencloud-scanner/jwks/</code></td>
 </tr>
 <tr>
-<td><strong>Token endpoint</strong></td>
+<td><strong>Point de terminaison des jetons</strong></td>
 <td><code>https://sso.example.com/application/o/token/</code></td>
 </tr>
 </tbody>
 </table>
-<p>The token endpoint is deliberately not per-application: Authentik routes it by
-<code>client_id</code>. The discovery and JWKS endpoints are per-slug, and there is no
-root-level discovery document.</p>
-<p>Read the issuer out of the discovery document rather than typing it. It is
-what the tokens will actually carry, and it is the value the scanner compares
-against.</p>
-<p>A blueprint that fails does <strong>not</strong> stop Authentik from starting - it records
-the error against the blueprint instance instead. If <code>/mcp</code> refuses every
-token on a fresh stack, look under <strong>Customisation → Blueprints</strong> before
-looking anywhere else.</p>
-<p>To do it by hand instead - against an Authentik you already run, say - the
-wizard under <strong>Applications → Applications → Create with wizard</strong> asks for the
-same things in the same order, and the table above is the answer sheet.</p>
-<h2 id="a-second-factor-for-everybody">A second factor for everybody</h2>
-<p><code>authentik/blueprints/opencloud-mfa.yaml</code> is mounted with the others, and it
-makes a second factor part of every sign-in. Authentik's default
-authentication flow already contains a stage that checks one -
-<code>default-authentication-mfa-validation</code> - but it ships set to <em>skip</em> an
-account that has none, which on a new directory is every account. The
-blueprint sets that same stage to <em>configure</em>:</p>
+<p>Le point de terminaison des jetons n’est volontairement pas propre à chaque
+application : Authentik l’aiguille selon le <code>client_id</code>. Les points de
+terminaison de découverte et JWKS sont propres à chaque slug, et il n’existe pas
+de document de découverte à la racine.</p>
+<p>Lisez l’émetteur dans le document de découverte plutôt que de le saisir. C’est
+ce que les jetons contiendront réellement, et c’est la valeur à laquelle le
+scanner compare.</p>
+<p>Un blueprint en échec n’empêche <strong>pas</strong> Authentik de démarrer : l’erreur est
+enregistrée sur l’instance du blueprint. Si <code>/mcp</code> refuse tous les jetons sur
+une pile toute neuve, regardez sous <strong>Customisation → Blueprints</strong> avant de
+chercher ailleurs.</p>
+<p>Pour le faire à la main - sur un Authentik que vous exploitez déjà, par
+exemple -, l’assistant sous <strong>Applications → Applications → Create with wizard</strong>
+demande les mêmes informations dans le même ordre, et le tableau ci-dessus donne
+les réponses.</p>
+<h2 id="a-second-factor-for-everybody">Un second facteur pour tout le monde</h2>
+<p><code>authentik/blueprints/opencloud-mfa.yaml</code> est monté avec les autres et intègre
+un second facteur à chaque connexion. Le flux d’authentification par défaut
+d’Authentik contient déjà une étape qui le vérifie -
+<code>default-authentication-mfa-validation</code> -, mais elle est livrée réglée pour
+<em>ignorer</em> un compte qui n’en a pas, c’est-à-dire tous les comptes d’un annuaire
+neuf. Le blueprint règle cette même étape sur <em>configurer</em> :</p>
 <table>
 <thead>
 <tr>
 <th></th>
-<th>Value</th>
+<th>Valeur</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><strong>Account without a factor</strong></td>
-<td>Taken through enrolling one before the sign-in completes</td>
+<td><strong>Compte sans facteur</strong></td>
+<td>Conduit à en enregistrer un avant la fin de la connexion</td>
 </tr>
 <tr>
-<td><strong>Offered</strong></td>
-<td>TOTP (an authenticator app) and WebAuthn (a security key or passkey)</td>
+<td><strong>Proposés</strong></td>
+<td>TOTP (une application d’authentification) et WebAuthn (une clé de sécurité ou une passkey)</td>
 </tr>
 <tr>
-<td><strong>Accepted afterwards</strong></td>
-<td>TOTP, WebAuthn, and static recovery codes created from the user's own settings</td>
+<td><strong>Acceptés ensuite</strong></td>
+<td>TOTP, WebAuthn, et les codes de récupération statiques créés depuis les paramètres de l’utilisateur</td>
 </tr>
 <tr>
-<td><strong>Re-applied</strong></td>
-<td>Every hour (<code>state: present</code>), so it cannot be switched off in the interface and forgotten</td>
+<td><strong>Réappliqué</strong></td>
+<td>Toutes les heures (<code>state: present</code>), pour qu’on ne puisse pas le désactiver dans l’interface puis l’oublier</td>
 </tr>
 </tbody>
 </table>
-<h3 id="what-the-person-sees">What the person sees</h3>
+<h3 id="what-the-person-sees">Ce que voit la personne</h3>
 <ol>
-<li><strong>The first sign-in after the password</strong> stops at <em>Configure an
-   authenticator</em> and offers the two kinds.</li>
-<li><strong>An authenticator app</strong> (TOTP): scan the QR code with any authenticator
-   app, then type the six-digit code it shows to confirm.</li>
-<li><strong>A security key or passkey</strong> (WebAuthn): the browser asks to touch the key,
-   or to use the device's own passkey, and names it.</li>
-<li><strong>Every sign-in after that</strong> asks for a code or a touch after the password.</li>
-<li><strong>Recovery codes</strong> are worth creating straight away: under the user's own
-   settings - the avatar, then <strong>Settings → MFA Devices → Enroll → Static
-   tokens</strong> - Authentik shows a set of one-time codes. Keep them where the phone
-   is not.</li>
+<li><strong>La première connexion après le mot de passe</strong> s’arrête sur <em>Configure an
+   authenticator</em> et propose les deux types.</li>
+<li><strong>Une application d’authentification</strong> (TOTP) : scannez le code QR avec
+   n’importe quelle application d’authentification, puis saisissez le code à six
+   chiffres qu’elle affiche pour confirmer.</li>
+<li><strong>Une clé de sécurité ou une passkey</strong> (WebAuthn) : le navigateur demande de
+   toucher la clé ou d’utiliser la passkey de l’appareil, puis de la nommer.</li>
+<li><strong>Chaque connexion suivante</strong> demande un code ou un toucher après le mot de
+   passe.</li>
+<li><strong>Les codes de récupération</strong> méritent d’être créés tout de suite : dans les
+   paramètres de l’utilisateur - l’avatar, puis <strong>Settings → MFA Devices →
+   Enroll → Static tokens</strong> -, Authentik affiche une série de codes à usage
+   unique. Conservez-les ailleurs qu’avec le téléphone.</li>
 </ol>
-<p>More than one factor can be enrolled from the same page, and a second
-device - a key as well as an app - is the cheapest recovery there is.</p>
-<h3 id="how-it-is-enforced">How it is enforced</h3>
-<p>It changes the default flow's own stage rather than binding a second one, so a
-person with an authenticator is asked once, not twice. To lift the
-requirement, remove the file from the blueprint directory; the stage keeps its
-last setting until you change it.</p>
-<p>Two things it does not touch. <strong>Agents</strong> using <code>client_credentials</code> sign in
-with an app password and never run a flow, so a token for <code>/mcp</code> needs no code
-from anybody's phone. And <strong>a lost authenticator</strong> is recovered by an
-administrator: sign in as <code>akadmin</code>, open <strong>Directory → Users</strong>, and delete
-the person's device under <em>MFA Authenticators</em>; their next sign-in enrols a
-new one.</p>
-<h2 id="accounts-without-the-admin-interface">Accounts without the admin interface</h2>
-<p>A stack written by <code>docker/setup-wizard.py</code> goes one step further, and nobody
-creates an account by hand at all. The wizard asks <strong>who signs in</strong>, by
-username - everybody on the operator's guest list, <code>COS_WEB_ADMIN_USERS</code>, is on
-it whether repeated or not - and writes three things:</p>
+<p>Plusieurs facteurs peuvent être enregistrés depuis la même page, et un second
+appareil - une clé en plus d’une application - est la récupération la moins
+coûteuse qui soit.</p>
+<h3 id="how-it-is-enforced">Comment il est imposé</h3>
+<p>Le blueprint modifie l’étape du flux par défaut au lieu d’en associer une
+seconde : une personne disposant d’un authentificateur n’est sollicitée qu’une
+fois, pas deux. Pour lever l’exigence, retirez le fichier du répertoire des
+blueprints ; l’étape conserve son dernier réglage jusqu’à ce que vous le
+modifiiez.</p>
+<p>Deux choses ne sont pas concernées. <strong>Les agents</strong> qui utilisent
+<code>client_credentials</code> se connectent avec un mot de passe d’application et
+n’exécutent jamais de flux : un jeton pour <code>/mcp</code> ne demande donc de code sur le
+téléphone de personne. Et <strong>un authentificateur perdu</strong> est récupéré par un
+administrateur : connectez-vous en tant qu’<code>akadmin</code>, ouvrez <strong>Directory →
+Users</strong> et supprimez l’appareil de la personne sous <em>MFA Authenticators</em> ; sa
+connexion suivante en enregistre un nouveau.</p>
+<h2 id="accounts-without-the-admin-interface">Des comptes sans l’interface d’administration</h2>
+<p>Une pile générée par <code>docker/setup-wizard.py</code> va plus loin : personne ne crée de
+compte à la main. L’assistant demande <strong>qui se connecte</strong>, par nom
+d’utilisateur - toutes les personnes de la liste d’invités de l’opérateur,
+<code>COS_WEB_ADMIN_USERS</code>, y figurent qu’elles soient répétées ou non - et écrit
+trois choses :</p>
 <table>
 <thead>
 <tr>
-<th>Where</th>
-<th>What</th>
+<th>Où</th>
+<th>Quoi</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>.env</code></td>
-<td><code>AUTHENTIK_ENROLLMENT_TOKEN</code>, a random UUID, and <code>AUTHENTIK_BOOTSTRAP_PASSWORD</code> for <code>akadmin</code></td>
+<td><code>AUTHENTIK_ENROLLMENT_TOKEN</code>, un UUID aléatoire, et <code>AUTHENTIK_BOOTSTRAP_PASSWORD</code> pour <code>akadmin</code></td>
 </tr>
 <tr>
-<td>The compose file</td>
-<td><code>COS_AUTHENTIK_ACCOUNTS</code>, the usernames, and <code>COS_WEB_ADMIN_USERS</code>, for both Authentik containers</td>
+<td>Le fichier compose</td>
+<td><code>COS_AUTHENTIK_ACCOUNTS</code>, les noms d’utilisateur, et <code>COS_WEB_ADMIN_USERS</code>, pour les deux conteneurs Authentik</td>
 </tr>
 <tr>
 <td><code>authentik/blueprints/</code></td>
-<td><code>opencloud-enrollment.yaml</code> and <code>opencloud-mfa.yaml</code>, beside the other two</td>
+<td><code>opencloud-enrollment.yaml</code> et <code>opencloud-mfa.yaml</code>, à côté des deux autres</td>
 </tr>
 </tbody>
 </table>
-<p>and it ends by printing one link:</p>
+<p>et termine en affichant un lien :</p>
 <pre><code>https://sso.example.com/if/flow/opencloud-scanner-enrollment/?itoken=&lt;AUTHENTIK_ENROLLMENT_TOKEN&gt;
 </code></pre>
-<p>The token is a credential, so the wizard prints the placeholder rather than
-the value, and beside it the command that assembles the real link from <code>.env</code>:</p>
+<p>Le jeton est un identifiant : l’assistant affiche donc le paramètre fictif et
+non la valeur, et à côté la commande qui assemble le vrai lien à partir de
+<code>.env</code> :</p>
 <pre><code>echo &quot;https://sso.example.com/if/flow/opencloud-scanner-enrollment/?itoken=$(sed -n 's/^AUTHENTIK_ENROLLMENT_TOKEN=//p' .env)&quot;
 </code></pre>
-<p>Each person named opens it, types their username, an email address and a
-password, enrols an authenticator app or a security key, and is signed in.
-Somebody on the operator's guest list lands in <code>opencloud-scanner-operators</code>,
-the group <code>/admin</code> is bound to, on the way. Nothing is clicked in Authentik -
-by them or by you.</p>
-<p>The link is a way in, so three things bound it:</p>
+<p>Chaque personne nommée l’ouvre, saisit son nom d’utilisateur, une adresse e-mail
+et un mot de passe, enregistre une application d’authentification ou une clé de
+sécurité, et se retrouve connectée. Une personne de la liste d’invités de
+l’opérateur est placée au passage dans <code>opencloud-scanner-operators</code>, le groupe
+auquel <code>/admin</code> est associé. Rien n’est cliqué dans Authentik, ni par elles ni
+par vous.</p>
+<p>Le lien est une porte d’entrée ; trois règles l’encadrent :</p>
 <ul>
-<li><strong>Only the listed names.</strong> A username not in <code>COS_AUTHENTIK_ACCOUNTS</code> is
-  refused at the form, and an empty list admits nobody.</li>
-<li><strong>Each name once.</strong> The username field refuses a name that already exists,
-  so a name that has enrolled cannot be claimed again, and the link is useless
-  once everybody on the list has used it.</li>
-<li><strong>Only with the token.</strong> Without it - or with any other - the flow answers
-  <em>access denied</em> before showing a field.</li>
+<li><strong>Seuls les noms listés.</strong> Un nom d’utilisateur absent de
+  <code>COS_AUTHENTIK_ACCOUNTS</code> est refusé dès le formulaire, et une liste vide
+  n’admet personne.</li>
+<li><strong>Chaque nom une seule fois.</strong> Le champ du nom d’utilisateur refuse un nom qui
+  existe déjà : un nom déjà enregistré ne peut pas être revendiqué à nouveau, et
+  le lien devient inutile une fois que tout le monde sur la liste l’a utilisé.</li>
+<li><strong>Uniquement avec le jeton.</strong> Sans lui - ou avec un autre -, le flux répond
+  <em>access denied</em> avant d’afficher le moindre champ.</li>
 </ul>
-<p>Treat it like a password until everybody has used it. To add somebody later,
-run the wizard again, add the name, and send the same link; to retire the
-link, replace <code>AUTHENTIK_ENROLLMENT_TOKEN</code> in <code>.env</code> with a new UUID and
-restart the Authentik containers, and the invitation is re-applied under the
-new token. A person who stops after the password and before the second factor
-has an account already: signing in normally takes them through enrolling the
-factor then.</p>
-<p><strong><code>akadmin</code> is kept for recovery.</strong> <code>AUTHENTIK_BOOTSTRAP_PASSWORD</code> gives it a
-random password on the very first start, which also closes the
-<code>/if/flow/initial-setup/</code> flow - otherwise the first person to reach it would
-become the administrator. It too is asked to enrol a second factor on its
-first sign-in. The variable has no effect on a database that already has
-<code>akadmin</code>.</p>
-<p><code>docker-compose.authentik.yml</code>, run by hand, mounts the enrollment blueprint
-as well but has no token, so no invitation is created and the flow cannot be
-used; accounts there are made as described under
-<a href="#adding-somebody-who-may-use-the-endpoint">adding somebody</a>.</p>
-<p>The link is not printed by <code>--non-interactive</code>, which prints nothing; build it
-from the public address of Authentik and <code>AUTHENTIK_ENROLLMENT_TOKEN</code> in <code>.env</code>,
-as the comment at the top of the generated compose file shows.</p>
-<h2 id="an-operator-for-admin">An operator for /admin</h2>
-<p>The operator's area needs two things to agree about one person, and they live
-on different sides of the forward auth:</p>
+<p>Traitez-le comme un mot de passe tant que tout le monde ne l’a pas utilisé. Pour
+ajouter quelqu’un plus tard, relancez l’assistant, ajoutez le nom et envoyez le
+même lien ; pour retirer le lien, remplacez <code>AUTHENTIK_ENROLLMENT_TOKEN</code> dans
+<code>.env</code> par un nouvel UUID et redémarrez les conteneurs Authentik : l’invitation
+est réappliquée avec le nouveau jeton. Une personne qui s’arrête après le mot de
+passe et avant le second facteur a déjà un compte : une connexion normale la
+conduit alors à enregistrer le facteur.</p>
+<p><strong><code>akadmin</code> est conservé pour la récupération.</strong> <code>AUTHENTIK_BOOTSTRAP_PASSWORD</code>
+lui attribue un mot de passe aléatoire au tout premier démarrage, ce qui ferme
+aussi le flux <code>/if/flow/initial-setup/</code> - sans cela, la première personne à
+l’atteindre deviendrait administrateur. Lui aussi doit enregistrer un second
+facteur à sa première connexion. La variable n’a aucun effet sur une base de
+données qui contient déjà <code>akadmin</code>.</p>
+<p><code>docker-compose.authentik.yml</code>, lancé à la main, monte aussi le blueprint
+d’inscription mais n’a pas de jeton : aucune invitation n’est créée et le flux
+est inutilisable ; les comptes y sont créés comme décrit sous
+<a href="#adding-somebody-who-may-use-the-endpoint">autoriser une personne</a>.</p>
+<p>Le lien n’est pas affiché avec <code>--non-interactive</code>, qui n’affiche rien ;
+construisez-le à partir de l’adresse publique d’Authentik et de
+<code>AUTHENTIK_ENROLLMENT_TOKEN</code> dans <code>.env</code>, comme le montre le commentaire en tête
+du fichier compose généré.</p>
+<h2 id="an-operator-for-admin">Un opérateur pour /admin</h2>
+<p>L’espace opérateur exige que deux éléments concordent au sujet d’une même
+personne, et ils se trouvent de part et d’autre de l’authentification déléguée :</p>
 <table>
 <thead>
 <tr>
-<th>Where</th>
-<th>What it decides</th>
+<th>Où</th>
+<th>Ce qui est décidé</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Authentik: membership of <code>opencloud-scanner-operators</code></td>
-<td>Whether the sign-in is allowed to reach <code>scan.example.com</code> at all. The <code>/admin</code> application is bound to that group, so anybody outside it is stopped at Authentik</td>
+<td>Authentik : appartenance à <code>opencloud-scanner-operators</code></td>
+<td>Si la connexion peut seulement atteindre <code>scan.example.com</code>. L’application <code>/admin</code> est associée à ce groupe : toute personne extérieure est arrêtée chez Authentik</td>
 </tr>
 <tr>
-<td>The scan service: <code>COS_WEB_ADMIN_USERS</code></td>
-<td>Whether the username the outpost forwards is an operator of <em>this</em> deployment</td>
+<td>Le service d’analyse : <code>COS_WEB_ADMIN_USERS</code></td>
+<td>Si le nom d’utilisateur transmis par l’outpost est un opérateur de <em>ce</em> déploiement</td>
 </tr>
 </tbody>
 </table>
-<p>A person needs both: the same username in the group and on the list. What
-follows is the same result reached two ways, and the check at the end applies
-to either.</p>
-<h3 id="with-the-wizard">With the wizard</h3>
-<p>Run <code>docker/setup-wizard.py</code>, turn the operator's area on, and answer:</p>
+<p>Une personne a besoin des deux : le même nom d’utilisateur dans le groupe et sur
+la liste. Voici le même résultat obtenu de deux façons ; la vérification finale
+s’applique à l’une comme à l’autre.</p>
+<h3 id="with-the-wizard">Avec l’assistant</h3>
+<p>Lancez <code>docker/setup-wizard.py</code>, activez l’espace opérateur et répondez :</p>
 <ul>
-<li><strong>the operator's guest list</strong> (<code>admin_users</code>) with the username, for example
-  <code>scanokko</code>;</li>
-<li><strong>who signs in</strong> (<code>authentik_accounts</code>) - the guest list is added to it
-  anyway, so there is nothing to repeat.</li>
+<li><strong>la liste d’invités de l’opérateur</strong> (<code>admin_users</code>) avec le nom
+  d’utilisateur, par exemple <code>scanokko</code> ;</li>
+<li><strong>qui se connecte</strong> (<code>authentik_accounts</code>) : la liste d’invités y est ajoutée
+  de toute façon, il n’y a donc rien à répéter.</li>
 </ul>
-<p>Bring the stack up, build the enrollment link from <code>.env</code> with the command the
-wizard printed (see <a href="#accounts-without-the-admin-interface">accounts without the admin
-interface</a>), and send it to that person.
-They open it and:</p>
+<p>Démarrez la pile, construisez le lien d’inscription à partir de <code>.env</code> avec la
+commande affichée par l’assistant (voir <a href="#accounts-without-the-admin-interface">des comptes sans l’interface
+d’administration</a>), et envoyez-le à cette
+personne. Elle l’ouvre et :</p>
 <ol>
-<li>type the username exactly as it is on the guest list, an email address and
-   a password;</li>
-<li>enrol a second factor - scan the QR code with an authenticator app, or
-   register a security key or passkey (see <a href="#what-the-person-sees">what the person
-   sees</a>);</li>
-<li>are signed in, already in <code>opencloud-scanner-operators</code>.</li>
+<li>saisit le nom d’utilisateur exactement comme sur la liste d’invités, une
+   adresse e-mail et un mot de passe ;</li>
+<li>enregistre un second facteur - en scannant le code QR avec une application
+   d’authentification, ou en enregistrant une clé de sécurité ou une passkey
+   (voir <a href="#what-the-person-sees">ce que voit la personne</a>) ;</li>
+<li>est connectée, et déjà membre de <code>opencloud-scanner-operators</code>.</li>
 </ol>
-<p>They can then open <code>https://scan.example.com/admin</code>. To add an operator later,
-run the wizard again against the same directory, add the name to the guest
-list, restart the Authentik containers so they read the new list, and send the
-same link.</p>
-<h3 id="by-hand-in-the-authentik-interface">By hand, in the Authentik interface</h3>
-<p>For an account that already existed before it was put on the guest list, a
-database the enrollment flow never ran against, or an Authentik you run
-yourself.</p>
-<p><strong>1. Get into <code>akadmin</code>.</strong> On a stack the wizard wrote, the password is
-<code>AUTHENTIK_BOOTSTRAP_PASSWORD</code> in <code>.env</code> - but only if the database was created
-by that stack. The variable is applied on the very first start and ignored on a
-database that already has <code>akadmin</code>, so a regenerated <code>.env</code> next to an older
-volume has a password nothing accepts. Mint a one-time way in instead:</p>
+<p>Elle peut alors ouvrir <code>https://scan.example.com/admin</code>. Pour ajouter un
+opérateur plus tard, relancez l’assistant sur le même annuaire, ajoutez le nom à
+la liste d’invités, redémarrez les conteneurs Authentik pour qu’ils lisent la
+nouvelle liste, et envoyez le même lien.</p>
+<h3 id="by-hand-in-the-authentik-interface">À la main, dans l’interface Authentik</h3>
+<p>Pour un compte qui existait avant d’être placé sur la liste d’invités, une base
+de données sur laquelle le flux d’inscription n’a jamais été exécuté, ou un
+Authentik que vous exploitez vous-même.</p>
+<p><strong>1. Accédez à <code>akadmin</code>.</strong> Sur une pile générée par l’assistant, le mot de passe
+est <code>AUTHENTIK_BOOTSTRAP_PASSWORD</code> dans <code>.env</code> - mais seulement si la base de
+données a été créée par cette pile. La variable est appliquée au tout premier
+démarrage et ignorée sur une base qui contient déjà <code>akadmin</code> : un <code>.env</code>
+régénéré à côté d’un volume plus ancien contient donc un mot de passe que rien
+n’accepte. Générez plutôt un accès à usage unique :</p>
 <pre><code class="language-bash">docker compose exec authentik_worker ak create_recovery_key 10 akadmin
 </code></pre>
-<p>It prints a path, valid for ten minutes. Open it on Authentik's public
-address - <code>https://sso.example.com</code> followed by that path - and you are signed
-in as <code>akadmin</code> without a password; set one under the user settings. The
-first sign-in asks <code>akadmin</code> to enrol a second factor like everybody else.</p>
-<p><strong>2. Create the person.</strong> <strong>Directory → Users → New User → Internal User</strong>. The
-username must be spelled exactly as it is in <code>COS_WEB_ADMIN_USERS</code> - the
-service compares the forwarded name, not the email or the display name. Give
-it an email address, so a password recovery has somewhere to go.</p>
-<p><strong>3. Give them a password.</strong> On the user's page, <strong>Set password</strong>, or better
-<strong>Email recovery link</strong> if <a href="#sending-mail">mail</a> is configured, or <strong>Create
-recovery link</strong> to hand the link over some other way. A link means the
-password never passes through your clipboard.</p>
-<p><strong>4. Put them in the group.</strong> On the user's page, <strong>Groups → Add to existing
-group → <code>opencloud-scanner-operators</code></strong>. Or from the group's side:
+<p>La commande affiche un chemin, valable dix minutes. Ouvrez-le sur l’adresse
+publique d’Authentik - <code>https://sso.example.com</code> suivi de ce chemin - et vous
+êtes connecté en tant qu’<code>akadmin</code> sans mot de passe ; définissez-en un dans les
+paramètres de l’utilisateur. À la première connexion, <code>akadmin</code> doit
+enregistrer un second facteur comme tout le monde.</p>
+<p><strong>2. Créez le compte utilisateur.</strong> <strong>Directory → Users → New User → Internal User</strong>. Le
+nom d’utilisateur doit être écrit exactement comme dans <code>COS_WEB_ADMIN_USERS</code> :
+le service compare le nom transmis, pas l’e-mail ni le nom affiché. Donnez-lui
+une adresse e-mail, pour qu’une récupération de mot de passe puisse aboutir
+quelque part.</p>
+<p><strong>3. Donnez-lui un mot de passe.</strong> Sur la page de l’utilisateur, <strong>Set
+password</strong>, ou mieux <strong>Email recovery link</strong> si <a href="#sending-mail">la messagerie</a>
+est configurée, ou <strong>Create recovery link</strong> pour transmettre le lien par un
+autre moyen. Avec un lien, le mot de passe ne passe jamais par votre
+presse-papiers.</p>
+<p><strong>4. Ajoutez-la au groupe.</strong> Sur la page de l’utilisateur, <strong>Groups → Add to
+existing group → <code>opencloud-scanner-operators</code></strong>. Ou depuis le groupe :
 <strong>Directory → Groups → opencloud-scanner-operators → Users → Add existing
-user</strong>. Do not tick <em>Superuser</em> anywhere: an Authentik superuser administers
-Authentik, which is not what being an operator of the scanner means.</p>
-<p><strong>5. They sign in.</strong> They open <code>https://scan.example.com/admin</code>, are sent to
-Authentik, sign in, enrol a second factor, and are sent back.</p>
-<p>Steps 2 and 4 can be done from a shell instead - each command on one line, as
-written, because <code>ak shell -c</code> runs the string as a script and a pasted
-indentation is a syntax error:</p>
+user</strong>. Ne cochez <em>Superuser</em> nulle part : un superutilisateur Authentik
+administre Authentik, ce qui n’a rien à voir avec le rôle d’opérateur du
+scanner.</p>
+<p><strong>5. Elle se connecte.</strong> Elle ouvre <code>https://scan.example.com/admin</code>, est
+redirigée vers Authentik, se connecte, enregistre un second facteur et revient.</p>
+<p>Les étapes 2 et 4 peuvent aussi se faire depuis un shell - chaque commande sur
+une seule ligne, telle qu’écrite, car <code>ak shell -c</code> exécute la chaîne comme un
+script et une indentation collée provoque une erreur de syntaxe :</p>
 <pre><code class="language-bash"># Create the account with no usable password; hand them a recovery link after.
 docker compose exec authentik_worker ak shell -c &quot;from authentik.core.models import User; u = User(username='scanokko', email='scanokko@example.com', name='scanokko'); u.set_unusable_password(); u.save(); print('CREATED')&quot; 2&gt;&amp;1 | grep -E 'CREATED|Error'
 docker compose exec authentik_worker ak create_recovery_key 60 scanokko
@@ -591,21 +619,22 @@ docker compose exec authentik_worker ak create_recovery_key 60 scanokko
 # Put it in the operator group.
 docker compose exec authentik_worker ak shell -c &quot;from authentik.core.models import Group, User; Group.objects.get(name='opencloud-scanner-operators').users.add(User.objects.get(username='scanokko')); print('ADDED')&quot; 2&gt;&amp;1 | grep -E 'ADDED|Error|DoesNotExist'
 </code></pre>
-<p>The recovery link from <code>create_recovery_key</code> is how that person sets their own
-password; it expires after the minutes given.</p>
-<h3 id="checking-it">Checking it</h3>
-<p>Membership is the part that fails silently - the person signs in, and Authentik
-shows an error instead of sending them back:</p>
+<p>Le lien de récupération produit par <code>create_recovery_key</code> permet à cette
+personne de définir son propre mot de passe ; il expire après le nombre de
+minutes indiqué.</p>
+<h3 id="checking-it">Vérifier</h3>
+<p>L’appartenance au groupe est ce qui échoue en silence : la personne se connecte,
+et Authentik affiche une erreur au lieu de la renvoyer :</p>
 <pre><code class="language-bash">docker compose exec authentik_worker ak shell -c &quot;from authentik.core.models import Group; g = Group.objects.get(name='opencloud-scanner-operators'); print('IN_GROUP', g.users.filter(username='scanokko').exists())&quot; 2&gt;&amp;1 | grep -E 'IN_GROUP|Error|DoesNotExist'
 </code></pre>
-<p>And the negative case, which is worth the minute: an account that is <em>not</em> in
-the group must get Authentik's error, not the area. <strong>Events → Logs</strong> records
-every refusal with the account and the application it was refused.</p>
-<h2 id="pointing-the-scanner-at-it">Pointing the scanner at it</h2>
-<p>The stack above does this for you - the values below are already in
-<code>docker-compose.authentik.yml</code>, read from <code>.env</code>. This section is for pointing
-the service at an Authentik, or any other provider, that you already run. On
-<code>web_app</code>, in <code>docker/docker-compose.yml</code> or in <code>docker/.env</code>:</p>
+<p>Et le cas négatif, qui vaut bien une minute : un compte qui n’est <em>pas</em> dans le
+groupe doit recevoir l’erreur d’Authentik, et non l’espace opérateur. <strong>Events →
+Logs</strong> enregistre chaque refus avec le compte et l’application concernés.</p>
+<h2 id="pointing-the-scanner-at-it">Relier le scanner au fournisseur</h2>
+<p>La pile ci-dessus le fait pour vous : les valeurs ci-dessous figurent déjà dans
+<code>docker-compose.authentik.yml</code>, lues depuis <code>.env</code>. Cette section sert à relier
+le service à un Authentik, ou à tout autre fournisseur, que vous exploitez déjà.
+Sur <code>web_app</code>, dans <code>docker/docker-compose.yml</code> ou dans <code>docker/.env</code> :</p>
 <pre><code class="language-yaml">COS_WEB_PUBLIC_BASE_URL: &quot;https://scanner.example.com&quot;
 COS_WEB_MCP_AUTH_ENABLED: &quot;true&quot;
 COS_WEB_MCP_AUTH_ISSUER: &quot;https://sso.example.com/application/o/opencloud-scanner/&quot;
@@ -614,168 +643,175 @@ COS_WEB_MCP_AUTH_AUDIENCE: &quot;&lt;the provider's client ID&gt;&quot;
 <table>
 <thead>
 <tr>
-<th>Setting</th>
-<th>Meaning</th>
+<th>Paramètre</th>
+<th>Signification</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>COS_WEB_MCP_AUTH_ENABLED</code></td>
-<td>Whether <code>/mcp</code> requires a token. Off by default</td>
+<td>Si <code>/mcp</code> exige un jeton. Désactivé par défaut</td>
 </tr>
 <tr>
 <td><code>COS_WEB_MCP_AUTH_ISSUER</code></td>
-<td>The issuer, exactly as the discovery document spells it. A trailing slash is accepted either way</td>
+<td>L’émetteur, exactement comme l’écrit le document de découverte. Une barre oblique finale est acceptée dans les deux cas</td>
 </tr>
 <tr>
 <td><code>COS_WEB_MCP_AUTH_AUDIENCE</code></td>
-<td>What a token's <code>aud</code> must contain. In Authentik that is the client ID. <strong>Required</strong> whenever the sign-in is on</td>
+<td>Ce que le <code>aud</code> d’un jeton doit contenir. Dans Authentik, c’est l’ID client. <strong>Obligatoire</strong> dès que la connexion est activée</td>
 </tr>
 <tr>
 <td><code>COS_WEB_MCP_AUTH_JWKS_URL</code></td>
-<td>Only when the keys are not at <code>&lt;issuer&gt;/jwks/</code></td>
+<td>Uniquement lorsque les clés ne se trouvent pas à <code>&lt;issuer&gt;/jwks/</code></td>
 </tr>
 <tr>
 <td><code>COS_WEB_MCP_AUTH_RESOURCE_URL</code></td>
-<td>Only when <code>/mcp</code> is not at <code>&lt;public base URL&gt;/mcp</code></td>
+<td>Uniquement lorsque <code>/mcp</code> ne se trouve pas à <code>&lt;public base URL&gt;/mcp</code></td>
 </tr>
 <tr>
 <td><code>COS_WEB_MCP_AUTH_SCOPES</code></td>
-<td>Scopes a token must carry, separated by <code>;</code>. Empty means any valid token from that issuer is enough</td>
+<td>Les portées qu’un jeton doit porter, séparées par <code>;</code>. Vide, tout jeton valide de cet émetteur suffit</td>
 </tr>
 </tbody>
 </table>
-<p>Four misconfigurations <strong>refuse to start</strong> rather than serve <code>/mcp</code> open,
-because an operator who believes the endpoint is protected while it is not is
-the worst outcome available here:</p>
+<p>Quatre erreurs de configuration <strong>empêchent le démarrage</strong> plutôt que de servir
+<code>/mcp</code> sans protection, car un opérateur qui croit le point de terminaison
+protégé alors qu’il ne l’est pas est le pire scénario possible ici :</p>
 <ul>
-<li>authentication on with no issuer - there would be nothing to check against;</li>
-<li>authentication on with no public base URL and no resource URL - the 401
-  names that URL and the RFC 9728 metadata is published beneath it, so
-  guessing it would send every client somewhere else;</li>
-<li>a resource URL that is neither HTTPS nor loopback - a bearer token on an
-  unencrypted hop is a credential in the clear;</li>
-<li>authentication on with no audience - see below.</li>
+<li>authentification activée sans émetteur : il n’y aurait rien à vérifier ;</li>
+<li>authentification activée sans URL de base publique ni URL de ressource : la
+  réponse 401 nomme cette URL et les métadonnées RFC 9728 sont publiées
+  en dessous, la deviner enverrait donc chaque client ailleurs ;</li>
+<li>une URL de ressource qui n’est ni en HTTPS ni en bouclage : un jeton porteur
+  sur un tronçon non chiffré est un identifiant en clair ;</li>
+<li>authentification activée sans audience - voir ci-dessous.</li>
 </ul>
-<p>Asking for authentication while <code>COS_WEB_ENABLE_MCP</code> is <code>false</code> is <em>not</em> an
-error. Turning the endpoint off is a perfectly good way to protect it, and
-making the safest configuration the one that fails to boot would only teach
-people to switch the guard off instead.</p>
-<p><strong>The audience is required.</strong> An Authentik that serves more than this
-application mints tokens for all of them, with the same issuer and the same
-signing key, so an <code>aud</code> that is never compared makes every one of those
-tokens a key to <code>/mcp</code> - including one minted for an application anybody in
-the directory may use. Leaving <code>COS_WEB_MCP_AUTH_AUDIENCE</code> empty therefore
-stops the service rather than quietly widening it, and a token that carries
-no <code>aud</code> at all is refused for the same reason. The stack in
-<code>docker/docker-compose.authentik.yml</code> sets it from <code>AUTHENTIK_CLIENT_ID</code> and
-will not start without it.</p>
-<h2 id="adding-somebody-who-may-use-the-endpoint">Adding somebody who may use the endpoint</h2>
-<p><strong>Read this before the stack is reachable by anybody else.</strong> The blueprint
-provisions a provider and an application, and an application with no bindings
-is one <strong>every</strong> account in this Authentik can use. On a stack that exists to
-guard <code>/mcp</code> that is usually fine on the first day, when the only account is
-the <code>akadmin</code> you created at first start, and rarely fine on the second.</p>
-<p>Nothing about <em>who</em> a caller is reaches the scan service. It checks a
-signature, an issuer, an audience, an expiry and the scopes it was told to
-require - it never looks at the subject, the username or a group claim, and it
-has no user table to look them up in. Who may hold a token is therefore
-entirely Authentik's decision, made in the two steps below, and it is the only
-place that decision exists.</p>
-<h3 id="a-group-and-the-binding-that-makes-it-mean-something">A group, and the binding that makes it mean something</h3>
-<p>Do this once, before the first user. A binding on a group is one thing to
-review later; a binding per person is a list nobody prunes.</p>
+<p>Demander l’authentification alors que <code>COS_WEB_ENABLE_MCP</code> vaut <code>false</code> n’est
+<em>pas</em> une erreur. Désactiver le point de terminaison est un très bon moyen de le
+protéger, et faire échouer au démarrage la configuration la plus sûre
+n’apprendrait qu’à désactiver le garde-fou.</p>
+<p><strong>L’audience est obligatoire.</strong> Un Authentik qui sert d’autres applications
+émet des jetons pour toutes, avec le même émetteur et la même clé de signature :
+un <code>aud</code> jamais comparé ferait de chacun de ces jetons une clé pour <code>/mcp</code>, y
+compris un jeton émis pour une application que n’importe qui dans l’annuaire
+peut utiliser. Laisser <code>COS_WEB_MCP_AUTH_AUDIENCE</code> vide arrête donc le service
+au lieu d’élargir discrètement l’accès, et un jeton sans aucun <code>aud</code> est refusé
+pour la même raison. La pile de <code>docker/docker-compose.authentik.yml</code> la définit
+à partir de <code>AUTHENTIK_CLIENT_ID</code> et ne démarre pas sans elle.</p>
+<h2 id="adding-somebody-who-may-use-the-endpoint">Autoriser une personne à utiliser le point de terminaison</h2>
+<p><strong>Lisez ceci avant que la pile soit accessible à d’autres personnes.</strong> Le
+blueprint provisionne un fournisseur et une application, et une application sans
+association peut être utilisée par <strong>tous</strong> les comptes de cet Authentik. Sur
+une pile dont le rôle est de protéger <code>/mcp</code>, c’est généralement acceptable le
+premier jour, quand le seul compte est l’<code>akadmin</code> créé au premier démarrage, et
+rarement le deuxième.</p>
+<p>Rien de l’identité d’un appelant n’atteint le service d’analyse. Il vérifie une
+signature, un émetteur, une audience, une expiration et les portées qu’on lui a
+demandé d’exiger ; il ne regarde jamais le sujet, le nom d’utilisateur ni un
+claim de groupe, et n’a aucune table d’utilisateurs où les chercher. Qui peut
+détenir un jeton relève donc entièrement d’Authentik, décidé dans les deux étapes
+ci-dessous, et c’est le seul endroit où cette décision existe.</p>
+<h3 id="a-group-and-the-binding-that-makes-it-mean-something">Un groupe, et l’association qui lui donne un sens</h3>
+<p>Faites-le une fois, avant le premier utilisateur. Une association sur un groupe
+est un seul élément à réexaminer plus tard ; une association par personne est
+une liste que personne ne nettoie.</p>
 <ol>
-<li><strong>Directory → Groups → Create</strong>. Name it <code>opencloud-scanner</code>. Leave
-   <em>Superuser privileges</em> off - this group is about one application, and an
-   Authentik superuser is an Authentik administrator.</li>
-<li><strong>Applications → Applications → OpenCloud security scanner</strong>, the
-   <strong>Policy / Group / User Bindings</strong> tab, <strong>Bind existing Group/User</strong>.</li>
-<li>Choose the group, leave the policy engine mode at <strong>any</strong>, and create it.</li>
+<li><strong>Directory → Groups → Create</strong>. Nommez-le <code>opencloud-scanner</code>. Laissez
+   <em>Superuser privileges</em> désactivé : ce groupe concerne une application, et un
+   superutilisateur Authentik est un administrateur d’Authentik.</li>
+<li><strong>Applications → Applications → OpenCloud security scanner</strong>, onglet
+   <strong>Policy / Group / User Bindings</strong>, <strong>Bind existing Group/User</strong>.</li>
+<li>Choisissez le groupe, laissez le mode du moteur de politiques sur <strong>any</strong>, et
+   créez l’association.</li>
 </ol>
-<p>From that moment the application is closed to everybody who is not in the
-group, and a token request from anybody else fails at Authentik rather than at
-<code>/mcp</code>. The failure is logged under <strong>Events → Logs</strong> as a denied
-authorization, which is the page to check when somebody swears their password
-is right.</p>
-<p>Test the negative case rather than assuming it: an account outside the group
-must <em>not</em> be able to get a token. An application that looks bound but is not
-is the one failure mode worth spending two minutes on.</p>
-<h3 id="the-person">The person</h3>
-<p><strong>Directory → Users → New User → Internal User.</strong> Username and email are the
-two fields that matter; the email is what a password recovery goes to, so an
-account without one can only be recovered by an administrator.</p>
-<p>Then, on the user's page:</p>
+<p>Dès lors, l’application est fermée à toute personne extérieure au groupe, et une
+demande de jeton de quelqu’un d’autre échoue chez Authentik plutôt que sur
+<code>/mcp</code>. L’échec est journalisé sous <strong>Events → Logs</strong> comme une autorisation
+refusée : c’est la page à consulter quand quelqu’un jure que son mot de passe est
+correct.</p>
+<p>Testez le cas négatif au lieu de le supposer : un compte extérieur au groupe ne
+doit <em>pas</em> pouvoir obtenir de jeton. Une application qui semble associée mais ne
+l’est pas est la seule défaillance qui mérite qu’on y consacre deux minutes.</p>
+<h3 id="the-person">La personne</h3>
+<p><strong>Directory → Users → New User → Internal User.</strong> Le nom d’utilisateur et
+l’e-mail sont les deux champs importants ; l’e-mail est la destination d’une
+récupération de mot de passe, et un compte sans e-mail ne peut être récupéré que
+par un administrateur.</p>
+<p>Ensuite, sur la page de l’utilisateur :</p>
 <ul>
-<li><strong>Set password</strong>, or <strong>Email recovery link</strong> if you configured
-  <a href="#sending-mail">mail</a> - the second is the better habit, because it means the
-  password was never in your clipboard, your terminal or the chat message you
-  sent it in. <strong>Create recovery link</strong> produces the same link to hand over by
-  some other route when there is no mail server.</li>
+<li><strong>Set password</strong>, ou <strong>Email recovery link</strong> si vous avez configuré
+  <a href="#sending-mail">la messagerie</a> - la seconde option est la meilleure habitude,
+  car le mot de passe n’est alors jamais passé par votre presse-papiers, votre
+  terminal ou le message de chat dans lequel vous l’auriez envoyé. <strong>Create
+  recovery link</strong> produit le même lien, à transmettre par un autre moyen
+  lorsqu’il n’y a pas de serveur de messagerie.</li>
 <li><strong>Groups → Add to existing group</strong> → <code>opencloud-scanner</code>.</li>
 </ul>
-<p>That is the whole of it for somebody who signs in through a browser: their MCP
-client takes them through Authentik, they log in, and the client gets a token.
-Nothing has to be copied, and there is no per-user configuration on the
-scanner side at all.</p>
-<p><strong>A second factor is already required.</strong> The person is taken through
-enrolling one on their first sign-in - see
-<a href="#a-second-factor-for-everybody">a second factor for everybody</a> - so there is
-nothing to switch on for them.</p>
-<h3 id="the-agent-that-is-nobody">The agent that is nobody</h3>
-<p>A cron job, a CI pipeline or an assistant running on a server has no browser
-to be taken through, and should not be holding a person's password. It gets a
-<strong>service account</strong>: an account with credentials and no login.</p>
-<p><strong>Directory → Users → New User → Service Account.</strong> The confirmation screen
-shows the username and an <strong>app password</strong>, once - that string is the
-credential, and there is no second chance to read it. Add the account to
-<code>opencloud-scanner</code> the same way as a person, because a binding does not care
-which kind of account it is; <em>Create group</em> on the form does the equivalent
-the other way round if you would rather bind one account on its own.</p>
-<p>Two details worth writing down at the time rather than discovering later. The
-app password <strong>expires after 360 days</strong> unless you clear <em>Expiring</em>, so an
-agent that has worked all year is an agent that stops for no visible reason -
-issue a new one from <strong>Directory → Tokens and App passwords</strong> before then. And
-a service account cannot use the admin or user interface at all, which is the
-point of it: it has credentials and no login.</p>
-<p>Give one to each caller rather than sharing one. They cost nothing, and the
-difference shows the day you need to revoke exactly one of them without
-telephoning everybody else.</p>
-<h2 id="getting-a-token">Getting a token</h2>
-<p>Which credential a caller uses depends on what it is, and all three end at the
-same token endpoint:</p>
+<p>C’est tout pour une personne qui se connecte dans un navigateur : son client MCP
+la conduit chez Authentik, elle se connecte, et le client obtient un jeton. Rien
+n’est à copier, et il n’y a aucune configuration par utilisateur côté scanner.</p>
+<p><strong>Un second facteur est déjà exigé.</strong> La personne est conduite à en enregistrer
+un lors de sa première connexion - voir
+<a href="#a-second-factor-for-everybody">un second facteur pour tout le monde</a> -, il n’y a
+donc rien à activer pour elle.</p>
+<h3 id="the-agent-that-is-nobody">L’agent avec un compte de service</h3>
+<p>Une tâche cron, un pipeline CI ou un assistant exécuté sur un serveur n’a pas de
+navigateur par lequel passer, et ne devrait pas détenir le mot de passe d’une
+personne. Il reçoit un <strong>compte de service</strong> : un compte doté d’identifiants et
+sans connexion interactive.</p>
+<p><strong>Directory → Users → New User → Service Account.</strong> L’écran de confirmation
+affiche le nom d’utilisateur et un <strong>mot de passe d’application</strong>, une seule
+fois : conservez ce secret dès sa création, car vous ne pourrez pas
+l’afficher de nouveau. Ajoutez le compte à <code>opencloud-scanner</code> comme pour une personne, car une
+association s’applique aux deux types de comptes ; <em>Create group</em> dans le
+formulaire fait l’équivalent dans l’autre sens si vous préférez associer un
+compte isolément.</p>
+<p>Deux détails à noter tout de suite plutôt qu’à découvrir plus tard. Le mot de
+passe d’application <strong>expire au bout de 360 jours</strong> si vous ne décochez pas
+<em>Expiring</em> : un agent qui a fonctionné toute l’année s’arrête alors sans raison
+visible. Émettez-en un nouveau depuis <strong>Directory → Tokens and App passwords</strong>
+avant cette échéance. Et un compte de service ne peut utiliser ni l’interface
+d’administration ni l’interface utilisateur, et c’est tout l’intérêt : il a des
+identifiants, pas de connexion.</p>
+<p>Donnez-en un à chaque appelant plutôt que d’en partager un. Ils ne coûtent rien,
+et la différence se voit le jour où vous devez en révoquer exactement un sans
+téléphoner à tous les autres.</p>
+<h2 id="getting-a-token">Obtenir un jeton</h2>
+<p>L’identifiant utilisé par un appelant dépend de sa nature, et les trois cas
+aboutissent au même point de terminaison des jetons :</p>
 <table>
 <thead>
 <tr>
-<th>The caller</th>
-<th>What it presents</th>
-<th>Where the credential comes from</th>
+<th>L’appelant</th>
+<th>Ce qu’il présente</th>
+<th>D’où vient l’identifiant</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>A person at a keyboard</td>
-<td>The authorization code flow, in a browser</td>
-<td>Their own password, and their second factor</td>
+<td>Une personne au clavier</td>
+<td>Le flux par code d’autorisation, dans un navigateur</td>
+<td>Son propre mot de passe et son second facteur</td>
 </tr>
 <tr>
-<td>An agent acting for a person</td>
-<td>That person's username and an app password</td>
+<td>Un agent agissant pour une personne</td>
+<td>Le nom d’utilisateur de cette personne et un mot de passe d’application</td>
 <td><strong>Directory → Tokens and App passwords</strong></td>
 </tr>
 <tr>
-<td>An agent acting for nobody</td>
-<td>A service account's username and app password</td>
-<td>Shown once when the service account was created</td>
+<td>Un agent utilisant son propre compte de service</td>
+<td>Le nom d’utilisateur et le mot de passe d’application d’un compte de service</td>
+<td>Affichés une fois à la création du compte de service</td>
 </tr>
 </tbody>
 </table>
-<p>For an explicitly named service account, use its username and app password along with
-the provider’s client ID and secret. Authentik also supports the client-only request
-described below, which creates a shared service account. Choose a separate account per
-caller when you need individual revocation.</p>
-<h3 id="as-a-service-account">As a service account</h3>
-<p>The ordinary case for an agent, and the one to reach for:</p>
+<p>Pour un compte de service explicitement nommé, utilisez son nom d’utilisateur et
+son mot de passe d’application avec l’ID et le secret client du fournisseur.
+Authentik accepte aussi la requête avec les seuls identifiants client décrite
+ci-dessous, qui crée un compte de service partagé. Choisissez un compte distinct
+par appelant si vous avez besoin d’une révocation individuelle.</p>
+<h3 id="as-a-service-account">En tant que compte de service</h3>
+<p>Le cas ordinaire pour un agent, et celui à privilégier :</p>
 <pre><code class="language-bash">curl -s https://sso.example.com/application/o/token/ \
   -d grant_type=client_credentials \
   -d client_id=&quot;$AUTHENTIK_CLIENT_ID&quot; \
@@ -784,97 +820,99 @@ caller when you need individual revocation.</p>
   -d password=&quot;$APP_PASSWORD&quot; \
   -d scope=&quot;openid&quot; | jq -r .access_token
 </code></pre>
-<p><code>username</code> is the service account, <code>password</code> is its app password, and
-<code>client_id</code> and <code>client_secret</code> are the provider's, straight out of
-<code>docker/.env</code>. Ask for the scopes the deployment requires - <code>openid</code> alone is
-enough while <code>COS_WEB_MCP_AUTH_SCOPES</code> is empty, which is the default.</p>
-<p>For a client that can only be given one secret, the same thing with the
-username folded in:</p>
+<p><code>username</code> est le compte de service, <code>password</code> son mot de passe
+d’application, et <code>client_id</code> et <code>client_secret</code> sont ceux du fournisseur, tirés
+directement de <code>docker/.env</code>. Demandez les portées exigées par le déploiement :
+<code>openid</code> seul suffit tant que <code>COS_WEB_MCP_AUTH_SCOPES</code> est vide, ce qui est la
+valeur par défaut.</p>
+<p>Pour un client auquel on ne peut donner qu’un seul secret, la même chose avec le
+nom d’utilisateur intégré :</p>
 <pre><code class="language-bash">curl -s https://sso.example.com/application/o/token/ \
   -d grant_type=client_credentials \
   -d client_id=&quot;$AUTHENTIK_CLIENT_ID&quot; \
   -d client_secret=&quot;$(printf '%s:%s' scanner-agent &quot;$APP_PASSWORD&quot; | base64 -w0)&quot; \
   -d scope=&quot;openid&quot; | jq -r .access_token
 </code></pre>
-<h3 id="without-naming-an-account-at-all">Without naming an account at all</h3>
-<p>Leave the username out and send only the provider's client ID and secret, and
-Authentik issues the token against a service account it creates for the
-purpose, named <code>ak-check-opencloud-security-client_credentials</code>:</p>
+<h3 id="without-naming-an-account-at-all">Sans nommer de compte</h3>
+<p>Omettez le nom d’utilisateur et n’envoyez que l’ID et le secret client du
+fournisseur : Authentik émet alors le jeton pour un compte de service qu’il crée
+à cet effet, nommé <code>ak-check-opencloud-security-client_credentials</code> :</p>
 <pre><code class="language-bash">curl -s https://sso.example.com/application/o/token/ \
   -d grant_type=client_credentials \
   -d client_id=&quot;$AUTHENTIK_CLIENT_ID&quot; \
   -d client_secret=&quot;$AUTHENTIK_CLIENT_SECRET&quot; \
   -d scope=&quot;openid&quot; | jq -r .access_token
 </code></pre>
-<p>It is the shortest path to a working token and the right one for trying the
-endpoint out. It is a poor one to leave in place: every caller using it is the
-same account, so revoking one revokes all of them, and the credential it turns
-on is the provider secret the scan service also reads. Once the binding above
-exists, remember to add that generated account to the group as well, or this
-stops working - which is the correct outcome, and the moment to switch to a
-service account of your own.</p>
-<h3 id="as-a-person">As a person</h3>
-<p>An MCP client that implements the OAuth flow needs nothing but the URL: it
-meets the <code>401</code>, reads <code>/.well-known/oauth-protected-resource/mcp</code>, finds
-Authentik, opens a browser and comes back with a token. The blueprint already
-allows the loopback redirect such a client uses -
-<code>http://127.0.0.1:&lt;port&gt;/...</code>, on 127.0.0.1 only - and the authorization flow
-is the implicit-consent one, so there is no consent screen between logging in
-and being connected.</p>
-<p>If a client asks to be registered instead, register it by hand under
-<strong>Applications → Providers</strong>: Authentik supports dynamic client registration,
-but it is off by default and gated behind a registration token.</p>
-<h3 id="reading-the-token-you-got">Reading the token you got</h3>
-<p>Before wondering why <code>/mcp</code> refuses one, look at what is in it:</p>
+<p>C’est le chemin le plus court vers un jeton fonctionnel, et le bon pour essayer
+le point de terminaison. C’est un mauvais choix à long terme : tous les appelants
+qui l’utilisent sont le même compte, en révoquer un les révoque tous, et
+l’identifiant qu’il active est le secret du fournisseur que lit aussi le service
+d’analyse. Une fois l’association ci-dessus en place, pensez à ajouter aussi ce
+compte généré au groupe, sinon ce chemin cesse de fonctionner - ce qui est le
+bon résultat, et le moment de passer à votre propre compte de service.</p>
+<h3 id="as-a-person">En tant que personne</h3>
+<p>Un client MCP qui implémente le flux OAuth n’a besoin que de l’URL : il reçoit la
+réponse <code>401</code>, lit <code>/.well-known/oauth-protected-resource/mcp</code>, trouve
+Authentik, ouvre un navigateur et revient avec un jeton. Le blueprint autorise
+déjà la redirection de bouclage qu’utilise un tel client -
+<code>http://127.0.0.1:&lt;port&gt;/...</code>, uniquement sur 127.0.0.1 -, et le flux
+d’autorisation est celui à consentement implicite : il n’y a donc pas d’écran de
+consentement entre la connexion et l’accès.</p>
+<p>Si un client demande à être enregistré, enregistrez-le à la main sous
+<strong>Applications → Providers</strong> : Authentik prend en charge l’enregistrement
+dynamique des clients, mais il est désactivé par défaut et protégé par un jeton
+d’enregistrement.</p>
+<h3 id="reading-the-token-you-got">Lire le jeton obtenu</h3>
+<p>Avant de vous demander pourquoi <code>/mcp</code> en refuse un, regardez ce qu’il contient :</p>
 <pre><code class="language-bash">python -c 'import base64,json,sys;p=sys.argv[1].split(&quot;.&quot;)[1];print(json.dumps(json.loads(base64.urlsafe_b64decode(p+&quot;=&quot;*(-len(p)%4))),indent=2))' &quot;$TOKEN&quot;
 </code></pre>
 <table>
 <thead>
 <tr>
 <th>Claim</th>
-<th>What it must be</th>
+<th>Ce qu’il doit être</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>iss</code></td>
-<td><code>COS_WEB_MCP_AUTH_ISSUER</code>, give or take the trailing slash</td>
+<td><code>COS_WEB_MCP_AUTH_ISSUER</code>, à la barre oblique finale près</td>
 </tr>
 <tr>
 <td><code>aud</code></td>
-<td>Contains <code>COS_WEB_MCP_AUTH_AUDIENCE</code>, which is the client ID</td>
+<td>Contient <code>COS_WEB_MCP_AUTH_AUDIENCE</code>, c’est-à-dire l’ID client</td>
 </tr>
 <tr>
 <td><code>exp</code></td>
-<td>In the future - Authentik's default access token lifetime is minutes, not days</td>
+<td>Dans le futur - la durée de vie par défaut d’un jeton d’accès Authentik se compte en minutes, pas en jours</td>
 </tr>
 <tr>
 <td><code>scope</code></td>
-<td>Contains everything in <code>COS_WEB_MCP_AUTH_SCOPES</code>, if anything is set</td>
+<td>Contient tout ce que liste <code>COS_WEB_MCP_AUTH_SCOPES</code>, le cas échéant</td>
 </tr>
 <tr>
 <td><code>sub</code></td>
-<td>Whatever Authentik decided. <strong>The scan service does not read it</strong></td>
+<td>Ce qu’Authentik a décidé. <strong>Le service d’analyse ne le lit pas</strong></td>
 </tr>
 </tbody>
 </table>
-<p>Then use it, which is the only step that involves this service at all:</p>
+<p>Utilisez-le ensuite ; c’est la seule étape qui fait intervenir ce service :</p>
 <pre><code class="language-bash">curl -s https://scanner.example.com/mcp \
   -H &quot;Authorization: Bearer $TOKEN&quot; \
   -H &quot;Content-Type: application/json&quot; \
   -H &quot;Accept: application/json, text/event-stream&quot; \
   -d '{&quot;jsonrpc&quot;:&quot;2.0&quot;,&quot;id&quot;:1,&quot;method&quot;:&quot;tools/list&quot;}'
 </code></pre>
-<p>A list of tools means the whole chain works. A <code>401</code> means the token was not
-accepted, and the header on that response names the document that says why it
-would be. A token, once minted, is good until it expires: mint one per run
-rather than one per request.</p>
-<p>Authentik always issues JWT access tokens, whichever way you asked for one, so
-there is never an opaque string to introspect and the scan service never has
-to ask Authentik anything.</p>
-<h2 id="configuring-an-agent">Configuring an agent</h2>
-<p>Most MCP clients accept a static header, which is the simplest thing that
-works:</p>
+<p>Une liste d’outils signifie que toute la chaîne fonctionne. Une réponse <code>401</code>
+signifie que le jeton n’a pas été accepté, et l’en-tête de cette réponse nomme le
+document qui indique pourquoi il le serait. Un jeton émis reste valable jusqu’à
+son expiration : émettez-en un par exécution plutôt qu’un par requête.</p>
+<p>Authentik émet toujours des jetons d’accès JWT, quelle que soit la façon dont
+vous les demandez : il n’y a donc jamais de chaîne opaque à introspecter, et le
+service d’analyse n’a jamais rien à demander à Authentik.</p>
+<h2 id="configuring-an-agent">Configurer un agent</h2>
+<p>La plupart des clients MCP acceptent un en-tête statique, ce qui est la solution
+la plus simple :</p>
 <pre><code class="language-json">{
   &quot;servers&quot;: {
     &quot;opencloud-scan&quot;: {
@@ -885,73 +923,77 @@ works:</p>
   }
 }
 </code></pre>
-<p>A client that implements the MCP authorization specification needs no
-configuration beyond the URL: it will meet the 401, read
-<code>/.well-known/oauth-protected-resource/mcp</code>, find Authentik and take the user
-through the flow. Authentik does support dynamic client registration, but it
-is disabled by default and gated behind a registration token, so registering
-the client by hand in the admin interface is the path that always works.</p>
-<p>See <a href="/documentation/mcp">the MCP guide</a> for the per-client configuration files; the only
-addition here is the header.</p>
-<h2 id="erasure-which-is-a-different-credential">Erasure, which is a different credential</h2>
-<p><code>erase_instance_data</code> needs the operator's purge credential -
-<code>COS_WEB_PURGE_TOKEN</code> - and that has never been the same thing as an identity.
-With the endpoint open it travels in <code>Authorization</code>, because nothing else is
-using that header.</p>
-<p><strong>With a sign-in configured, <code>Authorization</code> belongs to the identity provider,
-and the purge credential moves to <code>X-Purge-Authorization</code>.</strong> The fallback is
-deliberately not kept: reading an agent's identity token as if it were an
-operator credential is exactly the confusion worth refusing.</p>
+<p>Un client qui implémente la spécification d’autorisation MCP n’a besoin d’aucune
+configuration en dehors de l’URL : il recevra la réponse 401, lira
+<code>/.well-known/oauth-protected-resource/mcp</code>, trouvera Authentik et conduira
+l’utilisateur à travers le flux. Authentik prend bien en charge
+l’enregistrement dynamique des clients, mais il est désactivé par défaut et
+protégé par un jeton d’enregistrement : enregistrer le client à la main dans
+l’interface d’administration est la méthode qui fonctionne toujours.</p>
+<p>Consultez <a href="/documentation/mcp">le guide MCP</a> pour les fichiers de configuration propres à
+chaque client ; le seul ajout ici est l’en-tête.</p>
+<h2 id="erasure-which-is-a-different-credential">L’effacement, qui est un autre identifiant</h2>
+<p><code>erase_instance_data</code> exige l’identifiant d’effacement de l’opérateur -
+<code>COS_WEB_PURGE_TOKEN</code> -, qui n’a jamais été une identité. Lorsque le point de
+terminaison est ouvert, il circule dans <code>Authorization</code>, car rien d’autre
+n’utilise cet en-tête.</p>
+<p><strong>Lorsqu’une connexion est configurée, <code>Authorization</code> appartient au
+fournisseur d’identité, et l’identifiant d’effacement passe dans
+<code>X-Purge-Authorization</code>.</strong> L’ancien comportement n’est volontairement pas
+conservé : lire le jeton d’identité d’un agent comme s’il s’agissait d’un
+identifiant d’opérateur est exactement la confusion qu’il faut refuser.</p>
 <pre><code class="language-json">&quot;headers&quot;: {
   &quot;Authorization&quot;: &quot;Bearer ${input:token}&quot;,
   &quot;X-Purge-Authorization&quot;: &quot;Bearer ${input:purge_token}&quot;
 }
 </code></pre>
-<p>Neither ever reaches the model: the tool takes them from the request headers,
-never as an argument.</p>
-<h2 id="behind-a-reverse-proxy">Behind a reverse proxy</h2>
-<p>Two hosts, two requirements.</p>
-<p><strong>Authentik builds the issuer out of the <code>Host</code> header it is handed.</strong> A proxy
-that rewrites it gives every token an <code>iss</code> nobody will accept, and the
-symptom is confusing because everything else works. Pass <code>Host</code> and
-<code>X-Forwarded-Proto</code> through unchanged, and add the proxy's egress address to
-<code>AUTHENTIK_LISTEN__TRUSTED_PROXY_CIDRS</code> if it is outside the private ranges.
-Authentik cannot run under a subpath; give it a hostname.</p>
-<p>Set <code>COS_WEB_PUBLIC_BASE_URL</code> to the scanner’s public address for resource metadata. The
-token audience is configured separately through <code>COS_WEB_MCP_AUTH_AUDIENCE</code>. The
-<a href="/documentation/reverse-proxy">reverse proxy guide</a> includes working configurations.</p>
-<h2 id="backing-it-up">Backing it up</h2>
-<p><strong>Authentik has no built-in backup.</strong> The one it used to have was removed
-years ago, so this is yours to run. Four things matter, and the first two are
-the ones that make a restore possible at all:</p>
+<p>Ni l’un ni l’autre n’atteint jamais le modèle : l’outil les lit dans les
+en-têtes de la requête, jamais dans un argument.</p>
+<h2 id="behind-a-reverse-proxy">Derrière un reverse proxy</h2>
+<p>Deux hôtes, deux exigences.</p>
+<p><strong>Authentik construit l’émetteur à partir de l’en-tête <code>Host</code> qu’il reçoit.</strong> Un
+proxy qui le réécrit donne à chaque jeton un <code>iss</code> que personne n’acceptera, et
+le symptôme est déroutant parce que tout le reste fonctionne. Transmettez <code>Host</code>
+et <code>X-Forwarded-Proto</code> sans modification, et ajoutez l’adresse de sortie du proxy
+à <code>AUTHENTIK_LISTEN__TRUSTED_PROXY_CIDRS</code> si elle est en dehors des plages
+privées. Authentik ne peut pas fonctionner sous un sous-chemin : donnez-lui un
+nom d’hôte.</p>
+<p>Définissez <code>COS_WEB_PUBLIC_BASE_URL</code> sur l’adresse publique du scanner pour les
+métadonnées de ressource. L’audience des jetons se configure séparément avec
+<code>COS_WEB_MCP_AUTH_AUDIENCE</code>. Le <a href="/documentation/reverse-proxy">guide des reverse proxies</a>
+contient des configurations fonctionnelles.</p>
+<h2 id="backing-it-up">Sauvegarder</h2>
+<p><strong>Authentik n’a pas de sauvegarde intégrée.</strong> Celle qui existait a été retirée il
+y a des années : c’est donc à vous de la mettre en place. Quatre éléments
+comptent, et les deux premiers sont ceux qui rendent une restauration possible :</p>
 <table>
 <thead>
 <tr>
-<th>What</th>
-<th>Where</th>
-<th>Why</th>
+<th>Quoi</th>
+<th>Où</th>
+<th>Pourquoi</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>AUTHENTIK_SECRET_KEY</code></td>
 <td><code>docker/.env</code></td>
-<td>Signs everything in the database. A different key makes a restored database unusable</td>
+<td>Signe tout le contenu de la base. Une autre clé rend une base restaurée inutilisable</td>
 </tr>
 <tr>
 <td>PostgreSQL</td>
-<td>the <code>authentik_database</code> volume</td>
-<td>Users, groups, flows, policies, providers, tokens, certificates. Losing it is losing everything</td>
+<td>le volume <code>authentik_database</code></td>
+<td>Utilisateurs, groupes, flux, politiques, fournisseurs, jetons, certificats. La perdre, c’est tout perdre</td>
 </tr>
 <tr>
-<td>Media</td>
-<td>the <code>authentik_media</code> volume</td>
-<td>Uploaded icons and backgrounds</td>
+<td>Médias</td>
+<td>le volume <code>authentik_media</code></td>
+<td>Icônes et arrière-plans téléversés</td>
 </tr>
 <tr>
-<td>Certificates and templates</td>
+<td>Certificats et modèles</td>
 <td><code>authentik_certs</code>, <code>authentik_templates</code></td>
-<td>Only if you put something there that is not in the database</td>
+<td>Uniquement si vous y avez placé quelque chose qui n’est pas dans la base</td>
 </tr>
 </tbody>
 </table>
@@ -976,12 +1018,13 @@ done
 # And the secrets, without which none of the above is worth anything.
 cp .env &quot;authentik-env-$stamp.backup&quot;
 </code></pre>
-<p>The volume names are prefixed with the Compose project name, which is the
-directory name unless you set <code>COMPOSE_PROJECT_NAME</code>. <code>docker volume ls</code> will
-tell you what they actually came out as.</p>
-<p>The backup contains credentials and signing keys. Encrypt it, keep a copy off the host
-and test a restore with the matching database version and <code>.env</code>.</p>
-<h2 id="restoring-it">Restoring it</h2>
+<p>Les noms des volumes sont préfixés par le nom du projet Compose, qui est le nom
+du répertoire sauf si vous définissez <code>COMPOSE_PROJECT_NAME</code>. <code>docker volume ls</code>
+vous indique les noms réellement obtenus.</p>
+<p>La sauvegarde contient des identifiants et des clés de signature. Chiffrez-la,
+conservez-en une copie hors de l’hôte et testez une restauration avec la version
+de base de données et le <code>.env</code> correspondants.</p>
+<h2 id="restoring-it">Restaurer</h2>
 <pre><code class="language-bash">cd docker
 stack=&quot;-f docker-compose.authentik.yml&quot;
 
@@ -1004,144 +1047,144 @@ done
 
 docker compose $stack up -d
 </code></pre>
-<p>Restoring into a different major version is not supported; restore into the
-version that made the dump, then upgrade.</p>
-<p>Nothing on the scanner's side needs restoring. It holds no state about the
-provider beyond the settings in the compose file, and the signing keys are
-fetched again on the first request.</p>
-<h2 id="when-it-does-not-work">When it does not work</h2>
+<p>La restauration dans une autre version majeure n’est pas prise en charge ;
+restaurez dans la version qui a produit la sauvegarde, puis mettez à jour.</p>
+<p>Rien n’est à restaurer côté scanner. Il ne conserve aucun état concernant le
+fournisseur en dehors des paramètres du fichier compose, et les clés de signature
+sont récupérées à nouveau à la première requête.</p>
+<h2 id="when-it-does-not-work">Quand cela ne fonctionne pas</h2>
 <table>
 <thead>
 <tr>
-<th>Symptom</th>
+<th>Symptôme</th>
 <th>Cause</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>The service refuses to start naming <code>ISSUER</code>, <code>RESOURCE_URL</code> or <code>HTTPS</code></td>
-<td>Exactly what it says; see <a href="#pointing-the-scanner-at-it">pointing the scanner at it</a></td>
+<td>Le service refuse de démarrer en citant <code>ISSUER</code>, <code>RESOURCE_URL</code> ou <code>HTTPS</code></td>
+<td>Exactement ce qui est indiqué ; voir <a href="#pointing-the-scanner-at-it">relier le scanner au fournisseur</a></td>
 </tr>
 <tr>
-<td>Every request gets 401, and the token looks fine</td>
-<td><code>iss</code> in the token does not match <code>COS_WEB_MCP_AUTH_ISSUER</code>. Usually the proxy rewriting <code>Host</code>, or the application slug not being what you thought</td>
+<td>Chaque requête reçoit 401, et le jeton semble correct</td>
+<td>Le <code>iss</code> du jeton ne correspond pas à <code>COS_WEB_MCP_AUTH_ISSUER</code>. Généralement un proxy qui réécrit <code>Host</code>, ou un slug d’application différent de ce que vous pensiez</td>
 </tr>
 <tr>
-<td>Every request gets 401, <code>iss</code> is right</td>
-<td><code>aud</code> does not contain the audience. In Authentik it is the client ID, not the application name</td>
+<td>Chaque requête reçoit 401, <code>iss</code> est correct</td>
+<td><code>aud</code> ne contient pas l’audience. Dans Authentik, c’est l’ID client, pas le nom de l’application</td>
 </tr>
 <tr>
-<td>401 after a while, having worked</td>
-<td>The token expired. Access tokens are short-lived by design; the client should refresh</td>
+<td>401 au bout d’un moment, après avoir fonctionné</td>
+<td>Le jeton a expiré. Les jetons d’accès ont une courte durée de vie par conception ; le client doit le renouveler</td>
 </tr>
 <tr>
-<td>401 and the token has <code>"alg": "HS256"</code></td>
-<td>No signing key on the provider. Set one and issue a new token - a symmetrically signed token cannot be verified without the client secret, and this service will not take it</td>
+<td>401 et le jeton contient <code>"alg": "HS256"</code></td>
+<td>Pas de clé de signature sur le fournisseur. Définissez-en une et émettez un nouveau jeton : un jeton signé de façon symétrique ne peut pas être vérifié sans le secret client, et ce service ne l’accepte pas</td>
 </tr>
 <tr>
-<td>401 and everything looks right</td>
-<td>A required scope from <code>COS_WEB_MCP_AUTH_SCOPES</code> is missing from the token's <code>scope</code> claim</td>
+<td>401 alors que tout semble correct</td>
+<td>Une portée exigée par <code>COS_WEB_MCP_AUTH_SCOPES</code> manque dans le claim <code>scope</code> du jeton</td>
 </tr>
 <tr>
-<td>Anybody with an Authentik account can get a token</td>
-<td>The application has no bindings, and that means everyone. See <a href="#adding-somebody-who-may-use-the-endpoint">adding somebody who may use the endpoint</a></td>
+<td>N’importe qui avec un compte Authentik peut obtenir un jeton</td>
+<td>L’application n’a pas d’association, ce qui signifie tout le monde. Voir <a href="#adding-somebody-who-may-use-the-endpoint">autoriser une personne à utiliser le point de terminaison</a></td>
 </tr>
 <tr>
-<td>The token request itself is refused, before <code>/mcp</code> is ever reached</td>
-<td>The account is not bound to the application. <strong>Events → Logs</strong> records it as a denied authorization, naming the account</td>
+<td>La demande de jeton elle-même est refusée, avant même d’atteindre <code>/mcp</code></td>
+<td>Le compte n’est pas associé à l’application. <strong>Events → Logs</strong> l’enregistre comme une autorisation refusée, avec le nom du compte</td>
 </tr>
 <tr>
-<td>It worked until a group binding was added, using only the client secret</td>
-<td>That path runs as the service account Authentik generated, <code>ak-check-opencloud-security-client_credentials</code>, and it is not in the group either. Add it, or move to a service account of your own</td>
+<td>Cela fonctionnait jusqu’à l’ajout d’une association de groupe, avec le seul secret client</td>
+<td>Ce chemin s’exécute sous le compte de service généré par Authentik, <code>ak-check-opencloud-security-client_credentials</code>, qui n’est pas non plus dans le groupe. Ajoutez-le, ou passez à votre propre compte de service</td>
 </tr>
 <tr>
-<td><code>invalid_grant</code> on a <code>client_credentials</code> request</td>
-<td>The <code>password</code> is an <strong>app password</strong>, not the user's login password and not an API token. Create one under <strong>Directory → Tokens and App passwords</strong></td>
+<td><code>invalid_grant</code> sur une requête <code>client_credentials</code></td>
+<td>Le <code>password</code> est un <strong>mot de passe d’application</strong>, ni le mot de passe de connexion de l’utilisateur ni un jeton d’API. Créez-en un sous <strong>Directory → Tokens and App passwords</strong></td>
 </tr>
 <tr>
-<td>The enrollment link answers <em>access denied</em></td>
-<td>The token is not the one in <code>.env</code>, or the stack was started without <code>AUTHENTIK_ENROLLMENT_TOKEN</code>. Check <strong>Customisation → Blueprints</strong> for <code>check-opencloud-security - enrollment</code></td>
+<td>Le lien d’inscription répond <em>access denied</em></td>
+<td>Le jeton n’est pas celui de <code>.env</code>, ou la pile a été démarrée sans <code>AUTHENTIK_ENROLLMENT_TOKEN</code>. Cherchez <code>check-opencloud-security - enrollment</code> sous <strong>Customisation → Blueprints</strong></td>
 </tr>
 <tr>
-<td>"This username is not one this invitation was issued for."</td>
-<td>The name is not in <code>COS_AUTHENTIK_ACCOUNTS</code>. Run the wizard again and add it; the list is read when the form is submitted, after a restart of the Authentik containers</td>
+<td>« This username is not one this invitation was issued for. »</td>
+<td>Le nom ne figure pas dans <code>COS_AUTHENTIK_ACCOUNTS</code>. Relancez l’assistant et ajoutez-le ; la liste est lue à la soumission du formulaire, après un redémarrage des conteneurs Authentik</td>
 </tr>
 <tr>
-<td>"Username is already taken." on the enrollment link</td>
-<td>That name has enrolled already. Sign in normally instead</td>
+<td>« Username is already taken. » sur le lien d’inscription</td>
+<td>Ce nom est déjà inscrit. Connectez-vous normalement</td>
 </tr>
 <tr>
-<td>Somebody lost their authenticator</td>
-<td>Sign in as <code>akadmin</code> (password <code>AUTHENTIK_BOOTSTRAP_PASSWORD</code> in <code>.env</code>) and delete their device under <strong>Directory → Users</strong></td>
+<td>Quelqu’un a perdu son authentificateur</td>
+<td>Connectez-vous en tant qu’<code>akadmin</code> (mot de passe <code>AUTHENTIK_BOOTSTRAP_PASSWORD</code> dans <code>.env</code>) et supprimez son appareil sous <strong>Directory → Users</strong></td>
 </tr>
 <tr>
-<td><code>AUTHENTIK_BOOTSTRAP_PASSWORD</code> is refused for <code>akadmin</code></td>
-<td>The database is older than that <code>.env</code> - the variable is applied on the first start only. <code>docker compose exec authentik_worker ak create_recovery_key 10 akadmin</code> prints a one-time sign-in; see <a href="#by-hand-in-the-authentik-interface">an operator for /admin</a></td>
+<td><code>AUTHENTIK_BOOTSTRAP_PASSWORD</code> est refusé pour <code>akadmin</code></td>
+<td>La base de données est plus ancienne que ce <code>.env</code> : la variable n’est appliquée qu’au premier démarrage. <code>docker compose exec authentik_worker ak create_recovery_key 10 akadmin</code> affiche une connexion à usage unique ; voir <a href="#by-hand-in-the-authentik-interface">un opérateur pour /admin</a></td>
 </tr>
 <tr>
-<td>Signing in to <code>/admin</code> works at Authentik, which then shows an error instead of sending you back</td>
-<td>The account is not in <code>opencloud-scanner-operators</code>. See <a href="#checking-it">checking it</a></td>
+<td>La connexion à <code>/admin</code> fonctionne chez Authentik, qui affiche ensuite une erreur au lieu de vous renvoyer</td>
+<td>Le compte n’est pas dans <code>opencloud-scanner-operators</code>. Voir <a href="#checking-it">vérifier</a></td>
 </tr>
 <tr>
-<td>Authentik is in the group and <code>/admin</code> still refuses</td>
-<td>The username is not in <code>COS_WEB_ADMIN_USERS</code>, or is spelled differently there</td>
+<td>Le compte est dans le groupe Authentik et <code>/admin</code> refuse toujours</td>
+<td>Le nom d’utilisateur ne figure pas dans <code>COS_WEB_ADMIN_USERS</code>, ou y est écrit différemment</td>
 </tr>
 <tr>
-<td><code>password authentication failed for user "authentik"</code> in the Authentik log</td>
-<td><code>AUTHENTIK_PG_PASS</code> in <code>.env</code> is not the password the database volume was created with - PostgreSQL reads <code>POSTGRES_PASSWORD</code> only when it initialises an empty volume. Set the old value back, or change the database user's password to the new one with <code>ALTER USER authentik WITH PASSWORD '...'</code> through <code>docker compose exec authentik_postgresql psql -U authentik</code></td>
+<td><code>password authentication failed for user "authentik"</code> dans le journal d’Authentik</td>
+<td><code>AUTHENTIK_PG_PASS</code> dans <code>.env</code> n’est pas le mot de passe avec lequel le volume de base de données a été créé : PostgreSQL ne lit <code>POSTGRES_PASSWORD</code> qu’à l’initialisation d’un volume vide. Remettez l’ancienne valeur, ou changez le mot de passe de l’utilisateur de la base avec <code>ALTER USER authentik WITH PASSWORD '...'</code> via <code>docker compose exec authentik_postgresql psql -U authentik</code></td>
 </tr>
 <tr>
-<td>The password recovery mail never arrives</td>
-<td>No mail server, so Authentik delivered it locally. See <a href="#sending-mail">sending mail</a></td>
+<td>L’e-mail de récupération de mot de passe n’arrive jamais</td>
+<td>Pas de serveur de messagerie : Authentik l’a livré localement. Voir <a href="#sending-mail">envoyer des e-mails</a></td>
 </tr>
 <tr>
-<td>No <code>WWW-Authenticate</code> on the 401</td>
-<td>Something in front is stripping it. The header is how a client finds the provider</td>
+<td>Pas de <code>WWW-Authenticate</code> sur la réponse 401</td>
+<td>Un élément placé devant le supprime. Cet en-tête est ce qui permet à un client de trouver le fournisseur</td>
 </tr>
 <tr>
-<td>The endpoint is open when it should not be</td>
-<td><code>COS_WEB_MCP_AUTH_ENABLED</code> did not reach the container. <code>/.well-known/ai.json</code> reports what the service actually believes: <code>mcp.authentication.type</code></td>
+<td>Le point de terminaison est ouvert alors qu’il ne devrait pas l’être</td>
+<td><code>COS_WEB_MCP_AUTH_ENABLED</code> n’a pas atteint le conteneur. <code>/.well-known/ai.json</code> indique ce que le service croit réellement : <code>mcp.authentication.type</code></td>
 </tr>
 <tr>
-<td>401, and the log says the JWKS could not be fetched</td>
-<td>The URL resolves but Authentik answers <strong>404</strong>. A Compose service name with an underscore in it is not a legal host name, and Authentik refuses one; use the <code>authentik-server</code> alias, which is what the shipped stack does</td>
+<td>401, et le journal indique que le JWKS n’a pas pu être récupéré</td>
+<td>L’URL se résout mais Authentik répond <strong>404</strong>. Un nom de service Compose contenant un tiret bas n’est pas un nom d’hôte valide, et Authentik le refuse ; utilisez l’alias <code>authentik-server</code>, comme le fait la pile fournie</td>
 </tr>
 <tr>
-<td>The blueprint never appears under <strong>Customisation → Blueprints</strong></td>
-<td>Authentik reads it as uid 1000. A <code>authentik/blueprints</code> directory that is not world-readable - a restrictive <code>umask</code> when the repository was cloned - is skipped in silence. <code>chmod 755 authentik/blueprints &amp;&amp; chmod 644 authentik/blueprints/*.yaml</code></td>
+<td>Le blueprint n’apparaît jamais sous <strong>Customisation → Blueprints</strong></td>
+<td>Authentik le lit avec l’uid 1000. Un répertoire <code>authentik/blueprints</code> non lisible par tous - un <code>umask</code> restrictif lors du clonage du dépôt - est ignoré en silence. <code>chmod 755 authentik/blueprints &amp;&amp; chmod 644 authentik/blueprints/*.yaml</code></td>
 </tr>
 <tr>
-<td>The database container is unhealthy, complaining about <code>/var/lib/postgresql/data</code></td>
-<td>PostgreSQL 18 mounts one level up, at <code>/var/lib/postgresql</code>, and refuses the old path rather than ignoring it. A volume from a 16 or 17 stack has to be <code>pg_upgrade</code>d, not remounted</td>
+<td>Le conteneur de base de données est en mauvaise santé et se plaint de <code>/var/lib/postgresql/data</code></td>
+<td>PostgreSQL 18 se monte un niveau plus haut, sur <code>/var/lib/postgresql</code>, et refuse l’ancien chemin au lieu de l’ignorer. Un volume d’une pile 16 ou 17 doit passer par <code>pg_upgrade</code>, pas être remonté</td>
 </tr>
 <tr>
-<td>Either Authentik container exits with <code>Address family not supported by protocol</code></td>
-<td>The host has no IPv6, and Authentik binds <code>[::]</code> by default. The three <code>AUTHENTIK_LISTEN__*</code> variables in the shipped stack pin it to IPv4 - including <code>__METRICS</code>, which is the one that is easy to forget and enough on its own to crash the worker</td>
+<td>L’un des conteneurs Authentik se termine avec <code>Address family not supported by protocol</code></td>
+<td>L’hôte n’a pas d’IPv6, et Authentik écoute sur <code>[::]</code> par défaut. Les trois variables <code>AUTHENTIK_LISTEN__*</code> de la pile fournie le limitent à IPv4 - y compris <code>__METRICS</code>, facile à oublier et suffisante à elle seule pour faire planter le worker</td>
 </tr>
 </tbody>
 </table>
-<p>The last one is worth checking after every change:</p>
+<p>La dernière vérification mérite d’être faite après chaque modification :</p>
 <pre><code class="language-bash">curl -s https://scanner.example.com/.well-known/ai.json | jq .mcp.authentication
 curl -s https://scanner.example.com/.well-known/oauth-protected-resource/mcp | jq
 curl -si https://scanner.example.com/mcp -X POST -d '{}' | grep -i www-authenticate
 </code></pre>
-<h2 id="using-a-provider-that-is-not-authentik">Using a provider that is not Authentik</h2>
-<p>Nothing here is Authentik-specific. Any provider that issues signed JWT access
-tokens and publishes a JWKS works: Keycloak, Zitadel, Authelia, Auth0, Okta.
-Set the issuer to whatever its discovery
-document says, the audience to whatever it puts in <code>aud</code>, and if it publishes
-its keys somewhere other than <code>&lt;issuer&gt;/jwks/</code>, set
-<code>COS_WEB_MCP_AUTH_JWKS_URL</code> to where it does. Only asymmetric algorithms are
-accepted - RS256, RS384, RS512, ES256, ES384, ES512 - which rules out <code>HS256</code>
-and, more importantly, <code>none</code>.</p>
-<p>Authentik is what ships here because it is open source, self-hosted, runs in
-two containers next to the stack, and does not require an account with anybody
-to try.</p>
+<h2 id="using-a-provider-that-is-not-authentik">Utiliser un autre fournisseur qu’Authentik</h2>
+<p>Rien ici n’est propre à Authentik. Tout fournisseur qui émet des jetons d’accès
+JWT signés et publie un JWKS convient : Keycloak, Zitadel, Authelia, Auth0,
+Okta. Définissez l’émetteur selon son document de découverte, l’audience selon
+ce qu’il place dans <code>aud</code>, et s’il publie ses clés ailleurs qu’à
+<code>&lt;issuer&gt;/jwks/</code>, indiquez leur emplacement dans <code>COS_WEB_MCP_AUTH_JWKS_URL</code>.
+Seuls les algorithmes asymétriques sont acceptés - RS256, RS384, RS512, ES256,
+ES384, ES512 -, ce qui exclut <code>HS256</code> et, surtout, <code>none</code>.</p>
+<p>Authentik est fourni ici parce qu’il est open source, auto-hébergé, fonctionne
+dans deux conteneurs à côté de la pile, et ne demande de compte auprès de
+personne pour l’essayer.</p>
 <hr>
-<p>This is an independent community project. It is not affiliated with, endorsed
-by or supported by OpenCloud GmbH, or by Authentik Security, Inc. "OpenCloud"
-and all related marks belong to their respective owners and are used here only
-to identify the software this tool checks.</p>
+<p>Ce projet est un projet communautaire indépendant. Il n’est ni affilié à
+OpenCloud GmbH ni à Authentik Security, Inc., ni approuvé ou soutenu par elles.
+« OpenCloud » et toutes les marques associées appartiennent à leurs
+propriétaires respectifs et ne sont utilisés ici que pour identifier le logiciel
+que cet outil vérifie.</p>
 </article>
 
 {% include "_page-nav.html" %}

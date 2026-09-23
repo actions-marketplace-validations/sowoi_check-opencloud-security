@@ -55,9 +55,9 @@ Read from the instance itself:
   out - an office integration that embeds Collabora or a WOPI host stops
   loading unless that origin sends a `Cross-Origin-Resource-Policy` of its own
 - whether `/.well-known/security.txt` tells somebody who finds a flaw where to
-  report it, as `securityTxtPublished` under `setup.advisoryChecks`. The same
-  bargain as the headers above, for what is not a header: OpenCloud publishes
-  none on any instance, so it is explained and never counted. The file has to
+  report it, as `securityTxtPublished` under `setup.advisoryChecks`. OpenCloud does not
+  publish this file by default. As with the advisory headers above, the result
+  explains its absence without affecting the grade. The file has to
   carry the `Contact` field RFC 9116 requires - a 200 alone means nothing on
   an instance whose frontend answers every unknown path with its own shell.
   See [ADR 0034](../adr/0034-an-advisory-observation-need-not-be-a-header.md)
@@ -133,8 +133,8 @@ OpenCloud is a single Go binary that serves its web frontend from embedded
 assets, and its frontend is a single-page application: unknown paths return the
 app shell with HTTP 200 rather than a 404. A naive "does `/opencloud.yaml`
 return 200?" check would therefore flag every healthy instance. The scanner
-first probes a path that cannot exist, learns what the catch-all response looks
-like, and only reports an exposed path whose response actually differs from it.
+first requests a path that cannot exist and records the catch-all response.
+It only reports an exposed path when its response differs from that baseline.
 
 ### Who signs users in
 

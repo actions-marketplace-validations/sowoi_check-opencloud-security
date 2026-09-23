@@ -23,7 +23,7 @@ réussit que lorsque **tous** exigent un mot de passe - si ne serait-ce qu'un
 type de partage peut être créé sans, quiconque détient cette URL dispose des
 données qu'elle expose, indéfiniment, sans le moindre identifiant.
 
-**Il s'agit d'un échec de peu plutôt que d'un tout ou rien.** OpenCloud impose
+**L’échec peut concerner certains types de liens seulement.** OpenCloud impose
 un mot de passe sur les liens en lecture seule par défaut, mais pas sur ceux en
 écriture : la raison habituelle de cet échec est donc que les liens en dépôt
 seul ou en modification sont restés à leur valeur par défaut. Un lien en
@@ -49,8 +49,8 @@ toutes les instances renvoient la même valeur, quelle que soit leur
 configuration. **Ce contrôle ne déclenche jamais d'alerte**, précisément pour
 cette raison : il est exclu de la ligne « Missing hardening », de la métrique
 `hardenings_missing` et de la charge utile du webhook, car un avertissement que
-personne ne peut jamais lever est du bruit, et c'est par le bruit que les
-constats réels finissent ignorés - voir [Mesures qui ne sont pas des
+aucun réglage ne permet de corriger risque de détourner l’attention des
+problèmes qui peuvent être corrigés - voir [Mesures qui ne sont pas des
 réglages](hardening.md#measures-that-are-not-settings). `--debug` continue de
 l'afficher, avec l'explication.
 
@@ -69,10 +69,9 @@ calendrier.
 
 ## Ce que contient encore ce document, et pourquoi rien d'autre n'est contrôlé {#what-else-is-in-that-document-and-why-none-of-it-is-checked}
 
-Le document de capacités décrit bien d'autres aspects du partage que ce que
-lisent ces deux contrôles, et il vaut la peine de consigner pourquoi le reste ne
-mérite pas d'indicateur - sans quoi quelqu'un refera ce raisonnement chaque
-année. Vérifié par rapport à
+Le document de capacités décrit d’autres aspects du partage. Le tableau
+ci-dessous explique pourquoi ils ne font pas l’objet de contrôles. Ces
+explications ont été vérifiées dans
 `services/frontend/pkg/revaconfig/config.go` dans
 [opencloud-eu/opencloud](https://github.com/opencloud-eu/opencloud) :
 
@@ -81,7 +80,7 @@ année. Vérifié par rapport à
 | `auto_accept_share`, `share_with_group_members_only`, `share_with_membership_groups_only`, `group_sharing`, `sharing_roles`, `api_enabled` | Constantes figées dans la table des capacités. Toutes les instances renvoient la même valeur : un contrôle ne dirait donc rien du déploiement - la même raison que pour `publicLinkExpirationEnforced`, qui ne déclenche jamais d'alerte. |
 | `public.upload`, `public.send_mail`, `public.social_share`, `public.alias`, `public.multiple`, `public.supports_upload_only`, `public.can_edit` | Figées de la même manière. |
 | `federation.incoming`, `federation.outgoing` | Configurables via `OC_ENABLE_OCM`, mais la description d'OpenCloud elle-même indique que sa modification n'est **pas prise en charge** et que « le comportement du backend n'est pas modifié » : cela régit ce qui est annoncé aux clients, non ce que fait le serveur. Un constat sur lequel un exploitant ne peut pas agir avec un effet réel est pire que pas de constat du tout. |
-| `public.default_permissions` | Réellement configurable (`FRONTEND_DEFAULT_LINK_PERMISSIONS` : `0` interne, `1` visiteur public, `1` par défaut). Pas *encore* contrôlée, car toutes les instances par défaut se mettraient à échouer, et savoir si ce compromis en vaut la peine relève d'un jugement sur le bruit plutôt que sur les faits. |
+| `public.default_permissions` | Réellement configurable (`FRONTEND_DEFAULT_LINK_PERMISSIONS` : `0` interne, `1` visiteur public, `1` par défaut). Pas encore contrôlée : toutes les instances avec la configuration par défaut échoueraient. Il reste à déterminer si cette alerte aiderait les exploitants. |
 | `deny_access`, `search_min_length` | Configurables, mais il s'agit respectivement d'une expérimentation obsolète et d'un réglage d'ergonomie de recherche, dont aucun ne change qui peut accéder aux données. |
 
 La règle que suit ce tableau est celle d'`AGENTS.md` : avant d'ajouter un
