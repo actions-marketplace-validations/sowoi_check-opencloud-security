@@ -10,76 +10,79 @@ modifier.
 apparaissent dans la sortie et les métriques.
 
 <!-- TOC -->
-* [Hardening measures, one by one](#hardening-measures-one-by-one)
-  * [What each measure means](#what-each-measure-means)
-  * [Measures that are not settings](#measures-that-are-not-settings)
-  * [Accepting a finding you are not going to fix](#accepting-a-finding-you-are-not-going-to-fix)
+* [Les mesures de durcissement une par une](#hardening-measures-one-by-one)
+  * [Signification de chaque mesure](#what-each-measure-means)
+  * [Mesures qui ne sont pas des paramètres](#measures-that-are-not-settings)
+  * [Accepter un constat que vous ne corrigerez pas](#accepting-a-finding-you-are-not-going-to-fix)
 <!-- TOC -->
 
 
-## What each measure means
+## Signification de chaque mesure {#what-each-measure-means}
 
-| Hardening                      | What a failure means                                                                                                                                                                                                                                                                                                                             | Setting to change                                                                                                                                              |
+| Durcissement                   | Signification d’un échec                                                                                                                                                                                                                                                                                                                         | Paramètre à modifier                                                                                                                                           |
 |:-------------------------------|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `basicAuthDisabled`            | The instance offers HTTP Basic auth, so credentials can be replayed on every request and single sign-on (with any second factor) is bypassed. Often deliberate: CalDAV, CardDAV and WebDAV clients cannot speak OpenID Connect, which is why this is rated `medium`, and `low` when an external identity provider handles the interactive login. | [`PROXY_ENABLE_BASIC_AUTH=false`][proxy-env] if nothing needs it; otherwise keep it and hand those clients app tokens rather than account passwords.           |
-| `cspWithoutUnsafeInline`       | The `Content-Security-Policy` contains `'unsafe-inline'`, so injected markup may execute. **This is OpenCloud's shipped default** - see the note below.                                                                                                                                                                                          | [`PROXY_CSP_CONFIG_FILE_LOCATION`][proxy-env] pointing at your own `csp.yaml` (or `PROXY_CSP_CONFIG_FILE_OVERRIDE_LOCATION` to replace the default outright).  |
-| `publicLinkPasswordEnforced`   | Public links may be created without a password, so the URL alone grants access. OpenCloud enforces a password on read-only links but not on writable ones.                                                                                                                                                                                       | [`OC_SHARING_PUBLIC_SHARE_MUST_HAVE_PASSWORD=true`][sharing-env] and `OC_SHARING_PUBLIC_WRITEABLE_SHARE_MUST_HAVE_PASSWORD=true`.                              |
-| `passwordPolicyEnforced`       | Public link passwords may be shorter than 8 characters. (This policy covers link passwords, not account passwords - those belong to your identity provider.)                                                                                                                                                                                     | [`OC_PASSWORD_POLICY_MIN_CHARACTERS`][link-password] (default `8`), plus the `MIN_LOWERCASE`/`MIN_UPPERCASE`/`MIN_DIGITS`/`MIN_SPECIAL_CHARACTERS` companions. |
-| `passwordPolicyComplexity`     | The link password policy no longer requires a lowercase letter, an uppercase letter, a digit and a special character. Each defaults to `1`, so a failure means somebody lowered one; a policy that is switched off reports this as unknown rather than failed.                                                                                     | [`OC_PASSWORD_POLICY_MIN_LOWERCASE_CHARACTERS`][link-password] and its `MIN_UPPERCASE`/`MIN_DIGITS`/`MIN_SPECIAL_CHARACTERS` companions, back to `1` or more.                |
-| `hstsLongMaxAge`               | `Strict-Transport-Security` carries a `max-age` below a year.                                                                                                                                                                                                                                                                                    | None in OpenCloud - its proxy sends ten years, so a short value comes from a reverse proxy in front of it.                                                     |
-| `hstsPreload`                  | The same header has no `preload` directive, so the very first request to the host is unprotected.                                                                                                                                                                                                                                                | None in OpenCloud - again a reverse proxy rewriting the header. Only add `preload` once every subdomain is HTTPS-only.                                         |
-| `hstsPreloadEligible`          | The header would not be accepted for browser preloading: the list requires a `max-age` of at least a year, `includeSubDomains` *and* `preload` together, and OpenCloud's proxy omits `includeSubDomains`. `hstsPreload` above says the directive is there; this says asking would be refused. Reported under `setup.advisoryChecks` and **never alerted on**, because the shortfall is in what OpenCloud ships. Being on the list is not measured - see [ADR 0037](../../adr/0037-preload-eligibility-is-measured-list-membership-is-not.md).                                                                    | Add `includeSubDomains` at the reverse proxy, then submit the domain at [hstspreload.org](https://hstspreload.org/) - acceptance needs both. Confirm every subdomain is HTTPS-only first.                          |
-| `publicLinkExpirationEnforced` | Nothing about your instance: OpenCloud hardcodes this capability to `false`. **Never alerted on** - see below.                                                                                                                                                                                                                                   | None exists.                                                                                                                                                   |
-| `userEnumerationRestricted`    | Account search is not limited to shared groups. OpenCloud hardcodes the restricted state, so this passes everywhere.                                                                                                                                                                                                                             | None exists.                                                                                                                                                   |
-| `oidcPkceSupported`            | The identity provider's discovery document publishes `code_challenge_methods_supported` without `S256`, so the authorization code flow runs without PKCE. Only reported when the provider publishes the field - OpenCloud's built-in provider omits it, and an absent answer is not a failing one.                                                | Require PKCE with `S256` on the provider: Keycloak's *Proof Key for Code Exchange*, Authentik's public client with PKCE required, Authelia's `require_pkce`.   |
-| `oidcImplicitFlowDisabled`     | `response_types_supported` still offers a type that returns a token from the authorization endpoint (`token` or `id_token`), i.e. the implicit flow. **External providers only** - OpenCloud's built-in provider offers these and cannot be reconfigured.                                                                                         | Restrict the client to the authorization code flow; in Keycloak, Standard flow on and Implicit flow off.                                                       |
-| `oidcSigningAlgorithmStrong`   | `id_token_signing_alg_values_supported` offers `none` (an unsigned ID token anybody can write) or an `HS` algorithm (signed with the client secret, which a public client cannot keep). OpenCloud's built-in provider signs with `PS256` and passes.                                                                                              | Offer only asymmetric algorithms - `RS256`, `PS256`, `ES256` or `EdDSA` - and remove `none` and the `HS` family.                                               |
-| `oidcEndpointsUseHttps`        | An endpoint in the discovery document is an `http://` address. Only checked when the instance itself answered over HTTPS: an instance scanned over plain HTTP publishes `http://` because that is how it was asked, which `httpsEnforced` already reports.                                                                                        | Publish the provider over HTTPS and set its issuer to the `https://` address; an `http://` issuer is usually a provider behind a terminating proxy that was never told its public URL. |
+| `basicAuthDisabled`            | L’instance accepte l’authentification HTTP Basic : les identifiants peuvent être rejoués à chaque requête et l’authentification unique (avec un éventuel second facteur) est contournée. C’est souvent voulu : les clients CalDAV, CardDAV et WebDAV ne savent pas utiliser OpenID Connect. C’est pourquoi la gravité est `medium`, et `low` lorsqu’un fournisseur d’identité externe gère la connexion interactive. | [`PROXY_ENABLE_BASIC_AUTH=false`][proxy-env] si rien n’en a besoin ; sinon, conservez-la et donnez à ces clients des jetons d’application plutôt que les mots de passe des comptes. |
+| `cspWithoutUnsafeInline`       | La `Content-Security-Policy` contient `'unsafe-inline'` : du balisage injecté peut donc s’exécuter. **C’est la valeur par défaut livrée avec OpenCloud** - voir la remarque ci-dessous.                                                                                                                                                          | [`PROXY_CSP_CONFIG_FILE_LOCATION`][proxy-env] pointant vers votre propre `csp.yaml` (ou `PROXY_CSP_CONFIG_FILE_OVERRIDE_LOCATION` pour remplacer entièrement la valeur par défaut). |
+| `publicLinkPasswordEnforced`   | Des liens publics peuvent être créés sans mot de passe : l’URL seule donne alors accès. OpenCloud impose un mot de passe aux liens en lecture seule, mais pas aux liens modifiables.                                                                                                                                                             | [`OC_SHARING_PUBLIC_SHARE_MUST_HAVE_PASSWORD=true`][sharing-env] et `OC_SHARING_PUBLIC_WRITEABLE_SHARE_MUST_HAVE_PASSWORD=true`.                               |
+| `passwordPolicyEnforced`       | Les mots de passe des liens publics peuvent compter moins de 8 caractères. (Cette politique concerne les mots de passe des liens, pas ceux des comptes, qui relèvent de votre fournisseur d’identité.)                                                                                                                                           | [`OC_PASSWORD_POLICY_MIN_CHARACTERS`][link-password] (par défaut `8`), avec les paramètres associés `MIN_LOWERCASE`/`MIN_UPPERCASE`/`MIN_DIGITS`/`MIN_SPECIAL_CHARACTERS`. |
+| `passwordPolicyComplexity`     | La politique de mot de passe des liens n’exige plus une minuscule, une majuscule, un chiffre et un caractère spécial. Chacun vaut `1` par défaut : un échec signifie donc que quelqu’un a abaissé l’une de ces valeurs. Une politique désactivée est signalée comme inconnue, pas comme un échec.                                                  | [`OC_PASSWORD_POLICY_MIN_LOWERCASE_CHARACTERS`][link-password] et les paramètres associés `MIN_UPPERCASE`/`MIN_DIGITS`/`MIN_SPECIAL_CHARACTERS`, à remettre à `1` ou plus. |
+| `hstsLongMaxAge`               | `Strict-Transport-Security` porte un `max-age` inférieur à un an.                                                                                                                                                                                                                                                                                | Aucun dans OpenCloud : son proxy envoie dix ans, donc une valeur courte vient d’un reverse proxy placé devant lui.                                              |
+| `hstsPreload`                  | Le même en-tête n’a pas de directive `preload` : la toute première requête vers l’hôte n’est donc pas protégée.                                                                                                                                                                                                                                  | Aucun dans OpenCloud : là encore, un reverse proxy réécrit l’en-tête. N’ajoutez `preload` que lorsque tous les sous-domaines sont exclusivement en HTTPS.      |
+| `hstsPreloadEligible`          | L’en-tête ne serait pas accepté pour le préchargement par les navigateurs : la liste exige à la fois un `max-age` d’au moins un an, `includeSubDomains` *et* `preload`, et le proxy d’OpenCloud omet `includeSubDomains`. `hstsPreload` ci-dessus indique que la directive est présente ; cette mesure indique qu’une demande serait refusée. Elle figure sous `setup.advisoryChecks` et **ne déclenche jamais d’alerte**, car le manque vient de ce que livre OpenCloud. L’inscription effective sur la liste n’est pas mesurée - voir l’[ADR 0037](../../adr/0037-preload-eligibility-is-measured-list-membership-is-not.md). | Ajoutez `includeSubDomains` au niveau du reverse proxy, puis soumettez le domaine sur [hstspreload.org](https://hstspreload.org/) : l’acceptation exige les deux. Vérifiez d’abord que tous les sous-domaines sont exclusivement en HTTPS. |
+| `publicLinkExpirationEnforced` | Cela ne dit rien de votre instance : OpenCloud code cette capacité en dur à `false`. **Ne déclenche jamais d’alerte** - voir ci-dessous.                                                                                                                                                                                                         | Il n’en existe aucun.                                                                                                                                          |
+| `userEnumerationRestricted`    | La recherche de comptes n’est pas limitée aux groupes partagés. OpenCloud code l’état restreint en dur : ce contrôle réussit donc partout.                                                                                                                                                                                                       | Il n’en existe aucun.                                                                                                                                          |
+| `oidcPkceSupported`            | Le document de découverte du fournisseur d’identité publie `code_challenge_methods_supported` sans `S256` : le flux par code d’autorisation fonctionne donc sans PKCE. Signalé uniquement lorsque le fournisseur publie ce champ : le fournisseur intégré d’OpenCloud l’omet, et une réponse absente n’est pas un échec.                          | Exigez PKCE avec `S256` auprès du fournisseur : *Proof Key for Code Exchange* dans Keycloak, client public avec PKCE obligatoire dans Authentik, `require_pkce` dans Authelia. |
+| `oidcImplicitFlowDisabled`     | `response_types_supported` propose encore un type qui renvoie un jeton depuis le point de terminaison d’autorisation (`token` ou `id_token`), c’est-à-dire le flux implicite. **Fournisseurs externes uniquement** : le fournisseur intégré d’OpenCloud propose ces types et ne peut pas être reconfiguré.                                         | Limitez le client au flux par code d’autorisation ; dans Keycloak, activez le Standard flow et désactivez l’Implicit flow.                                      |
+| `oidcSigningAlgorithmStrong`   | `id_token_signing_alg_values_supported` propose `none` (un jeton d’identité non signé que n’importe qui peut écrire) ou un algorithme `HS` (signé avec le secret client, qu’un client public ne peut pas garder secret). Le fournisseur intégré d’OpenCloud signe avec `PS256` et réussit ce contrôle.                                            | Ne proposez que des algorithmes asymétriques - `RS256`, `PS256`, `ES256` ou `EdDSA` - et retirez `none` et la famille `HS`.                                     |
+| `oidcEndpointsUseHttps`        | Un point de terminaison du document de découverte est une adresse `http://`. Vérifié uniquement lorsque l’instance elle-même a répondu en HTTPS : une instance analysée en HTTP simple publie `http://` parce que c’est ainsi qu’elle a été interrogée, ce que `httpsEnforced` signale déjà.                                                      | Publiez le fournisseur en HTTPS et définissez son émetteur (issuer) sur l’adresse `https://` ; un émetteur `http://` est généralement un fournisseur placé derrière un proxy de terminaison TLS à qui l’on n’a jamais indiqué son URL publique. |
 
 [proxy-env]: https://docs.opencloud.eu/docs/dev/server/services/proxy/environment-variables
 [sharing-env]: https://docs.opencloud.eu/docs/dev/server/services/sharing/environment-variables
 [frontend-env]: https://docs.opencloud.eu/docs/dev/server/services/frontend/environment-variables
 [link-password]: https://docs.opencloud.eu/docs/admin/configuration/link-password-policy
 
-## Measures that are not settings
+## Mesures qui ne sont pas des paramètres {#measures-that-are-not-settings}
 
-Two of the rows above cannot be influenced by anyone:
+Deux des lignes ci-dessus échappent à toute action :
 
-- **`publicLinkExpirationEnforced`** is reported as `false` by *every*
-  OpenCloud instance. The capability is a hardcoded constant in the frontend
-  service, not a configuration value, so there is no variable to set and no
-  version that passes.
-- **`userEnumerationRestricted`** is the same story with the opposite sign:
-  hardcoded to the restricted state, so it always passes.
+- **`publicLinkExpirationEnforced`** est signalé à `false` par *toutes* les
+  instances OpenCloud. La capacité est une constante codée en dur dans le service
+  frontend, pas une valeur de configuration : il n’y a donc aucune variable à
+  définir et aucune version qui réussisse ce contrôle.
+- **`userEnumerationRestricted`** est le même cas, en sens inverse : l’état
+  restreint est codé en dur, donc le contrôle réussit toujours.
 
-They are still recorded in the result document, because the observation is
-real, but they are **left out of the "Missing hardening" line, out of the
-`hardenings_missing` metric and out of the webhook**. A warning nobody can
-ever clear is noise, and noise is how genuine findings get ignored. `--debug`
-still lists them, with the explanation.
+Ces deux mesures restent enregistrées dans le document de résultat, car
+l’observation est réelle, mais elles sont **exclues de la ligne « Missing
+hardening », de la métrique `hardenings_missing` et du webhook**. Un
+avertissement que personne ne peut jamais lever n’est que du bruit, et le bruit
+fait ignorer les vrais constats. `--debug` les liste toujours, avec
+l’explication.
 
-`cspWithoutUnsafeInline` is a milder version of the same problem: OpenCloud's
-**default CSP contains `'unsafe-inline'`**, so it fails on a stock instance.
-That one *is* changeable, so it is reported rather than excused - but be aware
-that the web interface currently relies on inline scripts and styles, so a
-strict policy is likely to break the UI and any connected office or IDP
-service. Test before rolling it out. See [`docs/csp.md`](csp.md) for the
-full explanation of both CSP checks.
+`cspWithoutUnsafeInline` est une version atténuée du même problème : la **CSP
+par défaut d’OpenCloud contient `'unsafe-inline'`**, si bien qu’elle échoue sur
+une instance non modifiée. Celle-ci *peut* être changée : elle est donc signalée
+plutôt qu’excusée. Sachez toutefois que l’interface web s’appuie actuellement
+sur des scripts et des styles en ligne : une politique stricte risque de casser
+l’interface ainsi que les services bureautiques ou d’identité connectés. Testez
+avant de la déployer. Consultez [`docs/csp.md`](csp.md) pour l’explication
+complète des deux contrôles CSP.
 
-The capability-derived rows only appear when the instance actually reports the
-corresponding capability, so an older release does not accumulate phantom
-findings.
+Les lignes issues des capacités n’apparaissent que si l’instance publie
+effectivement la capacité correspondante : une version plus ancienne n’accumule
+donc pas de constats fantômes.
 
-## Accepting a finding you are not going to fix
+## Accepter un constat que vous ne corrigerez pas {#accepting-a-finding-you-are-not-going-to-fix}
 
-Some findings are real but not actionable in your environment: a CSP you
-cannot tighten without breaking the web UI, an HSTS header your reverse proxy
-owns, or basic auth you genuinely need for a migration tool. Left alone they
-keep the rating down and the check yellow, and a check that is permanently
-yellow is a check nobody reads.
+Certains constats sont réels mais ne peuvent pas être traités dans votre
+environnement : une CSP que vous ne pouvez pas durcir sans casser l’interface
+web, un en-tête HSTS géré par votre reverse proxy, ou une authentification Basic
+dont un outil de migration a réellement besoin. Laissés tels quels, ils
+abaissent la note et maintiennent le contrôle en jaune, et un contrôle
+constamment jaune est un contrôle que plus personne ne lit.
 
-`--ignore-hardening` accepts a finding by name. The rating is recalculated
-without it, so accepting a finding really does change the grade:
+`--ignore-hardening` accepte un constat par son nom. La note est recalculée sans
+lui : accepter un constat change donc réellement la note :
 
 ```bash
 check-opencloud-security --host opencloud.example.com --check-hardening \
@@ -87,43 +90,45 @@ check-opencloud-security --host opencloud.example.com --check-hardening \
     --ignore-hardening basicAuthDisabled
 ```
 
-The option is repeatable, also takes a comma-separated list, and understands
-shell-style wildcards for the identifiers that carry a path or a port:
+L’option peut être répétée, accepte aussi une liste séparée par des virgules et
+comprend les jokers de type shell pour les identifiants qui contiennent un
+chemin ou un port :
 
 ```bash
 --ignore-hardening 'debugPort:*,exposed:/status.php'
 ```
 
-It matches hardening measures, security header names, `httpsEnforced` and the
-ids of the additional checks - one option for all of them, because
-`basicAuthDisabled` is both a hardening measure and an additional check, and
-accepting it in one place but not the other would be surprising.
+Elle s’applique aux mesures de durcissement, aux noms des en-têtes de sécurité,
+à `httpsEnforced` et aux identifiants des contrôles supplémentaires. Une seule
+option couvre tout cela, car `basicAuthDisabled` est à la fois une mesure de
+durcissement et un contrôle supplémentaire : l’accepter à un endroit mais pas à
+l’autre serait déroutant.
 
-A waived finding:
+Un constat faisant l’objet d’une exemption :
 
-- no longer lowers the rating,
-- no longer appears in `Missing hardening:` or `Additional checks failed`,
-- no longer counts towards the `hardenings_missing` and `extra_checks_failed`
-  metrics,
-- is left out of the webhook payload,
-- but **stays in the JSON result document**, flagged with `"ignored": true`,
-  and is listed in the plugin output as `Ignored by configuration (n): ...`.
+- n’abaisse plus la note,
+- n’apparaît plus dans `Missing hardening:` ni dans `Additional checks failed`,
+- n’est plus compté dans les métriques `hardenings_missing` et
+  `extra_checks_failed`,
+- est exclu de la charge utile du webhook,
+- mais **reste dans le document de résultat JSON**, marqué `"ignored": true`,
+  et figure dans la sortie du plugin sous la forme `Ignored by configuration (n): ...`.
 
-That last point is deliberate. A waiver suppresses an alert, not the evidence:
-the scan still records what it saw, `--debug` still explains it, and anyone
-reading the output can see exactly what is being skipped.
+Ce dernier point est voulu. Une exemption supprime une alerte, pas la preuve :
+l’analyse enregistre toujours ce qu’elle a vu, `--debug` l’explique toujours et
+toute personne qui lit la sortie voit exactement ce qui est ignoré.
 
-Two things a waiver will not do:
+Une exemption ne permet pas deux choses :
 
-- **It cannot waive something that passes.** A waiver is only applied to a
-  finding that actually failed, so it cannot quietly turn into a blind spot the
-  day the measure regresses.
-- **It cannot waive an end-of-life release.** Running a version that receives
-  no security fixes overrides every other signal, including
-  `--ignore-hardening '*'`.
+- **Exempter un contrôle qui réussit.** Une exemption ne s’applique qu’à un
+  constat réellement en échec : elle ne peut donc pas devenir discrètement un
+  angle mort le jour où la mesure régresse.
+- **Exempter une version en fin de vie.** Faire tourner une version qui ne
+  reçoit plus de correctifs de sécurité l’emporte sur tous les autres signaux, y
+  compris `--ignore-hardening '*'`.
 
-Waivers are a good fit for a config file, where they can carry a comment
-explaining why each one is there:
+Les exemptions ont leur place dans un fichier de configuration, où chacune peut
+être accompagnée d’un commentaire expliquant sa raison d’être :
 
 ```yaml
 scanner:

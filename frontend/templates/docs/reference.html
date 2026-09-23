@@ -1198,8 +1198,7 @@ true</code>, because a waiver suppresses an alert and not the evidence:</p>
 <pre><code class="language-bash">check-opencloud-security --host opencloud.example.com --check-hardening \
     --ignore-hardening 'cspWithoutUnsafeInline,hstsPreload'
 </code></pre>
-<p>A waiver with no deadline lasts until somebody remembers to remove it, and
-nobody remembers. <code>--waive-until</code> accepts the same patterns and adds the two
+<p>A waiver without a deadline remains active until you remove it. <code>--waive-until</code> accepts the same patterns and adds the two
 things that fix that - a reason and an expiry:</p>
 <pre><code class="language-bash">check-opencloud-security --host opencloud.example.com --check-hardening \
     --waive-until 'debugPort:9205|2026-12-31T00:00:00Z|Firewall change, OPS-412'
@@ -1209,6 +1208,17 @@ missing either is refused rather than quietly treated as permanent. At
 <code>2026-12-31T00:00:00Z</code> the check alerts again with no configuration change.
 Every configured waiver - active, expired, and the ones that matched nothing -
 is listed under <code>waivers</code> in the result document.</p>
+<p>The deadline gives no lead time by itself: the check is silent until the
+deadline and alerts on the next run after it. The output names the next
+waiver to end, and the <code>waiver_days_left</code> performance value counts down to it.
+If you want a WARNING before that day, add <code>--waiver-warning DAYS</code>
+(<code>COS_WAIVER_WARNING</code>, YAML <code>waiver_warning</code>). An otherwise <code>OK</code> result then
+becomes <code>WARNING</code> once a waiver that hides a failing check ends within <code>DAYS</code>
+days:</p>
+<pre><code class="language-bash">check-opencloud-security --host opencloud.example.com --check-hardening \
+    --waive-until 'debugPort:9205|2026-12-31T00:00:00Z|Firewall change, OPS-412' \
+    --waiver-warning 14
+</code></pre>
 <p>See
 <a href="/documentation/hardening#accepting-a-finding-you-are-not-going-to-fix">Accepting a finding you are not going to fix</a>
 for the wildcards, what a waiver will not do, and why a configuration file is
@@ -1360,9 +1370,9 @@ restores the normal alert state.</p>
 <p>The full state is still printed either way - only the alert is suppressed,
 never the evidence. <strong>An end-of-life release always alerts</strong>, however long it
 has been in the baseline.</p>
-<p>A baseline also remembers the scan's <strong>configuration fingerprint</strong> - grouped
-digests of how the instance is set up, never of what it is set to - so a run
-where nothing failed can still report that the deployment changed:</p>
+<p>A baseline stores the scan's <strong>configuration fingerprint</strong>: hashes of the
+configuration, grouped by area. It stores no configuration values. These
+hashes can identify a configuration change even when no check fails:</p>
 <pre><code>Baseline: No new findings since 2026-09-14T06:00:00Z, but the configuration changed (headers, proxy)
 </code></pre>
 <p>Only the group names are reported; the settings behind them are hashed and
@@ -1451,6 +1461,18 @@ the graph without extra configuration.</p>
 <td><code>upgrade_path_complete</code></td>
 <td><code>1</code> when the recommended upgrade clears every known advisory, <code>0</code> when it leaves one open; absent without advisories</td>
 </tr>
+<tr>
+<td><code>waiver_days_left</code></td>
+<td>Days until a <code>--waive-until</code> waiver ends and lets a failing check alert again; absent when no failing check depends on a deadline</td>
+</tr>
+<tr>
+<td><code>coverage_inconclusive</code></td>
+<td>Checks the scan ran and could not decide</td>
+</tr>
+<tr>
+<td><code>coverage_not_checked</code></td>
+<td>Checks the scan did not run</td>
+</tr>
 </tbody>
 </table>
 <p><code>cert_days_left</code> is absent rather than zero when nothing was measured - a scan
@@ -1459,6 +1481,15 @@ dates would not parse. It carries the scan's own thresholds rather than a
 second opinion invented for the graph: warning at or below
 <code>scanner.tls_min_days</code>, the same margin the <code>tlsCertificate</code> finding fires at,
 and critical once the certificate has actually expired.</p>
+<p><code>waiver_days_left</code> counts from the scan to the next moment a temporary waiver
+stops hiding a failing check. A waiver that a permanent pattern also covers
+does not count, because its end changes nothing. With <code>--waiver-warning DAYS</code>
+the value carries that window as its warning range. The value never goes
+negative: after the deadline, the check itself alerts.</p>
+<p><code>coverage_inconclusive</code> and <code>coverage_not_checked</code> come from the same
+coverage block as the <code>Coverage:</code> line. They explain the grade and never
+change it, so they carry no thresholds. They are absent when the result has
+no coverage block.</p>
 <p>Outside Icinga2, the same numbers reach Prometheus through the node_exporter
 textfile collector or a Pushgateway - see
 <a href="/documentation/prometheus">Prometheus and Grafana</a>.</p>

@@ -118,6 +118,7 @@ SETTINGS: tuple[Setting, ...] = (
     Setting("update_source", "update_source"),
     Setting("update_warning", "update_warning", quote=False),
     Setting("eol_warning", "eol_warning", quote=False),
+    Setting("waiver_warning", "waiver_warning", quote=False),
     Setting("scanner.concurrency", "concurrency", quote=False),
     Setting("scanner.check_debug_ports", "no_debug_ports", invert=True, quote=False),
     Setting("scanner.check_login_throttling", "login_throttling", quote=False),

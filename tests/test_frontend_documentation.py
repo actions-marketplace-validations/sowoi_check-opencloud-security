@@ -260,37 +260,7 @@ MAX_ENGLISH_SHARE = 0.35
 #: The test asserts membership in *both* directions, so translating a page
 #: fails the suite until the page is removed from here - a stale entry cannot
 #: quietly outlive the work it describes.
-UNTRANSLATED_GUIDES = frozenset(
-    (slug, "fr")
-    for slug in (
-        "authentication",
-        "authentik",
-        "checkmk",
-        "ci",
-        "docker",
-        "examples",
-        "exposure",
-        "hardening",
-        "identity-providers",
-        "installation",
-        "kubernetes",
-        "many-instances",
-        "mcp",
-        "output-formats",
-        "prometheus",
-        "redis",
-        "reference",
-        "reference-data",
-        "release-lifecycle",
-        "reverse-proxy",
-        "scanner",
-        "scanner-checks",
-        "secure-deployment",
-        "tls",
-        "web-service",
-        "webhooks",
-    )
-)
+UNTRANSLATED_GUIDES: frozenset[tuple[str, str]] = frozenset()
 
 
 def _prose_lines(path: Path) -> list[str]:

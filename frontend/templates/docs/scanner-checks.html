@@ -69,9 +69,9 @@ paragraph; the individual checks are explained one group at a time in
   out - an office integration that embeds Collabora or a WOPI host stops
   loading unless that origin sends a <code>Cross-Origin-Resource-Policy</code> of its own</li>
 <li>whether <code>/.well-known/security.txt</code> tells somebody who finds a flaw where to
-  report it, as <code>securityTxtPublished</code> under <code>setup.advisoryChecks</code>. The same
-  bargain as the headers above, for what is not a header: OpenCloud publishes
-  none on any instance, so it is explained and never counted. The file has to
+  report it, as <code>securityTxtPublished</code> under <code>setup.advisoryChecks</code>. OpenCloud does not
+  publish this file by default. As with the advisory headers above, the result
+  explains its absence without affecting the grade. The file has to
   carry the <code>Contact</code> field RFC 9116 requires - a 200 alone means nothing on
   an instance whose frontend answers every unknown path with its own shell.
   See <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0034-an-advisory-observation-need-not-be-a-header.md">ADR 0034</a></li>
@@ -297,8 +297,8 @@ above, see <a href="/documentation/cookies"><code>docs/cookies.md</code></a>,
 assets, and its frontend is a single-page application: unknown paths return the
 app shell with HTTP 200 rather than a 404. A naive "does <code>/opencloud.yaml</code>
 return 200?" check would therefore flag every healthy instance. The scanner
-first probes a path that cannot exist, learns what the catch-all response looks
-like, and only reports an exposed path whose response actually differs from it.</p>
+first requests a path that cannot exist and records the catch-all response.
+It only reports an exposed path when its response differs from that baseline.</p>
 <h3 id="who-signs-users-in">Who signs users in</h3>
 <p>The scan also reads <code>/.well-known/openid-configuration</code> - the OpenID Connect
 discovery document, or the redirect the instance answers it with - to find out

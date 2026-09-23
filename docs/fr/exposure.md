@@ -1,212 +1,173 @@
-# Surface d’exposition publique
+# Surface d’exposition publique {#exposed-paths-and-debug-endpoints-what-this-scanner-checks-and-why}
 
-OpenCloud ne publie normalement ni index de répertoire, ni fichiers de déploiement, ni clés
-privées, ni base de données d’identité via HTTP. Ces vérifications recherchent un serveur
-web ou un proxy inverse qui exposerait ces fichiers, ainsi que des interfaces de débogage
+OpenCloud ne publie normalement ni index de répertoire, ni fichiers de déploiement,
+ni clés privées, ni base d’identités par HTTP. Ces contrôles recherchent les fichiers
+exposés par un serveur web ou un proxy inverse, ainsi que les interfaces de débogage
 qui devraient rester privées.
 
-Before any of these run, the scan first requests a path that cannot possibly
-exist and remembers what comes back. OpenCloud's web frontend is a
-single-page application, and unknown paths return the app shell with HTTP
-`200` rather than a `404` - a naive "does this path return `200`?" check
-would flag every healthy instance. Only a response that actually differs from
-that catch-all baseline counts as a hit, on every check below.
+Avant ces contrôles, le scanner demande un chemin inexistant et mémorise la réponse.
+L’interface OpenCloud est une application monopage : elle renvoie sa page principale
+avec le statut HTTP `200` même pour un chemin inconnu. Le seul statut `200` ne prouve
+donc aucune exposition. Pour tous les contrôles ci-dessous, la réponse doit aussi
+différer de cette réponse de référence.
 
-<!-- TOC -->
-* [Exposed paths and debug endpoints: what this scanner checks, and why](#exposed-paths-and-debug-endpoints-what-this-scanner-checks-and-why)
-  * [1. Is a directory index being served: `directoryListing`](#1-is-a-directory-index-being-served-directorylisting)
-  * [2. Is a specific deployment file readable: `exposed:<path>`](#2-is-a-specific-deployment-file-readable-exposedpath)
-  * [3. Is a debug endpoint publicly readable: `debugEndpoint:<path>`](#3-is-a-debug-endpoint-publicly-readable-debugendpointpath)
-  * [4. Is a service debug port reachable: `debugPort:<port>`](#4-is-a-service-debug-port-reachable-debugportport)
-  * [5. Is the backend reachable directly, bypassing the proxy: `backendPortClosed`](#5-is-the-backend-reachable-directly-bypassing-the-proxy-backendportclosed)
-  * [6. Who may read a response cross-origin: `corsOriginRestricted`](#6-who-may-read-a-response-cross-origin-corsoriginrestricted)
-  * [7. Is the request echoed back: `traceMethodDisabled`](#7-is-the-request-echoed-back-tracemethoddisabled)
-  * [8. Is a second service's console published beside the instance: `companionAdminConsole`](#8-is-a-second-services-console-published-beside-the-instance-companionadminconsole)
-  * [Severity and rating impact](#severity-and-rating-impact)
-<!-- TOC -->
+## 1. Index de répertoire : `directoryListing` {#1-is-a-directory-index-being-served-directorylisting}
 
+Le serveur a renvoyé une page de type `Index of /`. OpenCloud n’en produit jamais.
+Un serveur web dessert donc directement le répertoire de déploiement. Cette même
+configuration peut exposer les fichiers recherchés par le contrôle suivant.
 
-## 1. Is a directory index being served: `directoryListing`
+**Correction :** cessez de servir le répertoire comme contenu statique. Configurez
+le serveur web comme proxy inverse vers l’adresse d’OpenCloud. Désactivez également
+l’indexation des répertoires : `autoindex off` pour Nginx, `Options -Indexes` pour
+Apache. Voir les [proxys inverses](reverse-proxy.md).
 
-An `Index of /`-style page was returned. OpenCloud never generates one, so
-this can only come from a plain web server pointed directly at the
-deployment directory - the same misconfiguration that, left unnoticed, also
-serves everything the next check looks for by name.
+## 2. Fichiers de déploiement accessibles : `exposed:<path>` {#2-is-a-specific-deployment-file-readable-exposedpath}
 
-**Fix:** stop serving the deployment directory as static files. Point the
-web server at OpenCloud's own address as a reverse proxy instead of at a
-filesystem path, and switch directory indexing off explicitly (Nginx
-`autoindex off`, Apache `Options -Indexes`) as a second layer - see [Reverse
-proxies](reverse-proxy.md).
+Le scanner demande une liste fixe de chemins qui ne doivent jamais être accessibles par HTTP :
 
-## 2. Is a specific deployment file readable: `exposed:<path>`
+| Chemin | Gravité |
+|:--|:--|
+| `/opencloud.yaml` | critical |
+| `/config/opencloud.yaml` | critical |
+| `/.opencloud/config/opencloud.yaml` | critical |
+| `/proxy/server.key` | critical |
+| `/idm/opencloud.boltdb` | critical |
+| `/.env` | critical |
+| `/docker-compose.yml` | high |
+| `/storage/users/` | high |
+| `/.git/config` | high |
 
-A fixed list of paths that must never answer over HTTP is requested by name:
+`opencloud.yaml` et `.env` contiennent des paramètres et des secrets,
+`proxy/server.key` contient la clé privée TLS et `idm/opencloud.boltdb` contient
+les identités. Une réponse positive indique que le répertoire de déploiement, ou
+sa copie Git, est accessible, comme pour `directoryListing`.
 
-| Path                                  | Severity |
-|:---------------------------------------|:---------|
-| `/opencloud.yaml`                      | critical |
-| `/config/opencloud.yaml`               | critical |
-| `/.opencloud/config/opencloud.yaml`    | critical |
-| `/proxy/server.key`                    | critical |
-| `/idm/opencloud.boltdb`                | critical |
-| `/.env`                                 | critical |
-| `/docker-compose.yml`                  | high     |
-| `/storage/users/`                       | high     |
-| `/.git/config`                          | high     |
+**Correction :** configurez un proxy vers OpenCloud au lieu d’exposer ses fichiers.
+Vérifiez ensuite que chaque chemin signalé répond `404`. Considérez les données
+accessibles comme divulguées : remplacez la clé TLS et les identifiants présents
+dans `opencloud.yaml` ou `.env`. Examinez les comptes créés pendant l’exposition
+de la base d’identités.
 
-These are configuration, key material and a database, in roughly that order
-of what reading them hands over: `opencloud.yaml` and `.env` carry secrets
-and settings, `proxy/server.key` is TLS private key material, and
-`idm/opencloud.boltdb` is the identity store. A hit on any of them means the
-deployment directory (or a git checkout of it) is reachable, exactly as with
-`directoryListing` above.
+## 3. Interfaces de débogage publiques : `debugEndpoint:<path>` {#3-is-a-debug-endpoint-publicly-readable-debugendpointpath}
 
-**Fix:** stop serving the deployment directory - proxy to OpenCloud's own
-address rather than exposing the filesystem it runs from - and confirm every
-reported path answers `404` afterwards. Treat anything that *was* readable
-as disclosed: rotate the TLS key, any credential in `opencloud.yaml` or
-`.env`, and review the identity store for accounts created while it was
-exposed.
+Le scanner vérifie `/metrics`, `/config` et `/debug/pprof/` sur l’adresse publique.
+Ces chemins doivent rester sur l’interface de débogage locale d’OpenCloud.
+`/metrics` et `/config` révèlent la configuration et l’état interne. Lorsqu’il est
+activé, `/debug/pprof/` permet de déclencher un profilage du processus : il divulgue
+des informations et peut consommer des ressources importantes.
 
-## 3. Is a debug endpoint publicly readable: `debugEndpoint:<path>`
+**Correction :** ne publiez pas les chemins `/debug` via le proxy. Conservez
+`127.0.0.1` comme adresse d’écoute, valeur par défaut de `OC_DEBUG_ADDR` et des
+variables `*_DEBUG_ADDR` propres aux services. Si un collecteur de métriques doit
+y accéder, utilisez le réseau interne.
 
-`/metrics`, `/config` and `/debug/pprof/` are checked on the public address.
-These belong on OpenCloud's loopback-only debug listener, never in front of
-a reverse proxy: `/metrics` and `/config` hand an outsider the running
-configuration and internal state, and `/debug/pprof/` - when enabled - lets
-the process be told to profile itself, which is both an information leak and
-a way to make it do expensive work on request.
+## 4. Ports de débogage accessibles : `debugPort:<port>` {#4-is-a-service-debug-port-reachable-debugportport}
 
-**Fix:** do not proxy `/debug` paths to the public address, and leave the
-debug listeners bound to `127.0.0.1` as they are by default
-(`OC_DEBUG_ADDR` and the per-service `*_DEBUG_ADDR` variables). If a metrics
-scraper genuinely needs these, reach them over the internal network rather
-than routing them through the same address the public internet uses.
+Chaque service OpenCloud possède aussi un port de débogage, lié par défaut à
+`127.0.0.1`. Le scanner tente une connexion directe aux ports par défaut ou à ceux
+définis dans `scanner.debug_ports`. Un port accessible a été publié, généralement
+par une redirection de port de conteneur.
 
-## 4. Is a service debug port reachable: `debugPort:<port>`
+**Correction :** supprimez cette redirection et conservez l’écoute sur `127.0.0.1`.
+Si nécessaire, accédez aux ports depuis le réseau interne.
 
-Beyond the HTTP paths above, each OpenCloud service also listens on its own
-debug **port**, bound to `127.0.0.1` by default. This check connects to the
-default ports directly (or the ports configured in `scanner.debug_ports`) -
-reaching one at all means it was published, almost always by a container
-port mapping rather than a deliberate OpenCloud setting.
+## 5. Accès direct au serveur : `backendPortClosed` {#5-is-the-backend-reachable-directly-bypassing-the-proxy-backendportclosed}
 
-**Fix:** remove the port mapping that publishes it and leave the debug
-listeners on `127.0.0.1`. As with the HTTP debug endpoints above, reach them
-over the internal network if something needs to.
+Le port `9200` dessert OpenCloud sans les protections ajoutées par le proxy inverse.
+Un client qui l’atteint directement contourne la terminaison TLS, les en-têtes de
+sécurité et les limites de débit du proxy. Les contrôles réussis sur l’adresse
+publique ne garantissent donc pas la protection de cet accès direct.
 
-## 5. Is the backend reachable directly, bypassing the proxy: `backendPortClosed`
+**Correction :** supprimez la publication du port `9200`. Liez le serveur à l’interface
+locale ou au réseau privé des conteneurs, pour que seul le proxy puisse le joindre.
 
-Port `9200` serves the same OpenCloud instance as the public address, but
-without whatever a reverse proxy adds in front of it. When a proxy fronts
-OpenCloud - for TLS termination, security headers, rate limiting, or all
-three - a client that reaches `9200` directly gets none of that: no TLS
-policy, no header hardening, none of the checks the rest of this scanner
-reports as passing actually apply to a request that arrives this way.
+## 6. Lecture depuis une autre origine : `corsOriginRestricted` {#6-who-may-read-a-response-cross-origin-corsoriginrestricted}
 
-**Fix:** remove the public port mapping for `9200` and bind the backend to
-loopback or the private container network, so only the reverse proxy can
-reach it.
+Ce contrôle vérifie quels sites peuvent lire les réponses de l’instance dans un
+navigateur. La politique de même origine empêche normalement une page sur
+`attacker.example` de lire une réponse d’OpenCloud. Le mécanisme CORS
+(Cross-Origin Resource Sharing) permet au serveur d’autoriser certaines origines.
 
-## 6. Who may read a response cross-origin: `corsOriginRestricted`
+Par défaut, [`OC_CORS_ALLOW_ORIGINS` vaut `*` et `OC_CORS_ALLOW_CREDENTIALS` vaut
+`true`](https://docs.opencloud.eu/docs/dev/server/services/graph/environment-variables).
+Avec cette combinaison, un composant intermédiaire renvoie souvent la valeur
+`Origin` reçue au lieu du caractère `*`. Cela contourne le refus du navigateur
+d’accepter un joker avec des identifiants.
 
-The other checks on this page ask whether something is reachable. This one
-asks who is allowed to *read the answer* once it is, which is a different
-question and, on a stock instance, the more alarming one.
+Le scanner demande `/graph/v1.0/me` avec l’origine
+`https://cors-probe.check-opencloud-security.invalid`. Le suffixe `.invalid`, réservé
+par la RFC 2606, ne peut pas être résolu. Il examine ensuite la réponse :
 
-The browser's same-origin policy is what normally stops a page on
-`attacker.example` from reading a response your OpenCloud sent. Cross-Origin
-Resource Sharing is how a server switches that protection off for named
-origins. OpenCloud ships with it switched off for *all* of them:
-[`OC_CORS_ALLOW_ORIGINS` defaults to `*` and `OC_CORS_ALLOW_CREDENTIALS` to
-`true`](https://docs.opencloud.eu/docs/dev/server/services/graph/environment-variables),
-and a middleware given both commonly reflects whatever `Origin` it was sent
-rather than the literal `*` - which is precisely the arrangement browsers
-refuse to allow when they can see it coming.
+| Réponse de l’instance | Verdict |
+|:--|:--|
+| Origine du test renvoyée avec `Access-Control-Allow-Credentials: true` | **critical** : tout site peut faire envoyer la session OpenCloud du visiteur et lire la réponse |
+| `Access-Control-Allow-Origin: null`, avec identifiants | **critical** : une iframe isolée peut envoyer l’origine `null` |
+| Origine du test renvoyée sans identifiants | **medium** : expose les données déjà accessibles sans authentification |
+| Joker `*`, avec ou sans identifiants | **medium** : le navigateur refuse la combinaison avec identifiants |
+| Une autre origine précise | **Réussite** : configuration attendue |
+| Aucun en-tête `Access-Control-Allow-Origin` | **Réussite** |
 
-The scan sends a request to `/graph/v1.0/me` carrying an `Origin` that cannot
-belong to anybody (`https://cors-probe.check-opencloud-security.invalid` -
-`.invalid` is reserved by RFC 2606 and resolves nowhere) and reads what comes
-back:
+**Correction :** limitez `OC_CORS_ALLOW_ORIGINS` aux origines qui doivent appeler
+l’API : interface web et éventuelles applications bureautiques ou clientes hébergées
+ailleurs. Définissez `OC_CORS_ALLOW_CREDENTIALS=false`, sauf si l’une de ces applications
+doit envoyer une session. Les variables propres aux services, comme
+`GRAPH_CORS_ALLOW_ORIGINS` et `OCS_CORS_ALLOW_ORIGINS`, remplacent le réglage commun
+lorsqu’un service nécessite une liste différente.
 
-| What the instance answers | Verdict |
-|:--------------------------|:--------|
-| The probe origin reflected, **with** `Access-Control-Allow-Credentials: true` | **critical** - any site can have a visitor's browser attach its OpenCloud session and hand the reply back |
-| `Access-Control-Allow-Origin: null`, with credentials | **critical** - `null` is what a sandboxed iframe sends, and any page can put itself in one |
-| The probe origin reflected, without credentials | **medium** - exposes what an unauthenticated caller could already fetch |
-| A literal `*`, with or without credentials | **medium** - browsers refuse the pair with credentials, so the request fails rather than succeeding dangerously |
-| A different, specific origin | **pass** - this is the configuration the check asks for |
-| No `Access-Control-Allow-Origin` at all | **pass** |
+## 7. Renvoi de la requête : `traceMethodDisabled` {#7-is-the-request-echoed-back-tracemethoddisabled}
 
-**Fix:** set `OC_CORS_ALLOW_ORIGINS` to the exact origins that must reach the
-API - the web interface's own origin, plus any office or client application
-deliberately hosted elsewhere - and set `OC_CORS_ALLOW_CREDENTIALS=false`
-unless one of them genuinely needs to send the session. The per-service forms
-(`GRAPH_CORS_ALLOW_ORIGINS`, `OCS_CORS_ALLOW_ORIGINS` and so on) override the
-shared name where one service needs a wider list.
+`TRACE` demande au serveur de renvoyer la requête, en-têtes compris, dans le corps
+de la réponse. Les cookies, l’en-tête `Authorization` ou les en-têtes ajoutés par
+le proxy peuvent alors devenir du texte lisible par un script qui ne pouvait pas
+les lire directement.
 
-## 7. Is the request echoed back: `traceMethodDisabled`
+OpenCloud n’implémente pas `TRACE`. Si l’instance y répond, c’est le proxy ou le
+serveur applicatif placé devant elle qui le fait. Le statut `200` ne suffit pas :
+le corps doit ressembler à la requête envoyée, avec `Content-Type: message/http`
+ou la ligne de requête reproduite.
 
-`TRACE` asks the server to send the request back as the response body,
-headers included. Anything the browser attached on the way - the session
-cookie, an `Authorization` header, a header the reverse proxy added - then
-arrives as ordinary text, readable by a script that could never have read
-those headers directly.
+La RFC 9110 définit `TRACE` comme une méthode sûre : elle renvoie la requête sans
+modifier l’état du serveur. Le plugin peut donc l’utiliser lors de contrôles réguliers.
 
-OpenCloud does not implement `TRACE`, so an instance answering it has a
-reverse proxy or an application server in front that does. As with every
-check on this page, a `200` alone proves nothing on a single-page
-application: the answer only counts as an echo when the body actually looks
-like the request that was sent (`Content-Type: message/http`, or the echoed
-request line).
+**Correction :** refusez `TRACE` dans le composant placé devant l’instance.
+Pour Apache, utilisez `TraceEnable off`. nginx répond déjà `405`, sauf si une règle
+transmet toutes les méthodes au serveur. Avec Traefik et Caddy, limitez les méthodes
+transmises.
 
-Probing for it is free in the sense that matters: `TRACE` is defined as a
-safe method by RFC 9110 - it echoes and changes nothing - which is why a
-plugin that may run every minute can ask.
+## 8. Console d’un service associé : `companionAdminConsole` {#8-is-a-second-services-console-published-beside-the-instance-companionadminconsole}
 
-**Fix:** refuse `TRACE` in whatever fronts the instance. Apache needs
-`TraceEnable off`; nginx already returns `405` unless a location was written
-to pass every method upstream; Traefik and Caddy need a rule limiting the
-methods forwarded.
+Un éditeur WOPI, comme Collabora Online ou OnlyOffice, peut être publié sur la même
+origine qu’OpenCloud lorsque le proxy lui transmet `/hosting` et `/browser`.
+Sa console d’administration affiche les sessions documentaires, leurs utilisateurs
+et la configuration du serveur. Elle peut aussi fermer les sessions. Un seul mot
+de passe partagé la protège, sans limitation de débit devant elle.
 
-## 8. Is a second service's console published beside the instance: `companionAdminConsole`
+Le scanner demande `/hosting/discovery` et exige l’élément racine `wopi-discovery`
+défini par WOPI. Le statut HTTP seul ne suffit pas, car OpenCloud renvoie sa page
+HTML pour les chemins inconnus. Le scanner ne demande le chemin de la console
+qu’après avoir reçu ce document.
 
-A document editor speaking WOPI - Collabora Online, OnlyOffice - is the usual
-second service in an OpenCloud deployment, and a reverse proxy that forwards
-`/hosting` and `/browser` to it publishes that editor on the instance's own
-origin. It is a second HTTP server, and its administration console lists every
-open document session and the users in them, reports the server's own
-configuration, and can terminate sessions. It is guarded by one shared
-password with no rate limiting in front of it.
+Le contrôle `companionEditorHttps` examine les adresses d’éditeur publiées dans le
+même document. Une adresse `http://` transmet sans chiffrement le document et le
+jeton de session. Un navigateur sur une page HTTPS bloque également cette iframe.
 
-The scan detects the backend by asking for `/hosting/discovery` and requiring
-the `wopi-discovery` root element the WOPI protocol specifies - a status code
-alone would find an editor on every instance, since OpenCloud answers unknown
-paths with its own HTML shell. Only once that document has answered does it
-ask for the console path, and only then can the finding be reported. A second
-finding, `companionEditorHttps`, reads the editor addresses that document
-advertises: an `http://` one means the document and the token authorising the
-session travel unencrypted, and a browser on an HTTPS page blocks the frame
-outright.
-
-**Where no backend is published on this origin, neither finding appears at
-all** - not as a pass. Most deployments serve the editor from a host of its
-own, and the scan deliberately does not follow the host named inside the
-discovery document, because that would let a scanned instance choose the next
-address the scanner connects to. Point a second scan at that host instead. See
+**Si aucun éditeur n’est publié sur cette origine, les deux contrôles sont absents.**
+Ils ne sont pas déclarés réussis. La plupart des déploiements utilisent un autre
+hôte pour l’éditeur. Le scanner ne suit pas cet hôte depuis le document de découverte :
+l’instance analysée pourrait ainsi choisir la prochaine adresse contactée.
+Lancez une analyse distincte de cet hôte. Voir
 [ADR 0036](../../adr/0036-a-companion-service-is-probed-only-where-the-scan-was-pointed.md).
 
-**Fix:** block the console path at the reverse proxy that publishes the
-backend, so only the editor's own paths reach the internet. Setting a console
-password instead is the weaker of the two, because that one credential
-protects every document session on the server.
+**Correction :** bloquez le chemin de la console dans le proxy qui publie l’éditeur.
+Seuls les chemins nécessaires à l’édition doivent être publics. Un mot de passe de
+console offre une protection plus faible, car il protège à lui seul toutes les
+sessions documentaires du serveur.
 
-## Severity and rating impact
+## Gravité et effet sur la note {#severity-and-rating-impact}
 
-Every check in this group is an `extraChecks` entry, reported and
-rating-capped whenever the scan runs at all - critical findings cap the
-rating at `D`, high at `C` - see the extra-checks table in [the main
-README](scanner-checks.md#what-the-scanner-checks). None of them are hardening
-flags, and none require `--check-hardening`: an exposed configuration file
-or an open debug port is a finding on every scan, not an opt-in one.
+Tous ces contrôles figurent dans `extraChecks`. Ils s’exécutent à chaque analyse
+et peuvent plafonner la note : `D` pour une gravité `critical`, `C` pour `high`.
+Voir le [tableau des contrôles supplémentaires](scanner-checks.md#what-the-scanner-checks).
+Ils ne dépendent pas de `--check-hardening` : un fichier de configuration exposé
+ou un port de débogage ouvert est toujours signalé.

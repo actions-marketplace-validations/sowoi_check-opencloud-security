@@ -16,40 +16,21 @@
 {% endif %}
 
 <article class="docs-article card section-gap" data-reveal lang="fr">
-<p>Utilisez un pipeline d'IC programmé pour des analyses régulières ou pour vérifier une instance d'un autre
-réseau. Vérifier que le pipeline fonctionne et comprendre ce qu’il signale : un travail manqué
-ne produit aucun résultat d'analyse.</p>
-<p>Whatever the platform, three things decide whether it works:</p>
+<p>Un pipeline d’intégration continue (CI) peut analyser régulièrement une instance ou
+la vérifier depuis un autre réseau. Surveillez aussi son exécution : une tâche qui
+ne démarre pas ne produit aucun résultat.</p>
+<p>Trois points s’appliquent à toutes les plateformes :</p>
 <ul>
-<li><strong>The runner has to reach the instance.</strong> A hosted runner cannot scan
-  something behind your firewall - use a self-hosted runner for that.</li>
-<li><strong>The scan is from the runner's vantage point.</strong> What it measures about TLS,
-  enforced HTTPS and reachable debug ports is what an outsider on that network
-  sees, which is usually the interesting answer.</li>
-<li><strong>The exit code is the result</strong>: <code>0</code> OK, <code>1</code> WARNING, <code>2</code> CRITICAL, <code>3</code>
-  UNKNOWN. A pipeline fails on anything non-zero, so <code>--warning</code> and
-  <code>--critical</code> decide how strict it is.</li>
+<li><strong>L’exécuteur doit atteindre l’instance.</strong> Pour une instance derrière votre pare-feu,
+  utilisez un exécuteur que vous hébergez sur le réseau concerné.</li>
+<li><strong>L’analyse reflète le réseau de l’exécuteur.</strong> Les contrôles TLS, HTTPS et des ports
+  de débogage mesurent ce qui est accessible depuis ce réseau.</li>
+<li><strong>Le code de sortie représente le résultat :</strong> <code>0</code> OK, <code>1</code> WARNING, <code>2</code> CRITICAL,
+  <code>3</code> UNKNOWN. Un code non nul fait échouer le pipeline. Les options <code>--warning</code>
+  et <code>--critical</code> définissent donc ses seuils.</li>
 </ul>
-<!-- TOC -->
-<ul>
-<li><a href="#running-the-check-from-ci">Running the check from CI</a></li>
-<li><a href="#github-actions">GitHub Actions</a><ul>
-<li><a href="#the-action">The action</a></li>
-<li><a href="#feeding-the-code-scanning-dashboard">Feeding the code-scanning dashboard</a></li>
-<li><a href="#installing-it-yourself-instead">Installing it yourself instead</a></li>
-<li><a href="#opencloud-compatibility-evidence">OpenCloud compatibility evidence</a></li>
-<li><a href="#reporting-rather-than-failing">Reporting rather than failing</a></li>
-<li><a href="#the-json-document-instead">The JSON document instead</a></li>
-</ul>
-</li>
-<li><a href="#gitlab-ci">GitLab CI</a></li>
-<li><a href="#using-the-container-image-instead-of-installing">Using the container image instead of installing</a></li>
-<li><a href="#do-not-put-the-token-on-the-command-line">Do not put the token on the command line</a></li>
-</ul>
-<!-- TOC -->
-
 <h2 id="github-actions">GitHub Actions</h2>
-<h3 id="the-action">The action</h3>
+<h3 id="the-action">Utiliser l’action</h3>
 <pre><code class="language-yaml">name: OpenCloud security check
 
 on:
@@ -71,87 +52,87 @@ jobs:
           # token the job already has is enough; it needs no scopes.
           releases-token: $&#123;&#123; github.token &#125;&#125;
 </code></pre>
-<p>That is the whole thing. The step installs the pinned release, scans the
-instance, writes <code>opencloud-security.json</code>, puts the result in the job
-summary, and fails the job on WARNING, CRITICAL or UNKNOWN.</p>
-<p><strong>Pin the tag.</strong> The release schedule and the newest known OpenCloud version
-ship <em>inside</em> the package, so which release runs is part of the verdict.
-<code>@v1.16.0</code> installs exactly 1.16.0; a branch or SHA ref installs the newest
-release and says so in a warning annotation.</p>
+<p>Cette étape installe la version indiquée, analyse l’instance, écrit
+<code>opencloud-security.json</code> et ajoute le résultat au résumé de la tâche. Elle fait
+échouer la tâche pour WARNING, CRITICAL ou UNKNOWN.</p>
+<p><strong>Choisissez un tag précis.</strong> Le paquet contient le calendrier des versions et la
+dernière version OpenCloud connue. La version du plugin influence donc le verdict.
+<code>@v1.16.0</code> installe exactement la version 1.16.0. Une référence de branche ou de
+commit SHA installe la dernière version publiée et le signale par un avertissement.</p>
 <table>
 <thead>
 <tr>
-<th>Input</th>
-<th>Default</th>
-<th>What it does</th>
+<th>Entrée</th>
+<th>Valeur par défaut</th>
+<th>Fonction</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>target</code></td>
-<td><em>required</em></td>
-<td>The instance, as a hostname or URL</td>
+<td><em>obligatoire</em></td>
+<td>Nom d’hôte ou URL de l’instance</td>
 </tr>
 <tr>
 <td><code>version</code></td>
-<td>the pinned tag</td>
-<td>Which release of the check to install</td>
+<td>Tag choisi</td>
+<td>Version du plugin à installer</td>
 </tr>
 <tr>
 <td><code>format</code></td>
 <td><code>json</code></td>
-<td><code>json</code>, <code>sarif</code>, <code>junit</code> or <code>nagios</code></td>
+<td><code>json</code>, <code>sarif</code>, <code>junit</code> ou <code>nagios</code></td>
 </tr>
 <tr>
 <td><code>output-file</code></td>
 <td><code>opencloud-security.json</code></td>
-<td>Where the output is written</td>
+<td>Fichier de sortie</td>
 </tr>
 <tr>
 <td><code>fail-on</code></td>
 <td><code>warning</code></td>
-<td><code>warning</code>, <code>critical</code> or <code>never</code></td>
+<td><code>warning</code>, <code>critical</code> ou <code>never</code></td>
 </tr>
 <tr>
 <td><code>warning</code> / <code>critical</code></td>
-<td>plugin defaults</td>
-<td>Rating thresholds</td>
+<td>Valeurs du plugin</td>
+<td>Seuils de notation</td>
 </tr>
 <tr>
 <td><code>check-hardening</code></td>
 <td><code>true</code></td>
-<td>Count hardening measures towards the result</td>
+<td>Inclure les mesures de durcissement dans le résultat</td>
 </tr>
 <tr>
 <td><code>ignore-hardening</code></td>
-<td><em>none</em></td>
-<td>Identifiers to waive, comma-separated</td>
+<td><em>aucune</em></td>
+<td>Identifiants exemptés, séparés par des virgules</td>
 </tr>
 <tr>
 <td><code>release-track</code></td>
 <td><code>auto</code></td>
-<td><code>auto</code>, <code>rolling</code>, <code>production</code> or <code>lts</code></td>
+<td><code>auto</code>, <code>rolling</code>, <code>production</code> ou <code>lts</code></td>
 </tr>
 <tr>
 <td><code>releases-token</code></td>
-<td><em>none</em></td>
-<td>A token for the release feed's rate limit</td>
+<td><em>aucun</em></td>
+<td>Jeton pour augmenter la limite de requêtes du flux des versions</td>
 </tr>
 <tr>
 <td><code>summary</code></td>
 <td><code>true</code></td>
-<td>Write the result to the job summary</td>
+<td>Ajouter le résultat au résumé de la tâche</td>
 </tr>
 <tr>
 <td><code>extra-args</code></td>
-<td><em>none</em></td>
-<td>Any other flag, passed verbatim</td>
+<td><em>aucun</em></td>
+<td>Autres arguments, transmis tels quels</td>
 </tr>
 </tbody>
 </table>
-<p>The outputs are <code>exit-code</code>, <code>status</code>, <code>rating</code>, <code>rating-label</code>, <code>message</code> and
-<code>result-file</code>. All but the first two are empty unless <code>format</code> is <code>json</code>,
-because they are read out of that document:</p>
+<p>Les sorties sont <code>exit-code</code>, <code>status</code>, <code>rating</code>, <code>rating-label</code>, <code>message</code> et
+<code>result-file</code>. Seules les deux premières sont disponibles hors du format <code>json</code> ;
+les autres sont lues dans le document JSON :</p>
 <pre><code class="language-yaml">      - uses: sowoi/check-opencloud-security@v1.16.0
         id: scan
         with:
@@ -164,16 +145,14 @@ because they are read out of that document:</p>
         env:
           GH_TOKEN: $&#123;&#123; github.token &#125;&#125;
 </code></pre>
-<p><code>fail-on: never</code> is what makes that possible: the step succeeds, and the
-decision moves to a later step that can do something more useful than turning
-the run red.</p>
-<p>Note that the runner has to be able to reach the instance. A hosted runner
-cannot see anything behind your firewall - use a self-hosted one for that, or
-scan from the network the instance actually publishes to.</p>
-<h3 id="feeding-the-code-scanning-dashboard">Feeding the code-scanning dashboard</h3>
-<p><code>format: sarif</code> writes SARIF 2.1.0, which is what GitHub's Security tab
-ingests. The findings then live where the rest of your security findings do,
-with their own history, rather than in a log nobody opens:</p>
+<p>Avec <code>fail-on: never</code>, l’étape réussit toujours. Une étape suivante peut alors agir
+selon le résultat, par exemple ouvrir un ticket.</p>
+<p>L’exécuteur doit pouvoir atteindre l’instance. Un exécuteur hébergé ne peut pas
+traverser votre pare-feu. Utilisez un exécuteur local ou analysez l’instance depuis
+le réseau sur lequel elle est publiée.</p>
+<h3 id="feeding-the-code-scanning-dashboard">Alimenter le tableau des analyses de sécurité</h3>
+<p><code>format: sarif</code> produit un document SARIF 2.1.0 accepté par l’onglet Security de
+GitHub. Les constats y apparaissent avec leur historique :</p>
 <pre><code class="language-yaml">permissions:
   contents: read
   security-events: write
@@ -195,12 +174,12 @@ jobs:
           sarif_file: opencloud-security.sarif
           category: opencloud-security
 </code></pre>
-<p>Keep <code>fail-on: never</code> here and gate on the uploaded findings instead. A step
-that fails before the upload throws away the very findings that failed it.</p>
-<h3 id="installing-it-yourself-instead">Installing it yourself instead</h3>
-<p>Nothing about the action is privileged - it installs the same package and runs
-the same command. Do it by hand when you need a step the action does not
-model, or when you would rather not depend on an action at all.</p>
+<p>Conservez <code>fail-on: never</code> pour permettre l’envoi du fichier, puis appliquez votre
+politique aux constats importés. Sinon, l’échec de l’étape peut empêcher leur envoi.</p>
+<h3 id="installing-it-yourself-instead">Installer le plugin directement</h3>
+<p>L’action installe le même paquet et lance la même commande que vous pouvez utiliser
+vous-même. Une installation directe convient si vous avez besoin d’une étape que
+l’action ne propose pas ou si vous souhaitez éviter cette dépendance.</p>
 <pre><code class="language-yaml">name: OpenCloud security check
 
 on:
@@ -228,15 +207,14 @@ jobs:
           COS_RELEASES_TOKEN: $&#123;&#123; github.token &#125;&#125;
         run: check-opencloud-security
 </code></pre>
-<p>Pin the version rather than tracking <code>latest</code>. The release schedule and the
-newest known OpenCloud version ship inside the package, so which version you
-install is part of the verdict - and an unpinned install turns an upstream
-release into an unexplained pipeline failure.</p>
-<p><code>workflow_dispatch</code> is worth keeping: it is how you re-run the check after
-fixing something without waiting for tomorrow.</p>
-<h3 id="reporting-rather-than-failing">Reporting rather than failing</h3>
-<p>A failed scheduled workflow only notifies the person who last touched it. To
-get the result somewhere people look, keep the job green and post the outcome:</p>
+<p>Fixez la version installée. Le calendrier fourni et la dernière version OpenCloud
+connue participent au verdict. Sans version fixe, une nouvelle publication du
+plugin peut modifier le résultat du pipeline.</p>
+<p>Conservez <code>workflow_dispatch</code> pour relancer le contrôle après une correction sans
+attendre la prochaine exécution planifiée.</p>
+<h3 id="reporting-rather-than-failing">Publier le résultat sans faire échouer la tâche</h3>
+<p>L’échec d’un workflow planifié ne notifie que la personne qui l’a modifié en dernier.
+Vous pouvez laisser la tâche réussir et publier son résultat dans le résumé :</p>
 <pre><code class="language-yaml">      - name: Scan the instance
         id: scan
         continue-on-error: true
@@ -260,14 +238,14 @@ get the result somewhere people look, keep the job green and post the outcome:</
             echo '```'
           } &gt;&gt; &quot;$GITHUB_STEP_SUMMARY&quot;
 </code></pre>
-<p>Alternatively, set <code>--webhook-url</code> to deliver the result directly; see <a href="/documentation/webhooks">Webhook
-recipes</a>. Delivery still depends on the workflow running. If
-scheduled runs are disabled, neither summaries nor webhooks are produced.</p>
-<h3 id="the-json-document-instead">The JSON document instead</h3>
-<p>For anything that has to make a decision - a policy gate, a dashboard, an
-issue filed automatically - use the scanner rather than the plugin. It prints
-the full result document, and every field in it is documented in
-<a href="/documentation/scanner">the library README</a>.</p>
+<p>Vous pouvez aussi utiliser <code>--webhook-url</code> pour envoyer directement le résultat ;
+voir les <a href="/documentation/webhooks">exemples de webhooks</a>. Ces deux méthodes nécessitent
+que le workflow s’exécute. Si les exécutions planifiées sont désactivées, aucun
+résumé ni webhook n’est produit.</p>
+<h3 id="the-json-document-instead">Exploiter le document JSON</h3>
+<p>Pour appliquer une règle, alimenter un tableau de bord ou créer automatiquement
+un ticket, utilisez le scanner autonome. Il affiche le résultat complet, dont les
+champs sont décrits dans le <a href="/documentation/scanner">README de la bibliothèque</a>.</p>
 <pre><code class="language-yaml">      - name: Scan and keep the result
         run: |
           check-opencloud-scanner scan --compact opencloud.example.com &gt; scan.json
@@ -279,60 +257,58 @@ the full result document, and every field in it is documented in
           name: opencloud-scan
           path: scan.json
 </code></pre>
-<p><code>jq -e</code> exits non-zero when the expression is false, which is what turns a
-field of the document into a pipeline gate. <code>.EOL</code>, <code>.rating</code>,
-<code>.updates.available</code> and <code>.lifecycle.daysRemaining</code> are the four worth gating
-on.</p>
-<h3 id="opencloud-compatibility-evidence">OpenCloud compatibility evidence</h3>
-<p>The repository's <strong>real OpenCloud container</strong> workflow keeps one reviewed,
-immutable rolling-image digest as its baseline and runs the scanner against it
-weekly. It verifies that the container still initializes, exposes the expected
-public status endpoint, identifies itself as OpenCloud, reports a version, and
-produces a bounded rating. The image reports its exact OpenCloud version during
-the test; the workflow intentionally does not claim compatibility for a new
-release until that evidence has been reviewed.</p>
+<p><code>jq -e</code> renvoie un code non nul si l’expression est fausse. Vous pouvez ainsi faire
+dépendre la réussite du pipeline d’un champ. Les champs <code>.EOL</code>, <code>.rating</code>,
+<code>.updates.available</code> et <code>.lifecycle.daysRemaining</code> sont particulièrement utiles.</p>
+<h3 id="opencloud-compatibility-evidence">Preuves de compatibilité OpenCloud</h3>
+<p>Le workflow du dépôt utilisant un <strong>véritable conteneur OpenCloud</strong> conserve comme
+référence l’empreinte immuable d’une image rolling examinée. Chaque semaine, il
+vérifie que le conteneur démarre, publie le chemin de statut attendu, s’identifie
+comme OpenCloud, annonce une version et produit une note dans les limites prévues.
+L’image indique sa version exacte pendant le test. La compatibilité avec une
+nouvelle version n’est déclarée qu’après examen de ces résultats.</p>
 <table>
 <thead>
 <tr>
-<th>Evidence</th>
-<th>Baseline</th>
-<th>Compatible when</th>
-<th>Review path</th>
+<th>Preuve</th>
+<th>Référence</th>
+<th>Conditions de compatibilité</th>
+<th>Examen</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Vendor container integration</td>
+<td>Intégration avec le conteneur officiel</td>
 <td><code>opencloudeu/opencloud-rolling@sha256:0bb9038f4c01ab187a014e97550435f5d45630731aed9341d87a0b40fe72fe3d</code></td>
-<td>The complete integration test passes and its reported version and externally observable behaviour are reviewed</td>
-<td>Dispatch the workflow with <code>candidate_image</code>; update the baseline only in a reviewed pull request</td>
+<td>Test complet réussi, version annoncée et comportement observable examinés</td>
+<td>Lancer le workflow avec <code>candidate_image</code> ; modifier la référence dans une pull request examinée</td>
 </tr>
 <tr>
-<td>Release lifecycle</td>
-<td>Bundled schedule plus the daily conservative refresh</td>
-<td>New or changed lines retain existing support facts and pass lifecycle regressions</td>
-<td>Review the release-schedule refresh PR</td>
+<td>Cycle de vie des versions</td>
+<td>Calendrier fourni et actualisation quotidienne conservatrice</td>
+<td>Conservation des informations de support existantes et réussite des tests de non-régression</td>
+<td>Examiner la pull request d’actualisation du calendrier</td>
 </tr>
 <tr>
-<td>Advisories</td>
-<td>Bundled database plus the daily conservative refresh</td>
-<td>New advisories add evidence without removing known affected ranges</td>
-<td>Review the advisory-database refresh PR</td>
+<td>Avis de sécurité</td>
+<td>Base fournie et actualisation quotidienne conservatrice</td>
+<td>Ajout de preuves sans supprimer les plages de versions déjà connues comme affectées</td>
+<td>Examiner la pull request d’actualisation des avis</td>
 </tr>
 </tbody>
 </table>
-<p>The automation never rewrites fixtures, grades, or security expectations to
-turn a candidate green. A changed response, header, endpoint, or security
-property must have release evidence and a reviewable test change naming that
-evidence.</p>
-<p>The repository's <code>Supply-chain checks</code> workflow runs on pull requests, pushes
-to <code>main</code> and weekly. It exports the fully resolved <code>uv.lock</code> dependency set,
-runs <code>pip-audit</code> over core, web and MCP dependencies, and publishes a
-CycloneDX SBOM as a workflow artifact. Pushes and scheduled runs also receive
-a GitHub Sigstore attestation, so the SBOM can be verified with
-<code>gh attestation verify</code>. The release workflow repeats this for the exact
-runtime environment shipped with each package and attests the package files
-and web bundle.</p>
+<p>L’automatisation ne modifie jamais les données de test, les notes ni les attentes
+de sécurité pour faire réussir une image candidate. Tout changement de réponse,
+d’en-tête, de chemin ou de propriété de sécurité exige des preuves liées à la
+version et une modification de test qui les cite.</p>
+<p>Le workflow <code>Supply-chain checks</code> s’exécute sur les pull requests, les envois vers
+<code>main</code> et chaque semaine. Il exporte les dépendances résolues de <code>uv.lock</code>, exécute
+<code>pip-audit</code> sur les dépendances du cœur, du web et de MCP, puis publie un inventaire
+logiciel SBOM CycloneDX comme artefact. Les exécutions planifiées et celles déclenchées
+par un envoi reçoivent aussi une attestation GitHub Sigstore. Vérifiez-la avec
+<code>gh attestation verify</code>. Le workflow de publication répète ces contrôles sur
+l’environnement d’exécution exact livré avec chaque paquet et atteste les paquets
+ainsi que l’archive web.</p>
 <h2 id="gitlab-ci">GitLab CI</h2>
 <pre><code class="language-yaml">opencloud-security:
   image: python:3.13-slim
@@ -349,15 +325,14 @@ and web bundle.</p>
   allow_failure:
     exit_codes: [1]
 </code></pre>
-<p><code>allow_failure.exit_codes</code> maps the plugin's states onto GitLab's directly:
-list <code>1</code> to tolerate WARNING, add <code>3</code> to tolerate a scan that could not
-complete - though a scan that cannot complete is usually the thing you most
-want to know about.</p>
-<p>Add the schedule under <em>Build → Pipeline schedules</em>; the <code>rules</code> block above
-keeps the job out of ordinary commit pipelines.</p>
-<h2 id="using-the-container-image-instead-of-installing">Using the container image instead of installing</h2>
-<p>This example builds the plugin image from the checkout. The published
-<code>okxo/opencloud-scanner</code> image is another option when you select the plugin with
+<p><code>allow_failure.exit_codes</code> associe directement les états du plugin aux règles
+GitLab. La valeur <code>1</code> tolère WARNING. Ajouter <code>3</code> tolère une analyse inachevée,
+mais cet échec mérite généralement une intervention.</p>
+<p>Ajoutez la planification dans <em>Build → Pipeline schedules</em>. Le bloc <code>rules</code> évite
+l’exécution de cette tâche dans les pipelines ordinaires de commit.</p>
+<h2 id="using-the-container-image-instead-of-installing">Utiliser une image de conteneur</h2>
+<p>Cet exemple construit l’image du plugin depuis le dépôt. Vous pouvez aussi utiliser
+l’image publiée <code>okxo/opencloud-scanner</code> avec
 <code>--entrypoint check-opencloud-security</code>.</p>
 <pre><code class="language-shell">docker build -f docker/Dockerfile \
   -t registry.example.com/check-opencloud-security:1.1.0 .
@@ -368,14 +343,14 @@ docker run --rm \
   -e COS_CHECK_HARDENING=true \
   registry.example.com/check-opencloud-security:1.1.0
 </code></pre>
-<h2 id="do-not-put-the-token-on-the-command-line">Do not put the token on the command line</h2>
-<p>CI logs are readable by more people than you think, and <code>--release-token</code> on a
-command line ends up in them. Pass secrets as environment variables
-(<code>COS_RELEASES_TOKEN</code>, <code>COS_WEBHOOK_URL</code>) or as a
-<a href="/documentation#configuration-file-and-secrets">secret reference</a>. The plugin
-redacts tokens from its own debug output; it cannot redact your shell trace.</p>
+<h2 id="do-not-put-the-token-on-the-command-line">Ne pas placer les jetons dans la ligne de commande</h2>
+<p>Les journaux CI peuvent être accessibles à plusieurs personnes. Un jeton passé
+avec <code>--release-token</code> peut y apparaître. Utilisez les variables d’environnement
+<code>COS_RELEASES_TOKEN</code>, <code>COS_WEBHOOK_URL</code> ou une
+<a href="/documentation#configuration-file-and-secrets">référence de secret</a>. Le plugin masque
+les jetons dans sa propre sortie de débogage, mais pas dans les traces du shell.</p>
 <hr>
-<p><a href="/documentation/reference">Back to the documentation index</a> | <a href="/documentation">Back to the main README</a></p>
+<p><a href="/documentation/reference">Retour à l’index de documentation</a> | <a href="/documentation">Retour au README principal</a></p>
 </article>
 
 {% include "_page-nav.html" %}

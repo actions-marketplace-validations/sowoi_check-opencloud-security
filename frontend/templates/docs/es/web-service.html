@@ -752,7 +752,7 @@ scan:{uuid}:metadata    target, waivers, timestamps
   idéntico en los tres casos, para que un desconocido no pueda saber que un
   uuid existió;</li>
 <li>todas las claves llevan el TTL, incluida la que se escribe mientras el
-  análisis sigue en cola. Nada sobrevive a lo que promete la página de inicio.</li>
+  análisis sigue en cola. Los datos caducan al terminar el plazo de conservación indicado en la página de inicio.</li>
 </ul>
 <h2 id="comparing-two-scans">Comparar dos análisis</h2>
 <p><code>GET /compare</code> responde a la pregunta que sigue a un plan de corrección: <em>¿ha

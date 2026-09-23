@@ -412,7 +412,7 @@ El uuid es una capacidad: conocerlo es la única forma de llegar al análisis.
   idéntico en los tres casos, para que un desconocido no pueda saber que un
   uuid existió;
 - todas las claves llevan el TTL, incluida la que se escribe mientras el
-  análisis sigue en cola. Nada sobrevive a lo que promete la página de inicio.
+  análisis sigue en cola. Los datos caducan al terminar el plazo de conservación indicado en la página de inicio.
 
 ## Comparar dos análisis {#comparing-two-scans}
 

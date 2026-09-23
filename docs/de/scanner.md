@@ -558,7 +558,7 @@ trägt dieselben Zahlen unter `coverage`, und die Weboberfläche zeigt sie unter
 ## Unter welchen Bedingungen ein Scan lief {#the-conditions-a-scan-ran-under}
 
 Zwei Scans derselben Instanz können sich unterscheiden, ohne dass sich die
-Instanz geändert hat: Die Advisory-Datenbank hat eine CVE dazugelernt, ein
+Instanz geändert hat: Die Advisory-Datenbank enthält eine neue CVE, ein
 Supportzeitraum ist abgelaufen, der Scanner wurde aktualisiert, eine Ausnahme
 ist verfallen. `provenance` hält fest, was zum Zeitpunkt des Scans bekannt war,
 damit ein Vergleich das von einer echten Verschlechterung unterscheiden kann.

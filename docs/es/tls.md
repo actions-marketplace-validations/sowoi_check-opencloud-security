@@ -247,12 +247,11 @@ idempotentes reproducidas.
 
 ## Qué se deja sin medir deliberadamente {#what-is-deliberately-left-unmeasured}
 
-**Aquí nada notifica como superado algo que no ha medido.** Una compilación de
-OpenSSL que se niega a hablar TLS 1.0 no puede decirle al escáner si el
-*servidor* lo habría aceptado, y sin el binario `openssl` no se puede sondear
-el stapling OCSP. En ambos casos la comprobación se omite por completo del
-resultado en lugar de registrarse como superada: un hueco en la salida es
-honesto; una marca verde por algo que nadie ha examinado no lo es.
+El escáner no marca como superada una comprobación que no pudo realizar.
+Si la compilación de OpenSSL no admite TLS 1.0, el escáner no puede determinar
+si el servidor acepta ese protocolo. Sin el ejecutable `openssl`, tampoco
+puede comprobar el stapling OCSP. En ambos casos, la comprobación se omite
+del resultado.
 
 **Un certificado que no supera la verificación se lee igualmente.**
 `getpeercert()` no devuelve nada para un par no verificado, así que en las

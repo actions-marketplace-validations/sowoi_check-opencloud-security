@@ -3,189 +3,197 @@
 OpenCloud maintient les canaux Rolling, Production et LTS en parallèle. Le support d’une version
 dépend donc de son canal et de son numéro. Ce guide explique comment le
 scanner utilise les lignes de version et le calendrier fourni, choisit une mise à jour et applique
-"--release-track".
+`--release-track`.
 
-The [main README](../README.md#end-of-life-detection) carries the current
-state of each track and the settings that switch the check off.
+Le [README principal](../../README.md#end-of-life-detection) indique l’état actuel
+de chaque canal et les paramètres qui désactivent ce contrôle.
 
 <!-- TOC -->
-* [Release tracks, end of life and the update recommendation](#release-tracks-end-of-life-and-the-update-recommendation)
-  * [Why a version number is not an answer](#why-a-version-number-is-not-an-answer)
-  * [What the bundled schedule can and cannot tell you](#what-the-bundled-schedule-can-and-cannot-tell-you)
-  * [The recommended release follows your track](#the-recommended-release-follows-your-track)
-  * [Declaring your release track](#declaring-your-release-track)
+* [Canaux de versions, fin de vie et recommandation de mise à jour](#release-tracks-end-of-life-and-the-update-recommendation)
+  * [Pourquoi un numéro de version ne suffit pas](#why-a-version-number-is-not-an-answer)
+  * [Ce que le calendrier fourni peut et ne peut pas vous dire](#what-the-bundled-schedule-can-and-cannot-tell-you)
+  * [La version recommandée suit votre canal](#the-recommended-release-follows-your-track)
+  * [Déclarer votre canal de versions](#declaring-your-release-track)
 <!-- TOC -->
 
 
-## Why a version number is not an answer
+## Pourquoi un numéro de version ne suffit pas {#why-a-version-number-is-not-an-answer}
 
-OpenCloud publishes rolling, production and LTS releases from the same version
-sequence. The consequence for monitoring is that the *same* version can be perfectly
-current or long dead depending on the track it was published on. `7.2.3` is the
-current production release even though the rolling track is already at `7.4.0`,
-while `7.3.0` - a *higher* version - stopped receiving fixes the day `7.4.0`
-appeared.
+OpenCloud publie les versions rolling, production et LTS à partir de la même
+séquence de numéros. Conséquence pour la supervision : la *même* version peut
+être parfaitement à jour ou abandonnée depuis longtemps selon le canal sur
+lequel elle a été publiée. `7.2.3` est la version de production actuelle alors
+que le canal rolling en est déjà à `7.4.0`, tandis que `7.3.0` - une version
+*plus élevée* - a cessé de recevoir des correctifs le jour où `7.4.0` est sortie.
 
-The plugin therefore works in **release lines** (`MAJOR.MINOR`), which is the
-unit OpenCloud maintains: `7.2.3` is a patch of the `7.2` line. A line can
-belong to more than one track - `7.2` shipped as a rolling release before it
-was promoted to production, and `4.0` is both the previous production line and
-the current LTS line - and it is judged by whichever track supports it longest.
+Le plugin raisonne donc en **lignes de version** (`MAJOR.MINOR`), l’unité
+qu’OpenCloud maintient : `7.2.3` est un correctif de la ligne `7.2`. Une ligne
+peut appartenir à plusieurs canaux - `7.2` est sortie en version rolling avant
+d’être promue en production, et `4.0` est à la fois la ligne de production
+précédente et la ligne LTS actuelle - et elle est jugée selon le canal qui la
+prend en charge le plus longtemps.
 
-The schedule ships in `opencloud_local_scan/data/release_schedule.json` and is
-scraped from the release dates in the OpenCloud admin documentation, the only
-source that states the release *type*; the GitHub release list cannot tell a
-rolling release from a production one. It is refreshed on every release and
-weekly by a [scheduled workflow](../../.github/workflows/release-schedule.yml), and
-the same run rewrites the table above - so the versions quoted here are the
-ones the plugin actually judges against, not the ones that were current when
-this page was written. Everything else in this section, including the worked
-examples below, is written by hand and may name older releases to make a
-point.
+Le calendrier est livré dans `opencloud_local_scan/data/release_schedule.json`
+et extrait des dates de publication de la documentation d’administration
+d’OpenCloud, la seule source qui indique le *type* de version ; la liste des
+versions GitHub ne permet pas de distinguer une version rolling d’une version de
+production. Il est actualisé à chaque publication et chaque semaine par un
+[workflow planifié](../../.github/workflows/release-schedule.yml), et la même
+exécution réécrit le tableau du README : les versions citées sont donc celles
+auxquelles le plugin compare réellement, et non celles qui étaient actuelles
+lors de la rédaction de cette page. Tout le reste de cette section, y compris
+les exemples détaillés ci-dessous, est rédigé à la main et peut citer des
+versions plus anciennes pour illustrer un point.
 
-## What the bundled schedule can and cannot tell you
+## Ce que le calendrier fourni peut et ne peut pas vous dire {#what-the-bundled-schedule-can-and-cannot-tell-you}
 
-Two things are worth knowing about the bundled schedule:
+Voici ce qu’il faut savoir sur le calendrier fourni :
 
-- **LTS releases are only available with a subscription**, so an LTS line is
-  recognised from the documentation but its releases may never appear
-  publicly. If your vendor has committed to a different window, point
-  `release_schedule` at your own file rather than letting the bundled one
-  decide.
-- **A release newer than the schedule is never rated `F`, and never counted
-  against the instance.** The file ages between updates of this package, so an
-  instance that was patched promptly is routinely newer than the data it is
-  compared against. It keeps its rating, gets no upgrade recommendation and is
-  never called end of life for it.
-- **It says so when that happens.** A version ahead of the newest release
-  recorded for its line - or on a line newer than every line on record - sets
-  `lifecycle.scheduleStale` in the result document, fills in `scheduleNote`,
-  `scheduleUpdated` and `scheduleSource`, and adds a line to the plugin's
-  output:
+- **Les versions LTS ne sont disponibles qu’avec un abonnement** : une ligne LTS
+  est reconnue grâce à la documentation, mais ses versions peuvent ne jamais
+  apparaître publiquement. Si votre fournisseur s’est engagé sur une autre
+  période, faites pointer `release_schedule` vers votre propre fichier plutôt que
+  de laisser décider le fichier fourni.
+- **Une version plus récente que le calendrier n’est jamais notée `F` et n’est
+  jamais retenue contre l’instance.** Le fichier vieillit entre deux mises à jour
+  de ce paquet : une instance corrigée rapidement est donc souvent plus récente
+  que les données auxquelles elle est comparée. Elle conserve sa note, ne reçoit
+  aucune recommandation de mise à jour et n’est jamais déclarée en fin de vie
+  pour cette raison.
+- **Le scanner le signale lorsque cela se produit.** Une version plus récente que
+  la dernière version enregistrée pour sa ligne - ou située sur une ligne plus
+  récente que toutes les lignes connues - active `lifecycle.scheduleStale` dans
+  le document de résultat, renseigne `scheduleNote`, `scheduleUpdated` et
+  `scheduleSource`, et ajoute une ligne à la sortie du plugin :
 
   ```
   Release schedule: 7.4.1 is newer than anything in the bundled release schedule (generated 2026-08-12), so that schedule is probably out of date. This is not counted against the instance. Check the current support window at https://docs.opencloud.eu/docs/admin/resources/lifecycle/, and regenerate the schedule with scripts/update_release_schedule.py.
   ```
 
-  It is a statement about the bundled file, not about the instance: the
-  support window it worked out came from data older than the release it
-  judged, so it is worth re-reading at the [source][lifecycle]. Upgrading the
-  package, or running `python scripts/update_release_schedule.py`, clears it.
-  A line that genuinely expired stays expired - patching inside a dead line
-  does not reopen it, and the note explains the data rather than overturning
-  the verdict.
+  C’est une remarque sur le fichier fourni, pas sur l’instance : la période de
+  support calculée provient de données plus anciennes que la version évaluée, et
+  il vaut donc la peine de la vérifier à la [source][lifecycle]. Mettre à jour le
+  paquet, ou exécuter `python scripts/update_release_schedule.py`, fait
+  disparaître cette remarque. Une ligne réellement expirée le reste : appliquer
+  un correctif dans une ligne abandonnée ne la rouvre pas, et la remarque
+  explique les données sans renverser le verdict.
 
-## The recommended release follows your track
+## La version recommandée suit votre canal {#the-recommended-release-follows-your-track}
 
-A release feed only knows the newest release *overall*, and on OpenCloud that
-is always a rolling one. Recommending it to a production or LTS instance would
-quietly move it onto a track with a three-week support window - the opposite
-of what an operator on the production track signed up for.
+Un flux de versions ne connaît que la version la plus récente *tous canaux
+confondus*, et chez OpenCloud c’est toujours une version rolling. La recommander
+à une instance production ou LTS la ferait passer discrètement sur un canal dont
+la période de support est de trois semaines - l’inverse de ce qu’a choisi un
+opérateur du canal production.
 
-The update check therefore uses the
-[release schedule](../README.md#end-of-life-detection) to pick a target on the instance's
-own track:
+La vérification des mises à jour utilise donc le
+[calendrier des versions](../../README.md#end-of-life-detection) pour choisir une
+cible sur le canal propre à l’instance :
 
-| Installed | Track      | Recommended | Why                                                           |
-|:----------|:-----------|:------------|:--------------------------------------------------------------|
-| `7.2.3`   | production | *nothing*   | Current production release, even though rolling is at `7.4.0` |
-| `7.2.0`   | production | `7.2.3`     | The newest patch of the same line                             |
-| `7.3.0`   | rolling    | `7.4.0`     | On rolling, the newest release is the right one               |
-| `4.0.0`   | LTS        | `4.0.8`     | Where the backports are                                       |
+| Installée | Canal      | Recommandée | Pourquoi                                                              |
+|:----------|:-----------|:------------|:----------------------------------------------------------------------|
+| `7.2.3`   | production | *rien*      | Version de production actuelle, même si rolling en est à `7.4.0`      |
+| `7.2.0`   | production | `7.2.3`     | Le correctif le plus récent de la même ligne                          |
+| `7.3.0`   | rolling    | `7.4.0`     | Sur rolling, la version la plus récente est la bonne                  |
+| `4.0.0`   | LTS        | `4.0.8`     | C’est là que se trouvent les rétroportages                            |
 
-The newest release overall is still reported, as `newestRelease` in the JSON
-result and the webhook payload, so nothing is hidden - it is simply not
-presented as the release to install. If the feed reports a newer patch of the
-line you are already on, the feed wins, because it is fresher than the bundled
-schedule.
+La version la plus récente tous canaux confondus reste signalée, sous
+`newestRelease` dans le résultat JSON et la charge utile du webhook : rien n’est
+masqué, elle n’est simplement pas présentée comme la version à installer. Si le
+flux annonce un correctif plus récent de la ligne sur laquelle vous êtes déjà,
+le flux l’emporte, car il est plus récent que le calendrier fourni.
 
-## Declaring your release track
+## Déclarer votre canal de versions {#declaring-your-release-track}
 
-By default the release schedule works out which track a version belongs to and
-judges it as generously as the truth allows: `7.2.3` appears on both the
-rolling and the production track, so it is treated as a production release and
-is current.
+Par défaut, le calendrier des versions détermine à quel canal appartient une
+version et la juge aussi favorablement que les faits le permettent : `7.2.3`
+figure à la fois sur le canal rolling et sur le canal production, elle est donc
+traitée comme une version de production et considérée comme à jour.
 
-That is the right answer when nobody has said otherwise, but it is not the
-right answer for everyone. If you deliberately follow the rolling track, then
-`7.2.3` went out of support the day `7.4.0` shipped, and you want to be told
-so. `--release-track` says which track you are on, and the version is then
-judged on that track alone:
+C’est la bonne réponse tant que personne n’a indiqué le contraire, mais pas pour
+tout le monde. Si vous suivez délibérément le canal rolling, `7.2.3` n’est plus
+prise en charge depuis la sortie de `7.4.0`, et vous voulez en être informé.
+`--release-track` indique votre canal, et la version est alors jugée sur ce seul
+canal :
 
 ```bash
 check-opencloud-security --host opencloud.example.com --release-track rolling
 ```
 
-`--release-track auto` is the default: the release schedule is asked which
-track the installed release belongs to. It is the same answer as leaving the
-flag out, said out loud, and it is what keeps one configuration usable across
-instances on different tracks:
+`--release-track auto` est la valeur par défaut : le calendrier des versions
+détermine à quel canal appartient la version installée. C’est la même réponse
+que sans l’option, mais formulée explicitement, et c’est ce qui permet
+d’utiliser une même configuration pour des instances sur des canaux différents :
 
 ```bash
 check-opencloud-security --host opencloud.example.com --release-track auto
 ```
 
-| Installed | Declared            | Verdict                                                                     |
-|:----------|:--------------------|:----------------------------------------------------------------------------|
-| `7.2.3`   | *nothing* or `auto` | Supported - current production release                                      |
-| `7.2.3`   | `production`        | Supported - current production release                                      |
-| `7.2.3`   | `rolling`           | **End of life** - superseded by `7.4.0`, upgrade to `7.4.0`                 |
-| `7.4.0`   | `production`        | Supported - ahead of the production track, whose current release is `7.2.3` |
-| `2.3.0`   | `production`        | **End of life** - behind the production track, upgrade to `7.2.3`           |
-| `4.0.8`   | `lts`               | Supported until the two-year window closes                                  |
+| Installée | Déclaré             | Verdict                                                                            |
+|:----------|:--------------------|:-----------------------------------------------------------------------------------|
+| `7.2.3`   | *rien* ou `auto`    | Prise en charge - version de production actuelle                                   |
+| `7.2.3`   | `production`        | Prise en charge - version de production actuelle                                   |
+| `7.2.3`   | `rolling`           | **Fin de vie** - remplacée par `7.4.0`, mettre à jour vers `7.4.0`                 |
+| `7.4.0`   | `production`        | Prise en charge - en avance sur le canal production, dont la version actuelle est `7.2.3` |
+| `2.3.0`   | `production`        | **Fin de vie** - en retard sur le canal production, mettre à jour vers `7.2.3`     |
+| `4.0.8`   | `lts`               | Prise en charge jusqu’à la fin de la période de deux ans                           |
 
-Two consequences are worth knowing about in advance:
+Deux conséquences sont bonnes à connaître à l’avance :
 
-- **Being ahead of your track is not a finding.** A production instance that
-  has moved on to the current rolling release has everything the production
-  track ships and more, so it is reported as ahead of its track rather than
-  rated `F`. Only a release *behind* the current release of your track is out
-  of support.
-- **The check never recommends a downgrade.** If your declared track has no
-  release you could move *up* to, the update recommendation stays empty and
-  the reason explains the situation instead. Moving from `7.4.0` back to
-  `7.2.3` is a decision for a human, not for a monitoring plugin.
+- **Être en avance sur votre canal n’est pas un constat.** Une instance
+  production passée à la version rolling actuelle dispose de tout ce que livre
+  le canal production, et plus encore : elle est donc signalée comme en avance
+  sur son canal au lieu d’être notée `F`. Seule une version *antérieure* à la
+  version actuelle de votre canal n’est plus prise en charge.
+- **La vérification ne recommande jamais de rétrogradation.** Si votre canal
+  déclaré ne propose aucune version *supérieure*, la recommandation de mise à
+  jour reste vide et la raison explique la situation. Revenir de `7.4.0` à
+  `7.2.3` est une décision humaine, pas celle d’un plugin de supervision.
 
-The declared track also steers the update recommendation described in
-[the section above](#the-recommended-release-follows-your-track), and the
-output marks it as declared so it can be told apart from an inferred one:
+Le canal déclaré oriente aussi la recommandation de mise à jour décrite dans
+[la section ci-dessus](#the-recommended-release-follows-your-track), et la sortie
+le signale comme déclaré pour le distinguer d’un canal déduit :
 
 ```
 Release lifecycle: 7.2 (rolling track declared), out of support since 2026-07-14, upgrade to 7.4.0
 ```
 
-An unknown value is ignored rather than treated as an error, so a typo in a
-config file degrades to the default behaviour instead of taking the check down.
+Une valeur inconnue est ignorée plutôt que traitée comme une erreur : une faute
+de frappe dans un fichier de configuration ramène au comportement par défaut au
+lieu de mettre la vérification hors service.
 
-## Warning before the end of life
+## Avertir avant la fin de vie {#warning-before-the-end-of-life}
 
-End of life is `CRITICAL` on the day it arrives, which is too late to plan an
-upgrade. `--eol-warning DAYS` (`COS_EOL_WARNING`, YAML `eol_warning`) turns an
-otherwise `OK` result into `WARNING` once the running line has `DAYS` or fewer
-days of support left:
+La fin de vie devient `CRITICAL` le jour même, ce qui est trop tard pour
+planifier une mise à niveau. `--eol-warning DAYS` (`COS_EOL_WARNING`, YAML
+`eol_warning`) transforme un résultat autrement `OK` en `WARNING` dès qu’il reste
+`DAYS` jours de support ou moins à la ligne en service :
 
 ```text
 WARNING: The 7.2 release line reaches end of life on 2026-10-14 (20 days left). Upgrade to 7.4.0.
 ```
 
-It only ever raises `OK`; a result that is already `WARNING` or `CRITICAL`
-keeps its own line. A line without a published end-of-life date has nothing to
-count down and never warns. `0`, the default, turns it off.
+Cette option ne fait qu’élever un résultat `OK` ; un résultat déjà `WARNING` ou
+`CRITICAL` conserve sa propre ligne. Une ligne sans date de fin de vie publiée
+n’a rien à décompter et n’avertit jamais. `0`, la valeur par défaut, désactive
+l’option.
 
-## Does the upgrade clear the advisories?
+## La mise à niveau lève-t-elle les avis de sécurité ? {#does-the-upgrade-clear-the-advisories}
 
-When the installed release carries known advisories, the scan records
-`upgradePath`: what moving to the recommended release does about each one.
+Lorsque la version installée est concernée par des avis de sécurité connus,
+l’analyse enregistre `upgradePath` : l’effet du passage à la version recommandée
+sur chacun d’eux.
 
 ```json
 {"upgradePath": {"target": "7.2.4", "fixes": ["GHSA-aaaa"],
   "stillAffected": ["GHSA-bbbb"], "safeVersion": "7.3.0"}}
 ```
 
-Every range of an advisory is checked against the target, so a fix backported
-to another line counts. `safeVersion` is the lowest release past every fix the
-target still lacks, or `null` when one of them has no fix yet. The plugin
-prints it as a detail line:
+Chaque plage de versions d’un avis est comparée à la cible : un correctif
+rétroporté sur une autre ligne compte donc. `safeVersion` est la plus ancienne
+version postérieure à tous les correctifs qui manquent encore à la cible, ou
+`null` lorsque l’un d’eux n’a pas encore de correctif. Le plugin l’affiche sur
+une ligne de détail :
 
 ```text
 Upgrade path: 7.2.4 fixes GHSA-aaaa but is still affected by GHSA-bbbb; 7.3.0 is the first release that clears them all.

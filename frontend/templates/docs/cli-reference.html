@@ -194,6 +194,12 @@ for the naming rules.</p>
 <td><code>COS_SCANNER_TEMPORARY_WAIVERS</code></td>
 </tr>
 <tr>
+<td><code>--waiver-warning DAYS</code></td>
+<td>Report WARNING when a <code>--waive-until</code> waiver that hides a failing check ends within DAYS days (<code>0</code> is off)</td>
+<td><code>0</code></td>
+<td><code>COS_WAIVER_WARNING</code></td>
+</tr>
+<tr>
 <td><code>--release-track</code></td>
 <td>Release track this instance follows: <code>rolling</code>, <code>production</code>, <code>lts</code> or <code>auto</code></td>
 <td><code>auto</code></td>
@@ -243,7 +249,7 @@ for the naming rules.</p>
 </tr>
 <tr>
 <td><code>--baseline</code></td>
-<td>File that remembers the findings of the last run, one entry per host</td>
+<td>File that stores the findings of the last run, one entry per host</td>
 <td><em>None</em></td>
 <td><code>COS_BASELINE</code></td>
 </tr>

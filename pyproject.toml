@@ -162,6 +162,8 @@ pytest_add_cli_args_test_selection = [
     "tests/test_explain.py",
     "tests/test_check_vulnerabilities.py",
     "tests/test_eol_warning.py",
+    "tests/test_waiver_warning.py",
+    "tests/test_coverage_perfdata.py",
     "tests/test_upgrade_path.py",
     "tests/test_upgrade_rehearsal.py",
     "tests/test_verify_remediation.py",

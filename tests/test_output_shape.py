@@ -43,6 +43,7 @@ PAYLOAD_KEYS = frozenset({
     "plugin_version", "product", "product_version", "rating", "rating_label",
     "release_type", "scan_backend", "scan_uuid", "scanned_at", "status", "timestamp",
     "update", "upgrade_path", "upgrade_rehearsal", "vulnerabilities", "vulnerability_count",
+    "waiver_days_left", "waiver_warning", "waiver_warning_days",
 })
 
 # Sections of the payload that are the scanner's own documents, copied as-is.

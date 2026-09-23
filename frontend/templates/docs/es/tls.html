@@ -267,12 +267,11 @@ activan. Déjelos activados solo cuando un problema de latencia medido lo
 justifique <em>y</em> se sepa que la aplicación rechaza las solicitudes no
 idempotentes reproducidas.</p>
 <h2 id="what-is-deliberately-left-unmeasured">Qué se deja sin medir deliberadamente</h2>
-<p><strong>Aquí nada notifica como superado algo que no ha medido.</strong> Una compilación de
-OpenSSL que se niega a hablar TLS 1.0 no puede decirle al escáner si el
-<em>servidor</em> lo habría aceptado, y sin el binario <code>openssl</code> no se puede sondear
-el stapling OCSP. En ambos casos la comprobación se omite por completo del
-resultado en lugar de registrarse como superada: un hueco en la salida es
-honesto; una marca verde por algo que nadie ha examinado no lo es.</p>
+<p>El escáner no marca como superada una comprobación que no pudo realizar.
+Si la compilación de OpenSSL no admite TLS 1.0, el escáner no puede determinar
+si el servidor acepta ese protocolo. Sin el ejecutable <code>openssl</code>, tampoco
+puede comprobar el stapling OCSP. En ambos casos, la comprobación se omite
+del resultado.</p>
 <p><strong>Un certificado que no supera la verificación se lee igualmente.</strong>
 <code>getpeercert()</code> no devuelve nada para un par no verificado, así que en las
 instancias autofirmadas, donde más importa, el escáner descarga el

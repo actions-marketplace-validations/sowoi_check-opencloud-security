@@ -1,91 +1,67 @@
-# Proxys inverses
+# Proxys inverses {#reverse-proxies}
 
-Deux machines différentes de ce projet sont assises derrière un proxy inverse, et elles
-Je veux des choses opposées.
+Deux composants peuvent se trouver derrière un proxy inverse, avec des
+besoins différents.
 
-- **In front of an OpenCloud instance**, the proxy is the thing this check
-  grades. Most of the findings under *headers* are decided there, and a proxy
-  that strips a header OpenCloud sent will cost an instance a grade it had
-  earned. → [In front of OpenCloud](#in-front-of-opencloud)
-- **In front of the scan service** from this repository, the proxy decides
-  whether the rate limit works at all, and whether a scan that takes a minute
-  survives long enough to be read. → [In front of the scan
-  service](#in-front-of-the-scan-service)
+- **Devant une instance OpenCloud**, le proxy est évalué par le contrôle.
+  La plupart des constats sur les en-têtes dépendent de sa configuration.
+  S’il supprime un en-tête envoyé par OpenCloud, il dégrade le résultat de
+  l’instance. Voir [Devant OpenCloud](#in-front-of-opencloud).
+- **Devant le service de scan** de ce dépôt, le proxy doit permettre la
+  limitation des requêtes et laisser assez de temps aux scans pour se
+  terminer. Voir [Devant le service de scan](#in-front-of-the-scan-service).
 
-Both sections carry worked configuration for nginx, Apache httpd, Caddy,
-Traefik and HAProxy. Replace `opencloud.example.com` and
-`scan.example.com` with your own names; no real hostname appears anywhere in
-this repository.
+Les deux sections donnent des configurations pour nginx, Apache httpd, Caddy,
+Traefik et HAProxy. Remplacez `opencloud.example.com` et `scan.example.com`
+par vos noms d’hôtes. Le dépôt ne contient aucun nom d’instance réelle.
 
-<!-- TOC -->
-* [Reverse proxies](#reverse-proxies)
-  * [In front of OpenCloud](#in-front-of-opencloud)
-    * [The headers this check looks for](#the-headers-this-check-looks-for)
-    * [Two findings decided here that are not headers](#two-findings-decided-here-that-are-not-headers)
-    * [nginx](#nginx)
-    * [Apache httpd](#apache-httpd)
-    * [Caddy](#caddy)
-    * [Traefik](#traefik)
-    * [HAProxy](#haproxy)
-    * [Mistakes that cost a grade](#mistakes-that-cost-a-grade)
-  * [In front of the scan service](#in-front-of-the-scan-service)
-    * [What the service needs from a proxy](#what-the-service-needs-from-a-proxy)
-    * [nginx](#nginx-1)
-    * [Apache httpd](#apache-httpd-1)
-    * [Caddy](#caddy-1)
-    * [Traefik](#traefik-1)
-    * [HAProxy](#haproxy-1)
-    * [Checking the result](#checking-the-result)
-<!-- TOC -->
+## Devant OpenCloud {#in-front-of-opencloud}
 
-## In front of OpenCloud
+Le service proxy d’OpenCloud envoie déjà les en-têtes de sécurité. Un constat
+sur les en-têtes signifie donc généralement qu’un intermédiaire les a
+supprimés ou a répondu avant OpenCloud. Les ajouter au proxy corrige les
+deux situations.
 
-OpenCloud's own proxy service already sends a full set of security headers. A
-finding under *headers* therefore almost always means one of two things:
-something in front of it removed them, or something in front of it answers
-before OpenCloud does. Adding them again in the proxy fixes both.
+### En-têtes attendus {#the-headers-this-check-looks-for}
 
-### The headers this check looks for
-
-| Header | What this check accepts |
-|:-------|:------------------------|
-| `Strict-Transport-Security` | Any `max-age`. A year or more also passes `hstsLongMaxAge`, and `preload` passes `hstsPreload` |
-| `Content-Security-Policy` | Any non-empty policy. A policy containing `unsafe-inline` fails `cspWithoutUnsafeInline` separately |
+| En-tête | Valeur acceptée par le contrôle |
+|:--------|:------------------------------|
+| `Strict-Transport-Security` | Tout `max-age`. Un an ou plus valide aussi `hstsLongMaxAge` ; `preload` valide `hstsPreload` |
+| `Content-Security-Policy` | Toute politique non vide. La présence de `unsafe-inline` fait échouer séparément `cspWithoutUnsafeInline` |
 | `X-Content-Type-Options` | `nosniff` |
 | `X-Frame-Options` | `SAMEORIGIN` |
 | `X-Permitted-Cross-Domain-Policies` | `none` |
-| `X-Robots-Tag` | Any non-empty value |
-| `X-XSS-Protection` | Any non-empty value. Modern browsers ignore it; it is checked because OpenCloud sends it |
-| `Referrer-Policy` | Any non-empty value |
+| `X-Robots-Tag` | Toute valeur non vide |
+| `X-XSS-Protection` | Toute valeur non vide. Les navigateurs modernes l’ignorent ; il est contrôlé parce qu’OpenCloud l’envoie |
+| `Referrer-Policy` | Toute valeur non vide |
 
-Send them on the HTTPS listener only. `Strict-Transport-Security` on a plain
-HTTP response is ignored by browsers and tells an attacker nothing useful.
+Envoyez-les uniquement sur HTTPS. Les navigateurs ignorent
+`Strict-Transport-Security` dans une réponse HTTP non chiffrée.
 
-### Two findings decided here that are not headers
+### Deux constats qui ne portent pas sur les en-têtes {#two-findings-decided-here-that-are-not-headers}
 
-Both are hardening flags rather than extra checks, so neither lowers the
-grade on its own - they raise the state to WARNING and are waivable with
-`--ignore-hardening`.
+Ce sont des indicateurs de durcissement et non des contrôles supplémentaires.
+Ils ne diminuent pas la note à eux seuls, mais font passer l’état à WARNING.
+Vous pouvez les exempter avec `--ignore-hardening`.
 
-| Flag | What has to be true to pass |
-|:-----|:----------------------------|
-| `httpsEnforced` | A request to `http://` on port 80 answers with a redirect whose `Location` starts with `https://` - or port 80 does not answer at all |
-| `reverseProxyDetected` | Something in the response looks like a proxy: a proxy-style `Server` header, or any `Via` header |
+| Indicateur | Condition de réussite |
+|:-----------|:----------------------|
+| `httpsEnforced` | Une requête `http://` sur le port 80 reçoit une redirection dont `Location` commence par `https://`, ou le port 80 ne répond pas |
+| `reverseProxyDetected` | La réponse contient un indice de proxy : un en-tête `Server` caractéristique ou un en-tête `Via` |
 
-**`httpsEnforced`** is measured without following redirects: the scan asks
-port 80 for `/` once and reads the `Location` it gets back. A redirect to
-another plain-HTTP address, a `200` that serves the interface, and a
-redirect chain that reaches HTTPS only on its second hop all fail. A closed
-or filtered port 80 **passes** - plain HTTP cannot be spoken at all, which is
-the stronger version of enforcing it.
+**`httpsEnforced`** est mesuré sans suivre les redirections. Le scanner
+interroge `/` sur le port 80 une fois et lit `Location`. Une redirection vers
+une autre adresse HTTP, un `200` qui sert l’interface ou une chaîne qui
+n’atteint HTTPS qu’au deuxième saut échouent. Un port 80 fermé ou filtré
+**réussit** : aucune communication HTTP non chiffrée n’est possible.
 
-**`reverseProxyDetected`** is deliberately best-effort and never changes the
-rating, because Traefik and HAProxy announce nothing by default. A
-well-configured deployment can fail it with nothing wrong; treat it as a
-prompt to confirm there is something in front, not as a defect. If there is
-not, the configuration below is the usual way to put one there.
+**`reverseProxyDetected`** repose sur les indices disponibles et ne change
+jamais la note. Traefik et HAProxy ne s’annoncent pas par défaut. Un
+déploiement correct peut donc échouer à ce contrôle. Vérifiez la présence
+d’un proxy avant de conclure à un défaut. Si vous devez en installer un,
+les exemples suivants donnent une configuration habituelle.
 
-### nginx
+### nginx {#nginx}
 
 ```nginx
 server {
@@ -130,16 +106,16 @@ server {
 }
 ```
 
-`add_header` in nginx is **not** additive across levels: one `add_header` in a
-`location` discards every `add_header` from the `server` block. If you add one
-inside a `location`, repeat the whole set there.
+Dans nginx, `add_header` **ne s’additionne pas entre les niveaux**. Un seul
+`add_header` dans un bloc `location` annule tous ceux du bloc `server`.
+Si vous en ajoutez un dans `location`, répétez-y la liste complète.
 
-`Content-Security-Policy` is deliberately absent above. OpenCloud sends its
-own, and a policy written by hand in the proxy is how an instance ends up with
-a broken web interface. Only set one here if the check reports it missing and
-you have established that nothing behind the proxy sends it.
+`Content-Security-Policy` est volontairement absent de cet exemple. OpenCloud
+envoie sa propre politique. Une politique écrite manuellement dans le proxy
+peut casser l’interface. Ajoutez-en une seulement si le contrôle la signale
+absente et si aucun composant derrière le proxy ne l’envoie.
 
-### Apache httpd
+### Apache httpd {#apache-httpd}
 
 ```apache
 <VirtualHost *:443>
@@ -166,11 +142,11 @@ you have established that nothing behind the proxy sends it.
 </VirtualHost>
 ```
 
-Needs `mod_headers`, `mod_proxy`, `mod_proxy_http` and `mod_ssl`. Apache sets
-`X-Forwarded-For` itself and appends the client to it; do not also set it by
-hand, or the instance sees the address twice.
+Les modules `mod_headers`, `mod_proxy`, `mod_proxy_http` et `mod_ssl` sont
+nécessaires. Apache ajoute lui-même le client à `X-Forwarded-For`. Ne le
+faites pas aussi manuellement, sinon l’adresse figurera deux fois.
 
-### Caddy
+### Caddy {#caddy}
 
 ```caddyfile
 opencloud.example.com {
@@ -194,14 +170,14 @@ opencloud.example.com {
 }
 ```
 
-Caddy terminates TLS and redirects port 80 by itself, and it sets
-`X-Forwarded-For`, `X-Forwarded-Proto` and `X-Forwarded-Host` without being
-asked. Its `header` directive replaces a header the backend already sent, so
-this is safe to leave in place even once OpenCloud sends its own again.
+Caddy termine TLS, redirige automatiquement le port 80 et définit
+`X-Forwarded-For`, `X-Forwarded-Proto` et `X-Forwarded-Host`. Sa directive
+`header` remplace l’en-tête reçu du serveur en amont. Vous pouvez donc la
+conserver même si OpenCloud envoie de nouveau ses propres en-têtes.
 
-### Traefik
+### Traefik {#traefik}
 
-As labels on the OpenCloud container:
+Ajoutez ces étiquettes au conteneur OpenCloud :
 
 ```yaml
 labels:
@@ -223,11 +199,12 @@ labels:
   - "traefik.http.middlewares.opencloud-headers.headers.customResponseHeaders.X-XSS-Protection=1; mode=block"
 ```
 
-`stsSeconds` is the only way to get HSTS out of Traefik's headers middleware -
-setting `Strict-Transport-Security` through `customResponseHeaders` is
-overwritten. Traefik only sends HSTS on a TLS router, which is what you want.
+`stsSeconds` est le seul moyen de configurer HSTS dans le middleware d’en-têtes
+de Traefik. Une valeur `Strict-Transport-Security` placée dans
+`customResponseHeaders` est remplacée. Traefik n’envoie HSTS que sur un
+routeur TLS, ce qui convient ici.
 
-### HAProxy
+### HAProxy {#haproxy}
 
 ```haproxy
 frontend https-in
@@ -251,48 +228,46 @@ backend opencloud
     server oc1 127.0.0.1:9200 check
 ```
 
-`set-header` replaces; `add-header` would append a second copy, and two
-`Strict-Transport-Security` headers are worse than none.
+`set-header` remplace la valeur existante. `add-header` ajouterait un deuxième
+en-tête, ce qu’il faut éviter pour `Strict-Transport-Security`.
 
-### Mistakes that cost a grade
+### Erreurs qui dégradent le résultat {#mistakes-that-cost-a-grade}
 
-- **A header set only on `200`.** nginx's `add_header` without `always`, and
-  Apache's `Header set` without `always`, both skip error responses. This
-  check reads the headers of whatever the instance answers, so a redirect or
-  a 401 without them is a finding.
-- **A proxy that answers first.** A maintenance page, an authentication
-  gateway or a CDN error page is what gets scanned, and none of them look like
-  OpenCloud. If the check reports the wrong product or no version at all,
-  something in front is answering. See
-  [Troubleshooting](troubleshooting.md).
-- **`X-Forwarded-For` appended from a client-supplied value.** Not a finding
-  here, but it makes every rate limit and every audit log behind the proxy
-  guesswork. Overwrite it at the edge.
-- **`X-Forwarded-Host` passed through from the client.** This one *is* a
-  finding - `forwardedHostIgnored` - whenever the instance then builds its
-  public URLs from it. The scan asks for the discovery document claiming a
-  host that does not exist and looks for it in the `issuer` and the
-  endpoints, because those are where the next sign-in is sent. Set `OC_URL`
-  so the instance knows its own address, and set the header from the proxy's
-  own configuration (`proxy_set_header X-Forwarded-Host $host;`) rather than
-  forwarding whatever arrived. A default virtual host that refuses a name it
-  does not recognise closes the same door for the `Host` header.
-- **No default server.** Without one, nginx answers a `Host` it has no
-  `server_name` for from whichever `server` block it loaded first for that
-  port - often a different application on the same machine - and Apache from
-  the first `<VirtualHost>`. When that site redirects with `$host`, the probe
-  host comes back in the `Location`, and `forwardedHostIgnored` fails with
-  `Host comes back as the address it redirects to` although OpenCloud never
-  saw the request and `OC_URL` is set correctly. A different certificate or a
-  different set of headers on a request with a made-up `Host` is the tell:
+- **En-têtes envoyés uniquement avec `200`.** `add_header` dans nginx et
+  `Header set` dans Apache, sans `always`, omettent les réponses d’erreur.
+  Le scanner lit les en-têtes de la réponse reçue : leur absence sur une
+  redirection ou un 401 est donc signalée.
+- **Proxy qui répond avant OpenCloud.** Une page de maintenance, une passerelle
+  d’authentification ou une erreur de CDN peut être analysée à la place
+  d’OpenCloud. Si le contrôle trouve un autre produit ou aucune version,
+  vérifiez les intermédiaires. Voir [Dépannage](troubleshooting.md).
+- **Ajout à un `X-Forwarded-For` fourni par le client.** Ce contrôle ne le
+  signale pas, mais cela peut fausser les limites et journaux d’audit derrière
+  le proxy. Remplacez cet en-tête à l’entrée du réseau.
+- **Transmission du `X-Forwarded-Host` du client.** Le contrôle
+  `forwardedHostIgnored` échoue si l’instance utilise cette valeur dans ses
+  URL publiques. Le scanner demande le document de découverte avec un nom
+  d’hôte inexistant, puis cherche ce nom dans `issuer` et les points d’accès
+  qui recevront la prochaine connexion. Définissez `OC_URL` et construisez
+  l’en-tête à partir de la configuration du proxy
+  (`proxy_set_header X-Forwarded-Host $host;`). Un hôte virtuel par défaut
+  qui refuse les noms inconnus protège aussi l’en-tête `Host`.
+- **Absence de serveur par défaut.** Pour un `Host` sans `server_name`
+  correspondant, nginx utilise le premier bloc `server` chargé sur ce port,
+  parfois celui d’une autre application. Apache utilise le premier
+  `<VirtualHost>`. Si ce site redirige avec `$host`, le nom de test revient
+  dans `Location`. `forwardedHostIgnored` échoue alors avec
+  `Host comes back as the address it redirects to`, même si OpenCloud n’a
+  jamais reçu la requête et si `OC_URL` est correct. Un certificat ou des
+  en-têtes différents avec un `Host` inventé permettent de le repérer :
 
   ```bash
   curl -sI -H "Host: unknown.invalid" https://opencloud.example.com/.well-known/openid-configuration
   ```
 
-  Give the proxy an explicit default server that refuses every name it does
-  not serve, and write redirects in other sites with their own name rather
-  than `$host`:
+  Définissez un serveur par défaut qui refuse tous les noms non servis.
+  Dans les autres sites, écrivez les redirections avec leur propre nom
+  plutôt qu’avec `$host` :
 
   ```nginx
   server {
@@ -306,62 +281,59 @@ backend opencloud
   }
   ```
 
-  In Apache, make the first `<VirtualHost>` for each port one that serves
-  nothing (`Redirect 403 /`). Caddy and Traefik answer an unknown name
-  without routing it to a site, so they need nothing here.
-- **HTTP left open.** A redirect is enough; this check follows it and grades
-  the destination. What it will not forgive is a plain-HTTP listener that
-  serves the interface as well - that is the `httpsEnforced` flag
-  [above](#two-findings-decided-here-that-are-not-headers).
-- **A self-signed or expired certificate.** The scan refuses to establish a
-  version over an untrusted connection, and no header can make up for that.
+  Dans Apache, le premier `<VirtualHost>` de chaque port doit ne rien servir
+  (`Redirect 403 /`). Caddy et Traefik ne dirigent pas les noms inconnus vers
+  un site ; ils ne nécessitent pas cet ajout.
+- **Interface accessible en HTTP.** Une redirection suffit : le scanner la
+  suit et évalue la destination. En revanche, servir aussi l’interface en
+  HTTP fait échouer [`httpsEnforced`](#two-findings-decided-here-that-are-not-headers).
+- **Certificat autosigné ou expiré.** Une connexion non reconnue est un
+  problème TLS qu’aucun en-tête ne peut corriger.
 
-## In front of the scan service
+## Devant le service de scan {#in-front-of-the-scan-service}
 
-The web application in this repository - [`docs/webapp.md`](../webapp.md) - is a
-plain ASGI service on one port. It sends its own security headers, including a
-`Content-Security-Policy` with no `unsafe-inline`, so a proxy has nothing to
-add. What it does need is the truth about who is calling and enough patience
-for a scan to finish.
+L’application web de ce dépôt, décrite dans [`docs/webapp.md`](../webapp.md),
+est un service ASGI sur un seul port. Elle envoie ses en-têtes de sécurité,
+dont une `Content-Security-Policy` sans `unsafe-inline`. Le proxy doit surtout
+transmettre l’adresse réelle du client et attendre la fin du scan.
 
-**You do not have to copy any of this by hand.**
-[`docker/setup-wizard.py`](../../docker/setup-wizard.py) writes the nginx, Apache,
-Caddy or Traefik configuration for a generated deployment, following the notes
-below and filling in the host name, the port and - where the stack brings its
-own identity provider - the forward auth in front of `/admin` and a site for
-Authentik itself at the host name of its public address. These sections
-are what it generates, and the reference for a deployment it did not write.
+**Vous n’avez pas besoin de copier ces configurations à la main.**
+[`docker/setup-wizard.py`](../../docker/setup-wizard.py) génère la configuration
+nginx, Apache, Caddy ou Traefik avec le nom d’hôte et le port. Si la pile
+inclut son fournisseur d’identité, il ajoute aussi l’authentification déléguée
+devant `/admin` et un site Authentik sur son nom d’hôte public. Les exemples
+suivants servent aussi de référence pour les déploiements manuels.
 
-### What the service needs from a proxy
+### Besoins du service {#what-the-service-needs-from-a-proxy}
 
-- **A real client address.** The rate limit and the target cooldown are the
-  only things standing between a public scanner and being used as an
-  amplifier, and both key off the client address. Pass `X-Forwarded-For` and
-  set `COS_WEB_TRUST_FORWARDED_FOR=true`, plus `COS_WEB_TRUSTED_PROXY_HOPS` if
-  more than one proxy of yours is in the path.
+- **Adresse réelle du client.** La limitation des requêtes et le délai entre
+  scans d’une même cible empêchent l’utilisation abusive du scanner public.
+  Les deux utilisent l’adresse du client. Transmettez `X-Forwarded-For`,
+  activez `COS_WEB_TRUST_FORWARDED_FOR=true` et réglez
+  `COS_WEB_TRUSTED_PROXY_HOPS` si plusieurs de vos proxys sont traversés.
 
-  The header is read from the **right**, that many entries in, so a proxy that
-  appends is as safe as one that overwrites - what a client sends stays to the
-  left of the entry your own proxy wrote, and is never reached. Set the hop
-  count to the number of proxies *you operate*: too few names a proxy instead
-  of the visitor, which is harmless, while too many walks back into the part
-  of the header the client controls.
-- **Timeouts longer than a scan.** A scan takes seconds to a minute; a PDF
-  export and an MCP `scan_instance` call can hold a response for minutes. 120
-  seconds is a sensible floor and the MCP endpoint wants more.
-- **No response buffering on `/mcp`.** The Model Context Protocol endpoint
-  answers with an event stream. A proxy that buffers it turns a working
-  session into a client that waits for ever.
-- **No rewriting of the discovery paths.** `/.well-known/ai.json`,
-  `/openapi.json`, `/arazzo.json`, `/robots.txt` and `/sitemap.xml` are served
-  by the application and must reach it unchanged. A proxy that answers
-  `/.well-known/` itself - some ACME setups do - has to exclude that file.
-- **The public origin, once.** Set `COS_WEB_PUBLIC_BASE_URL` to the address
-  visitors use. Canonical links, the sitemap and the absolute URLs in the
-  discovery document are built from it, and behind a proxy the application
-  cannot work it out on its own.
+  L’application lit ce nombre d’entrées à partir de la **droite**. Un proxy
+  qui ajoute une entrée est donc aussi sûr qu’un proxy qui remplace
+  l’en-tête : la valeur du client reste à gauche de l’entrée ajoutée par
+  votre proxy. Comptez uniquement les proxys **que vous exploitez**. Un
+  nombre trop faible identifie un proxy plutôt que le visiteur ; un nombre
+  trop élevé atteint une valeur contrôlée par le client.
+- **Délais supérieurs à la durée du scan.** Un scan prend quelques secondes à
+  une minute. Un export PDF ou un appel MCP `scan_instance` peut durer
+  plusieurs minutes. Prévoyez au moins 120 secondes, davantage pour MCP.
+- **Aucune mise en tampon sur `/mcp`.** Le point d’accès Model Context
+  Protocol renvoie un flux d’événements. La mise en tampon empêche le client
+  de les recevoir à temps.
+- **Chemins de découverte inchangés.** `/.well-known/ai.json`, `/openapi.json`,
+  `/arazzo.json`, `/robots.txt` et `/sitemap.xml` doivent atteindre
+  l’application sans réécriture. Si le proxy traite lui-même
+  `/.well-known/`, comme certaines configurations ACME, excluez ce fichier.
+- **Adresse publique explicite.** Réglez `COS_WEB_PUBLIC_BASE_URL` sur
+  l’adresse utilisée par les visiteurs. Elle sert aux liens canoniques,
+  au plan du site et aux URL absolues du document de découverte.
+  L’application ne peut pas la déduire derrière un proxy.
 
-### nginx
+### nginx {#nginx_1}
 
 ```nginx
 map $http_upgrade $connection_upgrade {
@@ -409,7 +381,7 @@ server {
 }
 ```
 
-Then:
+Puis configurez :
 
 ```bash
 COS_WEB_TRUST_FORWARDED_FOR=true
@@ -418,12 +390,12 @@ COS_WEB_PUBLIC_BASE_URL=https://scan.example.com
 COS_WEB_MCP_ALLOWED_HOSTS=scan.example.com
 ```
 
-`COS_WEB_MCP_ALLOWED_HOSTS` is the MCP endpoint's DNS-rebinding protection. It
-is safe to leave empty behind a proxy that already fixes the host, and worth
-setting anyway - it costs nothing and it is one `Host` header away from being
-the only check.
+`COS_WEB_MCP_ALLOWED_HOSTS` protège le point d’accès MCP contre le rebinding
+DNS. Il peut rester vide si le proxy impose déjà le nom d’hôte, mais le
+renseigner ajoute une vérification utile en cas de mauvaise transmission de
+`Host`.
 
-### Apache httpd
+### Apache httpd {#apache-httpd_1}
 
 ```apache
 <VirtualHost *:443>
@@ -453,10 +425,10 @@ the only check.
 </VirtualHost>
 ```
 
-Order matters: the `<Location "/mcp">` block has to come before the catch-all
-`ProxyPass /`, or the catch-all wins and the stream is buffered again.
+L’ordre compte : le bloc `<Location "/mcp">` doit précéder le `ProxyPass /`
+général. Sinon, cette dernière règle s’applique et réactive la mise en tampon.
 
-### Caddy
+### Caddy {#caddy_1}
 
 ```caddyfile
 scan.example.com {
@@ -478,12 +450,12 @@ scan.example.com {
 }
 ```
 
-`flush_interval -1` disables buffering, which is what the event stream needs.
-Caddy writes `X-Forwarded-For` from the connection and drops what the client
-sent, so `COS_WEB_TRUST_FORWARDED_FOR=true` is safe with the default
-`COS_WEB_TRUSTED_PROXY_HOPS=1`.
+`flush_interval -1` désactive la mise en tampon nécessaire au flux
+d’événements. Caddy construit `X-Forwarded-For` depuis la connexion et ignore
+la valeur du client. `COS_WEB_TRUST_FORWARDED_FOR=true` convient donc avec
+`COS_WEB_TRUSTED_PROXY_HOPS=1`, sa valeur par défaut.
 
-### Traefik
+### Traefik {#traefik_1}
 
 ```yaml
 labels:
@@ -497,7 +469,7 @@ labels:
   - "traefik.http.services.scan.loadbalancer.responseForwarding.flushInterval=1ms"
 ```
 
-with, on the static configuration:
+Dans la configuration statique :
 
 ```yaml
 entryPoints:
@@ -510,14 +482,13 @@ entryPoints:
         idleTimeout: 300s
 ```
 
-Traefik overwrites `X-Real-Ip` and *appends* to `X-Forwarded-For`. The
-application reads the header from the right, so the entry it takes is the one
-Traefik wrote and not whatever the client put in front of it:
-`COS_WEB_TRUST_FORWARDED_FOR=true` with the default
-`COS_WEB_TRUSTED_PROXY_HOPS=1` is correct here. Behind a CDN as well, count
-both and set `2`.
+Traefik remplace `X-Real-Ip` et **ajoute** une entrée à `X-Forwarded-For`.
+L’application lit l’en-tête depuis la droite et prend donc l’entrée de
+Traefik. Utilisez `COS_WEB_TRUST_FORWARDED_FOR=true` et
+`COS_WEB_TRUSTED_PROXY_HOPS=1`. Si un CDN précède aussi Traefik, comptez les
+deux intermédiaires et réglez la valeur sur `2`.
 
-### HAProxy
+### HAProxy {#haproxy_1}
 
 ```haproxy
 frontend scan-in
@@ -535,10 +506,10 @@ backend scan
     server scan1 127.0.0.1:8811 check
 ```
 
-`timeout tunnel` is what keeps the MCP stream alive; `timeout server` alone
-closes it mid-session.
+`timeout tunnel` maintient le flux MCP ouvert. `timeout server` seul peut
+fermer la connexion en cours de session.
 
-### Checking the result
+### Vérifier le résultat {#checking-the-result}
 
 ```bash
 # The client address the service actually sees, through the proxy.
@@ -562,15 +533,15 @@ curl -sS -X POST https://scan.example.com/mcp \
         "clientInfo":{"name":"curl","version":"1"}}}'
 ```
 
-The rate limit is the one thing worth testing from somewhere else: submit more
-scans than `COS_WEB_IP_RATE_LIMIT` allows from one machine and confirm the
-**429**, then repeat from a second address and confirm it is *not* refused. If
-the second machine is limited too, the proxy is not passing the address on and
-every visitor is sharing one bucket.
+Testez la limite depuis deux adresses. Sur une machine, dépassez
+`COS_WEB_IP_RATE_LIMIT` et vérifiez la réponse **429**. Depuis une deuxième
+adresse, vérifiez qu’une soumission reste acceptée. Si cette adresse est
+aussi limitée, le proxy ne transmet probablement pas l’adresse du client et
+tous les visiteurs partagent le même quota.
 
 ---
 
-This is an independent community project. It is not affiliated with, endorsed
-by or supported by OpenCloud GmbH. "OpenCloud" and all related marks belong to
-their respective owners and are used here only to identify the software this
-tool checks.
+Ce projet communautaire est indépendant. Il n’est ni affilié à OpenCloud
+GmbH, ni approuvé ou soutenu par cette société. « OpenCloud » et les marques
+associées appartiennent à leurs propriétaires respectifs. Elles servent
+uniquement à identifier le logiciel contrôlé.

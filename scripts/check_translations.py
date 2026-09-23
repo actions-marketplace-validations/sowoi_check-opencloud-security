@@ -276,13 +276,19 @@ REGISTER: dict[str, tuple[str, str, re.Pattern[str], bool]] = {
     "fr": (
         "polite (vous)",
         "familiar (tu)",
-        re.compile(r"\b(?:tu|toi|ton|ta|tes|tien(?:ne)?s?)\b"),
+        re.compile(
+            r"\b(?:tu|toi|ton|ta|tes|tien(?:ne)?s?|réessaie|recharge\s+la\s+page)\b",
+            re.IGNORECASE,
+        ),
         False,
     ),
     "es": (
         "polite (usted)",
         "familiar (tú)",
-        re.compile(r"\b(?:t[úu]|tus|tuyos?|tuyas?|vosotros|vuestr[oa]s?)\b"),
+        re.compile(
+            r"\b(?:t[úu]|tus|tuyos?|tuyas?|vosotros|vuestr[oa]s?|sigue\s+leyendo)\b",
+            re.IGNORECASE,
+        ),
         False,
     ),
 }

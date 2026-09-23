@@ -38,7 +38,7 @@ MESSAGES: dict[str, str] = {
     "admin.config.group.frontend": "Frontend",
     "admin.rules.title": "Geltende Regeln",
     "admin.rules.lede": "Wie eine Note entsteht und welche Regeln diese Bereitstellung für Anfragen durchsetzt – einschließlich der aktuell wirksamen Werte.",
-    "admin.rules.scope": "Die Übersicht zeigt die Einstellungen beim Start dieses Prozesses und die im Code festgelegten Regeln. Zieladressen und Angaben zu Besuchern werden hier nicht angezeigt.",
+    "admin.rules.scope": "Diese Übersicht zeigt die beim Prozessstart geladene Konfiguration und die im Code festgelegten Regeln. Zieladressen und Besucherdaten werden nicht angezeigt.",
     "admin.rules.on": "Aktiv",
     "admin.rules.off": "Aus",
     "admin.rules.variables": "Gesetzt über",
@@ -46,30 +46,30 @@ MESSAGES: dict[str, str] = {
     "admin.rules.rating.heading": "Wie eine Instanz bewertet wird",
     "admin.rules.rating.lede": "Die Bewertung stammt vom Scanner selbst; dieser Dienst zeigt sie nur an. Diese Regeln gelten für jeden Scan hier.",
     "admin.rules.rating.scale": "Die Skala",
-    "admin.rules.rating.caps": "Was eine fehlgeschlagene Prüfung mit der Note macht",
+    "admin.rules.rating.caps": "Wie fehlgeschlagene Prüfungen die Note begrenzen",
     "admin.rules.rating.version.title": "Die Version bestimmt die Ausgangsnote",
     "admin.rules.rating.version.body": "Die Ausgangsnote richtet sich nach dem Supportstatus der Release-Linie und den bekannten Schwachstellen der Version. Fehlgeschlagene Prüfungen können die Note verschlechtern.",
     "admin.rules.rating.overrides.title": "Supportende und Release-Track",
-    "admin.rules.rating.shared.title": "Eine Obergrenze pro Schweregrad",
+    "admin.rules.rating.shared.title": "Notengrenzen nach Schweregrad",
     "admin.rules.rating.extra.title": "Zusatzprüfungen zählen zur Note",
     "admin.rules.rating.extra.body": "Transportsicherheit, Header und die übrigen Zusatzprüfungen begrenzen die Note wie Härtungsprüfungen, statt nur im Bericht zu erscheinen.",
     "admin.rules.rating.waivers.title": "Ausnahmen, die Besucher wählen können",
-    "admin.rules.rating.waivers.body": "{count} Härtungsprüfungen können im Formular ausgenommen werden. Eine ausgenommene Prüfung begrenzt die Note nicht mehr und bleibt markiert im Bericht; das Supportende lässt sich nicht ausnehmen.",
+    "admin.rules.rating.waivers.body": "Im Formular kannst du {count} Härtungsprüfungen ausnehmen. Ausgenommene Prüfungen bleiben im Bericht gekennzeichnet, begrenzen aber die Note nicht. Das Supportende beeinflusst die Note immer.",
     "admin.rules.rating.track.title": "Release-Track",
     "admin.rules.rating.track.body": "Ohne Auswahl im Formular gilt der Track {track}. Der Track ändert, wie eine Version bewertet wird, nie wie intensiv die Instanz geprüft wird.",
     "admin.rules.rating.reference.title": "Referenzdaten für die Bewertung",
     "admin.rules.rating.reference.body": "{advisories} Sicherheitsmeldungen in der Datenbank; Release-Zeitplan vom {schedule}.",
     "admin.rules.rating.more": "Die <a href=\"/grades\">Notenseite</a> erklärt Besuchern jede Note mit denselben Begriffen.",
     "admin.rules.group.submissions": "Limits für Einreichungen",
-    "admin.rules.group.submissions.lede": "Wie oft ein Client fragen darf, und wie sich der Dienst unter Last verhält.",
+    "admin.rules.group.submissions.lede": "Wie oft ein Client einen Scan anfordern kann und wie der Dienst mit hoher Last umgeht.",
     "admin.rules.group.probe": "Scan-Sperre",
     "admin.rules.group.probe.lede": "Grenzen für wiederholte Anfragen an Ziele, die sich nicht scannen lassen.",
     "admin.rules.group.targets": "Was gescannt werden darf",
-    "admin.rules.group.targets.lede": "Geprüft, bevor irgendetwas eine Verbindung aufbaut, und erneut bei jeder Weiterleitung.",
+    "admin.rules.group.targets.lede": "Ziele werden vor dem Verbindungsaufbau und vor jeder Weiterleitung geprüft.",
     "admin.rules.group.scanner": "Wie intensiv ein Host geprüft wird",
     "admin.rules.group.scanner.lede": "Die Einstellungen, mit denen jeder Scan dieser Bereitstellung ausgeführt wird. Anfragen können sie nicht ändern.",
     "admin.rules.group.operator": "Zugangsdaten und Betreiberaktionen",
-    "admin.rules.group.operator.lede": "Limits für Anfragen mit Zugangsdaten und für Aktionen im Betreiberbereich.",
+    "admin.rules.group.operator.lede": "Grenzen für Anfragen mit Zugangsdaten und für Aktionen im Betreiberbereich.",
     "admin.rules.rule.client_limit.title": "Limit pro Client",
     "admin.rules.rule.client_limit.body": "Höchstens {limit} Einreichungen pro Client alle {window}. Eine IPv4-Adresse ist ein Client; ein IPv6-Client ist sein /{ipv6}.",
     "admin.rules.rule.daily_cap.title": "Tageslimit",
@@ -78,8 +78,8 @@ MESSAGES: dict[str, str] = {
     "admin.rules.rule.target_cooldown.body": "Dieselbe Instanz darf einmal alle {cooldown} gescannt werden, egal wer fragt.",
     "admin.rules.rule.batch.title": "Stapelgröße",
     "admin.rules.rule.batch.body": "Ein Stapel enthält höchstens {limit} Ziele, und jedes zählt gegen jedes Limit.",
-    "admin.rules.rule.queue.title": "Warteschlange bei hoher Auslastung",
-    "admin.rules.rule.queue.body": "{workers} Scans laufen gleichzeitig; weitere Einreichungen warten der Reihe nach und werden nie wegen Last abgelehnt.",
+    "admin.rules.rule.queue.title": "Scan-Warteschlange bei hoher Last",
+    "admin.rules.rule.queue.body": "Bis zu {workers} Scans laufen gleichzeitig. Weitere Anfragen warten in der Reihenfolge ihres Eingangs. Hohe Last führt nicht zur Ablehnung.",
     "admin.rules.rule.agent_wait.title": "Grenze automatischer Wiederholungen",
     "admin.rules.rule.agent_wait.body": "MCP und die Workflows warten eine Retry-After-Zeit von bis zu {wait} selbst ab, höchstens {attempts} Mal. Bei längerer Wartezeit geht die Antwort an den Aufrufer zurück.",
     "admin.rules.rule.probe_block.title": "Sperre nach wiederholten Verstößen",
@@ -87,7 +87,7 @@ MESSAGES: dict[str, str] = {
     "admin.rules.rule.probe_escalation.title": "Wiederholte Sperren werden länger",
     "admin.rules.rule.probe_escalation.body": "Ein Netz, das innerhalb von {repeat} nach seiner letzten Sperre erneut gesperrt wird, wartet jedes Mal {factor}-mal länger: {steps}.",
     "admin.rules.rule.probe_network.title": "Die Sperre gilt für ein Netz",
-    "admin.rules.rule.probe_network.body": "Eine Sperre gilt für das IPv4-/{ipv4} und das IPv6-/{ipv6} des Clients, damit die nächste Adresse sie nicht umgehen kann.",
+    "admin.rules.rule.probe_network.body": "Eine Sperre gilt für das IPv4-/{ipv4}- oder IPv6-/{ipv6}-Netz des Clients. Ein Adresswechsel innerhalb dieses Netzes umgeht die Sperre nicht.",
     "admin.rules.rule.strike_scans.title": "Ein Scan ohne OpenCloud ist ein Verstoß",
     "admin.rules.rule.strike_scans.body": "status.php antwortete nicht, lieferte kein JSON, nannte ein anderes Produkt, oder die Zeit lief ab. Derselbe Host erneut ist ein weiterer Verstoß; ein abgeschlossener Scan nie.",
     "admin.rules.rule.strike_refusals.title": "Ein abgelehntes Ziel ist ein Verstoß",
@@ -103,7 +103,7 @@ MESSAGES: dict[str, str] = {
     "admin.rules.rule.internal_names.title": "Lokale Namen und Metadaten-Endpunkte",
     "admin.rules.rule.internal_names.body": "Nach Name wie nach Adresse abgelehnt:",
     "admin.rules.rule.wildcard_dns.title": "Wildcard- und Rebinding-DNS-Namen",
-    "admin.rules.rule.wildcard_dns.body": "Diese Dienste lösen Hostnamen zur darin enthaltenen IP-Adresse auf. Du kannst diese IP-Adresse weiterhin direkt eingeben:",
+    "admin.rules.rule.wildcard_dns.body": "Diese Dienste kodieren eine IP-Adresse im Hostnamen. Um diese Adresse zu scannen, gib die IP-Adresse direkt ein:",
     "admin.rules.rule.dns_consistency.title": "Ein Name muss zweimal gleich auflösen",
     "admin.rules.rule.dns_consistency.body": "Ein eingereichter Name wird zweimal abgefragt und abgelehnt, wenn die Antworten keine Adresse teilen; jede Adresse aus beiden wird geprüft.",
     "admin.rules.rule.redirects.title": "Jede Weiterleitung wird geprüft",
@@ -131,11 +131,7 @@ MESSAGES: dict[str, str] = {
     "admin.band": "Betriebsbereich - angemeldet als {user}",
     "admin.band.signout": "Abmelden",
     "admin.lede": "Prüfe den Dienstzustand und die Referenzdaten oder starte die täglichen Aktualisierungen des Workers manuell.",
-    "admin.noscript": (
-        "Die Werte oben werden per JavaScript eingesetzt. Ohne JavaScript lade "
-        "die Seite neu, um die aktuellen zu sehen; beide Schaltflächen "
-        "funktionieren weiterhin."
-    ),
+    "admin.noscript": "JavaScript aktualisiert die Werte oben. Ohne JavaScript musst du die Seite neu laden, um aktuelle Werte zu sehen. Beide Aktualisierungsschaltflächen funktionieren weiterhin.",
     "admin.state.kicker": "Jetzt",
     "admin.state.heading": "Dienstzustand",
     "admin.state.lede": "Aktuelle Zählerstände und konfigurierte Begrenzungen. Einzelne Scanergebnisse und Client-Adressen sind hier nicht abrufbar.",
@@ -302,12 +298,9 @@ MESSAGES: dict[str, str] = {
     ),
     "admin.outcome.failed": "Konnte nicht abgerufen werden. Nichts geändert.",
     "admin.outcome.disabled": "Diese Aktualisierung ist in den Einstellungen dieser Installation abgeschaltet.",
-    "admin.outcome.cooldown": "Lief gerade eben. In {seconds}s wieder möglich.",
+    "admin.outcome.cooldown": "Eine Aktualisierung lief gerade. Versuche es in {seconds}s erneut.",
     "admin.probe.action": "Quellen testen",
-    "admin.probe.hint": (
-        "Liest beide Quellen und meldet, was eine Aktualisierung daraus machen "
-        "würde. Es wird nichts gespeichert."
-    ),
+    "admin.probe.hint": "Ruft beide Quellen ab und prüft, ob die Daten für eine Aktualisierung geeignet sind. Die abgerufenen Daten werden nicht gespeichert.",
     "admin.probe.schedule": "Release-Zeitplan: {answer}",
     "admin.probe.advisories": "Sicherheitsmeldungen: {answer}",
     "admin.probe.usable": "gelesen, eine Aktualisierung würde ihn übernehmen",
@@ -316,12 +309,7 @@ MESSAGES: dict[str, str] = {
     "admin.probe.disabled": "nicht geprüft - diese Aktualisierung ist abgeschaltet",
     "admin.search.kicker": "Suchindex",
     "admin.search.heading": "Ist der ausgelieferte Index noch aktuell",
-    "admin.search.lede": (
-        "Der Suchindex wird beim Build erzeugt und kann hier nicht geändert "
-        "werden. Diese Ansicht prüft, ob Seiten, Sprachen und Release-Version "
-        "zum laufenden Dienst passen. Die vollständigen Seitentexte werden "
-        "dabei nicht verglichen."
-    ),
+    "admin.search.lede": "Der Suchindex wird beim Build erzeugt. Diese Ansicht vergleicht seine Seiten, Sprachen und Release-Version mit dem laufenden Dienst. Sie vergleicht keine vollständigen Seitentexte und ändert den Index nicht.",
     "admin.search.fresh": "Aktuell",
     "admin.search.stale": "Veraltet",
     "admin.search.unknown": "Nicht feststellbar",
@@ -348,10 +336,7 @@ MESSAGES: dict[str, str] = {
         "Von Hand muss nichts eingecheckt werden: Jeder Pull Request auf main "
         "erzeugt den Index neu und checkt ihn in seinen Branch ein."
     ),
-    "admin.search.fix": (
-        "Jeder Pull Request auf main und der Release-Workflow erzeugen den "
-        "Index neu und checken ihn ein. In dieser Ansicht kannst du den Index nicht neu erstellen."
-    ),
+    "admin.search.fix": "Die Pull-Request- und Release-Workflows erzeugen den Index neu und committen ihn. Auf dieser Seite kannst du ihn nicht neu erstellen.",
     "admin.audit.kicker": "Audit-Log",
     "admin.audit.heading": "Audit-Log",
     "admin.audit.lede": (
@@ -359,18 +344,8 @@ MESSAGES: dict[str, str] = {
         "Live-Verfolgen öffnet eine Verbindung; ohne Aufforderung wird "
         "nichts übertragen."
     ),
-    "admin.audit.privacy": (
-        "Client-Adressen erscheinen nur als gekürzte HMAC-Fingerabdrücke. "
-        "Das dafür verwendete Salt bleibt in diesem Prozess. Die Ansicht "
-        "zeigt ausschließlich die Einträge des Audit-Logs und kann keine "
-        "Client-Adressen auflösen."
-    ),
-    "admin.audit.replicas": (
-        "Diese Installation führt keine Audit-Datei, deshalb stammen diese "
-        "Einträge aus dem Speicher genau des Prozesses, der geantwortet hat - "
-        "bei mehr als einer Replik ist das ein Teil des Protokolls und nicht "
-        "das ganze."
-    ),
+    "admin.audit.privacy": "Client-Adressen erscheinen als gekürzte HMAC-Fingerabdrücke. Das dafür verwendete Salt bleibt in diesem Prozess. Diese Ansicht zeigt vorhandene Protokolleinträge und kann daraus keine Client-Adressen ermitteln.",
+    "admin.audit.replicas": "Es ist keine Audit-Datei konfiguriert. Diese Einträge stammen aus dem Speicher dieses Prozesses. Bei mehreren Replikaten zeigt die Ansicht nur einen Teil des Audit-Logs.",
     "admin.audit.follow": "Live verfolgen",
     "admin.audit.stop": "Anhalten",
     "admin.audit.clear": "Leeren",
@@ -444,15 +419,9 @@ MESSAGES: dict[str, str] = {
     "pagenav.kicker": "Weiterlesen",
     "pagenav.aria": "Mehr über diesen Dienst",
     "pagenav.how.title": "Wie der Scan funktioniert",
-    "pagenav.how.blurb": (
-        "Was getestet wird, und die vier Schritte zwischen dem Klick auf den "
-        "Button und der Note."
-    ),
+    "pagenav.how.blurb": "Die Prüfungen und die vier Phasen eines Scans.",
     "pagenav.grades.title": "Was die Noten bedeuten",
-    "pagenav.grades.blurb": (
-        "Was die Noten von A+ bis F bedeuten und wie du die Bewertung "
-        "verbessern kannst."
-    ),
+    "pagenav.grades.blurb": "Was die Noten von A+ bis F bedeuten und wie du eine Bewertung verbessern kannst.",
     "pagenav.catalogue.title": "Was der Scanner prüft",
     "pagenav.catalogue.blurb": (
         "Härtungsmaßnahmen, Header- und TLS-Prüfungen sowie bekannte "
@@ -469,9 +438,7 @@ MESSAGES: dict[str, str] = {
         "MCP-Endpunkt."
     ),
     "pagenav.privacy.title": "Was dieser Server speichert",
-    "pagenav.privacy.blurb": (
-        "Welche Daten für {minutes} Minuten gespeichert werden und was im Log steht."
-    ),
+    "pagenav.privacy.blurb": "Welche Daten für {minutes} Minuten im Speicher bleiben und welche Daten protokolliert werden.",
     "pagenav.about.title": "Über OpenCloud",
     "pagenav.about.blurb": (
         "Die Plattform, die hier geprüft wird, und warum dieses Projekt "
@@ -973,7 +940,7 @@ MESSAGES: dict[str, str] = {
     "docs.index.option.debug": (
         "Ausgangsnote und Auswirkungen der einzelnen Befunde erklären."
     ),
-    "docs.index.option.insecure": "Zertifikatsverifikation überspringen; nur für bewusst nicht vertrauenswürdige Zertifikate verwenden.",
+    "docs.index.option.insecure": "Überspringe die Zertifikatsprüfung für eine Instanz, die du selbst verwaltest.",
     "docs.index.option.thresholds": (
         "Die Bewertungsschwellen wählen, die auf Monitoring-Zustände abbilden."
     ),
@@ -1303,7 +1270,7 @@ MESSAGES: dict[str, str] = {
     "error.target.credentials": (
         "Zugangsdaten in der Adresse werden nicht akzeptiert."
     ),
-    "error.target.address_only": "Gib die Basisadresse ein, bei Bedarf mit einfachem Unterordner. Querys, Fragmente, Parameter und Pfadwechsel sind nicht erlaubt.",
+    "error.target.address_only": "Gib nur die Basisadresse der Instanz ein, bei Bedarf mit einfachem Unterordner. Querys, Fragmente, Parameter und Pfadwechsel sind nicht erlaubt.",
     "error.target.port": "Diese Adresse hat einen ungültigen Port.",
     "error.target.no_host": "Diese Adresse hat keinen Hostnamen.",
     "error.target.hostname_shape": (
@@ -1356,10 +1323,7 @@ MESSAGES: dict[str, str] = {
     "result.progress.queued.title": "Wartet auf einen freien Scanner-Prozess",
     "result.progress.queued.detail": "Alle Worker sind beschäftigt. Dein Scan wartet an seiner Position, bis ein Worker frei wird.",
     "result.progress.running.title": "Die Instanz wird gescannt",
-    "result.progress.running.detail": (
-        "Der Scanner prüft Version, Funktionen, Zertifikat, Header und "
-        "Endpunkte, die ohne Anmeldung erreichbar sind."
-    ),
+    "result.progress.running.detail": "Der Scanner prüft Version, Funktionen, Zertifikat, Header und Endpunkte, die die Instanz ohne Anmeldung bereitstellt.",
     "result.progress.step.queued": "In Warteschlange",
     "result.progress.step.running": "Läuft",
     "result.progress.step.done": "Ergebnis",
@@ -1521,7 +1485,7 @@ MESSAGES: dict[str, str] = {
         "bestanden."
     ),
     "result.hardening.kicker": "Härtung",
-    "result.hardening.heading": "Härtung, die sich lohnt",
+    "result.hardening.heading": "Fehlende Härtungsmaßnahmen",
     "result.hardening.lede": "Diese Einstellungen bieten zusätzlichen Schutz vor typischen Risiken. Prüfe zu jedem Befund die Erklärung und den vorgeschlagenen Lösungsweg.",
     "result.hardening.tag": "Härtung",
     "result.header.tag": "Header",
@@ -1591,11 +1555,7 @@ MESSAGES: dict[str, str] = {
     "result.coverage.complete": (
         "Jede Prüfung, die dieser Scan vorgesehen hat, kam zu einem Ergebnis."
     ),
-    "result.coverage.unavailable": (
-        "Dieser Bericht entstand, bevor Scans ihre Abdeckung festgehalten "
-        "haben; er sagt also nicht, welche Prüfungen gelaufen sind. Das ist "
-        "nicht dasselbe wie ein Scan ohne Lücken."
-    ),
+    "result.coverage.unavailable": "Dieser ältere Bericht enthält keine Angaben zu den ausgeführten Prüfungen. Der Prüfumfang ist unbekannt.",
     "coverage.reason.not_applicable": "Trifft auf diese Instanz nicht zu",
     "coverage.reason.probe_disabled": "Die Prüfung war für diesen Scan abgeschaltet",
     "coverage.reason.prerequisite_missing": (
@@ -1625,17 +1585,7 @@ MESSAGES: dict[str, str] = {
     "result.excluded.unfixable.note": "Diese Werte sind im OpenCloud-Code festgelegt und können nicht konfiguriert werden. Sie dienen zur Information und beeinflussen die Bewertung nicht.",
     "result.scope.kicker": "Umfang",
     "result.scope.heading": "Was dieser Scan nicht sehen kann",
-    "result.scope.body": (
-        "Der Scan prüft öffentlich zugängliche Informationen. <strong>Keine "
-        "Befunde bedeuten nicht, dass die Instanz sicher ist</strong> – auch "
-        "bei der besten Note. Nicht geprüft werden Betriebssystem und Pakete, "
-        "Container-Laufzeit, Reverse-Proxy-Konfiguration, Backups und "
-        "Wiederherstellung, Speicher, Geheimnisse und Schlüsselverwaltung, "
-        "Konten, Passwörter, Multi-Faktor-Anmeldung, bestehende "
-        "Freigabeberechtigungen und die Software-Lieferkette. Auch Daten, die "
-        "erst nach der Anmeldung zugänglich sind, liegen außerhalb des "
-        "Prüfumfangs. Zwei weitere Bereiche solltest du gesondert prüfen:"
-    ),
+    "result.scope.body": "Der Scan prüft öffentlich zugängliche Informationen. <strong>Keine Befunde bedeuten nicht, dass die Instanz sicher ist</strong>, auch bei der besten Note. Nicht geprüft werden Betriebssystem und Pakete, Container-Laufzeit, Reverse-Proxy-Konfiguration, Backups und Wiederherstellung, Speicher, Geheimnisse und Schlüsselverwaltung, Konten, Passwörter, Multi-Faktor-Anmeldung, bestehende Freigabeberechtigungen und die Software-Lieferkette. Auch Daten, die erst nach der Anmeldung zugänglich sind, liegen außerhalb des Prüfumfangs. Prüfe diese beiden Bereiche gesondert:",
     "result.scope.audit": (
         "<strong>Audit-Logging.</strong> Der Audit-Dienst von OpenCloud "
         "nutzt nur den internen Event-Bus – er veröffentlicht keinen "

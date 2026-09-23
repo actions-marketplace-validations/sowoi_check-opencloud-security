@@ -17,61 +17,62 @@
 
 <nav class="docs-toc card section-gap" aria-label="{{ t('docs.guide.toc.aria') }}" data-reveal>
   <p class="kicker">{{ t('docs.guide.toc.heading') }}</p>
-  <a href="#when-you-need-it" lang="fr">When you need it</a>
-  <a href="#running-a-refresh" lang="fr">Running a refresh</a>
-  <a href="#where-the-data-comes-from-and-how-it-is-checked" lang="fr">Where the data comes from, and how it is checked</a>
-  <a href="#using-the-refreshed-files" lang="fr">Using the refreshed files</a>
-  <a href="#running-it-daily-with-systemd" lang="fr">Running it daily with systemd</a>
-  <a href="#mirrors-and-hosts-without-internet-access" lang="fr">Mirrors and hosts without internet access</a>
-  <a href="#your-own-advisories" lang="fr">Your own advisories</a>
-  <a href="#points-worth-knowing" lang="fr">Points worth knowing</a>
+  <a href="#when-you-need-it" lang="fr">Quand les actualiser</a>
+  <a href="#running-a-refresh" lang="fr">Lancer une actualisation</a>
+  <a href="#where-the-data-comes-from-and-how-it-is-checked" lang="fr">Sources et contrôles des données</a>
+  <a href="#using-the-refreshed-files" lang="fr">Utiliser les fichiers actualisés</a>
+  <a href="#running-it-daily-with-systemd" lang="fr">Exécution quotidienne avec systemd</a>
+  <a href="#mirrors-and-hosts-without-internet-access" lang="fr">Miroirs et hôtes sans accès à Internet</a>
+  <a href="#your-own-advisories" lang="fr">Vos propres avis de sécurité</a>
+  <a href="#points-worth-knowing" lang="fr">Points à retenir</a>
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="fr">
-<p>Le scanner utilise un calendrier de diffusion pour déterminer l'état du support et une base de données consultative
-identifier les vulnérabilités connues. Les deux sont groupés avec le paquet et peuvent devenir
-dépassé entre les mises à jour de paquet. Les rafraîchir séparément permet au scanner de reconnaître
-nouvelles versions et avis.</p>
-<p><code>check-opencloud-scanner refresh-data</code> closes that gap without a package
-upgrade. This page covers what it fetches and how it checks the data, how to
-run it daily, and how to point the check at the result.</p>
+<p>Le scanner utilise un calendrier des versions pour déterminer leur état de support
+et une base d’avis de sécurité pour identifier les vulnérabilités connues. Ces
+données sont fournies avec le paquet et peuvent vieillir entre ses mises à jour.
+Une actualisation séparée permet de reconnaître les nouvelles versions et les
+nouveaux avis.</p>
+<p><code>check-opencloud-scanner refresh-data</code> actualise ces données sans mettre le paquet
+à jour. Ce guide décrit les sources, les contrôles, la planification quotidienne
+et les réglages nécessaires pour utiliser les fichiers obtenus.</p>
 <!-- TOC -->
 <ul>
-<li><a href="#keeping-the-release-schedule-and-advisories-current">Keeping the release schedule and advisories current</a></li>
-<li><a href="#when-you-need-it">When you need it</a></li>
-<li><a href="#running-a-refresh">Running a refresh</a></li>
-<li><a href="#where-the-data-comes-from-and-how-it-is-checked">Where the data comes from, and how it is checked</a><ul>
-<li><a href="#signature-verification">Signature verification</a></li>
-<li><a href="#the-checks-that-apply-either-way">The checks that apply either way</a></li>
+<li><a href="#keeping-the-release-schedule-and-advisories-current">Actualiser les données de référence</a></li>
+<li><a href="#when-you-need-it">Quand les actualiser</a></li>
+<li><a href="#running-a-refresh">Lancer une actualisation</a></li>
+<li><a href="#where-the-data-comes-from-and-how-it-is-checked">Sources et contrôles des données</a><ul>
+<li><a href="#signature-verification">Vérification de la signature</a></li>
+<li><a href="#the-checks-that-apply-either-way">Contrôles systématiques</a></li>
 </ul>
 </li>
-<li><a href="#using-the-refreshed-files">Using the refreshed files</a></li>
-<li><a href="#running-it-daily-with-systemd">Running it daily with systemd</a></li>
-<li><a href="#mirrors-and-hosts-without-internet-access">Mirrors and hosts without internet access</a></li>
-<li><a href="#your-own-advisories">Your own advisories</a></li>
-<li><a href="#points-worth-knowing">Points worth knowing</a></li>
+<li><a href="#using-the-refreshed-files">Utiliser les fichiers actualisés</a></li>
+<li><a href="#running-it-daily-with-systemd">Exécution quotidienne avec systemd</a></li>
+<li><a href="#mirrors-and-hosts-without-internet-access">Miroirs et hôtes sans accès à Internet</a></li>
+<li><a href="#your-own-advisories">Vos propres avis de sécurité</a></li>
+<li><a href="#points-worth-knowing">Points à retenir</a></li>
 </ul>
 <!-- TOC -->
 
-<h2 id="when-you-need-it">When you need it</h2>
+<h2 id="when-you-need-it">Quand les actualiser</h2>
 <ul>
-<li><strong>A scan names a version the schedule does not know.</strong> The lifecycle line
-  then says the release is newer than anything in the bundled release
-  schedule, and the result document carries <code>"scheduleStale": true</code>. See
-  <a href="/documentation/release-lifecycle">Release tracks, end of life and the update recommendation</a>.</li>
-<li><strong>An advisory was published after your package was built.</strong> The bundled
-  database cannot match it, so the scan reports no known vulnerabilities for
-  a version that has one.</li>
-<li><strong>You pin the package</strong> and upgrade it on your own schedule rather than
-  whenever a release appears.</li>
+<li><strong>L’analyse détecte une version absente du calendrier.</strong> La ligne du cycle de
+  vie indique que la version est plus récente que les données fournies et le
+  résultat contient <code>"scheduleStale": true</code>. Voir le <a href="/documentation/release-lifecycle">cycle de vie des versions</a>.</li>
+<li><strong>Un avis a été publié après la construction du paquet.</strong> La base fournie ne le
+  connaît pas. L’analyse peut donc ne signaler aucune vulnérabilité connue pour
+  une version qui en a une.</li>
+<li><strong>Vous conservez une version fixe du paquet</strong> et le mettez à jour selon votre
+  propre calendrier.</li>
 </ul>
-<p>A host that upgrades the package promptly gets the same data that way, and
-needs none of this. The <a href="/documentation/web-service">public scan service</a> refreshes its own
-copy at runtime and needs none of it either.</p>
-<h2 id="running-a-refresh">Running a refresh</h2>
+<p>Si vous mettez rapidement le paquet à jour, vous recevez les mêmes données par
+cette voie. Le <a href="/documentation/web-service">service public d’analyse</a> actualise lui-même ses
+données pendant son fonctionnement et n’a pas besoin de cette commande.</p>
+<h2 id="running-a-refresh">Lancer une actualisation</h2>
 <pre><code class="language-bash">check-opencloud-scanner refresh-data --output-dir /var/lib/check-opencloud-security
 </code></pre>
-<p>On success it prints the two files it wrote and exits <code>0</code>:</p>
+<p>En cas de réussite, la commande affiche les deux fichiers écrits et termine avec
+le code <code>0</code> :</p>
 <pre><code class="language-text">/var/lib/check-opencloud-security/release_schedule.json
 /var/lib/check-opencloud-security/vulnerabilities.json
 </code></pre>
@@ -79,211 +80,206 @@ copy at runtime and needs none of it either.</p>
 <thead>
 <tr>
 <th>Option</th>
-<th>Default</th>
-<th>What it does</th>
+<th>Valeur par défaut</th>
+<th>Fonction</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>--output-dir</code></td>
 <td><code>~/.cache/check-opencloud-security</code></td>
-<td>Directory the two files are written to. Created if missing</td>
+<td>Répertoire des deux fichiers, créé au besoin</td>
 </tr>
 <tr>
 <td><code>--timeout</code></td>
 <td><code>30</code></td>
-<td>Seconds allowed for each request</td>
+<td>Délai maximal de chaque requête, en secondes</td>
 </tr>
 <tr>
 <td><code>--schedule-url</code></td>
-<td><em>(none)</em></td>
-<td>Read the release schedule from this lifecycle page or mirror instead, <strong>unverified</strong>. See <a href="#mirrors-and-hosts-without-internet-access">Mirrors</a></td>
+<td><em>(aucune)</em></td>
+<td>Lire le calendrier depuis cette page ou ce miroir, <strong>sans vérifier la signature</strong> ; voir <a href="#mirrors-and-hosts-without-internet-access">Miroirs</a></td>
 </tr>
 <tr>
 <td><code>--advisory-url</code></td>
-<td><em>(none)</em></td>
-<td>Query this OSV endpoint or mirror instead, <strong>unverified</strong></td>
+<td><em>(aucune)</em></td>
+<td>Interroger ce point d’accès OSV ou ce miroir, <strong>sans vérifier la signature</strong></td>
 </tr>
 </tbody>
 </table>
-<p>Any failure exits <code>1</code> with the reason on stderr: a network error, a document
-that fails a check, or a signature that does not match. Nothing is written
-unless both documents pass, so the previous files stay exactly where they
-were. A cron job or timer can therefore run it blindly. A bad day upstream
-never replaces good data with worse.</p>
-<p>Add <code>-vv</code> to see each signature being verified:</p>
+<p>Tout échec termine avec le code <code>1</code> et sa cause sur stderr : erreur réseau,
+document rejeté ou signature incorrecte. Aucun fichier n’est écrit tant que les
+deux documents n’ont pas passé les contrôles. Les fichiers précédents restent donc
+disponibles en cas d’échec. Vous pouvez planifier la commande avec cron ou un timer.</p>
+<p>Ajoutez <code>-vv</code> pour voir la vérification de chaque signature :</p>
 <pre><code class="language-bash">check-opencloud-scanner -vv refresh-data --output-dir /var/lib/check-opencloud-security
 </code></pre>
-<h2 id="where-the-data-comes-from-and-how-it-is-checked">Where the data comes from, and how it is checked</h2>
-<p>By default the refresh does <strong>not</strong> query OSV or the OpenCloud lifecycle
-page live. It reads <code>release_schedule.json</code> and <code>vulnerabilities.json</code> from
-the <code>main</code> branch of this project's repository. Those are the files a
-maintainer already reviewed and merged, in the pull requests the project's
-daily data workflows open. Nothing reaches your host that a person has not
-looked at. See
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0027-refreshed-reference-data-is-attested-not-merely-fetched.md">ADR 0027</a>.</p>
-<h3 id="signature-verification">Signature verification</h3>
-<p>Every change to those two files on <code>main</code> is attested with
-<a href="https://www.sigstore.dev/">Sigstore</a> by this repository's
-<code>attest-security-data.yml</code> workflow. The refresh fetches that attestation and
-checks that it was signed by that one workflow, on <code>main</code>, in this
-repository. A signature from any other GitHub Actions run does not count.</p>
-<p>Verification needs the <code>signing</code> extra, which is optional because it pulls in
-about a dozen further packages:</p>
+<h2 id="where-the-data-comes-from-and-how-it-is-checked">Sources et contrôles des données</h2>
+<p>Par défaut, la commande lit <code>release_schedule.json</code> et <code>vulnerabilities.json</code>
+depuis la branche <code>main</code> du dépôt de ce projet. Elle ne consulte pas directement
+OSV ni la page du cycle de vie d’OpenCloud. Les mainteneurs ont déjà examiné et
+fusionné ces fichiers dans les demandes de fusion ouvertes par les tâches
+quotidiennes du projet. Voir l’<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0027-refreshed-reference-data-is-attested-not-merely-fetched.md">ADR 0027</a>.</p>
+<h3 id="signature-verification">Vérification de la signature</h3>
+<p>À chaque modification de ces fichiers sur <code>main</code>, le workflow
+<code>attest-security-data.yml</code> du dépôt produit une attestation
+<a href="https://www.sigstore.dev/">Sigstore</a>. La commande la récupère et vérifie qu’elle
+provient de ce workflow, sur <code>main</code>, dans ce dépôt. Une signature issue d’une autre
+exécution GitHub Actions ne suffit pas.</p>
+<p>La vérification nécessite l’option d’installation <code>signing</code>. Elle reste facultative
+car elle ajoute environ une douzaine de paquets :</p>
 <pre><code class="language-bash">pipx install 'check-opencloud-security[signing]'
 </code></pre>
-<p>To add the extra to an existing pipx installation, re-run that command with
-<code>--force</code>. <a href="/documentation/installation">Installing the plugin</a> has the uv and pip
-equivalents.</p>
-<p>There are three outcomes, and they are deliberately different:</p>
+<p>Pour l’ajouter à une installation pipx existante, relancez la commande avec
+<code>--force</code>. Le guide <a href="/documentation/installation">Installation du plugin</a> donne les commandes
+équivalentes pour uv et pip.</p>
+<p>Trois résultats sont possibles :</p>
 <table>
 <thead>
 <tr>
-<th>Outcome</th>
-<th>What happens</th>
+<th>Résultat</th>
+<th>Conséquence</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>The signature verifies</td>
-<td>The document is used</td>
+<td>La signature est valide</td>
+<td>Le document est utilisé</td>
 </tr>
 <tr>
-<td>The signature could not be <em>checked</em></td>
-<td>A warning, then the structural checks below only. Causes: the extra is not installed, GitHub or the Sigstore trust root is unreachable, or no attestation is published yet for that content</td>
+<td>La signature n’a pas pu être vérifiée</td>
+<td>Un avertissement est émis, puis seuls les contrôles structurels ci-dessous s’appliquent. Causes possibles : option <code>signing</code> absente, GitHub ou racine de confiance Sigstore inaccessible, attestation pas encore publiée</td>
 </tr>
 <tr>
-<td>A signature is present and <strong>wrong</strong></td>
-<td>The refresh stops, exits <code>1</code>, and writes nothing</td>
+<td>Une signature est présente et <strong>incorrecte</strong></td>
+<td>La commande s’arrête avec le code <code>1</code> sans rien écrire</td>
 </tr>
 </tbody>
 </table>
-<p>Without the extra, every run logs this for each file and still succeeds:</p>
+<p>Sans l’option <code>signing</code>, chaque exécution affiche cet avertissement pour chaque
+fichier et peut tout de même réussir :</p>
 <pre><code class="language-text">WARNING check_opencloud.refresh_data: Refreshing the release schedule without verifying its signature: the 'signing' extra (sigstore) is not installed. Install the 'signing' extra (pip install check-opencloud-security[signing]) to verify it.
 </code></pre>
-<p>A host that shows this warning is not checking where its data came from.
-Install the extra wherever the refresh matters.</p>
-<h3 id="the-checks-that-apply-either-way">The checks that apply either way</h3>
-<p>A verified signature proves where a document came from, not that it makes
-sense. So these checks run on every refresh, signed or not:</p>
+<p>Cet avertissement signifie que l’origine des données n’est pas vérifiée.
+Installez l’option <code>signing</code> sur les hôtes qui doivent vérifier cette origine.</p>
+<h3 id="the-checks-that-apply-either-way">Contrôles systématiques</h3>
+<p>Une signature valide prouve l’origine du document, pas la cohérence de son contenu.
+Les contrôles suivants s’appliquent donc avec ou sans signature :</p>
 <ul>
-<li><strong>The release schedule may not lose a release line.</strong> Every line in the
-  schedule bundled with the installed package must still be present. A
-  truncated or rewritten lifecycle page cannot quietly make an old release
-  look supported.</li>
-<li><strong>The advisory database must have usable entries.</strong> It must contain at
-  least one advisory, and every advisory needs a version bound. An advisory
-  open at both ends would match every OpenCloud release there has ever been.</li>
-<li><strong>Each file is replaced atomically.</strong> A reader never sees half a file.</li>
+<li><strong>Le calendrier doit conserver toutes les lignes de version.</strong> Chaque ligne
+  connue du calendrier fourni avec le paquet doit encore être présente. Une page
+  tronquée ou remaniée ne peut ainsi faire passer une ancienne version pour une
+  version encore prise en charge.</li>
+<li><strong>La base d’avis doit contenir des entrées exploitables.</strong> Elle doit contenir
+  au moins un avis, et chaque avis doit définir au moins une borne de version.
+  Sans borne, un avis concernerait toutes les versions d’OpenCloud.</li>
+<li><strong>Chaque fichier est remplacé de façon atomique.</strong> Aucun lecteur ne voit un
+  fichier partiellement écrit.</li>
 </ul>
-<h2 id="using-the-refreshed-files">Using the refreshed files</h2>
-<p>The refresh only writes files. It never writes into the installed package, so
-nothing changes until the check is told where to look:</p>
+<h2 id="using-the-refreshed-files">Utiliser les fichiers actualisés</h2>
+<p>La commande écrit uniquement des fichiers, sans modifier le paquet installé.
+Indiquez au contrôle où les lire :</p>
 <pre><code class="language-yaml">scanner:
   release_schedule: /var/lib/check-opencloud-security/release_schedule.json
   vulnerability_db:
     - /var/lib/check-opencloud-security/vulnerabilities.json
 </code></pre>
-<p>Or through the environment:</p>
+<p>Ou utilisez les variables d’environnement :</p>
 <pre><code class="language-bash">COS_SCANNER_RELEASE_SCHEDULE=/var/lib/check-opencloud-security/release_schedule.json
 COS_SCANNER_VULNERABILITY_DB=/var/lib/check-opencloud-security/vulnerabilities.json
 </code></pre>
-<p>The two settings behave differently:</p>
+<p>Les deux réglages ont des effets différents :</p>
 <ul>
-<li><code>release_schedule</code> <strong>replaces</strong> the bundled schedule.</li>
-<li><code>vulnerability_db</code> <strong>adds to</strong> the bundled database. Entries are
-  de-duplicated by id, so listing the refreshed file alongside the bundled one
-  is safe.</li>
+<li><code>release_schedule</code> <strong>remplace</strong> le calendrier fourni.</li>
+<li><code>vulnerability_db</code> <strong>complète</strong> la base fournie. Les entrées sont dédupliquées
+  par identifiant ; vous pouvez donc ajouter le fichier actualisé sans doublons.</li>
 </ul>
-<p>Both the plugin and <code>check-opencloud-scanner scan</code> read the same settings.
-Confirm it took effect with the scanner's JSON output:</p>
+<p>Le plugin et <code>check-opencloud-scanner scan</code> lisent les mêmes réglages. Vérifiez
+leur effet dans la sortie JSON :</p>
 <pre><code class="language-bash">check-opencloud-scanner -c /etc/check-opencloud-security/config.yml \
     scan opencloud.example.com | jq '.advisorySources, .lifecycle.scheduleUpdated'
 </code></pre>
-<p><code>scheduleUpdated</code> should be the date of the refreshed schedule, and
-<code>advisorySources</code> should list the refreshed file.</p>
-<p><strong>Check both after any change of path or user, because neither failure is
-loud:</strong></p>
+<p><code>scheduleUpdated</code> doit contenir la date du calendrier actualisé et
+<code>advisorySources</code> doit mentionner le fichier actualisé.</p>
+<p><strong>Vérifiez les deux après tout changement de chemin ou d’utilisateur :</strong></p>
 <ul>
-<li><strong>A schedule file that is missing or unreadable turns the end-of-life check
-  off.</strong> The check does not fall back to the bundled schedule. The lifecycle
-  line reads <code>Release lifecycle: unknown (no release schedule available)</code>,
-  <code>scheduleUpdated</code> is <code>null</code>, and nothing is logged below <code>-vv</code>. An
-  end-of-life release is then rated on its configuration alone. In testing, a
-  2.3.0 instance that is otherwise CRITICAL came out as <code>OK</code> and <code>A+</code>.</li>
-<li><strong>An advisory file that is missing or unreadable is skipped with a
-  warning</strong> on stderr (<code>Advisory file ... does not exist</code>, or <code>Ignoring
-  advisory file ...: Permission denied</code>). An unreadable file still appears
-  in <code>advisorySources</code>, so read the warning rather than the list.</li>
+<li><strong>Un calendrier absent ou illisible désactive le contrôle de fin de vie.</strong>
+  Le calendrier fourni n’est pas utilisé en remplacement. La sortie indique
+  <code>Release lifecycle: unknown (no release schedule available)</code>,
+  <code>scheduleUpdated</code> vaut <code>null</code> et aucun message n’apparaît sans <code>-vv</code>. Une
+  version en fin de vie est alors notée uniquement sur sa configuration. Lors
+  des tests, une instance 2.3.0 normalement CRITICAL a obtenu <code>OK</code> et <code>A+</code>.</li>
+<li><strong>Un fichier d’avis absent ou illisible est ignoré avec un avertissement</strong> sur
+  stderr : <code>Advisory file ... does not exist</code> ou
+  <code>Ignoring advisory file ...: Permission denied</code>. Un fichier illisible apparaît
+  quand même dans <code>advisorySources</code> : consultez aussi les avertissements.</li>
 </ul>
-<h2 id="running-it-daily-with-systemd">Running it daily with systemd</h2>
-<p><a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/systemd"><code>contrib/systemd/</code></a> has a hardened oneshot service and a
-timer for it:
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/systemd/check-opencloud-security-refresh.service"><code>check-opencloud-security-refresh.service</code></a>
-and
+<h2 id="running-it-daily-with-systemd">Exécution quotidienne avec systemd</h2>
+<p><a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/systemd"><code>contrib/systemd/</code></a> fournit un service ponctuel durci,
+<a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/systemd/check-opencloud-security-refresh.service"><code>check-opencloud-security-refresh.service</code></a>,
+et son timer,
 <a href="https://github.com/sowoi/check-opencloud-security/blob/main/contrib/systemd/check-opencloud-security-refresh.timer"><code>check-opencloud-security-refresh.timer</code></a>.
-The service writes to <code>/var/lib/check-opencloud-security</code> through
-<code>StateDirectory=</code> and may write nowhere else. The timer runs it daily,
-randomised within an hour, and catches up after downtime.</p>
+Le service ne peut écrire que dans <code>/var/lib/check-opencloud-security</code>, via
+<code>StateDirectory=</code>. Le timer l’exécute chaque jour avec un décalage aléatoire d’au
+plus une heure et rattrape les exécutions manquées pendant un arrêt.</p>
 <pre><code class="language-bash">sudo cp contrib/systemd/check-opencloud-security-refresh.{service,timer} /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now check-opencloud-security-refresh.timer
 sudo systemctl start check-opencloud-security-refresh.service   # a first run now
 journalctl -u check-opencloud-security-refresh.service
 </code></pre>
-<p><strong>Run it as the user the check runs as.</strong> Both files are written readable by
-their owner only (mode <code>0600</code>). The unit ships with
-<code>User=check-opencloud-security</code>, so a check running as <code>nagios</code> or <code>icinga</code>
-cannot read what it wrote. That silently turns the end-of-life check off. See
-<a href="#using-the-refreshed-files">Using the refreshed files</a>. Either run the check
-as that user, or change the refresh user with a drop-in:</p>
+<p><strong>Utilisez le même utilisateur que pour le contrôle.</strong> Les fichiers ne sont
+lisibles que par leur propriétaire (mode <code>0600</code>). L’unité fournie utilise
+<code>User=check-opencloud-security</code>. Un contrôle exécuté sous <code>nagios</code> ou <code>icinga</code> ne
+peut donc pas lire ces fichiers, ce qui désactive le contrôle de fin de vie sans
+alerte explicite. Voir <a href="#using-the-refreshed-files">Utiliser les fichiers actualisés</a>.
+Exécutez le contrôle sous le même compte, ou modifiez l’utilisateur du service :</p>
 <pre><code class="language-bash">sudo systemctl edit check-opencloud-security-refresh.service
 # [Service]
 # User=nagios
 </code></pre>
-<p><code>ExecStart=</code> expects <code>/usr/bin/check-opencloud-scanner</code>, which is where the
-<code>.deb</code> and <code>.rpm</code> packages install it. Adjust the path for a pipx or pip
-installation. Without systemd, a daily cron line does the same job. See
-<a href="/documentation/scheduling">Scheduling</a>.</p>
-<h2 id="mirrors-and-hosts-without-internet-access">Mirrors and hosts without internet access</h2>
-<p>A default refresh needs HTTPS access to <code>raw.githubusercontent.com</code>, and,
-for verification, to GitHub's attestation API and the Sigstore trust root.
-There are two ways to serve a host that has none of that.</p>
-<p><strong>Refresh elsewhere and copy the files.</strong> Run the verified refresh on a
-connected machine with the <code>signing</code> extra, then copy the two files to the
-same paths on the isolated host. The files are self-contained, and the copy
-keeps the verification you did.</p>
-<p><strong>Point the refresh at a mirror.</strong> <code>--schedule-url</code> takes a copy of the
-OpenCloud lifecycle page. <code>--advisory-url</code> takes an OSV-compatible query
-endpoint, whose answer is merged into the bundled database:</p>
+<p><code>ExecStart=</code> attend <code>/usr/bin/check-opencloud-scanner</code>, le chemin installé par les
+paquets <code>.deb</code> et <code>.rpm</code>. Adaptez-le pour pipx ou pip. Sans systemd, utilisez une
+tâche cron quotidienne ; voir <a href="/documentation/scheduling">Planification</a>.</p>
+<h2 id="mirrors-and-hosts-without-internet-access">Miroirs et hôtes sans accès à Internet</h2>
+<p>Une actualisation par défaut nécessite un accès HTTPS à <code>raw.githubusercontent.com</code>
+et, pour vérifier la signature, à l’API d’attestation GitHub et à la racine de
+confiance Sigstore. Deux méthodes conviennent aux hôtes sans ces accès.</p>
+<p><strong>Actualisez les données ailleurs, puis copiez les fichiers.</strong> Lancez la commande
+avec <code>signing</code> sur une machine connectée, vérifiez sa réussite, puis copiez les
+deux fichiers aux mêmes chemins sur l’hôte isolé. Ils sont autonomes et vous avez
+déjà vérifié leur origine.</p>
+<p><strong>Utilisez un miroir.</strong> <code>--schedule-url</code> accepte une copie de la page du cycle de
+vie d’OpenCloud. <code>--advisory-url</code> accepte un point d’accès compatible OSV, dont la
+réponse complète la base fournie :</p>
 <pre><code class="language-bash">check-opencloud-scanner refresh-data \
     --output-dir /var/lib/check-opencloud-security \
     --schedule-url https://mirror.example.com/opencloud/lifecycle/ \
     --advisory-url https://mirror.example.com/osv/v1/query
 </code></pre>
-<p>Nothing signs a mirror, so both options skip signature verification and say
-so on every run. The structural checks above still apply. Use this for an
-internal mirror you control, not as a way around a signature failure.</p>
-<h2 id="your-own-advisories">Your own advisories</h2>
-<p><code>scanner.vulnerability_db</code> takes a list, so a file of your own sits beside the
-refreshed one. Three formats are understood without conversion: the native
-<code>{"advisories": [...]}</code> document, the GitHub Advisory API format, and OSV
-documents. The <a href="/documentation#advisory-database">main README</a> describes the
-formats and how entries match a version. <code>scanner.vulnerability_feed</code> queries
-a feed live on every scan instead of reading a file.</p>
-<h2 id="points-worth-knowing">Points worth knowing</h2>
+<p>Ces deux options désactivent la vérification de signature et le signalent à chaque
+exécution. Les contrôles structurels restent actifs. Utilisez-les pour un miroir
+interne que vous maîtrisez, pas pour contourner une signature incorrecte.</p>
+<h2 id="your-own-advisories">Vos propres avis de sécurité</h2>
+<p><code>scanner.vulnerability_db</code> accepte une liste : vous pouvez ajouter votre fichier
+à côté du fichier actualisé. Trois formats sont reconnus sans conversion :
+<code>{"advisories": [...]}</code>, le format de l’API GitHub Advisory et les documents OSV.
+Le <a href="/documentation#advisory-database">README principal</a> décrit ces formats et les
+règles qui associent un avis à une version. <code>scanner.vulnerability_feed</code> interroge
+un flux à chaque analyse au lieu de lire un fichier.</p>
+<h2 id="points-worth-knowing">Points à retenir</h2>
 <ul>
-<li><strong>A refresh only ever changes data, never code.</strong> No new check, finding or
-  rating rule arrives this way. Those still need a package upgrade.</li>
-<li><strong>An empty <code>vulnerabilities</code> list is not a clean bill of health.</strong> It means
-  nothing in the databases you configured matched this version. The
-  configuration checks carry most of the rating either way.</li>
-<li><strong>Refresh the files the check actually reads.</strong> The default output
-  directory is under the home directory of whoever runs the refresh, so a
-  refresh run as root does nothing for a check running as <code>nagios</code>.</li>
-<li><strong>The web application does not use this command.</strong> It refreshes its schedule
-  and advisory database at runtime, and may only ever gain knowledge. See
-  <a href="/documentation/web-service">the public scan service</a>.</li>
+<li><strong>Une actualisation modifie uniquement les données.</strong> Les nouveaux contrôles,
+  constats et règles de notation nécessitent une mise à jour du paquet.</li>
+<li><strong>Une liste <code>vulnerabilities</code> vide ne garantit pas l’absence de vulnérabilité.</strong>
+  Aucun avis des bases configurées ne correspond à cette version. Les contrôles de
+  configuration déterminent aussi une grande partie de la note.</li>
+<li><strong>Actualisez les fichiers effectivement lus par le contrôle.</strong> Le répertoire
+  par défaut dépend du compte qui lance la commande. Une actualisation sous root
+  ne change donc rien pour un contrôle sous <code>nagios</code>.</li>
+<li><strong>L’application web n’utilise pas cette commande.</strong> Elle actualise son calendrier
+  et ses avis pendant son fonctionnement, sans retirer les données déjà connues.
+  Voir le <a href="/documentation/web-service">service public d’analyse</a>.</li>
 </ul>
 </article>
 

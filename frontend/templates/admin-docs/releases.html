@@ -45,8 +45,39 @@
 
 <article class="docs-article card section-gap" data-reveal lang="en">
 <h2 id="1301-this-release">[1.30.1] - this release</h2>
-<h2 id="1300-2026-09-22">[1.30.0] - 2026-09-22</h2>
+<h3 id="added">Added</h3>
+<ul>
+<li><code>--waiver-warning DAYS</code> (<code>COS_WAIVER_WARNING</code>, YAML <code>waiver_warning</code>)
+  sets a warning window for <code>--waive-until</code> waivers. If a waiver that hides
+  a failing check ends within <code>DAYS</code> days, an otherwise OK result becomes
+  WARNING. Before this, a waiver gave no lead time. The check was silent
+  until the deadline and alerted on the next run after it. The long output
+  also names the next waiver to end. The default <code>0</code> turns the warning off.</li>
+<li>The <code>waiver_days_left</code> performance value counts the days until that
+  waiver ends. With <code>--waiver-warning</code> it carries the window as its warning
+  range. Checkmk reports it under the same name, and Prometheus and OTLP as
+  <code>opencloud_security_waiver_days_remaining</code>. The webhook payload adds
+  <code>waiver_days_left</code>, <code>waiver_warning_days</code> and <code>waiver_warning</code>, and
+  <code>contrib/prometheus/alerts.yml</code> adds an <code>OpenCloudWaiverExpiring</code> rule.</li>
+<li>The <code>coverage_inconclusive</code> and <code>coverage_not_checked</code> performance values
+  put the coverage block on a graph. A graph now shows the day that checks
+  become unreadable. Checkmk uses the same names, and Prometheus and OTLP use
+  <code>opencloud_security_coverage_inconclusive_total</code> and
+  <code>opencloud_security_coverage_not_checked_total</code>. The grade does not change.</li>
+</ul>
 <h3 id="documentation">Documentation</h3>
+<ul>
+<li>Replaced vague and literal wording in the interface, scanner guides and
+  README. Aligned English, German, Spanish and French explanations and
+  corrected inconsistent forms of address.</li>
+<li>Completed the remaining French guide translations while preserving commands,
+  technical values and section links.</li>
+<li>Expanded wording checks to current repository documentation and Python
+  product strings, including phrases split across lines. Added regression
+  cases and a translation review checklist.</li>
+</ul>
+<h2 id="1300-2026-09-22">[1.30.0] - 2026-09-22</h2>
+<h3 id="documentation_1">Documentation</h3>
 <ul>
 <li>
 <p>Listed <code>tests/test_monitoring_export.py</code> in the test index, so the
@@ -69,7 +100,7 @@
   guides, including severity comparisons and missing measurements. Added
   regression cases for the awkward phrases found during review.</li>
 </ul>
-<h3 id="added">Added</h3>
+<h3 id="added_1">Added</h3>
 <ul>
 <li>
 <p><strong>The setup wizard exports the scheduled check, not just the configuration.</strong>
@@ -257,7 +288,7 @@
   is aimed, which still fails - loudly - if a press is ever genuinely lost.</li>
 </ul>
 <h2 id="1290-2026-09-21">[1.29.0] - 2026-09-21</h2>
-<h3 id="added_1">Added</h3>
+<h3 id="added_2">Added</h3>
 <ul>
 <li><strong>A scan fingerprints the configuration it measured, so drift is visible
   without the grade moving.</strong> A rewritten content security policy, a replaced
@@ -312,7 +343,7 @@
   close. Nothing in it changes a grade, an exit code or an alert line.</li>
 </ul>
 <h2 id="1281-2026-09-21">[1.28.1] - 2026-09-21</h2>
-<h3 id="added_2">Added</h3>
+<h3 id="added_3">Added</h3>
 <ul>
 <li><strong><code>--profile</code> judges a scan by a named threshold set.</strong> <code>strict</code>, <code>ops</code> and
   <code>lenient</code> each decide the five settings a team otherwise writes out by hand</li>
@@ -401,7 +432,7 @@
 </li>
 </ul>
 <h2 id="1280-2026-09-20">[1.28.0] - 2026-09-20</h2>
-<h3 id="added_3">Added</h3>
+<h3 id="added_4">Added</h3>
 <ul>
 <li>
 <p><strong>Upgrade rehearsal: what each candidate release would fix, leave and
@@ -440,7 +471,7 @@
   ADR 0072.</p>
 </li>
 </ul>
-<h3 id="documentation_1">Documentation</h3>
+<h3 id="documentation_2">Documentation</h3>
 <ul>
 <li><strong>Translated release-lifecycle guides now include the upgrade-rehearsal
   section.</strong> Their section anchors stay aligned with the English guide.</li>
@@ -457,7 +488,7 @@
   an <code>ImportPathMismatchError</code> between the real and mutated test suites.</li>
 </ul>
 <h2 id="1272-2026-09-19">[1.27.2] - 2026-09-19</h2>
-<h3 id="added_4">Added</h3>
+<h3 id="added_5">Added</h3>
 <ul>
 <li><strong>Property-based tests for the parsers that read outside text.</strong>
   <code>tests/test_properties.py</code> uses Hypothesis, a new test-only dependency
@@ -498,7 +529,7 @@
   from 1.0.0 up to 4.0.8 and from 4.1.0 up to (but not including) 7.2.0.</li>
 </ul>
 <h2 id="1271-2026-09-19">[1.27.1] - 2026-09-19</h2>
-<h3 id="added_5">Added</h3>
+<h3 id="added_6">Added</h3>
 <ul>
 <li>
 <p>Codex can use the repository's Claude Code skills, hooks, subagent roles and

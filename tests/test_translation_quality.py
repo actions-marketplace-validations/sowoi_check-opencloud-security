@@ -11,6 +11,7 @@ the manifest deliberately leaves in English) really do not.
 
 from __future__ import annotations
 
+import ast
 import importlib.util
 import re
 import sys
@@ -60,7 +61,14 @@ AI_SLOP = re.compile(
     r"schweigt dazu also zu Recht|ahora pesa de otra|"
     r"nunca de con qué valores|calla al respecto|"
     r"Ninguno de los dos es un resultado correcto|"
-    r"wo ihre Schreibweise es sagt|Das Update hält|Was die TLS-Schicht sagte"
+    r"wo ihre Schreibweise es sagt|Das Update hält|Was die TLS-Schicht sagte|"
+    r"between the button and the grade|zwischen dem Klick auf den Button und der Note|"
+    r"entre el botón y la calificación|entre le bouton et la note|"
+    r"la surcharge fait la queue|appuient sur un bouton|"
+    r"was eine Aktualisierung daraus machen würde|qué haría con ellas una actualización|"
+    r"ce qu'une mise à jour en ferait|"
+    r"nothing outlives the promise|nada sobrevive a lo que promete|"
+    r"eine CVE dazugelernt|genuinely useful on its own"
     r")\b",
     re.IGNORECASE,
 )
@@ -80,7 +88,7 @@ UNTRANSLATED_GUIDE_SLOP = re.compile(
 
 def _ai_slop_hits(value: str) -> list[str]:
     """Return cliché wording found in one visible catalogue string."""
-    return [match.group(0) for match in AI_SLOP.finditer(value)]
+    return [match.group(0) for match in AI_SLOP.finditer(" ".join(value.split()))]
 
 
 # ------------------------------------------------- the tree as it stands
@@ -110,18 +118,44 @@ def test_catalogues_do_not_use_ai_slop_wording():
 
 def test_handwritten_guides_and_templates_do_not_use_ai_slop_wording():
     """First-party prose should stay concrete outside the catalogues too."""
-    roots = (REPO_ROOT / "docs", REPO_ROOT / "frontend" / "templates")
+    roots = (
+        REPO_ROOT / "docs",
+        REPO_ROOT / "frontend" / "templates",
+        REPO_ROOT / "contrib",
+        REPO_ROOT / "config",
+        REPO_ROOT / "docker",
+        REPO_ROOT / "packaging",
+        REPO_ROOT / "security",
+    )
+    # Release notes and accepted ADRs are historical records. Style guides
+    # deliberately quote rejected wording. Check current product prose.
+    paths = {REPO_ROOT / name for name in ("README.md", "CONTRIBUTING.md", "ARCHITECTURE.md")}
+    paths.update(
+        path for root in roots for path in root.rglob("*")
+        if path.suffix in {".md", ".html"}
+    )
     findings = []
-    for root in roots:
-        for path in sorted(root.rglob("*")):
-            if path.suffix not in {".md", ".html"}:
-                continue
-            for line_number, line in enumerate(
-                path.read_text(encoding="utf-8").splitlines(), start=1
-            ):
-                for hit in _ai_slop_hits(line):
-                    findings.append((path.relative_to(REPO_ROOT).as_posix(), line_number, hit))
+    for path in sorted(paths):
+        for paragraph in re.split(r"\n\s*\n", path.read_text(encoding="utf-8")):
+            for hit in _ai_slop_hits(paragraph):
+                findings.append((path.relative_to(REPO_ROOT).as_posix(), hit))
 
+    assert findings == []
+
+
+def test_python_product_strings_do_not_use_known_cliches():
+    """Inspect joined literals, including messages outside the web catalogue."""
+    paths = [REPO_ROOT / "check_opencloud_security.py"]
+    for directory in ("opencloud_local_scan", "webapp", "scripts", "docker"):
+        paths.extend((REPO_ROOT / directory).rglob("*.py"))
+    findings = []
+    for path in paths:
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if isinstance(node, ast.Constant) and isinstance(node.value, str):
+                findings.extend(
+                    (str(path.relative_to(REPO_ROOT)), node.lineno, hit)
+                    for hit in _ai_slop_hits(node.value)
+                )
     assert findings == []
 
 
@@ -156,6 +190,10 @@ def test_handwritten_guides_and_templates_do_not_use_ai_slop_wording():
         "Describe cómo está montada y nunca de con qué valores.",
         "La línea base calla al respecto.",
         "Ninguno de los dos es un resultado correcto.",
+        "The four steps between the button\nand the grade.",
+        "La surcharge fait la queue.",
+        "La vista muestra qué haría con ellas una actualización.",
+        "Die Datenbank hat eine CVE dazugelernt.",
     ],
 )
 def test_ai_slop_detector_catches_typical_cliches(value: str):
@@ -355,8 +393,13 @@ def test_a_guide_title_the_manifest_leaves_in_english_is_not_reported():
         ("de", "Die Werte sind fest. Sie dienen zur Information.", False),
         ("fr", "Saisissez l'adresse de base.", False),
         ("fr", "Saisis ton adresse de base.", True),
+        ("fr", "Réessaie dans quelques secondes.", True),
+        ("fr", "Sans JavaScript, recharge la page.", True),
+        ("fr", "Réessayez et rechargez la page.", False),
         ("es", "Introduzca la dirección base.", False),
         ("es", "Introduce tu dirección base.", True),
+        ("es", "Sigue leyendo", True),
+        ("es", "Sigue siendo válido", False),
     ],
 )
 def test_each_language_is_checked_against_its_own_form_of_address(

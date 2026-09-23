@@ -391,7 +391,7 @@ The uuid is a capability: knowing it is the only way to reach the scan.
 - an unknown, invalid or expired uuid is a **404** with an identical body in
   all three cases, so a stranger cannot learn that a uuid was once real;
 - every key carries the TTL, including the one written while the scan is still
-  queued. Nothing outlives the promise on the landing page.
+  queued. The data expires after the retention period shown on the landing page.
 
 ## Comparing two scans
 
