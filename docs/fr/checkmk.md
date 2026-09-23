@@ -44,7 +44,8 @@ détails sur les lignes suivantes et les métriques après `|`. Les
 [données de performance](../README.md#performance-data) utilisent déjà le format
 Nagios, seuils compris : `rating`, `vulnerabilities`, `hardenings_missing`,
 `extra_checks_failed`, `update_available`, `support_days_left`, `cert_days_left`,
-`upgrade_path_complete` et `time`.
+`upgrade_path_complete`, `waiver_days_left`, `coverage_inconclusive`,
+`coverage_not_checked` et `time`.
 
 L’intervalle par défaut est d’une minute. Une analyse effectue environ vingt
 requêtes HTTP et cinq connexions TCP. Un contrôle horaire suffit généralement
@@ -136,6 +137,9 @@ Les mesures portent les mêmes noms que dans la sortie Nagios, avec deux adaptat
 | `support_days_left` | Jours avant la fin des correctifs pour cette branche ; valeur négative ensuite |
 | `cert_days_left` | Jours avant expiration du certificat ; valeur négative ensuite |
 | `upgrade_path_complete` | `1` si la mise à jour recommandée corrige tous les avis connus, sinon `0` ; absente sans avis |
+| `waiver_days_left` | Jours avant la fin d’une exemption `--waive-until` qui laisse un contrôle en échec alerter de nouveau ; absente si aucun contrôle en échec ne dépend d’une échéance |
+| `coverage_inconclusive` | Contrôles exécutés par l’analyse sans conclusion ; absente sans bloc de couverture |
+| `coverage_not_checked` | Contrôles que l’analyse n’a pas exécutés ; absente sans bloc de couverture |
 | `execution_time` | Durée de l’analyse en secondes |
 
 Une mesure non effectuée est omise. Elle n’apparaît donc pas comme un zéro dans les graphiques.

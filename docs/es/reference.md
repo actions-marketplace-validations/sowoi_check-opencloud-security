@@ -1244,6 +1244,10 @@ Icinga2 los dibuja en el gráfico sin configuración adicional.
 | `update_available`    | `1` cuando existe una versión de OpenCloud más reciente            |
 | `support_days_left`   | Días hasta que la línea de versiones pierde el soporte (negativo si ha vencido) |
 | `cert_days_left`      | Días hasta que caduca el certificado TLS (negativo si ya ha caducado) |
+| `upgrade_path_complete` | `1` cuando la actualización recomendada corrige todos los avisos conocidos, `0` cuando deja alguno abierto; ausente sin avisos |
+| `waiver_days_left`    | Días hasta que termina una exención `--waive-until` y una comprobación fallida vuelve a alertar; ausente si ninguna depende de un plazo |
+| `coverage_inconclusive` | Comprobaciones que el análisis ejecutó sin llegar a una conclusión |
+| `coverage_not_checked` | Comprobaciones que el análisis no ejecutó |
 
 `cert_days_left` se omite, en lugar de valer cero, cuando no se midió nada: un
 análisis por HTTP sin cifrar, un host que rechazó el handshake o un certificado
@@ -1251,6 +1255,12 @@ cuyas fechas no se pudieron interpretar. Lleva los umbrales del propio análisis
 y no una segunda opinión inventada para el gráfico: aviso igual o por debajo de
 `scanner.tls_min_days`, el mismo margen con el que salta el hallazgo
 `tlsCertificate`, y crítico cuando el certificado ya ha caducado.
+
+`waiver_days_left` cuenta desde el análisis hasta el próximo momento en que una
+exención temporal deja de ocultar una comprobación fallida. Con
+`--waiver-warning DÍAS`, el valor lleva esa ventana como rango de aviso.
+`coverage_inconclusive` y `coverage_not_checked` explican la nota sin cambiarla
+nunca, por eso no llevan umbrales.
 
 Fuera de Icinga2, los mismos números llegan a Prometheus mediante el textfile
 collector de node_exporter o una Pushgateway; consulte

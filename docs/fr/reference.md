@@ -1329,6 +1329,9 @@ Icinga2 les trace donc sur le graphique sans configuration supplémentaire.
 | `support_days_left`   | Jours restants avant la fin du support de la ligne de version (négatif en cas de dépassement) |
 | `cert_days_left`      | Jours restants avant l’expiration du certificat TLS (négatif une fois expiré)          |
 | `upgrade_path_complete` | `1` lorsque la mise à niveau recommandée lève tous les avis connus, `0` lorsqu’elle en laisse un ouvert ; absente sans avis |
+| `waiver_days_left`    | Jours avant la fin d’une exemption `--waive-until` qui laisse un contrôle en échec alerter de nouveau ; absente si aucun contrôle en échec ne dépend d’une échéance |
+| `coverage_inconclusive` | Contrôles exécutés par l’analyse sans conclusion |
+| `coverage_not_checked` | Contrôles que l’analyse n’a pas exécutés |
 
 `cert_days_left` est absente plutôt que nulle lorsque rien n’a été mesuré : une
 analyse en HTTP simple, un hôte qui a refusé la négociation ou un certificat
@@ -1336,6 +1339,12 @@ dont les dates n’ont pas pu être lues. Elle porte les seuils de l’analyse
 elle-même plutôt qu’un second avis inventé pour le graphique : avertissement à
 partir de `scanner.tls_min_days`, la même marge que celle du constat
 `tlsCertificate`, et critique une fois le certificat réellement expiré.
+
+`waiver_days_left` compte depuis l’analyse jusqu’au prochain moment où une
+exemption temporaire cesse de masquer un contrôle en échec. Avec
+`--waiver-warning DAYS`, la valeur porte cette fenêtre comme plage
+d’avertissement. `coverage_inconclusive` et `coverage_not_checked` expliquent
+la note sans jamais la modifier, et n’ont donc pas de seuils.
 
 En dehors d’Icinga2, les mêmes nombres atteignent Prometheus par le collecteur
 textfile de node_exporter ou un Pushgateway - voir

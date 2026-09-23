@@ -117,6 +117,21 @@ promtool check rules /etc/prometheus/rules/opencloud-security.yml
 <td><code>1</code>, wenn das empfohlene Upgrade alle bekannten Schwachstellen behebt; kein Wert ohne Upgrade-Pfad</td>
 </tr>
 <tr>
+<td><code>opencloud_security_waiver_days_remaining</code></td>
+<td><code>host</code></td>
+<td>Tage, bis eine <code>--waive-until</code>-Ausnahme endet und eine fehlgeschlagene Prüfung wieder alarmiert; kein Wert, wenn keine fehlgeschlagene Prüfung an einer Frist hängt</td>
+</tr>
+<tr>
+<td><code>opencloud_security_coverage_inconclusive_total</code></td>
+<td><code>host</code></td>
+<td>Prüfungen, die der Scan ausgeführt, aber nicht entschieden hat</td>
+</tr>
+<tr>
+<td><code>opencloud_security_coverage_not_checked_total</code></td>
+<td><code>host</code></td>
+<td>Prüfungen, die der Scan nicht ausgeführt hat</td>
+</tr>
+<tr>
 <td><code>opencloud_security_scan_duration_seconds</code></td>
 <td><code>host</code></td>
 <td>Scandauer</td>
@@ -169,6 +184,18 @@ promtool check rules /etc/prometheus/rules/opencloud-security.yml
 <tr>
 <td><code>support_days_left</code></td>
 <td>Verbleibende Supporttage; nach dem Enddatum negativ</td>
+</tr>
+<tr>
+<td><code>waiver_days_left</code></td>
+<td>Tage bis zum Ende einer befristeten Ausnahme; fehlt, wenn keine eine fehlgeschlagene Prüfung verdeckt</td>
+</tr>
+<tr>
+<td><code>coverage_inconclusive</code></td>
+<td>Prüfungen, die der Scan nicht entscheiden konnte</td>
+</tr>
+<tr>
+<td><code>coverage_not_checked</code></td>
+<td>Prüfungen, die der Scan nicht ausgeführt hat</td>
 </tr>
 </tbody>
 </table>

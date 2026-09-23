@@ -857,10 +857,19 @@ rating=5;@0:3;@0:1;0;5 vulnerabilities=0;;;0; time=1.234s;;;0;
 | `update_available` | 1 bei verfügbarem Update |
 | `support_days_left` | Tage bis Supportende, danach negativ |
 | `cert_days_left` | Tage bis Zertifikatsablauf, danach negativ |
+| `upgrade_path_complete` | `1`, wenn das empfohlene Upgrade alle bekannten Hinweise behebt, sonst `0`; fehlt ohne Hinweise |
+| `waiver_days_left` | Tage, bis eine `--waive-until`-Ausnahme endet und eine fehlgeschlagene Prüfung wieder alarmiert; fehlt, wenn keine an einer Frist hängt |
+| `coverage_inconclusive` | Prüfungen, die der Scan ausgeführt, aber nicht entschieden hat |
+| `coverage_not_checked` | Prüfungen, die der Scan nicht ausgeführt hat |
 
 `rating` enthält die konfigurierten Nagios-Schwellen, etwa `@0:3`.
 `cert_days_left` fehlt, wenn keine verlässliche Messung möglich war. Seine
 Warnschwelle entspricht `scanner.tls_min_days`; nach Ablauf gilt kritisch.
+`waiver_days_left` zählt vom Scan bis zum nächsten Moment, an dem eine befristete
+Ausnahme eine fehlgeschlagene Prüfung nicht mehr verdeckt. Mit `--waiver-warning TAGE`
+trägt der Wert dieses Fenster als Warnbereich. `coverage_inconclusive` und
+`coverage_not_checked` erklären die Bewertung, ändern sie aber nie, und haben
+deshalb keine Schwellen.
 Die [Prometheus-Anleitung](../prometheus.md) zeigt weitere Auswertungen.
 
 ## Cache {#caching}

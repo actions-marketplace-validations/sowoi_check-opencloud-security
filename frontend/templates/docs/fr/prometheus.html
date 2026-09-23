@@ -148,6 +148,21 @@ Leurs noms, plus courts, diffèrent de ceux des deux fichiers fournis ci-dessus.
 <td><code>1</code> si la mise à jour recommandée corrige toutes les vulnérabilités connues ; aucun échantillon sinon</td>
 </tr>
 <tr>
+<td><code>opencloud_security_waiver_days_remaining</code></td>
+<td><code>host</code></td>
+<td>Jours avant la fin d’une exemption <code>--waive-until</code> qui laisse un contrôle en échec alerter de nouveau ; aucun échantillon si aucun contrôle en échec ne dépend d’une échéance</td>
+</tr>
+<tr>
+<td><code>opencloud_security_coverage_inconclusive_total</code></td>
+<td><code>host</code></td>
+<td>Contrôles exécutés par l’analyse sans conclusion</td>
+</tr>
+<tr>
+<td><code>opencloud_security_coverage_not_checked_total</code></td>
+<td><code>host</code></td>
+<td>Contrôles que l’analyse n’a pas exécutés</td>
+</tr>
+<tr>
 <td><code>opencloud_security_scan_duration_seconds</code></td>
 <td><code>host</code></td>
 <td>Durée de l’analyse</td>
@@ -206,6 +221,18 @@ qui signifierait « expire aujourd’hui ».</p>
 <tr>
 <td><code>support_days_left</code></td>
 <td>Jours de support restants ; valeur négative après la fin du support</td>
+</tr>
+<tr>
+<td><code>waiver_days_left</code></td>
+<td>Jours avant la fin d’une exemption temporaire ; absente si aucune ne masque un contrôle en échec</td>
+</tr>
+<tr>
+<td><code>coverage_inconclusive</code></td>
+<td>Contrôles que l’analyse n’a pas pu trancher</td>
+</tr>
+<tr>
+<td><code>coverage_not_checked</code></td>
+<td>Contrôles que l’analyse n’a pas exécutés</td>
 </tr>
 </tbody>
 </table>

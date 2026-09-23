@@ -66,7 +66,7 @@
 <li><strong>Command line:</strong> <code>check-opencloud-security --host opencloud.example.com --check-hardening</code></li>
 </ul>
 <p>Weise die Regel dem Host zu, unter dem der Service erscheinen soll. Das tatsächliche Scanziel bestimmt weiterhin <code>--host</code>.</p>
-<p>Checkmk liest den Status aus dem Exitcode, die Zusammenfassung aus der ersten Ausgabezeile, weitere Zeilen als Details und die Werte hinter <code>|</code> als Metriken. Die <a href="/documentation/reference#performance-data">Performancedaten</a> enthalten <code>rating</code>, <code>vulnerabilities</code>, <code>hardenings_missing</code>, <code>extra_checks_failed</code>, <code>update_available</code>, <code>support_days_left</code>, <code>cert_days_left</code> und <code>time</code> einschließlich Schwellwerten.</p>
+<p>Checkmk liest den Status aus dem Exitcode, die Zusammenfassung aus der ersten Ausgabezeile, weitere Zeilen als Details und die Werte hinter <code>|</code> als Metriken. Die <a href="/documentation/reference#performance-data">Performancedaten</a> enthalten <code>rating</code>, <code>vulnerabilities</code>, <code>hardenings_missing</code>, <code>extra_checks_failed</code>, <code>update_available</code>, <code>support_days_left</code>, <code>cert_days_left</code>, <code>upgrade_path_complete</code>, <code>waiver_days_left</code>, <code>coverage_inconclusive</code>, <code>coverage_not_checked</code> und <code>time</code> einschließlich Schwellwerten.</p>
 <p>Prüfe das Intervall unter <strong>Setup &gt; Services &gt; Service monitoring rules &gt; Normal check interval for service checks</strong>. Ein Scan erzeugt mehrere HTTP-Anfragen und TCP-Verbindungen; ein minütlicher Check ist für diese Konfigurationsprüfung meist unnötig. Wähle beispielsweise eine Stunde oder länger.</p>
 <h2 id="2-a-local-check-on-an-agent-host">2. Lokaler Check auf einem Agent-Host</h2>
 <p>Ein lokaler Check führt den Scanner auf einem Host aus, der die Instanz erreichen kann. Der Agent übernimmt dessen Ausgabe als Service dieses Hosts.</p>
@@ -143,6 +143,18 @@
 <tr>
 <td><code>upgrade_path_complete</code></td>
 <td><code>1</code>, wenn das empfohlene Update alle bekannten Schwachstellen behebt, sonst <code>0</code>; fehlt ohne Hinweise</td>
+</tr>
+<tr>
+<td><code>waiver_days_left</code></td>
+<td>Tage, bis eine <code>--waive-until</code>-Ausnahme endet und eine fehlgeschlagene Prüfung wieder alarmiert; fehlt, wenn keine fehlgeschlagene Prüfung an einer Frist hängt</td>
+</tr>
+<tr>
+<td><code>coverage_inconclusive</code></td>
+<td>Prüfungen, die der Scan ausgeführt, aber nicht entschieden hat; fehlt ohne Coverage-Block</td>
+</tr>
+<tr>
+<td><code>coverage_not_checked</code></td>
+<td>Prüfungen, die der Scan nicht ausgeführt hat; fehlt ohne Coverage-Block</td>
 </tr>
 <tr>
 <td><code>execution_time</code></td>

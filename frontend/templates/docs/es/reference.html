@@ -1338,6 +1338,22 @@ Icinga2 los dibuja en el gráfico sin configuración adicional.</p>
 <td><code>cert_days_left</code></td>
 <td>Días hasta que caduca el certificado TLS (negativo si ya ha caducado)</td>
 </tr>
+<tr>
+<td><code>upgrade_path_complete</code></td>
+<td><code>1</code> cuando la actualización recomendada corrige todos los avisos conocidos, <code>0</code> cuando deja alguno abierto; ausente sin avisos</td>
+</tr>
+<tr>
+<td><code>waiver_days_left</code></td>
+<td>Días hasta que termina una exención <code>--waive-until</code> y una comprobación fallida vuelve a alertar; ausente si ninguna depende de un plazo</td>
+</tr>
+<tr>
+<td><code>coverage_inconclusive</code></td>
+<td>Comprobaciones que el análisis ejecutó sin llegar a una conclusión</td>
+</tr>
+<tr>
+<td><code>coverage_not_checked</code></td>
+<td>Comprobaciones que el análisis no ejecutó</td>
+</tr>
 </tbody>
 </table>
 <p><code>cert_days_left</code> se omite, en lugar de valer cero, cuando no se midió nada: un
@@ -1346,6 +1362,11 @@ cuyas fechas no se pudieron interpretar. Lleva los umbrales del propio análisis
 y no una segunda opinión inventada para el gráfico: aviso igual o por debajo de
 <code>scanner.tls_min_days</code>, el mismo margen con el que salta el hallazgo
 <code>tlsCertificate</code>, y crítico cuando el certificado ya ha caducado.</p>
+<p><code>waiver_days_left</code> cuenta desde el análisis hasta el próximo momento en que una
+exención temporal deja de ocultar una comprobación fallida. Con
+<code>--waiver-warning DÍAS</code>, el valor lleva esa ventana como rango de aviso.
+<code>coverage_inconclusive</code> y <code>coverage_not_checked</code> explican la nota sin cambiarla
+nunca, por eso no llevan umbrales.</p>
 <p>Fuera de Icinga2, los mismos números llegan a Prometheus mediante el textfile
 collector de node_exporter o una Pushgateway; consulte
 <a href="/documentation/prometheus">Prometheus y Grafana</a>.</p>

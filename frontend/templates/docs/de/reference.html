@@ -900,11 +900,32 @@ Scan; die Gesamtlaufzeit kann daher deutlich über einem einzelnen Timeout liege
 <td><code>cert_days_left</code></td>
 <td>Tage bis Zertifikatsablauf, danach negativ</td>
 </tr>
+<tr>
+<td><code>upgrade_path_complete</code></td>
+<td><code>1</code>, wenn das empfohlene Upgrade alle bekannten Hinweise behebt, sonst <code>0</code>; fehlt ohne Hinweise</td>
+</tr>
+<tr>
+<td><code>waiver_days_left</code></td>
+<td>Tage, bis eine <code>--waive-until</code>-Ausnahme endet und eine fehlgeschlagene Prüfung wieder alarmiert; fehlt, wenn keine an einer Frist hängt</td>
+</tr>
+<tr>
+<td><code>coverage_inconclusive</code></td>
+<td>Prüfungen, die der Scan ausgeführt, aber nicht entschieden hat</td>
+</tr>
+<tr>
+<td><code>coverage_not_checked</code></td>
+<td>Prüfungen, die der Scan nicht ausgeführt hat</td>
+</tr>
 </tbody>
 </table>
 <p><code>rating</code> enthält die konfigurierten Nagios-Schwellen, etwa <code>@0:3</code>.
 <code>cert_days_left</code> fehlt, wenn keine verlässliche Messung möglich war. Seine
 Warnschwelle entspricht <code>scanner.tls_min_days</code>; nach Ablauf gilt kritisch.
+<code>waiver_days_left</code> zählt vom Scan bis zum nächsten Moment, an dem eine befristete
+Ausnahme eine fehlgeschlagene Prüfung nicht mehr verdeckt. Mit <code>--waiver-warning TAGE</code>
+trägt der Wert dieses Fenster als Warnbereich. <code>coverage_inconclusive</code> und
+<code>coverage_not_checked</code> erklären die Bewertung, ändern sie aber nie, und haben
+deshalb keine Schwellen.
 Die <a href="/documentation/prometheus">Prometheus-Anleitung</a> zeigt weitere Auswertungen.</p>
 <h3 id="caching">Cache</h3>
 <p>Das Plugin scannt bei jedem Lauf neu. Der optionale

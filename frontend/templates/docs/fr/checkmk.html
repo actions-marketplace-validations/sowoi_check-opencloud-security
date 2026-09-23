@@ -79,7 +79,8 @@ détails sur les lignes suivantes et les métriques après <code>|</code>. Les
 <a href="/documentation#performance-data">données de performance</a> utilisent déjà le format
 Nagios, seuils compris : <code>rating</code>, <code>vulnerabilities</code>, <code>hardenings_missing</code>,
 <code>extra_checks_failed</code>, <code>update_available</code>, <code>support_days_left</code>, <code>cert_days_left</code>,
-<code>upgrade_path_complete</code> et <code>time</code>.</p>
+<code>upgrade_path_complete</code>, <code>waiver_days_left</code>, <code>coverage_inconclusive</code>,
+<code>coverage_not_checked</code> et <code>time</code>.</p>
 <p>L’intervalle par défaut est d’une minute. Une analyse effectue environ vingt
 requêtes HTTP et cinq connexions TCP. Un contrôle horaire suffit généralement
 pour une note qui évolue avec la configuration. Réglez cet intervalle dans
@@ -177,6 +178,18 @@ de l’hôte au lieu de le signaler comme UNKNOWN.</p>
 <tr>
 <td><code>upgrade_path_complete</code></td>
 <td><code>1</code> si la mise à jour recommandée corrige tous les avis connus, sinon <code>0</code> ; absente sans avis</td>
+</tr>
+<tr>
+<td><code>waiver_days_left</code></td>
+<td>Jours avant la fin d’une exemption <code>--waive-until</code> qui laisse un contrôle en échec alerter de nouveau ; absente si aucun contrôle en échec ne dépend d’une échéance</td>
+</tr>
+<tr>
+<td><code>coverage_inconclusive</code></td>
+<td>Contrôles exécutés par l’analyse sans conclusion ; absente sans bloc de couverture</td>
+</tr>
+<tr>
+<td><code>coverage_not_checked</code></td>
+<td>Contrôles que l’analyse n’a pas exécutés ; absente sans bloc de couverture</td>
 </tr>
 <tr>
 <td><code>execution_time</code></td>

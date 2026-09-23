@@ -1519,6 +1519,18 @@ Icinga2 les trace donc sur le graphique sans configuration supplémentaire.</p>
 <td><code>upgrade_path_complete</code></td>
 <td><code>1</code> lorsque la mise à niveau recommandée lève tous les avis connus, <code>0</code> lorsqu’elle en laisse un ouvert ; absente sans avis</td>
 </tr>
+<tr>
+<td><code>waiver_days_left</code></td>
+<td>Jours avant la fin d’une exemption <code>--waive-until</code> qui laisse un contrôle en échec alerter de nouveau ; absente si aucun contrôle en échec ne dépend d’une échéance</td>
+</tr>
+<tr>
+<td><code>coverage_inconclusive</code></td>
+<td>Contrôles exécutés par l’analyse sans conclusion</td>
+</tr>
+<tr>
+<td><code>coverage_not_checked</code></td>
+<td>Contrôles que l’analyse n’a pas exécutés</td>
+</tr>
 </tbody>
 </table>
 <p><code>cert_days_left</code> est absente plutôt que nulle lorsque rien n’a été mesuré : une
@@ -1527,6 +1539,11 @@ dont les dates n’ont pas pu être lues. Elle porte les seuils de l’analyse
 elle-même plutôt qu’un second avis inventé pour le graphique : avertissement à
 partir de <code>scanner.tls_min_days</code>, la même marge que celle du constat
 <code>tlsCertificate</code>, et critique une fois le certificat réellement expiré.</p>
+<p><code>waiver_days_left</code> compte depuis l’analyse jusqu’au prochain moment où une
+exemption temporaire cesse de masquer un contrôle en échec. Avec
+<code>--waiver-warning DAYS</code>, la valeur porte cette fenêtre comme plage
+d’avertissement. <code>coverage_inconclusive</code> et <code>coverage_not_checked</code> expliquent
+la note sans jamais la modifier, et n’ont donc pas de seuils.</p>
 <p>En dehors d’Icinga2, les mêmes nombres atteignent Prometheus par le collecteur
 textfile de node_exporter ou un Pushgateway - voir
 <a href="/documentation/prometheus">Prometheus et Grafana</a>.</p>

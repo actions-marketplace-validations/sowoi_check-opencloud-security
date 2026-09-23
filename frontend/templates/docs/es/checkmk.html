@@ -83,7 +83,8 @@ sigue a <code>|</code> como métricas. No hay que convertir nada: los
 <a href="/documentation/reference#performance-data">datos de rendimiento</a> que ya escribe este
 complemento (<code>rating</code>, <code>vulnerabilities</code>, <code>hardenings_missing</code>,
 <code>extra_checks_failed</code>, <code>update_available</code>, <code>support_days_left</code>,
-<code>cert_days_left</code>, <code>upgrade_path_complete</code>, <code>time</code>) están en el formato de Nagios que Checkmk sabe leer,
+<code>cert_days_left</code>, <code>upgrade_path_complete</code>, <code>waiver_days_left</code>, <code>coverage_inconclusive</code>,
+<code>coverage_not_checked</code>, <code>time</code>) están en el formato de Nagios que Checkmk sabe leer,
 umbrales incluidos.</p>
 <p>Una advertencia sobre la programación: el intervalo de comprobación
 predeterminado es de un minuto, y un análisis realiza unas veinte solicitudes
@@ -197,6 +198,18 @@ nombres y dos diferencias que exige el formato:</p>
 <tr>
 <td><code>upgrade_path_complete</code></td>
 <td><code>1</code> si la actualización recomendada corrige todos los avisos conocidos, <code>0</code> si no; ausente sin avisos</td>
+</tr>
+<tr>
+<td><code>waiver_days_left</code></td>
+<td>Días hasta que termina una exención <code>--waive-until</code> y una comprobación fallida vuelve a alertar; ausente si ninguna comprobación fallida depende de un plazo</td>
+</tr>
+<tr>
+<td><code>coverage_inconclusive</code></td>
+<td>Comprobaciones que el análisis ejecutó sin llegar a una conclusión; ausente sin bloque de cobertura</td>
+</tr>
+<tr>
+<td><code>coverage_not_checked</code></td>
+<td>Comprobaciones que el análisis no ejecutó; ausente sin bloque de cobertura</td>
 </tr>
 <tr>
 <td><code>execution_time</code></td>

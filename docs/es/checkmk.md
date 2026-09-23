@@ -48,7 +48,8 @@ sigue a `|` como métricas. No hay que convertir nada: los
 [datos de rendimiento](../../README.md#performance-data) que ya escribe este
 complemento (`rating`, `vulnerabilities`, `hardenings_missing`,
 `extra_checks_failed`, `update_available`, `support_days_left`,
-`cert_days_left`, `upgrade_path_complete`, `time`) están en el formato de Nagios que Checkmk sabe leer,
+`cert_days_left`, `upgrade_path_complete`, `waiver_days_left`, `coverage_inconclusive`,
+`coverage_not_checked`, `time`) están en el formato de Nagios que Checkmk sabe leer,
 umbrales incluidos.
 
 Una advertencia sobre la programación: el intervalo de comprobación
@@ -156,6 +157,9 @@ nombres y dos diferencias que exige el formato:
 | `support_days_left` | Días hasta que la línea de versiones deja de recibir correcciones; negativo si ya ha ocurrido |
 | `cert_days_left` | Días hasta que caduca el certificado; negativo si ya ha caducado |
 | `upgrade_path_complete` | `1` si la actualización recomendada corrige todos los avisos conocidos, `0` si no; ausente sin avisos |
+| `waiver_days_left` | Días hasta que termina una exención `--waive-until` y una comprobación fallida vuelve a alertar; ausente si ninguna comprobación fallida depende de un plazo |
+| `coverage_inconclusive` | Comprobaciones que el análisis ejecutó sin llegar a una conclusión; ausente sin bloque de cobertura |
+| `coverage_not_checked` | Comprobaciones que el análisis no ejecutó; ausente sin bloque de cobertura |
 | `execution_time` | Duración del análisis, en segundos |
 
 Una métrica que no se ha medido se omite en lugar de enviarse como cero, para

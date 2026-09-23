@@ -153,6 +153,21 @@ incluidos no coinciden con ellos.</p>
 <td><code>1</code> cuando la actualización recomendada corrige todas las vulnerabilidades conocidas; sin muestra si no hay ruta</td>
 </tr>
 <tr>
+<td><code>opencloud_security_waiver_days_remaining</code></td>
+<td><code>host</code></td>
+<td>Días hasta que termina una exención <code>--waive-until</code> y una comprobación fallida vuelve a alertar; sin muestra si ninguna comprobación fallida depende de un plazo</td>
+</tr>
+<tr>
+<td><code>opencloud_security_coverage_inconclusive_total</code></td>
+<td><code>host</code></td>
+<td>Comprobaciones que el análisis ejecutó sin llegar a una conclusión</td>
+</tr>
+<tr>
+<td><code>opencloud_security_coverage_not_checked_total</code></td>
+<td><code>host</code></td>
+<td>Comprobaciones que el análisis no ejecutó</td>
+</tr>
+<tr>
 <td><code>opencloud_security_scan_duration_seconds</code></td>
 <td><code>host</code></td>
 <td>Duración del análisis</td>
@@ -211,6 +226,18 @@ leerse como "caduca hoy" en la única alerta que nadie puede pasar por alto.</p>
 <tr>
 <td><code>support_days_left</code></td>
 <td>Días de soporte restantes; negativo cuando ya ha vencido</td>
+</tr>
+<tr>
+<td><code>waiver_days_left</code></td>
+<td>Días hasta que termina una exención temporal; ausente si ninguna oculta una comprobación fallida</td>
+</tr>
+<tr>
+<td><code>coverage_inconclusive</code></td>
+<td>Comprobaciones que el análisis no pudo decidir</td>
+</tr>
+<tr>
+<td><code>coverage_not_checked</code></td>
+<td>Comprobaciones que el análisis no ejecutó</td>
 </tr>
 </tbody>
 </table>

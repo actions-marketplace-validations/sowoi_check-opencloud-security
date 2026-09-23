@@ -74,6 +74,9 @@ Leurs noms, plus courts, diffèrent de ceux des deux fichiers fournis ci-dessus.
 | `opencloud_security_update_available` | `host`, `target_version` | `1` si une version plus récente existe |
 | `opencloud_security_certificate_days_remaining` | `host` | Jours avant l’expiration du certificat présenté ; valeur négative après expiration, aucun échantillon en HTTP simple |
 | `opencloud_security_upgrade_path_complete` | `host`, `target_version` | `1` si la mise à jour recommandée corrige toutes les vulnérabilités connues ; aucun échantillon sinon |
+| `opencloud_security_waiver_days_remaining` | `host` | Jours avant la fin d’une exemption `--waive-until` qui laisse un contrôle en échec alerter de nouveau ; aucun échantillon si aucun contrôle en échec ne dépend d’une échéance |
+| `opencloud_security_coverage_inconclusive_total` | `host` | Contrôles exécutés par l’analyse sans conclusion |
+| `opencloud_security_coverage_not_checked_total` | `host` | Contrôles que l’analyse n’a pas exécutés |
 | `opencloud_security_scan_duration_seconds` | `host` | Durée de l’analyse |
 | `opencloud_security_scrape_success` | `host` | `0` si l’analyse a échoué |
 
@@ -104,6 +107,9 @@ rating=5;@0:3;@0:1;0;5 vulnerabilities=0;;;0; time=1.234s;;;0;
 | `extra_checks_failed` | Contrôles supplémentaires en échec |
 | `update_available` | `1` si une version plus récente existe |
 | `support_days_left` | Jours de support restants ; valeur négative après la fin du support |
+| `waiver_days_left` | Jours avant la fin d’une exemption temporaire ; absente si aucune ne masque un contrôle en échec |
+| `coverage_inconclusive` | Contrôles que l’analyse n’a pas pu trancher |
+| `coverage_not_checked` | Contrôles que l’analyse n’a pas exécutés |
 
 Une alerte sur `support_days_left` permet de repérer une version qui ne reçoit
 plus de correctifs.
