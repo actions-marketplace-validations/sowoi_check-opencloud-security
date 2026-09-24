@@ -19,7 +19,14 @@ case "$packager" in
     deb)
         export DEBIAN_FRONTEND=noninteractive
         apt-get update -qq
-        apt-get install -y -qq ./check-opencloud-security_*_all.deb >/dev/null
+        # A mirror caught mid-sync can list a dependency it no longer
+        # serves (404). Refresh the index and try once more before failing.
+        if ! apt-get install -y -qq ./check-opencloud-security_*_all.deb >/dev/null; then
+            echo "install failed, refreshing the package index and retrying once" >&2
+            sleep 30
+            apt-get update -qq
+            apt-get install -y -qq ./check-opencloud-security_*_all.deb >/dev/null
+        fi
         plugin=/usr/lib/nagios/plugins/check_opencloud_security
         ;;
     rpm)

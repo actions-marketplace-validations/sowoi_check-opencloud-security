@@ -84,6 +84,13 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   printed a summary. See
   [the scanner command](docs/scanner-cli.md#fleet---a-dashboard-from-saved-results).
 
+### Fixed
+
+- **The `.deb` install smoke test survives a mirror caught mid-sync.** When
+  the Ubuntu or Debian mirror lists a dependency it no longer serves (a
+  404), `packaging/tests/install-smoke.sh` refreshes the package index and
+  tries the install once more before the release dry run fails.
+
 ## [1.30.2] - 2026-09-24
 
 ### Changed
