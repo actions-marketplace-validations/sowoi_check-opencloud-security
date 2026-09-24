@@ -45,20 +45,27 @@
 
 <article class="docs-article card section-gap" data-reveal lang="en">
 <h2 id="1312-this-release">[1.31.2] - this release</h2>
+<h3 id="security">Security</h3>
+<ul>
+<li><strong>The erasure credential throttle counts an IPv6 client by its /64.</strong> Failed
+  guesses at the <code>DELETE /api/purge</code> token were counted per single address,
+  while every other limit counts an IPv6 client by the /64 it is handed - so
+  rotating the interface identifier bought five fresh guesses each time. The
+  32-character minimum on the token kept guessing impractical regardless.</li>
+<li><strong>The scan service refuses a guessable token on a wide bind.</strong> Serving
+  anywhere but loopback required a token but accepted any non-empty one -
+  <code>--token a</code>, or the placeholder <code>secrets/scanner_token.example</code> ships with -
+  and nothing counts failed attempts, so a short token let anybody who reached
+  the port make it scan whatever they named. Such a bind now needs a token of
+  at least 32 characters that is not that placeholder, or it refuses to start.
+  <code>openssl rand -hex 32</code>, which every guide already uses, is unaffected.</li>
+</ul>
 <h3 id="fixed">Fixed</h3>
 <ul>
-<li><strong>A check only one of two scans made is no longer called new or resolved.</strong>
-  Comparisons read a finding missing from the earlier scan as passing, so a
-  check added by a newer scanner - or by turning the extra checks on - was
-  reported as a regression of the instance, and a check the later scan no
-  longer made as fixed. The baseline, <code>check-opencloud-scanner diff</code>, the web
-  comparison and <code>compare_scans</code> now list these as newly measured or no
-  longer measured, based on each scan's coverage block, and the explanation
-  files them as scanner changes. A newly measured failure still alerts, and
-  <code>--warn-on-new</code> still does not suppress it. A report or baseline that does
-  not list its checks is compared as before. See ADR 0079.</li>
 <li>Aligned the report expiry footer, warning and live countdown to round remaining
   minutes up consistently in every language.</li>
+<li><strong>A comparison page rounds its expiry up too.</strong> It rounded the minutes
+  left down, so it announced one minute fewer than the result page would.</li>
 </ul>
 <h3 id="documentation">Documentation</h3>
 <ul>
@@ -112,7 +119,7 @@
   <code>ratingExplanation.base</code> is <code>null</code>.</strong> The update step's detail is then left
   empty, instead of <code>remediation_plan()</code> raising.</li>
 </ul>
-<h3 id="security">Security</h3>
+<h3 id="security_1">Security</h3>
 <ul>
 <li><strong>An empty listen address no longer counts as loopback for the scan
   service.</strong> Binding <code>""</code> listens on every interface, but the check that

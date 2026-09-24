@@ -949,7 +949,8 @@ model, where an operator names their own instances. Reachable by strangers and
 unauthenticated, the same property makes it a way to read the inside of the
 network it runs on. So <code>--listen</code>/<code>COS_SERVICE_LISTEN</code> anywhere but loopback
 without <code>--token</code>/<code>COS_SERVICE_TOKEN</code> refuses to start rather than serving
-open. See <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0030-a-listener-binds-loopback-and-a-wide-bind-needs-a-credential.md">ADR 0030</a>.</p>
+open, and so does one whose token is shorter than 32 characters or still the
+placeholder from <code>secrets/scanner_token.example</code>. See <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0030-a-listener-binds-loopback-and-a-wide-bind-needs-a-credential.md">ADR 0030</a>.</p>
 <p>Running it in a container, and the ready-made
 <a href="https://github.com/sowoi/check-opencloud-security/blob/main/docker/docker-compose.monitoring.yml"><code>docker/docker-compose.monitoring.yml</code></a>
 that starts the scanner plus a check container with Docker secrets, are in

@@ -285,7 +285,7 @@ REFERENCE: dict[str, dict[str, str]] = {
     },
     "PURGE_TOKEN": {
         "default": "(none)",
-        "description": "Enables DELETE /api/purge and is the secret it requires. Unset means the endpoint answers 404 like any other path that is not there. At least 32 characters, or startup refuses: it is the whole authorisation for the one call that deletes other people's results. Five wrong answers from one address in five minutes are followed by 429",
+        "description": "Enables DELETE /api/purge and is the secret it requires. Unset means the endpoint answers 404 like any other path that is not there. At least 32 characters, or startup refuses: it is the whole authorisation for the one call that deletes other people's results. Five wrong answers from one address (one /64 for IPv6) in five minutes are followed by 429",
     },
     "PURGE_SIGNING_KEY": {
         "default": "(none)",

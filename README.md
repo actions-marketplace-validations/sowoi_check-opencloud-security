@@ -874,7 +874,8 @@ model, where an operator names their own instances. Reachable by strangers and
 unauthenticated, the same property makes it a way to read the inside of the
 network it runs on. So `--listen`/`COS_SERVICE_LISTEN` anywhere but loopback
 without `--token`/`COS_SERVICE_TOKEN` refuses to start rather than serving
-open. See [ADR 0030](adr/0030-a-listener-binds-loopback-and-a-wide-bind-needs-a-credential.md).
+open, and so does one whose token is shorter than 32 characters or still the
+placeholder from `secrets/scanner_token.example`. See [ADR 0030](adr/0030-a-listener-binds-loopback-and-a-wide-bind-needs-a-credential.md).
 
 Running it in a container, and the ready-made
 [`docker/docker-compose.monitoring.yml`](docker/docker-compose.monitoring.yml)

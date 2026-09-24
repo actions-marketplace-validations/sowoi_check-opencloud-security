@@ -26,7 +26,7 @@
       "lastmod": "2026-09-17"
     },
     "docs/baseline.html": {
-      "digest": "0ff0c8ec310ed76e9af234cbc273ac4411f72e9cb56744783e129a1c002ad682",
+      "digest": "efedfea83702eee845d59c48703b863cf727085f131f1c2b70d1707ce7fc524d",
       "lastmod": "2026-09-24"
     },
     "docs/checkmk.html": {
@@ -118,7 +118,7 @@
       "lastmod": "2026-09-17"
     },
     "docs/reference.html": {
-      "digest": "805269897ccdbd5384cb178960ea2327fdc76c0362b96800f8046fcf7c274282",
+      "digest": "f44e48fcf966e52fe4026005a95bf3e8346d0ea2c2aed6aad22a81780cd96524",
       "lastmod": "2026-09-24"
     },
     "docs/release-lifecycle.html": {
@@ -138,7 +138,7 @@
       "lastmod": "2026-09-23"
     },
     "docs/scanner-cli.html": {
-      "digest": "077714d32c0774760f7bed51c30d810e2ad006d2a477a62ed0f5ca7d690f0fb9",
+      "digest": "f02c1c40c7e7ef7643a35293eda6a69f35fe6b09dabd0256888eb9fae66fc395",
       "lastmod": "2026-09-24"
     },
     "docs/scanner.html": {
@@ -170,7 +170,7 @@
       "lastmod": "2026-09-17"
     },
     "docs/web-service.html": {
-      "digest": "99a02440775cc82e0acb35436bab5d3519c93efe996d581c3a53eca9086d0eb4",
+      "digest": "9978f603651a362f483a2c4e4952faa361c016c95dd29d3fd533043ae20212ac",
       "lastmod": "2026-09-24"
     },
     "docs/webhooks.html": {

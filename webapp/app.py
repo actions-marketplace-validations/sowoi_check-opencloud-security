@@ -2416,8 +2416,11 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
             {
                 "t": translate,
                 "comparison": comparison,
+                # Rounded up, as the result page's expiry line is: a
+                # comparison with 59 minutes and a few seconds left has not
+                # lost its sixtieth minute yet.
                 "expires_in_minutes": max(
-                    1, await app.state.comparisons.expires_in(token) // 60
+                    1, (await app.state.comparisons.expires_in(token) + 59) // 60
                 ),
             },
         )

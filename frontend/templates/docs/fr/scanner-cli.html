@@ -656,6 +656,9 @@ qu'un superviseur ne relancera pas indéfiniment. Les points d'accès sont
 listés dans le <a href="/documentation/reference#running-the-scanner-as-a-service">README principal</a>,
 et l'exécution en conteneur est traitée dans <a href="/documentation/scan-service">Exécuter le scanner comme un
 service</a>.</p>
+<p>Le jeton doit alors compter au moins 32 caractères et ne pas être l'exemple de
+<code>secrets/scanner_token.example</code> : rien ne limite le nombre de tentatives, sa
+longueur fait donc toute sa force. <code>openssl rand -hex 32</code> en produit un.</p>
 <p>Il ne s'agit pas de l'application web publique. Celle-ci est décrite dans
 <a href="/documentation/web-service">le service de scan public</a>.</p>
 <h2 id="configure-write-a-configuration-file"><code>configure</code> - écrire un fichier de configuration</h2>
