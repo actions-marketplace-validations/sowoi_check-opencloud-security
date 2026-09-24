@@ -283,6 +283,10 @@ class UpcomingExpiry:
     #: The record whose deadline that is, so the alert can name it.
     pattern: str
     reason: str
+    #: Every record ending at ``at`` as ``(pattern, reason)``, the one above
+    #: first. Two waivers written with the same deadline end together, and
+    #: an alert naming one of them would leave the other's checks unexplained.
+    ending: tuple[tuple[str, str], ...] = ()
 
 
 def next_expiry(block: Any) -> UpcomingExpiry | None:
@@ -329,12 +333,20 @@ def next_expiry(block: Any) -> UpcomingExpiry | None:
         )
     if not ends:
         return None
-    at, record = min(ends.values(), key=lambda item: item[0])
+    at = min(end for end, _ in ends.values())
+    checks = tuple(sorted(check for check, (end, _) in ends.items() if end == at))
+    ending: list[tuple[str, str]] = []
+    for check in checks:
+        record = ends[check][1]
+        named = (str(record.get("pattern") or ""), str(record.get("reason") or ""))
+        if named not in ending:
+            ending.append(named)
     return UpcomingExpiry(
         at=at,
-        checks=tuple(sorted(check for check, (end, _) in ends.items() if end == at)),
-        pattern=str(record.get("pattern") or ""),
-        reason=str(record.get("reason") or ""),
+        checks=checks,
+        pattern=ending[0][0],
+        reason=ending[0][1],
+        ending=tuple(ending),
     )
 
 

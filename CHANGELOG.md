@@ -31,6 +31,8 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   end-of-life warning, the lifecycle line and the waiver warning. If one
   waiver covers several checks, the waiver warning now says that they
   "alert again".
+- If two waivers end at the same moment, the waiver warning now names both.
+  Before this fix, it named only one waiver but listed the checks of both.
 
 ## [1.30.1] - 2026-09-23
 

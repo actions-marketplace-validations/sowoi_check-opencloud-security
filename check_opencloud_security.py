@@ -1016,10 +1016,15 @@ def _waiver_expiry_sentence(response_scan: dict[str, Any]) -> str | None:
     remaining = waiver_days_left(response_scan)
     if upcoming is None or remaining is None:
         return None
-    reason = f" ({upcoming.reason})" if upcoming.reason else ""
+    named = ", ".join(
+        f"{pattern} ({reason})" if reason else pattern
+        for pattern, reason in upcoming.ending or ((upcoming.pattern, upcoming.reason),)
+    )
+    waivers = "waiver" if len(upcoming.ending) <= 1 else "waivers"
+    ends = "ends" if len(upcoming.ending) <= 1 else "end"
     verb = "alerts" if len(upcoming.checks) == 1 else "alert"
     return (
-        f"The waiver {upcoming.pattern}{reason} ends on "
+        f"The {waivers} {named} {ends} on "
         f"{upcoming.at.strftime('%Y-%m-%d %H:%M UTC')} ({_days_left_text(remaining)}), "
         f"after which {', '.join(upcoming.checks)} {verb} again."
     )

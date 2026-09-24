@@ -196,6 +196,24 @@ def test_the_warning_counts_one_day_and_several_checks_in_plain_english(capsys):
     assert "debugPort:9205, debugPort:9229 alert again." in first
 
 
+def test_two_waivers_ending_together_are_both_named(capsys):
+    """Each check that alerts again is explained by the waiver that covered it."""
+    document = result(
+        record("debugPort:9205", "2026-05-09T10:00:00Z", ["debugPort:9205"]),
+        record("debugPort:9229", "2026-05-09T10:00:00Z", ["debugPort:9229"]),
+    )
+
+    code, output = run(document, capsys, waiver_warning_days=14)
+    first = output.split("\n", 1)[0]
+
+    assert code is NagiosExitCode.WARNING
+    assert first.startswith(
+        "WARNING: The waivers debugPort:9205 (reason for debugPort:9205), "
+        "debugPort:9229 (reason for debugPort:9229) end on 2026-05-09 10:00 UTC"
+    )
+    assert "debugPort:9205, debugPort:9229 alert again." in first
+
+
 def test_a_hardcoded_flag_under_a_waiver_does_not_warn(capsys):
     """Nothing alerts when a waiver on a flag nobody can change runs out."""
     document = result(
