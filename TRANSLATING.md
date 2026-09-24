@@ -23,6 +23,11 @@ in English, once, in every locale
 ([ADR 0077](adr/0077-decision-records-are-never-translated.md)). Only the
 operator area's interface around them is translated.
 
+The same holds for `CHANGELOG.md`, `RELEASE.md` and the operator area's
+Releases tab built from them: English only, in every locale, and never a
+`docs/<language>/operator/releases.md`
+([ADR 0078](adr/0078-changelogs-and-release-notes-are-never-translated.md)).
+
 A guide title a translation has not overridden falls back to English on
 purpose (`webapp/locales/__init__.py`), so a new guide is reachable in every
 language the day it is written. That fallback is a decision, not a gap, and

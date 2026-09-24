@@ -17,6 +17,10 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 - **Decision records are never translated.** ADR 0077 records that every
   record in `adr/` exists in English only, and once: the operator area shows
   it untranslated in every locale, and translation work leaves `adr/` alone.
+- **Changelogs and release notes are never translated.** ADR 0078 records
+  that `CHANGELOG.md`, `RELEASE.md` and the GitHub release body exist in
+  English only, and that the operator area's Releases tab shows them
+  untranslated in every locale.
 
 ## [1.31.1] - 2026-09-24
 
