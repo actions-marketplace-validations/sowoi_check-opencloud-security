@@ -12,6 +12,8 @@ which exist to *loosen* the guard cannot reopen it.
 
 from __future__ import annotations
 
+from html import unescape
+
 import pytest
 
 from tests.webapp_support import (  # noqa: F401 - the fixtures are autouse
@@ -21,6 +23,7 @@ from tests.webapp_support import (  # noqa: F401 - the fixtures are autouse
     client,
     settings,
 )
+from webapp.i18n import Translator
 from webapp.ssrf import (
     TargetRejected,
     denylist,
@@ -267,7 +270,18 @@ def test_a_store_that_cannot_be_read_refuses_the_scan_rather_than_running_it(
     assert payload["selfHostUrl"]
 
 
-def test_the_store_being_unreadable_is_said_in_the_visitor_s_language(monkeypatch):
+@pytest.mark.parametrize(
+    ("locale", "retry"),
+    [
+        ("en", "try again in a few minutes"),
+        ("de", "versuche es in einigen Minuten erneut"),
+        ("es", "Inténtelo de nuevo dentro de unos minutos"),
+        ("fr", "réessayer dans quelques minutes"),
+    ],
+)
+def test_the_store_being_unreadable_is_said_in_the_visitor_s_language(
+    monkeypatch, locale, retry
+):
     """
     Most people submit in a browser, and a 503 body is not a page.
 
@@ -286,8 +300,10 @@ def test_the_store_being_unreadable_is_said_in_the_visitor_s_language(monkeypatc
     refused = test_client.post(
         "/",
         data={"target_url": "https://cloud.example.com"},
-        headers={"accept": "text/html", "accept-language": "de"},
+        headers={"accept": "text/html", "accept-language": locale},
     )
 
     assert refused.status_code == 503
-    assert "eigene Konfiguration" in refused.text
+    assert f'<html lang="{locale}">' in refused.text
+    assert Translator(locale)("error.store_unavailable") in unescape(refused.text)
+    assert retry in unescape(refused.text)

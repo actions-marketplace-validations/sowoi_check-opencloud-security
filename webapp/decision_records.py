@@ -82,4 +82,6 @@ RECORDS: tuple[tuple[str, str, str, str], ...] = (
     ("0072", "0072-remediation-verification-re-measures-named-findings-without-a-full-scan", "Remediation verification re-measures named findings without a full scan", "Proposed"),
     ("0073", "0073-a-result-fingerprints-the-configuration-it-measured", "A result fingerprints the configuration it measured", "Accepted"),
     ("0074", "0074-a-lost-measurement-warns-through-the-baseline-not-the-rating", "A lost measurement warns through the baseline, not the rating", "Accepted"),
+    ("0075", "0075-the-remediation-plan-groups-changes-by-where-they-are-made", "The remediation plan groups changes by where they are made", "Accepted"),
+    ("0076", "0076-a-fleet-summary-is-read-from-saved-reports-and-stores-nothing", "A fleet summary is read from saved reports and stores nothing", "Proposed"),
 )

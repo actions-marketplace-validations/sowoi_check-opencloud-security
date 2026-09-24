@@ -33,6 +33,7 @@
 * [Hardening checks](#hardening-checks)
 * [Explaining a rating](#explaining-a-rating)
 * [What would raise the rating](#what-would-raise-the-rating)
+  * [Grouped by where the change is made](#grouped-by-where-the-change-is-made)
 * [Webhook notifications](#webhook-notifications)
 * [Reporting only what changed](#reporting-only-what-changed)
 * [Is the plugin itself up to date?](#is-the-plugin-itself-up-to-date)
@@ -1222,6 +1223,38 @@ it does not fix anything, and the plan says so.
 
 The same plan appears on the web dashboard, in the JSON, CSV, SARIF and PDF
 exports, and as the `plan_remediation` MCP tool.
+
+## Grouped by where the change is made
+
+The plan also groups the open findings by the system you edit to fix them -
+the **reverse proxy**, the **identity provider**, **OpenCloud** itself, or the
+**DNS zone** - under `remediationPlan.groups`. It includes open findings that
+do not cap the rating, such as a missing header, because they are still a line
+in that system's configuration.
+
+Within a group, findings one edit resolves are one change: every missing
+security header is one header block, three certificate complaints are one new
+certificate, every member of a family such as `exposed:/...` is one fix, and
+the update closes every advisory matching the installed release. Each change
+names the findings it resolves, whether it `resolvesSeveral`, and the rating
+that change alone would give - the same rating function replayed, never an
+estimate. `groupSummary` names the changes that resolve several findings at
+once. Waived and hardcoded findings are not offered as changes.
+
+```text
+--- Changes grouped by where they are made ---
+1 change resolves several findings at once: stop serving the deployment directory (2).
+Reverse proxy: 2 finding(s), 4/5 (A) with every change here made
+  * Stop serving the deployment directory - resolves 2: exposed:/opencloud.yaml, directoryListing
+    Fix: Proxy every request to OpenCloud's own address instead of serving ...
+OpenCloud: 1 finding(s), 5/5 (A+) with every change here made
+  * HTTP Basic authentication is enabled - basicAuthDisabled
+    Fix: Set PROXY_ENABLE_BASIC_AUTH=false (the default) if nothing needs it ...
+```
+
+The web dashboard shows the groups as "What to change where", the remediation
+bundle lists them under "Changes by where they are made", and the
+`plan_remediation` MCP tool returns them.
 
 # Webhook notifications
 The plugin can post a JSON notification to an HTTP(S) endpoint when a check

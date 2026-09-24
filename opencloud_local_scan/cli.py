@@ -19,6 +19,12 @@ Command line entry point of the bundled scanner.
     comparison on staying quiet; this spends it on telling somebody what
     happened, which is the question after a change rather than during one.
 
+``fleet``
+    Summarise every result document in a directory: unsupported releases,
+    waivers about to run out, the findings many instances share, and the
+    instances nobody has looked at lately. Reads files only, like ``diff``,
+    and keeps nothing afterwards.
+
 ``explain``
     Look one finding identifier up in the catalogue without scanning
     anything. A monitoring system prints ``cspWithoutUnsafeInline`` at three
@@ -56,6 +62,15 @@ from .factory import release_settings_from_config, scanner_settings_from_config
 from .findings import ADVISORY_CATEGORY, Delta, severity_totals
 from .findings import CATEGORIES as FINDING_CATEGORIES
 from .findings import compare as compare_findings
+from .fleet import (
+    DEFAULT_STALE_AFTER_DAYS,
+    DEFAULT_TOP_FINDINGS,
+    DEFAULT_WINDOW_DAYS,
+    load_reports,
+    read_inventory,
+    summarise,
+)
+from .fleet import render as render_fleet
 from .hardening import (
     CATEGORIES,
     Hardening,
@@ -74,6 +89,7 @@ from .service import (
     ServiceMisconfigured,
     serve,
 )
+from .versions import load_release_schedule
 from .waivers import (
     FIELD_SEPARATOR,
     REVIEW_KINDS,
@@ -335,6 +351,81 @@ def build_arg_parser() -> argparse.ArgumentParser:
             "Always exit 0. Without it, a comparison that got worse exits 1 so "
             "a pipeline can gate on it."
         ),
+    )
+
+    fleet_parser = sub.add_parser(
+        "fleet",
+        help="Summarise many saved result documents as one dashboard.",
+        description=(
+            "Read result documents written by `scan` - files, or directories "
+            "searched for *.json - and summarise the newest one per host: "
+            "unsupported releases, waiver deadlines, the findings many hosts "
+            "share and the hosts nobody has looked at lately. Reads files "
+            "only: it never scans anything and stores nothing."
+        ),
+    )
+    fleet_parser.add_argument(
+        "paths",
+        nargs="+",
+        type=Path,
+        metavar="PATH",
+        help="Result documents, or directories holding them.",
+    )
+    fleet_parser.add_argument(
+        "--format",
+        dest="fleet_format",
+        choices=("text", "markdown", "html", "json"),
+        default="text",
+        help=(
+            "Aligned tables, Markdown, one self-contained HTML page, or the "
+            "structured summary. Default: text."
+        ),
+    )
+    fleet_parser.add_argument(
+        "--window",
+        type=int,
+        default=DEFAULT_WINDOW_DAYS,
+        metavar="DAYS",
+        help=(
+            "Show waivers and support windows that end within DAYS days. "
+            f"Default: {DEFAULT_WINDOW_DAYS}."
+        ),
+    )
+    fleet_parser.add_argument(
+        "--stale-after",
+        type=int,
+        default=DEFAULT_STALE_AFTER_DAYS,
+        metavar="DAYS",
+        help=(
+            "Count a host as not covered when its newest report is older than "
+            f"DAYS days; 0 turns this off. Default: {DEFAULT_STALE_AFTER_DAYS}."
+        ),
+    )
+    fleet_parser.add_argument(
+        "--top",
+        type=int,
+        default=DEFAULT_TOP_FINDINGS,
+        metavar="N",
+        help=(
+            "List the N most common findings; 0 lists all of them. "
+            f"Default: {DEFAULT_TOP_FINDINGS}."
+        ),
+    )
+    fleet_parser.add_argument(
+        "--expect",
+        action="append",
+        default=[],
+        metavar="HOST",
+        help=(
+            "A host the fleet should have a report for. Repeatable, or comma "
+            "separated. A host without one is listed as missing coverage."
+        ),
+    )
+    fleet_parser.add_argument(
+        "--inventory",
+        type=Path,
+        metavar="FILE",
+        help="A file of expected hosts, one per line, '#' starting a comment.",
     )
 
     explain_parser = sub.add_parser(
@@ -838,6 +929,54 @@ def _run_diff(args: argparse.Namespace) -> int:
     return 1 if comparison.regressed else 0
 
 
+def _run_fleet(args: argparse.Namespace, scanner_settings) -> int:
+    """
+    Summarise the saved result documents of a fleet.
+
+    The configuration is read for one thing only: which release schedule this
+    installation trusts, so a report's version is placed in the same schedule
+    the plugin would use today. Nothing else about a scan applies to files.
+    """
+    for name in ("window", "stale_after", "top"):
+        if getattr(args, name) < 0:
+            LOGGER.error("--%s cannot be negative.", name.replace("_", "-"))
+            return 2
+    expected = [
+        host.strip() for value in args.expect for host in value.split(",") if host.strip()
+    ]
+    if args.inventory is not None:
+        try:
+            expected.extend(read_inventory(args.inventory))
+        except OSError as exc:
+            LOGGER.error("Cannot read the inventory %s: %s", args.inventory, exc)
+            return 2
+
+    # A skipped file is listed in the summary itself rather than logged, so
+    # the JSON form carries it too and nothing is said twice.
+    reports, skipped = load_reports(args.paths)
+    if not reports and not expected:
+        LOGGER.error(
+            "No result documents found in %s. Write them with "
+            "`check-opencloud-scanner scan HOST > HOST.json`.",
+            ", ".join(str(path) for path in args.paths),
+        )
+        return 2
+
+    schedule = None
+    if scanner_settings.use_release_schedule:
+        schedule = scanner_settings.release_schedule or load_release_schedule()
+    summary = summarise(
+        reports,
+        skipped=skipped,
+        expected=expected,
+        schedule=schedule,
+        window_days=args.window,
+        stale_after_days=args.stale_after,
+    )
+    print(render_fleet(summary, args.fleet_format, top=args.top))
+    return 0
+
+
 def _catalogue() -> list[Hardening]:
     """
     Every entry this build can explain, in the order the categories are listed.
@@ -1083,6 +1222,8 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "scan":
         return _run_scan(args, scanner_settings, release_settings)
+    if args.command == "fleet":
+        return _run_fleet(args, scanner_settings)
 
     store = ScanStore(
         scanner_settings=scanner_settings,

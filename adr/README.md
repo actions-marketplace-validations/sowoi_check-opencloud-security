@@ -81,6 +81,8 @@ project. Read the accepted records that affect an area before changing it.
 | [0072](0072-remediation-verification-re-measures-named-findings-without-a-full-scan.md) | Remediation verification re-measures named findings without a full scan | Proposed |
 | [0073](0073-a-result-fingerprints-the-configuration-it-measured.md) | A result fingerprints the configuration it measured | Accepted |
 | [0074](0074-a-lost-measurement-warns-through-the-baseline-not-the-rating.md) | A lost measurement warns through the baseline, not the rating | Accepted |
+| [0075](0075-the-remediation-plan-groups-changes-by-where-they-are-made.md) | The remediation plan groups changes by where they are made | Accepted |
+| [0076](0076-a-fleet-summary-is-read-from-saved-reports-and-stores-nothing.md) | A fleet summary is read from saved reports and stores nothing | Proposed |
 
 ## Writing a new record
 

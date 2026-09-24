@@ -173,6 +173,52 @@ Jeder Namensraum wird nur gefiltert, wenn du einen Wert dafür angibst: `--categ
 
 Eine gefilterte Erklärung lässt die `[limitation]`-Zeilen weg, weil diese den gesamten Vergleich einschränken und nicht eine einzelne Kategorie davon.
 
+## `fleet`: Übersicht aus gespeicherten Ergebnissen {#fleet-a-dashboard-from-saved-results}
+
+```bash
+today="/var/lib/opencloud-reports/$(date +%F)"
+mkdir -p "$today"
+for host in cloud1.example.com cloud2.example.com cloud3.example.com; do
+  check-opencloud-scanner scan "$host" > "$today/$host.json"
+done
+check-opencloud-scanner fleet /var/lib/opencloud-reports
+check-opencloud-scanner fleet /var/lib/opencloud-reports --format html > fleet.html
+```
+
+`fleet` liest Ergebnisdokumente von `scan` – einzelne Dateien oder Verzeichnisse, die rekursiv nach `*.json` durchsucht werden – und fasst den **neuesten Bericht jedes Hosts** zusammen. Es scannt nichts und speichert nichts. Wie du die Berichte sammelst, per Cronjob, CI-Artefakt oder gemeinsamem Verzeichnis, bleibt dir überlassen.
+
+| Abschnitt | Inhalt |
+|:--|:--|
+| Hosts | Eine Zeile pro Host: Version, Bewertung, Release-Linie, offene und ausgenommene Befunde, Abdeckungslücken und Alter des Berichts |
+| Unsupported releases | Releases ohne Support, Releases, deren Support innerhalb des Zeitfensters endet, und Versionen, die der Zeitplan nicht kennt |
+| Waiver deadlines | Befristete Ausnahmen, nach deren Ablauf eine fehlgeschlagene Prüfung innerhalb des Zeitfensters wieder alarmiert – oder schon alarmiert |
+| Common findings | Die fehlgeschlagenen Befunde, die die meisten Hosts teilen, schwerste zuerst |
+| Missing coverage | Erwartete Hosts ohne Bericht, Hosts mit fehlgeschlagenem letzten Scan, veraltete Berichte und Berichte ohne Abdeckungsblock |
+| Checks not evaluated | Prüfungen, die die Scans übersprungen oder nicht entscheiden konnten, und auf wie vielen Hosts |
+
+Ein Bericht belegt den Tag, an dem er entstand. Zwei Dinge werden deshalb gegen **heute** neu bewertet:
+
+- **Das Release.** Die gespeicherte Version wird erneut im Release-Zeitplan dieser Installation eingeordnet – dem mitgelieferten oder dem in der Konfiguration genannten, wie beim Plugin. Eine Linie, deren Support nach dem Bericht endete, erscheint mit dem Hinweis `since the scan`. End of Life ist endgültig; ein Bericht, der es schon meldete, wird immer aufgeführt.
+- **Die Frist einer Ausnahme.** Eine im Bericht aktive Ausnahme kann inzwischen abgelaufen sein. Aufgeführt wird nur eine Frist, nach der eine Prüfung wirklich wieder alarmiert – nach derselben Regel wie `--waiver-warning` des Plugins.
+
+Häufige Befunde lassen weg, was niemand ändern kann: Flags, die OpenCloud fest vorgibt, und Header, die kein OpenCloud sendet. Ausgenommene Befunde werden mitgezählt; die Spalte `Waived` zeigt, auf wie vielen Hosts.
+
+| Option | Funktion |
+|:--|:--|
+| `--format text` | Ausgerichtete Tabellen; Standard |
+| `--format markdown` | Markdown-Tabellen für ein Ticket oder ein Wiki |
+| `--format html` | Eine eigenständige Seite ohne Skripte, Schriften oder externe Abrufe, mit hellem und dunklem Modus |
+| `--format json` | Die strukturierte Zusammenfassung in camelCase wie das Ergebnisdokument |
+| `--window DAYS` | Ausnahmen und Support-Zeiträume zeigen, die innerhalb von `DAYS` Tagen enden; Standard `30` |
+| `--stale-after DAYS` | Einen Host als nicht abgedeckt zählen, wenn sein neuester Bericht älter ist; Standard `7`, `0` schaltet das ab |
+| `--top N` | Die `N` häufigsten Befunde auflisten; Standard `10`, `0` listet alle |
+| `--expect HOST` | Ein Host, für den ein Bericht vorliegen sollte; mehrfach oder kommagetrennt angebbar |
+| `--inventory FILE` | Erwartete Hosts aus einer Datei, einer pro Zeile, `#` leitet einen Kommentar ein |
+
+Hosts werden über Name und Port zugeordnet: `https://opencloud.example.com/` und `opencloud.example.com` sind derselbe Host, `opencloud.example.com:9200` ist ein anderer. Gib den Port bei `--expect` an, wenn die Instanz auf einem eigenen Port gescannt wird.
+
+Der Exitcode ist `0`, sobald eine Zusammenfassung ausgegeben wurde, egal wie schlecht die Flotte aussieht. `2` bedeutet, dass kein Ergebnisdokument gefunden und kein Host erwartet wurde. Eine Datei, die kein Ergebnisdokument ist, ist kein Fehler; sie erscheint unter *Files skipped*.
+
 ## `explain`: Befunde erklären {#explain-what-a-finding-means-and-how-to-fix-it}
 
 ```bash
@@ -332,6 +378,7 @@ Die Scanner-CLI verwendet eigene Exitcodes. Ein erfolgreich gescannter Host mit 
 |:--|:--|:--|:--|:--|
 | `scan` | Alle Hosts gescannt | Mindestens ein Host nicht scanbar | Ungültige Konfiguration | – |
 | `diff` | Keine Verschlechterung | Zweites Ergebnis schlechter | Dateien nicht vergleichbar | – |
+| `fleet` | Zusammenfassung ausgegeben | – | Kein Ergebnisdokument gefunden oder Inventar nicht lesbar | – |
 | `explain` | Ausgabe erstellt | Unbekannte Kennung oder leere Kategorie | – | – |
 | `review-waivers` | Nichts aufzuräumen | Mindestens eine Ausnahme gelistet | Ungültige Ausnahme, Zeitangabe oder `--result`-Datei | – |
 | `refresh-data` | Beide Dateien geschrieben | Nichts geschrieben; siehe stderr | – | – |

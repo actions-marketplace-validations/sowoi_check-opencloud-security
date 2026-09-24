@@ -20,6 +20,7 @@
   <a href="#global-options" lang="es">Opciones globales</a>
   <a href="#scan-print-the-result-document" lang="es"><code>scan</code>: imprimir el documento de resultado</a>
   <a href="#diff-what-changed-between-two-saved-results" lang="es"><code>diff</code>: qué ha cambiado entre dos resultados guardados</a>
+  <a href="#fleet-a-dashboard-from-saved-results" lang="es"><code>fleet</code>: un panel a partir de resultados guardados</a>
   <a href="#explain-what-a-finding-means-and-how-to-fix-it" lang="es"><code>explain</code>: qué significa un hallazgo y cómo corregirlo</a>
   <a href="#review-waivers-waivers-that-need-attention" lang="es"><code>review-waivers</code>: exenciones que requieren atención</a>
   <a href="#refresh-data-update-the-release-schedule-and-advisories" lang="es"><code>refresh-data</code>: actualizar el calendario de versiones y los avisos de seguridad</a>
@@ -47,6 +48,7 @@
 <li><a href="#global-options">Opciones globales</a></li>
 <li><a href="#scan---print-the-result-document"><code>scan</code>: imprimir el documento de resultado</a></li>
 <li><a href="#diff---what-changed-between-two-saved-results"><code>diff</code>: qué ha cambiado entre dos resultados guardados</a></li>
+<li><a href="#fleet---a-dashboard-from-saved-results"><code>fleet</code>: un panel a partir de resultados guardados</a></li>
 <li><a href="#explain---what-a-finding-means-and-how-to-fix-it"><code>explain</code>: qué significa un hallazgo y cómo corregirlo</a></li>
 <li><a href="#review-waivers---waivers-that-need-attention"><code>review-waivers</code>: exenciones que requieren atención</a></li>
 <li><a href="#refresh-data---update-the-release-schedule-and-advisories"><code>refresh-data</code>: actualizar el calendario de versiones y los avisos de seguridad</a></li>
@@ -295,6 +297,125 @@ check-opencloud-scanner diff before.json after.json --category instance
 </code></pre>
 <p>Cada espacio de nombres se filtra solo cuando se le da un valor, así que <code>--category transport</code> deja intacta la explicación y <code>--category instance</code> deja intactos los hallazgos. La opción se puede repetir, y un valor desconocido se rechaza con el código de salida <code>2</code> en lugar de no mostrar nada: una errata que imprimiera una comparación vacía se leería como «no ha cambiado nada».</p>
 <p>Una explicación filtrada omite las líneas <code>[limitation]</code>, porque estas matizan la comparación entera y no una de sus categorías.</p>
+<h2 id="fleet-a-dashboard-from-saved-results"><code>fleet</code>: un panel a partir de resultados guardados</h2>
+<pre><code class="language-bash">today=&quot;/var/lib/opencloud-reports/$(date +%F)&quot;
+mkdir -p &quot;$today&quot;
+for host in cloud1.example.com cloud2.example.com cloud3.example.com; do
+  check-opencloud-scanner scan &quot;$host&quot; &gt; &quot;$today/$host.json&quot;
+done
+check-opencloud-scanner fleet /var/lib/opencloud-reports
+check-opencloud-scanner fleet /var/lib/opencloud-reports --format html &gt; fleet.html
+</code></pre>
+<p>Lee documentos de resultado escritos por <code>scan</code> (archivos, o directorios en
+los que busca <code>*.json</code> de forma recursiva) y resume el <strong>informe más reciente
+de cada host</strong>. No analiza nada ni almacena nada: la recopilación de los
+informes, con una tarea cron, un almacén de artefactos de CI o un directorio
+compartido, queda a cargo de lo que usted ya utilice.</p>
+<table>
+<thead>
+<tr>
+<th>Sección</th>
+<th>Qué muestra</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Hosts</td>
+<td>Una fila por host: versión, calificación, línea de versiones, hallazgos fallidos y exentos, huecos de cobertura y antigüedad del informe</td>
+</tr>
+<tr>
+<td>Unsupported releases</td>
+<td>Versiones sin soporte, versiones cuyo soporte termina dentro de la ventana y versiones que el calendario no conoce</td>
+</tr>
+<tr>
+<td>Waiver deadlines</td>
+<td>Exenciones temporales tras las cuales una comprobación fallida vuelve a alertar dentro de la ventana, o ya alerta</td>
+</tr>
+<tr>
+<td>Common findings</td>
+<td>Los hallazgos fallidos que comparten más hosts, primero los más graves</td>
+</tr>
+<tr>
+<td>Missing coverage</td>
+<td>Hosts esperados sin informe, hosts cuyo último análisis falló, informes antiguos e informes sin bloque de cobertura</td>
+</tr>
+<tr>
+<td>Checks not evaluated</td>
+<td>Comprobaciones que los análisis omitieron o no pudieron decidir, y en cuántos hosts</td>
+</tr>
+</tbody>
+</table>
+<p>Un informe es prueba del día en que se escribió, así que dos cosas se
+vuelven a evaluar respecto a <strong>hoy</strong>:</p>
+<ul>
+<li><strong>La versión.</strong> La versión registrada se sitúa de nuevo en el calendario de
+  versiones de esta instalación: el incluido, o el archivo que indique la
+  configuración, igual que en el complemento. Una línea cuyo soporte terminó
+  después del informe aparece con la nota <code>since the scan</code>. El fin de vida es
+  definitivo: un informe que ya lo indicaba siempre se lista.</li>
+<li><strong>El plazo de una exención.</strong> Una exención activa en el informe puede haber
+  vencido desde entonces. Solo se lista un plazo tras el cual una comprobación
+  vuelve a alertar de verdad, con la misma regla que <code>--waiver-warning</code> del
+  complemento.</li>
+</ul>
+<p>Los hallazgos comunes omiten lo que ningún administrador puede cambiar: los
+indicadores que OpenCloud fija en el código y las cabeceras que ningún
+OpenCloud envía. Un hallazgo exento se cuenta, y la columna <code>Waived</code> indica en
+cuántos hosts.</p>
+<table>
+<thead>
+<tr>
+<th>Opción</th>
+<th>Qué hace</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--format text</code></td>
+<td>Tablas alineadas. Es el valor predeterminado</td>
+</tr>
+<tr>
+<td><code>--format markdown</code></td>
+<td>Tablas Markdown, para un ticket o una wiki</td>
+</tr>
+<tr>
+<td><code>--format html</code></td>
+<td>Una página autónoma: sin scripts, sin fuentes, sin descargas, con modo claro y oscuro</td>
+</tr>
+<tr>
+<td><code>--format json</code></td>
+<td>El resumen estructurado, en camelCase como el documento de resultado</td>
+</tr>
+<tr>
+<td><code>--window DAYS</code></td>
+<td>Mostrar exenciones y periodos de soporte que terminan en <code>DAYS</code> días. Predeterminado <code>30</code></td>
+</tr>
+<tr>
+<td><code>--stale-after DAYS</code></td>
+<td>Contar un host como no cubierto si su informe más reciente es más antiguo. Predeterminado <code>7</code>; <code>0</code> lo desactiva</td>
+</tr>
+<tr>
+<td><code>--top N</code></td>
+<td>Listar los <code>N</code> hallazgos más comunes. Predeterminado <code>10</code>; <code>0</code> los lista todos</td>
+</tr>
+<tr>
+<td><code>--expect HOST</code></td>
+<td>Un host que debería tener un informe. Repetible, o separado por comas</td>
+</tr>
+<tr>
+<td><code>--inventory FILE</code></td>
+<td>Hosts esperados desde un archivo, uno por línea; <code>#</code> inicia un comentario</td>
+</tr>
+</tbody>
+</table>
+<p>Un host se identifica por nombre y puerto: <code>https://opencloud.example.com/</code> y
+<code>opencloud.example.com</code> son el mismo host, y <code>opencloud.example.com:9200</code> es
+otro. Indique el puerto en <code>--expect</code> cuando la instancia se analice en uno
+propio.</p>
+<p>Termina con <code>0</code> siempre que haya impreso un resumen, por mal que esté la
+flota. Termina con <code>2</code> cuando no encontró ningún documento de resultado y no
+se esperaba ningún host. Un archivo que no es un documento de resultado no es
+un error; se nombra en <em>Files skipped</em>.</p>
 <h2 id="explain-what-a-finding-means-and-how-to-fix-it"><code>explain</code>: qué significa un hallazgo y cómo corregirlo</h2>
 <pre><code class="language-bash">check-opencloud-scanner explain basicAuthDisabled
 </code></pre>
@@ -629,6 +750,13 @@ tarea del complemento.</p>
 <td>Nada ha empeorado</td>
 <td>El resultado posterior es peor</td>
 <td>Los archivos no se pueden comparar</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>fleet</code></td>
+<td>Resumen impreso</td>
+<td>-</td>
+<td>No se encontró ningún documento de resultado, o el inventario no se puede leer</td>
 <td>-</td>
 </tr>
 <tr>

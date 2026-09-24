@@ -383,6 +383,78 @@ def _schemas() -> dict[str, Any]:
                         "they simply did not count."
                     ),
                 },
+                "groups": {
+                    "type": "array",
+                    "items": {"$ref": "#/components/schemas/RemediationGroup"},
+                    "description": (
+                        "The open findings grouped by where the change is "
+                        "made, including those that cap nothing, such as a "
+                        "missing header. Only groups with something open are "
+                        "listed."
+                    ),
+                },
+                "groupSummary": {
+                    "type": "string",
+                    "description": (
+                        "The changes that resolve several findings at once, "
+                        "in one sentence; empty when each resolves one."
+                    ),
+                },
+            },
+        },
+        "RemediationGroup": {
+            "type": "object",
+            "description": (
+                "Everything to change in one place: the reverse proxy, the "
+                "identity provider, OpenCloud itself, or the DNS zone."
+            ),
+            "properties": {
+                "target": {
+                    "type": "string",
+                    "enum": ["reverseProxy", "identityProvider", "opencloud", "dnsZone"],
+                },
+                "title": {"type": "string"},
+                "findings": {
+                    "type": "integer",
+                    "description": "How many open findings the changes here resolve.",
+                },
+                "ratingAfter": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 5,
+                    "description": "The rating with every change in this group made.",
+                },
+                "label": {"type": "string"},
+                "changes": {
+                    "type": "array",
+                    "items": {"$ref": "#/components/schemas/RemediationChange"},
+                },
+            },
+        },
+        "RemediationChange": {
+            "type": "object",
+            "description": (
+                "One edit, and every finding it resolves. The ones resolving "
+                "the most findings come first."
+            ),
+            "properties": {
+                "id": {"type": "string"},
+                "title": {"type": "string"},
+                "action": {"type": "string"},
+                "findings": {"type": "array", "items": {"type": "string"}},
+                "steps": {
+                    "type": "array",
+                    "items": {"type": "integer"},
+                    "description": "The plan steps among those findings, by order.",
+                },
+                "resolvesSeveral": {"type": "boolean"},
+                "ratingAfter": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 5,
+                    "description": "The rating with this change alone made.",
+                },
+                "label": {"type": "string"},
             },
         },
         "ScanSummary": {

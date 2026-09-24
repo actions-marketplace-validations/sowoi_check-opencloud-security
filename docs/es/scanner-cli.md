@@ -18,6 +18,7 @@ Esta página es la referencia del segundo.
   * [Opciones globales](#global-options)
   * [`scan`: imprimir el documento de resultado](#scan---print-the-result-document)
   * [`diff`: qué ha cambiado entre dos resultados guardados](#diff---what-changed-between-two-saved-results)
+  * [`fleet`: un panel a partir de resultados guardados](#fleet---a-dashboard-from-saved-results)
   * [`explain`: qué significa un hallazgo y cómo corregirlo](#explain---what-a-finding-means-and-how-to-fix-it)
   * [`review-waivers`: exenciones que requieren atención](#review-waivers---waivers-that-need-attention)
   * [`refresh-data`: actualizar el calendario de versiones y los avisos de seguridad](#refresh-data---update-the-release-schedule-and-advisories)
@@ -217,6 +218,73 @@ check-opencloud-scanner diff before.json after.json --category instance
 Cada espacio de nombres se filtra solo cuando se le da un valor, así que `--category transport` deja intacta la explicación y `--category instance` deja intactos los hallazgos. La opción se puede repetir, y un valor desconocido se rechaza con el código de salida `2` en lugar de no mostrar nada: una errata que imprimiera una comparación vacía se leería como «no ha cambiado nada».
 
 Una explicación filtrada omite las líneas `[limitation]`, porque estas matizan la comparación entera y no una de sus categorías.
+
+## `fleet`: un panel a partir de resultados guardados {#fleet-a-dashboard-from-saved-results}
+
+```bash
+today="/var/lib/opencloud-reports/$(date +%F)"
+mkdir -p "$today"
+for host in cloud1.example.com cloud2.example.com cloud3.example.com; do
+  check-opencloud-scanner scan "$host" > "$today/$host.json"
+done
+check-opencloud-scanner fleet /var/lib/opencloud-reports
+check-opencloud-scanner fleet /var/lib/opencloud-reports --format html > fleet.html
+```
+
+Lee documentos de resultado escritos por `scan` (archivos, o directorios en
+los que busca `*.json` de forma recursiva) y resume el **informe más reciente
+de cada host**. No analiza nada ni almacena nada: la recopilación de los
+informes, con una tarea cron, un almacén de artefactos de CI o un directorio
+compartido, queda a cargo de lo que usted ya utilice.
+
+| Sección | Qué muestra |
+|:--|:--|
+| Hosts | Una fila por host: versión, calificación, línea de versiones, hallazgos fallidos y exentos, huecos de cobertura y antigüedad del informe |
+| Unsupported releases | Versiones sin soporte, versiones cuyo soporte termina dentro de la ventana y versiones que el calendario no conoce |
+| Waiver deadlines | Exenciones temporales tras las cuales una comprobación fallida vuelve a alertar dentro de la ventana, o ya alerta |
+| Common findings | Los hallazgos fallidos que comparten más hosts, primero los más graves |
+| Missing coverage | Hosts esperados sin informe, hosts cuyo último análisis falló, informes antiguos e informes sin bloque de cobertura |
+| Checks not evaluated | Comprobaciones que los análisis omitieron o no pudieron decidir, y en cuántos hosts |
+
+Un informe es prueba del día en que se escribió, así que dos cosas se
+vuelven a evaluar respecto a **hoy**:
+
+- **La versión.** La versión registrada se sitúa de nuevo en el calendario de
+  versiones de esta instalación: el incluido, o el archivo que indique la
+  configuración, igual que en el complemento. Una línea cuyo soporte terminó
+  después del informe aparece con la nota `since the scan`. El fin de vida es
+  definitivo: un informe que ya lo indicaba siempre se lista.
+- **El plazo de una exención.** Una exención activa en el informe puede haber
+  vencido desde entonces. Solo se lista un plazo tras el cual una comprobación
+  vuelve a alertar de verdad, con la misma regla que `--waiver-warning` del
+  complemento.
+
+Los hallazgos comunes omiten lo que ningún administrador puede cambiar: los
+indicadores que OpenCloud fija en el código y las cabeceras que ningún
+OpenCloud envía. Un hallazgo exento se cuenta, y la columna `Waived` indica en
+cuántos hosts.
+
+| Opción | Qué hace |
+|:--|:--|
+| `--format text` | Tablas alineadas. Es el valor predeterminado |
+| `--format markdown` | Tablas Markdown, para un ticket o una wiki |
+| `--format html` | Una página autónoma: sin scripts, sin fuentes, sin descargas, con modo claro y oscuro |
+| `--format json` | El resumen estructurado, en camelCase como el documento de resultado |
+| `--window DAYS` | Mostrar exenciones y periodos de soporte que terminan en `DAYS` días. Predeterminado `30` |
+| `--stale-after DAYS` | Contar un host como no cubierto si su informe más reciente es más antiguo. Predeterminado `7`; `0` lo desactiva |
+| `--top N` | Listar los `N` hallazgos más comunes. Predeterminado `10`; `0` los lista todos |
+| `--expect HOST` | Un host que debería tener un informe. Repetible, o separado por comas |
+| `--inventory FILE` | Hosts esperados desde un archivo, uno por línea; `#` inicia un comentario |
+
+Un host se identifica por nombre y puerto: `https://opencloud.example.com/` y
+`opencloud.example.com` son el mismo host, y `opencloud.example.com:9200` es
+otro. Indique el puerto en `--expect` cuando la instancia se analice en uno
+propio.
+
+Termina con `0` siempre que haya impreso un resumen, por mal que esté la
+flota. Termina con `2` cuando no encontró ningún documento de resultado y no
+se esperaba ningún host. Un archivo que no es un documento de resultado no es
+un error; se nombra en *Files skipped*.
 
 ## `explain`: qué significa un hallazgo y cómo corregirlo {#explain-what-a-finding-means-and-how-to-fix-it}
 
@@ -419,6 +487,7 @@ tarea del complemento.
 |:--|:--|:--|:--|:--|
 | `scan` | Se han analizado todos los hosts | Al menos un host no se pudo analizar | Configuración no válida | - |
 | `diff` | Nada ha empeorado | El resultado posterior es peor | Los archivos no se pueden comparar | - |
+| `fleet` | Resumen impreso | - | No se encontró ningún documento de resultado, o el inventario no se puede leer | - |
 | `explain` | Impreso | Identificador desconocido o categoría vacía | - | - |
 | `review-waivers` | Nada que limpiar | Al menos una exención listada | Exención, marca de tiempo o archivo `--result` no válidos | - |
 | `refresh-data` | Se han escrito ambos archivos | No se ha escrito nada; consulte stderr | - | - |

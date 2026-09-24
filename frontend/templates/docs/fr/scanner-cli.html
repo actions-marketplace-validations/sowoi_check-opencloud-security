@@ -20,6 +20,7 @@
   <a href="#global-options" lang="fr">Options globales</a>
   <a href="#scan-print-the-result-document" lang="fr"><code>scan</code> - afficher le document de résultat</a>
   <a href="#diff-what-changed-between-two-saved-results" lang="fr"><code>diff</code> - ce qui a changé entre deux résultats enregistrés</a>
+  <a href="#fleet-a-dashboard-from-saved-results" lang="fr"><code>fleet</code> - un tableau de bord à partir de résultats enregistrés</a>
   <a href="#explain-what-a-finding-means-and-how-to-fix-it" lang="fr"><code>explain</code> - ce que signifie un constat et comment le corriger</a>
   <a href="#review-waivers-waivers-that-need-attention" lang="fr"><code>review-waivers</code> - les exemptions à revoir</a>
   <a href="#refresh-data-update-the-release-schedule-and-advisories" lang="fr"><code>refresh-data</code> - actualiser le calendrier des versions et les avis de sécurité</a>
@@ -47,6 +48,7 @@
 <li><a href="#global-options">Options globales</a></li>
 <li><a href="#scan---print-the-result-document"><code>scan</code> - afficher le document de résultat</a></li>
 <li><a href="#diff---what-changed-between-two-saved-results"><code>diff</code> - ce qui a changé entre deux résultats enregistrés</a></li>
+<li><a href="#fleet---a-dashboard-from-saved-results"><code>fleet</code> - un tableau de bord à partir de résultats enregistrés</a></li>
 <li><a href="#explain---what-a-finding-means-and-how-to-fix-it"><code>explain</code> - ce que signifie un constat et comment le corriger</a></li>
 <li><a href="#review-waivers---waivers-that-need-attention"><code>review-waivers</code> - les exemptions à revoir</a></li>
 <li><a href="#refresh-data---update-the-release-schedule-and-advisories"><code>refresh-data</code> - actualiser le calendrier des versions et les avis de sécurité</a></li>
@@ -310,6 +312,126 @@ corrigés. <code>--exit-zero</code> désactive cette barrière.</p>
   exemple, il ne contient pas de note, ou il s'agit de l'entrée d'erreur d'une
   instance qui n'a pas pu être analysée.</li>
 </ul>
+<h2 id="fleet-a-dashboard-from-saved-results"><code>fleet</code> - un tableau de bord à partir de résultats enregistrés</h2>
+<pre><code class="language-bash">today=&quot;/var/lib/opencloud-reports/$(date +%F)&quot;
+mkdir -p &quot;$today&quot;
+for host in cloud1.example.com cloud2.example.com cloud3.example.com; do
+  check-opencloud-scanner scan &quot;$host&quot; &gt; &quot;$today/$host.json&quot;
+done
+check-opencloud-scanner fleet /var/lib/opencloud-reports
+check-opencloud-scanner fleet /var/lib/opencloud-reports --format html &gt; fleet.html
+</code></pre>
+<p>Elle lit les documents de résultat écrits par <code>scan</code> - des fichiers, ou des
+répertoires parcourus récursivement à la recherche de <code>*.json</code> - et résume le
+<strong>rapport le plus récent de chaque hôte</strong>. Elle n'analyse rien et ne stocke
+rien : la collecte des rapports, par une tâche cron, un stockage d'artefacts
+de CI ou un répertoire partagé, reste à l'outil que vous utilisez déjà.</p>
+<table>
+<thead>
+<tr>
+<th>Section</th>
+<th>Ce qu'elle montre</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Hosts</td>
+<td>Une ligne par hôte : version, note, ligne de version, constats en échec et exemptés, lacunes de couverture et âge du rapport</td>
+</tr>
+<tr>
+<td>Unsupported releases</td>
+<td>Les versions en fin de vie, celles dont le support se termine dans la fenêtre, et les versions que le calendrier ne connaît pas</td>
+</tr>
+<tr>
+<td>Waiver deadlines</td>
+<td>Les exemptions temporaires après lesquelles un contrôle en échec alertera de nouveau dans la fenêtre, ou alerte déjà</td>
+</tr>
+<tr>
+<td>Common findings</td>
+<td>Les constats en échec partagés par le plus d'hôtes, les plus graves d'abord</td>
+</tr>
+<tr>
+<td>Missing coverage</td>
+<td>Les hôtes attendus sans rapport, ceux dont le dernier scan a échoué, les rapports trop anciens et ceux sans bloc de couverture</td>
+</tr>
+<tr>
+<td>Checks not evaluated</td>
+<td>Les contrôles que les scans ont ignorés ou n'ont pas pu trancher, et sur combien d'hôtes</td>
+</tr>
+</tbody>
+</table>
+<p>Un rapport témoigne du jour où il a été écrit ; deux éléments sont donc
+réévalués par rapport à <strong>aujourd'hui</strong> :</p>
+<ul>
+<li><strong>La version.</strong> La version enregistrée est replacée dans le calendrier des
+  versions de cette installation - celui fourni, ou le fichier indiqué dans la
+  configuration, comme pour le plugin. Une ligne dont le support s'est terminé
+  après le rapport porte la mention <code>since the scan</code>. La fin de vie est
+  définitive : un rapport qui l'indiquait déjà est toujours listé.</li>
+<li><strong>L'échéance d'une exemption.</strong> Une exemption active dans le rapport a pu
+  expirer depuis. Seule une échéance après laquelle un contrôle alerte
+  réellement de nouveau est listée, selon la même règle que
+  <code>--waiver-warning</code> du plugin.</li>
+</ul>
+<p>Les constats fréquents omettent ce qu'aucun administrateur ne peut changer :
+les indicateurs qu'OpenCloud fixe en dur et les en-têtes qu'aucun OpenCloud
+n'envoie. Un constat exempté est compté, et la colonne <code>Waived</code> indique sur
+combien d'hôtes.</p>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Effet</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--format text</code></td>
+<td>Des tableaux alignés. Par défaut</td>
+</tr>
+<tr>
+<td><code>--format markdown</code></td>
+<td>Des tableaux Markdown, pour un ticket ou un wiki</td>
+</tr>
+<tr>
+<td><code>--format html</code></td>
+<td>Une page autonome : aucun script, aucune police, rien n'est téléchargé, modes clair et sombre</td>
+</tr>
+<tr>
+<td><code>--format json</code></td>
+<td>Le résumé structuré, en camelCase comme le document de résultat</td>
+</tr>
+<tr>
+<td><code>--window DAYS</code></td>
+<td>Afficher les exemptions et les périodes de support qui se terminent dans <code>DAYS</code> jours. Par défaut <code>30</code></td>
+</tr>
+<tr>
+<td><code>--stale-after DAYS</code></td>
+<td>Considérer un hôte comme non couvert si son rapport le plus récent est plus ancien. Par défaut <code>7</code>, <code>0</code> désactive</td>
+</tr>
+<tr>
+<td><code>--top N</code></td>
+<td>Lister les <code>N</code> constats les plus fréquents. Par défaut <code>10</code>, <code>0</code> les liste tous</td>
+</tr>
+<tr>
+<td><code>--expect HOST</code></td>
+<td>Un hôte qui devrait avoir un rapport. Répétable, ou séparé par des virgules</td>
+</tr>
+<tr>
+<td><code>--inventory FILE</code></td>
+<td>Les hôtes attendus, depuis un fichier, un par ligne, <code>#</code> commençant un commentaire</td>
+</tr>
+</tbody>
+</table>
+<p>Un hôte est identifié par son nom et son port : <code>https://opencloud.example.com/</code>
+et <code>opencloud.example.com</code> sont le même hôte, <code>opencloud.example.com:9200</code> en
+est un autre. Indiquez le port dans <code>--expect</code> lorsque l'instance est analysée
+sur un port particulier.</p>
+<p>La commande se termine avec <code>0</code> dès qu'elle a affiché un résumé, quel que soit
+l'état de la flotte. Elle se termine avec <code>2</code> si elle n'a trouvé aucun
+document de résultat et qu'aucun hôte n'était attendu. Un fichier qui n'est
+pas un document de résultat n'est pas une erreur ; il est nommé sous
+<em>Files skipped</em>.</p>
 <h2 id="explain-what-a-finding-means-and-how-to-fix-it"><code>explain</code> - ce que signifie un constat et comment le corriger</h2>
 <pre><code class="language-bash">check-opencloud-scanner explain basicAuthDisabled
 </code></pre>
@@ -644,6 +766,13 @@ travail du plugin.</p>
 <td>Rien n'a empiré</td>
 <td>Le résultat le plus récent est moins bon</td>
 <td>Les fichiers ne peuvent pas être comparés</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>fleet</code></td>
+<td>Résumé affiché</td>
+<td>-</td>
+<td>Aucun document de résultat trouvé, ou inventaire illisible</td>
 <td>-</td>
 </tr>
 <tr>

@@ -6,7 +6,8 @@ The package installs two commands.
   instance, *judges* the result against thresholds and exits `0`-`3` for
   Nagios or Icinga. Its flags are in the [CLI option reference](cli-reference.md).
 - **`check-opencloud-scanner`** is everything else. It gives you the raw
-  result document, compares two of them, explains a finding, reviews the
+  result document, compares two of them, summarises a fleet of them,
+  explains a finding, reviews the
   configured waivers, refreshes the reference data, and runs the scan service. It never applies a warning or
   critical threshold.
 
@@ -17,6 +18,7 @@ This page is the reference for the second one.
   * [Global options](#global-options)
   * [`scan` - print the result document](#scan---print-the-result-document)
   * [`diff` - what changed between two saved results](#diff---what-changed-between-two-saved-results)
+  * [`fleet` - a dashboard from saved results](#fleet---a-dashboard-from-saved-results)
   * [`explain` - what a finding means and how to fix it](#explain---what-a-finding-means-and-how-to-fix-it)
   * [`review-waivers` - waivers that need attention](#review-waivers---waivers-that-need-attention)
   * [`refresh-data` - update the release schedule and advisories](#refresh-data---update-the-release-schedule-and-advisories)
@@ -225,6 +227,100 @@ It exits `2` without comparing results in either of these cases:
   if you intend to compare different hosts.
 - **a file is not a result document** from `scan`. For example, it has no
   rating, or it is the error entry of an instance that could not be scanned.
+
+## `fleet` - a dashboard from saved results
+
+```bash
+today="/var/lib/opencloud-reports/$(date +%F)"
+mkdir -p "$today"
+for host in cloud1.example.com cloud2.example.com cloud3.example.com; do
+  check-opencloud-scanner scan "$host" > "$today/$host.json"
+done
+check-opencloud-scanner fleet /var/lib/opencloud-reports
+check-opencloud-scanner fleet /var/lib/opencloud-reports --format html > fleet.html
+```
+
+```text
+Fleet summary, 2026-09-24 06:15:02 UTC
+42 reports read, 3 hosts, 39 older superseded
+Hosts: 3 | Unsupported releases: 1 | Waivers ending: 1 | Not covered: 1
+Ratings: 4/5 x1, 2/5 x1
+
+== Unsupported releases
+Host                Version  Line              End of life  Upgrade to  Note
+------------------  -------  ----------------  -----------  ----------  --------------
+cloud2.example.com  2.0.0    2.0 (production)  2025-12-01   7.2.4       since the scan
+
+== Waiver deadlines (next 30 days)
+Host                Ends                  When        Checks         Waiver     Reason
+------------------  --------------------  ----------  -------------  ---------  ----------------------
+cloud2.example.com  2026-10-05 00:00 UTC  in 10 days  exposed:/.env  exposed:*  migration ticket OPS-1
+
+== Common findings
+Finding               Severity  Hosts  Waived  What it is
+--------------------  --------  -----  ------  ----------------------------------------------
+exposed:/.env         critical  2/2    1       A deployment file is publicly readable (/.env)
+...
+
+== Missing coverage
+Host                Gap               Detail
+------------------  ----------------  ----------------------------------------------------
+cloud3.example.com  last scan failed  https://cloud3.example.com/status.php is unreachable
+```
+
+It reads result documents written by `scan` - files, or directories searched
+recursively for `*.json` - and summarises the **newest report of each host**.
+It scans nothing and stores nothing: collecting the reports, with a cron job,
+a CI artefact store or a shared directory, stays with whatever you already use.
+
+| Section | What it shows |
+|:--|:--|
+| Hosts | One row per host: version, rating, release line, failing and waived findings, coverage gaps and the age of the report |
+| Unsupported releases | End-of-life releases, releases whose support ends within the window, and versions the schedule does not know |
+| Waiver deadlines | Temporary waivers that let a failing check alert again within the window, or already have |
+| Common findings | The failing findings shared by the most hosts, worst severity first |
+| Missing coverage | Expected hosts without a report, hosts whose newest scan failed, stale reports, and reports older than the coverage block |
+| Checks not evaluated | Checks the scans skipped or could not decide, and on how many hosts |
+
+A report is evidence about the day it was written, so two things are
+re-measured against **today** rather than read back:
+
+- **The release.** The recorded version is placed again in the release
+  schedule this installation uses - the bundled one, or the file the
+  configuration names, as for the plugin. A line that closed after the report
+  was written is listed with the note `since the scan`. End of life is
+  permanent, so a report that already said so is always listed.
+- **The waiver deadline.** A waiver the report recorded as active may have
+  run out since. Only a deadline after which a check really alerts again is
+  listed, by the same rule as the plugin's `--waiver-warning`: a check that a
+  permanent waiver also covers, and a flag OpenCloud hardcodes, never alert.
+
+Common findings leave out what no operator can change - the flags OpenCloud
+hardcodes and the headers no OpenCloud sends - because they fail on every
+instance and would top the list of every fleet. A waived finding is still
+counted, and the `Waived` column says on how many hosts.
+
+| Option | What it does |
+|:--|:--|
+| `--format text` | Aligned tables, as above. The default |
+| `--format markdown` | Markdown tables, for a ticket or a wiki page |
+| `--format html` | One self-contained page: no script, no font, nothing fetched, light and dark mode |
+| `--format json` | The structured summary, camelCase like the result document |
+| `--window DAYS` | Show waivers and support windows ending within `DAYS` days. Default `30` |
+| `--stale-after DAYS` | Count a host as not covered when its newest report is older. Default `7`, `0` turns it off |
+| `--top N` | List the `N` most common findings. Default `10`, `0` lists all |
+| `--expect HOST` | A host that should have a report. Repeatable, or comma separated |
+| `--inventory FILE` | Expected hosts from a file, one per line, `#` starting a comment |
+
+A host is matched by name and port, so `https://opencloud.example.com/` and
+`opencloud.example.com` are the same host, while `opencloud.example.com:9200`
+is another one. Write the port in `--expect` when the instance is scanned on
+one.
+
+It exits `0` whenever it printed a summary, however bad the fleet looks:
+like `scan`, it measures and does not judge. It exits `2` when it found no
+result document and no host was expected. A file that is not a result
+document is not an error; it is named under *Files skipped*.
 
 ## `explain` - what a finding means and how to fix it
 
@@ -448,6 +544,7 @@ instance still exits `0`, because judging the result is the plugin's job.
 |:--|:--|:--|:--|:--|
 | `scan` | Every host was scanned | At least one host could not be scanned | Invalid configuration | - |
 | `diff` | Nothing got worse | The later result is worse | The files cannot be compared | - |
+| `fleet` | Summary printed | - | No result document found, or an unreadable inventory | - |
 | `explain` | Printed | Unknown identifier or empty category | - | - |
 | `review-waivers` | Nothing to clean up | At least one waiver is listed | Invalid waiver, timestamp or `--result` file | - |
 | `refresh-data` | Both files written | Nothing written, see stderr | - | - |

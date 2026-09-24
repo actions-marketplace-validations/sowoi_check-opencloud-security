@@ -639,16 +639,41 @@ mit `Retry-After`.
 
 ### `GET /api/scans/{uuid}/export/{format}` {#get-apiscansuuidexportformat}
 
-Ein fertiger Bericht lässt sich als `json`, `csv`, `sarif` oder `pdf` herunterladen:
+Einen abgeschlossenen Scan kannst du als `json`, `csv`, `sarif`, `pdf` oder
+`html` herunterladen. Die Pakete `remediation-md` und `remediation-html`
+enthalten nur offene, behebbare Befunde und vorgeschlagene
+Konfigurationsausschnitte für nginx, Caddy, Traefik, Compose und `.env`.
+Für die Note, bestandene Prüfungen und Sicherheitsmeldungen verwende einen
+vollständigen Bericht.
 
 ```bash
 curl -sS -OJ http://127.0.0.1:8811/api/scans/0f4a1f22-.../export/pdf
 ```
 
-Alle Formate enthalten Maßnahmenplan und TLS-Details. Nicht ermittelte Werte
-bleiben als solche erkennbar; `null` bedeutet nicht „bestanden“. Die Dateien
-werden aus demselben Ergebnis erzeugt und sind nach dessen Ablauf nicht mehr
-abrufbar. Die API nennt die Download-URLs unter `exports`.
+Der `html`-Bericht ist **eine eigenständige Datei** mit eingebundener
+Formatierung. Beim Öffnen stellt er keine Netzwerkanfragen. Er enthält keine
+Skripte, Bilder, externen Schriftarten oder Stylesheets. Dokumentationslinks
+öffnen sich nur, wenn du ihnen folgst. Enthalten sind Befunde, ausgenommene
+Befunde mit ihren Begründungen, der Behebungsplan, Lücken im Prüfumfang und
+die für die Bewertung verwendeten Referenzdaten. Formulare, Bedienelemente
+für erneute Scans, automatische Abfragen und Lösch-Token fehlen.
+
+Vollständige Berichte enthalten den Behebungsplan: als Zusammenfassungs- und
+Schrittzeilen in CSV, unter `runs[0].properties.remediation` in SARIF, als
+Planabschnitt in PDF und HTML sowie unter `remediationPlan` in JSON.
+TLS-Details stehen im CSV-Kopfblock, unter `runs[0].properties.tls` in SARIF,
+in den Transportabschnitten von PDF und HTML sowie unter `tls` in JSON.
+Dazu gehören Protokoll, Verschlüsselungsverfahren, Zertifikatsgültigkeit und
+verbleibende Tage, Vollständigkeit der Zertifikatskette und OCSP-Stapling.
+`null` bedeutet, dass der Wert nicht ermittelt werden konnte, nicht dass
+die Prüfung bestanden wurde.
+
+Downloads werden auf Anfrage aus dem gespeicherten Ergebnis erzeugt. Ihre
+Links funktionieren nach Ablauf des Scans nicht mehr. Bereits gespeicherte
+Dateien bleiben verfügbar, aktualisieren sich nicht und werden beim Löschen
+des Scans nicht entfernt. Die Antwort von `GET /api/scans/{uuid}` für einen
+abgeschlossenen Scan nennt die Download-URLs unter `exports`; die Ergebnisseite
+bietet dieselben Formate als Download-Schaltflächen an.
 
 #### Signierte Exporte {#signed-exports}
 

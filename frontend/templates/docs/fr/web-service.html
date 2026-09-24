@@ -1415,43 +1415,38 @@ est la raison du refus de la première cible - <strong>429</strong> avec <code>R
 l’indication d’auto-hébergement s’il s’agit d’une limite, <strong>400</strong> ou <strong>422</strong>
 sinon.</p>
 <h3 id="get-apiscansuuidexportformat"><code>GET /api/scans/{uuid}/export/{format}</code></h3>
-<p>Une analyse terminée sous forme de fichier : <code>json</code>, <code>csv</code>, <code>sarif</code>, <code>pdf</code>,
-<code>html</code>, <code>remediation-md</code> ou <code>remediation-html</code>. Les deux ensembles de correction
-ne contiennent que les constats ouverts et exploitables ainsi que les fragments
-nginx, Caddy, Traefik, Compose et <code>.env</code> qui les corrigent - la note, les
-contrôles réussis et les avis de sécurité restent dans le rapport complet.</p>
+<p>Une analyse terminée peut être téléchargée au format <code>json</code>, <code>csv</code>, <code>sarif</code>,
+<code>pdf</code> ou <code>html</code>. Les kits <code>remediation-md</code> et <code>remediation-html</code> contiennent
+uniquement les constats encore ouverts pouvant être corrigés et les extraits
+de configuration proposés pour nginx, Caddy, Traefik, Compose et <code>.env</code>.
+Utilisez un rapport complet pour consulter la note, les contrôles réussis
+et les avis de sécurité.</p>
 <pre><code class="language-bash">curl -sS -OJ http://127.0.0.1:8811/api/scans/0f4a1f22-.../export/pdf
 </code></pre>
-<p><code>html</code> est le rapport sous forme de <strong>fichier autonome unique</strong>. Un lien de
-résultat est une capacité limitée dans le temps, ce qui convient à une page
-accessible à un inconnu mais pas à la preuve dont quelqu’un a besoin en fin de
-trimestre : c’est donc le même rapport, sans le service derrière lui. La mise en
-forme est incluse dans le document, il n’y a ni script, ni image, ni service de
-polices, ni feuille de style à récupérer, et son ouverture n’effectue aucune
-requête réseau. Les liens de documentation sont les seules adresses qu’il
-contient, et ils ne sont suivis que si le lecteur le choisit. Il contient les
-constats, les constats ignorés avec les raisons de leur exemption, le plan de
-correction, les lacunes de couverture et les données de référence utilisées pour
-juger l’analyse, et il indique clairement qu’il s’agit d’une copie : il continue
-de fonctionner après l’expiration du lien, il n’est pas mis à jour, et effacer
-l’analyse ne l’efface pas. Il ne contient rien à actionner - ni formulaire, ni
-commande de nouvelle analyse, ni interrogation, ni jeton d’effacement.</p>
-<p>Les cinq contiennent le plan de correction - la liste ordonnée des corrections
-avec la note atteinte à chaque étape - sous forme de lignes de résumé et d’étapes
-dans le CSV, de <code>runs[0].properties.remediation</code> dans le SARIF, d’une section
-« What gets you to A+ » dans le PDF et de <code>remediationPlan</code> dans le JSON.</p>
-<p>Ils contiennent aux mêmes endroits le détail de la sécurité du transport : le
-bloc d’en-tête du CSV, <code>runs[0].properties.tls</code> dans le SARIF, une section
-« Transport security » dans le PDF et le bloc <code>tls</code> dans le JSON - protocole,
-suite de chiffrement, validité et jours restants du certificat, complétude de la
-chaîne et agrafage OCSP. Une mesure qui n’a pas pu être effectuée vaut <code>null</code>,
-c’est-à-dire « non déterminé » et non « correct ».</p>
-<p>Les quatre sont des rendus du même résultat terminé, produits à la demande et
-disparus à l’expiration de l’analyse. Le PDF est écrit par ce service plutôt que
-par une bibliothèque de rapports, pour la même raison que le frontend ne charge
-rien depuis un CDN. La réponse <code>GET /api/scans/{uuid}</code> d’une analyse terminée
-annonce les quatre URL sous <code>exports</code>, et la page de résultat les propose sous
-forme de boutons de téléchargement.</p>
+<p>Le rapport <code>html</code> est <strong>un fichier autonome unique</strong> dont les styles sont
+inclus. Son ouverture ne déclenche aucune requête réseau : il ne contient
+ni scripts, ni images, ni polices ou feuilles de style externes. Les liens
+de documentation s’ouvrent uniquement si vous les suivez. Le rapport comprend
+les constats, les constats exemptés et leurs motifs, le plan de correction,
+les lacunes de couverture et les données de référence utilisées pour évaluer
+l’analyse. Il ne contient ni formulaires, ni commandes de nouvelle analyse,
+ni interrogation périodique, ni jeton d’effacement.</p>
+<p>Les rapports complets comprennent le plan de correction : lignes de résumé
+et d’étapes dans le CSV, <code>runs[0].properties.remediation</code> dans le SARIF,
+section du plan dans les formats PDF et HTML, et <code>remediationPlan</code> dans le
+JSON. Les détails de transport figurent dans le bloc d’en-tête du CSV,
+<code>runs[0].properties.tls</code> dans le SARIF, les sections de transport des formats
+PDF et HTML, et <code>tls</code> dans le JSON. Ils couvrent le protocole, le chiffrement,
+la validité du certificat et les jours restants, la complétude de la chaîne
+et l’agrafage OCSP. La valeur <code>null</code> signifie que la mesure n’a pas pu être
+établie, et non que le contrôle a réussi.</p>
+<p>Les téléchargements sont générés à la demande à partir du résultat enregistré.
+Leurs liens cessent de fonctionner à l’expiration de l’analyse. Les fichiers
+déjà enregistrés restent disponibles, ne se mettent pas à jour et ne sont pas
+supprimés lors de l’effacement de l’analyse. La réponse de
+<code>GET /api/scans/{uuid}</code> pour une analyse terminée indique les URL de
+téléchargement sous <code>exports</code> ; la page de résultat propose les mêmes formats
+sous forme de boutons de téléchargement.</p>
 <h4 id="signed-exports">Exports signés</h4>
 <p>Lorsque <code>COS_WEB_EXPORT_SIGNING_KEY</code> est défini, chaque réponse d’export porte une
 signature de ses octets exacts :</p>

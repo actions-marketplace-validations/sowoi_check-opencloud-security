@@ -13,6 +13,7 @@ comprobaciones resultantes.
   * [Desde dónde deben ejecutarse las comprobaciones](#where-the-checks-should-run-from)
   * [Revisar las exclusiones periódicamente](#keeping-the-waivers-honest)
   * [Alertar solo sobre lo que ha cambiado](#only-alerting-on-what-changed)
+  * [Un panel para toda la flota](#one-dashboard-for-the-whole-fleet)
   * [Programarlo todo](#scheduling-the-whole-thing)
 <!-- TOC -->
 
@@ -205,6 +206,31 @@ Consulte
 Añada `--self-update-check` en un solo host del conjunto (no en todos) para
 recibir un aviso cuando se publique una versión más reciente del complemento.
 Se guarda en caché durante un día y nunca cambia el código de salida.
+
+## Un panel para toda la flota {#one-dashboard-for-the-whole-fleet}
+
+La monitorización responde, host a host, si una instancia está fallando
+ahora. Una revisión de la flota pregunta otra cosa: qué instancias ejecutan
+una versión que ya no recibe parches, qué exenciones vencen este mes, qué
+hallazgo falla en todas partes y qué instancia no ha revisado nadie
+últimamente. Conserve los documentos de resultado que escribe `scan`, y
+`fleet` responde a las cuatro preguntas solo a partir de los archivos:
+
+```shell
+dir="/var/lib/opencloud-reports/$(date +%F)"
+mkdir -p "$dir"
+for host in opencloud1.example.com opencloud2.example.com; do
+  check-opencloud-scanner scan "$host" > "$dir/$host.json"
+done
+check-opencloud-scanner fleet /var/lib/opencloud-reports \
+    --inventory /etc/check-opencloud-security/hosts.txt --format html > fleet.html
+```
+
+No analiza nada ni almacena nada; cuenta el informe más reciente de cada
+host, y la versión y los plazos de las exenciones se evalúan respecto a hoy y
+no al día del informe. Con un inventario, un host sin ningún informe aparece
+como ausente. Consulte
+[`fleet`: un panel a partir de resultados guardados](scanner-cli.md#fleet-a-dashboard-from-saved-results).
 
 ## Programarlo todo {#scheduling-the-whole-thing}
 

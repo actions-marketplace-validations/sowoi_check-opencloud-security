@@ -1032,47 +1032,42 @@ self-hosting hint if it was a limit, **400** or **422** otherwise.
 
 ### `GET /api/scans/{uuid}/export/{format}`
 
-A finished scan as a file: `json`, `csv`, `sarif`, `pdf`, `html`,
-`remediation-md` or `remediation-html`. The two remediation bundles carry
-only the open, actionable findings and the nginx, Caddy, Traefik, Compose
-and `.env` fragments that close them - the grade, the passed checks and the
-advisories stay in the full report.
+A completed scan can be downloaded as `json`, `csv`, `sarif`, `pdf` or
+`html`. The `remediation-md` and `remediation-html` bundles contain only
+open, actionable findings and suggested nginx, Caddy, Traefik, Compose and
+`.env` configuration snippets. Use a full report for the grade, passed checks
+and security advisories.
 
 ```bash
 curl -sS -OJ http://127.0.0.1:8811/api/scans/0f4a1f22-.../export/pdf
 ```
 
-`html` is the report as **one standalone file**. A result link is a capability
-with a time limit, which is right for a page a stranger can reach and wrong
-for the evidence somebody needs at the end of the quarter, so this is the same
-report without the service under it: the styling is inside the document, there
-is no script, no image, no font service and no stylesheet to fetch, and
-opening it makes no network request at all. The documentation links are the
-only addresses in it and are followed only if the reader chooses to. It
-carries the findings, the ignored ones with their waiver reasons, the
-remediation plan, the coverage gaps and the reference data the scan was judged
-against, and it says plainly that it is a copy: it keeps working after the
-link expires, it does not update, and erasing the scan does not erase it.
-There is nothing to operate in it - no form, no rescan control, no polling and
-no erasure token.
+The `html` report is **one standalone file** with its styling included.
+Opening it makes no network requests; it has no scripts, images, external
+fonts or stylesheets. Documentation links open only when you follow them.
+It includes findings, waived findings and their reasons, the remediation
+plan, coverage gaps and the reference data used to assess the scan. It has
+no forms, rescan controls, polling or erasure token.
 
-All five carry the remediation plan - the ordered fix list with the grade each
-step reaches - as summary and step rows in the CSV,
-`runs[0].properties.remediation` in the SARIF, a "What gets you to A+" section
-in the PDF and `remediationPlan` in the JSON.
+Full reports include the remediation plan: summary and step rows in CSV,
+`runs[0].properties.remediation` in SARIF, a plan section in PDF and HTML,
+and `remediationPlan` in JSON. Transport details appear in the CSV header
+block, `runs[0].properties.tls` in SARIF, the transport sections in PDF and
+HTML, and `tls` in JSON. These cover the protocol, cipher, certificate
+validity and remaining days, chain completeness and OCSP stapling. A value
+of `null` means the measurement could not be established, not that the check
+passed.
 
-They carry the transport-security detail in the same places: the header block
-in the CSV, `runs[0].properties.tls` in the SARIF, a "Transport security"
-section in the PDF and the `tls` block in the JSON - protocol, cipher,
-certificate validity and remaining days, chain completeness and OCSP stapling.
-A measurement that could not be taken is `null`, meaning "not determined"
-rather than "fine".
+The result page and the two remediation bundles also group the open findings
+by where the change is made - reverse proxy, identity provider, OpenCloud,
+DNS zone - and name the changes that resolve several findings at once
+(`remediationPlan.groups` in JSON).
 
-All four are renderings of the same finished result, produced on request and
-gone when the scan expires. The PDF is written by this service rather than by
-a reporting library, for the same reason the frontend loads nothing from a
-CDN. The finished `GET /api/scans/{uuid}` response advertises the four URLs
-under `exports`, and the result page offers them as download buttons.
+Downloads are generated from the stored result on request. Their links stop
+working when the scan expires. Files already saved remain available, do not
+update and are not removed when the scan is erased. The completed
+`GET /api/scans/{uuid}` response lists the download URLs under `exports`;
+the result page offers the same formats as download buttons.
 
 #### Signed exports
 

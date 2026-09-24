@@ -1160,6 +1160,23 @@ taire une alerte, elle ne corrige rien, et le plan le dit.
 Le même plan figure sur le tableau de bord web, dans les exports JSON, CSV,
 SARIF et PDF, et dans l’outil MCP `plan_remediation`.
 
+### Regroupé par configuration {#grouped-by-where-the-change-is-made}
+
+`remediationPlan.groups` classe les constats ouverts selon le système à
+modifier pour les corriger : **proxy inverse**, **fournisseur d’identité**,
+**OpenCloud** ou **zone DNS**. Les constats qui ne limitent pas la note, comme
+un en-tête manquant, y figurent aussi.
+
+Les constats qu’une seule modification résout forment une seule modification :
+tous les en-têtes de sécurité manquants sont un bloc d’en-têtes, plusieurs
+problèmes de certificat un nouveau certificat, tous les chemins `exposed:/...`
+une correction, et la mise à jour ferme tous les avis correspondants. Chaque
+modification nomme ses constats, `resolvesSeveral` et la note qu’elle
+donnerait seule, recalculée avec la même fonction de notation. `groupSummary`
+nomme les modifications qui résolvent plusieurs constats à la fois. Les
+constats ignorés ou codés en dur ne sont pas proposés. `--debug`, le tableau de
+bord, le lot de remédiation et `plan_remediation` affichent aussi ces groupes.
+
 # Notifications par webhook {#webhook-notifications}
 Le plugin peut envoyer une notification JSON à un point de terminaison HTTP(S)
 lorsqu’une vérification atteint un niveau critique. La fonction est

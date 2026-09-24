@@ -1363,41 +1363,36 @@ target pays a cooldown for a batch that never ran.</p>
 the reason the first target was refused - <strong>429</strong> with <code>Retry-After</code> and the
 self-hosting hint if it was a limit, <strong>400</strong> or <strong>422</strong> otherwise.</p>
 <h3 id="get-apiscansuuidexportformat"><code>GET /api/scans/{uuid}/export/{format}</code></h3>
-<p>A finished scan as a file: <code>json</code>, <code>csv</code>, <code>sarif</code>, <code>pdf</code>, <code>html</code>,
-<code>remediation-md</code> or <code>remediation-html</code>. The two remediation bundles carry
-only the open, actionable findings and the nginx, Caddy, Traefik, Compose
-and <code>.env</code> fragments that close them - the grade, the passed checks and the
-advisories stay in the full report.</p>
+<p>A completed scan can be downloaded as <code>json</code>, <code>csv</code>, <code>sarif</code>, <code>pdf</code> or
+<code>html</code>. The <code>remediation-md</code> and <code>remediation-html</code> bundles contain only
+open, actionable findings and suggested nginx, Caddy, Traefik, Compose and
+<code>.env</code> configuration snippets. Use a full report for the grade, passed checks
+and security advisories.</p>
 <pre><code class="language-bash">curl -sS -OJ http://127.0.0.1:8811/api/scans/0f4a1f22-.../export/pdf
 </code></pre>
-<p><code>html</code> is the report as <strong>one standalone file</strong>. A result link is a capability
-with a time limit, which is right for a page a stranger can reach and wrong
-for the evidence somebody needs at the end of the quarter, so this is the same
-report without the service under it: the styling is inside the document, there
-is no script, no image, no font service and no stylesheet to fetch, and
-opening it makes no network request at all. The documentation links are the
-only addresses in it and are followed only if the reader chooses to. It
-carries the findings, the ignored ones with their waiver reasons, the
-remediation plan, the coverage gaps and the reference data the scan was judged
-against, and it says plainly that it is a copy: it keeps working after the
-link expires, it does not update, and erasing the scan does not erase it.
-There is nothing to operate in it - no form, no rescan control, no polling and
-no erasure token.</p>
-<p>All five carry the remediation plan - the ordered fix list with the grade each
-step reaches - as summary and step rows in the CSV,
-<code>runs[0].properties.remediation</code> in the SARIF, a "What gets you to A+" section
-in the PDF and <code>remediationPlan</code> in the JSON.</p>
-<p>They carry the transport-security detail in the same places: the header block
-in the CSV, <code>runs[0].properties.tls</code> in the SARIF, a "Transport security"
-section in the PDF and the <code>tls</code> block in the JSON - protocol, cipher,
-certificate validity and remaining days, chain completeness and OCSP stapling.
-A measurement that could not be taken is <code>null</code>, meaning "not determined"
-rather than "fine".</p>
-<p>All four are renderings of the same finished result, produced on request and
-gone when the scan expires. The PDF is written by this service rather than by
-a reporting library, for the same reason the frontend loads nothing from a
-CDN. The finished <code>GET /api/scans/{uuid}</code> response advertises the four URLs
-under <code>exports</code>, and the result page offers them as download buttons.</p>
+<p>The <code>html</code> report is <strong>one standalone file</strong> with its styling included.
+Opening it makes no network requests; it has no scripts, images, external
+fonts or stylesheets. Documentation links open only when you follow them.
+It includes findings, waived findings and their reasons, the remediation
+plan, coverage gaps and the reference data used to assess the scan. It has
+no forms, rescan controls, polling or erasure token.</p>
+<p>Full reports include the remediation plan: summary and step rows in CSV,
+<code>runs[0].properties.remediation</code> in SARIF, a plan section in PDF and HTML,
+and <code>remediationPlan</code> in JSON. Transport details appear in the CSV header
+block, <code>runs[0].properties.tls</code> in SARIF, the transport sections in PDF and
+HTML, and <code>tls</code> in JSON. These cover the protocol, cipher, certificate
+validity and remaining days, chain completeness and OCSP stapling. A value
+of <code>null</code> means the measurement could not be established, not that the check
+passed.</p>
+<p>The result page and the two remediation bundles also group the open findings
+by where the change is made - reverse proxy, identity provider, OpenCloud,
+DNS zone - and name the changes that resolve several findings at once
+(<code>remediationPlan.groups</code> in JSON).</p>
+<p>Downloads are generated from the stored result on request. Their links stop
+working when the scan expires. Files already saved remain available, do not
+update and are not removed when the scan is erased. The completed
+<code>GET /api/scans/{uuid}</code> response lists the download URLs under <code>exports</code>;
+the result page offers the same formats as download buttons.</p>
 <h4 id="signed-exports">Signed exports</h4>
 <p>With <code>COS_WEB_EXPORT_SIGNING_KEY</code> set, every export response carries a
 signature of its exact bytes:</p>

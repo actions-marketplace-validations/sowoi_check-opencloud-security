@@ -2301,6 +2301,7 @@ def _explain_lines(
         )
 
     lines.extend(_remediation_lines(response_scan))
+    lines.extend(_remediation_group_lines(response_scan))
 
     waived = _waived(response_scan)
     if waived:
@@ -2398,6 +2399,46 @@ def _remediation_lines(response_scan: dict[str, Any]) -> list[str]:
                 f"Not fixable: {step.get('id')} - OpenCloud hardcodes this, so "
                 "the plan above cannot reach further."
             )
+    return lines
+
+
+def _remediation_group_lines(response_scan: dict[str, Any]) -> list[str]:
+    """
+    The same fixes, grouped by the configuration each change is made in.
+
+    The scanner decided the groups and which findings one edit resolves; as
+    with the ordered plan, the only thing added here is the letter.
+    """
+    plan = response_scan.get("remediationPlan")
+    if not isinstance(plan, dict):
+        return []
+    groups = plan.get("groups")
+    if not isinstance(groups, list) or not groups:
+        return []
+
+    lines = ["", "--- Changes grouped by where they are made ---"]
+    if plan.get("groupSummary"):
+        lines.append(str(plan["groupSummary"]))
+    for group in groups:
+        if not isinstance(group, dict):
+            continue
+        after = group.get("ratingAfter")
+        grade = RATE_MAP.get(after, "?") if isinstance(after, int) else "?"
+        lines.append(
+            f"{group.get('title')}: {group.get('findings')} finding(s), "
+            f"{after}/5 ({grade}) with every change here made"
+        )
+        for change in group.get("changes") or []:
+            if not isinstance(change, dict):
+                continue
+            findings = [str(name) for name in change.get("findings") or []]
+            resolves = (
+                f"resolves {len(findings)}: {', '.join(findings)}"
+                if change.get("resolvesSeveral")
+                else findings[0] if findings else ""
+            )
+            lines.append(f"  * {change.get('title')} - {resolves}")
+            lines.append(f"    Fix: {change.get('action')}")
     return lines
 
 

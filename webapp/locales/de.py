@@ -1094,11 +1094,10 @@ MESSAGES: dict[str, str] = {
     ),
     "compare.upload.expires": "Dieser Vergleich ist noch etwa {minutes} Minuten abrufbar. Danach brauchst du die ursprüngliche Datei für einen neuen Vergleich.",
     "compare.upload.error.missing": (
-        "Es wurde keine Datei hochgeladen. Wähle den JSON- oder "
-        "CSV-Bericht, den du früher heruntergeladen hast."
+        "Es wurde kein Bericht hochgeladen. Wähle einen JSON- oder CSV-Bericht, den du von einer Ergebnisseite heruntergeladen hast."
     ),
     "compare.upload.error.no_current": "Gib die UUID des Scans an, mit dem du den hochgeladenen Bericht vergleichen möchtest.",
-    "compare.upload.error.empty": "Diese Datei ist leer.",
+    "compare.upload.error.empty": "Die hochgeladene Datei ist leer. Wähle einen heruntergeladenen JSON- oder CSV-Bericht.",
     "compare.upload.error.too_large": "Die Datei überschreitet die erlaubte Größe von {kilobytes} KB.",
     "compare.upload.error.unreadable": (
         "Diese Datei ließ sich weder als JSON noch als CSV lesen. Lade die "
@@ -1106,8 +1105,7 @@ MESSAGES: dict[str, str] = {
         "öffnen und neu zu speichern."
     ),
     "compare.upload.error.not_a_report": (
-        "Diese Datei sieht nicht nach einem Scanbericht dieses Dienstes aus. "
-        "Erwartet werden die Downloads von einer Ergebnisseite."
+        "Diese Datei wurde nicht als Scanbericht erkannt. Verwende einen JSON- oder CSV-Download von einer Ergebnisseite."
     ),
     "compare.upload.error.rate_limit": (
         "Das sind viele Berichte aus deinem Netz in kurzer Zeit. Warte eine "
@@ -1196,16 +1194,14 @@ MESSAGES: dict[str, str] = {
     ),
     "error.rate_limit.client": "Aus deinem Netzwerk wurden in kurzer Zeit viele Scans angefragt. Bitte warte eine Minute und versuche es erneut.",
     "error.rate_limit.probe": "Mehrere zuletzt angefragte Ziele waren keine erreichbaren OpenCloud-Instanzen. Weitere Scans aus deinem Netzwerk sind vorübergehend gesperrt. Für deine eigene Instanz kannst du den Scanner auch lokal ausführen.",
-    "error.rate_limit.daily": "Das heutige Scan-Limit für dein Netzwerk ist erreicht. Versuche es morgen erneut oder führe den Scanner lokal ohne dieses Tageslimit aus.",
+    "error.rate_limit.daily": "Leider ist das heutige Scan-Limit für dein Netzwerk erreicht. Versuche es morgen erneut oder führe den Scanner auf deinem Rechner ohne dieses Tageslimit aus.",
     "error.target.wildcard_dns": "Dieser Name gehört zu einem Wildcard-DNS-Dienst. Gib den eigenen Hostnamen oder die IP-Adresse der Instanz ein.",
     "error.target.unstable": (
         "Dieser Hostname liefert bei jeder Abfrage andere Adressen, daher kann "
         "dieser Dienst nicht verlässlich bestimmen, was er scannen würde."
     ),
     "error.target.not_approved": (
-        "Dieser Dienst scannt nur Instanzen, die dafür freigegeben wurden. Bitte "
-        "den Betreiber, sie hinzuzufügen, oder veröffentliche den DNS-Eintrag, "
-        "der sie freigibt."
+        "Dieser Dienst scannt nur freigegebene Instanzen. Bitte den Betreiber um die Freigabe dieser Instanz oder veröffentliche den dafür erforderlichen DNS-Eintrag."
     ),
     "error.rate_limit.target": "Diese Instanz wurde kürzlich gescannt. Bitte warte einige Minuten.",
     "error.target.invalid": "Diese Adresse kann nicht gescannt werden.",
@@ -1214,7 +1210,7 @@ MESSAGES: dict[str, str] = {
     "error.target.characters": (
         "Diese Adresse enthält Zeichen, die ein Hostname nicht haben kann."
     ),
-    "error.target.unparsed": "Diese Adresse konnte nicht verarbeitet werden.",
+    "error.target.unparsed": "Diese Adresse konnte nicht gelesen werden. Prüfe sie und gib die Basis-URL der Instanz ein.",
     "error.target.scheme": (
         "Nur http://- und https://-Ziele können gescannt werden."
     ),
@@ -1227,7 +1223,7 @@ MESSAGES: dict[str, str] = {
     "error.target.hostname_shape": (
         "Das ist kein Hostname, den dieser Dienst scannen kann."
     ),
-    "error.target.unresolved": "Für diesen Hostnamen konnte keine IP-Adresse ermittelt werden.",
+    "error.target.unresolved": "Für diesen Hostnamen wurde keine IP-Adresse gefunden. Prüfe die Schreibweise und die DNS-Konfiguration.",
     "error.target.hostname_long": "Dieser Hostname ist zu lang.",
     "error.target.internal": (
         "Lokale und interne Adressen können nicht gescannt werden."
@@ -1237,12 +1233,10 @@ MESSAGES: dict[str, str] = {
         "Netzwerk, das dieser Dienst nicht scannt."
     ),
     "error.target.blocked": (
-        "Dieser Dienst wurde gebeten, diese Adresse nicht zu scannen."
+        "Der Betreiber hat diese Adresse von Scans ausgeschlossen."
     ),
     "error.store_unavailable": (
-        "Dieser Dienst kann seine eigene Konfiguration gerade nicht lesen und "
-        "scannt nicht, solange unklar ist, welche Ziele ausgeschlossen sind. Bitte versuche "
-        "es in einigen Minuten erneut."
+        "Der Dienst kann seine Liste ausgeschlossener Ziele nicht lesen und deshalb keinen Scan sicher starten. Bitte versuche es in einigen Minuten erneut."
     ),
     # ----------------------------------------------------------- result page
     "result.title": "Scan-Ergebnisse",
@@ -1271,29 +1265,29 @@ MESSAGES: dict[str, str] = {
     "result.compare.offer": "In diesem Tab wurde diese Instanz bereits um {time} gescannt.",
     "result.compare.offer.link": "Sehen, was sich seitdem geändert hat",
     "result.progress.kicker": "In Bearbeitung",
-    "result.progress.queued.title": "Wartet auf einen freien Scanner-Prozess",
-    "result.progress.queued.detail": "Alle Worker sind beschäftigt. Dein Scan wartet an seiner Position, bis ein Worker frei wird.",
+    "result.progress.queued.title": "Wartet auf den Start des Scans",
+    "result.progress.queued.detail": "Alle Scan-Prozesse sind beschäftigt. Dein Scan behält seinen Platz in der Warteschlange und startet, sobald ein Prozess frei wird.",
     "result.progress.running.title": "Die Instanz wird gescannt",
     "result.progress.running.detail": "Der Scanner prüft Version, Funktionen, Zertifikat, Header und Endpunkte, die die Instanz ohne Anmeldung bereitstellt.",
     "result.progress.step.queued": "In Warteschlange",
     "result.progress.step.running": "Läuft",
     "result.progress.step.done": "Ergebnis",
     "result.progress.estimate": "Die meisten Scans sind in unter einer Minute fertig.",
-    "result.progress.elapsed": "seit {duration}",
-    "result.progress.noscript": "Mit JavaScript aktualisiert sich diese Seite automatisch. Andernfalls lade sie nach einigen Sekunden neu.",
+    "result.progress.elapsed": "Vergangene Zeit: {duration}",
+    "result.progress.noscript": "JavaScript aktualisiert diese Seite automatisch. Falls JavaScript nicht verfügbar ist, lade die Seite nach einigen Sekunden neu, um das Ergebnis zu sehen.",
     "result.progress.queue.position": (
         "Scan in Warteschlange. Position in der Reihe: #{position} von "
         "{length}."
     ),
-    "result.progress.queue.next": "Dein Scan ist als Nächstes an der Reihe.",
+    "result.progress.queue.next": "Dein Scan ist als Nächstes in der Warteschlange an der Reihe.",
     "result.progress.queue.waiting": (
-        "Wartet darauf, dass ein Scanner-Prozess den Auftrag übernimmt."
+        "Wartet auf einen freien Scan-Prozess."
     ),
     "result.progress.done.title": "Bericht fertig",
-    "result.progress.done.detail": "Die Note steht fest. Der Bericht wird geöffnet.",
+    "result.progress.done.detail": "Der Scan ist abgeschlossen. Der Bericht wird geöffnet.",
     "result.progress.failed.title": "Scan beendet",
     "result.progress.failed.detail": (
-        "Der Scan konnte nicht abgeschlossen werden. Das Ergebnis wird geöffnet."
+        "Der Scan konnte nicht abgeschlossen werden. Die Ergebnisseite mit den Fehlerdetails wird geöffnet."
     ),
     "result.failed.fallback": "Der Scan konnte nicht abgeschlossen werden.",
     "result.failed.body": "Der Scanner konnte nicht genügend Informationen für eine Bewertung abrufen. Prüfe die Adresse und stelle sicher, dass dort OpenCloud läuft und die Instanz von diesem Dienst aus erreichbar ist.",
@@ -1381,6 +1375,16 @@ MESSAGES: dict[str, str] = {
         "über die Konfiguration ändern. Deshalb kann der Maßnahmenplan "
         "keine bessere Note erreichen."
     ),
+    "result.groups.kicker": "Nach Konfiguration gruppiert",
+    "result.groups.heading": "Was du wo ändern musst",
+    "result.groups.lede": "Dieselben offenen Befunde, gruppiert nach dem System, das du zur Behebung bearbeitest – auch Befunde, die die Note nicht beeinflussen. Oft behebt eine Änderung mehrere Befunde.",
+    "result.groups.target.reverseProxy": "Reverse Proxy",
+    "result.groups.target.identityProvider": "Identitätsanbieter",
+    "result.groups.target.opencloud": "OpenCloud",
+    "result.groups.target.dnsZone": "DNS-Zone",
+    "result.groups.count": "{count} offene Befunde, {label} mit allen Änderungen hier",
+    "result.groups.resolves": "Behebt {count} Befunde auf einmal",
+    "result.groups.alone": "nur diese Änderung: {label}",
     "result.rehearsal.kicker": "Upgrade-Simulation",
     "result.rehearsal.heading": "Was ein Upgrade beheben würde",
     "result.rehearsal.lede": (
@@ -1575,13 +1579,13 @@ MESSAGES: dict[str, str] = {
     ),
     "result.raw.summary": "Das rohe JSON anzeigen",
     "result.export.kicker": "Export",
-    "result.export.heading": "Dieses Ergebnis mitnehmen",
-    "result.export.lede": "Lade denselben Bericht in einem der vier Formate herunter. Die Downloads sind verfügbar, bis der Scan abläuft.",
+    "result.export.heading": "Dieses Ergebnis herunterladen",
+    "result.export.lede": "Wähle einen vollständigen Bericht oder ein Behebungspaket. Die Download-Links funktionieren bis zum Ablauf des Scans; gespeicherte Dateien bleiben auf deinem Gerät verfügbar.",
     "result.export.pdf": "PDF-Bericht",
     "result.export.pdf.hint": "Für ein Ticket, eine Überprüfung oder einen Ausdruck.",
     "result.export.html": "Bericht herunterladen",
     "result.export.html.hint": (
-        'Eine Datei, die auch nach Ablauf dieses Links lesbar bleibt. Du kannst sie offline öffnen. Sie stellt keine Netzwerkanfragen und aktualisiert sich nicht.'
+        "Ein eigenständiger Bericht, den du nach Ablauf dieses Links offline öffnen kannst. Er stellt keine Netzwerkanfragen und aktualisiert sich nicht."
     ),
     "result.export.remediation.md": "Behebungspaket (Markdown)",
     "result.export.remediation.md.hint": (
@@ -1599,22 +1603,19 @@ MESSAGES: dict[str, str] = {
     "result.export.sarif.hint": "Für ein Code-Scanning-Dashboard.",
     "result.export.json": "JSON",
     "result.export.json.hint": "Das rohe Dokument, das das Plugin auswertet.",
-    "result.export.passed.heading": "Was bereits bestanden hat",
+    "result.export.passed.heading": "Bestandene Prüfungen",
     "result.export.passed.note": (
-        "Diese Prüfungen waren unauffällig und stehen deshalb nicht im Plan oben."
+        "Diese Prüfungen wurden bestanden und erfordern keine Maßnahme im Behebungsplan oben."
     ),
     "result.share.kicker": "Teilen",
     "result.share.heading": "Diesen Bericht teilen",
     "result.share.lede": "Kopiere den Link oder eine Zusammenfassung, oder öffne einen Entwurf in deinem E-Mail-Programm. Der Dienst versendet den Bericht nicht selbst.",
-    "result.share.warning": "Wer diesen Link erhält, kann den Bericht bis zum Ablauf lesen. Beim Teilen in einem Kanal erhalten auch dessen Teilnehmer und mögliche Vorschau-Dienste Zugriff. Teile nur die Zusammenfassung, wenn du den Bericht nicht freigeben möchtest.",
+    "result.share.warning": "Wer diesen Link hat, kann den Bericht bis zum Ablauf lesen. Wenn du ihn in einem Kanal teilst, erhalten auch dessen Mitglieder und Linkvorschau-Dienste Zugriff. Teile stattdessen die Textzusammenfassung, wenn du keinen Zugriff auf den vollständigen Bericht gewähren möchtest.",
     "result.share.email": "Per E-Mail teilen",
-    "result.share.email.hint": "Öffnet eine vorbereitete Nachricht in deinem E-Mail-Programm. Gesendet wird sie erst, wenn du dort bestätigst.",
+    "result.share.email.hint": "Öffnet eine vorbereitete Nachricht in deinem E-Mail-Programm. Du entscheidest, ob du sie sendest.",
     "result.share.email.subject": "OpenCloud-Sicherheitsbericht für {target}",
     "result.share.email.body": (
-        "Hier ist der Sicherheitsbericht für unsere OpenCloud-Instanz:\n\n"
-        "{url}\n\n"
-        "Dieser Link gewährt den Zugang zum Bericht - behandle ihn wie ein "
-        "Passwort. Er läuft von selbst ab, danach ist die Seite weg."
+        "Hier ist der Sicherheitsbericht für unsere OpenCloud-Instanz:\n\n{url}\n\nWer diesen Link hat, kann den Bericht lesen. Behandle ihn wie ein Passwort. Nach Ablauf des Berichts funktioniert der Link nicht mehr."
     ),
     "result.share.link": "Link kopieren",
     "result.share.link.hint": (
@@ -1622,7 +1623,7 @@ MESSAGES: dict[str, str] = {
     ),
     "result.share.summary": "Zusammenfassung kopieren",
     "result.share.summary.hint": (
-        'Die Befunde als Text ohne Berichtslink. So kannst du die Zusammenfassung in einem Chat teilen, ohne Zugriff auf den vollständigen Bericht zu gewähren.'
+        "Befunde als Text ohne Berichtslink. Das Teilen der Zusammenfassung gewährt keinen Zugriff auf den vollständigen Bericht."
     ),
     "result.share.summary.body": (
         "OpenCloud-Sicherheitsbericht - {domain}\n"

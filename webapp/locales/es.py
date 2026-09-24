@@ -1081,14 +1081,13 @@ MESSAGES: dict[str, str] = {
         "de funcionar. Nada aquí puede reconstruirla: el archivo del que salió ya "
         "no está."
     ),
-    "compare.upload.error.missing": "Seleccione el informe JSON o CSV que descargó anteriormente.",
+    "compare.upload.error.missing": "No se ha subido ningún informe. Seleccione un informe JSON o CSV descargado desde una página de resultados.",
     "compare.upload.error.no_current": "Indique el UUID del análisis con el que desea comparar el informe.",
-    "compare.upload.error.empty": "Ese archivo está vacío.",
+    "compare.upload.error.empty": "El archivo subido está vacío. Seleccione un informe JSON o CSV descargado.",
     "compare.upload.error.too_large": "El archivo supera el tamaño permitido de {kilobytes} KB.",
     "compare.upload.error.unreadable": "No se pudo leer el archivo como JSON ni como CSV. Suba la descarga original sin modificar.",
     "compare.upload.error.not_a_report": (
-        "Ese archivo no parece un informe de análisis de este servicio. Lo que se "
-        "espera son las descargas de una página de resultado."
+        "No se reconoce este archivo como un informe de análisis. Utilice un archivo JSON o CSV descargado desde una página de resultados."
     ),
     "compare.upload.error.rate_limit": "Se han subido varios informes desde su red en poco tiempo. Espere un minuto y vuelva a intentarlo.",
     "compare.upload.error.blocked": "Varios destinos recientes de su red no eran instancias de OpenCloud accesibles, así que este servicio ha pausado temporalmente las solicitudes desde su red, incluidas las subidas de informes. El analizador y su comparación también se ejecutan sin límites en su propia máquina.",
@@ -1158,7 +1157,7 @@ MESSAGES: dict[str, str] = {
     ),
     "error.rate_limit.client": "Se han solicitado muchos análisis desde su red en poco tiempo. Espere un minuto y vuelva a intentarlo.",
     "error.rate_limit.probe": "Varios destinos recientes no eran instancias de OpenCloud accesibles. Los análisis desde su red están suspendidos temporalmente. También puede comprobar su propia instancia con el analizador local.",
-    "error.rate_limit.daily": "Se ha alcanzado el límite diario de su red. Vuelva mañana o utilice el analizador local, que no tiene este límite.",
+    "error.rate_limit.daily": "Lo sentimos, su red ha alcanzado el límite de análisis de hoy. Vuelva a intentarlo mañana o ejecute el escáner en su equipo sin este límite diario.",
     "error.target.wildcard_dns": (
         "Ese nombre pertenece a un servicio que apunta nombres a cualquier "
         "dirección. Escriba el nombre de host propio de la instancia o su dirección."
@@ -1168,8 +1167,7 @@ MESSAGES: dict[str, str] = {
         "así que este servicio no puede determinar con certeza qué analizaría."
     ),
     "error.target.not_approved": (
-        "Este servicio solo analiza instancias aprobadas para ello. Pida al "
-        "operador que la añada o publica el registro DNS que la aprueba."
+        "Este servicio solo analiza instancias aprobadas. Pida al operador que apruebe esta instancia o publique el registro DNS de aprobación requerido."
     ),
     "error.rate_limit.target": "Esta instancia se ha analizado recientemente. Espere unos minutos.",
     "error.target.invalid": "Esa dirección no se puede analizar.",
@@ -1178,7 +1176,7 @@ MESSAGES: dict[str, str] = {
     "error.target.characters": (
         "Esa dirección contiene caracteres que un nombre de host no puede tener."
     ),
-    "error.target.unparsed": "No se pudo interpretar esa dirección.",
+    "error.target.unparsed": "No se ha podido interpretar esta dirección. Revísela e introduzca la URL base de la instancia.",
     "error.target.scheme": "Solo se pueden analizar destinos http:// y https://.",
     "error.target.credentials": "No se aceptan credenciales dentro de la dirección.",
     "error.target.address_only": "Introduzca solo la dirección base de la instancia, con una subcarpeta sencilla si la necesita. No se aceptan consultas, fragmentos, parámetros ni cambios de directorio.",
@@ -1187,7 +1185,7 @@ MESSAGES: dict[str, str] = {
     "error.target.hostname_shape": (
         "Eso no es un nombre de host que este servicio pueda analizar."
     ),
-    "error.target.unresolved": "Ese nombre de host no se resuelve.",
+    "error.target.unresolved": "No se ha encontrado ninguna dirección IP para este nombre de host. Revise la escritura y la configuración DNS.",
     "error.target.hostname_long": "Ese nombre de host es demasiado largo.",
     "error.target.internal": "No se pueden analizar direcciones locales ni internas.",
     "error.target.private": (
@@ -1195,12 +1193,10 @@ MESSAGES: dict[str, str] = {
         "local, y este servicio no la analizará."
     ),
     "error.target.blocked": (
-        "A este servicio se le ha pedido que no analice esa dirección."
+        "El operador ha excluido esta dirección de los análisis."
     ),
     "error.store_unavailable": (
-        "Este servicio no puede leer ahora mismo su propia configuración y "
-        "no analizará mientras no sepa qué objetivos debe excluir. "
-        "Inténtelo de nuevo dentro de unos minutos."
+        "El servicio no puede leer su lista de destinos excluidos y no puede iniciar un análisis de forma segura. Inténtelo de nuevo dentro de unos minutos."
     ),
     # ----------------------------------------------------------- result page
     "result.title": "Resultados del análisis",
@@ -1229,8 +1225,8 @@ MESSAGES: dict[str, str] = {
     ),
     "result.compare.offer.link": "Ver qué ha cambiado desde entonces",
     "result.progress.kicker": "En curso",
-    "result.progress.queued.title": "Esperando un proceso de análisis disponible",
-    "result.progress.queued.detail": "Todos los procesos están ocupados. Su análisis mantiene su posición y comenzará cuando quede uno libre.",
+    "result.progress.queued.title": "Esperando para iniciar el análisis",
+    "result.progress.queued.detail": "Todos los procesos de análisis están ocupados. Su análisis mantiene su lugar en la cola y comenzará cuando quede uno disponible.",
     "result.progress.running.title": "Analizando la instancia",
     "result.progress.running.detail": (
         "Leyendo lo que publica la instancia: versión, capacidades, "
@@ -1240,21 +1236,20 @@ MESSAGES: dict[str, str] = {
     "result.progress.step.running": "En ejecución",
     "result.progress.step.done": "Resultado",
     "result.progress.estimate": "La mayoría de los análisis terminan en menos de un minuto.",
-    "result.progress.elapsed": "hace {duration}",
+    "result.progress.elapsed": "Tiempo transcurrido: {duration}",
     "result.progress.noscript": (
-        "Esta página se actualiza sola mediante JavaScript. Sin él, recarga "
-        "la página en unos segundos para ver el resultado."
+        "JavaScript actualiza esta página automáticamente. Si JavaScript no está disponible, recargue la página al cabo de unos segundos para ver el resultado."
     ),
     "result.progress.queue.position": (
         "Análisis en cola. Posición en la fila: n.º {position} de {length}."
     ),
-    "result.progress.queue.next": "Análisis en cola. Es el siguiente.",
-    "result.progress.queue.waiting": "Esperando a que un proceso de análisis lo recoja.",
+    "result.progress.queue.next": "Su análisis es el siguiente en la cola.",
+    "result.progress.queue.waiting": "Esperando un proceso de análisis disponible.",
     "result.progress.done.title": "Informe listo",
-    "result.progress.done.detail": "La calificación ya está lista. Abriendo el informe.",
+    "result.progress.done.detail": "El análisis ha terminado. Abriendo el informe.",
     "result.progress.failed.title": "Análisis finalizado",
     "result.progress.failed.detail": (
-        "El análisis no se pudo completar. Abriendo lo que se obtuvo."
+        "El análisis no ha podido finalizar. Abriendo la página de resultados con los detalles del error."
     ),
     "result.failed.fallback": "El análisis no se pudo completar.",
     "result.failed.body": "El escáner no pudo obtener información suficiente para asignar una nota. Revise la dirección, confirme que ejecuta OpenCloud y compruebe que la instancia sea accesible desde este servicio.",
@@ -1341,6 +1336,16 @@ MESSAGES: dict[str, str] = {
         "ajuste los alcanza. Son la razón por la que el plan anterior se "
         "detiene donde lo hace."
     ),
+    "result.groups.kicker": "Agrupado por configuración",
+    "result.groups.heading": "Qué cambiar y dónde",
+    "result.groups.lede": "Los mismos hallazgos abiertos, agrupados según el sistema que usted edita para corregirlos, incluidos los que no afectan a la calificación. A menudo un solo cambio resuelve varios hallazgos.",
+    "result.groups.target.reverseProxy": "Proxy inverso",
+    "result.groups.target.identityProvider": "Proveedor de identidad",
+    "result.groups.target.opencloud": "OpenCloud",
+    "result.groups.target.dnsZone": "Zona DNS",
+    "result.groups.count": "{count} hallazgos abiertos, {label} con todos los cambios de este grupo",
+    "result.groups.resolves": "Resuelve {count} hallazgos a la vez",
+    "result.groups.alone": "solo este cambio: {label}",
     "result.rehearsal.kicker": "Simulación de actualización",
     "result.rehearsal.heading": "Qué solucionaría una actualización",
     "result.rehearsal.lede": (
@@ -1537,19 +1542,15 @@ MESSAGES: dict[str, str] = {
     "result.raw.lede": "El documento de resultado completo, tal como lo ve el complemento.",
     "result.raw.summary": "Mostrar el JSON en bruto",
     "result.export.kicker": "Exportar",
-    "result.export.heading": "Llévate este resultado",
+    "result.export.heading": "Descargar este resultado",
     "result.export.lede": (
-        "El mismo análisis, presentado de cuatro formas distintas. Cada una "
-        "se genera cuando la solicitas y desaparece junto con el propio "
-        "análisis."
+        "Elija un informe completo o un paquete de correcciones. Los enlaces de descarga funcionan hasta que caduca el análisis; los archivos guardados siguen disponibles en su dispositivo."
     ),
     "result.export.pdf": "Informe en PDF",
     "result.export.pdf.hint": "Para un ticket, una revisión o una copia impresa.",
     "result.export.html": "Descargar el informe",
     "result.export.html.hint": (
-        "Un fichero que sigue siendo legible cuando este enlace caduque. Se "
-        "abre sin conexión, no hace ninguna petición de red y no se "
-        "actualiza."
+        "Un informe independiente que puede abrir sin conexión después de que caduque este enlace. No hace solicitudes de red ni se actualiza."
     ),
     "result.export.remediation.md": "Paquete de correcciones (Markdown)",
     "result.export.remediation.md.hint": (
@@ -1567,22 +1568,19 @@ MESSAGES: dict[str, str] = {
     "result.export.sarif.hint": "Para un panel de análisis de código.",
     "result.export.json": "JSON",
     "result.export.json.hint": "El documento en bruto que evalúa el complemento.",
-    "result.export.passed.heading": "Lo que ya ha pasado",
+    "result.export.passed.heading": "Comprobaciones superadas",
     "result.export.passed.note": (
-        "Estas comprobaciones salieron limpias, así que no están en el plan de arriba."
+        "Estas comprobaciones se han superado y no requieren ninguna acción en el plan de corrección anterior."
     ),
     "result.share.kicker": "Compartir",
     "result.share.heading": "Compartir este informe",
     "result.share.lede": "Copie el enlace o un resumen, o abra un borrador en su cliente de correo. Este servicio no envía el informe por usted.",
-    "result.share.warning": "Cualquier persona con este enlace puede leer el informe hasta que caduque. Al publicarlo en un canal, también da acceso a sus participantes y a los servicios de vista previa. Comparta solo el resumen si no desea dar acceso al informe.",
+    "result.share.warning": "Cualquier persona con este enlace puede leer el informe hasta que caduque. Al compartirlo en un canal, también da acceso a sus miembros y a los servicios de vista previa de enlaces. Comparta el resumen de texto si no desea dar acceso al informe completo.",
     "result.share.email": "Compartir por correo",
-    "result.share.email.hint": "Abre un mensaje preparado en su programa de correo. Solo se envía cuando lo confirme allí.",
+    "result.share.email.hint": "Abre un mensaje preparado en su programa de correo. Usted decide si lo envía.",
     "result.share.email.subject": "Informe de seguridad de OpenCloud para {target}",
     "result.share.email.body": (
-        "Este es el informe de seguridad de nuestra instancia de OpenCloud:\n\n"
-        "{url}\n\n"
-        "Este enlace es lo que da acceso al informe, así que trátalo como una "
-        "contraseña. Caduca por sí solo y después la página deja de existir."
+        "Este es el informe de seguridad de nuestra instancia de OpenCloud:\n\n{url}\n\nCualquier persona con este enlace puede leer el informe. Trátelo como una contraseña. El enlace deja de funcionar cuando caduca el informe."
     ),
     "result.share.link": "Copiar enlace",
     "result.share.link.hint": (
@@ -1590,8 +1588,7 @@ MESSAGES: dict[str, str] = {
     ),
     "result.share.summary": "Copiar resumen",
     "result.share.summary.hint": (
-        "Los hallazgos como texto, sin ningún enlace. Lo más seguro para pegar "
-        "en un canal de chat."
+        "Hallazgos en texto, sin enlace al informe. Compartir el resumen no da acceso al informe completo."
     ),
     "result.share.summary.body": (
         "Informe de seguridad de OpenCloud - {domain}\n"

@@ -23,6 +23,7 @@
   <a href="#where-the-checks-should-run-from" lang="en">Where the checks should run from</a>
   <a href="#keeping-the-waivers-honest" lang="en">Keeping the waivers honest</a>
   <a href="#only-alerting-on-what-changed" lang="en">Only alerting on what changed</a>
+  <a href="#one-dashboard-for-the-whole-fleet" lang="en">One dashboard for the whole fleet</a>
   <a href="#scheduling-the-whole-thing" lang="en">Scheduling the whole thing</a>
 </nav>
 
@@ -39,6 +40,7 @@ how to schedule the resulting checks.</p>
 <li><a href="#where-the-checks-should-run-from">Where the checks should run from</a></li>
 <li><a href="#keeping-the-waivers-honest">Keeping the waivers honest</a></li>
 <li><a href="#only-alerting-on-what-changed">Only alerting on what changed</a></li>
+<li><a href="#one-dashboard-for-the-whole-fleet">One dashboard for the whole fleet</a></li>
 <li><a href="#scheduling-the-whole-thing">Scheduling the whole thing</a></li>
 </ul>
 <!-- TOC -->
@@ -185,6 +187,25 @@ every day it stays up. See
 <p>Add <code>--self-update-check</code> on one host in the fleet - not all of them - to be
 told when a newer plugin version is published. It is cached for a day and
 never changes the exit code.</p>
+<h2 id="one-dashboard-for-the-whole-fleet">One dashboard for the whole fleet</h2>
+<p>Monitoring answers "is this instance broken right now", one host at a time.
+A fleet review asks something else: which instances run a release nobody
+patches any more, which waivers run out this month, which finding is broken
+everywhere, and which instance nobody has looked at lately. Keep the result
+documents <code>scan</code> writes, and <code>fleet</code> answers all four from the files alone:</p>
+<pre><code class="language-shell">dir=&quot;/var/lib/opencloud-reports/$(date +%F)&quot;
+mkdir -p &quot;$dir&quot;
+for host in opencloud1.example.com opencloud2.example.com; do
+  check-opencloud-scanner scan &quot;$host&quot; &gt; &quot;$dir/$host.json&quot;
+done
+check-opencloud-scanner fleet /var/lib/opencloud-reports \
+    --inventory /etc/check-opencloud-security/hosts.txt --format html &gt; fleet.html
+</code></pre>
+<p>It scans nothing and stores nothing; the newest report of each host is the
+one that counts, and the release and the waiver deadlines are measured
+against today rather than the day the report was written. An inventory
+makes a host with no report at all show up as missing. See
+<a href="/documentation/scanner-cli#fleet---a-dashboard-from-saved-results"><code>fleet</code> - a dashboard from saved results</a>.</p>
 <h2 id="scheduling-the-whole-thing">Scheduling the whole thing</h2>
 <ul>
 <li>With Icinga2: one <code>Service</code> per host, applied from a host group - see

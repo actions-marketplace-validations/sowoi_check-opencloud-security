@@ -138,6 +138,14 @@ It is a replay of `_compute_rating` with one finding removed at a time, not a
 second model of the rating, so a predicted grade cannot disagree with the real
 one. Nothing new is stored: the plan is derived from the document it sits in.
 
+`groups` regroups the open findings - including ones that cap nothing, such
+as a missing header - by where the change is made (`reverseProxy`,
+`identityProvider`, `opencloud`, `dnsZone`), built by `remediation_groups.py`.
+Findings one edit resolves together are one change, with the `findings` it
+resolves, the plan `steps` among them, `resolvesSeveral`, and the
+`ratingAfter` that change alone gives, replayed through the same arithmetic.
+`groupSummary` is one sentence naming the changes that resolve several.
+
 Three properties are load-bearing and have tests:
 
 - The **order** is by cap, then severity, then identifier, so it does not
