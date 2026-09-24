@@ -49,8 +49,12 @@ def test_a_measured_check_that_becomes_inconclusive_warns_without_moving_the_rat
     assert comparison.coverage_lost == {"caaRecord": "timeout"}
     assert comparison.current.rating == comparison.previous.rating == 5
     assert code is check.NagiosExitCode.WARNING
-    assert message.startswith("WARNING: 1 previously measured check(s)")
-    assert "rating is unchanged" in message
+    # The original OK message is carried without its own "OK: ", so the alert
+    # line never reads as both a WARNING and an OK.
+    assert message == (
+        "WARNING: 1 previously measured check(s) are now inconclusive; "
+        "the rating is unchanged (original)"
+    )
     assert any(line.startswith("Coverage regressed (1)") for line in lines)
     assert comparison.as_dict()["coverage_regressed"] == {"caaRecord": "timeout"}
 

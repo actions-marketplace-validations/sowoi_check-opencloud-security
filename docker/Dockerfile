@@ -17,11 +17,15 @@ COPY --from=ghcr.io/astral-sh/uv:0.11.31 /uv /uvx /bin/
 WORKDIR /src
 
 # Only copy what is needed to build the wheel, keeping the build cache-friendly.
-COPY pyproject.toml README.md LICENSE ./
+COPY pyproject.toml uv.lock README.md LICENSE ./
 COPY check_opencloud_security.py ./
 COPY opencloud_local_scan ./opencloud_local_scan
 
-RUN uv build --wheel --out-dir /dist
+# The dependencies come from uv.lock, with their hashes: the set CI tested and
+# pip-audit checked, not whatever PyPI serves on the day the image is built.
+RUN uv build --wheel --out-dir /dist \
+    && uv export --frozen --no-default-groups --no-emit-project \
+        --format requirements-txt --output-file /dist/requirements.txt
 
 
 FROM python:3.14-slim
@@ -32,13 +36,13 @@ LABEL org.opencontainers.image.title="check-opencloud-security" \
       org.opencontainers.image.licenses="GPL-3.0-only"
 
 COPY --from=ghcr.io/astral-sh/uv:0.11.31 /uv /bin/
-COPY --from=builder /dist/*.whl /tmp/
+COPY --from=builder /dist/*.whl /dist/requirements.txt /tmp/
 
-# Dependencies are resolved from the wheel metadata (pyproject.toml);
-# this project has no requirements.txt - generate one with `uv export`
-# if some tool of yours needs it.
-RUN uv pip install --system --no-cache /tmp/*.whl \
-    && rm -rf /tmp/*.whl /bin/uv \
+# The locked set first, every hash checked, then the wheel with --no-deps, so
+# nothing this step installs was resolved here.
+RUN uv pip install --system --no-cache --require-hashes -r /tmp/requirements.txt \
+    && uv pip install --system --no-cache --no-deps /tmp/*.whl \
+    && rm -rf /tmp/*.whl /tmp/requirements.txt /bin/uv \
     && useradd --no-create-home --shell /usr/sbin/nologin --uid 1000 nagios
 
 # Numeric, so a runtime that checks runAsNonRoot can tell without reading

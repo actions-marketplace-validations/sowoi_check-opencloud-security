@@ -1,6 +1,6 @@
 # ADR 0061: The frontend is tested in real browsers that cannot leave loopback
 
-- Status: Proposed; its "never Chromium" engine choice superseded by ADR 0068
+- Status: Accepted; its "never Chromium" engine choice superseded by ADR 0068
 - Date: 2026-09-16
 - Extends: ADR 0060 (the `playwright` record it requires)
 

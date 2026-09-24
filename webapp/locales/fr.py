@@ -1426,6 +1426,7 @@ MESSAGES: dict[str, str] = {
     "result.explain.title": "Ce que signifie ce contrôle",
     "result.plan.kicker": "Plan de remédiation",
     "result.plan.heading": "Ce qui vous mène à {label}",
+    "result.plan.heading.held": "Encore à corriger, la note reste {label}",
     "result.plan.then": "puis {label}",
     "result.plan.still": "toujours {label}",
     "result.plan.note": "Le plan donne la priorité aux changements qui améliorent la note. La note indiquée à chaque étape suppose que cette étape et toutes les précédentes sont terminées. Les constats de même gravité partagent un plafond : plusieurs corrections peuvent donc être nécessaires avant que la note augmente.",

@@ -365,7 +365,7 @@ def test_the_service_listens_on_loopback_unless_told_otherwise():
 # for a reason that has nothing to do with the rule.
 
 
-@pytest.mark.parametrize("listen", ["127.0.0.1", "::1", "localhost", "127.0.0.5", ""])
+@pytest.mark.parametrize("listen", ["127.0.0.1", "::1", "localhost", "127.0.0.5"])
 def test_loopback_needs_no_token(listen):
     """
     An operator on their own machine is not made to invent a credential.
@@ -377,7 +377,7 @@ def test_loopback_needs_no_token(listen):
 
 
 @pytest.mark.parametrize(
-    "listen", ["0.0.0.0", "::", "192.168.1.10", "10.0.0.4", "some-host"]
+    "listen", ["0.0.0.0", "::", "", " ", "192.168.1.10", "10.0.0.4", "some-host"]
 )
 def test_a_wide_bind_without_a_token_is_refused(listen):
     """
@@ -403,6 +403,17 @@ def test_a_wide_bind_with_a_token_is_allowed(listen):
     This is the shipped container's configuration, so it has to keep working.
     """
     ensure_listen_is_safe(listen, "s3cret")
+
+
+def test_an_empty_bind_address_is_every_interface_not_loopback():
+    """
+    A socket bound to "" listens on INADDR_ANY, so it must need a token.
+
+    It used to be listed as loopback, which let the widest bind there is
+    through the one check meant to stop an open request forwarder.
+    """
+    with pytest.raises(ServiceMisconfigured):
+        ensure_listen_is_safe("", None)
 
 
 def test_an_unresolvable_bind_address_counts_as_exposed():

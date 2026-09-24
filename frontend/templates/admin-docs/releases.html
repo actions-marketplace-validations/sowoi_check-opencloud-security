@@ -31,6 +31,7 @@
 
 <nav class="docs-toc card section-gap" aria-label="{{ t('docs.guide.toc.aria') }}" data-reveal>
   <p class="kicker">{{ t('docs.guide.toc.heading') }}</p>
+  <a href="#1311-2026-09-24" lang="en">[1.31.1] - 2026-09-24</a>
   <a href="#1310-2026-09-24" lang="en">[1.31.0] - 2026-09-24</a>
   <a href="#1302-2026-09-24" lang="en">[1.30.2] - 2026-09-24</a>
   <a href="#1301-2026-09-23" lang="en">[1.30.1] - 2026-09-23</a>
@@ -40,10 +41,50 @@
   <a href="#1291-2026-09-21" lang="en">[1.29.1] - 2026-09-21</a>
   <a href="#1290-2026-09-21" lang="en">[1.29.0] - 2026-09-21</a>
   <a href="#1281-2026-09-21" lang="en">[1.28.1] - 2026-09-21</a>
-  <a href="#1280-2026-09-20" lang="en">[1.28.0] - 2026-09-20</a>
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="en">
+<h2 id="1311-2026-09-24">[1.31.1] - 2026-09-24</h2>
+<h3 id="changed">Changed</h3>
+<ul>
+<li><strong>The coverage warning's alert line is now covered by mutation testing.</strong>
+  <code>tests/test_coverage_regression.py</code> drives <code>_apply_baseline</code> in process but
+  was missing from the mutmut selection, so eleven mutants of the branch that
+  lifts an OK to WARNING when a measured check turns inconclusive survived.
+  It is now listed, and its test asserts the whole alert line: three of those
+  mutants left <code>OK:</code> inside the WARNING message without a test noticing.</li>
+</ul>
+<h3 id="fixed">Fixed</h3>
+<ul>
+<li><strong>The web report no longer offers "What gets you to A+" under an A+.</strong> When
+  no step in the remediation plan raises the grade, because the instance
+  already has the top grade or something no setting can change holds it down,
+  the plan is headed "Still worth fixing, the grade stays A+" (or whichever
+  grade it holds) instead.
+  This applies to the dashboard, its contents list, and the PDF and HTML
+  exports, in all four languages.</li>
+<li><strong><code>check-opencloud-scanner fleet</code> lists waiver deadlines in the order they
+  end.</strong> Deadlines were sorted by their text, so a waiver written with a
+  <code>+02:00</code> offset could be listed after one that ends later in UTC.</li>
+<li><strong>The fleet summary's "Not covered" count counts each host once.</strong> A host
+  whose last scan failed long enough ago to be stale was counted twice.</li>
+<li><strong>The remediation plan no longer fails on a result document whose
+  <code>ratingExplanation.base</code> is <code>null</code>.</strong> The update step's detail is then left
+  empty, instead of <code>remediation_plan()</code> raising.</li>
+</ul>
+<h3 id="security">Security</h3>
+<ul>
+<li><strong>An empty listen address no longer counts as loopback for the scan
+  service.</strong> Binding <code>""</code> listens on every interface, but the check that
+  demands a token for anything but loopback let it through. The command line,
+  <code>COS_SERVICE_LISTEN</code> and the configuration file all fall back to
+  <code>127.0.0.1</code> when empty, so only a program calling <code>build_server()</code> or
+  <code>serve()</code> with <code>listen=""</code> could reach it.</li>
+<li><strong>The container images install the dependencies <code>uv.lock</code> pins, with their
+  hashes.</strong> Both <code>docker/Dockerfile</code> and <code>docker/Dockerfile.web</code> resolved
+  their dependencies from PyPI at build time, so an image could ship versions
+  that CI, <code>pip-audit</code> and the SBOM never saw.</li>
+</ul>
 <h2 id="1310-2026-09-24">[1.31.0] - 2026-09-24</h2>
 <h3 id="documentation">Documentation</h3>
 <ul>
@@ -117,7 +158,7 @@
   printed a summary. See
   <a href="/documentation/scanner-cli#fleet---a-dashboard-from-saved-results">the scanner command</a>.</li>
 </ul>
-<h3 id="fixed">Fixed</h3>
+<h3 id="fixed_1">Fixed</h3>
 <ul>
 <li><strong>The <code>.deb</code> install smoke test survives a mirror caught mid-sync.</strong> When
   the Ubuntu or Debian mirror lists a dependency it no longer serves (a
@@ -125,7 +166,7 @@
   tries the install once more before the release dry run fails.</li>
 </ul>
 <h2 id="1302-2026-09-24">[1.30.2] - 2026-09-24</h2>
-<h3 id="changed">Changed</h3>
+<h3 id="changed_1">Changed</h3>
 <ul>
 <li><strong>Tests now cover code that no test reached before.</strong> The advisory refresh
   script <code>scripts/update_vulnerability_db.py</code> has tests. They prove that it
@@ -150,7 +191,7 @@
   duplicate catalogue keys, repeated placeholders, and formatting and HTML
   escaping across every language, including messages on conditional pages.</li>
 </ul>
-<h3 id="fixed_1">Fixed</h3>
+<h3 id="fixed_2">Fixed</h3>
 <ul>
 <li><code>--waiver-warning</code> and <code>waiver_days_left</code> no longer count a waiver that
   only covers a flag OpenCloud hardcodes, such as
@@ -301,7 +342,7 @@
   release ends the window.</p>
 </li>
 </ul>
-<h3 id="fixed_2">Fixed</h3>
+<h3 id="fixed_3">Fixed</h3>
 <ul>
 <li>
 <p><strong>The French scanner CLI guide no longer ships the newly added comparison
@@ -316,7 +357,7 @@
 </li>
 </ul>
 <h2 id="1293-2026-09-22">[1.29.3] - 2026-09-22</h2>
-<h3 id="fixed_3">Fixed</h3>
+<h3 id="fixed_4">Fixed</h3>
 <ul>
 <li><strong>Sloppy generated wording was removed from the English, German and French&lt;
   documentation.</strong> Replaced vague promotional phrases and awkward literal
@@ -325,7 +366,7 @@
   regression cases for these patterns.</li>
 </ul>
 <h2 id="1292-2026-09-22">[1.29.2] - 2026-09-22</h2>
-<h3 id="fixed_4">Fixed</h3>
+<h3 id="fixed_5">Fixed</h3>
 <ul>
 <li>
 <p><strong><code>/llms.txt</code> and <code>/llms-full.txt</code> described an older version of the
@@ -367,7 +408,7 @@
 </li>
 </ul>
 <h2 id="1291-2026-09-21">[1.29.1] - 2026-09-21</h2>
-<h3 id="changed_1">Changed</h3>
+<h3 id="changed_2">Changed</h3>
 <ul>
 <li>
 <p><strong>The <code>--policy</code> deployment gate is now covered by tests mutation testing
@@ -396,7 +437,7 @@
   dropped rather than raise.</p>
 </li>
 </ul>
-<h3 id="fixed_5">Fixed</h3>
+<h3 id="fixed_6">Fixed</h3>
 <ul>
 <li>The browser test for the severity filter no longer drops its own press in
   WebKit on CI. Pressing a counter hides most of the list and reveals the
@@ -505,7 +546,7 @@
   new verdict is the intended one.</p>
 </li>
 </ul>
-<h3 id="changed_2">Changed</h3>
+<h3 id="changed_3">Changed</h3>
 <ul>
 <li>
 <p><strong>The Icinga check commands offer <code>--profile</code>.</strong> The three CheckCommand
@@ -525,7 +566,7 @@
   selection, which reported "no tests" for <code>verification.py</code> before.</p>
 </li>
 </ul>
-<h3 id="security">Security</h3>
+<h3 id="security_1">Security</h3>
 <ul>
 <li><strong>The web application sends <code>Strict-Transport-Security</code> over HTTPS.</strong> The
   generated reverse-proxy configuration deliberately adds no security headers</li>
@@ -551,62 +592,6 @@
   sides are encoded now, exactly as the purge endpoint has always compared
   its token. The endpoint itself was never affected.</p>
 </li>
-</ul>
-<h2 id="1280-2026-09-20">[1.28.0] - 2026-09-20</h2>
-<h3 id="added_5">Added</h3>
-<ul>
-<li>
-<p><strong>Upgrade rehearsal: what each candidate release would fix, leave and
-  rate.</strong> The scan result gains <code>upgradeRehearsal</code>, which simulates every
-  release worth moving to (the newest patch of the installed line and the
-  newest release of each later line, only on the declared track) against the
-  advisory database and the release schedule. The plugin prints it as one
-  detail line, for example "Upgrade rehearsal: 7.2.4 fixes 3 findings,
-  leaves 1, reaches rating C", and the webhook payload carries it as
-  <code>upgrade_rehearsal</code>. The rating replays the scanner's own version rules and
-  keeps the instance's failed checks as caps, because an upgrade does not
-  change the proxy. See
-  <a href="/documentation/release-lifecycle#rehearse-every-upgrade">Rehearse every upgrade</a>.</p>
-</li>
-<li>
-<p><strong>A scan the target cooldown refuses now opens your earlier result.</strong> When
-  an instance was scanned too recently and this browser tab has already shown
-  a finished scan of it, the web application opens that result instead of
-  only refusing, says it is the earlier result, and counts down to when a new
-  scan is possible. The earlier result comes from the tab's own scan history
-  (the one the comparison offer keeps in <code>sessionStorage</code>); the server never
-  hands one visitor a scan somebody else started, as
-  <a href="{{ admin_path }}/decisions/0002-no-scan-result-caching">ADR 0002</a> requires. Without such a
-  scan the refusal is unchanged.</p>
-</li>
-<li>
-<p><strong><code>--verify-remediation</code> re-checks one finding without a full scan.</strong>
-  After changing a single reverse-proxy setting, pass the finding ids the
-  full output reported (repeatable or comma-separated, a family root such as
-  <code>exposed</code> covers every member) and only the probes that measure them run.
-  The plugin answers <code>OK</code> when every one now passes, <code>WARNING</code>/<code>CRITICAL</code>
-  while one still fails, and <code>UNKNOWN</code> for an id only a full scan can settle
-  (<code>eol</code>, a vulnerability, address parity). No rating, baseline or webhook.
-  The measurement is <code>opencloud_local_scan.verification.verify</code>, which reuses
-  the scanner's own probes so its answer matches the next full scan. See
-  ADR 0072.</p>
-</li>
-</ul>
-<h3 id="documentation_4">Documentation</h3>
-<ul>
-<li><strong>Translated release-lifecycle guides now include the upgrade-rehearsal
-  section.</strong> Their section anchors stay aligned with the English guide.</li>
-</ul>
-<h3 id="fixed_6">Fixed</h3>
-<ul>
-<li><strong>A gateway answer no longer fails the documented link check.</strong> An HTTP
-  408, 502, 503 or 504 comes from the machinery in front of a site, not from
-  the page, so it is now retried like a transport error and - when the whole
-  run is unlucky - reported without failing the workflow. A link that rotted
-  answers 404; a merge that fails because GitHub was briefly slow is exactly
-  the noise this check is meant to avoid.</li>
-<li><strong>Pytest no longer collects mutmut's generated working copy.</strong> This avoids
-  an <code>ImportPathMismatchError</code> between the real and mutated test suites.</li>
 </ul>
 </article>
 {% endblock %}
