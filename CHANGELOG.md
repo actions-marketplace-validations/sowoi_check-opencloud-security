@@ -12,6 +12,15 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+### Documentation
+
+- Clarified operator status, comparison results, monitoring instructions and
+  TLS explanations in English, German, Spanish and French. Corrected Spanish
+  forms of address and translated two overlooked deployment settings rows.
+- Expanded translation tests to cover copied English table descriptions,
+  duplicate catalogue keys, repeated placeholders, and formatting and HTML
+  escaping across every language, including messages on conditional pages.
+
 ### Fixed
 
 - `--waiver-warning` and `waiver_days_left` no longer count a waiver that
