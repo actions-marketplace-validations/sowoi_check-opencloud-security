@@ -65,6 +65,11 @@ Ignore generated hits (`frontend/static/search-index*.json`,
    fake instance pass or fail the check.
 4. If a `snippets.py` rendering applies (Compose, .env, nginx, Caddy,
    Traefik), confirm the new `env_fix` / `header_fix` renders.
+5. **`opencloud_local_scan/remediation_groups.py`** - place the check in
+   `CHECK_TARGETS` (the reverse proxy, the identity provider, OpenCloud or
+   the DNS zone - where its fix is made), and add it to a `SHARED_CHANGES`
+   entry when one edit also resolves related checks.
+   `tests/test_remediation_groups.py` fails until it is placed.
 
 ## 3. Tests
 

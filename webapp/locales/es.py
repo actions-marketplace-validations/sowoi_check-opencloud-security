@@ -12,6 +12,7 @@ MESSAGES: dict[str, str] = {
     "admin.tabs.overview": "Resumen",
     "admin.tabs.configuration": "Configuración",
     "admin.tabs.rules": "Reglas",
+    "admin.tabs.decisions": "Decisiones",
     "admin.config.title": "Configuración",
     "admin.config.lede": "Todas las variables COS_WEB_* que lee este servicio y sus valores efectivos actuales.",
     "admin.config.scope": "Estos son los ajustes efectivos de este proceso web al iniciarse. OpenCloud y el proceso de análisis tienen su propia configuración. Para las credenciales solo se indica si están definidas.",
@@ -128,6 +129,12 @@ MESSAGES: dict[str, str] = {
     "admin.rules.rule.admin_refresh.body": "Cada actualización de datos de referencia puede pulsarse una vez cada {cooldown}.",
     "admin.docs.kicker": "Documentación de operación",
     "admin.docs.source": "Desde <code>{file}</code> en el repositorio, en inglés.",
+    "admin.decisions.title": "Decisiones de arquitectura",
+    "admin.decisions.lede": "Cada registro de decisión de arquitectura de este repositorio y su estado, en inglés tal como se escribió.",
+    "admin.decisions.search.label": "Filtrar los registros de decisión",
+    "admin.decisions.search.placeholder": "Número, título o estado",
+    "admin.decisions.search.empty": "Ningún registro coincide. La búsqueda del sitio también busca en el texto de cada registro.",
+    "admin.decisions.back": "Todas las decisiones",
     "admin.band": "Área de operación - sesión iniciada como {user}",
     "admin.band.signout": "Cerrar sesión",
     "admin.lede": "Consulte el estado del servicio y los datos de referencia, o ejecute manualmente las actualizaciones diarias del proceso de trabajo.",
@@ -153,12 +160,8 @@ MESSAGES: dict[str, str] = {
     "admin.state.schedule": "Calendario de versiones",
     "admin.state.advisories": "Avisos",
     "admin.state.checked": "comprobado {when}",
-    "admin.state.checked.failed": (
-        "comprobado {when}: el último intento no se pudo descargar"
-    ),
-    "admin.state.checked.rejected": (
-        "comprobado {when}: las comprobaciones rechazaron el último intento"
-    ),
+    "admin.state.checked.failed": "comprobado {when}: la última descarga de datos ha fallado",
+    "admin.state.checked.rejected": "comprobado {when}: los datos descargados no han superado la validación",
     "admin.state.refresh.off": "la actualización diaria está desactivada",
     "admin.state.ago.minutes": "hace {minutes} min",
     "admin.state.ago.hours": "hace {hours} h",
@@ -182,10 +185,7 @@ MESSAGES: dict[str, str] = {
     "admin.surfaces.mcp.guarded": (
         "Se exige un token del emisor configurado."
     ),
-    "admin.surfaces.mcp.open": (
-        "No se exige ningún token: cualquier agente que llegue hasta él puede "
-        "ocupar los workers de este servicio."
-    ),
+    "admin.surfaces.mcp.open": "No se exige ningún token. Cualquier agente que pueda acceder a este punto de acceso puede solicitar análisis.",
     "admin.surfaces.docs": "Páginas de API navegables en /docs",
     "admin.surfaces.docs.contract": (
         "Desactivarlas oculta las páginas, no el contrato: /openapi.json, "
@@ -194,10 +194,7 @@ MESSAGES: dict[str, str] = {
     "admin.surfaces.indexed": "Localizable por los buscadores",
     "admin.surfaces.private": "Análisis de direcciones de red privadas",
     "admin.surfaces.private.found": "Se permiten destinos privados y está activada la indexación en buscadores. Cualquiera que encuentre este servicio puede enviar destinos de su red interna.",
-    "admin.surfaces.private.estate": (
-        "Permitido, que es justo para lo que sirve una instalación que "
-        "analiza su propia red."
-    ),
+    "admin.surfaces.private.estate": "Permitido para que este despliegue pueda analizar instancias de su red interna.",
     "admin.surfaces.encrypt": "Resultados cifrados en reposo",
     "admin.surfaces.audit": "Registro de auditoría",
     "admin.surfaces.audit.file": (
@@ -283,7 +280,7 @@ MESSAGES: dict[str, str] = {
     "admin.probe.unreadable": "no se ha podido leer - inalcanzable, o ya no tiene la forma esperada",
     "admin.probe.disabled": "sin comprobar - esa actualización está desactivada",
     "admin.search.kicker": "Índice de búsqueda",
-    "admin.search.heading": "Sigue siendo válido el índice publicado",
+    "admin.search.heading": "Estado del índice de búsqueda",
     "admin.search.lede": "El índice de búsqueda se genera durante la compilación. Esta vista compara sus páginas, idiomas y versión con el servicio en ejecución. No compara el texto completo de las páginas ni modifica el índice.",
     "admin.search.fresh": "Al día",
     "admin.search.stale": "Desactualizado",
@@ -763,11 +760,7 @@ MESSAGES: dict[str, str] = {
         "indican cómo se combinan esas operaciones para enviar un análisis, "
         "esperarlo y recoger el resultado."
     ),
-    "api.schema.docs_on": (
-        'Ambos se pueden explorar aquí como <a href="/docs">Swagger UI</a> y '
-        '<a href="/redoc">ReDoc</a>, servidos desde este servidor como todo '
-        "lo demás; nada se obtiene de ningún otro sitio."
-    ),
+    "api.schema.docs_on": "Consulte la API con <a href=\"/docs\">Swagger UI</a> o <a href=\"/redoc\">ReDoc</a>. Ambos visores cargan sus recursos desde este servidor, sin solicitudes a terceros.",
     "api.schema.docs_off": (
         "Los visores interactivos (Swagger UI en <code>/docs</code>, ReDoc "
         "en <code>/redoc</code>) están desactivados en este despliegue; un "
@@ -959,25 +952,13 @@ MESSAGES: dict[str, str] = {
         "otra extensión es YAML. Los secretos pueden vivir en archivos "
         "separados en lugar de en la línea de comandos."
     ),
-    "docs.index.monitoring.kicker": "Ponlo a trabajar",
+    "docs.index.monitoring.kicker": "Comprobaciones periódicas",
     "docs.index.monitoring.heading": (
         "Monitorización, automatización y varias instancias"
     ),
-    "docs.index.monitoring.nagios": (
-        "<strong>Nagios o Icinga:</strong> usa directamente la salida del "
-        "complemento; el peor umbral configurado determina el código de "
-        "salida."
-    ),
-    "docs.index.monitoring.fleet": (
-        "<strong>Varias instancias:</strong> pasa una lista de hosts "
-        "separados por comas, o usa un archivo de configuración por "
-        "instancia en cuanto sus ajustes diverjan."
-    ),
-    "docs.index.monitoring.prometheus": (
-        "<strong>Prometheus:</strong> usa <code>--format=prometheus</code> "
-        "una vez, o expón el exportador incorporado con "
-        "<code>--prometheus-listen-port</code>."
-    ),
+    "docs.index.monitoring.nagios": "<strong>Nagios o Icinga:</strong> utilice directamente la salida del complemento. El estado más grave activado por los umbrales configurados determina el código de salida.",
+    "docs.index.monitoring.fleet": "<strong>Varias instancias:</strong> indique una lista de hosts separados por comas. Utilice un archivo de configuración propio para cada instancia que necesite ajustes diferentes.",
+    "docs.index.monitoring.prometheus": "<strong>Prometheus:</strong> utilice <code>--format=prometheus</code> para una exportación puntual, o publique las métricas con el exportador integrado mediante <code>--prometheus-listen-port</code>.",
     "docs.index.monitoring.ci": "<strong>CI:</strong> utilice el mismo comando en su flujo de trabajo. El código de salida permite hacer fallar el trabajo según la política configurada.",
     "docs.index.monitoring.scheduled": (
         "<strong>Comprobaciones programadas:</strong> systemd, cron, "
@@ -1039,9 +1020,9 @@ MESSAGES: dict[str, str] = {
     ),
     "compare.error.different_targets": "Los dos análisis corresponden a instancias distintas, por lo que no se comparan. Compare dos análisis de la misma instancia.",
     "compare.verdict.kicker": "Entre los dos análisis",
-    "compare.verdict.improved": "Ha mejorado",
+    "compare.verdict.improved": "El resultado del análisis ha mejorado",
     "compare.verdict.unchanged": "No ha cambiado nada",
-    "compare.verdict.regressed": "Ha empeorado",
+    "compare.verdict.regressed": "El resultado del análisis ha empeorado",
     "compare.rating.up": "La nota ha subido {points} punto(s).",
     "compare.rating.down": "La nota ha bajado {points} punto(s).",
     "compare.rating.same": "La nota no ha cambiado. Aun así, puede haber hallazgos corregidos: varios hallazgos pueden imponer el mismo límite. Las listas siguientes muestran los cambios.",
@@ -1055,20 +1036,13 @@ MESSAGES: dict[str, str] = {
     "compare.introduced.heading": "Hallazgos nuevos ({count})",
     "compare.introduced.none": "No hay nada nuevo desde el análisis anterior.",
     "compare.resolved.heading": "Hallazgos resueltos ({count})",
-    "compare.resolved.none": (
-        "No ha desaparecido nada de lo que estaba abierto en el análisis "
-        "anterior."
-    ),
+    "compare.resolved.none": "No se ha resuelto ningún hallazgo del análisis anterior.",
     "compare.unchanged.heading": "Siguen abiertos ({count})",
     "compare.unchanged.none": "No hay nada abierto en ambos análisis.",
     "compare.changes.heading": "Lo que detalla la comparación",
     "compare.changes.category": "Categoría",
     "compare.changes.change": "Cambio",
-    "compare.nothing_stored": (
-        "Esta comparación se ha calculado a partir de los dos resultados y no "
-        "se ha guardado en ninguna parte. Al recargar se vuelve a calcular; si "
-        "caduca cualquiera de los dos resultados, ya no se podrá pedir."
-    ),
+    "compare.nothing_stored": "Esta comparación se calcula a partir de los dos resultados cada vez que se abre la página. No se guarda por separado y deja de estar disponible cuando caduca cualquiera de los resultados.",
     # ----------------------------------------------------------------- search
     # ---------------------------------------- comparación con un archivo
     "compare.upload.kicker": "Comparar un informe guardado",
@@ -1090,10 +1064,7 @@ MESSAGES: dict[str, str] = {
     "compare.upload.source.kicker": "De dónde viene el lado anterior",
     "compare.upload.source.json": "El informe anterior procede de un archivo JSON subido. No tiene una página de resultados aquí; el archivo se descartó tras leerlo.",
     "compare.upload.source.csv": "El informe anterior procede de un archivo CSV subido. No tiene una página de resultados aquí; el archivo se descartó tras leerlo.",
-    "compare.upload.source.dropped": (
-        "{count} línea(s) del archivo no llevan los nombres con los que este "
-        "escáner nombra sus hallazgos y quedaron fuera de la comparación."
-    ),
+    "compare.upload.source.dropped": "Entradas con identificadores de hallazgo desconocidos excluidas de la comparación: {count}.",
     "compare.upload.source.missing.httpsEnforced": (
         "El archivo subido no registra si se forzaba HTTPS, así que esa medida "
         "quedó fuera de ambos lados en lugar de adivinarse. Un CSV descargado "
@@ -1110,14 +1081,13 @@ MESSAGES: dict[str, str] = {
         "de funcionar. Nada aquí puede reconstruirla: el archivo del que salió ya "
         "no está."
     ),
-    "compare.upload.error.missing": "Seleccione el informe JSON o CSV que descargó anteriormente.",
+    "compare.upload.error.missing": "No se ha subido ningún informe. Seleccione un informe JSON o CSV descargado desde una página de resultados.",
     "compare.upload.error.no_current": "Indique el UUID del análisis con el que desea comparar el informe.",
-    "compare.upload.error.empty": "Ese archivo está vacío.",
+    "compare.upload.error.empty": "El archivo subido está vacío. Seleccione un informe JSON o CSV descargado.",
     "compare.upload.error.too_large": "El archivo supera el tamaño permitido de {kilobytes} KB.",
     "compare.upload.error.unreadable": "No se pudo leer el archivo como JSON ni como CSV. Suba la descarga original sin modificar.",
     "compare.upload.error.not_a_report": (
-        "Ese archivo no parece un informe de análisis de este servicio. Lo que se "
-        "espera son las descargas de una página de resultado."
+        "No se reconoce este archivo como un informe de análisis. Utilice un archivo JSON o CSV descargado desde una página de resultados."
     ),
     "compare.upload.error.rate_limit": "Se han subido varios informes desde su red en poco tiempo. Espere un minuto y vuelva a intentarlo.",
     "compare.upload.error.blocked": "Varios destinos recientes de su red no eran instancias de OpenCloud accesibles, así que este servicio ha pausado temporalmente las solicitudes desde su red, incluidas las subidas de informes. El analizador y su comparación también se ejecutan sin límites en su propia máquina.",
@@ -1187,7 +1157,7 @@ MESSAGES: dict[str, str] = {
     ),
     "error.rate_limit.client": "Se han solicitado muchos análisis desde su red en poco tiempo. Espere un minuto y vuelva a intentarlo.",
     "error.rate_limit.probe": "Varios destinos recientes no eran instancias de OpenCloud accesibles. Los análisis desde su red están suspendidos temporalmente. También puede comprobar su propia instancia con el analizador local.",
-    "error.rate_limit.daily": "Se ha alcanzado el límite diario de su red. Vuelva mañana o utilice el analizador local, que no tiene este límite.",
+    "error.rate_limit.daily": "Lo sentimos, su red ha alcanzado el límite de análisis de hoy. Vuelva a intentarlo mañana o ejecute el escáner en su equipo sin este límite diario.",
     "error.target.wildcard_dns": (
         "Ese nombre pertenece a un servicio que apunta nombres a cualquier "
         "dirección. Escriba el nombre de host propio de la instancia o su dirección."
@@ -1197,8 +1167,7 @@ MESSAGES: dict[str, str] = {
         "así que este servicio no puede determinar con certeza qué analizaría."
     ),
     "error.target.not_approved": (
-        "Este servicio solo analiza instancias aprobadas para ello. Pida al "
-        "operador que la añada o publica el registro DNS que la aprueba."
+        "Este servicio solo analiza instancias aprobadas. Pida al operador que apruebe esta instancia o publique el registro DNS de aprobación requerido."
     ),
     "error.rate_limit.target": "Esta instancia se ha analizado recientemente. Espere unos minutos.",
     "error.target.invalid": "Esa dirección no se puede analizar.",
@@ -1207,7 +1176,7 @@ MESSAGES: dict[str, str] = {
     "error.target.characters": (
         "Esa dirección contiene caracteres que un nombre de host no puede tener."
     ),
-    "error.target.unparsed": "No se pudo interpretar esa dirección.",
+    "error.target.unparsed": "No se ha podido interpretar esta dirección. Revísela e introduzca la URL base de la instancia.",
     "error.target.scheme": "Solo se pueden analizar destinos http:// y https://.",
     "error.target.credentials": "No se aceptan credenciales dentro de la dirección.",
     "error.target.address_only": "Introduzca solo la dirección base de la instancia, con una subcarpeta sencilla si la necesita. No se aceptan consultas, fragmentos, parámetros ni cambios de directorio.",
@@ -1216,7 +1185,7 @@ MESSAGES: dict[str, str] = {
     "error.target.hostname_shape": (
         "Eso no es un nombre de host que este servicio pueda analizar."
     ),
-    "error.target.unresolved": "Ese nombre de host no se resuelve.",
+    "error.target.unresolved": "No se ha encontrado ninguna dirección IP para este nombre de host. Revise la escritura y la configuración DNS.",
     "error.target.hostname_long": "Ese nombre de host es demasiado largo.",
     "error.target.internal": "No se pueden analizar direcciones locales ni internas.",
     "error.target.private": (
@@ -1224,12 +1193,10 @@ MESSAGES: dict[str, str] = {
         "local, y este servicio no la analizará."
     ),
     "error.target.blocked": (
-        "A este servicio se le ha pedido que no analice esa dirección."
+        "El operador ha excluido esta dirección de los análisis."
     ),
     "error.store_unavailable": (
-        "Este servicio no puede leer ahora mismo su propia configuración y "
-        "no analizará mientras no sepa qué objetivos debe excluir. "
-        "Inténtelo de nuevo dentro de unos minutos."
+        "El servicio no puede leer su lista de destinos excluidos y no puede iniciar un análisis de forma segura. Inténtelo de nuevo dentro de unos minutos."
     ),
     # ----------------------------------------------------------- result page
     "result.title": "Resultados del análisis",
@@ -1258,8 +1225,8 @@ MESSAGES: dict[str, str] = {
     ),
     "result.compare.offer.link": "Ver qué ha cambiado desde entonces",
     "result.progress.kicker": "En curso",
-    "result.progress.queued.title": "Esperando un proceso de análisis disponible",
-    "result.progress.queued.detail": "Todos los procesos están ocupados. Su análisis mantiene su posición y comenzará cuando quede uno libre.",
+    "result.progress.queued.title": "Esperando para iniciar el análisis",
+    "result.progress.queued.detail": "Todos los procesos de análisis están ocupados. Su análisis mantiene su lugar en la cola y comenzará cuando quede uno disponible.",
     "result.progress.running.title": "Analizando la instancia",
     "result.progress.running.detail": (
         "Leyendo lo que publica la instancia: versión, capacidades, "
@@ -1269,21 +1236,20 @@ MESSAGES: dict[str, str] = {
     "result.progress.step.running": "En ejecución",
     "result.progress.step.done": "Resultado",
     "result.progress.estimate": "La mayoría de los análisis terminan en menos de un minuto.",
-    "result.progress.elapsed": "hace {duration}",
+    "result.progress.elapsed": "Tiempo transcurrido: {duration}",
     "result.progress.noscript": (
-        "Esta página se actualiza sola mediante JavaScript. Sin él, recarga "
-        "la página en unos segundos para ver el resultado."
+        "JavaScript actualiza esta página automáticamente. Si JavaScript no está disponible, recargue la página al cabo de unos segundos para ver el resultado."
     ),
     "result.progress.queue.position": (
         "Análisis en cola. Posición en la fila: n.º {position} de {length}."
     ),
-    "result.progress.queue.next": "Análisis en cola. Es el siguiente.",
-    "result.progress.queue.waiting": "Esperando a que un proceso de análisis lo recoja.",
+    "result.progress.queue.next": "Su análisis es el siguiente en la cola.",
+    "result.progress.queue.waiting": "Esperando un proceso de análisis disponible.",
     "result.progress.done.title": "Informe listo",
-    "result.progress.done.detail": "La calificación ya está lista. Abriendo el informe.",
+    "result.progress.done.detail": "El análisis ha terminado. Abriendo el informe.",
     "result.progress.failed.title": "Análisis finalizado",
     "result.progress.failed.detail": (
-        "El análisis no se pudo completar. Abriendo lo que se obtuvo."
+        "El análisis no ha podido finalizar. Abriendo la página de resultados con los detalles del error."
     ),
     "result.failed.fallback": "El análisis no se pudo completar.",
     "result.failed.body": "El escáner no pudo obtener información suficiente para asignar una nota. Revise la dirección, confirme que ejecuta OpenCloud y compruebe que la instancia sea accesible desde este servicio.",
@@ -1320,7 +1286,7 @@ MESSAGES: dict[str, str] = {
         "calendario probablemente esté desactualizado. Esto no se cuenta en "
         "contra de la instancia -"
     ),
-    "result.facts.schedule.link": "consulta la página publicada del ciclo de vida",
+    "result.facts.schedule.link": "consulte el ciclo de vida de versiones publicado",
     "result.facts.signin": "Inicio de sesión",
     "result.facts.signin.external": "Proveedor externo",
     "result.facts.signin.upstream_tag": "upstream",
@@ -1370,6 +1336,16 @@ MESSAGES: dict[str, str] = {
         "ajuste los alcanza. Son la razón por la que el plan anterior se "
         "detiene donde lo hace."
     ),
+    "result.groups.kicker": "Agrupado por configuración",
+    "result.groups.heading": "Qué cambiar y dónde",
+    "result.groups.lede": "Los mismos hallazgos abiertos, agrupados según el sistema que usted edita para corregirlos, incluidos los que no afectan a la calificación. A menudo un solo cambio resuelve varios hallazgos.",
+    "result.groups.target.reverseProxy": "Proxy inverso",
+    "result.groups.target.identityProvider": "Proveedor de identidad",
+    "result.groups.target.opencloud": "OpenCloud",
+    "result.groups.target.dnsZone": "Zona DNS",
+    "result.groups.count": "{count} hallazgos abiertos, {label} con todos los cambios de este grupo",
+    "result.groups.resolves": "Resuelve {count} hallazgos a la vez",
+    "result.groups.alone": "solo este cambio: {label}",
     "result.rehearsal.kicker": "Simulación de actualización",
     "result.rehearsal.heading": "Qué solucionaría una actualización",
     "result.rehearsal.lede": (
@@ -1466,11 +1442,7 @@ MESSAGES: dict[str, str] = {
     ),
     "result.fingerprint.overall": "En todos los grupos: {digest}",
     "result.fingerprint.unmeasured": "No se midió en este análisis",
-    "result.fingerprint.unavailable": (
-        "Este informe no registra ninguna huella de configuración, así que no "
-        "puede decir si la instalación cambió. Eso no es lo mismo que una "
-        "instalación que siguió igual."
-    ),
+    "result.fingerprint.unavailable": "Este informe no contiene ninguna huella de configuración. No permite determinar si el despliegue ha cambiado.",
     "fingerprint.group.tls": "Seguridad del transporte",
     "fingerprint.group.headers": "Cabeceras de seguridad",
     "fingerprint.group.sharing": "Compartición",
@@ -1499,9 +1471,7 @@ MESSAGES: dict[str, str] = {
     "coverage.reason.probe_disabled": (
         "La comprobación estaba desactivada en este análisis"
     ),
-    "coverage.reason.prerequisite_missing": (
-        "La instancia no publicó lo que esta comprobación lee"
-    ),
+    "coverage.reason.prerequisite_missing": "La instancia no ha publicado la información necesaria para esta comprobación",
     "coverage.reason.timeout": "Nada respondió a tiempo",
     "coverage.reason.unreadable": "No se pudo leer la respuesta",
     "coverage.reason.no_route": "Este escáner no tiene ruta hasta esa dirección",
@@ -1541,11 +1511,7 @@ MESSAGES: dict[str, str] = {
     ),
     "result.tls.kicker": "Transporte",
     "result.tls.heading": "Seguridad del transporte",
-    "result.tls.lede": (
-        "Datos de TLS obtenidos antes de intercambiar datos por HTTP. "
-        "Los hallazgos anteriores ya valoran esto; aquí está la medición que "
-        "hay detrás."
-    ),
+    "result.tls.lede": "Detalles del protocolo y del certificado obtenidos durante la negociación TLS. Los hallazgos anteriores explican cómo afectan estas mediciones a la nota.",
     "result.tls.protocol": "Protocolo",
     "result.tls.bits": "({bits} bits)",
     "result.tls.deprecated": "Versiones obsoletas",
@@ -1576,19 +1542,15 @@ MESSAGES: dict[str, str] = {
     "result.raw.lede": "El documento de resultado completo, tal como lo ve el complemento.",
     "result.raw.summary": "Mostrar el JSON en bruto",
     "result.export.kicker": "Exportar",
-    "result.export.heading": "Llévate este resultado",
+    "result.export.heading": "Descargar este resultado",
     "result.export.lede": (
-        "El mismo análisis, presentado de cuatro formas distintas. Cada una "
-        "se genera cuando la solicitas y desaparece junto con el propio "
-        "análisis."
+        "Elija un informe completo o un paquete de correcciones. Los enlaces de descarga funcionan hasta que caduca el análisis; los archivos guardados siguen disponibles en su dispositivo."
     ),
     "result.export.pdf": "Informe en PDF",
     "result.export.pdf.hint": "Para un ticket, una revisión o una copia impresa.",
     "result.export.html": "Descargar el informe",
     "result.export.html.hint": (
-        "Un fichero que sigue siendo legible cuando este enlace caduque. Se "
-        "abre sin conexión, no hace ninguna petición de red y no se "
-        "actualiza."
+        "Un informe independiente que puede abrir sin conexión después de que caduque este enlace. No hace solicitudes de red ni se actualiza."
     ),
     "result.export.remediation.md": "Paquete de correcciones (Markdown)",
     "result.export.remediation.md.hint": (
@@ -1606,22 +1568,19 @@ MESSAGES: dict[str, str] = {
     "result.export.sarif.hint": "Para un panel de análisis de código.",
     "result.export.json": "JSON",
     "result.export.json.hint": "El documento en bruto que evalúa el complemento.",
-    "result.export.passed.heading": "Lo que ya ha pasado",
+    "result.export.passed.heading": "Comprobaciones superadas",
     "result.export.passed.note": (
-        "Estas comprobaciones salieron limpias, así que no están en el plan de arriba."
+        "Estas comprobaciones se han superado y no requieren ninguna acción en el plan de corrección anterior."
     ),
     "result.share.kicker": "Compartir",
     "result.share.heading": "Compartir este informe",
     "result.share.lede": "Copie el enlace o un resumen, o abra un borrador en su cliente de correo. Este servicio no envía el informe por usted.",
-    "result.share.warning": "Cualquier persona con este enlace puede leer el informe hasta que caduque. Al publicarlo en un canal, también da acceso a sus participantes y a los servicios de vista previa. Comparta solo el resumen si no desea dar acceso al informe.",
+    "result.share.warning": "Cualquier persona con este enlace puede leer el informe hasta que caduque. Al compartirlo en un canal, también da acceso a sus miembros y a los servicios de vista previa de enlaces. Comparta el resumen de texto si no desea dar acceso al informe completo.",
     "result.share.email": "Compartir por correo",
-    "result.share.email.hint": "Abre un mensaje preparado en su programa de correo. Solo se envía cuando lo confirme allí.",
+    "result.share.email.hint": "Abre un mensaje preparado en su programa de correo. Usted decide si lo envía.",
     "result.share.email.subject": "Informe de seguridad de OpenCloud para {target}",
     "result.share.email.body": (
-        "Este es el informe de seguridad de nuestra instancia de OpenCloud:\n\n"
-        "{url}\n\n"
-        "Este enlace es lo que da acceso al informe, así que trátalo como una "
-        "contraseña. Caduca por sí solo y después la página deja de existir."
+        "Este es el informe de seguridad de nuestra instancia de OpenCloud:\n\n{url}\n\nCualquier persona con este enlace puede leer el informe. Trátelo como una contraseña. El enlace deja de funcionar cuando caduca el informe."
     ),
     "result.share.link": "Copiar enlace",
     "result.share.link.hint": (
@@ -1629,8 +1588,7 @@ MESSAGES: dict[str, str] = {
     ),
     "result.share.summary": "Copiar resumen",
     "result.share.summary.hint": (
-        "Los hallazgos como texto, sin ningún enlace. Lo más seguro para pegar "
-        "en un canal de chat."
+        "Hallazgos en texto, sin enlace al informe. Compartir el resumen no da acceso al informe completo."
     ),
     "result.share.summary.body": (
         "Informe de seguridad de OpenCloud - {domain}\n"

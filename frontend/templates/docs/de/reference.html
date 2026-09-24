@@ -802,6 +802,20 @@ unter den blockierten Maßnahmen und begrenzen das erreichbare Ergebnis.
 Ausnahmen bleiben als solche sichtbar; sie beheben den Befund nicht.</p>
 <p>Derselbe Plan erscheint im Webbericht, in den Exporten und im MCP-Werkzeug
 <code>plan_remediation</code>.</p>
+<h4 id="grouped-by-where-the-change-is-made">Nach Konfiguration gruppiert</h4>
+<p><code>remediationPlan.groups</code> ordnet die offenen Befunde dem System zu, das du zur
+Behebung bearbeitest: <strong>Reverse Proxy</strong>, <strong>Identitätsanbieter</strong>, <strong>OpenCloud</strong>
+oder <strong>DNS-Zone</strong>. Auch Befunde, die die Note nicht begrenzen, etwa ein
+fehlender Header, sind enthalten.</p>
+<p>Befunde, die eine einzige Änderung behebt, bilden eine Änderung: alle
+fehlenden Sicherheits-Header ein Header-Block, mehrere Zertifikatsprobleme ein
+neues Zertifikat, alle <code>exposed:/...</code>-Pfade eine Korrektur und das Update alle
+passenden Advisories. Jede Änderung nennt ihre Befunde, <code>resolvesSeveral</code> und
+die Note, die sie allein ergäbe – nachgerechnet mit derselben
+Bewertungsfunktion. <code>groupSummary</code> nennt die Änderungen, die mehrere Befunde
+auf einmal beheben. Ausnahmen und fest vorgegebene Merkmale erscheinen nicht
+als Änderung. <code>--debug</code>, der Webbericht, das Maßnahmenpaket und
+<code>plan_remediation</code> zeigen die Gruppen ebenfalls.</p>
 <h3 id="webhook-notifications">Webhook-Benachrichtigungen</h3>
 <p>Mit <code>--webhook-url</code> oder <code>COS_WEBHOOK_URL</code> aktiviere Benachrichtigungen:</p>
 <pre><code class="language-shell">check-opencloud-security --host opencloud.example.com \

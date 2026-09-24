@@ -123,6 +123,22 @@ Versionen nach ihrem Supportende lösen weiterhin bei jedem Durchlauf einen Alar
 
 Aktiviere `--self-update-check` für einen der Aufrufe, um von neuen Plugin-Versionen zu erfahren. Die Abfrage wird einen Tag zwischengespeichert und beeinflusst den Exitcode nicht.
 
+## Eine Übersicht über die ganze Flotte {#one-dashboard-for-the-whole-fleet}
+
+Das Monitoring beantwortet Host für Host, ob eine Instanz gerade ein Problem hat. Bei einer Überprüfung der Flotte geht es um etwas anderes: Welche Instanzen laufen auf einem Release ohne Sicherheitsupdates, welche Ausnahmen laufen diesen Monat ab, welcher Befund tritt überall auf und welche Instanz hat länger niemand geprüft? Bewahre die Ergebnisdokumente von `scan` auf; `fleet` beantwortet alle vier Fragen allein aus den Dateien:
+
+```shell
+dir="/var/lib/opencloud-reports/$(date +%F)"
+mkdir -p "$dir"
+for host in opencloud1.example.com opencloud2.example.com; do
+  check-opencloud-scanner scan "$host" > "$dir/$host.json"
+done
+check-opencloud-scanner fleet /var/lib/opencloud-reports \
+    --inventory /etc/check-opencloud-security/hosts.txt --format html > fleet.html
+```
+
+Es scannt nichts und speichert nichts. Es zählt der neueste Bericht jedes Hosts, und Release sowie Fristen von Ausnahmen werden gegen heute bewertet, nicht gegen den Tag des Berichts. Mit einem Inventar erscheint auch ein Host ohne jeden Bericht als fehlend. Siehe [`fleet`: Übersicht aus gespeicherten Ergebnissen](scanner-cli.md#fleet-a-dashboard-from-saved-results).
+
 ## Zeitplanung {#scheduling-the-whole-thing}
 
 - Icinga2: ein `Service` pro Host, gegebenenfalls über eine Hostgruppe; siehe [Icinga Director](../icinga-director.md) oder [Ansible](../ansible.md).

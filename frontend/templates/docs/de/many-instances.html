@@ -23,6 +23,7 @@
   <a href="#where-the-checks-should-run-from" lang="de">Den Standort des Scanners wählen</a>
   <a href="#keeping-the-waivers-honest" lang="de">Ausnahmen regelmäßig prüfen</a>
   <a href="#only-alerting-on-what-changed" lang="de">Nur bei Änderungen alarmieren</a>
+  <a href="#one-dashboard-for-the-whole-fleet" lang="de">Eine Übersicht über die ganze Flotte</a>
   <a href="#scheduling-the-whole-thing" lang="de">Zeitplanung</a>
 </nav>
 
@@ -115,6 +116,17 @@ done
 </ul>
 <p>Versionen nach ihrem Supportende lösen weiterhin bei jedem Durchlauf einen Alarm aus. Details stehen unter <a href="/documentation/reference#reporting-only-what-changed">Nur Änderungen melden</a>.</p>
 <p>Aktiviere <code>--self-update-check</code> für einen der Aufrufe, um von neuen Plugin-Versionen zu erfahren. Die Abfrage wird einen Tag zwischengespeichert und beeinflusst den Exitcode nicht.</p>
+<h2 id="one-dashboard-for-the-whole-fleet">Eine Übersicht über die ganze Flotte</h2>
+<p>Das Monitoring beantwortet Host für Host, ob eine Instanz gerade ein Problem hat. Bei einer Überprüfung der Flotte geht es um etwas anderes: Welche Instanzen laufen auf einem Release ohne Sicherheitsupdates, welche Ausnahmen laufen diesen Monat ab, welcher Befund tritt überall auf und welche Instanz hat länger niemand geprüft? Bewahre die Ergebnisdokumente von <code>scan</code> auf; <code>fleet</code> beantwortet alle vier Fragen allein aus den Dateien:</p>
+<pre><code class="language-shell">dir=&quot;/var/lib/opencloud-reports/$(date +%F)&quot;
+mkdir -p &quot;$dir&quot;
+for host in opencloud1.example.com opencloud2.example.com; do
+  check-opencloud-scanner scan &quot;$host&quot; &gt; &quot;$dir/$host.json&quot;
+done
+check-opencloud-scanner fleet /var/lib/opencloud-reports \
+    --inventory /etc/check-opencloud-security/hosts.txt --format html &gt; fleet.html
+</code></pre>
+<p>Es scannt nichts und speichert nichts. Es zählt der neueste Bericht jedes Hosts, und Release sowie Fristen von Ausnahmen werden gegen heute bewertet, nicht gegen den Tag des Berichts. Mit einem Inventar erscheint auch ein Host ohne jeden Bericht als fehlend. Siehe <a href="/documentation/scanner-cli#fleet-a-dashboard-from-saved-results"><code>fleet</code>: Übersicht aus gespeicherten Ergebnissen</a>.</p>
 <h2 id="scheduling-the-whole-thing">Zeitplanung</h2>
 <ul>
 <li>Icinga2: ein <code>Service</code> pro Host, gegebenenfalls über eine Hostgruppe; siehe <a href="/documentation/icinga-director">Icinga Director</a> oder <a href="/documentation/ansible">Ansible</a>.</li>

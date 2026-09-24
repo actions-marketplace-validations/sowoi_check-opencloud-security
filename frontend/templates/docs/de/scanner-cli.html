@@ -20,7 +20,9 @@
   <a href="#global-options" lang="de">Globale Optionen</a>
   <a href="#scan-print-the-result-document" lang="de"><code>scan</code>: Ergebnisdokument ausgeben</a>
   <a href="#diff-what-changed-between-two-saved-results" lang="de"><code>diff</code>: gespeicherte Ergebnisse vergleichen</a>
+  <a href="#fleet-a-dashboard-from-saved-results" lang="de"><code>fleet</code>: Übersicht aus gespeicherten Ergebnissen</a>
   <a href="#explain-what-a-finding-means-and-how-to-fix-it" lang="de"><code>explain</code>: Befunde erklären</a>
+  <a href="#review-waivers-waivers-that-need-attention" lang="de"><code>review-waivers</code>: Ausnahmen überprüfen</a>
   <a href="#refresh-data-update-the-release-schedule-and-advisories" lang="de"><code>refresh-data</code>: Referenzdaten aktualisieren</a>
   <a href="#serve-the-scan-service" lang="de"><code>serve</code>: HTTP-Dienst betreiben</a>
   <a href="#configure-write-a-configuration-file" lang="de"><code>configure</code>: Konfigurationsdatei erstellen</a>
@@ -248,6 +250,104 @@ check-opencloud-scanner diff before.json after.json --category instance
 </code></pre>
 <p>Jeder Namensraum wird nur gefiltert, wenn du einen Wert dafür angibst: <code>--category transport</code> lässt die Erklärung unangetastet, <code>--category instance</code> die Befunde. Du kannst die Option mehrfach angeben. Ein unbekannter Wert führt zu Exitcode <code>2</code>. So entsteht bei einem Tippfehler kein leerer Vergleich, der fälschlich den Eindruck erweckt, es habe sich nichts geändert.</p>
 <p>Eine gefilterte Erklärung lässt die <code>[limitation]</code>-Zeilen weg, weil diese den gesamten Vergleich einschränken und nicht eine einzelne Kategorie davon.</p>
+<h2 id="fleet-a-dashboard-from-saved-results"><code>fleet</code>: Übersicht aus gespeicherten Ergebnissen</h2>
+<pre><code class="language-bash">today=&quot;/var/lib/opencloud-reports/$(date +%F)&quot;
+mkdir -p &quot;$today&quot;
+for host in cloud1.example.com cloud2.example.com cloud3.example.com; do
+  check-opencloud-scanner scan &quot;$host&quot; &gt; &quot;$today/$host.json&quot;
+done
+check-opencloud-scanner fleet /var/lib/opencloud-reports
+check-opencloud-scanner fleet /var/lib/opencloud-reports --format html &gt; fleet.html
+</code></pre>
+<p><code>fleet</code> liest Ergebnisdokumente von <code>scan</code> – einzelne Dateien oder Verzeichnisse, die rekursiv nach <code>*.json</code> durchsucht werden – und fasst den <strong>neuesten Bericht jedes Hosts</strong> zusammen. Es scannt nichts und speichert nichts. Wie du die Berichte sammelst, per Cronjob, CI-Artefakt oder gemeinsamem Verzeichnis, bleibt dir überlassen.</p>
+<table>
+<thead>
+<tr>
+<th>Abschnitt</th>
+<th>Inhalt</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Hosts</td>
+<td>Eine Zeile pro Host: Version, Bewertung, Release-Linie, offene und ausgenommene Befunde, Abdeckungslücken und Alter des Berichts</td>
+</tr>
+<tr>
+<td>Unsupported releases</td>
+<td>Releases ohne Support, Releases, deren Support innerhalb des Zeitfensters endet, und Versionen, die der Zeitplan nicht kennt</td>
+</tr>
+<tr>
+<td>Waiver deadlines</td>
+<td>Befristete Ausnahmen, nach deren Ablauf eine fehlgeschlagene Prüfung innerhalb des Zeitfensters wieder alarmiert – oder schon alarmiert</td>
+</tr>
+<tr>
+<td>Common findings</td>
+<td>Die fehlgeschlagenen Befunde, die die meisten Hosts teilen, schwerste zuerst</td>
+</tr>
+<tr>
+<td>Missing coverage</td>
+<td>Erwartete Hosts ohne Bericht, Hosts mit fehlgeschlagenem letzten Scan, veraltete Berichte und Berichte ohne Abdeckungsblock</td>
+</tr>
+<tr>
+<td>Checks not evaluated</td>
+<td>Prüfungen, die die Scans übersprungen oder nicht entscheiden konnten, und auf wie vielen Hosts</td>
+</tr>
+</tbody>
+</table>
+<p>Ein Bericht belegt den Tag, an dem er entstand. Zwei Dinge werden deshalb gegen <strong>heute</strong> neu bewertet:</p>
+<ul>
+<li><strong>Das Release.</strong> Die gespeicherte Version wird erneut im Release-Zeitplan dieser Installation eingeordnet – dem mitgelieferten oder dem in der Konfiguration genannten, wie beim Plugin. Eine Linie, deren Support nach dem Bericht endete, erscheint mit dem Hinweis <code>since the scan</code>. End of Life ist endgültig; ein Bericht, der es schon meldete, wird immer aufgeführt.</li>
+<li><strong>Die Frist einer Ausnahme.</strong> Eine im Bericht aktive Ausnahme kann inzwischen abgelaufen sein. Aufgeführt wird nur eine Frist, nach der eine Prüfung wirklich wieder alarmiert – nach derselben Regel wie <code>--waiver-warning</code> des Plugins.</li>
+</ul>
+<p>Häufige Befunde lassen weg, was niemand ändern kann: Flags, die OpenCloud fest vorgibt, und Header, die kein OpenCloud sendet. Ausgenommene Befunde werden mitgezählt; die Spalte <code>Waived</code> zeigt, auf wie vielen Hosts.</p>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Funktion</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--format text</code></td>
+<td>Ausgerichtete Tabellen; Standard</td>
+</tr>
+<tr>
+<td><code>--format markdown</code></td>
+<td>Markdown-Tabellen für ein Ticket oder ein Wiki</td>
+</tr>
+<tr>
+<td><code>--format html</code></td>
+<td>Eine eigenständige Seite ohne Skripte, Schriften oder externe Abrufe, mit hellem und dunklem Modus</td>
+</tr>
+<tr>
+<td><code>--format json</code></td>
+<td>Die strukturierte Zusammenfassung in camelCase wie das Ergebnisdokument</td>
+</tr>
+<tr>
+<td><code>--window DAYS</code></td>
+<td>Ausnahmen und Support-Zeiträume zeigen, die innerhalb von <code>DAYS</code> Tagen enden; Standard <code>30</code></td>
+</tr>
+<tr>
+<td><code>--stale-after DAYS</code></td>
+<td>Einen Host als nicht abgedeckt zählen, wenn sein neuester Bericht älter ist; Standard <code>7</code>, <code>0</code> schaltet das ab</td>
+</tr>
+<tr>
+<td><code>--top N</code></td>
+<td>Die <code>N</code> häufigsten Befunde auflisten; Standard <code>10</code>, <code>0</code> listet alle</td>
+</tr>
+<tr>
+<td><code>--expect HOST</code></td>
+<td>Ein Host, für den ein Bericht vorliegen sollte; mehrfach oder kommagetrennt angebbar</td>
+</tr>
+<tr>
+<td><code>--inventory FILE</code></td>
+<td>Erwartete Hosts aus einer Datei, einer pro Zeile, <code>#</code> leitet einen Kommentar ein</td>
+</tr>
+</tbody>
+</table>
+<p>Hosts werden über Name und Port zugeordnet: <code>https://opencloud.example.com/</code> und <code>opencloud.example.com</code> sind derselbe Host, <code>opencloud.example.com:9200</code> ist ein anderer. Gib den Port bei <code>--expect</code> an, wenn die Instanz auf einem eigenen Port gescannt wird.</p>
+<p>Der Exitcode ist <code>0</code>, sobald eine Zusammenfassung ausgegeben wurde, egal wie schlecht die Flotte aussieht. <code>2</code> bedeutet, dass kein Ergebnisdokument gefunden und kein Host erwartet wurde. Eine Datei, die kein Ergebnisdokument ist, ist kein Fehler; sie erscheint unter <em>Files skipped</em>.</p>
 <h2 id="explain-what-a-finding-means-and-how-to-fix-it"><code>explain</code>: Befunde erklären</h2>
 <pre><code class="language-bash">check-opencloud-scanner explain basicAuthDisabled
 </code></pre>
@@ -291,6 +391,80 @@ check-opencloud-scanner explain                                         # the wh
 <pre><code class="language-text">ERROR check_opencloud.cli: No catalogue entry for 'cookieSecur'. Did you mean: cookieSecure, cookieSameSite, cookiePrefix? Run `explain --list` for every identifier this build knows.
 </code></pre>
 <p>Die Kennungen entsprechen den Werten in der Alarmzeile, in <code>extraChecks[].id</code>, in <code>hardenings</code> und in den Ausnahmelisten. Ausführlichere Erklärungen stehen unter <a href="/documentation/hardening">Härtungsmaßnahmen</a> und <a href="/documentation/scanner-checks">Prüfumfang</a>.</p>
+<h2 id="review-waivers-waivers-that-need-attention"><code>review-waivers</code>: Ausnahmen überprüfen</h2>
+<pre><code class="language-bash">check-opencloud-scanner -c /etc/check-opencloud-security/config.yml review-waivers
+</code></pre>
+<p>Der Befehl liest die Ausnahmen, die auch das Plugin verwenden würde - <code>scanner.ignore_hardenings</code> und <code>scanner.temporary_waivers</code> aus der Konfigurationsdatei oder die passenden <code>COS_</code>-Umgebungsvariablen -, und listet jede auf, um die du dich kümmern solltest, jeweils mit einem Vorschlag zum Aufräumen. <strong>Er ändert die Konfiguration nie.</strong> Ob ein Befund weiter akzeptabel ist, entscheidest du, nicht das Werkzeug.</p>
+<table>
+<thead>
+<tr>
+<th>Art</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Expired</td>
+<td>Eine befristete Ausnahme, deren Frist abgelaufen ist. Die Ausgabe sagt, ob die Prüfung wieder alarmiert oder eine breitere Ausnahme sie weiter verdeckt.</td>
+</tr>
+<tr>
+<td>Expiring soon</td>
+<td>Eine befristete Ausnahme, die innerhalb von <code>--expiring-within</code> Tagen abläuft - <code>--waiver-warning</code> des Plugins für alle Einträge auf einmal.</td>
+</tr>
+<tr>
+<td>Unused</td>
+<td>Trifft auf keine Prüfung, die im <code>--result</code>-Dokument fehlschlägt. Ohne <code>--result</code>: trifft auf keine Kennung, die dieser Build kennt, meist ein Tippfehler. Eine Ausnahme für ein von OpenCloud fest eingestelltes Flag zählt ebenfalls, weil dieses nie alarmiert.</td>
+</tr>
+<tr>
+<td>Overlapping</td>
+<td>Eine andere aktive Ausnahme deckt sie schon ab: ein Duplikat, ein engeres Muster unter einem breiteren oder - mit <code>--result</code> - zwei Muster für dieselbe fehlschlagende Prüfung. Eine befristete Ausnahme unter einer dauerhaften fällt auf, weil ihre Frist nichts bewirkt.</td>
+</tr>
+<tr>
+<td>Permanent</td>
+<td>Ein Muster ohne Begründung und ohne Frist, mit einem <code>--waive-until</code>-Eintrag zum Übernehmen.</td>
+</tr>
+</tbody>
+</table>
+<pre><code class="language-bash">check-opencloud-scanner scan opencloud.example.com &gt; result.json
+check-opencloud-scanner review-waivers --result result.json          # tell used from unused
+check-opencloud-scanner review-waivers --at 2026-12-01T00:00:00Z     # what will have expired by then
+check-opencloud-scanner review-waivers --format json --exit-zero     # for a script
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Funktion</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--result FILE</code></td>
+<td>Ergebnisdokument von <code>scan</code>, um genutzte von ungenutzten Ausnahmen zu unterscheiden; nennt außerdem den nächsten Ablauf, nach dem eine Prüfung alarmiert</td>
+</tr>
+<tr>
+<td><code>--ignore-hardening</code>, <code>--waive-until</code></td>
+<td>Diese Werte statt der konfigurierten prüfen, so wie die gleichnamigen Plugin-Optionen sie ersetzen</td>
+</tr>
+<tr>
+<td><code>--expiring-within DAYS</code></td>
+<td>Zeitfenster für <em>Expiring soon</em>. Standard: die Einstellung <code>waiver_warning</code>, sonst <code>14</code>; <code>0</code> schaltet den Abschnitt ab</td>
+</tr>
+<tr>
+<td><code>--at TIMESTAMP</code></td>
+<td>Zu einem anderen Zeitpunkt prüfen; braucht wie eine Frist eine Zeitzone</td>
+</tr>
+<tr>
+<td><code>--format {text,json}</code></td>
+<td>JSON mit <code>counts</code> je Art und einem Eintrag je Befund mit <code>kind</code>, <code>pattern</code>, <code>reason</code>, <code>expiresAt</code>, <code>detail</code>, <code>suggestion</code> und <code>related</code></td>
+</tr>
+<tr>
+<td><code>--exit-zero</code></td>
+<td>Immer mit <code>0</code> enden</td>
+</tr>
+</tbody>
+</table>
+<p>Eine Ausnahme kann unter mehreren Arten erscheinen, ein falsch geschriebenes dauerhaftes Muster etwa als <em>Unused</em> und <em>Permanent</em>.</p>
 <h2 id="refresh-data-update-the-release-schedule-and-advisories"><code>refresh-data</code>: Referenzdaten aktualisieren</h2>
 <pre><code class="language-bash">check-opencloud-scanner refresh-data --output-dir /var/lib/check-opencloud-security
 </code></pre>
@@ -468,10 +642,24 @@ check-opencloud-scanner -c /etc/check-opencloud-security/.env.json configure
 <td>–</td>
 </tr>
 <tr>
+<td><code>fleet</code></td>
+<td>Zusammenfassung ausgegeben</td>
+<td>–</td>
+<td>Kein Ergebnisdokument gefunden oder Inventar nicht lesbar</td>
+<td>–</td>
+</tr>
+<tr>
 <td><code>explain</code></td>
 <td>Ausgabe erstellt</td>
 <td>Unbekannte Kennung oder leere Kategorie</td>
 <td>–</td>
+<td>–</td>
+</tr>
+<tr>
+<td><code>review-waivers</code></td>
+<td>Nichts aufzuräumen</td>
+<td>Mindestens eine Ausnahme gelistet</td>
+<td>Ungültige Ausnahme, Zeitangabe oder <code>--result</code>-Datei</td>
 <td>–</td>
 </tr>
 <tr>

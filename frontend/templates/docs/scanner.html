@@ -210,6 +210,13 @@ the caps above: an ordered fix list with the rating each step would reach.</p>
 <p>It is a replay of <code>_compute_rating</code> with one finding removed at a time, not a
 second model of the rating, so a predicted grade cannot disagree with the real
 one. Nothing new is stored: the plan is derived from the document it sits in.</p>
+<p><code>groups</code> regroups the open findings - including ones that cap nothing, such
+as a missing header - by where the change is made (<code>reverseProxy</code>,
+<code>identityProvider</code>, <code>opencloud</code>, <code>dnsZone</code>), built by <code>remediation_groups.py</code>.
+Findings one edit resolves together are one change, with the <code>findings</code> it
+resolves, the plan <code>steps</code> among them, <code>resolvesSeveral</code>, and the
+<code>ratingAfter</code> that change alone gives, replayed through the same arithmetic.
+<code>groupSummary</code> is one sentence naming the changes that resolve several.</p>
 <p>Three properties are load-bearing and have tests:</p>
 <ul>
 <li>The <strong>order</strong> is by cap, then severity, then identifier, so it does not

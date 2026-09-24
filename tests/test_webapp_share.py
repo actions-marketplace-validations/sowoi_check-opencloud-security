@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import asyncio
 import re
+from html import unescape
+from urllib.parse import parse_qs, urlsplit
 
 import pytest
 from fastapi.testclient import TestClient
@@ -23,6 +25,9 @@ from tests.webapp_support import (  # noqa: F401 - the fixtures are autouse
     settings,
 )
 from webapp.app import create_app
+from webapp.i18n import LANGUAGE_COOKIE, Translator
+from webapp.locales import CATALOGUES
+from webapp.reports import EXPORT_FORMATS
 from webapp.tasks import run_scan
 
 IDENTIFIER = "b6f2c0c5-1c4b-4f4e-9a3b-0d3f8b7c1a20"
@@ -46,8 +51,8 @@ THIRD_PARTY_SHARE = (
 )
 
 
-@pytest.fixture
-def report_page() -> str:
+@pytest.fixture(params=tuple(CATALOGUES))
+def report_page(request) -> str:
     """One real scan of the fake instance, rendered as the page a reader sees."""
     configured = settings(
         allow_private_targets=True,
@@ -57,6 +62,7 @@ def report_page() -> str:
     )
     app = create_app(configured)
     with TestClient(app) as test_client:
+        test_client.cookies.set(LANGUAGE_COOKIE, request.param)
         store = app.state.store
         with FakeOpenCloud(InstanceBehaviour(basic_auth=True)) as instance:
             asyncio.run(
@@ -68,14 +74,25 @@ def report_page() -> str:
                 )
             )
             asyncio.run(run_scan({"web_settings": configured, "store": store}, IDENTIFIER))
-        return test_client.get(f"/scan/{IDENTIFIER}").text
+        response = test_client.get(f"/scan/{IDENTIFIER}")
+        assert response.status_code == 200
+        assert f'<html lang="{request.param}">' in response.text
+        return response.text
 
 
 def _share_section(page: str) -> str:
     """Just the sharing card, so an assertion cannot pass on the rest of the page."""
-    start = page.index('data-share-copy="link"') - 2000
-    end = page.index("data-share-link-text") + 200
+    heading = page.index('id="share"')
+    start = page.rfind("<section", 0, heading)
+    end = page.index("</section>", heading) + len("</section>")
     return page[start:end]
+
+
+def _translator(page: str) -> Translator:
+    """Use the page language rather than assuming that the render was English."""
+    match = re.search(r'<html lang="([a-z]+)"', page)
+    assert match is not None
+    return Translator(match.group(1))
 
 
 def test_sharing_offers_no_third_party_and_names_none(report_page: str):
@@ -95,6 +112,14 @@ def test_the_email_link_is_a_mailto_and_reaches_no_server(report_page: str):
     # The report address travels in the body the reader chooses to send.
     assert "scan.example.org" in body.replace("%3A", ":").replace("%2F", "/")
     assert "http" not in body.split("body=")[0]
+    query = parse_qs(urlsplit(unescape(body)).query)
+    translator = _translator(report_page)
+    assert query["body"] == [
+        translator("result.share.email.body", url=f"{ORIGIN}/scan/{IDENTIFIER}")
+    ]
+    assert query["subject"][0].startswith(
+        translator("result.share.email.subject").split("{target}")[0]
+    )
 
 
 def test_the_summary_for_a_chat_channel_carries_no_link(report_page: str):
@@ -105,7 +130,10 @@ def test_the_summary_for_a_chat_channel_carries_no_link(report_page: str):
     assert summary is not None
     text = summary.group(1)
 
-    assert "OpenCloud security report" in text
+    expected_heading = _translator(report_page)("result.share.summary.body").split(
+        "{domain}", 1
+    )[0]
+    assert expected_heading in unescape(text)
     # The negative, which is the whole reason this exists separately.
     assert IDENTIFIER not in text
     assert "http://" not in text and "https://" not in text
@@ -128,10 +156,29 @@ def test_the_reader_is_told_the_address_is_the_credential(report_page: str):
     """Someone about to paste a link into a channel needs to know what it grants."""
     section = _share_section(report_page)
 
-    assert "share-warning" in report_page
-    assert "anyone who has it" in report_page.lower()
-    assert "expires" in report_page.lower()
-    assert section
+    warning = re.search(r'<p class="hint share-warning">(.*?)</p>', section, re.DOTALL)
+    assert warning is not None
+    text = unescape(warning.group(1))
+    translator = _translator(report_page)
+    assert translator("result.share.warning") in text
+    # Keep the access, expiry and preview warnings even if catalogue text changes.
+    concepts = {
+        "en": ("anyone", "expires", "preview"),
+        "de": ("wer", "ablauf", "linkvorschau"),
+        "es": ("cualquier persona", "caduque", "vista previa"),
+        "fr": ("toute personne", "expiration", "aperçu"),
+    }
+    assert all(concept in text.lower() for concept in concepts[translator.locale])
+
+
+def test_every_language_offers_the_supported_downloads(report_page: str):
+    """A translated result must keep every full-report and remediation download."""
+    formats = re.findall(
+        rf'href="/api/scans/{IDENTIFIER}/export/([a-z-]+)"', report_page
+    )
+    assert set(formats) == set(EXPORT_FORMATS)
+    assert len(formats) == len(EXPORT_FORMATS)
+    assert _translator(report_page)("result.export.lede") in unescape(report_page)
 
 
 def test_sharing_adds_no_inline_script_or_handler(report_page: str):

@@ -16,8 +16,22 @@ from tests.webapp_support import (  # noqa: F401 - the fixtures are autouse
 )
 from webapp.documentation import DOCUMENTATION_PAGES, GUIDE_LANGUAGES
 from webapp.locales import CATALOGUES
+from webapp.reports import EXPORT_FORMATS
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+
+
+@pytest.mark.parametrize("locale", ["en", *GUIDE_LANGUAGES])
+def test_every_export_format_is_documented_in_each_language(locale: str):
+    """Translated download instructions must keep up with the service's formats."""
+    path = REPO_ROOT / (
+        "docs/webapp.md" if locale == "en" else f"docs/{locale}/web-service.md"
+    )
+    section = path.read_text(encoding="utf-8").split(
+        "### `GET /api/scans/{uuid}/export/{format}`", 1
+    )[1].split("#### ", 1)[0]
+    documented = set(re.findall(r"`([a-z-]+)`", section))
+    assert set(EXPORT_FORMATS) <= documented, (locale, set(EXPORT_FORMATS) - documented)
 
 
 def _load_generator():
@@ -252,6 +266,50 @@ def test_the_publish_workflow_regenerates_the_release_notes_after_writing_them()
 #: Spanish page at or below 0.13; a page that is an English copy scores 0.50
 #: and up. Nothing sits in between, so the exact number is not delicate.
 MAX_ENGLISH_SHARE = 0.35
+
+
+def _table_descriptions(text: str) -> set[str]:
+    """Find prose cells, excluding code, short labels and quoted diagnostics."""
+    text = re.sub(r"```.*?```", "", text, flags=re.DOTALL)
+    descriptions = set()
+    for line in text.splitlines():
+        if not line.lstrip().startswith("|"):
+            continue
+        for cell in re.split(r"(?<!\\)\|", line.strip())[1:-1]:
+            cell = cell.strip()
+            if cell.startswith('"') and cell.endswith('"'):
+                continue
+            prose = re.sub(r"`[^`]*`", "", cell)
+            if len(re.findall(r"[A-Za-z]{2,}", prose)) >= 8:
+                descriptions.add(cell)
+    return descriptions
+
+
+@pytest.mark.parametrize("locale", GUIDE_LANGUAGES)
+def test_translated_guide_tables_do_not_retain_english_descriptions(locale: str):
+    """A copied settings description must fail even in a mostly translated guide."""
+    copied: list[tuple[str, str]] = []
+    for document in DOCUMENTATION_PAGES:
+        translated = REPO_ROOT / "docs" / locale / f"{document.slug}.md"
+        if translated.exists():
+            source = _table_descriptions(
+                (REPO_ROOT / document.source).read_text(encoding="utf-8")
+            )
+            shared = source & _table_descriptions(translated.read_text(encoding="utf-8"))
+            copied.extend((document.slug, cell) for cell in sorted(shared))
+    assert copied == []
+
+
+def test_table_review_distinguishes_descriptions_from_verbatim_examples():
+    """Technical examples stay English; operator instructions need translation."""
+    description = "Ask GitHub whether a newer release of this service exists."
+    text = (
+        f"| Setting | {description} |\n"
+        '| Error | "This username is not one this invitation was issued for." |\n'
+        "| Command | `check --one --two --three --four --five --six --seven --eight` |\n"
+        "```text\n| Example | This example is a literal command output in English. |\n```"
+    )
+    assert _table_descriptions(text) == {description}
 
 #: Guides that are still an English copy under a translated title.
 #:

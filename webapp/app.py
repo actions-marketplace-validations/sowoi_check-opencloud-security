@@ -146,6 +146,7 @@ from .discovery import (
     discovery_document,
 )
 from .documentation import (
+    DECISION_RECORDS_BY_SLUG,
     DOCUMENTATION_BY_SLUG,
     DOCUMENTATION_PAGES,
     GUIDE_LANGUAGES,
@@ -2691,6 +2692,42 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
             # reading and where to edit it.
             context["page_source"] = document.source
             return page(request, f"admin-docs/{slug}.html", context)
+
+        @app.get(f"{ADMIN_PATH}/decisions", response_class=HTMLResponse,
+                 include_in_schema=False)
+        async def admin_decisions(request: Request) -> Response:
+            """
+            Every architecture decision record, as one filterable list.
+
+            Generated from `adr/README.md`'s index at build time, like the
+            documents above, and gated exactly like them.
+            """
+            operator = admin_operator(request)
+            if operator is None:
+                return not_found(request)
+            context = await admin_context(operator, None)
+            context["admin_tab"] = "decisions"
+            return page(request, "admin-decisions/index.html", context)
+
+        @app.get(f"{ADMIN_PATH}/decisions/{{slug}}", response_class=HTMLResponse,
+                 include_in_schema=False)
+        async def admin_decision(request: Request, slug: str) -> Response:
+            """
+            One decision record, in English as it was written.
+
+            The slug selects an entry from the generated manifest and is never
+            joined into a template path unchecked, so an unknown one is the
+            same 404 the rest of the area gives a guess.
+            """
+            operator = admin_operator(request)
+            if operator is None:
+                return not_found(request)
+            record = DECISION_RECORDS_BY_SLUG.get(slug)
+            if record is None:
+                return not_found(request)
+            context = await admin_context(operator, None)
+            context["admin_tab"] = "decisions"
+            return page(request, f"admin-decisions/{record.slug}.html", context)
 
         @app.get(f"{ADMIN_PATH}/state", include_in_schema=False)
         async def admin_state(request: Request) -> Response:

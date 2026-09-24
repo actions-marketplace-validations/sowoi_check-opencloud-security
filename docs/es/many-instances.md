@@ -11,8 +11,9 @@ comprobaciones resultantes.
   * [Un archivo de configuración por instancia](#one-configuration-file-per-instance)
   * [Un bucle sobre los archivos](#a-loop-over-the-files)
   * [Desde dónde deben ejecutarse las comprobaciones](#where-the-checks-should-run-from)
-  * [Mantener honestas las exclusiones](#keeping-the-waivers-honest)
+  * [Revisar las exclusiones periódicamente](#keeping-the-waivers-honest)
   * [Alertar solo sobre lo que ha cambiado](#only-alerting-on-what-changed)
+  * [Un panel para toda la flota](#one-dashboard-for-the-whole-fleet)
   * [Programarlo todo](#scheduling-the-whole-thing)
 <!-- TOC -->
 
@@ -136,11 +137,10 @@ cerca de las instancias y deje que compartan su caché. El complemento nunca se
 comunica con él (siempre analiza dentro de su propio proceso), así que el
 servicio está pensado para paneles y scripts.
 
-## Mantener honestas las exclusiones {#keeping-the-waivers-honest}
+## Revisar las exclusiones periódicamente {#keeping-the-waivers-honest}
 
-Un conjunto de instancias acumula entradas `ignore_hardenings`, y una exclusión
-que nunca se revisa es la forma en que una regresión se vuelve invisible. Dos
-cosas las mantienen honestas:
+Revise periódicamente las entradas `ignore_hardenings` para que los hallazgos
+aceptados no oculten problemas nuevos. Las exclusiones tienen dos límites:
 
 - Una exclusión solo suprime la alerta. El hallazgo permanece en el documento
   de resultado con `"ignored": true`, y `--debug` lo sigue explicando;
@@ -206,6 +206,31 @@ Consulte
 Añada `--self-update-check` en un solo host del conjunto (no en todos) para
 recibir un aviso cuando se publique una versión más reciente del complemento.
 Se guarda en caché durante un día y nunca cambia el código de salida.
+
+## Un panel para toda la flota {#one-dashboard-for-the-whole-fleet}
+
+La monitorización responde, host a host, si una instancia está fallando
+ahora. Una revisión de la flota pregunta otra cosa: qué instancias ejecutan
+una versión que ya no recibe parches, qué exenciones vencen este mes, qué
+hallazgo falla en todas partes y qué instancia no ha revisado nadie
+últimamente. Conserve los documentos de resultado que escribe `scan`, y
+`fleet` responde a las cuatro preguntas solo a partir de los archivos:
+
+```shell
+dir="/var/lib/opencloud-reports/$(date +%F)"
+mkdir -p "$dir"
+for host in opencloud1.example.com opencloud2.example.com; do
+  check-opencloud-scanner scan "$host" > "$dir/$host.json"
+done
+check-opencloud-scanner fleet /var/lib/opencloud-reports \
+    --inventory /etc/check-opencloud-security/hosts.txt --format html > fleet.html
+```
+
+No analiza nada ni almacena nada; cuenta el informe más reciente de cada
+host, y la versión y los plazos de las exenciones se evalúan respecto a hoy y
+no al día del informe. Con un inventario, un host sin ningún informe aparece
+como ausente. Consulte
+[`fleet`: un panel a partir de resultados guardados](scanner-cli.md#fleet-a-dashboard-from-saved-results).
 
 ## Programarlo todo {#scheduling-the-whole-thing}
 

@@ -18,7 +18,9 @@ Cette page est la référence de la seconde.
   * [Options globales](#global-options)
   * [`scan` - afficher le document de résultat](#scan---print-the-result-document)
   * [`diff` - ce qui a changé entre deux résultats enregistrés](#diff---what-changed-between-two-saved-results)
+  * [`fleet` - un tableau de bord à partir de résultats enregistrés](#fleet---a-dashboard-from-saved-results)
   * [`explain` - ce que signifie un constat et comment le corriger](#explain---what-a-finding-means-and-how-to-fix-it)
+  * [`review-waivers` - les exemptions à revoir](#review-waivers---waivers-that-need-attention)
   * [`refresh-data` - actualiser le calendrier des versions et les avis de sécurité](#refresh-data---update-the-release-schedule-and-advisories)
   * [`serve` - le service de scan](#serve---the-scan-service)
   * [`configure` - écrire un fichier de configuration](#configure---write-a-configuration-file)
@@ -232,6 +234,74 @@ Il se termine avec `2`, sans rien comparer, dans l'un de ces deux cas :
   exemple, il ne contient pas de note, ou il s'agit de l'entrée d'erreur d'une
   instance qui n'a pas pu être analysée.
 
+## `fleet` - un tableau de bord à partir de résultats enregistrés {#fleet-a-dashboard-from-saved-results}
+
+```bash
+today="/var/lib/opencloud-reports/$(date +%F)"
+mkdir -p "$today"
+for host in cloud1.example.com cloud2.example.com cloud3.example.com; do
+  check-opencloud-scanner scan "$host" > "$today/$host.json"
+done
+check-opencloud-scanner fleet /var/lib/opencloud-reports
+check-opencloud-scanner fleet /var/lib/opencloud-reports --format html > fleet.html
+```
+
+Elle lit les documents de résultat écrits par `scan` - des fichiers, ou des
+répertoires parcourus récursivement à la recherche de `*.json` - et résume le
+**rapport le plus récent de chaque hôte**. Elle n'analyse rien et ne stocke
+rien : la collecte des rapports, par une tâche cron, un stockage d'artefacts
+de CI ou un répertoire partagé, reste à l'outil que vous utilisez déjà.
+
+| Section | Ce qu'elle montre |
+|:--|:--|
+| Hosts | Une ligne par hôte : version, note, ligne de version, constats en échec et exemptés, lacunes de couverture et âge du rapport |
+| Unsupported releases | Les versions en fin de vie, celles dont le support se termine dans la fenêtre, et les versions que le calendrier ne connaît pas |
+| Waiver deadlines | Les exemptions temporaires après lesquelles un contrôle en échec alertera de nouveau dans la fenêtre, ou alerte déjà |
+| Common findings | Les constats en échec partagés par le plus d'hôtes, les plus graves d'abord |
+| Missing coverage | Les hôtes attendus sans rapport, ceux dont le dernier scan a échoué, les rapports trop anciens et ceux sans bloc de couverture |
+| Checks not evaluated | Les contrôles que les scans ont ignorés ou n'ont pas pu trancher, et sur combien d'hôtes |
+
+Un rapport témoigne du jour où il a été écrit ; deux éléments sont donc
+réévalués par rapport à **aujourd'hui** :
+
+- **La version.** La version enregistrée est replacée dans le calendrier des
+  versions de cette installation - celui fourni, ou le fichier indiqué dans la
+  configuration, comme pour le plugin. Une ligne dont le support s'est terminé
+  après le rapport porte la mention `since the scan`. La fin de vie est
+  définitive : un rapport qui l'indiquait déjà est toujours listé.
+- **L'échéance d'une exemption.** Une exemption active dans le rapport a pu
+  expirer depuis. Seule une échéance après laquelle un contrôle alerte
+  réellement de nouveau est listée, selon la même règle que
+  `--waiver-warning` du plugin.
+
+Les constats fréquents omettent ce qu'aucun administrateur ne peut changer :
+les indicateurs qu'OpenCloud fixe en dur et les en-têtes qu'aucun OpenCloud
+n'envoie. Un constat exempté est compté, et la colonne `Waived` indique sur
+combien d'hôtes.
+
+| Option | Effet |
+|:--|:--|
+| `--format text` | Des tableaux alignés. Par défaut |
+| `--format markdown` | Des tableaux Markdown, pour un ticket ou un wiki |
+| `--format html` | Une page autonome : aucun script, aucune police, rien n'est téléchargé, modes clair et sombre |
+| `--format json` | Le résumé structuré, en camelCase comme le document de résultat |
+| `--window DAYS` | Afficher les exemptions et les périodes de support qui se terminent dans `DAYS` jours. Par défaut `30` |
+| `--stale-after DAYS` | Considérer un hôte comme non couvert si son rapport le plus récent est plus ancien. Par défaut `7`, `0` désactive |
+| `--top N` | Lister les `N` constats les plus fréquents. Par défaut `10`, `0` les liste tous |
+| `--expect HOST` | Un hôte qui devrait avoir un rapport. Répétable, ou séparé par des virgules |
+| `--inventory FILE` | Les hôtes attendus, depuis un fichier, un par ligne, `#` commençant un commentaire |
+
+Un hôte est identifié par son nom et son port : `https://opencloud.example.com/`
+et `opencloud.example.com` sont le même hôte, `opencloud.example.com:9200` en
+est un autre. Indiquez le port dans `--expect` lorsque l'instance est analysée
+sur un port particulier.
+
+La commande se termine avec `0` dès qu'elle a affiché un résumé, quel que soit
+l'état de la flotte. Elle se termine avec `2` si elle n'a trouvé aucun
+document de résultat et qu'aucun hôte n'était attendu. Un fichier qui n'est
+pas un document de résultat n'est pas une erreur ; il est nommé sous
+*Files skipped*.
+
 ## `explain` - ce que signifie un constat et comment le corriger {#explain-what-a-finding-means-and-how-to-fix-it}
 
 ```bash
@@ -279,6 +349,40 @@ dans `extraChecks[].id` et dans `hardenings`, ainsi que ceux que désigne une
 exclusion. Pour un traitement plus long, page par page, voir [Les mesures de
 durcissement, une par une](hardening.md) et [Ce que lit le
 scanner](scanner-checks.md).
+
+## `review-waivers` - les exemptions à revoir {#review-waivers-waivers-that-need-attention}
+
+```bash
+check-opencloud-scanner -c /etc/check-opencloud-security/config.yml review-waivers
+```
+
+La commande lit les exemptions que le plugin utiliserait - `scanner.ignore_hardenings` et `scanner.temporary_waivers` dans le fichier de configuration ou leurs variables d'environnement `COS_` - et liste celles qui demandent votre attention, chacune avec une proposition de nettoyage. **Elle ne modifie jamais la configuration.** Décider si un échec reste acceptable revient à la personne qui l'a accepté.
+
+| Type | Signification |
+|:--|:--|
+| Expired | Une exemption temporaire dont l'échéance est passée. La sortie indique si la vérification alerte de nouveau ou si une exemption plus large la masque encore. |
+| Expiring soon | Une exemption temporaire qui expire dans moins de `--expiring-within` jours : le `--waiver-warning` du plugin pour tous les enregistrements à la fois. |
+| Unused | Ne correspond à aucune vérification en échec dans le document `--result`. Sans `--result` : ne correspond à aucun identifiant connu, souvent une faute de frappe. Une exemption pour un indicateur qu'OpenCloud fixe dans le code compte aussi, car il n'alerte jamais. |
+| Overlapping | Une autre exemption active la couvre déjà : un doublon, un motif plus étroit sous un motif plus large ou, avec `--result`, deux motifs pour la même vérification en échec. Une exemption temporaire sous une exemption permanente est signalée, car son échéance ne change rien. |
+| Permanent | Un motif sans raison ni échéance, avec un enregistrement `--waive-until` à copier à sa place. |
+
+```bash
+check-opencloud-scanner scan opencloud.example.com > result.json
+check-opencloud-scanner review-waivers --result result.json          # tell used from unused
+check-opencloud-scanner review-waivers --at 2026-12-01T00:00:00Z     # what will have expired by then
+check-opencloud-scanner review-waivers --format json --exit-zero     # for a script
+```
+
+| Option | Effet |
+|:--|:--|
+| `--result FILE` | Un document de résultat de `scan`, pour distinguer les exemptions utilisées des autres ; indique aussi la prochaine échéance qui fera alerter une vérification |
+| `--ignore-hardening`, `--waive-until` | Revoir ces valeurs au lieu de celles configurées, comme les options homonymes du plugin les remplacent |
+| `--expiring-within DAYS` | Fenêtre de *Expiring soon*. Par défaut : le réglage `waiver_warning`, ou `14` s'il est désactivé ; `0` désactive la section |
+| `--at TIMESTAMP` | Revoir à un autre moment ; exige un fuseau horaire, comme une échéance |
+| `--format {text,json}` | JSON avec `counts` par type et une entrée par élément avec `kind`, `pattern`, `reason`, `expiresAt`, `detail`, `suggestion` et `related` |
+| `--exit-zero` | Toujours terminer avec `0` |
+
+Une exemption peut apparaître sous plusieurs types ; un motif permanent mal orthographié, par exemple, est à la fois *Unused* et *Permanent*.
 
 ## `refresh-data` - actualiser le calendrier des versions et les avis de sécurité {#refresh-data-update-the-release-schedule-and-advisories}
 
@@ -400,7 +504,9 @@ travail du plugin.
 |:--|:--|:--|:--|:--|
 | `scan` | Tous les hôtes ont été analysés | Au moins un hôte n'a pas pu être analysé | Configuration invalide | - |
 | `diff` | Rien n'a empiré | Le résultat le plus récent est moins bon | Les fichiers ne peuvent pas être comparés | - |
+| `fleet` | Résumé affiché | - | Aucun document de résultat trouvé, ou inventaire illisible | - |
 | `explain` | Affiché | Identifiant inconnu ou catégorie vide | - | - |
+| `review-waivers` | Rien à nettoyer | Au moins une exemption listée | Exemption, horodatage ou fichier `--result` invalide | - |
 | `refresh-data` | Les deux fichiers ont été écrits | Rien n'a été écrit, voir stderr | - | - |
 | `serve` | Arrêt normal | - | Configuration invalide | Démarrage refusé, p. ex. une écoute large sans jeton |
 

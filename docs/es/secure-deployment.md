@@ -531,7 +531,7 @@ Ahí hay cuatro decisiones, y cada una se gana su sitio:
 
 Para un conjunto de instancias,
 [Comprobar un conjunto de instancias](../many-instances.md) trata el uso de un
-archivo de configuración por instancia y cómo mantener honestas las
+archivo de configuración por instancia y cómo revisar periódicamente las
 exclusiones en todas ellas. Para gráficos y tendencias a largo plazo,
 [Prometheus y Grafana](../prometheus.md): la nota como serie temporal es un
 resumen sorprendentemente bueno para mostrar a quien no lee alertas.

@@ -113,6 +113,37 @@ régresser une exécution et ne modifie jamais le code de sortie. Une référenc
 de configuration, faute d'empreintes à comparer. Elle ne signale donc aucun
 changement ; cela ne prouve pas que la configuration est restée identique.
 
+## Régressions de couverture {#coverage-regressions}
+
+
+Une référence retient aussi les contrôles pour lesquels l'analyse **est
+parvenue à une conclusion**. Lorsqu'un contrôle mesuré auparavant est
+désormais `inconclusive` - il s'est exécuté sans pouvoir conclure, par exemple
+parce qu'une requête DNS n'a pas répondu à temps -, l'exécution le signale,
+même si la note n'a pas bougé :
+
+```text
+WARNING: 1 previously measured check(s) are now inconclusive; the rating is unchanged (Server is up to date. No known vulnerabilities.)
+Coverage regressed (1): previously measured, now inconclusive: caaRecord (timeout) - the rating is unaffected.
+```
+
+Ce signal est volontairement séparé de la note de sécurité. La note, les
+perfdata et les constats restent ceux que les mesures ont donnés ; seul l'état
+d'alerte change, et uniquement de `OK` à `WARNING`. Une exécution déjà en
+`WARNING` ou `CRITICAL` garde son message et reçoit la ligne en plus.
+`--warn-on-new` ne la supprime pas : une analyse qui voit soudain moins est
+une nouveauté.
+
+- Seul `inconclusive` compte. Un contrôle devenu `not_checked` - désactivé
+  par vous, ou devenu sans objet - n'est pas une régression de l'analyse.
+- Un contrôle perdu reste « mesuré auparavant » jusqu'à ce qu'une exécution
+  ultérieure le mesure de nouveau : l'avertissement dure autant que la lacune.
+- Le webhook porte la liste dans `baseline_diff` sous `coverage_regressed` ;
+  la comparaison de deux documents la signale comme `coverageRegressed`.
+- Une référence plus ancienne sans couverture ne peut signaler aucune perte à
+  la première exécution après la mise à jour ; elle enregistre alors ce qui a
+  été mesuré.
+
 ## Points à connaître {#points-worth-knowing}
 
 

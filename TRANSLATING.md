@@ -144,7 +144,15 @@ These tests run in the existing CI test job. They reject known wording defects
 in catalogues, current documentation, templates and Python product strings.
 Phrase checks join wrapped lines, so formatting cannot hide a known defect.
 The translation tests also reject guides that retain too much English prose
-and require translated headings to preserve their section links.
+and require translated headings to preserve their section links. They compare
+long table descriptions separately, so an untranslated settings row cannot
+hide inside an otherwise translated guide. Commands, short labels and quoted
+diagnostics remain verbatim. Catalogue tests also check duplicate keys in the
+source and exercise placeholder formatting and HTML escaping in every language.
+The sharing and error-page tests render all four languages, including email
+drafts, clipboard summaries, rate limits and rejected uploads. Export-format
+checks compare each translated guide with the formats the service supports.
+Link diagnostics ignore code examples and retain the source line numbers.
 
 Add a focused regression case when correcting a recurring wording defect.
 Include an acceptable example when a rule could also match correct technical

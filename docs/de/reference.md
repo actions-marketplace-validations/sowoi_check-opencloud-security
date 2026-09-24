@@ -768,6 +768,23 @@ Ausnahmen bleiben als solche sichtbar; sie beheben den Befund nicht.
 Derselbe Plan erscheint im Webbericht, in den Exporten und im MCP-Werkzeug
 `plan_remediation`.
 
+### Nach Konfiguration gruppiert {#grouped-by-where-the-change-is-made}
+
+`remediationPlan.groups` ordnet die offenen Befunde dem System zu, das du zur
+Behebung bearbeitest: **Reverse Proxy**, **Identitätsanbieter**, **OpenCloud**
+oder **DNS-Zone**. Auch Befunde, die die Note nicht begrenzen, etwa ein
+fehlender Header, sind enthalten.
+
+Befunde, die eine einzige Änderung behebt, bilden eine Änderung: alle
+fehlenden Sicherheits-Header ein Header-Block, mehrere Zertifikatsprobleme ein
+neues Zertifikat, alle `exposed:/...`-Pfade eine Korrektur und das Update alle
+passenden Advisories. Jede Änderung nennt ihre Befunde, `resolvesSeveral` und
+die Note, die sie allein ergäbe – nachgerechnet mit derselben
+Bewertungsfunktion. `groupSummary` nennt die Änderungen, die mehrere Befunde
+auf einmal beheben. Ausnahmen und fest vorgegebene Merkmale erscheinen nicht
+als Änderung. `--debug`, der Webbericht, das Maßnahmenpaket und
+`plan_remediation` zeigen die Gruppen ebenfalls.
+
 ## Webhook-Benachrichtigungen {#webhook-notifications}
 
 Mit `--webhook-url` oder `COS_WEBHOOK_URL` aktiviere Benachrichtigungen:

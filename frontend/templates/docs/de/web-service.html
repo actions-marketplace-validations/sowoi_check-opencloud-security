@@ -882,13 +882,36 @@ abgewiesen, bevor Aufträge entstehen.</p>
 Andernfalls entspricht sie dem Ablehnungsgrund des ersten Ziels, gegebenenfalls
 mit <code>Retry-After</code>.</p>
 <h3 id="get-apiscansuuidexportformat"><code>GET /api/scans/{uuid}/export/{format}</code></h3>
-<p>Ein fertiger Bericht lässt sich als <code>json</code>, <code>csv</code>, <code>sarif</code> oder <code>pdf</code> herunterladen:</p>
+<p>Einen abgeschlossenen Scan kannst du als <code>json</code>, <code>csv</code>, <code>sarif</code>, <code>pdf</code> oder
+<code>html</code> herunterladen. Die Pakete <code>remediation-md</code> und <code>remediation-html</code>
+enthalten nur offene, behebbare Befunde und vorgeschlagene
+Konfigurationsausschnitte für nginx, Caddy, Traefik, Compose und <code>.env</code>.
+Für die Note, bestandene Prüfungen und Sicherheitsmeldungen verwende einen
+vollständigen Bericht.</p>
 <pre><code class="language-bash">curl -sS -OJ http://127.0.0.1:8811/api/scans/0f4a1f22-.../export/pdf
 </code></pre>
-<p>Alle Formate enthalten Maßnahmenplan und TLS-Details. Nicht ermittelte Werte
-bleiben als solche erkennbar; <code>null</code> bedeutet nicht „bestanden“. Die Dateien
-werden aus demselben Ergebnis erzeugt und sind nach dessen Ablauf nicht mehr
-abrufbar. Die API nennt die Download-URLs unter <code>exports</code>.</p>
+<p>Der <code>html</code>-Bericht ist <strong>eine eigenständige Datei</strong> mit eingebundener
+Formatierung. Beim Öffnen stellt er keine Netzwerkanfragen. Er enthält keine
+Skripte, Bilder, externen Schriftarten oder Stylesheets. Dokumentationslinks
+öffnen sich nur, wenn du ihnen folgst. Enthalten sind Befunde, ausgenommene
+Befunde mit ihren Begründungen, der Behebungsplan, Lücken im Prüfumfang und
+die für die Bewertung verwendeten Referenzdaten. Formulare, Bedienelemente
+für erneute Scans, automatische Abfragen und Lösch-Token fehlen.</p>
+<p>Vollständige Berichte enthalten den Behebungsplan: als Zusammenfassungs- und
+Schrittzeilen in CSV, unter <code>runs[0].properties.remediation</code> in SARIF, als
+Planabschnitt in PDF und HTML sowie unter <code>remediationPlan</code> in JSON.
+TLS-Details stehen im CSV-Kopfblock, unter <code>runs[0].properties.tls</code> in SARIF,
+in den Transportabschnitten von PDF und HTML sowie unter <code>tls</code> in JSON.
+Dazu gehören Protokoll, Verschlüsselungsverfahren, Zertifikatsgültigkeit und
+verbleibende Tage, Vollständigkeit der Zertifikatskette und OCSP-Stapling.
+<code>null</code> bedeutet, dass der Wert nicht ermittelt werden konnte, nicht dass
+die Prüfung bestanden wurde.</p>
+<p>Downloads werden auf Anfrage aus dem gespeicherten Ergebnis erzeugt. Ihre
+Links funktionieren nach Ablauf des Scans nicht mehr. Bereits gespeicherte
+Dateien bleiben verfügbar, aktualisieren sich nicht und werden beim Löschen
+des Scans nicht entfernt. Die Antwort von <code>GET /api/scans/{uuid}</code> für einen
+abgeschlossenen Scan nennt die Download-URLs unter <code>exports</code>; die Ergebnisseite
+bietet dieselben Formate als Download-Schaltflächen an.</p>
 <h4 id="signed-exports">Signierte Exporte</h4>
 <p>Mit <code>COS_WEB_EXPORT_SIGNING_KEY</code> enthält jede Exportantwort eine HMAC-SHA256-Signatur
 über die tatsächlich gesendeten Bytes:</p>

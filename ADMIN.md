@@ -544,7 +544,7 @@ What the area does:
 | Search index | **Reports** whether the shipped index still matches this build. It never rebuilds - every pull request to main and the release workflow do that. When it is out of date, the card lists every reason and shows how to fix it. Three verdicts, not two: an index that does not name the release it was built for is **Cannot tell**, because its pages and languages could be compared and its copy could not |
 | Audit | Streams the audit records as they are written, from the log file when one is configured and otherwise from a bounded in-memory ring |
 
-Beside the overview there are five more places, reached from the tab strip at
+Beside the overview there are six more places, reached from the tab strip at
 the top of every page in the area:
 
 | Tab | What it shows |
@@ -554,6 +554,7 @@ the top of every page in the area:
 | Architecture | `ARCHITECTURE.md` — how the repository is put together and why the seams are where they are |
 | Operations | This file — the data to keep current, what to rebuild, and where to look when something breaks |
 | Releases | The ten newest released sections of `CHANGELOG.md`, newest first — what this release and the ones before it changed. `[Unreleased]` is left out: it is what a deployment does not run yet |
+| Decisions | Every architecture decision record `adr/README.md` indexes, with its status and a filter over number, title and status; each record opens as its own page under `/admin/decisions/<slug>`. A link from one record, or from `ARCHITECTURE.md`, to another stays inside the area instead of going to GitHub. The area's search indexes every record's full text |
 
 The three documents are generated into `frontend/templates/admin-docs/` at build time by
 `scripts/build_frontend_documentation.py`, from
@@ -566,6 +567,16 @@ descriptions come from the same script, which extracts the `docs/webapp.md`
 table into `webapp/environment_reference.py`; its `--check` in CI fails when
 the two disagree, and `tests/test_webapp_admin_configuration.py` fails when
 a variable is read, listed or documented in one place and not the others.
+
+The decision records take the same path into `frontend/templates/admin-decisions/`,
+from the index table in `adr/README.md` rather than the directory listing,
+so a record reaches the area when it reaches the index. Because the web
+bundle does not ship `adr/`, the same script writes the list of records into
+`webapp/decision_records.py`, which the routes and the operator search index
+read. Like the documents above they are English only. The interface around
+them follows the reader's language. After adding or editing a record, run
+`scripts/build_frontend_documentation.py` and `scripts/build_search_index.py`;
+CI's `--check` of both fails until you do.
 
 The Releases tab changes only when a release is published: the publish
 workflow renames `[Unreleased]` to the new version and, in the same commit,

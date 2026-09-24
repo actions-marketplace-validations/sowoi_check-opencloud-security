@@ -19,12 +19,25 @@ Command line entry point of the bundled scanner.
     comparison on staying quiet; this spends it on telling somebody what
     happened, which is the question after a change rather than during one.
 
+``fleet``
+    Summarise every result document in a directory: unsupported releases,
+    waivers about to run out, the findings many instances share, and the
+    instances nobody has looked at lately. Reads files only, like ``diff``,
+    and keeps nothing afterwards.
+
 ``explain``
     Look one finding identifier up in the catalogue without scanning
     anything. A monitoring system prints ``cspWithoutUnsafeInline`` at three
     in the morning; until now the three ways to find out what that meant were
     to run a scan that fails the same check, open the web application, or read
     the source.
+
+``review-waivers``
+    Read the configured waivers and list the ones that need a person: expired,
+    expiring, unused, overlapping and permanent, each with a suggested
+    cleanup. It only reads - the configuration is never changed - because
+    whether a failure is still acceptable is the decision of whoever accepted
+    it, not of a tool.
 """
 
 from __future__ import annotations
@@ -49,6 +62,15 @@ from .factory import release_settings_from_config, scanner_settings_from_config
 from .findings import ADVISORY_CATEGORY, Delta, severity_totals
 from .findings import CATEGORIES as FINDING_CATEGORIES
 from .findings import compare as compare_findings
+from .fleet import (
+    DEFAULT_STALE_AFTER_DAYS,
+    DEFAULT_TOP_FINDINGS,
+    DEFAULT_WINDOW_DAYS,
+    load_reports,
+    read_inventory,
+    summarise,
+)
+from .fleet import render as render_fleet
 from .hardening import (
     CATEGORIES,
     Hardening,
@@ -67,6 +89,18 @@ from .service import (
     ServiceMisconfigured,
     serve,
 )
+from .versions import load_release_schedule
+from .waivers import (
+    FIELD_SEPARATOR,
+    REVIEW_KINDS,
+    Waiver,
+    WaiverError,
+    WaiverReview,
+    parse_timestamp,
+    parse_waivers,
+    scan_clock,
+)
+from .waivers import review as review_waivers
 from .wizard import run as run_setup
 
 LOGGER = logging.getLogger("check_opencloud.cli")
@@ -319,6 +353,81 @@ def build_arg_parser() -> argparse.ArgumentParser:
         ),
     )
 
+    fleet_parser = sub.add_parser(
+        "fleet",
+        help="Summarise many saved result documents as one dashboard.",
+        description=(
+            "Read result documents written by `scan` - files, or directories "
+            "searched for *.json - and summarise the newest one per host: "
+            "unsupported releases, waiver deadlines, the findings many hosts "
+            "share and the hosts nobody has looked at lately. Reads files "
+            "only: it never scans anything and stores nothing."
+        ),
+    )
+    fleet_parser.add_argument(
+        "paths",
+        nargs="+",
+        type=Path,
+        metavar="PATH",
+        help="Result documents, or directories holding them.",
+    )
+    fleet_parser.add_argument(
+        "--format",
+        dest="fleet_format",
+        choices=("text", "markdown", "html", "json"),
+        default="text",
+        help=(
+            "Aligned tables, Markdown, one self-contained HTML page, or the "
+            "structured summary. Default: text."
+        ),
+    )
+    fleet_parser.add_argument(
+        "--window",
+        type=int,
+        default=DEFAULT_WINDOW_DAYS,
+        metavar="DAYS",
+        help=(
+            "Show waivers and support windows that end within DAYS days. "
+            f"Default: {DEFAULT_WINDOW_DAYS}."
+        ),
+    )
+    fleet_parser.add_argument(
+        "--stale-after",
+        type=int,
+        default=DEFAULT_STALE_AFTER_DAYS,
+        metavar="DAYS",
+        help=(
+            "Count a host as not covered when its newest report is older than "
+            f"DAYS days; 0 turns this off. Default: {DEFAULT_STALE_AFTER_DAYS}."
+        ),
+    )
+    fleet_parser.add_argument(
+        "--top",
+        type=int,
+        default=DEFAULT_TOP_FINDINGS,
+        metavar="N",
+        help=(
+            "List the N most common findings; 0 lists all of them. "
+            f"Default: {DEFAULT_TOP_FINDINGS}."
+        ),
+    )
+    fleet_parser.add_argument(
+        "--expect",
+        action="append",
+        default=[],
+        metavar="HOST",
+        help=(
+            "A host the fleet should have a report for. Repeatable, or comma "
+            "separated. A host without one is listed as missing coverage."
+        ),
+    )
+    fleet_parser.add_argument(
+        "--inventory",
+        type=Path,
+        metavar="FILE",
+        help="A file of expected hosts, one per line, '#' starting a comment.",
+    )
+
     explain_parser = sub.add_parser(
         "explain",
         help="Say what a finding identifier means and how to fix it.",
@@ -356,6 +465,80 @@ def build_arg_parser() -> argparse.ArgumentParser:
         choices=("text", "json"),
         default="text",
         help="How to render the entries. Default: text.",
+    )
+
+    review_parser = sub.add_parser(
+        "review-waivers",
+        help="List waivers that are expired, unused, overlapping or permanent.",
+        description=(
+            "Read the waivers from the configuration file, the environment or "
+            "the flags below, and list the ones that need attention with a "
+            "suggested cleanup. Never changes the configuration. Give it a "
+            "result document from `scan` to tell a waiver that covers a "
+            "failing check from one that covers nothing."
+        ),
+    )
+    review_parser.add_argument(
+        "--result",
+        type=Path,
+        metavar="FILE",
+        help=(
+            "A result document from `check-opencloud-scanner scan` of the "
+            "instance the waivers are for. Without it, a waiver counts as "
+            "unused only when it matches no identifier this build knows."
+        ),
+    )
+    review_parser.add_argument(
+        "--ignore-hardening",
+        action="append",
+        metavar="PATTERN",
+        help=(
+            "Review these permanent waivers instead of the configured "
+            "ignore_hardenings, as the plugin's flag of the same name would "
+            "use them. Repeatable, comma-separated."
+        ),
+    )
+    review_parser.add_argument(
+        "--waive-until",
+        action="append",
+        metavar=f"PATTERN{FIELD_SEPARATOR}EXPIRES{FIELD_SEPARATOR}REASON",
+        help=(
+            "Review these temporary waivers instead of the configured "
+            "temporary_waivers. Repeatable."
+        ),
+    )
+    review_parser.add_argument(
+        "--expiring-within",
+        type=int,
+        metavar="DAYS",
+        help=(
+            "Also list temporary waivers that run out within this many days. "
+            "Default: the plugin's waiver_warning setting, or 14 when that is "
+            "off. 0 lists only waivers that have already expired."
+        ),
+    )
+    review_parser.add_argument(
+        "--at",
+        metavar="TIMESTAMP",
+        help=(
+            "Review as of this moment instead of now, e.g. "
+            "2026-12-01T00:00:00Z, to see what will have expired by then."
+        ),
+    )
+    review_parser.add_argument(
+        "--format",
+        dest="review_format",
+        choices=("text", "json"),
+        default="text",
+        help="How to render the review. Default: text.",
+    )
+    review_parser.add_argument(
+        "--exit-zero",
+        action="store_true",
+        help=(
+            "Always exit 0. Without it, a review that lists anything exits 1 "
+            "so a pipeline can gate on it."
+        ),
     )
 
     enable_completion(parser)
@@ -746,6 +929,54 @@ def _run_diff(args: argparse.Namespace) -> int:
     return 1 if comparison.regressed else 0
 
 
+def _run_fleet(args: argparse.Namespace, scanner_settings) -> int:
+    """
+    Summarise the saved result documents of a fleet.
+
+    The configuration is read for one thing only: which release schedule this
+    installation trusts, so a report's version is placed in the same schedule
+    the plugin would use today. Nothing else about a scan applies to files.
+    """
+    for name in ("window", "stale_after", "top"):
+        if getattr(args, name) < 0:
+            LOGGER.error("--%s cannot be negative.", name.replace("_", "-"))
+            return 2
+    expected = [
+        host.strip() for value in args.expect for host in value.split(",") if host.strip()
+    ]
+    if args.inventory is not None:
+        try:
+            expected.extend(read_inventory(args.inventory))
+        except OSError as exc:
+            LOGGER.error("Cannot read the inventory %s: %s", args.inventory, exc)
+            return 2
+
+    # A skipped file is listed in the summary itself rather than logged, so
+    # the JSON form carries it too and nothing is said twice.
+    reports, skipped = load_reports(args.paths)
+    if not reports and not expected:
+        LOGGER.error(
+            "No result documents found in %s. Write them with "
+            "`check-opencloud-scanner scan HOST > HOST.json`.",
+            ", ".join(str(path) for path in args.paths),
+        )
+        return 2
+
+    schedule = None
+    if scanner_settings.use_release_schedule:
+        schedule = scanner_settings.release_schedule or load_release_schedule()
+    summary = summarise(
+        reports,
+        skipped=skipped,
+        expected=expected,
+        schedule=schedule,
+        window_days=args.window,
+        stale_after_days=args.stale_after,
+    )
+    print(render_fleet(summary, args.fleet_format, top=args.top))
+    return 0
+
+
 def _catalogue() -> list[Hardening]:
     """
     Every entry this build can explain, in the order the categories are listed.
@@ -820,6 +1051,110 @@ def _run_explain(args: argparse.Namespace) -> int:
     return 0
 
 
+#: How each kind of review item is headed in the text output.
+_REVIEW_HEADINGS: dict[str, str] = {
+    "expired": "Expired",
+    "expiring": "Expiring soon",
+    "unused": "Unused",
+    "overlapping": "Overlapping",
+    "permanent": "Permanent",
+}
+
+
+def _configured_waivers(args: argparse.Namespace, config: Any) -> tuple[Waiver, ...]:
+    """
+    The waivers a plugin run would use: flags replace the configured values.
+
+    The same precedence as the plugin, so the review describes what the
+    check actually runs with rather than a file it has overridden.
+    """
+    if args.ignore_hardening is not None:
+        patterns = tuple(
+            dict.fromkeys(
+                part.strip()
+                for value in args.ignore_hardening
+                for part in value.split(",")
+                if part.strip()
+            )
+        )
+    else:
+        patterns = scanner_settings_from_config(config).ignore_hardenings
+    if args.waive_until is not None:
+        temporary = parse_waivers(args.waive_until, require_deadline=True)
+    else:
+        temporary = scanner_settings_from_config(config).waivers
+    return tuple(Waiver(pattern) for pattern in patterns) + tuple(temporary)
+
+
+def _review_text(outcome: WaiverReview) -> str:
+    """The review as readable lines, grouped by kind."""
+    when = outcome.at.strftime("%Y-%m-%d %H:%M UTC")
+    if not outcome.waivers:
+        return f"No waivers are configured (reviewed {when})."
+    lines = [
+        f"Reviewed {len(outcome.waivers)} waiver(s) as of {when}"
+        + ("" if outcome.evidence else " without a scan result (pass --result for usage)")
+        + "."
+    ]
+    if not outcome.items:
+        lines.append("Nothing to clean up.")
+    for kind in REVIEW_KINDS:
+        items = outcome.of_kind(kind)
+        if not items:
+            continue
+        lines.extend(["", f"{_REVIEW_HEADINGS[kind]} ({len(items)}):"])
+        for item in items:
+            label = item.waiver.pattern
+            if item.waiver.reason:
+                label += f" - {item.waiver.reason}"
+            lines.append(f"  * {label}")
+            lines.append(f"      {item.detail}")
+            lines.append(f"      Suggestion: {item.suggestion}")
+    if outcome.upcoming is not None:
+        upcoming = outcome.upcoming
+        lines.extend(
+            [
+                "",
+                (
+                    f"Next alert from an expiry: {', '.join(upcoming.checks)} on "
+                    f"{upcoming.at.strftime('%Y-%m-%d %H:%M UTC')}."
+                ),
+            ]
+        )
+    lines.extend(["", "Nothing was changed; edit the configuration to apply a suggestion."])
+    return "\n".join(lines)
+
+
+def _run_review(args: argparse.Namespace, config: Any) -> int:
+    """List the waivers that need attention, without changing any of them."""
+    try:
+        waivers = _configured_waivers(args, config)
+        now = parse_timestamp(args.at) if args.at else scan_clock()
+    except (WaiverError, ConfigurationError) as exc:
+        LOGGER.error("%s", exc)
+        return 2
+    result = None
+    if args.result is not None:
+        try:
+            result = _load_result_document(args.result)
+        except DiffError as exc:
+            LOGGER.error("%s", exc)
+            return 2
+    within = args.expiring_within
+    if within is None:
+        within = config.get_int("WAIVER_WARNING", 0) or 14
+    if within < 0:
+        LOGGER.error("--expiring-within must be 0 or a number of days.")
+        return 2
+
+    outcome = review_waivers(waivers, now, result=result, expiring_within_days=within)
+    if args.review_format == "json":
+        print(json.dumps(outcome.as_dict(), indent=2))
+    else:
+        print(_review_text(outcome))
+    return 0 if args.exit_zero or not outcome.items else 1
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Entry point of ``check-opencloud-scanner``."""
     parser = build_arg_parser()
@@ -859,6 +1194,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         parser.error(str(exc))
         return 2
 
+    if args.command == "review-waivers":
+        return _run_review(args, config)
+
     try:
         scanner_settings = scanner_settings_from_config(
             config,
@@ -884,6 +1222,8 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "scan":
         return _run_scan(args, scanner_settings, release_settings)
+    if args.command == "fleet":
+        return _run_fleet(args, scanner_settings)
 
     store = ScanStore(
         scanner_settings=scanner_settings,

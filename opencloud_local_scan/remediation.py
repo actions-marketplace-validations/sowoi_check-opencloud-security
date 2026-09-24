@@ -32,6 +32,8 @@ from collections.abc import Mapping
 from typing import Any
 
 from .hardening import DOCS_UPDATE, describe
+from .remediation_groups import groups as grouped_changes
+from .remediation_groups import summary as grouped_summary
 
 MIN_RATING = 0
 MAX_RATING = 5
@@ -305,6 +307,16 @@ def plan(result: Mapping[str, Any]) -> dict[str, Any]:
         presented as a fix that does not work.
     ``summary``
         The same thing in one sentence.
+    ``groups``
+        The same findings - and the open ones that cap nothing, such as a
+        missing header - grouped by where the change is made: the reverse
+        proxy, the identity provider, OpenCloud or the DNS zone. Within a
+        group, findings one edit resolves together are one change, with the
+        rating that change alone would produce. See
+        :mod:`opencloud_local_scan.remediation_groups`.
+    ``groupSummary``
+        The changes that resolve several findings at once, in one sentence,
+        or ``""`` when every change resolves exactly one.
     """
     explanation = result.get("ratingExplanation")
     explanation = explanation if isinstance(explanation, Mapping) else {}
@@ -348,6 +360,13 @@ def plan(result: Mapping[str, Any]) -> dict[str, Any]:
         if isinstance(entry, Mapping) and entry.get("ignored")
     ]
 
+    def replay(resolved: frozenset[str], upgraded: bool) -> int:
+        # The same arithmetic as the steps: the version is the ceiling until
+        # the update is among the changes made.
+        remaining = [entry for entry in caps if str(entry.get("check")) not in resolved]
+        return _rating_with(MAX_RATING if upgraded else base_rating, remaining)
+
+    grouped = grouped_changes(result, steps, blocked, replay)
     return {
         "currentRating": current,
         "achievableRating": achievable,
@@ -355,6 +374,8 @@ def plan(result: Mapping[str, Any]) -> dict[str, Any]:
         "blocked": blocked,
         "waived": sorted(waived),
         "summary": _summarise(current, achievable, steps),
+        "groups": grouped,
+        "groupSummary": grouped_summary(grouped),
     }
 
 

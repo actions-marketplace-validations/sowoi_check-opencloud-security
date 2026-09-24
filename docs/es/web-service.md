@@ -291,8 +291,8 @@ Cada ajuste es una variable de entorno que se lee una vez al arrancar.
 | `COS_WEB_ADMIN_SIGN_OUT_URL` | *(sin definir)* | Adónde lleva el enlace de cierre de sesión del área. Este servicio no tiene ninguna sesión que terminar, así que la salida corresponde al proveedor situado delante; para la pila incluida, `/outpost.goauthentik.io/sign_out`. Sin definir, la franja muestra el nombre del operador y no ofrece salida. Solo se acepta una ruta local o una URL `http(s)`; cualquier otra cosa impide el arranque, porque el valor se muestra como `href` en una página cuya política de contenido prohíbe los scripts |
 | `COS_WEB_ADMIN_AUDIT_BUFFER` | `200` | Registros de auditoría recientes que se guardan en memoria para la vista en directo, para un despliegue que registra en stdout. `0` no guarda ninguno |
 | `COS_WEB_ADMIN_REFRESH_COOLDOWN` | `60` | Intervalo mínimo entre dos actualizaciones de los mismos datos de referencia lanzadas por el operador. La prueba en seco del área, que lee ambas fuentes y no aplica nada, se retiene durante el mismo intervalo con una clave propia, para que siga disponible justo después de que una actualización haya notificado un fallo |
-| `COS_WEB_UPDATE_CHECK` | `true` | Ask GitHub whether a newer release of this service exists, for the operator's area only and at most every six hours. Set `false` with no outbound access |
-| `COS_WEB_ADMIN_UPDATE_DIR` | *(unset)* | A writable tmpfs (the compose files mount one at `/var/lib/opencloud-scan/update`). Set, the operator's area can install a newer release: the web bundle is downloaded from GitHub, verified against its build attestation, unpacked here, and the web and worker processes restart on it - a short downtime, lasting until the containers restart. Unset, the area only says an update exists |
+| `COS_WEB_UPDATE_CHECK` | `true` | Consulta en GitHub si existe una versión más reciente de este servicio, solo para el área de operación y como máximo cada seis horas. Use `false` si no hay acceso de red saliente |
+| `COS_WEB_ADMIN_UPDATE_DIR` | *(sin definir)* | Directorio tmpfs con permisos de escritura; los archivos de Compose lo montan en `/var/lib/opencloud-scan/update`. Si se define, el área de operación permite instalar una versión más reciente: descarga el paquete web de GitHub, verifica su atestación de compilación, lo extrae aquí y reinicia los procesos web y los workers para usarlo. El servicio se interrumpe brevemente. La actualización permanece activa hasta que se reinician los contenedores. Sin definir, el área solo informa de las actualizaciones disponibles |
 | `COS_WEB_AUDIT_LOG` | `false` | Escribe un registro de auditoría por cada solicitud de análisis, rechazo y límite alcanzado |
 | `COS_WEB_AUDIT_LOG_TARGETS` | `false` | Registra el nombre de host del destino en claro en lugar de como huella. Solo para despliegues locales |
 | `COS_WEB_AUDIT_SALT` | *(aleatoria por proceso)* | Sal para las huellas de auditoría. Definir una permite relacionar registros tras un reinicio; rotarla lo impide |
@@ -1100,30 +1100,41 @@ un límite, y **400** o **422** en los demás casos.
 
 ### `GET /api/scans/{uuid}/export/{format}` {#get-apiscansuuidexportformat}
 
-Un análisis terminado como archivo: `json`, `csv`, `sarif` o `pdf`.
+Un análisis terminado se puede descargar como `json`, `csv`, `sarif`, `pdf`
+o `html`. Los paquetes `remediation-md` y `remediation-html` solo contienen
+hallazgos pendientes que se pueden corregir y fragmentos de configuración
+propuestos para nginx, Caddy, Traefik, Compose y `.env`. Utilice un informe
+completo para consultar la nota, las comprobaciones superadas y los avisos
+de seguridad.
 
 ```bash
 curl -sS -OJ http://127.0.0.1:8811/api/scans/0f4a1f22-.../export/pdf
 ```
 
-Los cuatro incluyen el plan de corrección (la lista ordenada de correcciones
-con la nota que alcanza cada paso): como filas de resumen y de pasos en el CSV,
-`runs[0].properties.remediation` en el SARIF, una sección "What gets you to
-A+" en el PDF y `remediationPlan` en el JSON.
+El informe `html` es **un único archivo independiente** con sus estilos
+incluidos. Al abrirlo no hace solicitudes de red: no contiene scripts,
+imágenes, fuentes externas ni hojas de estilo externas. Los enlaces a la
+documentación solo se abren si los sigue. Incluye los hallazgos, los hallazgos
+eximidos con sus motivos, el plan de corrección, las lagunas de cobertura y
+los datos de referencia utilizados para evaluar el análisis. No contiene
+formularios, controles para repetir el análisis, consultas periódicas ni
+tokens de borrado.
 
-Incluyen el detalle de la seguridad del transporte en los mismos lugares: el
-bloque de cabecera en el CSV, `runs[0].properties.tls` en el SARIF, una sección
-"Transport security" en el PDF y el bloque `tls` en el JSON (protocolo,
-cifrado, validez del certificado y días restantes, integridad de la cadena y
-stapling OCSP). Una medición que no se pudo tomar es `null`, que significa "no
-determinado" y no "correcto".
+Los informes completos incluyen el plan de corrección: filas de resumen y
+pasos en CSV, `runs[0].properties.remediation` en SARIF, una sección del plan
+en PDF y HTML, y `remediationPlan` en JSON. Los detalles de transporte aparecen
+en el bloque de cabecera de CSV, `runs[0].properties.tls` en SARIF, las secciones
+de transporte de PDF y HTML, y `tls` en JSON. Incluyen el protocolo, el cifrado,
+la validez del certificado y los días restantes, la integridad de la cadena
+y el stapling OCSP. Un valor `null` significa que no se ha podido determinar
+la medición, no que se haya superado la comprobación.
 
-Los cuatro son representaciones del mismo resultado terminado, que se generan
-bajo demanda y desaparecen cuando caduca el análisis. El PDF lo escribe este
-servicio y no una biblioteca de informes, por la misma razón por la que la
-interfaz no carga nada de una CDN. La respuesta de `GET /api/scans/{uuid}`
-terminada anuncia las cuatro URL en `exports`, y la página de resultados las
-ofrece como botones de descarga.
+Las descargas se generan a petición a partir del resultado almacenado. Sus
+enlaces dejan de funcionar cuando caduca el análisis. Los archivos ya guardados
+siguen disponibles, no se actualizan y no se eliminan al borrar el análisis.
+La respuesta de `GET /api/scans/{uuid}` para un análisis terminado enumera
+las URL de descarga en `exports`; la página de resultados ofrece los mismos
+formatos mediante botones de descarga.
 
 #### Exportaciones firmadas {#signed-exports}
 

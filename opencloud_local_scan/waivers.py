@@ -34,8 +34,11 @@ from __future__ import annotations
 import fnmatch
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from difflib import get_close_matches
 from typing import Any
+
+from .hardening import all_checks, header_names, is_actionable
 
 #: What separates the three fields of a temporary waiver. A check identifier
 #: is a name, a path or a port - `exposed:/config/opencloud.yaml`,
@@ -175,6 +178,16 @@ def _parse_expiry(value: str, raw: str) -> datetime:
     return parsed.astimezone(timezone.utc)
 
 
+def parse_timestamp(text: str) -> datetime:
+    """
+    Read one moment by the same rules as an expiry: ISO 8601, with a timezone.
+
+    For the review's ``--at``, which must mean the same instant an expiry it
+    is compared against does.
+    """
+    return _parse_expiry(text, text)
+
+
 def parse_waivers(
     values: Iterable[str], *, require_deadline: bool = False
 ) -> tuple[Waiver, ...]:
@@ -281,6 +294,10 @@ class UpcomingExpiry:
     #: The record whose deadline that is, so the alert can name it.
     pattern: str
     reason: str
+    #: Every record ending at ``at`` as ``(pattern, reason)``, the one above
+    #: first. Two waivers written with the same deadline end together, and
+    #: an alert naming one of them would leave the other's checks unexplained.
+    ending: tuple[tuple[str, str], ...] = ()
 
 
 def next_expiry(block: Any) -> UpcomingExpiry | None:
@@ -293,7 +310,8 @@ def next_expiry(block: Any) -> UpcomingExpiry | None:
     permanent wildcard ends without anything changing, and two overlapping
     temporary waivers end at the later of the two. Records that matched
     nothing are ignored for the same reason - their deadline passes
-    unnoticed.
+    unnoticed - and so are flags OpenCloud hardcodes, which never alert
+    whether waived or not.
 
     ``None`` when no failing check is suppressed by a temporary waiver alone.
     """
@@ -313,7 +331,8 @@ def next_expiry(block: Any) -> UpcomingExpiry | None:
             except WaiverError:
                 continue
         for check in record.get("matched") or ():
-            covering.setdefault(str(check), []).append((deadline, record))
+            if is_actionable(str(check)):
+                covering.setdefault(str(check), []).append((deadline, record))
 
     ends: dict[str, tuple[datetime, dict[str, Any]]] = {}
     for check, records in covering.items():
@@ -325,12 +344,20 @@ def next_expiry(block: Any) -> UpcomingExpiry | None:
         )
     if not ends:
         return None
-    at, record = min(ends.values(), key=lambda item: item[0])
+    at = min(end for end, _ in ends.values())
+    checks = tuple(sorted(check for check, (end, _) in ends.items() if end == at))
+    ending: list[tuple[str, str]] = []
+    for check in checks:
+        record = ends[check][1]
+        named = (str(record.get("pattern") or ""), str(record.get("reason") or ""))
+        if named not in ending:
+            ending.append(named)
     return UpcomingExpiry(
         at=at,
-        checks=tuple(sorted(check for check, (end, _) in ends.items() if end == at)),
-        pattern=str(record.get("pattern") or ""),
-        reason=str(record.get("reason") or ""),
+        checks=checks,
+        pattern=ending[0][0],
+        reason=ending[0][1],
+        ending=tuple(ending),
     )
 
 
@@ -360,3 +387,397 @@ def days_left(result: Mapping[str, Any], now: datetime | None = None) -> int | N
         return None
     moment = now or scanned_at(result) or scan_clock()
     return max((upcoming.at - moment).days, 0)
+
+
+# ------------------------------------------------------------ review
+#
+# Everything above decides a scan. What follows reads the same records at
+# rest and says which of them need a person's attention: the ones that have
+# run out, are about to, cover nothing, cover the same thing twice, or were
+# never given a deadline at all. It reports and suggests; it never rewrites a
+# configuration, because the only person who can say whether a failure is
+# still acceptable is the one who accepted it.
+
+#: The kinds of problem a review reports, in the order it reports them. An
+#: expired record comes first: it is the one that is already wrong.
+EXPIRED = "expired"
+EXPIRING = "expiring"
+UNUSED = "unused"
+OVERLAPPING = "overlapping"
+PERMANENT = "permanent"
+REVIEW_KINDS: tuple[str, ...] = (EXPIRED, EXPIRING, UNUSED, OVERLAPPING, PERMANENT)
+
+#: How far ahead a suggested replacement for a permanent waiver is dated. It
+#: is a placeholder for the operator to change, not a recommendation; a
+#: quarter is long enough to fix most things and short enough to be re-read.
+SUGGESTED_TERM_DAYS = 90
+
+
+@dataclass(frozen=True)
+class ReviewItem:
+    """One waiver that needs a person to look at it, and what they could do."""
+
+    kind: str
+    waiver: Waiver
+    detail: str
+    suggestion: str
+    #: What the finding is about: the failing checks a record matches, or
+    #: the patterns of the records it overlaps with.
+    related: tuple[str, ...] = ()
+
+    def as_dict(self) -> dict[str, Any]:
+        """Render the item for ``--format json``, camelCase as usual."""
+        return {
+            "kind": self.kind,
+            "pattern": self.waiver.pattern,
+            "reason": self.waiver.reason,
+            "expiresAt": self.waiver.expires_at.isoformat()
+            if self.waiver.expires_at
+            else None,
+            "detail": self.detail,
+            "suggestion": self.suggestion,
+            "related": list(self.related),
+        }
+
+
+@dataclass(frozen=True)
+class WaiverReview:
+    """Everything a review found, decided against one moment."""
+
+    at: datetime
+    waivers: tuple[Waiver, ...]
+    items: tuple[ReviewItem, ...]
+    #: Whether the review had a result document to tell a used waiver from
+    #: an unused one. Without it "unused" can only mean "matches nothing this
+    #: build knows", which is a much weaker statement.
+    evidence: bool
+    #: When a failing check next alerts again, as the plugin's expiry
+    #: warning computes it. Only known with evidence.
+    upcoming: UpcomingExpiry | None = None
+
+    def of_kind(self, kind: str) -> tuple[ReviewItem, ...]:
+        """The items of one kind, in the order they were found."""
+        return tuple(item for item in self.items if item.kind == kind)
+
+    def as_dict(self) -> dict[str, Any]:
+        """The whole review as one JSON document."""
+        return {
+            "reviewedAt": self.at.isoformat(),
+            "waivers": len(self.waivers),
+            "evidence": self.evidence,
+            "counts": {kind: len(self.of_kind(kind)) for kind in REVIEW_KINDS},
+            "items": [item.as_dict() for item in self.items],
+            "nextExpiry": {
+                "at": self.upcoming.at.isoformat(),
+                "checks": list(self.upcoming.checks),
+                "patterns": [pattern for pattern, _ in self.upcoming.ending],
+            }
+            if self.upcoming
+            else None,
+        }
+
+
+def failing_checks(result: Mapping[str, Any]) -> tuple[str, ...]:
+    """
+    Every identifier a result document reports as failing, waived or not.
+
+    The same four places the scanner decides waivers against: the extra
+    checks, the hardening flags, the counted response headers and HTTPS
+    enforcement. Advisory observations are left out because they can never
+    be waived, and nothing here consults the ``ignored`` flag, because the
+    question is what a waiver *could* be covering, not what it did.
+    """
+    failing: set[str] = set()
+    for entry in result.get("extraChecks") or ():
+        if isinstance(entry, Mapping) and entry.get("id") and not entry.get("passed"):
+            failing.add(str(entry["id"]))
+    hardenings = result.get("hardenings")
+    if isinstance(hardenings, Mapping):
+        failing.update(str(name) for name, enabled in hardenings.items() if not enabled)
+    setup = result.get("setup")
+    if isinstance(setup, Mapping):
+        https = setup.get("https")
+        if isinstance(https, Mapping) and not https.get("enforced", True):
+            failing.add("httpsEnforced")
+        headers = setup.get("headers")
+        if isinstance(headers, Mapping):
+            failing.update(str(name) for name, present in headers.items() if not present)
+    return tuple(sorted(failing))
+
+
+def _pattern_covers(broad: Waiver, narrow: Waiver) -> bool:
+    """
+    Whether every check ``narrow`` can match, ``broad`` matches too.
+
+    Decided on the pattern text, so it holds for checks no scan has reported
+    yet: ``debugPort:*`` covers ``debugPort:9205`` and ``debugPort:92*``
+    alike. Two patterns that merely intersect - ``*Policy`` and
+    ``Content-*`` - are not a cover; those are found from the evidence.
+    """
+    return broad.matches(narrow.pattern)
+
+
+def _describe_deadline(waiver: Waiver, now: datetime) -> str:
+    """``2026-12-31 00:00 UTC (in 3 days)``, or ``... (5 days ago)``."""
+    assert waiver.expires_at is not None
+    when = waiver.expires_at.strftime("%Y-%m-%d %H:%M UTC")
+    delta = waiver.expires_at - now
+    if delta.total_seconds() >= 0:
+        days = delta.days
+        return f"{when} (in {days} day{'s' if days != 1 else ''})" if days else f"{when} (within 24 hours)"
+    days = (-delta).days
+    return f"{when} ({days} day{'s' if days != 1 else ''} ago)" if days else f"{when} (within the last 24 hours)"
+
+
+def _known_identifiers() -> tuple[str, ...]:
+    """Every identifier this build can report, family roots included."""
+    return tuple(
+        sorted({*(entry.id for entry in all_checks()), *header_names(), "httpsEnforced"})
+    )
+
+
+def _matches_known(waiver: Waiver, known: Sequence[str]) -> bool:
+    """
+    Whether a pattern could ever match a check this build reports.
+
+    A member of a family - ``exposed:/.env``, ``debugPort:9205`` - is not in
+    the catalogue under its own name, so a pattern with a subject is judged
+    by its family root: ``debugPort:*`` can match, ``debugPrt:*`` cannot.
+    """
+    if any(waiver.matches(name) for name in known):
+        return True
+    family, separator, _ = waiver.pattern.partition(":")
+    return bool(separator) and any(Waiver(family).matches(name) for name in known)
+
+
+def review(
+    waivers: Sequence[Waiver],
+    now: datetime,
+    *,
+    result: Mapping[str, Any] | None = None,
+    expiring_within_days: int = 0,
+) -> WaiverReview:
+    """
+    Say which configured waivers need attention, and what could be done.
+
+    ``result`` is a result document from a recent scan of the instance the
+    waivers are for. With it, "unused" means "matches no check that fails
+    there"; without it, only "matches no check this build knows". Either
+    way nothing is changed: every suggestion is text for a person to act on.
+
+    ``expiring_within_days`` is the plugin's ``--waiver-warning`` window.
+    Zero reports only records that have already run out.
+    """
+    failing = failing_checks(result) if result is not None else None
+    actionable_failing = (
+        tuple(check for check in failing if is_actionable(check))
+        if failing is not None
+        else None
+    )
+    known = _known_identifiers()
+    active = [waiver for waiver in waivers if waiver.active_at(now)]
+    items: list[ReviewItem] = []
+
+    def matched(waiver: Waiver) -> tuple[str, ...]:
+        return tuple(check for check in actionable_failing or () if waiver.matches(check))
+
+    def still_covered(check: str, besides: Waiver) -> bool:
+        return any(other.matches(check) for other in active if other is not besides)
+
+    # Expired: already wrong. Say whether the check behind it alerts now or
+    # is quietly carried by something broader.
+    for waiver in waivers:
+        if not waiver.temporary or waiver.active_at(now):
+            continue
+        checks = matched(waiver)
+        carried = tuple(check for check in checks if still_covered(check, waiver))
+        detail = f"Expired {_describe_deadline(waiver, now)}; it suppresses nothing any more."
+        if carried:
+            detail += (
+                f" A broader waiver still suppresses {', '.join(carried)}, so the "
+                "expiry passed without an alert."
+            )
+        elif checks:
+            detail += f" {', '.join(checks)} alert{'s' if len(checks) == 1 else ''} again."
+        elif actionable_failing is not None:
+            detail += " The check it named no longer fails."
+        items.append(
+            ReviewItem(
+                EXPIRED,
+                waiver,
+                detail,
+                "Remove it from temporary_waivers / --waive-until. If the "
+                "failure is still accepted, write a new record with a new "
+                "deadline and a reason that is true today.",
+                checks,
+            )
+        )
+
+    # Expiring: the plugin's --waiver-warning, per record rather than only
+    # the next one, so every deadline inside the window is visible at once.
+    if expiring_within_days > 0:
+        for waiver in active:
+            if not waiver.temporary:
+                continue
+            assert waiver.expires_at is not None
+            if (waiver.expires_at - now).days > expiring_within_days:
+                continue
+            checks = matched(waiver)
+            uncovered = tuple(check for check in checks if not still_covered(check, waiver))
+            detail = f"Expires {_describe_deadline(waiver, now)}."
+            if uncovered:
+                detail += f" After that {', '.join(uncovered)} will alert."
+            items.append(
+                ReviewItem(
+                    EXPIRING,
+                    waiver,
+                    detail,
+                    "Fix the finding before the deadline, or renew the record "
+                    "with a later deadline and a current reason. Letting it "
+                    "expire is the intended outcome when neither applies.",
+                    uncovered or checks,
+                )
+            )
+
+    # Unused: an active record that covers nothing is a blind spot waiting
+    # for the day the check it names starts failing.
+    for waiver in active:
+        close = () if _matches_known(waiver, known) else tuple(
+            get_close_matches(waiver.pattern, known, n=3)
+        )
+        spelling = (
+            f" Check the spelling - did you mean {', '.join(close)}?" if close else ""
+        )
+        if actionable_failing is not None:
+            if matched(waiver):
+                continue
+            hardcoded = tuple(
+                check for check in failing or () if waiver.matches(check) and not is_actionable(check)
+            )
+            if hardcoded:
+                detail = (
+                    f"It only matches {', '.join(hardcoded)}, which OpenCloud "
+                    "hardcodes and which never alerts, waived or not."
+                )
+            else:
+                detail = "It matches no check that fails in the scan result."
+            suggestion = (
+                "Remove it. A waiver for a check that passes suppresses nothing "
+                "today and silences the check the day it starts failing."
+                + spelling
+            )
+        else:
+            if _matches_known(waiver, known):
+                continue
+            detail = "It matches no identifier this build knows."
+            suggestion = (
+                "A check that was renamed or removed leaves its waiver behind; "
+                "remove it if so." + spelling
+            )
+        items.append(ReviewItem(UNUSED, waiver, detail, suggestion))
+
+    # Overlapping: two active records for the same thing. The narrower one is
+    # reported, because it is the one whose deadline or reason is being
+    # overruled.
+    for index, narrow in enumerate(active):
+        broader: list[Waiver] = []
+        shared: set[str] = set()
+        for other_index, other in enumerate(active):
+            if other_index == index:
+                continue
+            same = narrow.pattern.casefold() == other.pattern.casefold()
+            if same and other_index > index:
+                continue  # an identical pair is reported once, on the later record
+            if same or _pattern_covers(other, narrow):
+                broader.append(other)
+            elif other_index > index and not _pattern_covers(narrow, other):
+                # Neither contains the other, yet the scan shows a check both
+                # match. A pair where this record is the broader one is
+                # reported on the other record instead.
+                overlap = set(matched(narrow)) & set(matched(other))
+                if overlap:
+                    broader.append(other)
+                    shared.update(overlap)
+        if not broader:
+            continue
+        names = ", ".join(repr(other.pattern) for other in broader)
+        permanent_cover = [other for other in broader if not other.temporary]
+        if narrow.temporary and permanent_cover:
+            detail = (
+                f"Also covered by the permanent waiver {names}, so its deadline "
+                "will pass without anything alerting."
+            )
+            suggestion = (
+                "Narrow or remove the permanent waiver if the deadline is what "
+                "was meant; otherwise remove this record, whose deadline "
+                "decides nothing."
+            )
+        elif any(other.pattern.casefold() == narrow.pattern.casefold() for other in broader):
+            detail = f"Duplicates {names}."
+            suggestion = (
+                "Keep one. If both are temporary, the later deadline is the one "
+                "in force."
+            )
+        elif shared:
+            detail = f"Waives {', '.join(sorted(shared))} together with {names}."
+            suggestion = "Keep the record that says why, and narrow the other."
+        else:
+            detail = f"Everything it matches is also matched by {names}."
+            suggestion = (
+                "Remove the narrower record, or narrow the broader one so each "
+                "check has one waiver with one reason."
+            )
+        items.append(
+            ReviewItem(
+                OVERLAPPING,
+                narrow,
+                detail,
+                suggestion,
+                tuple(other.pattern for other in broader),
+            )
+        )
+
+    # Permanent: valid, and the form every older configuration uses, but a
+    # suppression nobody will ever be reminded of.
+    suggested = (now + timedelta(days=SUGGESTED_TERM_DAYS)).strftime("%Y-%m-%dT00:00:00Z")
+    for waiver in waivers:
+        if waiver.temporary:
+            continue
+        blanket = waiver.pattern.strip("*") == ""
+        detail = (
+            "Waives every check, with no reason and no deadline."
+            if blanket
+            else "No reason and no deadline: it lasts until someone remembers it."
+        )
+        items.append(
+            ReviewItem(
+                PERMANENT,
+                waiver,
+                detail,
+                "Move it from ignore_hardenings / --ignore-hardening to a "
+                f"temporary waiver, e.g. --waive-until "
+                f"'{waiver.pattern}{FIELD_SEPARATOR}{suggested}{FIELD_SEPARATOR}<why this is accepted>'",
+                matched(waiver),
+            )
+        )
+
+    upcoming = None
+    if actionable_failing is not None:
+        # The plugin's own arithmetic over a block built from these records,
+        # so this answers exactly what --waiver-warning would.
+        upcoming = next_expiry(
+            report(
+                waivers,
+                (resolve(waivers, check, now) for check in actionable_failing),
+                now,
+            )
+        )
+    order = {kind: position for position, kind in enumerate(REVIEW_KINDS)}
+    items.sort(key=lambda item: order[item.kind])
+    return WaiverReview(
+        at=now,
+        waivers=tuple(waivers),
+        items=tuple(items),
+        evidence=result is not None,
+        upcoming=upcoming,
+    )

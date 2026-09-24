@@ -1091,6 +1091,24 @@ exclusión silencia una alerta, no corrige nada, y el plan lo dice.
 El mismo plan aparece en el panel web, en las exportaciones JSON, CSV, SARIF y
 PDF, y como la herramienta MCP `plan_remediation`.
 
+### Agrupado por configuración {#grouped-by-where-the-change-is-made}
+
+`remediationPlan.groups` agrupa los hallazgos abiertos según el sistema que
+usted edita para corregirlos: **proxy inverso**, **proveedor de identidad**,
+**OpenCloud** o **zona DNS**. También incluye los hallazgos que no limitan la
+calificación, como una cabecera ausente.
+
+Los hallazgos que resuelve un único cambio forman un solo cambio: todas las
+cabeceras de seguridad ausentes son un bloque de cabeceras, varios problemas de
+certificado un certificado nuevo, todas las rutas `exposed:/...` una
+corrección, y la actualización cierra todos los avisos correspondientes. Cada
+cambio indica sus hallazgos, `resolvesSeveral` y la calificación que daría por
+sí solo, recalculada con la misma función de calificación. `groupSummary`
+nombra los cambios que resuelven varios hallazgos a la vez. Los hallazgos
+omitidos o fijados en el código no se ofrecen como cambios. `--debug`, el
+panel web, el paquete de corrección y `plan_remediation` muestran también los
+grupos.
+
 ## Notificaciones por webhook {#webhook-notifications}
 El complemento puede enviar una notificación JSON a un punto de acceso
 HTTP(S) cuando una comprobación alcanza un nivel crítico. La función es

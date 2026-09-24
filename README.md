@@ -33,6 +33,7 @@
 * [Hardening checks](#hardening-checks)
 * [Explaining a rating](#explaining-a-rating)
 * [What would raise the rating](#what-would-raise-the-rating)
+  * [Grouped by where the change is made](#grouped-by-where-the-change-is-made)
 * [Webhook notifications](#webhook-notifications)
 * [Reporting only what changed](#reporting-only-what-changed)
 * [Is the plugin itself up to date?](#is-the-plugin-itself-up-to-date)
@@ -1115,6 +1116,13 @@ check-opencloud-security --host opencloud.example.com --check-hardening \
     --waiver-warning 14
 ```
 
+To go through every waiver at once, run
+`check-opencloud-scanner review-waivers --result result.json`. It lists the
+waivers that are expired, expiring within the `waiver_warning` window, unused,
+overlapping or permanent, each with a suggested cleanup, and leaves the
+configuration unchanged - see
+[the scanner command](docs/scanner-cli.md#review-waivers---waivers-that-need-attention).
+
 See
 [Accepting a finding you are not going to fix](docs/hardening.md#accepting-a-finding-you-are-not-going-to-fix)
 for the wildcards, what a waiver will not do, and why a configuration file is
@@ -1216,6 +1224,38 @@ it does not fix anything, and the plan says so.
 The same plan appears on the web dashboard, in the JSON, CSV, SARIF and PDF
 exports, and as the `plan_remediation` MCP tool.
 
+## Grouped by where the change is made
+
+The plan also groups the open findings by the system you edit to fix them -
+the **reverse proxy**, the **identity provider**, **OpenCloud** itself, or the
+**DNS zone** - under `remediationPlan.groups`. It includes open findings that
+do not cap the rating, such as a missing header, because they are still a line
+in that system's configuration.
+
+Within a group, findings one edit resolves are one change: every missing
+security header is one header block, three certificate complaints are one new
+certificate, every member of a family such as `exposed:/...` is one fix, and
+the update closes every advisory matching the installed release. Each change
+names the findings it resolves, whether it `resolvesSeveral`, and the rating
+that change alone would give - the same rating function replayed, never an
+estimate. `groupSummary` names the changes that resolve several findings at
+once. Waived and hardcoded findings are not offered as changes.
+
+```text
+--- Changes grouped by where they are made ---
+1 change resolves several findings at once: stop serving the deployment directory (2).
+Reverse proxy: 2 finding(s), 4/5 (A) with every change here made
+  * Stop serving the deployment directory - resolves 2: exposed:/opencloud.yaml, directoryListing
+    Fix: Proxy every request to OpenCloud's own address instead of serving ...
+OpenCloud: 1 finding(s), 5/5 (A+) with every change here made
+  * HTTP Basic authentication is enabled - basicAuthDisabled
+    Fix: Set PROXY_ENABLE_BASIC_AUTH=false (the default) if nothing needs it ...
+```
+
+The web dashboard shows the groups as "What to change where", the remediation
+bundle lists them under "Changes by where they are made", and the
+`plan_remediation` MCP tool returns them.
+
 # Webhook notifications
 The plugin can post a JSON notification to an HTTP(S) endpoint when a check
 reaches a critical level. The feature is **optional and disabled by default** -
@@ -1308,6 +1348,12 @@ Baseline: No new findings since 2026-09-14T06:00:00Z, but the configuration chan
 
 Only the group names are reported; the settings behind them are hashed and
 discarded. Drift never creates a finding and never changes the exit code.
+
+A baseline also remembers which checks reached a conclusion. When a check
+that was measured before is **inconclusive** now, the run warns - `OK` becomes
+`WARNING` - even though the grade has not moved. The rating, its perfdata and
+the findings are left exactly as the evidence gave them; it is the scan that
+saw less, not the instance that changed. `--warn-on-new` does not suppress it.
 
 **[Reporting only what changed](docs/baseline.md)** has the diff formats
 (`text`, `markdown`, `slack`, `json`), what counts as a regression, the

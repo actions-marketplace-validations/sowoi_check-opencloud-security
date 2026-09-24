@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from html import unescape
 from pathlib import Path
 from string import Formatter
 
@@ -137,6 +138,29 @@ def test_every_catalog_has_the_same_keys_placeholders_and_markup():
 
 
 @pytest.mark.parametrize("locale", ["en", "de", "es", "fr"])
+def test_every_catalogue_message_formats_and_escapes_its_parameters(locale: str):
+    """Exercise even conditional messages that the public-page smoke test misses."""
+    from markupsafe import escape
+
+    translator = Translator(locale)
+    for key, source in CATALOGUES["en"].items():
+        fields = _fields(source)
+        if not fields:
+            continue
+        params = {name: f'<probe data-field="{name}">&' for name in fields}
+        message = CATALOGUES[locale][key]
+        # Direct formatting raises rather than silently falling back to raw copy.
+        assert translator(key, **params) == message.format(**params), (locale, key)
+        rendered = str(translator.html(key, **params))
+        assert rendered == message.format(
+            **{name: escape(value) for name, value in params.items()}
+        ), (locale, key)
+        assert "<probe" not in rendered, (locale, key)
+        for name in fields:
+            assert str(escape(params[name])) in rendered, (locale, key, name)
+
+
+@pytest.mark.parametrize("locale", ["en", "de", "es", "fr"])
 def test_every_handwritten_page_renders_in_each_language(locale: str):
     """One incomplete catalog key must not break an otherwise reachable page."""
     test_client = client()
@@ -147,6 +171,64 @@ def test_every_handwritten_page_renders_in_each_language(locale: str):
         assert page.status_code == 200
         assert f'<html lang="{locale}">' in page.text
         assert 'action="/language"' in page.text
+
+
+@pytest.mark.parametrize("locale", ["en", "de", "es", "fr"])
+@pytest.mark.parametrize(
+    ("target", "key"),
+    [
+        ("ftp://opencloud.example.com", "error.target.scheme"),
+        ("https://user:password@opencloud.example.com", "error.target.credentials"),
+        ("http://localhost", "error.target.internal"),
+    ],
+)
+def test_submission_errors_translate_html_but_keep_json_stable(locale, target, key):
+    """Error paths must honour the language cookie without translating API contracts."""
+    test_client = client()
+    english = test_client.post("/api/scans", json={"target_url": target})
+    test_client.cookies.set(LANGUAGE_COOKIE, locale)
+    translated = test_client.post(
+        "/api/scans",
+        data={"target_url": target},
+        headers={"accept": "text/html", "accept-language": "en"},
+    )
+    assert translated.status_code == english.status_code == 400
+    assert f'<html lang="{locale}">' in translated.text
+    assert Translator(locale)(key) in unescape(translated.text)
+    api = test_client.post("/api/scans", json={"target_url": target})
+    assert api.status_code == english.status_code
+    assert api.json() == english.json()
+
+
+@pytest.mark.parametrize("locale", ["en", "de", "es", "fr"])
+def test_daily_limit_keeps_the_localised_explanation_and_self_host_link(locale):
+    """A translated refusal must retain the explanation and the way to run locally."""
+    test_client = client(daily_scan_limit=1)
+    test_client.cookies.set(LANGUAGE_COOKIE, locale)
+    accepted = test_client.post(
+        "/api/scans", json={"target_url": "https://opencloud.example.com"}
+    )
+    assert accepted.status_code == 202
+    limited = test_client.post(
+        "/api/scans",
+        data={"target_url": "https://another.example.com"},
+        headers={"accept": "text/html"},
+    )
+    assert limited.status_code == 429
+    assert int(limited.headers["retry-after"]) > 0
+    assert Translator(locale)("error.rate_limit.daily") in unescape(limited.text)
+    assert 'href="https://github.com/sowoi/check-opencloud-security"' in limited.text
+
+
+@pytest.mark.parametrize("locale", ["en", "de", "es", "fr"])
+def test_a_missing_upload_explains_the_next_step_in_the_chosen_language(locale):
+    """The comparison form must translate both the missing-file error and its remedy."""
+    test_client = client()
+    test_client.cookies.set(LANGUAGE_COOKIE, locale)
+    response = test_client.post("/compare", data={"current": ""})
+    assert response.status_code == 422
+    assert f'<html lang="{locale}">' in response.text
+    assert Translator(locale)("compare.upload.error.missing") in unescape(response.text)
 
 
 def test_machine_readable_contracts_remain_english():
@@ -160,10 +242,11 @@ def test_machine_readable_contracts_remain_english():
     assert german == english
 
 
-def test_html_translation_placeholders_cannot_inject_tags_or_attributes():
+@pytest.mark.parametrize("locale", ["en", "de", "es", "fr"])
+def test_html_translation_placeholders_cannot_inject_tags_or_attributes(locale: str):
     """Untrusted placeholder text must stay escaped inside trusted catalogue HTML."""
     payload = '"><img src=x onerror="alert(1)">'
-    translated = Translator("en").html("docs.index.options.manual", project=payload)
+    translated = Translator(locale).html("docs.index.options.manual", project=payload)
     rendered = Environment(autoescape=True).from_string("{{ value }}").render(
         value=translated
     )
@@ -174,9 +257,10 @@ def test_html_translation_placeholders_cannot_inject_tags_or_attributes():
     assert "&#34;alert(1)&#34;" in rendered
 
 
-def test_html_translation_keeps_trusted_catalogue_markup_renderable():
+@pytest.mark.parametrize("locale", ["en", "de", "es", "fr"])
+def test_html_translation_keeps_trusted_catalogue_markup_renderable(locale: str):
     """Allow-listed inline elements authored in a catalogue must remain HTML."""
-    translated = Translator("en").html(
+    translated = Translator(locale).html(
         "docs.index.options.manual", project="https://opencloud.example.com/docs"
     )
     rendered = Environment(autoescape=True).from_string("{{ value }}").render(

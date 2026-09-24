@@ -927,9 +927,23 @@ def _remediation(result: Mapping[str, Any]) -> dict[str, Any]:
         for step in plan.get("steps") or []
         if isinstance(step, Mapping)
     ]
+    groups = [
+        {
+            **group,
+            "label": rating_label(group.get("ratingAfter")),
+            "changes": [
+                {**change, "label": rating_label(change.get("ratingAfter"))}
+                for change in group.get("changes") or []
+                if isinstance(change, Mapping)
+            ],
+        }
+        for group in plan.get("groups") or []
+        if isinstance(group, Mapping)
+    ]
     return {
         **plan,
         "steps": steps,
+        "groups": groups,
         "currentLabel": rating_label(plan.get("currentRating")),
         "achievableLabel": rating_label(plan.get("achievableRating")),
     }

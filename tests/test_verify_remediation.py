@@ -103,6 +103,48 @@ def test_verification_agrees_with_a_full_scan():
         assert {check["id"]: check["passed"] for check in entry["checks"]} == expected
 
 
+def test_every_extra_check_of_a_full_scan_verifies_to_the_same_answer():
+    """An operator told "fixed" by a verification must not see it fail in the next scan."""
+    behaviour = InstanceBehaviour(
+        webfinger_version=True, debug_endpoints=True, exposed_paths={"/.env"}
+    )
+    with FakeOpenCloud(behaviour) as instance:
+        full = scan(
+            instance.host, settings=SETTINGS, release_settings=ReleaseSettings(mode="off")
+        )
+        expected = {
+            check["id"]: check["passed"]
+            for check in full["extraChecks"]
+            if probe_group(check["id"]) is not None
+        }
+        document = verify(instance.host, list(expected), settings=SETTINGS)
+
+    verified = {entry["id"]: entry["passed"] for entry in document["results"]}
+    assert verified == expected
+    # Both answers occur, so the comparison cannot pass by everything agreeing on one.
+    assert set(expected.values()) == {True, False}
+    assert {"identity", "authentication", "exposedPaths", "webEmbed"} <= set(
+        document["probeGroups"]
+    )
+
+
+def test_hardening_flags_verify_to_the_full_scan_answer():
+    """The hardening flags are derived from the same pages a full scan fetches."""
+    behaviour = InstanceBehaviour(basic_auth=True)
+    behaviour.headers["Content-Security-Policy"] = "default-src 'self' 'unsafe-inline'"
+    with FakeOpenCloud(behaviour) as instance:
+        full = scan(
+            instance.host, settings=SETTINGS, release_settings=ReleaseSettings(mode="off")
+        )
+        document = verify(instance.host, list(full["hardenings"]), settings=SETTINGS)
+
+    # basicAuthDisabled is also an identity check, and that group answers it.
+    assert "hardenings" in document["probeGroups"]
+    verified = {entry["id"]: entry["passed"] for entry in document["results"]}
+    assert verified == full["hardenings"]
+    assert set(verified.values()) == {True, False}
+
+
 def test_an_id_needing_a_full_scan_is_unverifiable_and_probes_nothing():
     with FakeOpenCloud(InstanceBehaviour()) as instance:
         document = verify(instance.host, ["eol", "eol", " "], settings=SETTINGS)

@@ -14,6 +14,13 @@ true:
   so every day it stays in production is worse than the last one.
 * **A rating that drops further** than it was at the time of the baseline.
 
+One thing is reported that is not a finding at all: **a check that was
+measured before and is inconclusive now.** The grade can stand still while
+the evidence behind it shrinks, and a scan that quietly stopped being able to
+see something is not a scan that found it fine. That is a statement about
+coverage, kept apart from the findings and from the rating - see
+:attr:`Comparison.coverage_lost`.
+
 The file is written atomically, because a monitoring plugin is killed by its
 own timeout often enough that a half-written baseline is a question of when,
 not if.
@@ -25,11 +32,12 @@ import json
 import os
 import tempfile
 from collections.abc import Iterable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .coverage import FAILED, INCONCLUSIVE, PASSED, coverage_of
 from .fingerprint import digests as fingerprint_digests
 from .fingerprint import drift as configuration_drift
 from .hardening import is_actionable
@@ -68,10 +76,20 @@ class Snapshot:
     #: finding and no grade moved. Empty for a snapshot written before the
     #: block existed, which is a snapshot that cannot say.
     configuration: dict[str, str] = field(default_factory=dict)
+    #: The coverage checks known to be measurable on this host: the ones this
+    #: run reached a conclusion on, plus any that were measurable before and
+    #: are inconclusive now. The second half is what keeps a lost check
+    #: alerting until it is measured again, rather than for one run only.
+    #: ``None`` when the scan had no coverage block or the snapshot predates
+    #: this field - a snapshot that cannot say, not one that measured nothing.
+    measured: tuple[str, ...] | None = None
+    #: The checks this run ran and could not decide, with the reason the
+    #: scanner recorded.
+    inconclusive: dict[str, str] = field(default_factory=dict)
 
     def as_dict(self) -> dict[str, Any]:
         """Render the snapshot in the shape stored on disk."""
-        return {
+        stored: dict[str, Any] = {
             "rating": self.rating,
             "eol": self.eol,
             "findings": list(self.findings),
@@ -81,6 +99,10 @@ class Snapshot:
             "supportDays": self.support_days,
             "configuration": dict(self.configuration),
         }
+        if self.measured is not None:
+            stored["measured"] = list(self.measured)
+            stored["inconclusive"] = dict(self.inconclusive)
+        return stored
 
     @classmethod
     def from_dict(cls, data: Any) -> Snapshot | None:
@@ -108,6 +130,15 @@ class Snapshot:
             }
             if isinstance(data.get("configuration"), dict)
             else {},
+            measured=tuple(str(item) for item in data["measured"])
+            if isinstance(data.get("measured"), list)
+            else None,
+            inconclusive={
+                str(check): str(reason)
+                for check, reason in data["inconclusive"].items()
+            }
+            if isinstance(data.get("inconclusive"), dict)
+            else {},
         )
 
 
@@ -123,6 +154,11 @@ class Comparison:
     #: A report of a change, never a finding: it does not make a run regress
     #: and it never reaches the exit code.
     configuration_drift: tuple[str, ...] = ()
+    #: Checks a previous run reached a conclusion on that this run ran and
+    #: could not decide, mapped to the reason the scanner gave. Never a
+    #: finding and never a change to the rating: it says the evidence behind
+    #: an unchanged grade got thinner.
+    coverage_lost: dict[str, str] = field(default_factory=dict)
 
     @property
     def first_run(self) -> bool:
@@ -146,7 +182,31 @@ class Comparison:
         """
         if self.first_run:
             return True
-        return bool(self.new_findings) or self.rating_worsened or self.current.eol
+        return (
+            bool(self.new_findings)
+            or self.rating_worsened
+            or self.current.eol
+            or bool(self.coverage_lost)
+        )
+
+    def coverage_summary(self) -> str:
+        """
+        One line naming the checks that became inconclusive, or ``""``.
+
+        Kept out of :meth:`summary`, which reports findings: a lost
+        measurement is said beside them, never instead of them.
+        """
+        if not self.coverage_lost:
+            return ""
+        names = sorted(self.coverage_lost)
+        listed = ", ".join(
+            f"{name} ({self.coverage_lost[name]})" for name in names[:5]
+        )
+        more = f" (+{len(names) - 5} more)" if len(names) > 5 else ""
+        return (
+            f"Coverage regressed ({len(names)}): previously measured, now "
+            f"inconclusive: {listed}{more}"
+        )
 
     def summary(self) -> str:
         """One line explaining what the comparison decided, for the output."""
@@ -246,6 +306,16 @@ class Comparison:
                     "change": f"{previous.version} -> {self.current.version}",
                 }
             )
+        for check in sorted(self.coverage_lost):
+            changes.append(
+                {
+                    "category": "Coverage",
+                    "change": (
+                        f"{check}: measured -> inconclusive "
+                        f"({self.coverage_lost[check]})"
+                    ),
+                }
+            )
         for group in self.configuration_drift:
             changes.append(
                 {
@@ -272,6 +342,7 @@ class Comparison:
             "regressed": self.regressed,
             "summary": self.summary(),
             "configuration_drift": list(self.configuration_drift),
+            "coverage_regressed": dict(sorted(self.coverage_lost.items())),
             "changes": self.items(),
         }
 
@@ -327,6 +398,22 @@ class Baseline:
             return Comparison(previous=None, current=current)
         before = set(previous.findings)
         now = set(current.findings)
+        lost: dict[str, str] = {}
+        if previous.measured is not None and current.measured is not None:
+            lost = {
+                check: reason
+                for check, reason in current.inconclusive.items()
+                if check in previous.measured
+            }
+            if lost:
+                # Carry the lost checks forward as measurable, so the next
+                # run still compares against what this host used to show
+                # rather than against the gap - one missed interval would
+                # otherwise be enough to make the loss the new normal.
+                current = replace(
+                    current,
+                    measured=tuple(sorted({*current.measured, *lost})),
+                )
         return Comparison(
             previous=previous,
             current=current,
@@ -335,6 +422,7 @@ class Baseline:
             configuration_drift=configuration_drift(
                 previous.configuration, current.configuration
             ),
+            coverage_lost=lost,
         )
 
     def record(self, host: str, current: Snapshot) -> None:
@@ -469,6 +557,31 @@ def _extra_check_ids(response: dict[str, Any]) -> Iterable[str]:
         yield f"check:{entry.get('id', 'unknown')}"
 
 
+def _coverage_states(
+    response: dict[str, Any],
+) -> tuple[tuple[str, ...] | None, dict[str, str]]:
+    """
+    The checks a result measured, and the ones it could not decide.
+
+    ``(None, {})`` for a document without a coverage block: nothing about
+    it says which checks were measurable, so nothing can be said to be lost.
+    """
+    coverage = coverage_of(response)
+    if coverage is None:
+        return None, {}
+    measured: set[str] = set()
+    inconclusive: dict[str, str] = {}
+    for entry in coverage["checks"]:
+        if not isinstance(entry, dict) or not entry.get("id"):
+            continue
+        check, state = str(entry["id"]), entry.get("state")
+        if state in {PASSED, FAILED}:
+            measured.add(check)
+        elif state == INCONCLUSIVE:
+            inconclusive[check] = str(entry.get("reason") or "unknown")
+    return tuple(sorted(measured)), inconclusive
+
+
 def snapshot_of(
     response: dict[str, Any],
     waived: Iterable[str] = (),
@@ -509,6 +622,7 @@ def snapshot_of(
         rating = int(response.get("rating", -1))
     except (TypeError, ValueError):
         rating = -1
+    measured, inconclusive = _coverage_states(response)
     return Snapshot(
         rating=rating,
         eol=bool(response.get("EOL", False)),
@@ -518,4 +632,6 @@ def snapshot_of(
         update_version=update_version,
         support_days=support_days,
         configuration=fingerprint_digests(response),
+        measured=measured,
+        inconclusive=inconclusive,
     )

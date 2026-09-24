@@ -13,6 +13,7 @@ résultent.
   * [D’où lancer les vérifications](#where-the-checks-should-run-from)
   * [Garder les exemptions sous contrôle](#keeping-the-waivers-honest)
   * [N’alerter que sur ce qui a changé](#only-alerting-on-what-changed)
+  * [Un tableau de bord pour toute la flotte](#one-dashboard-for-the-whole-fleet)
   * [Planifier l’ensemble](#scheduling-the-whole-thing)
 <!-- TOC -->
 
@@ -204,6 +205,31 @@ reste en service. Voir
 Ajoutez `--self-update-check` sur un seul hôte du parc - pas sur tous - pour être
 averti lorsqu’une nouvelle version du plugin est publiée. Le résultat est mis en
 cache pendant un jour et ne change jamais le code de sortie.
+
+## Un tableau de bord pour toute la flotte {#one-dashboard-for-the-whole-fleet}
+
+La supervision répond, hôte par hôte, à la question « cette instance est-elle
+en panne maintenant ». Une revue de flotte en pose d'autres : quelles
+instances utilisent une version qui ne reçoit plus de correctifs, quelles
+exemptions expirent ce mois-ci, quel constat échoue partout, et quelle
+instance personne n'a examinée récemment. Conservez les documents de résultat
+écrits par `scan`, et `fleet` répond aux quatre à partir des seuls fichiers :
+
+```shell
+dir="/var/lib/opencloud-reports/$(date +%F)"
+mkdir -p "$dir"
+for host in opencloud1.example.com opencloud2.example.com; do
+  check-opencloud-scanner scan "$host" > "$dir/$host.json"
+done
+check-opencloud-scanner fleet /var/lib/opencloud-reports \
+    --inventory /etc/check-opencloud-security/hosts.txt --format html > fleet.html
+```
+
+Elle n'analyse rien et ne stocke rien ; seul le rapport le plus récent de
+chaque hôte compte, et la version comme les échéances des exemptions sont
+évaluées par rapport à aujourd'hui plutôt qu'au jour du rapport. Avec un
+inventaire, un hôte sans aucun rapport apparaît comme manquant. Voir
+[`fleet` - un tableau de bord à partir de résultats enregistrés](scanner-cli.md#fleet-a-dashboard-from-saved-results).
 
 ## Planifier l’ensemble {#scheduling-the-whole-thing}
 

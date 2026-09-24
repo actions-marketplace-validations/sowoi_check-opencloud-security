@@ -1,8 +1,8 @@
 {#
   The operator area's own navigation.
 
-  Three places, one strip, included by the overview and by both generated
-  operator documents so that the area reads as one thing rather than a page
+  One strip, included by the overview, the generated operator documents and
+  the decision records so that the area reads as one thing rather than a page
   with two attachments. `aria-current="page"` is what names the one you are
   on; the tint under it repeats that visually rather than carrying it alone.
 
@@ -30,4 +30,8 @@
     {{ tab.title }}
   </a>
   {% endfor %}
+  <a href="{{ admin_path }}/decisions"
+     {% if admin_tab == 'decisions' %}aria-current="page"{% endif %}>
+    {{ t('admin.tabs.decisions') }}
+  </a>
 </nav>
