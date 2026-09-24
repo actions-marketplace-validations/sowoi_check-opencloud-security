@@ -29,6 +29,16 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ### Fixed
 
+- **A check only one of two scans made is no longer called new or resolved.**
+  Comparisons read a finding missing from the earlier scan as passing, so a
+  check added by a newer scanner - or by turning the extra checks on - was
+  reported as a regression of the instance, and a check the later scan no
+  longer made as fixed. The baseline, `check-opencloud-scanner diff`, the web
+  comparison and `compare_scans` now list these as newly measured or no
+  longer measured, based on each scan's coverage block, and the explanation
+  files them as scanner changes. A newly measured failure still alerts, and
+  `--warn-on-new` still does not suppress it. A report or baseline that does
+  not list its checks is compared as before. See ADR 0079.
 - Aligned the report expiry footer, warning and live countdown to round remaining
   minutes up consistently in every language.
 - **A comparison page rounds its expiry up too.** It rounded the minutes
