@@ -1,6 +1,6 @@
 # ADR 0069: Login throttling is observed only when the operator asks
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-09-19
 
 ## Context

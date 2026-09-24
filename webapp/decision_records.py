@@ -76,7 +76,7 @@ RECORDS: tuple[tuple[str, str, str, str], ...] = (
     ("0066", "0066-a-result-records-the-conditions-it-was-produced-under", "A result records the conditions it was produced under", "Accepted"),
     ("0067", "0067-a-release-ends-with-its-github-release-not-its-tag", "A release ends with its GitHub release, not its tag", "Accepted"),
     ("0068", "0068-chromium-is-a-third-browser-test-engine-behind-the-dead-proxy", "Chromium is a third browser test engine, behind the dead proxy", "Proposed"),
-    ("0069", "0069-login-throttling-is-observed-only-when-the-operator-asks", "Login throttling is observed only when the operator asks", "Proposed"),
+    ("0069", "0069-login-throttling-is-observed-only-when-the-operator-asks", "Login throttling is observed only when the operator asks", "Accepted"),
     ("0070", "0070-the-operator-area-installs-attested-releases-in-place", "The operator area installs attested releases in place", "Proposed"),
     ("0071", "0071-repository-advisories-are-a-second-advisory-source", "OpenCloud's repository advisories are a second advisory source", "Proposed"),
     ("0072", "0072-remediation-verification-re-measures-named-findings-without-a-full-scan", "Remediation verification re-measures named findings without a full scan", "Proposed"),
