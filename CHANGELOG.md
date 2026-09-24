@@ -12,6 +12,12 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+### Documentation
+
+- **Decision records are never translated.** ADR 0077 records that every
+  record in `adr/` exists in English only, and once: the operator area shows
+  it untranslated in every locale, and translation work leaves `adr/` alone.
+
 ## [1.31.1] - 2026-09-24
 
 ### Changed

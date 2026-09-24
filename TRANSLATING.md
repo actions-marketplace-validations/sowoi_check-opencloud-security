@@ -18,6 +18,11 @@ which is the tool that enforces what can be enforced here.
 | Operator guides | `docs/*.md` (English) and `docs/{de,fr,es}/*.md` |
 | Guide titles and summaries | `webapp/documentation.py`, translated in the catalogues |
 
+Decision records in `adr/` are not on this list and never will be: they stay
+in English, once, in every locale
+([ADR 0077](adr/0077-decision-records-are-never-translated.md)). Only the
+operator area's interface around them is translated.
+
 A guide title a translation has not overridden falls back to English on
 purpose (`webapp/locales/__init__.py`), so a new guide is reachable in every
 language the day it is written. That fallback is a decision, not a gap, and
