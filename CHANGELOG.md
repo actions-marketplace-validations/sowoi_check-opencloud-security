@@ -12,6 +12,15 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+### Changed
+
+- **The coverage warning's alert line is now covered by mutation testing.**
+  `tests/test_coverage_regression.py` drives `_apply_baseline` in process but
+  was missing from the mutmut selection, so eleven mutants of the branch that
+  lifts an OK to WARNING when a measured check turns inconclusive survived.
+  It is now listed, and its test asserts the whole alert line: three of those
+  mutants left `OK: ` inside the WARNING message without a test noticing.
+
 ### Fixed
 
 - **`check-opencloud-scanner fleet` lists waiver deadlines in the order they
