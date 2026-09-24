@@ -31,6 +31,7 @@
 
 <nav class="docs-toc card section-gap" aria-label="{{ t('docs.guide.toc.aria') }}" data-reveal>
   <p class="kicker">{{ t('docs.guide.toc.heading') }}</p>
+  <a href="#1312-this-release" lang="en">[1.31.2] - this release</a>
   <a href="#1311-2026-09-24" lang="en">[1.31.1] - 2026-09-24</a>
   <a href="#1310-2026-09-24" lang="en">[1.31.0] - 2026-09-24</a>
   <a href="#1302-2026-09-24" lang="en">[1.30.2] - 2026-09-24</a>
@@ -40,10 +41,10 @@
   <a href="#1292-2026-09-22" lang="en">[1.29.2] - 2026-09-22</a>
   <a href="#1291-2026-09-21" lang="en">[1.29.1] - 2026-09-21</a>
   <a href="#1290-2026-09-21" lang="en">[1.29.0] - 2026-09-21</a>
-  <a href="#1281-2026-09-21" lang="en">[1.28.1] - 2026-09-21</a>
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="en">
+<h2 id="1312-this-release">[1.31.2] - this release</h2>
 <h2 id="1311-2026-09-24">[1.31.1] - 2026-09-24</h2>
 <h3 id="changed">Changed</h3>
 <ul>
@@ -503,95 +504,6 @@
   counts because a timeout or a missing route - DNSSEC, an external identity
   provider, an optional endpoint - is the gap another vantage point might
   close. Nothing in it changes a grade, an exit code or an alert line.</li>
-</ul>
-<h2 id="1281-2026-09-21">[1.28.1] - 2026-09-21</h2>
-<h3 id="added_4">Added</h3>
-<ul>
-<li><strong><code>--profile</code> judges a scan by a named threshold set.</strong> <code>strict</code>, <code>ops</code> and
-  <code>lenient</code> each decide the five settings a team otherwise writes out by hand</li>
-<li>
-<p><code>--warning</code>, <code>--critical</code>, <code>--check-hardening</code>, <code>--update-warning</code> and
-  <code>--eol-warning</code> - so a monitoring definition can adopt a stance without
-  twelve flags. A profile decides <strong>how the same measurements are judged,
-  never how hard the instance is probed</strong>: there is no profile that scans
-  more or less. It is also the weakest source of a value, so an explicit
-  flag, an environment variable or a configuration key still wins, and the
-  <code>--debug</code> explanation names the profile a rating was judged by. Leaving it
-  unset keeps every default exactly as it was. See
-  <a href="/documentation/reference#threshold-profiles">Threshold profiles</a>.</p>
-</li>
-<li>
-<p><strong>The web application renders the upgrade rehearsal.</strong> The result page
-  gains a <em>What upgrading would buy you</em> panel: one row per candidate
-  release, with the advisories it clears, the ones it leaves, any it newly
-  brings in, whether it is already end of life, and the grade it would reach.
-  Where the version alone would rate better than the row shows, the panel
-  says so - the difference is this instance's own findings, which an upgrade
-  does not touch. Every number comes from the scanner's <code>upgradeRehearsal</code>;
-  the web layer only picks the letter and the tone, as it does for every
-  other grade on the page. A result stored before the rehearsal existed
-  renders without the panel rather than as an instance with nothing to
-  upgrade to.</p>
-</li>
-<li>
-<p><strong>A golden corpus of frozen verdicts.</strong> <code>tests/golden/</code> records the whole
-  judgement a handful of known instances earn - rating, grade, failed checks,
-  missing measures, the caps that produced the rating and the exit code under
-  the plugin's defaults and under every profile - and <code>tests/test_golden_corpus.py</code>
-  replays them. It is the assertion no single test makes: that a severity
-  raised or a measure added to the catalogue cannot silently re-grade every
-  instance that looks like one of these. The reference data is pinned in
-  <code>tests/golden_corpus.py</code>, so a published release or advisory does not move
-  the corpus; <code>python scripts/update_golden_corpus.py</code> rewrites it when the
-  new verdict is the intended one.</p>
-</li>
-</ul>
-<h3 id="changed_3">Changed</h3>
-<ul>
-<li>
-<p><strong>The Icinga check commands offer <code>--profile</code>.</strong> The three CheckCommand
-  definitions - <code>contrib/icinga2/check_opencloud_security.conf</code> and the
-  <code>opencloud_check_native</code> / <code>opencloud_check_docker</code> role templates - carry
-  the new option as <code>$opencloud_profile$</code>, next to <code>--warning</code> and
-  <code>--critical</code>. Without it an Icinga user could not reach a profile at all,
-  which is what <code>tests/test_monitoring_parity.py</code> is there to notice.</p>
-</li>
-<li>
-<p><strong>The upgrade rehearsal's reporting is pinned by tests.</strong> Mutation testing
-  found the two plugin helpers behind it under-covered: an end-of-life
-  candidate, a malformed entry, a rating outside the 0-5 range and seven of
-  the webhook payload's ten keys were asserted by nothing. The gaps are
-  closed, and <code>tests/test_verify_remediation.py</code> and
-  <code>tests/test_threshold_profiles.py</code> are now part of the mutmut test
-  selection, which reported "no tests" for <code>verification.py</code> before.</p>
-</li>
-</ul>
-<h3 id="security_1">Security</h3>
-<ul>
-<li><strong>The web application sends <code>Strict-Transport-Security</code> over HTTPS.</strong> The
-  generated reverse-proxy configuration deliberately adds no security headers</li>
-<li>
-<p>"the application sends its own, and an <code>add_header</code> here would be one
-  more place they can disagree" - and HSTS was the one the application did
-  not send, so no deployment built by <code>docker/setup-wizard.py</code> had it. A
-  service whose subject is HTTPS enforcement now asks of itself what
-  <code>hstsLongMaxAge</code> and <code>hstsIncludeSubdomains</code> ask of the instances it
-  scans: <code>max-age=63072000; includeSubDomains</code>. Not <code>preload</code>, which is an
-  effectively irreversible submission to a list browsers ship and belongs to
-  whoever owns the domain. Sent only over TLS, because RFC 6797 forbids a
-  browser to record it from a cleartext hop - and the scheme is read from
-  <code>X-Forwarded-Proto</code> only where <code>COS_WEB_TRUST_FORWARDED_FOR</code> says a proxy
-  writes it, which is the same trust decision <code>client_address</code> makes.</p>
-</li>
-<li>
-<p><strong>A tampered erasure receipt verifies as false rather than raising.</strong>
-  <code>webapp.purge.verify</code> compared the expected digest with the receipt's
-  signature as <code>str</code>, and <code>hmac.compare_digest</code> raises <code>TypeError</code> on a
-  string outside ASCII - so a receipt edited to carry one answered an auditor
-  with a traceback instead of the <code>False</code> the function is read for. Both
-  sides are encoded now, exactly as the purge endpoint has always compared
-  its token. The endpoint itself was never affected.</p>
-</li>
 </ul>
 </article>
 {% endblock %}
