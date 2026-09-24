@@ -12,6 +12,8 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+## [1.31.1] - 2026-09-24
+
 ### Changed
 
 - **The coverage warning's alert line is now covered by mutation testing.**
