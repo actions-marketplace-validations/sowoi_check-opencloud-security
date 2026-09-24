@@ -56,6 +56,14 @@
   <code>coverage_regressed</code>, and the two-document comparison reports a
   <code>coverageRegressed</code> scanner change. See ADR 0074 and
   <a href="/documentation/baseline#coverage-regressions">Reporting only what changed</a>.</li>
+<li><strong>Architecture decisions in the operator area.</strong> A new Decisions tab at
+  <code>/admin/decisions</code> lists every architecture decision record with its
+  status, and a filter narrows the list by number, title or status. Each
+  record opens as its own page in English, and links between records, or from
+  the Architecture tab, stay inside the area. The area's search now indexes
+  every record's full text. Like the rest of the area, the records are never
+  public: a stranger gets a 404, and they are absent from the public search,
+  the sitemap and <code>/documentation</code>.</li>
 <li><strong><code>check-opencloud-scanner review-waivers</code>.</strong> It reads the configured
   waivers (<code>ignore_hardenings</code> and <code>temporary_waivers</code>, or the
   <code>--ignore-hardening</code> and <code>--waive-until</code> values given to it) and lists five
@@ -374,7 +382,7 @@
   a proxy's new build number are not drift, and a group the two scans looked
   at differently is reported as not comparable rather than as a change.
   Nothing in it touches a rating, an exit code or an alert line. See
-  <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0073-a-result-fingerprints-the-configuration-it-measured.md">ADR 0073</a>.</li>
+  <a href="{{ admin_path }}/decisions/0073-a-result-fingerprints-the-configuration-it-measured">ADR 0073</a>.</li>
 <li><strong><code>--policy</code> fails a deployment on explicit requirements, not on a grade.</strong>
   <code>-w</code>/<code>-c</code> and <code>--profile</code> judge an instance by its rating, which is the
   wrong shape for a CI gate: a team that requires HTTPS enforcement and no
@@ -522,7 +530,7 @@
   scan is possible. The earlier result comes from the tab's own scan history
   (the one the comparison offer keeps in <code>sessionStorage</code>); the server never
   hands one visitor a scan somebody else started, as
-  <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0002-no-scan-result-caching.md">ADR 0002</a> requires. Without such a
+  <a href="{{ admin_path }}/decisions/0002-no-scan-result-caching">ADR 0002</a> requires. Without such a
   scan the refusal is unchanged.</p>
 </li>
 <li>

@@ -749,3 +749,63 @@
     align-items: center;
     gap: .75rem;
 }
+
+/* ------------------------------------------------------ the decision records */
+/* A numbered list rather than a table, like the configuration: the number in
+   the mono face it is cited in, the title as the link, the status after it.
+   The filter field is revealed by admin-decisions.js, because a search field
+   that cannot search is worse than none. */
+.admin-decision-search { display: none; margin-bottom: 1rem; }
+[data-decision-search] .admin-decision-search { display: block; }
+.admin-decision-search input[type="search"] {
+    width: 100%;
+    font: inherit;
+    font-family: var(--mono);
+    font-size: .88rem;
+    color: var(--ink);
+    background: var(--field-bg);
+    border: 1px solid var(--field-border);
+    border-radius: var(--radius-sm);
+    padding: .6rem .8rem;
+}
+@media (max-width: 640px) {
+    .admin-decision-search input[type="search"] { font-size: 1rem; }
+}
+.admin-decision-search input[type="search"]:focus {
+    border-color: var(--brand);
+    box-shadow: 0 0 0 4px var(--brand-glow);
+    outline: none;
+}
+.admin-decision-empty { margin: .4rem 0 0; }
+
+.admin-decisions {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--line);
+}
+
+.admin-decision {
+    display: grid;
+    grid-template-columns: 3.2rem minmax(0, 1fr);
+    gap: .2rem .9rem;
+    padding: .6rem .2rem;
+    border-bottom: 1px solid var(--line);
+}
+
+.admin-decision[hidden] { display: none; }
+
+.admin-decision-number {
+    font-family: var(--mono);
+    font-size: .86rem;
+    color: var(--ink-soft);
+    grid-row: span 2;
+}
+
+.admin-decision-title { overflow-wrap: anywhere; }
+
+.admin-decision-status {
+    grid-column: 2;
+    font-size: .86rem;
+    color: var(--ink-soft);
+}

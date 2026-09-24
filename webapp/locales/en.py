@@ -32,6 +32,7 @@ MESSAGES: dict[str, str] = {
     "admin.tabs.overview": "Overview",
     "admin.tabs.configuration": "Configuration",
     "admin.tabs.rules": "Rules",
+    "admin.tabs.decisions": "Decisions",
     "admin.config.title": "Configuration",
     "admin.config.lede": "Every COS_WEB_* variable this service reads, and the value it is running with.",
     "admin.config.scope": "These are this web process’s effective settings at startup. OpenCloud and the scan worker have their own configuration. Credentials are shown only as set or not set.",
@@ -148,6 +149,12 @@ MESSAGES: dict[str, str] = {
     "admin.rules.rule.admin_refresh.body": "Each reference-data refresh may be pressed once every {cooldown}.",
     "admin.docs.kicker": "Operator documentation",
     "admin.docs.source": "Shown from <code>{file}</code> in the repository, in English.",
+    "admin.decisions.title": "Architecture decisions",
+    "admin.decisions.lede": "Every architectural decision record in this repository and its status, shown in English as written.",
+    "admin.decisions.search.label": "Filter the decision records",
+    "admin.decisions.search.placeholder": "Number, title or status",
+    "admin.decisions.search.empty": "No record matches. The site search also looks inside each record's text.",
+    "admin.decisions.back": "All decisions",
     "admin.band": "Operator area - signed in as {user}",
     # Shown only where COS_WEB_ADMIN_SIGN_OUT_URL named where the provider in
     # front ends its session. This service has none of its own to end.

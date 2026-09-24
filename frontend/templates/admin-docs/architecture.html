@@ -49,7 +49,7 @@
 <p>How this repository is put together, and why the seams are where they are.
 <a href="https://github.com/sowoi/check-opencloud-security/blob/main/AGENTS.md"><code>AGENTS.md</code></a> holds the rules; this document holds the shape they
 follow from. For a decision and the alternatives that lost, read the record in
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/README.md"><code>adr/</code></a>.</p>
+<a href="{{ admin_path }}/decisions"><code>adr/</code></a>.</p>
 <!-- TOC -->
 <ul>
 <li><a href="#the-one-sentence-version">The one-sentence version</a></li>
@@ -385,7 +385,7 @@ client rate limit, the target cooldown, the queue and the authorisation on
 erasure are the real ones, because there is no second path to them. An agent
 cannot reach a code path a browser could not, and cannot be rationed more
 generously than a browser is. See
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0011-mcp-is-an-execution-layer-not-a-second-implementation.md">ADR 0011</a>.</p>
+<a href="{{ admin_path }}/decisions/0011-mcp-is-an-execution-layer-not-a-second-implementation">ADR 0011</a>.</p>
 <p>Six tools, and they are <strong>tasks rather than endpoints</strong>: <code>scan_instance</code>,
 <code>scan_instances</code>, <code>get_scan_result</code>, <code>plan_remediation</code>, <code>export_scan</code> and
 <code>erase_instance_data</code>. An agent asked to scan an instance calls one tool once;
@@ -412,7 +412,7 @@ the job rather than a menu of verbs. Their wording lives once in
 <code>prompts.py</code>, composed from the notes and constants in <code>workflows.py</code>, and a
 prompt names tools rather than endpoints because the tools are what carry the
 limits. See
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0014-prompts-are-tasks-and-their-text-lives-beside-the-workflows.md">ADR 0014</a>.</p>
+<a href="{{ admin_path }}/decisions/0014-prompts-are-tasks-and-their-text-lives-beside-the-workflows">ADR 0014</a>.</p>
 <p>The endpoint is <strong>open unless an operator says otherwise</strong>, which is what the
 public deployment wants and what the default is. An estate running it for
 itself sets <code>COS_WEB_MCP_AUTH_ENABLED</code> and an issuer, and <code>mcp_auth.py</code> makes
@@ -430,7 +430,7 @@ become the way around it. And a deployment that <strong>asked for a sign-in it
 cannot enforce refuses to start</strong>, exactly as one asked to encrypt without a
 key does - an operator who believes the endpoint is protected while it is
 served open is the worst outcome available. See
-<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0015-the-mcp-endpoint-may-require-a-sign-in.md">ADR 0015</a>.</p>
+<a href="{{ admin_path }}/decisions/0015-the-mcp-endpoint-may-require-a-sign-in">ADR 0015</a>.</p>
 <h3 id="browser-webmcp">Browser WebMCP</h3>
 <p>When MCP is enabled, the landing and result pages expose their current actions through the
 <a href="https://webmachinelearning.github.io/webmcp/">WebMCP draft</a>. This is a
@@ -456,7 +456,7 @@ the current <code>document.modelContext</code> draft, preferring the declarative
 <code>provideContext</code> where a browser offers it.</p>
 <p>Failures are returned, not thrown: <code>ok: false</code> with <code>status</code>, <code>error</code>,
 <code>retryable</code> and <code>retryAfter</code>, which is the contract the <code>/mcp</code> tools already
-had (<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0041-a-browser-tool-answers-a-failure-rather-than-throwing.md">ADR 0041</a>).</p>
+had (<a href="{{ admin_path }}/decisions/0041-a-browser-tool-answers-a-failure-rather-than-throwing">ADR 0041</a>).</p>
 <p>The landing page offers <code>scan_opencloud_security</code>. A result page offers
 <code>get_scan_result</code> and <code>export_scan_report</code>, bound to the UUID already in that
 page. Other views have no useful page-specific action and register nothing.
@@ -500,7 +500,7 @@ HTML.</p>
 <p>Every one of these URLs is public and unauthenticated at a stable path.
 <code>COS_WEB_ENABLE_DOCS</code> governs only the browsable <code>/docs</code> and <code>/redoc</code> pages,
 never the JSON: a description nobody can fetch describes nothing
-(<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0010-machine-readable-descriptions-are-always-public.md">ADR 0010</a>).
+(<a href="{{ admin_path }}/decisions/0010-machine-readable-descriptions-are-always-public">ADR 0010</a>).
 <code>COS_WEB_ENABLE_MCP</code> turns the MCP endpoint off for a deployment that does not
 want one, and the discovery document then stops advertising it.</p>
 <h3 id="what-mcp-may-not-do">What MCP may not do</h3>
@@ -552,20 +552,20 @@ want one, and the discovery document then stops advertising it.</p>
   and expired all answer the same 404.</li>
 <li>Logs carry lifecycle markers and a uuid. The audit trail in <code>audit.py</code> is the
   one exception, is off by default, and records fingerprints rather than
-  addresses (<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0004-webapp-audit-logging.md">ADR 0004</a>).</li>
-<li>Results are never cached (<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0002-no-scan-result-caching.md">ADR 0002</a>),
+  addresses (<a href="{{ admin_path }}/decisions/0004-webapp-audit-logging">ADR 0004</a>).</li>
+<li>Results are never cached (<a href="{{ admin_path }}/decisions/0002-no-scan-result-caching">ADR 0002</a>),
   and a worker heartbeat, not a process check, decides readiness
-  (<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0003-worker-health-heartbeat.md">ADR 0003</a>).</li>
+  (<a href="{{ admin_path }}/decisions/0003-worker-health-heartbeat">ADR 0003</a>).</li>
 <li>Everything expires on its own, and <code>DELETE /api/purge</code> erases it sooner on
   request. Because nothing maps a target back to its scans - such a map would
   be the very record this service refuses to keep - the purge walks the
   keyspace once, and returns a receipt whose <code>remaining</code> count comes from a
   second walk after the deletion
-  (<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0007-erasure-on-request.md">ADR 0007</a>).</li>
+  (<a href="{{ admin_path }}/decisions/0007-erasure-on-request">ADR 0007</a>).</li>
 <li><code>COS_WEB_ENCRYPT_RESULTS</code> encrypts the stored result with AES-256-GCM, and a
   process asked to encrypt without a usable key refuses to start rather than
   write cleartext while claiming otherwise
-  (<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0008-refuse-to-start-without-the-encryption-key.md">ADR 0008</a>).</li>
+  (<a href="{{ admin_path }}/decisions/0008-refuse-to-start-without-the-encryption-key">ADR 0008</a>).</li>
 </ul>
 <h2 id="the-rating">The rating</h2>
 <p>The rating starts from the version and the advisory database, then failed
@@ -581,7 +581,7 @@ Two invariants have tests:</p>
 and where does it get me?</em> - by replaying that same arithmetic with one finding
 removed at a time. It is derived from the result document and stored nowhere
 new, and it carries numbers only: the letters are still applied by the layer
-that judges (<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0012-the-remediation-plan-is-derived-not-stored.md">ADR 0012</a>).</p>
+that judges (<a href="{{ admin_path }}/decisions/0012-the-remediation-plan-is-derived-not-stored">ADR 0012</a>).</p>
 <p>A waiver suppresses an alert, not the evidence: a waived finding stays in the
 result document with <code>"ignored": true</code>, and only a finding that actually failed
 may be waived, so a waiver cannot silently become a blind spot when a measure

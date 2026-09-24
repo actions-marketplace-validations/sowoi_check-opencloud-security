@@ -23,6 +23,14 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   `coverage_regressed`, and the two-document comparison reports a
   `coverageRegressed` scanner change. See ADR 0074 and
   [Reporting only what changed](docs/baseline.md#coverage-regressions).
+- **Architecture decisions in the operator area.** A new Decisions tab at
+  `/admin/decisions` lists every architecture decision record with its
+  status, and a filter narrows the list by number, title or status. Each
+  record opens as its own page in English, and links between records, or from
+  the Architecture tab, stay inside the area. The area's search now indexes
+  every record's full text. Like the rest of the area, the records are never
+  public: a stranger gets a 404, and they are absent from the public search,
+  the sitemap and `/documentation`.
 - **`check-opencloud-scanner review-waivers`.** It reads the configured
   waivers (`ignore_hardenings` and `temporary_waivers`, or the
   `--ignore-hardening` and `--waive-until` values given to it) and lists five

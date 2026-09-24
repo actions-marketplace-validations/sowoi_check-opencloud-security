@@ -17,7 +17,11 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-from .documentation import DOCUMENTATION_PAGES, OPERATOR_DOCUMENTATION_PAGES
+from .documentation import (
+    DECISION_RECORDS,
+    DOCUMENTATION_PAGES,
+    OPERATOR_DOCUMENTATION_PAGES,
+)
 from .i18n import DEFAULT_LOCALE, SUPPORTED_LOCALES
 
 
@@ -160,6 +164,25 @@ ADMIN_SEARCH_PAGES: tuple[SearchPage, ...] = (
             f"admin-docs/{document.slug}.html",
         )
         for document in OPERATOR_DOCUMENTATION_PAGES
+    ),
+    SearchPage(
+        "/admin/decisions",
+        "Architecture decisions",
+        "Every architectural decision record in this repository and its status.",
+        "admin-decisions/index.html",
+        "admin.decisions.title",
+        "admin.decisions.lede",
+    ),
+    *(
+        # One entry per record, so a search for a term finds the decision
+        # that made it rather than only the list. English, as written.
+        SearchPage(
+            f"/admin/decisions/{record.slug}",
+            f"ADR {record.number}: {record.title}",
+            record.status,
+            f"admin-decisions/{record.slug}.html",
+        )
+        for record in DECISION_RECORDS
     ),
 )
 

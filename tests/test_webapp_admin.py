@@ -1591,6 +1591,118 @@ def test_the_operator_documents_stay_out_of_every_public_surface():
         assert slug not in robots.text
 
 
+# ------------------------------------------------ the decision records
+
+
+def test_every_indexed_decision_record_is_readable_from_the_area():
+    """
+    An operator asking why the service works the way it does should find the
+    record that decided it without leaving the area - every one of them, in
+    the English it was written in.
+    """
+    from webapp.documentation import DECISION_RECORDS
+
+    index = (REPO_ROOT / "adr" / "README.md").read_text(encoding="utf-8")
+    indexed = re.findall(r"^\| \[(\d{4})\]\(", index, re.MULTILINE)
+    assert [record.number for record in DECISION_RECORDS] == indexed
+
+    with TestClient(create_app(_admin_settings())) as client:
+        listing = client.get("/admin/decisions", headers=FORWARDED)
+        assert listing.status_code == 200
+        for record in DECISION_RECORDS:
+            assert f'href="/admin/decisions/{record.slug}"' in listing.text
+
+        first = DECISION_RECORDS[0]
+        response = client.get(f"/admin/decisions/{first.slug}", headers=FORWARDED)
+        assert response.status_code == 200
+        assert f"ADR {first.number}:" in response.text
+        assert first.source in response.text
+        assert 'class="docs-article card section-gap" data-reveal lang="en"' in response.text
+
+
+def test_the_decision_records_stay_english_whatever_the_interface_language():
+    """The frame follows the reader's language; the record is not translated."""
+    from webapp.documentation import DECISION_RECORDS
+
+    record = DECISION_RECORDS[0]
+    with TestClient(create_app(_admin_settings())) as client:
+        client.cookies.set(LANGUAGE_COOKIE, "de")
+        listing = client.get("/admin/decisions", headers=FORWARDED)
+        page = client.get(f"/admin/decisions/{record.slug}", headers=FORWARDED)
+
+    assert "Architekturentscheidungen" in listing.text
+    assert record.title in listing.text
+    assert record.title in page.text
+
+
+def test_a_link_between_decision_records_stays_inside_the_area():
+    """A record citing another opens it here, not on GitHub."""
+    body = (
+        REPO_ROOT / "frontend" / "templates" / "admin-decisions"
+        / "0074-a-lost-measurement-warns-through-the-baseline-not-the-rating.html"
+    ).read_text(encoding="utf-8")
+    architecture = (
+        REPO_ROOT / "frontend" / "templates" / "admin-docs" / "architecture.html"
+    ).read_text(encoding="utf-8")
+
+    for page in (body, architecture):
+        assert "/blob/main/adr/" not in page
+    assert 'href="{{ admin_path }}/decisions/' in architecture
+
+
+def test_the_decision_records_are_gated_exactly_like_the_rest_of_the_area():
+    """A record reachable without the outpost's secret undoes the area's guard."""
+    from webapp.documentation import DECISION_RECORDS
+
+    slug = DECISION_RECORDS[0].slug
+    with TestClient(create_app(_admin_settings())) as client:
+        for path in ("/admin/decisions", f"/admin/decisions/{slug}"):
+            assert client.get(path).status_code == 404
+            assert client.get(
+                path, headers={**FORWARDED, "x-cos-admin-proxy": "wrong"}
+            ).status_code == 404
+            response = client.get(path, headers=FORWARDED)
+            assert "noindex" in response.headers.get("x-robots-tag", "")
+            assert 'class="admin-tabs"' in response.text
+            assert response.text.count('aria-current="page"') == 1
+
+    with TestClient(create_app(settings())) as client:
+        assert client.get("/admin/decisions").status_code == 404
+        assert client.get(f"/admin/decisions/{slug}").status_code == 404
+
+
+def test_an_unknown_decision_record_is_a_404_rather_than_a_guess():
+    """A slug selects a manifest entry; it is not a path into the templates."""
+    with TestClient(create_app(_admin_settings())) as client:
+        for slug in ("nonsense", "index", "../base", "0000-missing"):
+            response = client.get(f"/admin/decisions/{slug}", headers=FORWARDED)
+            assert response.status_code == 404, slug
+
+
+def test_the_decision_records_are_searchable_by_an_operator_only():
+    """
+    Every record's text is in the operator index, and in no public one.
+    """
+    from webapp.documentation import DECISION_RECORDS
+
+    with TestClient(create_app(_admin_settings())) as client:
+        public = client.get("/static/search-index.json").json()
+        sitemap = client.get("/sitemap.xml").text
+        operator = client.get("/admin/search-index.json", headers=FORWARDED).json()
+
+    assert all("/decisions" not in entry["path"] for entry in public["pages"])
+    assert "/admin/decisions" not in sitemap
+
+    entries = {entry["path"]: entry for entry in operator["pages"]}
+    assert "/admin/decisions" in entries
+    for record in DECISION_RECORDS:
+        entry = entries[f"/admin/decisions/{record.slug}"]
+        assert entry["title"] == f"ADR {record.number}: {record.title}"
+        # The record's own text, not only its title: that is what makes a
+        # word from a review find the decision that made it.
+        assert len(entry["body"]) > 500, record.slug
+
+
 # ----------------------------------------------- the area's own search index
 
 

@@ -144,9 +144,12 @@ def test_handwritten_guides_and_templates_do_not_use_ai_slop_wording():
     # Release notes and accepted ADRs are historical records. Style guides
     # deliberately quote rejected wording. Check current product prose.
     paths = {REPO_ROOT / name for name in ("README.md", "CONTRIBUTING.md", "ARCHITECTURE.md")}
+    # The operator area's copies of the ADRs are generated from those same
+    # historical records, so they carry the same exemption.
+    decisions = REPO_ROOT / "frontend" / "templates" / "admin-decisions"
     paths.update(
         path for root in roots for path in root.rglob("*")
-        if path.suffix in {".md", ".html"}
+        if path.suffix in {".md", ".html"} and decisions not in path.parents
     )
     findings = []
     for path in sorted(paths):
