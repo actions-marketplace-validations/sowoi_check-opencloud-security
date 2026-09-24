@@ -21,6 +21,7 @@
   <a href="#scan-print-the-result-document" lang="de"><code>scan</code>: Ergebnisdokument ausgeben</a>
   <a href="#diff-what-changed-between-two-saved-results" lang="de"><code>diff</code>: gespeicherte Ergebnisse vergleichen</a>
   <a href="#explain-what-a-finding-means-and-how-to-fix-it" lang="de"><code>explain</code>: Befunde erklären</a>
+  <a href="#review-waivers-waivers-that-need-attention" lang="de"><code>review-waivers</code>: Ausnahmen überprüfen</a>
   <a href="#refresh-data-update-the-release-schedule-and-advisories" lang="de"><code>refresh-data</code>: Referenzdaten aktualisieren</a>
   <a href="#serve-the-scan-service" lang="de"><code>serve</code>: HTTP-Dienst betreiben</a>
   <a href="#configure-write-a-configuration-file" lang="de"><code>configure</code>: Konfigurationsdatei erstellen</a>
@@ -291,6 +292,80 @@ check-opencloud-scanner explain                                         # the wh
 <pre><code class="language-text">ERROR check_opencloud.cli: No catalogue entry for 'cookieSecur'. Did you mean: cookieSecure, cookieSameSite, cookiePrefix? Run `explain --list` for every identifier this build knows.
 </code></pre>
 <p>Die Kennungen entsprechen den Werten in der Alarmzeile, in <code>extraChecks[].id</code>, in <code>hardenings</code> und in den Ausnahmelisten. Ausführlichere Erklärungen stehen unter <a href="/documentation/hardening">Härtungsmaßnahmen</a> und <a href="/documentation/scanner-checks">Prüfumfang</a>.</p>
+<h2 id="review-waivers-waivers-that-need-attention"><code>review-waivers</code>: Ausnahmen überprüfen</h2>
+<pre><code class="language-bash">check-opencloud-scanner -c /etc/check-opencloud-security/config.yml review-waivers
+</code></pre>
+<p>Der Befehl liest die Ausnahmen, die auch das Plugin verwenden würde - <code>scanner.ignore_hardenings</code> und <code>scanner.temporary_waivers</code> aus der Konfigurationsdatei oder die passenden <code>COS_</code>-Umgebungsvariablen -, und listet jede auf, um die du dich kümmern solltest, jeweils mit einem Vorschlag zum Aufräumen. <strong>Er ändert die Konfiguration nie.</strong> Ob ein Befund weiter akzeptabel ist, entscheidest du, nicht das Werkzeug.</p>
+<table>
+<thead>
+<tr>
+<th>Art</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Expired</td>
+<td>Eine befristete Ausnahme, deren Frist abgelaufen ist. Die Ausgabe sagt, ob die Prüfung wieder alarmiert oder eine breitere Ausnahme sie weiter verdeckt.</td>
+</tr>
+<tr>
+<td>Expiring soon</td>
+<td>Eine befristete Ausnahme, die innerhalb von <code>--expiring-within</code> Tagen abläuft - <code>--waiver-warning</code> des Plugins für alle Einträge auf einmal.</td>
+</tr>
+<tr>
+<td>Unused</td>
+<td>Trifft auf keine Prüfung, die im <code>--result</code>-Dokument fehlschlägt. Ohne <code>--result</code>: trifft auf keine Kennung, die dieser Build kennt, meist ein Tippfehler. Eine Ausnahme für ein von OpenCloud fest eingestelltes Flag zählt ebenfalls, weil dieses nie alarmiert.</td>
+</tr>
+<tr>
+<td>Overlapping</td>
+<td>Eine andere aktive Ausnahme deckt sie schon ab: ein Duplikat, ein engeres Muster unter einem breiteren oder - mit <code>--result</code> - zwei Muster für dieselbe fehlschlagende Prüfung. Eine befristete Ausnahme unter einer dauerhaften fällt auf, weil ihre Frist nichts bewirkt.</td>
+</tr>
+<tr>
+<td>Permanent</td>
+<td>Ein Muster ohne Begründung und ohne Frist, mit einem <code>--waive-until</code>-Eintrag zum Übernehmen.</td>
+</tr>
+</tbody>
+</table>
+<pre><code class="language-bash">check-opencloud-scanner scan opencloud.example.com &gt; result.json
+check-opencloud-scanner review-waivers --result result.json          # tell used from unused
+check-opencloud-scanner review-waivers --at 2026-12-01T00:00:00Z     # what will have expired by then
+check-opencloud-scanner review-waivers --format json --exit-zero     # for a script
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Funktion</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--result FILE</code></td>
+<td>Ergebnisdokument von <code>scan</code>, um genutzte von ungenutzten Ausnahmen zu unterscheiden; nennt außerdem den nächsten Ablauf, nach dem eine Prüfung alarmiert</td>
+</tr>
+<tr>
+<td><code>--ignore-hardening</code>, <code>--waive-until</code></td>
+<td>Diese Werte statt der konfigurierten prüfen, so wie die gleichnamigen Plugin-Optionen sie ersetzen</td>
+</tr>
+<tr>
+<td><code>--expiring-within DAYS</code></td>
+<td>Zeitfenster für <em>Expiring soon</em>. Standard: die Einstellung <code>waiver_warning</code>, sonst <code>14</code>; <code>0</code> schaltet den Abschnitt ab</td>
+</tr>
+<tr>
+<td><code>--at TIMESTAMP</code></td>
+<td>Zu einem anderen Zeitpunkt prüfen; braucht wie eine Frist eine Zeitzone</td>
+</tr>
+<tr>
+<td><code>--format {text,json}</code></td>
+<td>JSON mit <code>counts</code> je Art und einem Eintrag je Befund mit <code>kind</code>, <code>pattern</code>, <code>reason</code>, <code>expiresAt</code>, <code>detail</code>, <code>suggestion</code> und <code>related</code></td>
+</tr>
+<tr>
+<td><code>--exit-zero</code></td>
+<td>Immer mit <code>0</code> enden</td>
+</tr>
+</tbody>
+</table>
+<p>Eine Ausnahme kann unter mehreren Arten erscheinen, ein falsch geschriebenes dauerhaftes Muster etwa als <em>Unused</em> und <em>Permanent</em>.</p>
 <h2 id="refresh-data-update-the-release-schedule-and-advisories"><code>refresh-data</code>: Referenzdaten aktualisieren</h2>
 <pre><code class="language-bash">check-opencloud-scanner refresh-data --output-dir /var/lib/check-opencloud-security
 </code></pre>
@@ -472,6 +547,13 @@ check-opencloud-scanner -c /etc/check-opencloud-security/.env.json configure
 <td>Ausgabe erstellt</td>
 <td>Unbekannte Kennung oder leere Kategorie</td>
 <td>–</td>
+<td>–</td>
+</tr>
+<tr>
+<td><code>review-waivers</code></td>
+<td>Nichts aufzuräumen</td>
+<td>Mindestens eine Ausnahme gelistet</td>
+<td>Ungültige Ausnahme, Zeitangabe oder <code>--result</code>-Datei</td>
 <td>–</td>
 </tr>
 <tr>

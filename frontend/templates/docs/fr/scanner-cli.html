@@ -21,6 +21,7 @@
   <a href="#scan-print-the-result-document" lang="fr"><code>scan</code> - afficher le document de résultat</a>
   <a href="#diff-what-changed-between-two-saved-results" lang="fr"><code>diff</code> - ce qui a changé entre deux résultats enregistrés</a>
   <a href="#explain-what-a-finding-means-and-how-to-fix-it" lang="fr"><code>explain</code> - ce que signifie un constat et comment le corriger</a>
+  <a href="#review-waivers-waivers-that-need-attention" lang="fr"><code>review-waivers</code> - les exemptions à revoir</a>
   <a href="#refresh-data-update-the-release-schedule-and-advisories" lang="fr"><code>refresh-data</code> - actualiser le calendrier des versions et les avis de sécurité</a>
   <a href="#serve-the-scan-service" lang="fr"><code>serve</code> - le service de scan</a>
   <a href="#configure-write-a-configuration-file" lang="fr"><code>configure</code> - écrire un fichier de configuration</a>
@@ -47,6 +48,7 @@
 <li><a href="#scan---print-the-result-document"><code>scan</code> - afficher le document de résultat</a></li>
 <li><a href="#diff---what-changed-between-two-saved-results"><code>diff</code> - ce qui a changé entre deux résultats enregistrés</a></li>
 <li><a href="#explain---what-a-finding-means-and-how-to-fix-it"><code>explain</code> - ce que signifie un constat et comment le corriger</a></li>
+<li><a href="#review-waivers---waivers-that-need-attention"><code>review-waivers</code> - les exemptions à revoir</a></li>
 <li><a href="#refresh-data---update-the-release-schedule-and-advisories"><code>refresh-data</code> - actualiser le calendrier des versions et les avis de sécurité</a></li>
 <li><a href="#serve---the-scan-service"><code>serve</code> - le service de scan</a></li>
 <li><a href="#configure---write-a-configuration-file"><code>configure</code> - écrire un fichier de configuration</a></li>
@@ -360,6 +362,80 @@ dans <code>extraChecks[].id</code> et dans <code>hardenings</code>, ainsi que ce
 exclusion. Pour un traitement plus long, page par page, voir <a href="/documentation/hardening">Les mesures de
 durcissement, une par une</a> et <a href="/documentation/scanner-checks">Ce que lit le
 scanner</a>.</p>
+<h2 id="review-waivers-waivers-that-need-attention"><code>review-waivers</code> - les exemptions à revoir</h2>
+<pre><code class="language-bash">check-opencloud-scanner -c /etc/check-opencloud-security/config.yml review-waivers
+</code></pre>
+<p>La commande lit les exemptions que le plugin utiliserait - <code>scanner.ignore_hardenings</code> et <code>scanner.temporary_waivers</code> dans le fichier de configuration ou leurs variables d'environnement <code>COS_</code> - et liste celles qui demandent votre attention, chacune avec une proposition de nettoyage. <strong>Elle ne modifie jamais la configuration.</strong> Décider si un échec reste acceptable revient à la personne qui l'a accepté.</p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Signification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Expired</td>
+<td>Une exemption temporaire dont l'échéance est passée. La sortie indique si la vérification alerte de nouveau ou si une exemption plus large la masque encore.</td>
+</tr>
+<tr>
+<td>Expiring soon</td>
+<td>Une exemption temporaire qui expire dans moins de <code>--expiring-within</code> jours : le <code>--waiver-warning</code> du plugin pour tous les enregistrements à la fois.</td>
+</tr>
+<tr>
+<td>Unused</td>
+<td>Ne correspond à aucune vérification en échec dans le document <code>--result</code>. Sans <code>--result</code> : ne correspond à aucun identifiant connu, souvent une faute de frappe. Une exemption pour un indicateur qu'OpenCloud fixe dans le code compte aussi, car il n'alerte jamais.</td>
+</tr>
+<tr>
+<td>Overlapping</td>
+<td>Une autre exemption active la couvre déjà : un doublon, un motif plus étroit sous un motif plus large ou, avec <code>--result</code>, deux motifs pour la même vérification en échec. Une exemption temporaire sous une exemption permanente est signalée, car son échéance ne change rien.</td>
+</tr>
+<tr>
+<td>Permanent</td>
+<td>Un motif sans raison ni échéance, avec un enregistrement <code>--waive-until</code> à copier à sa place.</td>
+</tr>
+</tbody>
+</table>
+<pre><code class="language-bash">check-opencloud-scanner scan opencloud.example.com &gt; result.json
+check-opencloud-scanner review-waivers --result result.json          # tell used from unused
+check-opencloud-scanner review-waivers --at 2026-12-01T00:00:00Z     # what will have expired by then
+check-opencloud-scanner review-waivers --format json --exit-zero     # for a script
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Effet</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--result FILE</code></td>
+<td>Un document de résultat de <code>scan</code>, pour distinguer les exemptions utilisées des autres ; indique aussi la prochaine échéance qui fera alerter une vérification</td>
+</tr>
+<tr>
+<td><code>--ignore-hardening</code>, <code>--waive-until</code></td>
+<td>Revoir ces valeurs au lieu de celles configurées, comme les options homonymes du plugin les remplacent</td>
+</tr>
+<tr>
+<td><code>--expiring-within DAYS</code></td>
+<td>Fenêtre de <em>Expiring soon</em>. Par défaut : le réglage <code>waiver_warning</code>, ou <code>14</code> s'il est désactivé ; <code>0</code> désactive la section</td>
+</tr>
+<tr>
+<td><code>--at TIMESTAMP</code></td>
+<td>Revoir à un autre moment ; exige un fuseau horaire, comme une échéance</td>
+</tr>
+<tr>
+<td><code>--format {text,json}</code></td>
+<td>JSON avec <code>counts</code> par type et une entrée par élément avec <code>kind</code>, <code>pattern</code>, <code>reason</code>, <code>expiresAt</code>, <code>detail</code>, <code>suggestion</code> et <code>related</code></td>
+</tr>
+<tr>
+<td><code>--exit-zero</code></td>
+<td>Toujours terminer avec <code>0</code></td>
+</tr>
+</tbody>
+</table>
+<p>Une exemption peut apparaître sous plusieurs types ; un motif permanent mal orthographié, par exemple, est à la fois <em>Unused</em> et <em>Permanent</em>.</p>
 <h2 id="refresh-data-update-the-release-schedule-and-advisories"><code>refresh-data</code> - actualiser le calendrier des versions et les avis de sécurité</h2>
 <pre><code class="language-bash">check-opencloud-scanner refresh-data --output-dir /var/lib/check-opencloud-security
 </code></pre>
@@ -575,6 +651,13 @@ travail du plugin.</p>
 <td>Affiché</td>
 <td>Identifiant inconnu ou catégorie vide</td>
 <td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>review-waivers</code></td>
+<td>Rien à nettoyer</td>
+<td>Au moins une exemption listée</td>
+<td>Exemption, horodatage ou fichier <code>--result</code> invalide</td>
 <td>-</td>
 </tr>
 <tr>

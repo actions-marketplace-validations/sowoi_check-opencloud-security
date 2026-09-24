@@ -19,6 +19,7 @@ Esta página es la referencia del segundo.
   * [`scan`: imprimir el documento de resultado](#scan---print-the-result-document)
   * [`diff`: qué ha cambiado entre dos resultados guardados](#diff---what-changed-between-two-saved-results)
   * [`explain`: qué significa un hallazgo y cómo corregirlo](#explain---what-a-finding-means-and-how-to-fix-it)
+  * [`review-waivers`: exenciones que requieren atención](#review-waivers---waivers-that-need-attention)
   * [`refresh-data`: actualizar el calendario de versiones y los avisos de seguridad](#refresh-data---update-the-release-schedule-and-advisories)
   * [`serve`: el servicio de análisis](#serve---the-scan-service)
   * [`configure`: escribir un archivo de configuración](#configure---write-a-configuration-file)
@@ -265,6 +266,40 @@ tratamiento más extenso, página a página, consulte
 [Medidas de refuerzo, una por una](../hardening.md) y
 [Qué lee el escáner](../scanner-checks.md).
 
+## `review-waivers`: exenciones que requieren atención {#review-waivers-waivers-that-need-attention}
+
+```bash
+check-opencloud-scanner -c /etc/check-opencloud-security/config.yml review-waivers
+```
+
+Lee las exenciones que usaría el plugin - `scanner.ignore_hardenings` y `scanner.temporary_waivers` del archivo de configuración o sus variables de entorno `COS_` - y enumera las que necesitan revisión, cada una con una propuesta de limpieza. **Nunca modifica la configuración.** Decidir si un fallo sigue siendo aceptable corresponde a quien lo aceptó.
+
+| Tipo | Significado |
+|:--|:--|
+| Expired | Una exención temporal cuyo plazo ha pasado. Indica si la comprobación vuelve a alertar o si otra exención más amplia la sigue ocultando. |
+| Expiring soon | Una exención temporal que vence en menos de `--expiring-within` días: el `--waiver-warning` del plugin para todos los registros a la vez. |
+| Unused | No coincide con ninguna comprobación fallida del documento `--result`. Sin `--result`: no coincide con ningún identificador conocido, normalmente una errata. Una exención para un indicador que OpenCloud fija en el código también cuenta, porque nunca alerta. |
+| Overlapping | Otra exención activa ya la cubre: un duplicado, un patrón más estrecho bajo otro más amplio o, con `--result`, dos patrones para la misma comprobación fallida. Una exención temporal bajo una permanente se señala porque su plazo no cambia nada. |
+| Permanent | Un patrón sin motivo ni plazo, con un registro `--waive-until` para copiar en su lugar. |
+
+```bash
+check-opencloud-scanner scan opencloud.example.com > result.json
+check-opencloud-scanner review-waivers --result result.json          # tell used from unused
+check-opencloud-scanner review-waivers --at 2026-12-01T00:00:00Z     # what will have expired by then
+check-opencloud-scanner review-waivers --format json --exit-zero     # for a script
+```
+
+| Opción | Qué hace |
+|:--|:--|
+| `--result FILE` | Un documento de resultado de `scan`, para distinguir las exenciones usadas de las que no; también indica el próximo vencimiento que hará alertar una comprobación |
+| `--ignore-hardening`, `--waive-until` | Revisar estos valores en lugar de los configurados, igual que los sustituyen las opciones homónimas del plugin |
+| `--expiring-within DAYS` | Ventana de *Expiring soon*. Por defecto: el ajuste `waiver_warning`, o `14` si está desactivado; `0` desactiva la sección |
+| `--at TIMESTAMP` | Revisar en otro momento; necesita zona horaria, como un plazo |
+| `--format {text,json}` | JSON con `counts` por tipo y una entrada por elemento con `kind`, `pattern`, `reason`, `expiresAt`, `detail`, `suggestion` y `related` |
+| `--exit-zero` | Terminar siempre con `0` |
+
+Una exención puede aparecer en varios tipos; un patrón permanente mal escrito, por ejemplo, es *Unused* y *Permanent*.
+
 ## `refresh-data`: actualizar el calendario de versiones y los avisos de seguridad {#refresh-data-update-the-release-schedule-and-advisories}
 
 ```bash
@@ -385,6 +420,7 @@ tarea del complemento.
 | `scan` | Se han analizado todos los hosts | Al menos un host no se pudo analizar | Configuración no válida | - |
 | `diff` | Nada ha empeorado | El resultado posterior es peor | Los archivos no se pueden comparar | - |
 | `explain` | Impreso | Identificador desconocido o categoría vacía | - | - |
+| `review-waivers` | Nada que limpiar | Al menos una exención listada | Exención, marca de tiempo o archivo `--result` no válidos | - |
 | `refresh-data` | Se han escrito ambos archivos | No se ha escrito nada; consulte stderr | - | - |
 | `serve` | Detenido con normalidad | - | Configuración no válida | Se negó a arrancar, p. ej. escucha amplia sin token |
 

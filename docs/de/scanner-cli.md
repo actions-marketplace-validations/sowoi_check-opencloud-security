@@ -212,6 +212,40 @@ ERROR check_opencloud.cli: No catalogue entry for 'cookieSecur'. Did you mean: c
 
 Die Kennungen entsprechen den Werten in der Alarmzeile, in `extraChecks[].id`, in `hardenings` und in den Ausnahmelisten. Ausführlichere Erklärungen stehen unter [Härtungsmaßnahmen](../hardening.md) und [Prüfumfang](../scanner-checks.md).
 
+## `review-waivers`: Ausnahmen überprüfen {#review-waivers-waivers-that-need-attention}
+
+```bash
+check-opencloud-scanner -c /etc/check-opencloud-security/config.yml review-waivers
+```
+
+Der Befehl liest die Ausnahmen, die auch das Plugin verwenden würde - `scanner.ignore_hardenings` und `scanner.temporary_waivers` aus der Konfigurationsdatei oder die passenden `COS_`-Umgebungsvariablen -, und listet jede auf, um die du dich kümmern solltest, jeweils mit einem Vorschlag zum Aufräumen. **Er ändert die Konfiguration nie.** Ob ein Befund weiter akzeptabel ist, entscheidest du, nicht das Werkzeug.
+
+| Art | Bedeutung |
+|:--|:--|
+| Expired | Eine befristete Ausnahme, deren Frist abgelaufen ist. Die Ausgabe sagt, ob die Prüfung wieder alarmiert oder eine breitere Ausnahme sie weiter verdeckt. |
+| Expiring soon | Eine befristete Ausnahme, die innerhalb von `--expiring-within` Tagen abläuft - `--waiver-warning` des Plugins für alle Einträge auf einmal. |
+| Unused | Trifft auf keine Prüfung, die im `--result`-Dokument fehlschlägt. Ohne `--result`: trifft auf keine Kennung, die dieser Build kennt, meist ein Tippfehler. Eine Ausnahme für ein von OpenCloud fest eingestelltes Flag zählt ebenfalls, weil dieses nie alarmiert. |
+| Overlapping | Eine andere aktive Ausnahme deckt sie schon ab: ein Duplikat, ein engeres Muster unter einem breiteren oder - mit `--result` - zwei Muster für dieselbe fehlschlagende Prüfung. Eine befristete Ausnahme unter einer dauerhaften fällt auf, weil ihre Frist nichts bewirkt. |
+| Permanent | Ein Muster ohne Begründung und ohne Frist, mit einem `--waive-until`-Eintrag zum Übernehmen. |
+
+```bash
+check-opencloud-scanner scan opencloud.example.com > result.json
+check-opencloud-scanner review-waivers --result result.json          # tell used from unused
+check-opencloud-scanner review-waivers --at 2026-12-01T00:00:00Z     # what will have expired by then
+check-opencloud-scanner review-waivers --format json --exit-zero     # for a script
+```
+
+| Option | Funktion |
+|:--|:--|
+| `--result FILE` | Ergebnisdokument von `scan`, um genutzte von ungenutzten Ausnahmen zu unterscheiden; nennt außerdem den nächsten Ablauf, nach dem eine Prüfung alarmiert |
+| `--ignore-hardening`, `--waive-until` | Diese Werte statt der konfigurierten prüfen, so wie die gleichnamigen Plugin-Optionen sie ersetzen |
+| `--expiring-within DAYS` | Zeitfenster für *Expiring soon*. Standard: die Einstellung `waiver_warning`, sonst `14`; `0` schaltet den Abschnitt ab |
+| `--at TIMESTAMP` | Zu einem anderen Zeitpunkt prüfen; braucht wie eine Frist eine Zeitzone |
+| `--format {text,json}` | JSON mit `counts` je Art und einem Eintrag je Befund mit `kind`, `pattern`, `reason`, `expiresAt`, `detail`, `suggestion` und `related` |
+| `--exit-zero` | Immer mit `0` enden |
+
+Eine Ausnahme kann unter mehreren Arten erscheinen, ein falsch geschriebenes dauerhaftes Muster etwa als *Unused* und *Permanent*.
+
 ## `refresh-data`: Referenzdaten aktualisieren {#refresh-data-update-the-release-schedule-and-advisories}
 
 ```bash
@@ -299,6 +333,7 @@ Die Scanner-CLI verwendet eigene Exitcodes. Ein erfolgreich gescannter Host mit 
 | `scan` | Alle Hosts gescannt | Mindestens ein Host nicht scanbar | Ungültige Konfiguration | – |
 | `diff` | Keine Verschlechterung | Zweites Ergebnis schlechter | Dateien nicht vergleichbar | – |
 | `explain` | Ausgabe erstellt | Unbekannte Kennung oder leere Kategorie | – | – |
+| `review-waivers` | Nichts aufzuräumen | Mindestens eine Ausnahme gelistet | Ungültige Ausnahme, Zeitangabe oder `--result`-Datei | – |
 | `refresh-data` | Beide Dateien geschrieben | Nichts geschrieben; siehe stderr | – | – |
 | `serve` | Regulär beendet | – | Ungültige Konfiguration | Start verweigert, etwa ohne Token außerhalb von Loopback |
 

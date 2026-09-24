@@ -21,6 +21,7 @@
   <a href="#scan-print-the-result-document" lang="es"><code>scan</code>: imprimir el documento de resultado</a>
   <a href="#diff-what-changed-between-two-saved-results" lang="es"><code>diff</code>: qué ha cambiado entre dos resultados guardados</a>
   <a href="#explain-what-a-finding-means-and-how-to-fix-it" lang="es"><code>explain</code>: qué significa un hallazgo y cómo corregirlo</a>
+  <a href="#review-waivers-waivers-that-need-attention" lang="es"><code>review-waivers</code>: exenciones que requieren atención</a>
   <a href="#refresh-data-update-the-release-schedule-and-advisories" lang="es"><code>refresh-data</code>: actualizar el calendario de versiones y los avisos de seguridad</a>
   <a href="#serve-the-scan-service" lang="es"><code>serve</code>: el servicio de análisis</a>
   <a href="#configure-write-a-configuration-file" lang="es"><code>configure</code>: escribir un archivo de configuración</a>
@@ -47,6 +48,7 @@
 <li><a href="#scan---print-the-result-document"><code>scan</code>: imprimir el documento de resultado</a></li>
 <li><a href="#diff---what-changed-between-two-saved-results"><code>diff</code>: qué ha cambiado entre dos resultados guardados</a></li>
 <li><a href="#explain---what-a-finding-means-and-how-to-fix-it"><code>explain</code>: qué significa un hallazgo y cómo corregirlo</a></li>
+<li><a href="#review-waivers---waivers-that-need-attention"><code>review-waivers</code>: exenciones que requieren atención</a></li>
 <li><a href="#refresh-data---update-the-release-schedule-and-advisories"><code>refresh-data</code>: actualizar el calendario de versiones y los avisos de seguridad</a></li>
 <li><a href="#serve---the-scan-service"><code>serve</code>: el servicio de análisis</a></li>
 <li><a href="#configure---write-a-configuration-file"><code>configure</code>: escribir un archivo de configuración</a></li>
@@ -345,6 +347,80 @@ parecidos:</p>
 tratamiento más extenso, página a página, consulte
 <a href="/documentation/hardening">Medidas de refuerzo, una por una</a> y
 <a href="/documentation/scanner-checks">Qué lee el escáner</a>.</p>
+<h2 id="review-waivers-waivers-that-need-attention"><code>review-waivers</code>: exenciones que requieren atención</h2>
+<pre><code class="language-bash">check-opencloud-scanner -c /etc/check-opencloud-security/config.yml review-waivers
+</code></pre>
+<p>Lee las exenciones que usaría el plugin - <code>scanner.ignore_hardenings</code> y <code>scanner.temporary_waivers</code> del archivo de configuración o sus variables de entorno <code>COS_</code> - y enumera las que necesitan revisión, cada una con una propuesta de limpieza. <strong>Nunca modifica la configuración.</strong> Decidir si un fallo sigue siendo aceptable corresponde a quien lo aceptó.</p>
+<table>
+<thead>
+<tr>
+<th>Tipo</th>
+<th>Significado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Expired</td>
+<td>Una exención temporal cuyo plazo ha pasado. Indica si la comprobación vuelve a alertar o si otra exención más amplia la sigue ocultando.</td>
+</tr>
+<tr>
+<td>Expiring soon</td>
+<td>Una exención temporal que vence en menos de <code>--expiring-within</code> días: el <code>--waiver-warning</code> del plugin para todos los registros a la vez.</td>
+</tr>
+<tr>
+<td>Unused</td>
+<td>No coincide con ninguna comprobación fallida del documento <code>--result</code>. Sin <code>--result</code>: no coincide con ningún identificador conocido, normalmente una errata. Una exención para un indicador que OpenCloud fija en el código también cuenta, porque nunca alerta.</td>
+</tr>
+<tr>
+<td>Overlapping</td>
+<td>Otra exención activa ya la cubre: un duplicado, un patrón más estrecho bajo otro más amplio o, con <code>--result</code>, dos patrones para la misma comprobación fallida. Una exención temporal bajo una permanente se señala porque su plazo no cambia nada.</td>
+</tr>
+<tr>
+<td>Permanent</td>
+<td>Un patrón sin motivo ni plazo, con un registro <code>--waive-until</code> para copiar en su lugar.</td>
+</tr>
+</tbody>
+</table>
+<pre><code class="language-bash">check-opencloud-scanner scan opencloud.example.com &gt; result.json
+check-opencloud-scanner review-waivers --result result.json          # tell used from unused
+check-opencloud-scanner review-waivers --at 2026-12-01T00:00:00Z     # what will have expired by then
+check-opencloud-scanner review-waivers --format json --exit-zero     # for a script
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Opción</th>
+<th>Qué hace</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--result FILE</code></td>
+<td>Un documento de resultado de <code>scan</code>, para distinguir las exenciones usadas de las que no; también indica el próximo vencimiento que hará alertar una comprobación</td>
+</tr>
+<tr>
+<td><code>--ignore-hardening</code>, <code>--waive-until</code></td>
+<td>Revisar estos valores en lugar de los configurados, igual que los sustituyen las opciones homónimas del plugin</td>
+</tr>
+<tr>
+<td><code>--expiring-within DAYS</code></td>
+<td>Ventana de <em>Expiring soon</em>. Por defecto: el ajuste <code>waiver_warning</code>, o <code>14</code> si está desactivado; <code>0</code> desactiva la sección</td>
+</tr>
+<tr>
+<td><code>--at TIMESTAMP</code></td>
+<td>Revisar en otro momento; necesita zona horaria, como un plazo</td>
+</tr>
+<tr>
+<td><code>--format {text,json}</code></td>
+<td>JSON con <code>counts</code> por tipo y una entrada por elemento con <code>kind</code>, <code>pattern</code>, <code>reason</code>, <code>expiresAt</code>, <code>detail</code>, <code>suggestion</code> y <code>related</code></td>
+</tr>
+<tr>
+<td><code>--exit-zero</code></td>
+<td>Terminar siempre con <code>0</code></td>
+</tr>
+</tbody>
+</table>
+<p>Una exención puede aparecer en varios tipos; un patrón permanente mal escrito, por ejemplo, es <em>Unused</em> y <em>Permanent</em>.</p>
 <h2 id="refresh-data-update-the-release-schedule-and-advisories"><code>refresh-data</code>: actualizar el calendario de versiones y los avisos de seguridad</h2>
 <pre><code class="language-bash">check-opencloud-scanner refresh-data --output-dir /var/lib/check-opencloud-security
 </code></pre>
@@ -560,6 +636,13 @@ tarea del complemento.</p>
 <td>Impreso</td>
 <td>Identificador desconocido o categoría vacía</td>
 <td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>review-waivers</code></td>
+<td>Nada que limpiar</td>
+<td>Al menos una exención listada</td>
+<td>Exención, marca de tiempo o archivo <code>--result</code> no válidos</td>
 <td>-</td>
 </tr>
 <tr>

@@ -21,6 +21,7 @@
   <a href="#scan-print-the-result-document" lang="en"><code>scan</code> - print the result document</a>
   <a href="#diff-what-changed-between-two-saved-results" lang="en"><code>diff</code> - what changed between two saved results</a>
   <a href="#explain-what-a-finding-means-and-how-to-fix-it" lang="en"><code>explain</code> - what a finding means and how to fix it</a>
+  <a href="#review-waivers-waivers-that-need-attention" lang="en"><code>review-waivers</code> - waivers that need attention</a>
   <a href="#refresh-data-update-the-release-schedule-and-advisories" lang="en"><code>refresh-data</code> - update the release schedule and advisories</a>
   <a href="#serve-the-scan-service" lang="en"><code>serve</code> - the scan service</a>
   <a href="#configure-write-a-configuration-file" lang="en"><code>configure</code> - write a configuration file</a>
@@ -34,8 +35,8 @@
   instance, <em>judges</em> the result against thresholds and exits <code>0</code>-<code>3</code> for
   Nagios or Icinga. Its flags are in the <a href="/documentation/cli-reference">CLI option reference</a>.</li>
 <li><strong><code>check-opencloud-scanner</code></strong> is everything else. It gives you the raw
-  result document, compares two of them, explains a finding, refreshes the
-  reference data, and runs the scan service. It never applies a warning or
+  result document, compares two of them, explains a finding, reviews the
+  configured waivers, refreshes the reference data, and runs the scan service. It never applies a warning or
   critical threshold.</li>
 </ul>
 <p>This page is the reference for the second one.</p>
@@ -46,6 +47,7 @@
 <li><a href="#scan---print-the-result-document"><code>scan</code> - print the result document</a></li>
 <li><a href="#diff---what-changed-between-two-saved-results"><code>diff</code> - what changed between two saved results</a></li>
 <li><a href="#explain---what-a-finding-means-and-how-to-fix-it"><code>explain</code> - what a finding means and how to fix it</a></li>
+<li><a href="#review-waivers---waivers-that-need-attention"><code>review-waivers</code> - waivers that need attention</a></li>
 <li><a href="#refresh-data---update-the-release-schedule-and-advisories"><code>refresh-data</code> - update the release schedule and advisories</a></li>
 <li><a href="#serve---the-scan-service"><code>serve</code> - the scan service</a></li>
 <li><a href="#configure---write-a-configuration-file"><code>configure</code> - write a configuration file</a></li>
@@ -352,6 +354,104 @@ ones:</p>
 longer, page-by-page treatment, see
 <a href="/documentation/hardening">Hardening measures, one by one</a> and
 <a href="/documentation/scanner-checks">What the scanner reads</a>.</p>
+<h2 id="review-waivers-waivers-that-need-attention"><code>review-waivers</code> - waivers that need attention</h2>
+<pre><code class="language-bash">check-opencloud-scanner -c /etc/check-opencloud-security/config.yml review-waivers
+</code></pre>
+<pre><code class="language-text">Reviewed 2 waiver(s) as of 2026-09-24 12:00 UTC without a scan result (pass --result for usage).
+
+Expired (1):
+  * exposed:/.env - Proxy rule pending
+      Expired 2026-09-01 00:00 UTC (23 days ago); it suppresses nothing any more.
+      Suggestion: Remove it from temporary_waivers / --waive-until. If the failure is still accepted, write a new record with a new deadline and a reason that is true today.
+
+Unused (1):
+  * debugPrt:*
+      It matches no identifier this build knows.
+      Suggestion: A check that was renamed or removed leaves its waiver behind; remove it if so. Check the spelling - did you mean debugPort?
+
+Permanent (1):
+  * debugPrt:*
+      No reason and no deadline: it lasts until someone remembers it.
+      Suggestion: Move it from ignore_hardenings / --ignore-hardening to a temporary waiver, e.g. --waive-until 'debugPrt:*|2026-12-23T00:00:00Z|&lt;why this is accepted&gt;'
+
+Nothing was changed; edit the configuration to apply a suggestion.
+</code></pre>
+<p>It reads the waivers the plugin would use - <code>scanner.ignore_hardenings</code> and
+<code>scanner.temporary_waivers</code> from the configuration file or their <code>COS_</code>
+environment variables - and lists the ones that need a person, each with a
+suggested cleanup. <strong>It never changes the configuration.</strong> Whether a failure
+is still acceptable is for whoever accepted it to decide.</p>
+<table>
+<thead>
+<tr>
+<th>Kind</th>
+<th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Expired</td>
+<td>A temporary waiver whose deadline has passed. It says whether the check alerts again or a broader waiver still hides it.</td>
+</tr>
+<tr>
+<td>Expiring soon</td>
+<td>A temporary waiver that runs out within <code>--expiring-within</code> days. This is the plugin's <code>--waiver-warning</code> for every record at once, not only the next one.</td>
+</tr>
+<tr>
+<td>Unused</td>
+<td>Matches no check that fails in the <code>--result</code> document. Without <code>--result</code>: matches no identifier this build knows, usually a typo or a renamed check. A waiver for a flag OpenCloud hardcodes counts as unused, because that flag never alerts.</td>
+</tr>
+<tr>
+<td>Overlapping</td>
+<td>Covered by another active waiver: a duplicate, a narrower pattern under a wider one, or - with <code>--result</code> - two patterns that waive the same failing check. A temporary waiver under a permanent one is flagged because its deadline changes nothing.</td>
+</tr>
+<tr>
+<td>Permanent</td>
+<td>A bare pattern with no reason and no deadline, with a <code>--waive-until</code> record to copy in its place.</td>
+</tr>
+</tbody>
+</table>
+<pre><code class="language-bash">check-opencloud-scanner scan opencloud.example.com &gt; result.json
+check-opencloud-scanner review-waivers --result result.json          # tell used from unused
+check-opencloud-scanner review-waivers --at 2026-12-01T00:00:00Z     # what will have expired by then
+check-opencloud-scanner review-waivers --format json --exit-zero     # for a script
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--result FILE</code></td>
+<td>A result document from <code>scan</code>, to judge which waivers cover a failing check. With it the review also names the next expiry that makes a check alert, as <code>--waiver-warning</code> computes it</td>
+</tr>
+<tr>
+<td><code>--ignore-hardening</code>, <code>--waive-until</code></td>
+<td>Review these instead of the configured values, as the plugin flags of the same name would replace them</td>
+</tr>
+<tr>
+<td><code>--expiring-within DAYS</code></td>
+<td>The window for <em>Expiring soon</em>. Default: the <code>waiver_warning</code> setting, or <code>14</code> when that is off; <code>0</code> turns the section off</td>
+</tr>
+<tr>
+<td><code>--at TIMESTAMP</code></td>
+<td>Review as of another moment. It needs a timezone, like an expiry</td>
+</tr>
+<tr>
+<td><code>--format {text,json}</code></td>
+<td>JSON gives <code>counts</code> per kind and one entry per item, with <code>kind</code>, <code>pattern</code>, <code>reason</code>, <code>expiresAt</code>, <code>detail</code>, <code>suggestion</code> and <code>related</code></td>
+</tr>
+<tr>
+<td><code>--exit-zero</code></td>
+<td>Always exit <code>0</code></td>
+</tr>
+</tbody>
+</table>
+<p>One waiver can appear under several kinds. A misspelled permanent pattern,
+for example, is both <em>Unused</em> and <em>Permanent</em>.</p>
 <h2 id="refresh-data-update-the-release-schedule-and-advisories"><code>refresh-data</code> - update the release schedule and advisories</h2>
 <pre><code class="language-bash">check-opencloud-scanner refresh-data --output-dir /var/lib/check-opencloud-security
 </code></pre>
@@ -563,6 +663,13 @@ instance still exits <code>0</code>, because judging the result is the plugin's 
 <td>Printed</td>
 <td>Unknown identifier or empty category</td>
 <td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>review-waivers</code></td>
+<td>Nothing to clean up</td>
+<td>At least one waiver is listed</td>
+<td>Invalid waiver, timestamp or <code>--result</code> file</td>
 <td>-</td>
 </tr>
 <tr>

@@ -19,6 +19,7 @@ Cette page est la référence de la seconde.
   * [`scan` - afficher le document de résultat](#scan---print-the-result-document)
   * [`diff` - ce qui a changé entre deux résultats enregistrés](#diff---what-changed-between-two-saved-results)
   * [`explain` - ce que signifie un constat et comment le corriger](#explain---what-a-finding-means-and-how-to-fix-it)
+  * [`review-waivers` - les exemptions à revoir](#review-waivers---waivers-that-need-attention)
   * [`refresh-data` - actualiser le calendrier des versions et les avis de sécurité](#refresh-data---update-the-release-schedule-and-advisories)
   * [`serve` - le service de scan](#serve---the-scan-service)
   * [`configure` - écrire un fichier de configuration](#configure---write-a-configuration-file)
@@ -280,6 +281,40 @@ exclusion. Pour un traitement plus long, page par page, voir [Les mesures de
 durcissement, une par une](hardening.md) et [Ce que lit le
 scanner](scanner-checks.md).
 
+## `review-waivers` - les exemptions à revoir {#review-waivers-waivers-that-need-attention}
+
+```bash
+check-opencloud-scanner -c /etc/check-opencloud-security/config.yml review-waivers
+```
+
+La commande lit les exemptions que le plugin utiliserait - `scanner.ignore_hardenings` et `scanner.temporary_waivers` dans le fichier de configuration ou leurs variables d'environnement `COS_` - et liste celles qui demandent votre attention, chacune avec une proposition de nettoyage. **Elle ne modifie jamais la configuration.** Décider si un échec reste acceptable revient à la personne qui l'a accepté.
+
+| Type | Signification |
+|:--|:--|
+| Expired | Une exemption temporaire dont l'échéance est passée. La sortie indique si la vérification alerte de nouveau ou si une exemption plus large la masque encore. |
+| Expiring soon | Une exemption temporaire qui expire dans moins de `--expiring-within` jours : le `--waiver-warning` du plugin pour tous les enregistrements à la fois. |
+| Unused | Ne correspond à aucune vérification en échec dans le document `--result`. Sans `--result` : ne correspond à aucun identifiant connu, souvent une faute de frappe. Une exemption pour un indicateur qu'OpenCloud fixe dans le code compte aussi, car il n'alerte jamais. |
+| Overlapping | Une autre exemption active la couvre déjà : un doublon, un motif plus étroit sous un motif plus large ou, avec `--result`, deux motifs pour la même vérification en échec. Une exemption temporaire sous une exemption permanente est signalée, car son échéance ne change rien. |
+| Permanent | Un motif sans raison ni échéance, avec un enregistrement `--waive-until` à copier à sa place. |
+
+```bash
+check-opencloud-scanner scan opencloud.example.com > result.json
+check-opencloud-scanner review-waivers --result result.json          # tell used from unused
+check-opencloud-scanner review-waivers --at 2026-12-01T00:00:00Z     # what will have expired by then
+check-opencloud-scanner review-waivers --format json --exit-zero     # for a script
+```
+
+| Option | Effet |
+|:--|:--|
+| `--result FILE` | Un document de résultat de `scan`, pour distinguer les exemptions utilisées des autres ; indique aussi la prochaine échéance qui fera alerter une vérification |
+| `--ignore-hardening`, `--waive-until` | Revoir ces valeurs au lieu de celles configurées, comme les options homonymes du plugin les remplacent |
+| `--expiring-within DAYS` | Fenêtre de *Expiring soon*. Par défaut : le réglage `waiver_warning`, ou `14` s'il est désactivé ; `0` désactive la section |
+| `--at TIMESTAMP` | Revoir à un autre moment ; exige un fuseau horaire, comme une échéance |
+| `--format {text,json}` | JSON avec `counts` par type et une entrée par élément avec `kind`, `pattern`, `reason`, `expiresAt`, `detail`, `suggestion` et `related` |
+| `--exit-zero` | Toujours terminer avec `0` |
+
+Une exemption peut apparaître sous plusieurs types ; un motif permanent mal orthographié, par exemple, est à la fois *Unused* et *Permanent*.
+
 ## `refresh-data` - actualiser le calendrier des versions et les avis de sécurité {#refresh-data-update-the-release-schedule-and-advisories}
 
 ```bash
@@ -401,6 +436,7 @@ travail du plugin.
 | `scan` | Tous les hôtes ont été analysés | Au moins un hôte n'a pas pu être analysé | Configuration invalide | - |
 | `diff` | Rien n'a empiré | Le résultat le plus récent est moins bon | Les fichiers ne peuvent pas être comparés | - |
 | `explain` | Affiché | Identifiant inconnu ou catégorie vide | - | - |
+| `review-waivers` | Rien à nettoyer | Au moins une exemption listée | Exemption, horodatage ou fichier `--result` invalide | - |
 | `refresh-data` | Les deux fichiers ont été écrits | Rien n'a été écrit, voir stderr | - | - |
 | `serve` | Arrêt normal | - | Configuration invalide | Démarrage refusé, p. ex. une écoute large sans jeton |
 

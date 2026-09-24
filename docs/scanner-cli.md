@@ -6,8 +6,8 @@ The package installs two commands.
   instance, *judges* the result against thresholds and exits `0`-`3` for
   Nagios or Icinga. Its flags are in the [CLI option reference](cli-reference.md).
 - **`check-opencloud-scanner`** is everything else. It gives you the raw
-  result document, compares two of them, explains a finding, refreshes the
-  reference data, and runs the scan service. It never applies a warning or
+  result document, compares two of them, explains a finding, reviews the
+  configured waivers, refreshes the reference data, and runs the scan service. It never applies a warning or
   critical threshold.
 
 This page is the reference for the second one.
@@ -18,6 +18,7 @@ This page is the reference for the second one.
   * [`scan` - print the result document](#scan---print-the-result-document)
   * [`diff` - what changed between two saved results](#diff---what-changed-between-two-saved-results)
   * [`explain` - what a finding means and how to fix it](#explain---what-a-finding-means-and-how-to-fix-it)
+  * [`review-waivers` - waivers that need attention](#review-waivers---waivers-that-need-attention)
   * [`refresh-data` - update the release schedule and advisories](#refresh-data---update-the-release-schedule-and-advisories)
   * [`serve` - the scan service](#serve---the-scan-service)
   * [`configure` - write a configuration file](#configure---write-a-configuration-file)
@@ -272,6 +273,66 @@ longer, page-by-page treatment, see
 [Hardening measures, one by one](hardening.md) and
 [What the scanner reads](scanner-checks.md).
 
+## `review-waivers` - waivers that need attention
+
+```bash
+check-opencloud-scanner -c /etc/check-opencloud-security/config.yml review-waivers
+```
+
+```text
+Reviewed 2 waiver(s) as of 2026-09-24 12:00 UTC without a scan result (pass --result for usage).
+
+Expired (1):
+  * exposed:/.env - Proxy rule pending
+      Expired 2026-09-01 00:00 UTC (23 days ago); it suppresses nothing any more.
+      Suggestion: Remove it from temporary_waivers / --waive-until. If the failure is still accepted, write a new record with a new deadline and a reason that is true today.
+
+Unused (1):
+  * debugPrt:*
+      It matches no identifier this build knows.
+      Suggestion: A check that was renamed or removed leaves its waiver behind; remove it if so. Check the spelling - did you mean debugPort?
+
+Permanent (1):
+  * debugPrt:*
+      No reason and no deadline: it lasts until someone remembers it.
+      Suggestion: Move it from ignore_hardenings / --ignore-hardening to a temporary waiver, e.g. --waive-until 'debugPrt:*|2026-12-23T00:00:00Z|<why this is accepted>'
+
+Nothing was changed; edit the configuration to apply a suggestion.
+```
+
+It reads the waivers the plugin would use - `scanner.ignore_hardenings` and
+`scanner.temporary_waivers` from the configuration file or their `COS_`
+environment variables - and lists the ones that need a person, each with a
+suggested cleanup. **It never changes the configuration.** Whether a failure
+is still acceptable is for whoever accepted it to decide.
+
+| Kind | What it means |
+|:--|:--|
+| Expired | A temporary waiver whose deadline has passed. It says whether the check alerts again or a broader waiver still hides it. |
+| Expiring soon | A temporary waiver that runs out within `--expiring-within` days. This is the plugin's `--waiver-warning` for every record at once, not only the next one. |
+| Unused | Matches no check that fails in the `--result` document. Without `--result`: matches no identifier this build knows, usually a typo or a renamed check. A waiver for a flag OpenCloud hardcodes counts as unused, because that flag never alerts. |
+| Overlapping | Covered by another active waiver: a duplicate, a narrower pattern under a wider one, or - with `--result` - two patterns that waive the same failing check. A temporary waiver under a permanent one is flagged because its deadline changes nothing. |
+| Permanent | A bare pattern with no reason and no deadline, with a `--waive-until` record to copy in its place. |
+
+```bash
+check-opencloud-scanner scan opencloud.example.com > result.json
+check-opencloud-scanner review-waivers --result result.json          # tell used from unused
+check-opencloud-scanner review-waivers --at 2026-12-01T00:00:00Z     # what will have expired by then
+check-opencloud-scanner review-waivers --format json --exit-zero     # for a script
+```
+
+| Option | What it does |
+|:--|:--|
+| `--result FILE` | A result document from `scan`, to judge which waivers cover a failing check. With it the review also names the next expiry that makes a check alert, as `--waiver-warning` computes it |
+| `--ignore-hardening`, `--waive-until` | Review these instead of the configured values, as the plugin flags of the same name would replace them |
+| `--expiring-within DAYS` | The window for *Expiring soon*. Default: the `waiver_warning` setting, or `14` when that is off; `0` turns the section off |
+| `--at TIMESTAMP` | Review as of another moment. It needs a timezone, like an expiry |
+| `--format {text,json}` | JSON gives `counts` per kind and one entry per item, with `kind`, `pattern`, `reason`, `expiresAt`, `detail`, `suggestion` and `related` |
+| `--exit-zero` | Always exit `0` |
+
+One waiver can appear under several kinds. A misspelled permanent pattern,
+for example, is both *Unused* and *Permanent*.
+
 ## `refresh-data` - update the release schedule and advisories
 
 ```bash
@@ -388,6 +449,7 @@ instance still exits `0`, because judging the result is the plugin's job.
 | `scan` | Every host was scanned | At least one host could not be scanned | Invalid configuration | - |
 | `diff` | Nothing got worse | The later result is worse | The files cannot be compared | - |
 | `explain` | Printed | Unknown identifier or empty category | - | - |
+| `review-waivers` | Nothing to clean up | At least one waiver is listed | Invalid waiver, timestamp or `--result` file | - |
 | `refresh-data` | Both files written | Nothing written, see stderr | - | - |
 | `serve` | Stopped normally | - | Invalid configuration | Refused to start, e.g. a wide bind without a token |
 

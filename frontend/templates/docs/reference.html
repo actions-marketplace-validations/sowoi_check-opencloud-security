@@ -1219,6 +1219,12 @@ days:</p>
     --waive-until 'debugPort:9205|2026-12-31T00:00:00Z|Firewall change, OPS-412' \
     --waiver-warning 14
 </code></pre>
+<p>To go through every waiver at once, run
+<code>check-opencloud-scanner review-waivers --result result.json</code>. It lists the
+waivers that are expired, expiring within the <code>waiver_warning</code> window, unused,
+overlapping or permanent, each with a suggested cleanup, and leaves the
+configuration unchanged - see
+<a href="/documentation/scanner-cli#review-waivers---waivers-that-need-attention">the scanner command</a>.</p>
 <p>See
 <a href="/documentation/hardening#accepting-a-finding-you-are-not-going-to-fix">Accepting a finding you are not going to fix</a>
 for the wildcards, what a waiver will not do, and why a configuration file is

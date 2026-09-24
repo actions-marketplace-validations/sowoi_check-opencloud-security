@@ -1115,6 +1115,13 @@ check-opencloud-security --host opencloud.example.com --check-hardening \
     --waiver-warning 14
 ```
 
+To go through every waiver at once, run
+`check-opencloud-scanner review-waivers --result result.json`. It lists the
+waivers that are expired, expiring within the `waiver_warning` window, unused,
+overlapping or permanent, each with a suggested cleanup, and leaves the
+configuration unchanged - see
+[the scanner command](docs/scanner-cli.md#review-waivers---waivers-that-need-attention).
+
 See
 [Accepting a finding you are not going to fix](docs/hardening.md#accepting-a-finding-you-are-not-going-to-fix)
 for the wildcards, what a waiver will not do, and why a configuration file is

@@ -56,6 +56,19 @@
   <code>coverage_regressed</code>, and the two-document comparison reports a
   <code>coverageRegressed</code> scanner change. See ADR 0074 and
   <a href="/documentation/baseline#coverage-regressions">Reporting only what changed</a>.</li>
+<li><strong><code>check-opencloud-scanner review-waivers</code>.</strong> It reads the configured
+  waivers (<code>ignore_hardenings</code> and <code>temporary_waivers</code>, or the
+  <code>--ignore-hardening</code> and <code>--waive-until</code> values given to it) and lists five
+  kinds that need attention. <em>Expired</em> waivers no longer suppress anything.
+  <em>Expiring soon</em> ones run out within the <code>waiver_warning</code> window. <em>Unused</em>
+  ones match no failing check in a <code>--result</code> document, or with no document,
+  no identifier the scanner knows. <em>Overlapping</em> ones are already covered by
+  another waiver, such as a deadline hidden under a permanent <code>*</code>.
+  <em>Permanent</em> ones have no reason and no deadline. Each item has a suggested
+  cleanup, for a permanent waiver a <code>--waive-until</code> record to copy. The
+  command never changes the configuration. It exits <code>1</code> when it lists
+  anything, unless given <code>--exit-zero</code>, and <code>--format json</code> suits scripts. See
+  <a href="/documentation/scanner-cli#review-waivers---waivers-that-need-attention">the scanner command</a>.</li>
 </ul>
 <h2 id="1302-2026-09-24">[1.30.2] - 2026-09-24</h2>
 <h3 id="changed">Changed</h3>

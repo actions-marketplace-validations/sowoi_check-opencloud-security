@@ -23,6 +23,19 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   `coverage_regressed`, and the two-document comparison reports a
   `coverageRegressed` scanner change. See ADR 0074 and
   [Reporting only what changed](docs/baseline.md#coverage-regressions).
+- **`check-opencloud-scanner review-waivers`.** It reads the configured
+  waivers (`ignore_hardenings` and `temporary_waivers`, or the
+  `--ignore-hardening` and `--waive-until` values given to it) and lists five
+  kinds that need attention. *Expired* waivers no longer suppress anything.
+  *Expiring soon* ones run out within the `waiver_warning` window. *Unused*
+  ones match no failing check in a `--result` document, or with no document,
+  no identifier the scanner knows. *Overlapping* ones are already covered by
+  another waiver, such as a deadline hidden under a permanent `*`.
+  *Permanent* ones have no reason and no deadline. Each item has a suggested
+  cleanup, for a permanent waiver a `--waive-until` record to copy. The
+  command never changes the configuration. It exits `1` when it lists
+  anything, unless given `--exit-zero`, and `--format json` suits scripts. See
+  [the scanner command](docs/scanner-cli.md#review-waivers---waivers-that-need-attention).
 
 ## [1.30.2] - 2026-09-24
 
