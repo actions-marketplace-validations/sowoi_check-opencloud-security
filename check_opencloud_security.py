@@ -1067,7 +1067,9 @@ def _apply_baseline(
     With ``--warn-on-new`` an unchanged picture stops alerting, so that a
     problem someone is already working on does not page anyone a second time.
     Anything new, a worse rating, and a release past its end of life all keep
-    their original status - see opencloud_local_scan.baseline for why.
+    their original status - see opencloud_local_scan.baseline for why. A check
+    that was measured before and is inconclusive now raises an OK to WARNING
+    without touching the rating.
 
     A baseline that cannot be written is reported as a line of output and
     nothing more: it would be absurd for a bookkeeping failure to change the
@@ -1092,7 +1094,24 @@ def _apply_baseline(
             message = f"OK: nothing new since the last run ({exit_code.name} state unchanged)."
             exit_code = NagiosExitCode.OK
 
-        store.record(context.host, current)
+        # A check that stopped being measurable is a warning about the scan,
+        # never about the instance: the rating, its perfdata and the findings
+        # stay exactly what the evidence gave. It only lifts an OK, so a real
+        # WARNING or CRITICAL keeps its own message.
+        coverage_line = comparison.coverage_summary()
+        if coverage_line:
+            lines.append(f"{coverage_line} - the rating is unaffected.")
+            if exit_code is NagiosExitCode.OK:
+                message = (
+                    f"WARNING: {len(comparison.coverage_lost)} previously measured "
+                    "check(s) are now inconclusive; the rating is unchanged "
+                    f"({message.removeprefix('OK: ')})"
+                )
+                exit_code = NagiosExitCode.WARNING
+
+        # The comparison's copy, which carries a lost check forward as
+        # measurable until a later run measures it again.
+        store.record(context.host, comparison.current)
         try:
             store.save()
         except BaselineError as exc:
@@ -2282,6 +2301,7 @@ def _explain_lines(
         )
 
     lines.extend(_remediation_lines(response_scan))
+    lines.extend(_remediation_group_lines(response_scan))
 
     waived = _waived(response_scan)
     if waived:
@@ -2379,6 +2399,46 @@ def _remediation_lines(response_scan: dict[str, Any]) -> list[str]:
                 f"Not fixable: {step.get('id')} - OpenCloud hardcodes this, so "
                 "the plan above cannot reach further."
             )
+    return lines
+
+
+def _remediation_group_lines(response_scan: dict[str, Any]) -> list[str]:
+    """
+    The same fixes, grouped by the configuration each change is made in.
+
+    The scanner decided the groups and which findings one edit resolves; as
+    with the ordered plan, the only thing added here is the letter.
+    """
+    plan = response_scan.get("remediationPlan")
+    if not isinstance(plan, dict):
+        return []
+    groups = plan.get("groups")
+    if not isinstance(groups, list) or not groups:
+        return []
+
+    lines = ["", "--- Changes grouped by where they are made ---"]
+    if plan.get("groupSummary"):
+        lines.append(str(plan["groupSummary"]))
+    for group in groups:
+        if not isinstance(group, dict):
+            continue
+        after = group.get("ratingAfter")
+        grade = RATE_MAP.get(after, "?") if isinstance(after, int) else "?"
+        lines.append(
+            f"{group.get('title')}: {group.get('findings')} finding(s), "
+            f"{after}/5 ({grade}) with every change here made"
+        )
+        for change in group.get("changes") or []:
+            if not isinstance(change, dict):
+                continue
+            findings = [str(name) for name in change.get("findings") or []]
+            resolves = (
+                f"resolves {len(findings)}: {', '.join(findings)}"
+                if change.get("resolvesSeveral")
+                else findings[0] if findings else ""
+            )
+            lines.append(f"  * {change.get('title')} - {resolves}")
+            lines.append(f"    Fix: {change.get('action')}")
     return lines
 
 

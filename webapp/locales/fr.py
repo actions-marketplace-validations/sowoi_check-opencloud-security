@@ -12,6 +12,7 @@ MESSAGES: dict[str, str] = {
     "admin.tabs.overview": "Vue d'ensemble",
     "admin.tabs.configuration": "Configuration",
     "admin.tabs.rules": "Règles",
+    "admin.tabs.decisions": "Décisions",
     "admin.config.title": "Configuration",
     "admin.config.lede": "Toutes les variables COS_WEB_* lues par ce service et leurs valeurs actuellement effectives.",
     "admin.config.scope": "Voici les paramètres effectifs de ce processus web au démarrage. OpenCloud et le worker d’analyse ont leur propre configuration. Pour les secrets, seule leur présence est indiquée.",
@@ -128,6 +129,12 @@ MESSAGES: dict[str, str] = {
     "admin.rules.rule.admin_refresh.body": "Chaque actualisation des données de référence peut être lancée une fois toutes les {cooldown}.",
     "admin.docs.kicker": "Documentation d'exploitation",
     "admin.docs.source": "Depuis <code>{file}</code> dans le dépôt, en anglais.",
+    "admin.decisions.title": "Décisions d’architecture",
+    "admin.decisions.lede": "Chaque enregistrement de décision d’architecture de ce dépôt et son statut, en anglais tel qu’il a été rédigé.",
+    "admin.decisions.search.label": "Filtrer les enregistrements de décision",
+    "admin.decisions.search.placeholder": "Numéro, titre ou statut",
+    "admin.decisions.search.empty": "Aucun enregistrement ne correspond. La recherche du site parcourt aussi le texte de chaque enregistrement.",
+    "admin.decisions.back": "Toutes les décisions",
     "admin.band": "Espace d'exploitation - connecté en tant que {user}",
     "admin.band.signout": "Se déconnecter",
     "admin.lede": "Consultez l’état du service et les données de référence, ou lancez manuellement les actualisations quotidiennes du worker.",
@@ -1127,14 +1134,13 @@ MESSAGES: dict[str, str] = {
     "compare.upload.source.missing.update": "Le fichier ne précise pas si une mise à jour était disponible. Ce point est exclu des deux rapports pour la comparaison, notamment avec les anciens exports CSV.",
     "compare.upload.expires": "La comparaison reste disponible pendant environ {minutes} minutes. Vous aurez ensuite besoin du fichier d’origine pour la refaire.",
     "compare.upload.error.missing": (
-        "Aucun fichier n'a été téléversé. Choisissez le rapport JSON ou CSV que "
-        "vous avez téléchargé auparavant."
+        "Aucun rapport n’a été envoyé. Choisissez un rapport JSON ou CSV téléchargé depuis une page de résultat."
     ),
     "compare.upload.error.no_current": "Indiquez l’UUID de l’analyse à laquelle comparer le rapport.",
-    "compare.upload.error.empty": "Ce fichier est vide.",
+    "compare.upload.error.empty": "Le fichier envoyé est vide. Choisissez un rapport JSON ou CSV téléchargé.",
     "compare.upload.error.too_large": "Le fichier dépasse la taille maximale de {kilobytes} Ko.",
     "compare.upload.error.unreadable": "Impossible de lire ce fichier en JSON ou CSV. Envoyez le rapport téléchargé d’origine, sans modification.",
-    "compare.upload.error.not_a_report": "Le fichier ne correspond pas à un rapport de ce service. Utilisez un export JSON ou CSV téléchargé depuis une page de résultat.",
+    "compare.upload.error.not_a_report": "Ce fichier n’est pas reconnu comme un rapport d’analyse. Utilisez un fichier JSON ou CSV téléchargé depuis une page de résultat.",
     "compare.upload.error.rate_limit": (
         "Cela fait beaucoup de rapports depuis votre réseau en peu de temps. "
         "Attendez une minute et réessayez."
@@ -1233,9 +1239,7 @@ MESSAGES: dict[str, str] = {
         "instance, le scanner fonctionne aussi sur votre machine."
     ),
     "error.rate_limit.daily": (
-        "C'est toutes les analyses que ce service peut faire aujourd'hui pour "
-        "votre réseau. Il y aura de la place demain - ou lancez le scanner "
-        "vous-même, il n'a pas de limite journalière."
+        "Désolé, votre réseau a atteint la limite d’analyses pour aujourd’hui. Réessayez demain ou exécutez le scanner sur votre machine sans cette limite quotidienne."
     ),
     "error.target.wildcard_dns": (
         "Ce nom appartient à un service qui fait pointer des noms vers n'importe "
@@ -1246,8 +1250,7 @@ MESSAGES: dict[str, str] = {
         "ce service ne peut donc pas déterminer de façon fiable ce qu'il analyserait."
     ),
     "error.target.not_approved": (
-        "Ce service n'analyse que les instances approuvées pour lui. Demandez à "
-        "l'opérateur de l'ajouter, ou publiez l'enregistrement DNS qui l'approuve."
+        "Ce service analyse uniquement les instances approuvées. Demandez à l’opérateur d’approuver cette instance ou publiez l’enregistrement DNS d’approbation requis."
     ),
     "error.rate_limit.target": (
         "Cette instance a été analysée très récemment. Merci de patienter "
@@ -1260,7 +1263,7 @@ MESSAGES: dict[str, str] = {
         "Cette adresse contient des caractères qu'un nom d'hôte ne peut pas "
         "avoir."
     ),
-    "error.target.unparsed": "Cette adresse n'a pas pu être analysée syntaxiquement.",
+    "error.target.unparsed": "Cette adresse n’a pas pu être interprétée. Vérifiez-la et saisissez l’URL de base de l’instance.",
     "error.target.scheme": (
         "Seules les cibles en http:// et https:// peuvent être analysées."
     ),
@@ -1277,7 +1280,7 @@ MESSAGES: dict[str, str] = {
     "error.target.hostname_shape": (
         "Ce n'est pas un nom d'hôte que ce service peut analyser."
     ),
-    "error.target.unresolved": "Ce nom d'hôte ne se résout pas.",
+    "error.target.unresolved": "Aucune adresse IP n’a été trouvée pour ce nom d’hôte. Vérifiez son orthographe et la configuration DNS.",
     "error.target.hostname_long": "Ce nom d'hôte est trop long.",
     "error.target.internal": (
         "Les adresses locales et internes ne peuvent pas être analysées."
@@ -1287,12 +1290,10 @@ MESSAGES: dict[str, str] = {
         "que ce service n'analysera pas."
     ),
     "error.target.blocked": (
-        "Il a été demandé à ce service de ne pas analyser cette adresse."
+        "L’opérateur a exclu cette adresse des analyses."
     ),
     "error.store_unavailable": (
-        "Ce service ne peut pas lire sa propre configuration pour le moment et "
-        "n'analysera rien tant que la liste des cibles exclues reste inaccessible. "
-        "Veuillez réessayer dans quelques minutes."
+        "Le service ne peut pas lire sa liste de cibles exclues et ne peut donc pas lancer d’analyse en toute sécurité. Veuillez réessayer dans quelques minutes."
     ),
     # ----------------------------------------------------------- result page
     "result.title": "Résultats de l'analyse",
@@ -1323,10 +1324,9 @@ MESSAGES: dict[str, str] = {
     ),
     "result.compare.offer.link": "Voir ce qui a changé depuis",
     "result.progress.kicker": "En cours",
-    "result.progress.queued.title": "En attente d’un worker",
+    "result.progress.queued.title": "En attente du démarrage de l’analyse",
     "result.progress.queued.detail": (
-        "Tous les workers sont occupés. Votre analyse garde sa place dans la "
-        "file et démarre dès que l’un d’eux se libère."
+        "Tous les processus d’analyse sont occupés. Votre analyse conserve sa place dans la file et démarrera dès qu’un processus sera disponible."
     ),
     "result.progress.running.title": "Analyse de l'instance en cours",
     "result.progress.running.detail": (
@@ -1338,23 +1338,22 @@ MESSAGES: dict[str, str] = {
     "result.progress.step.running": "En cours",
     "result.progress.step.done": "Résultat",
     "result.progress.estimate": "La plupart des analyses se terminent en moins d'une minute.",
-    "result.progress.elapsed": "depuis {duration}",
+    "result.progress.elapsed": "Temps écoulé : {duration}",
     "result.progress.noscript": (
-        "Cette page se met à jour elle-même grâce à JavaScript. Sans lui, "
-        "rechargez la page dans quelques secondes pour voir le résultat."
+        "JavaScript actualise cette page automatiquement. Si JavaScript n’est pas disponible, rechargez la page après quelques secondes pour voir le résultat."
     ),
     "result.progress.queue.position": (
         "Analyse en file d'attente. Position : #{position} sur {length}."
     ),
-    "result.progress.queue.next": "Analyse en file d'attente. Vous êtes le prochain.",
+    "result.progress.queue.next": "Votre analyse est la prochaine dans la file.",
     "result.progress.queue.waiting": (
-        "En attente qu’un worker la prenne en charge."
+        "En attente d’un processus d’analyse disponible."
     ),
     "result.progress.done.title": "Rapport prêt",
-    "result.progress.done.detail": "La note est disponible. Ouverture du rapport.",
+    "result.progress.done.detail": "L’analyse est terminée. Ouverture du rapport.",
     "result.progress.failed.title": "Analyse terminée",
     "result.progress.failed.detail": (
-        "L’analyse n’a pas pu être terminée. Ouverture de la page de résultat."
+        "L’analyse n’a pas pu aboutir. Ouverture de la page de résultat avec les détails de l’erreur."
     ),
     "result.failed.fallback": "L'analyse n'a pas pu être menée à son terme.",
     "result.failed.body": "Le scanner n’a pas pu recueillir assez d’informations pour attribuer une note. Vérifiez l’adresse, confirmez qu’elle héberge OpenCloud et assurez-vous que l’instance est accessible depuis ce service.",
@@ -1436,6 +1435,16 @@ MESSAGES: dict[str, str] = {
         "modifiées dans la configuration. Le plan ne peut donc pas atteindre "
         "une note supérieure."
     ),
+    "result.groups.kicker": "Regroupé par configuration",
+    "result.groups.heading": "Quoi modifier, et où",
+    "result.groups.lede": "Les mêmes constats ouverts, regroupés selon le système à modifier pour les corriger, y compris ceux qui n’influencent pas la note. Une seule modification en résout souvent plusieurs.",
+    "result.groups.target.reverseProxy": "Proxy inverse",
+    "result.groups.target.identityProvider": "Fournisseur d’identité",
+    "result.groups.target.opencloud": "OpenCloud",
+    "result.groups.target.dnsZone": "Zone DNS",
+    "result.groups.count": "{count} constats ouverts, {label} avec toutes les modifications de ce groupe",
+    "result.groups.resolves": "Résout {count} constats à la fois",
+    "result.groups.alone": "cette modification seule : {label}",
     "result.rehearsal.kicker": "Simulation de mise à niveau",
     "result.rehearsal.heading": "Ce qu’une mise à niveau corrigerait",
     "result.rehearsal.lede": (
@@ -1637,18 +1646,15 @@ MESSAGES: dict[str, str] = {
     ),
     "result.raw.summary": "Afficher le JSON brut",
     "result.export.kicker": "Export",
-    "result.export.heading": "Exporter ce résultat",
+    "result.export.heading": "Télécharger ce résultat",
     "result.export.lede": (
-        "La même analyse, présentée de quatre façons. Chacune est générée à "
-        "la demande et disparaît avec l'analyse elle-même."
+        "Choisissez un rapport complet ou un kit de correction. Les liens de téléchargement fonctionnent jusqu’à l’expiration de l’analyse ; les fichiers enregistrés restent disponibles sur votre appareil."
     ),
     "result.export.pdf": "Rapport PDF",
     "result.export.pdf.hint": "Pour un ticket, une revue ou une impression.",
     "result.export.html": "Télécharger le rapport",
     "result.export.html.hint": (
-        "Un fichier qui reste lisible après l'expiration de ce lien. Il s'ouvre "
-        "hors ligne, n'effectue aucune requête réseau et ne se met pas à "
-        "jour."
+        "Un rapport autonome que vous pouvez ouvrir hors ligne après l’expiration de ce lien. Il n’effectue aucune requête réseau et ne se met pas à jour."
     ),
     "result.export.remediation.md": "Kit de correction (Markdown)",
     "result.export.remediation.md.hint": (
@@ -1666,32 +1672,23 @@ MESSAGES: dict[str, str] = {
     "result.export.sarif.hint": "Pour un tableau de bord d'analyse de code.",
     "result.export.json": "JSON",
     "result.export.json.hint": "Le document brut qu'évalue le plugin.",
-    "result.export.passed.heading": "Ce qui est déjà en règle",
+    "result.export.passed.heading": "Contrôles réussis",
     "result.export.passed.note": (
-        "Ces contrôles sont revenus propres, ils n'apparaissent donc pas dans le "
-        "plan ci-dessus."
+        "Ces contrôles ont réussi et ne nécessitent aucune action dans le plan de correction ci-dessus."
     ),
     "result.share.kicker": "Partager",
     "result.share.heading": "Partager ce rapport",
     "result.share.lede": "Copiez le lien ou un résumé, ou ouvrez un brouillon dans votre messagerie. Ce service n’envoie pas le rapport à votre place.",
     "result.share.warning": (
-        "L'adresse de cette page est la seule chose qui la protège : qui la "
-        "détient peut lire le rapport jusqu'à son expiration. La publier dans "
-        "un canal la partage avec tout le monde, et avec tout ce qui consulte "
-        "les liens pour en faire un aperçu. Copiez plutôt le résumé lorsque "
-        "ce sont les constats qui comptent."
+        "Toute personne disposant de ce lien peut lire le rapport jusqu’à son expiration. Le partager dans un canal donne aussi accès à ses membres et aux services d’aperçu des liens. Partagez plutôt le résumé textuel si vous ne souhaitez pas donner accès au rapport complet."
     ),
     "result.share.email": "Partager par courriel",
     "result.share.email.hint": (
-        "Ouvre votre propre logiciel de messagerie avec le message prêt. Rien "
-        "ne quitte votre navigateur avant l'envoi."
+        "Ouvre un message préparé dans votre logiciel de messagerie. Vous décidez de l’envoyer ou non."
     ),
     "result.share.email.subject": "Rapport de sécurité OpenCloud pour {target}",
     "result.share.email.body": (
-        "Voici le rapport de sécurité de notre instance OpenCloud :\n\n"
-        "{url}\n\n"
-        "Ce lien est ce qui donne accès au rapport : traitez-le comme un mot "
-        "de passe. Il expire de lui-même, après quoi la page n'existe plus."
+        "Voici le rapport de sécurité de notre instance OpenCloud :\n\n{url}\n\nToute personne disposant de ce lien peut lire le rapport. Traitez-le comme un mot de passe. Le lien cesse de fonctionner à l’expiration du rapport."
     ),
     "result.share.link": "Copier le lien",
     "result.share.link.hint": (
@@ -1699,8 +1696,7 @@ MESSAGES: dict[str, str] = {
     ),
     "result.share.summary": "Copier le résumé",
     "result.share.summary.hint": (
-        "Les constats en texte, sans aucun lien. Le plus sûr à coller dans un "
-        "canal de discussion."
+        "Constats sous forme de texte, sans lien vers le rapport. Partager le résumé ne donne pas accès au rapport complet."
     ),
     "result.share.summary.body": (
         "Rapport de sécurité OpenCloud - {domain}\n"

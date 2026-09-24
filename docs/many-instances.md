@@ -12,6 +12,7 @@ how to schedule the resulting checks.
   * [Where the checks should run from](#where-the-checks-should-run-from)
   * [Keeping the waivers honest](#keeping-the-waivers-honest)
   * [Only alerting on what changed](#only-alerting-on-what-changed)
+  * [One dashboard for the whole fleet](#one-dashboard-for-the-whole-fleet)
   * [Scheduling the whole thing](#scheduling-the-whole-thing)
 <!-- TOC -->
 
@@ -191,6 +192,30 @@ every day it stays up. See
 Add `--self-update-check` on one host in the fleet - not all of them - to be
 told when a newer plugin version is published. It is cached for a day and
 never changes the exit code.
+
+## One dashboard for the whole fleet
+
+Monitoring answers "is this instance broken right now", one host at a time.
+A fleet review asks something else: which instances run a release nobody
+patches any more, which waivers run out this month, which finding is broken
+everywhere, and which instance nobody has looked at lately. Keep the result
+documents `scan` writes, and `fleet` answers all four from the files alone:
+
+```shell
+dir="/var/lib/opencloud-reports/$(date +%F)"
+mkdir -p "$dir"
+for host in opencloud1.example.com opencloud2.example.com; do
+  check-opencloud-scanner scan "$host" > "$dir/$host.json"
+done
+check-opencloud-scanner fleet /var/lib/opencloud-reports \
+    --inventory /etc/check-opencloud-security/hosts.txt --format html > fleet.html
+```
+
+It scans nothing and stores nothing; the newest report of each host is the
+one that counts, and the release and the waiver deadlines are measured
+against today rather than the day the report was written. An inventory
+makes a host with no report at all show up as missing. See
+[`fleet` - a dashboard from saved results](scanner-cli.md#fleet---a-dashboard-from-saved-results).
 
 ## Scheduling the whole thing
 

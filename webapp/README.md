@@ -293,6 +293,11 @@ entry per fix in the CSV, `runs[0].properties.remediation` in the SARIF, a
 "What gets you to A+" section in the PDF, and `remediationPlan` in the JSON,
 which is the scanner's own document.
 
+The result page ("What to change where") and the remediation bundle also list
+the open findings grouped by where the change is made - reverse proxy,
+identity provider, OpenCloud, DNS zone - with each change naming every
+finding it resolves; in the JSON that is `remediationPlan.groups`.
+
 `GET /api/scans/{uuid}/badge.svg` is the fifth rendering and the smallest: the
 grade, drawn by `badge.py` as a self-contained SVG with no script, no external
 font and no request anywhere else - an embedded image that fetched a badge
@@ -475,7 +480,7 @@ authorisation a browser does.
 | `scan_instance` | Submit one target, wait for it, return the rating. `wait: false` returns the uuid instead |
 | `scan_instances` | The same for a list, over the batch endpoint, waiting only on the accepted ones |
 | `get_scan_result` | Read one uuid once, without waiting |
-| `plan_remediation` | What would raise the grade, in order, with the rating each step reaches |
+| `plan_remediation` | What would raise the grade, in order, with the rating each step reaches, and grouped by reverse proxy, identity provider, OpenCloud and DNS zone |
 | `compare_scans` | Two finished scans of one instance, compared: what was fixed, what is still open, what is new. Both must still be here |
 | `export_scan` | Download a finished result as `json`, `csv`, `sarif` or `pdf` |
 | `erase_instance_data` | **Destructive.** Erase everything held about one hostname. Needs the operator's credential |

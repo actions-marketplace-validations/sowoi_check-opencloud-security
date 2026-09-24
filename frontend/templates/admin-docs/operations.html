@@ -707,7 +707,7 @@ anything else refuses to start.</p>
 </tr>
 </tbody>
 </table>
-<p>Beside the overview there are five more places, reached from the tab strip at
+<p>Beside the overview there are six more places, reached from the tab strip at
 the top of every page in the area:</p>
 <table>
 <thead>
@@ -737,6 +737,10 @@ the top of every page in the area:</p>
 <td>Releases</td>
 <td>The ten newest released sections of <code>CHANGELOG.md</code>, newest first — what this release and the ones before it changed. <code>[Unreleased]</code> is left out: it is what a deployment does not run yet</td>
 </tr>
+<tr>
+<td>Decisions</td>
+<td>Every architecture decision record <code>adr/README.md</code> indexes, with its status and a filter over number, title and status; each record opens as its own page under <code>/admin/decisions/&lt;slug&gt;</code>. A link from one record, or from <code>ARCHITECTURE.md</code>, to another stays inside the area instead of going to GitHub. The area's search indexes every record's full text</td>
+</tr>
 </tbody>
 </table>
 <p>The three documents are generated into <code>frontend/templates/admin-docs/</code> at build time by
@@ -750,6 +754,15 @@ descriptions come from the same script, which extracts the <code>docs/webapp.md<
 table into <code>webapp/environment_reference.py</code>; its <code>--check</code> in CI fails when
 the two disagree, and <code>tests/test_webapp_admin_configuration.py</code> fails when
 a variable is read, listed or documented in one place and not the others.</p>
+<p>The decision records take the same path into <code>frontend/templates/admin-decisions/</code>,
+from the index table in <code>adr/README.md</code> rather than the directory listing,
+so a record reaches the area when it reaches the index. Because the web
+bundle does not ship <code>adr/</code>, the same script writes the list of records into
+<code>webapp/decision_records.py</code>, which the routes and the operator search index
+read. Like the documents above they are English only. The interface around
+them follows the reader's language. After adding or editing a record, run
+<code>scripts/build_frontend_documentation.py</code> and <code>scripts/build_search_index.py</code>;
+CI's <code>--check</code> of both fails until you do.</p>
 <p>The Releases tab changes only when a release is published: the publish
 workflow renames <code>[Unreleased]</code> to the new version and, in the same commit,
 regenerates that page and the area's search index. An ordinary pull
@@ -790,7 +803,7 @@ safest possible shape of that:</p>
   own language; the audit trail gets <code>exclusions_unreadable</code>, which is worth
   grepping for - it means this deployment could not reach its own Redis.</li>
 </ul>
-<p>See <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0044-the-operator-area-may-write-the-exclusions.md">ADR 0044</a> for why
+<p>See <a href="{{ admin_path }}/decisions/0044-the-operator-area-may-write-the-exclusions">ADR 0044</a> for why
 the area is allowed to write this and nothing else.</p>
 <p><strong>The readings say how old they are.</strong> They are polled every ten seconds, and
 a poll that stops answering would otherwise be indistinguishable from a

@@ -1100,30 +1100,41 @@ un límite, y **400** o **422** en los demás casos.
 
 ### `GET /api/scans/{uuid}/export/{format}` {#get-apiscansuuidexportformat}
 
-Un análisis terminado como archivo: `json`, `csv`, `sarif` o `pdf`.
+Un análisis terminado se puede descargar como `json`, `csv`, `sarif`, `pdf`
+o `html`. Los paquetes `remediation-md` y `remediation-html` solo contienen
+hallazgos pendientes que se pueden corregir y fragmentos de configuración
+propuestos para nginx, Caddy, Traefik, Compose y `.env`. Utilice un informe
+completo para consultar la nota, las comprobaciones superadas y los avisos
+de seguridad.
 
 ```bash
 curl -sS -OJ http://127.0.0.1:8811/api/scans/0f4a1f22-.../export/pdf
 ```
 
-Los cuatro incluyen el plan de corrección (la lista ordenada de correcciones
-con la nota que alcanza cada paso): como filas de resumen y de pasos en el CSV,
-`runs[0].properties.remediation` en el SARIF, una sección "What gets you to
-A+" en el PDF y `remediationPlan` en el JSON.
+El informe `html` es **un único archivo independiente** con sus estilos
+incluidos. Al abrirlo no hace solicitudes de red: no contiene scripts,
+imágenes, fuentes externas ni hojas de estilo externas. Los enlaces a la
+documentación solo se abren si los sigue. Incluye los hallazgos, los hallazgos
+eximidos con sus motivos, el plan de corrección, las lagunas de cobertura y
+los datos de referencia utilizados para evaluar el análisis. No contiene
+formularios, controles para repetir el análisis, consultas periódicas ni
+tokens de borrado.
 
-Incluyen el detalle de la seguridad del transporte en los mismos lugares: el
-bloque de cabecera en el CSV, `runs[0].properties.tls` en el SARIF, una sección
-"Transport security" en el PDF y el bloque `tls` en el JSON (protocolo,
-cifrado, validez del certificado y días restantes, integridad de la cadena y
-stapling OCSP). Una medición que no se pudo tomar es `null`, que significa "no
-determinado" y no "correcto".
+Los informes completos incluyen el plan de corrección: filas de resumen y
+pasos en CSV, `runs[0].properties.remediation` en SARIF, una sección del plan
+en PDF y HTML, y `remediationPlan` en JSON. Los detalles de transporte aparecen
+en el bloque de cabecera de CSV, `runs[0].properties.tls` en SARIF, las secciones
+de transporte de PDF y HTML, y `tls` en JSON. Incluyen el protocolo, el cifrado,
+la validez del certificado y los días restantes, la integridad de la cadena
+y el stapling OCSP. Un valor `null` significa que no se ha podido determinar
+la medición, no que se haya superado la comprobación.
 
-Los cuatro son representaciones del mismo resultado terminado, que se generan
-bajo demanda y desaparecen cuando caduca el análisis. El PDF lo escribe este
-servicio y no una biblioteca de informes, por la misma razón por la que la
-interfaz no carga nada de una CDN. La respuesta de `GET /api/scans/{uuid}`
-terminada anuncia las cuatro URL en `exports`, y la página de resultados las
-ofrece como botones de descarga.
+Las descargas se generan a petición a partir del resultado almacenado. Sus
+enlaces dejan de funcionar cuando caduca el análisis. Los archivos ya guardados
+siguen disponibles, no se actualizan y no se eliminan al borrar el análisis.
+La respuesta de `GET /api/scans/{uuid}` para un análisis terminado enumera
+las URL de descarga en `exports`; la página de resultados ofrece los mismos
+formatos mediante botones de descarga.
 
 #### Exportaciones firmadas {#signed-exports}
 

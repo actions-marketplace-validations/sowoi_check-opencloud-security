@@ -1431,25 +1431,36 @@ ninguno, el estado es el motivo por el que se rechazó el primer destino:
 <strong>429</strong> con <code>Retry-After</code> y la sugerencia de alojarlo por cuenta propia si fue
 un límite, y <strong>400</strong> o <strong>422</strong> en los demás casos.</p>
 <h3 id="get-apiscansuuidexportformat"><code>GET /api/scans/{uuid}/export/{format}</code></h3>
-<p>Un análisis terminado como archivo: <code>json</code>, <code>csv</code>, <code>sarif</code> o <code>pdf</code>.</p>
+<p>Un análisis terminado se puede descargar como <code>json</code>, <code>csv</code>, <code>sarif</code>, <code>pdf</code>
+o <code>html</code>. Los paquetes <code>remediation-md</code> y <code>remediation-html</code> solo contienen
+hallazgos pendientes que se pueden corregir y fragmentos de configuración
+propuestos para nginx, Caddy, Traefik, Compose y <code>.env</code>. Utilice un informe
+completo para consultar la nota, las comprobaciones superadas y los avisos
+de seguridad.</p>
 <pre><code class="language-bash">curl -sS -OJ http://127.0.0.1:8811/api/scans/0f4a1f22-.../export/pdf
 </code></pre>
-<p>Los cuatro incluyen el plan de corrección (la lista ordenada de correcciones
-con la nota que alcanza cada paso): como filas de resumen y de pasos en el CSV,
-<code>runs[0].properties.remediation</code> en el SARIF, una sección "What gets you to
-A+" en el PDF y <code>remediationPlan</code> en el JSON.</p>
-<p>Incluyen el detalle de la seguridad del transporte en los mismos lugares: el
-bloque de cabecera en el CSV, <code>runs[0].properties.tls</code> en el SARIF, una sección
-"Transport security" en el PDF y el bloque <code>tls</code> en el JSON (protocolo,
-cifrado, validez del certificado y días restantes, integridad de la cadena y
-stapling OCSP). Una medición que no se pudo tomar es <code>null</code>, que significa "no
-determinado" y no "correcto".</p>
-<p>Los cuatro son representaciones del mismo resultado terminado, que se generan
-bajo demanda y desaparecen cuando caduca el análisis. El PDF lo escribe este
-servicio y no una biblioteca de informes, por la misma razón por la que la
-interfaz no carga nada de una CDN. La respuesta de <code>GET /api/scans/{uuid}</code>
-terminada anuncia las cuatro URL en <code>exports</code>, y la página de resultados las
-ofrece como botones de descarga.</p>
+<p>El informe <code>html</code> es <strong>un único archivo independiente</strong> con sus estilos
+incluidos. Al abrirlo no hace solicitudes de red: no contiene scripts,
+imágenes, fuentes externas ni hojas de estilo externas. Los enlaces a la
+documentación solo se abren si los sigue. Incluye los hallazgos, los hallazgos
+eximidos con sus motivos, el plan de corrección, las lagunas de cobertura y
+los datos de referencia utilizados para evaluar el análisis. No contiene
+formularios, controles para repetir el análisis, consultas periódicas ni
+tokens de borrado.</p>
+<p>Los informes completos incluyen el plan de corrección: filas de resumen y
+pasos en CSV, <code>runs[0].properties.remediation</code> en SARIF, una sección del plan
+en PDF y HTML, y <code>remediationPlan</code> en JSON. Los detalles de transporte aparecen
+en el bloque de cabecera de CSV, <code>runs[0].properties.tls</code> en SARIF, las secciones
+de transporte de PDF y HTML, y <code>tls</code> en JSON. Incluyen el protocolo, el cifrado,
+la validez del certificado y los días restantes, la integridad de la cadena
+y el stapling OCSP. Un valor <code>null</code> significa que no se ha podido determinar
+la medición, no que se haya superado la comprobación.</p>
+<p>Las descargas se generan a petición a partir del resultado almacenado. Sus
+enlaces dejan de funcionar cuando caduca el análisis. Los archivos ya guardados
+siguen disponibles, no se actualizan y no se eliminan al borrar el análisis.
+La respuesta de <code>GET /api/scans/{uuid}</code> para un análisis terminado enumera
+las URL de descarga en <code>exports</code>; la página de resultados ofrece los mismos
+formatos mediante botones de descarga.</p>
 <h4 id="signed-exports">Exportaciones firmadas</h4>
 <p>Con <code>COS_WEB_EXPORT_SIGNING_KEY</code> definido, cada respuesta de exportación lleva
 una firma de sus bytes exactos:</p>

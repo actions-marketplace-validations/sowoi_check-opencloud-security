@@ -110,6 +110,36 @@ antes de que existieran las huellas no puede detectar cambios de configuración
 porque carece de huellas para compararlas. Por eso no informa de cambios;
 esto no demuestra que la configuración siga igual.
 
+## Regresiones de cobertura {#coverage-regressions}
+
+
+Una línea base también recuerda en qué comprobaciones el análisis **llegó a
+una conclusión**. Cuando una comprobación que antes se midió ahora es
+`inconclusive` - se ejecutó sin poder decidir, por ejemplo porque una consulta
+DNS no respondió a tiempo -, la ejecución lo indica aunque la calificación no
+haya cambiado:
+
+```text
+WARNING: 1 previously measured check(s) are now inconclusive; the rating is unchanged (Server is up to date. No known vulnerabilities.)
+Coverage regressed (1): previously measured, now inconclusive: caaRecord (timeout) - the rating is unaffected.
+```
+
+Esto se mantiene separado de la calificación de seguridad a propósito. La
+calificación, los perfdata y los hallazgos siguen siendo los que dieron las
+mediciones; solo cambia el estado de alerta, y solo de `OK` a `WARNING`. Una
+ejecución que ya está en `WARNING` o `CRITICAL` conserva su mensaje y añade la
+línea. `--warn-on-new` no la suprime: un análisis que de pronto ve menos es
+una novedad.
+
+- Solo cuenta `inconclusive`. Una comprobación que pasa a `not_checked` -
+  desactivada por usted o que ya no aplica - no es una regresión del análisis.
+- Una comprobación perdida sigue contando como «medida antes» hasta que una
+  ejecución posterior la vuelva a medir: el aviso dura lo que dura la laguna.
+- El webhook incluye la lista en `baseline_diff` como `coverage_regressed`; la
+  comparación de dos documentos la indica como `coverageRegressed`.
+- Una línea base anterior sin cobertura no puede indicar ninguna pérdida en la
+  primera ejecución tras actualizar; registra lo medido para la siguiente.
+
 ## Aspectos que conviene conocer {#points-worth-knowing}
 
 

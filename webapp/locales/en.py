@@ -32,6 +32,7 @@ MESSAGES: dict[str, str] = {
     "admin.tabs.overview": "Overview",
     "admin.tabs.configuration": "Configuration",
     "admin.tabs.rules": "Rules",
+    "admin.tabs.decisions": "Decisions",
     "admin.config.title": "Configuration",
     "admin.config.lede": "Every COS_WEB_* variable this service reads, and the value it is running with.",
     "admin.config.scope": "These are this web process’s effective settings at startup. OpenCloud and the scan worker have their own configuration. Credentials are shown only as set or not set.",
@@ -148,6 +149,12 @@ MESSAGES: dict[str, str] = {
     "admin.rules.rule.admin_refresh.body": "Each reference-data refresh may be pressed once every {cooldown}.",
     "admin.docs.kicker": "Operator documentation",
     "admin.docs.source": "Shown from <code>{file}</code> in the repository, in English.",
+    "admin.decisions.title": "Architecture decisions",
+    "admin.decisions.lede": "Every architectural decision record in this repository and its status, shown in English as written.",
+    "admin.decisions.search.label": "Filter the decision records",
+    "admin.decisions.search.placeholder": "Number, title or status",
+    "admin.decisions.search.empty": "No record matches. The site search also looks inside each record's text.",
+    "admin.decisions.back": "All decisions",
     "admin.band": "Operator area - signed in as {user}",
     # Shown only where COS_WEB_ADMIN_SIGN_OUT_URL named where the provider in
     # front ends its session. This service has none of its own to end.
@@ -1149,19 +1156,17 @@ MESSAGES: dict[str, str] = {
         "from is gone."
     ),
     "compare.upload.error.missing": (
-        "No file was uploaded. Choose the JSON or CSV report you downloaded "
-        "earlier."
+        "No report was uploaded. Choose a JSON or CSV report downloaded from a result page."
     ),
     "compare.upload.error.no_current": "Enter the UUID of the scan you want to compare with this report.",
-    "compare.upload.error.empty": "That file is empty.",
+    "compare.upload.error.empty": "The uploaded file is empty. Choose a downloaded JSON or CSV report.",
     "compare.upload.error.too_large": "The file exceeds the {kilobytes} KB size limit.",
     "compare.upload.error.unreadable": (
         "That file could not be read as JSON or as CSV. Upload the file exactly "
         "as it was downloaded, without opening and re-saving it."
     ),
     "compare.upload.error.not_a_report": (
-        "That file does not look like a scan report from this service. The "
-        "downloads on a result page are what this expects."
+        "This file is not a recognised scan report. Use a JSON or CSV download from a result page."
     ),
     "compare.upload.error.rate_limit": (
         "That is a lot of reports from your network in a short time. Give it a "
@@ -1256,9 +1261,7 @@ MESSAGES: dict[str, str] = {
         "scanner runs on your machine too."
     ),
     "error.rate_limit.daily": (
-        "That is all the scans this service can run for your network today. It "
-        "will make room again tomorrow - or run the scanner yourself, which has "
-        "no daily limit."
+        "Sorry, your network has reached today’s scan limit. Please try again tomorrow, or run the scanner on your own machine without this daily limit."
     ),
     "error.target.wildcard_dns": (
         "That name belongs to a service that points names at any address. Enter "
@@ -1269,8 +1272,7 @@ MESSAGES: dict[str, str] = {
         "up, so this service cannot tell what it would scan."
     ),
     "error.target.not_approved": (
-        "This service only scans instances that have been approved for it. Ask "
-        "the operator to add it, or publish the DNS record that approves it."
+        "This service scans approved instances only. Ask the operator to approve this instance, or publish the required DNS approval record."
     ),
     "error.rate_limit.target": (
         "That instance was scanned very recently. Please give it a few minutes."
@@ -1281,7 +1283,7 @@ MESSAGES: dict[str, str] = {
     "error.target.characters": (
         "That address contains characters a hostname cannot have."
     ),
-    "error.target.unparsed": "That address could not be parsed.",
+    "error.target.unparsed": "This address could not be read. Check it and enter the instance’s base URL.",
     "error.target.scheme": "Only http:// and https:// targets can be scanned.",
     "error.target.credentials": "Credentials in the address are not accepted.",
     "error.target.address_only": (
@@ -1293,7 +1295,7 @@ MESSAGES: dict[str, str] = {
     "error.target.hostname_shape": (
         "That is not a hostname this service can scan."
     ),
-    "error.target.unresolved": "That hostname does not resolve.",
+    "error.target.unresolved": "No IP address could be found for this hostname. Check the spelling and DNS configuration.",
     "error.target.hostname_long": "That hostname is too long.",
     "error.target.internal": "Local and internal addresses cannot be scanned.",
     "error.target.private": (
@@ -1301,16 +1303,14 @@ MESSAGES: dict[str, str] = {
         "which this service will not scan."
     ),
     "error.target.blocked": (
-        "This service has been asked not to scan that address."
+        "The operator has excluded this address from scanning."
     ),
     # Not about the address at all: this deployment could not read its own
     # exclusions and refuses to scan without them. Said plainly, because the
     # visitor has nothing to fix and the only useful next step is the one the
     # self-host pointer beside it offers.
     "error.store_unavailable": (
-        "This service cannot reach its own configuration right now, and will "
-        "not scan without knowing what it has been asked to leave alone. "
-        "Please try again in a few minutes."
+        "The service cannot read its list of excluded targets, so it cannot safely start a scan. Please try again in a few minutes."
     ),
     # ----------------------------------------------------------- result page
     "result.title": "Scan results",
@@ -1336,10 +1336,9 @@ MESSAGES: dict[str, str] = {
     "result.compare.offer": "You scanned this instance earlier in this tab, at {time}.",
     "result.compare.offer.link": "See what changed since then",
     "result.progress.kicker": "In progress",
-    "result.progress.queued.title": "Waiting for a scanner worker",
+    "result.progress.queued.title": "Waiting to start the scan",
     "result.progress.queued.detail": (
-        "Every worker is busy right now. Your scan keeps its place in line and "
-        "starts as soon as one is free."
+        "All scan processes are busy. Your scan keeps its place in the queue and starts when one becomes available."
     ),
     "result.progress.running.title": "Scanning the instance",
     "result.progress.running.detail": (
@@ -1350,21 +1349,20 @@ MESSAGES: dict[str, str] = {
     "result.progress.step.running": "Running",
     "result.progress.step.done": "Result",
     "result.progress.estimate": "Most scans finish in under a minute.",
-    "result.progress.elapsed": "{duration} elapsed",
+    "result.progress.elapsed": "Elapsed time: {duration}",
     "result.progress.noscript": (
-        "This page updates itself with JavaScript. Without it, reload the page in "
-        "a few seconds to see the result."
+        "JavaScript refreshes this page automatically. If JavaScript is unavailable, reload the page after a few seconds to see the result."
     ),
     "result.progress.queue.position": (
         "Scan queued. Position in line: #{position} of {length}."
     ),
-    "result.progress.queue.next": "Scan queued. You are next in line.",
-    "result.progress.queue.waiting": "Waiting for a scanner worker to pick this up.",
+    "result.progress.queue.next": "Your scan is next in the queue.",
+    "result.progress.queue.waiting": "Waiting for an available scan process.",
     "result.progress.done.title": "Report ready",
-    "result.progress.done.detail": "The grade is in. Opening the report.",
+    "result.progress.done.detail": "The scan is complete. Opening the report.",
     "result.progress.failed.title": "Scan finished",
     "result.progress.failed.detail": (
-        "The scan could not be completed. Opening the result page."
+        "The scan could not finish. Opening the result page with the error details."
     ),
     "result.failed.fallback": "The scan could not be completed.",
     "result.failed.body": "The scanner could not obtain enough information to assign a grade. Check the address, confirm that it runs OpenCloud and make sure it is reachable from this service.",
@@ -1446,6 +1444,16 @@ MESSAGES: dict[str, str] = {
         "These values are hardcoded in OpenCloud and cannot be changed through "
         "configuration. They prevent the plan from reaching a higher grade."
     ),
+    "result.groups.kicker": "Grouped by configuration",
+    "result.groups.heading": "What to change where",
+    "result.groups.lede": "The same open findings, grouped by the system you edit to fix them, including findings that do not affect the grade. One change often resolves several findings.",
+    "result.groups.target.reverseProxy": "Reverse proxy",
+    "result.groups.target.identityProvider": "Identity provider",
+    "result.groups.target.opencloud": "OpenCloud",
+    "result.groups.target.dnsZone": "DNS zone",
+    "result.groups.count": "{count} open findings, {label} with every change here",
+    "result.groups.resolves": "Resolves {count} findings together",
+    "result.groups.alone": "this change alone: {label}",
     "result.rehearsal.kicker": "Upgrade rehearsal",
     "result.rehearsal.heading": "What an upgrade would fix",
     "result.rehearsal.lede": (
@@ -1634,17 +1642,15 @@ MESSAGES: dict[str, str] = {
     "result.raw.lede": "The full result document, exactly as the plugin sees it.",
     "result.raw.summary": "Show the raw JSON",
     "result.export.kicker": "Export",
-    "result.export.heading": "Take this result with you",
+    "result.export.heading": "Download this result",
     "result.export.lede": (
-        "The same scan, rendered four ways. Each one is generated when you ask for "
-        "it and disappears with the scan itself."
+        "Choose a full report or a remediation bundle. Download links work until the scan expires; files you have saved remain available on your device."
     ),
     "result.export.pdf": "PDF report",
     "result.export.pdf.hint": "For a ticket, a review or a printout.",
     "result.export.html": "Download the report",
     "result.export.html.hint": (
-        "One file that still reads after this link expires. Opens offline, "
-        "makes no network request, and does not update."
+        "A standalone report you can open offline after this link expires. It makes no network requests and does not update."
     ),
     "result.export.remediation.md": "Remediation bundle (Markdown)",
     "result.export.remediation.md.hint": (
@@ -1662,31 +1668,23 @@ MESSAGES: dict[str, str] = {
     "result.export.sarif.hint": "For a code-scanning dashboard.",
     "result.export.json": "JSON",
     "result.export.json.hint": "The raw document the plugin evaluates.",
-    "result.export.passed.heading": "What already passed",
+    "result.export.passed.heading": "Checks that passed",
     "result.export.passed.note": (
-        "These checks came back clean, so they are not in the plan above."
+        "These checks passed and require no action in the remediation plan above."
     ),
     "result.share.kicker": "Share",
     "result.share.heading": "Share this report",
     "result.share.lede": "Copy the link or a text summary, or open a draft in your email client. This service does not send the report for you.",
     "result.share.warning": (
-        "The address of this page is the only thing protecting it: anyone who "
-        "has it can read the report until it expires. Posting it in a channel "
-        "shares it with everyone in that channel, and with whatever fetches "
-        "links there to build a preview. Copy the summary instead where the "
-        "findings are the point."
+        "Anyone who has this link can read the report until it expires. Sharing it in a channel also grants access to its members and link-preview services. Share the text summary instead if you do not want to grant access to the full report."
     ),
     "result.share.email": "Share by email",
     "result.share.email.hint": (
-        "Opens your own mail client with the message ready. Nothing leaves "
-        "your browser until you send it."
+        "Opens a prepared message in your email client. You choose whether to send it."
     ),
     "result.share.email.subject": "OpenCloud security report for {target}",
     "result.share.email.body": (
-        "Here is the security report for our OpenCloud instance:\n\n"
-        "{url}\n\n"
-        "This link is what grants access to the report, so treat it as a "
-        "password. It expires on its own, after which the page is gone."
+        "Here is the security report for our OpenCloud instance:\n\n{url}\n\nAnyone with this link can read the report. Treat it like a password. The link stops working when the report expires."
     ),
     "result.share.link": "Copy link",
     "result.share.link.hint": (
@@ -1694,8 +1692,7 @@ MESSAGES: dict[str, str] = {
     ),
     "result.share.summary": "Copy summary",
     "result.share.summary.hint": (
-        "The findings as text, with no link in it. The safer thing to paste "
-        "into a chat channel."
+        "Findings as text, without a report link. Sharing the summary does not grant access to the full report."
     ),
     "result.share.summary.body": (
         "OpenCloud security report - {domain}\n"

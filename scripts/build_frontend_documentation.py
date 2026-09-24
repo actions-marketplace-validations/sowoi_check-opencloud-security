@@ -324,7 +324,7 @@ def render_operator_page(slug: str) -> str:
     body = re.sub(r'\s+style="[^"]*"', "", body)
     body = _rewrite_relative_links(body, page.source)
     body = _rewrite_image_sources(body, page.source)
-    body = _escape_jinja(body)
+    body = _link_decisions_in_area(_escape_jinja(body))
     toc = _table_of_contents(body)
     toc_block = f"{toc}\n" if toc else ""
     return f"""{GENERATED_MARKER}
@@ -363,6 +363,178 @@ def render_operator_page(slug: str) -> str:
 </article>
 {{% endblock %}}
 """
+
+
+#: The architecture decision records, rendered for the operator area only.
+#: Their own directory beside `admin-docs/`, because they are one tab and not
+#: one tab each: `adr/README.md`'s index becomes the tab, every record a page
+#: under it.
+DECISION_SOURCE_DIR = REPO_ROOT / "adr"
+DECISION_OUTPUT_DIR = REPO_ROOT / "frontend" / "templates" / "admin-decisions"
+#: The records the running service knows, as a Python module: the web bundle
+#: does not ship `adr/`, so the routes and the operator search index read
+#: this instead of the directory.
+DECISION_MANIFEST = REPO_ROOT / "webapp" / "decision_records.py"
+_DECISION_ROW = re.compile(
+    r"^\| \[(?P<number>\d{4})\]\((?P<slug>\d{4}-[a-z0-9-]+)\.md\) "
+    r"\| (?P<title>.+?) \| (?P<status>.+?) \|$"
+)
+_DECISION_LINK = re.compile(
+    rf'href="{re.escape(PROJECT_URL)}/blob/main/adr/'
+    r'(?P<target>README|\d{4}-[a-z0-9-]+)\.md(?P<fragment>#[^"]*)?"'
+)
+
+
+def decision_records() -> list[tuple[str, str, str, str]]:
+    """Number, slug, title and status of every record `adr/README.md` indexes.
+
+    The index rather than the files, because it is the curated list: a record
+    reaches the area the same way it reaches a reader of the repository.
+    """
+    source = (DECISION_SOURCE_DIR / "README.md").read_text(encoding="utf-8")
+    records = []
+    for line in source.splitlines():
+        match = _DECISION_ROW.match(line.strip())
+        if match is None:
+            continue
+        if not (DECISION_SOURCE_DIR / f"{match['slug']}.md").is_file():
+            raise ValueError(f"adr/README.md indexes a missing record: {match['slug']}")
+        records.append(
+            (match["number"], match["slug"], _plain(match["title"]), _plain(match["status"]))
+        )
+    if not records:
+        raise ValueError("adr/README.md has no index rows")
+    return records
+
+
+def _link_decisions_in_area(body: str) -> str:
+    """Keep a link to a decision record inside the operator area.
+
+    Runs after the general rewrite, which sends every repository file to
+    GitHub, and after Jinja escaping, because the address it writes is the
+    area's own `admin_path`.
+    """
+    known = {slug for _, slug, _, _ in decision_records()}
+
+    def rewrite(match: re.Match[str]) -> str:
+        target, fragment = match["target"], match["fragment"] or ""
+        if target == "README":
+            return f'href="{{{{ admin_path }}}}/decisions{fragment}"'
+        if target not in known:
+            return match.group(0)
+        return f'href="{{{{ admin_path }}}}/decisions/{target}{fragment}"'
+
+    return _DECISION_LINK.sub(rewrite, body)
+
+
+def _operator_chrome(title: str, description: str, content: str) -> str:
+    """The operator area's page wrapper around generated content."""
+    return f"""{GENERATED_MARKER}
+{{% extends "base.html" %}}
+
+{{% block title %}}{title}{{% endblock %}}
+{{% block description %}}{description}{{% endblock %}}
+
+{{% block head %}}
+<link rel="stylesheet" href="/static/css/admin.css">
+{{% endblock %}}
+
+{{% block content %}}
+<section class="admin-band" role="note">
+  <span class="admin-band-dot" aria-hidden="true"></span>
+  <p class="flush">
+    {{{{ t('admin.band', user=operator.username) }}}}
+  </p>
+  {{% if sign_out_url %}}
+  <a class="admin-band-exit" href="{{{{ sign_out_url }}}}">{{{{ t('admin.band.signout') }}}}</a>
+  {{% endif %}}
+</section>
+
+{{% include "_admin-tabs.html" %}}
+{content}{{% endblock %}}
+"""
+
+
+def render_decision_index() -> str:
+    """The Decisions tab: every indexed record, with a filter over the list."""
+    rows = "\n".join(
+        f'    <li class="admin-decision" data-decision="'
+        f'{html.escape(f"{number} adr {number} {title} {status}".lower(), quote=True)}">\n'
+        f'      <span class="admin-decision-number">{number}</span>\n'
+        f'      <a class="admin-decision-title" href="{{{{ admin_path }}}}/decisions/{slug}">'
+        f"{html.escape(title)}</a>\n"
+        f'      <span class="admin-decision-status">{html.escape(status)}</span>\n'
+        "    </li>"
+        for number, slug, title, status in decision_records()
+    )
+    content = f"""
+<section class="page-head admin-head">
+  <p class="kicker">{{{{ t('admin.docs.kicker') }}}}</p>
+  <h1>{{{{ t('admin.decisions.title') }}}}</h1>
+  <p class="lede">{{{{ t('admin.decisions.lede') }}}}</p>
+</section>
+
+<p class="hint section-gap">{{{{ t.html('admin.docs.source', file='adr/README.md') }}}}</p>
+
+<section class="card section-gap" data-reveal>
+  <div class="admin-decision-search">
+    <label class="visually-hidden" for="admin-decision-search">{{{{ t('admin.decisions.search.label') }}}}</label>
+    <input type="search" id="admin-decision-search" data-decision-filter
+           placeholder="{{{{ t('admin.decisions.search.placeholder') }}}}"
+           autocomplete="off" spellcheck="false" maxlength="120">
+    <p class="hint admin-decision-empty" id="admin-decision-empty" hidden aria-live="polite">
+      {{{{ t('admin.decisions.search.empty') }}}}
+    </p>
+  </div>
+  <ol class="admin-decisions" lang="en">
+{rows}
+  </ol>
+</section>
+"""
+    # The filter is revealed by its script, so a reader without scripting is
+    # never shown a field that cannot filter.
+    return _operator_chrome(
+        "{{ t('admin.decisions.title') }}", "{{ t('admin.decisions.lede') }}", content
+    ) + (
+        "\n{% block scripts %}\n"
+        '<script src="/static/js/admin-decisions.js" defer></script>\n'
+        "{% endblock %}\n"
+    )
+
+
+def render_decision_record(slug: str) -> str:
+    """One decision record, in the area and in the language it was written in."""
+    record = {row[1]: row for row in decision_records()}[slug]
+    number, _, title, status = record
+    source_path = f"adr/{slug}.md"
+    source = (REPO_ROOT / source_path).read_text(encoding="utf-8")
+    body = markdown.markdown(
+        _section(source, None, None),
+        extensions=list(MARKDOWN_EXTENSIONS),
+        output_format="html5",
+    )
+    body = re.sub(r'\s+style="[^"]*"', "", body)
+    body = _rewrite_relative_links(body, source_path)
+    body = _rewrite_image_sources(body, source_path)
+    body = _link_decisions_in_area(_escape_jinja(body))
+    toc = _table_of_contents(body)
+    toc_block = f"{toc}\n" if toc else ""
+    heading = html.escape(f"ADR {number}: {title}")
+    content = f"""
+<section class="page-head admin-head">
+  <p class="kicker">{{{{ t('admin.docs.kicker') }}}}</p>
+  <h1 lang="en">{heading}</h1>
+  <p class="lede" lang="en">{html.escape(status)}</p>
+</section>
+
+<p class="hint section-gap">{{{{ t.html('admin.docs.source', file='{source_path}') }}}}
+  <a href="{{{{ admin_path }}}}/decisions">{{{{ t('admin.decisions.back') }}}}</a></p>
+
+{toc_block}<article class="docs-article card section-gap" data-reveal lang="en">
+{body}
+</article>
+"""
+    return _operator_chrome(heading, f"ADR {number}, {html.escape(status)}.", content)
 
 
 #: Where the operator area's configuration tab reads each variable's
@@ -417,10 +589,38 @@ REFERENCE: dict[str, dict[str, str]] = {{
 '''
 
 
+def render_decision_manifest() -> str:
+    """The indexed decision records, as the module the web application reads."""
+    entries = "\n".join(
+        f"    ({json.dumps(number)}, {json.dumps(slug)}, "
+        f"{json.dumps(title, ensure_ascii=False)}, {json.dumps(status, ensure_ascii=False)}),"
+        for number, slug, title, status in decision_records()
+    )
+    return f'''"""
+Generated by scripts/build_frontend_documentation.py from adr/README.md.
+
+Number, slug, title and status of every architecture decision record the
+operator area renders under ``/admin/decisions``. The web bundle does not ship
+``adr/``, so this is what the routes and the operator search index read. Edit
+the index in adr/README.md and regenerate; CI fails when they disagree.
+"""
+
+RECORDS: tuple[tuple[str, str, str, str], ...] = (
+{entries}
+)
+'''
+
+
 def generated_pages() -> dict[Path, str]:
     """Every generated path and the exact content it should carry."""
     return {
         ENVIRONMENT_OUTPUT: render_environment_reference(),
+        DECISION_MANIFEST: render_decision_manifest(),
+        DECISION_OUTPUT_DIR / "index.html": render_decision_index(),
+        **{
+            DECISION_OUTPUT_DIR / f"{slug}.html": render_decision_record(slug)
+            for _, slug, _, _ in decision_records()
+        },
         **{
             OUTPUT_DIR / f"{page.slug}.html": render_page(page.slug)
             for page in DOCUMENTATION_PAGES
@@ -468,7 +668,12 @@ def write_pages() -> None:
     for language in GUIDE_LANGUAGES:
         (OUTPUT_DIR / language).mkdir(parents=True, exist_ok=True)
     OPERATOR_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    for path in (*OUTPUT_DIR.rglob("*.html"), *OPERATOR_OUTPUT_DIR.rglob("*.html")):
+    DECISION_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    for path in (
+        *OUTPUT_DIR.rglob("*.html"),
+        *OPERATOR_OUTPUT_DIR.rglob("*.html"),
+        *DECISION_OUTPUT_DIR.rglob("*.html"),
+    ):
         if path not in expected and path.read_text(encoding="utf-8").startswith(
             GENERATED_MARKER
         ):
@@ -485,7 +690,7 @@ def stale_pages() -> list[Path]:
         for path, content in expected.items()
         if not path.exists() or path.read_text(encoding="utf-8") != content
     ]
-    for directory in (OUTPUT_DIR, OPERATOR_OUTPUT_DIR):
+    for directory in (OUTPUT_DIR, OPERATOR_OUTPUT_DIR, DECISION_OUTPUT_DIR):
         if not directory.exists():
             continue
         stale.extend(

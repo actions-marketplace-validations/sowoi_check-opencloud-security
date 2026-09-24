@@ -62,15 +62,19 @@ is needed.
 | [`test_hardening.py`](test_hardening.py) | Every check the scanner can report appears in the hardening catalogue. |
 | [`test_waivers.py`](test_waivers.py) | Waiving hardening findings, and declaring an instance's release track. |
 | [`test_waiver_expiry.py`](test_waiver_expiry.py) | A waiver with a reason and a deadline, and the alert coming back when it passes. |
+| [`test_waiver_review.py`](test_waiver_review.py) | `check-opencloud-scanner review-waivers`: expired, expiring, unused, overlapping and permanent waivers each named with a suggestion, and the configuration left byte-for-byte unchanged. |
 | [`test_change_explanation.py`](test_change_explanation.py) | Why two results differ, claimed only as far as the evidence supports. |
 | [`test_webapp_html_report.py`](test_webapp_html_report.py) | The standalone report: no request on opening, and nothing in it is markup. |
 | [`test_upgrade_rehearsal.py`](test_upgrade_rehearsal.py) | The upgrade rehearsal: each candidate release's fixes, leftovers and rating follow the scanner's own version rules and keep the finding caps. |
 | [`test_webapp_remediation_bundle.py`](test_webapp_remediation_bundle.py) | The remediation bundle: only the open work, every flavour of the fix, and nothing a waiver already accepted. |
+| [`test_webapp_remediation_groups.py`](test_webapp_remediation_groups.py) | The grouped remediation plan on the result page, in both bundles and in the API contract. |
 | [`test_remediation.py`](test_remediation.py) | The remediation planner never promises a grade that its fixes would not reach. |
+| [`test_remediation_groups.py`](test_remediation_groups.py) | Grouped remediation: every open finding filed where its fix is made, and no change credited with a grade it cannot deliver. |
 | [`test_snippets.py`](test_snippets.py) | Configuration fragments for fixes, and that they match the prose describing them. |
 | [`test_explain.py`](test_explain.py) | Debug mode: why a rating is what it is, and what each hardening identifier means. |
 | [`test_cli_explain.py`](test_cli_explain.py) | Looking up a finding identifier from the catalogue without running a scan. |
 | [`test_diff_command.py`](test_diff_command.py) | `check-opencloud-scanner diff`: the changes between two saved scans, and refusing to compare different instances. |
+| [`test_fleet_command.py`](test_fleet_command.py) | `check-opencloud-scanner fleet`: a dashboard from reports on disk - end-of-life releases, waiver deadlines, shared findings, missing or stale hosts, and no markup injected by a scanned host. |
 | [`test_finding_deltas.py`](test_finding_deltas.py) | Two results compared finding by finding: the severity on each side, the category filter, and absent never read as passing. |
 | [`test_service.py`](test_service.py) | The HTTP scan service that runs in the container, including its result cache. |
 | [`test_config.py`](test_config.py) | Layered configuration (file, environment, flags) and the secret providers. |
@@ -113,6 +117,7 @@ is needed.
 | [`test_eol_warning.py`](test_eol_warning.py) | `--eol-warning`: an otherwise OK result warns while support is running out, from flag, environment or file. |
 | [`test_waiver_warning.py`](test_waiver_warning.py) | `--waiver-warning` and `waiver_days_left`: lead time before a temporary waiver runs out, and which deadline counts. |
 | [`test_coverage_perfdata.py`](test_coverage_perfdata.py) | `coverage_inconclusive` and `coverage_not_checked`: the coverage block as graphable numbers that never move the state. |
+| [`test_coverage_regression.py`](test_coverage_regression.py) | A check measured in the baseline that becomes inconclusive warns without moving the rating, and `--warn-on-new` does not suppress it. |
 | [`test_upgrade_path.py`](test_upgrade_path.py) | `upgradePath`: what the recommended release fixes and leaves open, and the plugin lines for it and for an advertised HTTP/3 listener. |
 | [`test_webapp_report_facts.py`](test_webapp_report_facts.py) | The report's facts list: an advertised HTTP/3 listener and the upgrade path, rendered from a real scan. |
 | [`test_webapp_rehearsal.py`](test_webapp_rehearsal.py) | The upgrade rehearsal on the result page: every rating comes from the scan document, an older result renders without the panel, and a version string the host chose stays text. |
@@ -121,9 +126,8 @@ is needed.
 | [`test_e2e_cli.py`](test_e2e_cli.py) | End to end: both CLIs run as subprocesses over real HTTP against the fake instance. |
 | [`test_completion.py`](test_completion.py) | Shell completion, and a host without `argcomplete` running exactly as before. |
 | [`test_selfupdate.py`](test_selfupdate.py) | `--upgrade-self` uses the right tool (pip, pipx, uv) for the installation. |
-| [`test_monitoring_export.py`](test_monitoring_export.py) | The wizard's answers as an Icinga service and systemd units: the thresholds it states, the flag inversions, and the credentials it never writes. |
+| [`test_monitoring_export.py`](test_monitoring_export.py) | What the wizard writes for a scheduler: the Icinga service, cron entry and systemd unit carry the operator's own thresholds, flag inversions and release track, and never a webhook credential in a world-readable file. |
 | [`test_wizard.py`](test_wizard.py) | The interactive setup behind `--configure`. |
-| [`test_monitoring_export.py`](test_monitoring_export.py) | What the wizard writes for a scheduler: the Icinga service, cron entry and systemd unit carry the operator's own thresholds and release track, and never a webhook credential in a world-readable file. |
 
 ## Web application (`webapp/` + `frontend/`)
 

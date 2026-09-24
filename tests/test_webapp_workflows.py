@@ -478,6 +478,17 @@ def _completed_with_plan() -> wf.ApiResponse:
                             "detail": "Basic offered",
                         },
                     ],
+                    "groups": [
+                        {
+                            "target": "reverseProxy",
+                            "findings": 1,
+                            "ratingAfter": 4,
+                            "changes": [
+                                {"id": "staticFiles", "findings": ["directoryListing"]}
+                            ],
+                        }
+                    ],
+                    "groupSummary": "",
                 },
             },
             "exports": {},
@@ -499,6 +510,8 @@ def test_the_plan_is_handed_on_exactly_as_the_scanner_worked_it_out():
     ]
     # The negative half: nothing was recomputed or reordered on the way out.
     assert [step["ratingAfter"] for step in result["steps"]] == [4, 5]
+    assert [group["target"] for group in result["groups"]] == ["reverseProxy"]
+    assert result["groups"][0]["changes"][0]["id"] == "staticFiles"
 
 
 def test_planning_against_an_unknown_scan_stops_rather_than_retrying():

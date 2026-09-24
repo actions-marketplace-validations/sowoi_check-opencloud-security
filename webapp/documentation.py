@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from .decision_records import RECORDS as _DECISION_ROWS
+
 
 @dataclass(frozen=True)
 class DocumentationPage:
@@ -332,3 +334,30 @@ OPERATOR_DOCUMENTATION_PAGES: tuple[DocumentationPage, ...] = (
 OPERATOR_DOCUMENTATION_BY_SLUG = {
     page.slug: page for page in OPERATOR_DOCUMENTATION_PAGES
 }
+
+
+@dataclass(frozen=True)
+class DecisionRecord:
+    """One architecture decision record, as the operator area lists it."""
+
+    number: str
+    slug: str
+    title: str
+    status: str
+
+    @property
+    def source(self) -> str:
+        """The repository file the record's page is generated from."""
+        return f"adr/{self.slug}.md"
+
+
+#: Every record `adr/README.md` indexes, rendered only inside the operator
+#: area under ``/admin/decisions``. English only, like the operator documents:
+#: a decision record is the repository's own history, and a translation would
+#: be a second text that could disagree with it. Read from a generated module
+#: because the web bundle does not ship `adr/`.
+DECISION_RECORDS: tuple[DecisionRecord, ...] = tuple(
+    DecisionRecord(*row) for row in _DECISION_ROWS
+)
+
+DECISION_RECORDS_BY_SLUG = {record.slug: record for record in DECISION_RECORDS}

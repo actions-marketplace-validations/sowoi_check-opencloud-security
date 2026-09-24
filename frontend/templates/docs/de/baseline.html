@@ -15,6 +15,15 @@
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
+<nav class="docs-toc card section-gap" aria-label="{{ t('docs.guide.toc.aria') }}" data-reveal>
+  <p class="kicker">{{ t('docs.guide.toc.heading') }}</p>
+  <a href="#writing-and-comparing-a-baseline" lang="de">Baseline speichern und vergleichen</a>
+  <a href="#what-counts-as-a-regression" lang="de">Was als Verschlechterung zählt</a>
+  <a href="#configuration-drift" lang="de">Konfigurationsänderungen</a>
+  <a href="#coverage-regressions" lang="de">Verlorene Abdeckung</a>
+  <a href="#points-worth-knowing" lang="de">Verhalten und Dateirechte</a>
+</nav>
+
 <article class="docs-article card section-gap" data-reveal lang="de">
 <p>Mit <code>--baseline</code> speichert das Plugin die Befunde eines Durchlaufs und vergleicht den nächsten Scan damit. Zusammen mit <code>--warn-on-new</code> kannst du die Alarmierung auf neue oder verschlechterte Befunde beschränken. Bereits bekannte Probleme bleiben im Bericht sichtbar.</p>
 <p>Eine Kurzfassung findest du im <a href="/documentation/reference#reporting-only-what-changed">Haupt-README</a>. Dieser Leitfaden erklärt die Vergleichsformate, die Kriterien für Verschlechterungen und den Umgang mit der Baseline-Datei.</p>
@@ -69,6 +78,31 @@ keinen Lauf zur Verschlechterung und ändert nie den Exit-Code. Eine Baseline
 aus der Zeit vor den Fingerabdrücken kann Konfigurationsänderungen nicht
 erkennen, weil ihr die Vergleichswerte fehlen. Sie meldet daher keine Änderung;
 das belegt jedoch nicht, dass die Konfiguration unverändert ist.</p>
+<h2 id="coverage-regressions">Verlorene Abdeckung</h2>
+<p>Eine Baseline merkt sich auch, zu welchen Prüfungen der Scan <strong>ein Ergebnis
+erreicht hat</strong>. Ist eine Prüfung, die früher gemessen wurde, jetzt
+<code>inconclusive</code> - sie lief, konnte aber nichts entscheiden, etwa weil eine
+DNS-Abfrage nicht rechtzeitig antwortete -, meldet der Lauf das, auch wenn die
+Note gleich bleibt:</p>
+<pre><code class="language-text">WARNING: 1 previously measured check(s) are now inconclusive; the rating is unchanged (Server is up to date. No known vulnerabilities.)
+Coverage regressed (1): previously measured, now inconclusive: caaRecord (timeout) - the rating is unaffected.
+</code></pre>
+<p>Das ist bewusst von der Sicherheitsbewertung getrennt. Note, Perfdata und
+Befunde bleiben, was die Messung ergeben hat; nur der Alarmstatus ändert sich,
+und nur von <code>OK</code> auf <code>WARNING</code>. Ein Lauf, der schon <code>WARNING</code> oder <code>CRITICAL</code>
+ist, behält seine Meldung und bekommt die Zeile dazu. <code>--warn-on-new</code>
+unterdrückt sie nicht, denn ein Scan, der plötzlich weniger sieht, ist neu.</p>
+<ul>
+<li>Nur <code>inconclusive</code> zählt. Eine Prüfung, die zu <code>not_checked</code> wird - weil du
+  sie abgeschaltet hast oder sie nicht mehr passt -, ist keine Verschlechterung
+  des Scans.</li>
+<li>Eine verlorene Prüfung gilt so lange als „früher gemessen“, bis ein späterer
+  Lauf sie wieder misst. Die Warnung hält also so lange wie die Lücke.</li>
+<li>Im Webhook steht die Liste als <code>coverage_regressed</code> in <code>baseline_diff</code>; der
+  Vergleich zweier Dokumente meldet sie als <code>coverageRegressed</code>.</li>
+<li>Eine ältere Baseline ohne Abdeckung kann beim ersten Lauf nach dem Update
+  keinen Verlust melden; sie speichert dann, was gemessen wurde.</li>
+</ul>
 <h2 id="points-worth-knowing">Verhalten und Dateirechte</h2>
 <ul>
 <li>Der erste Durchlauf meldet den regulären Status und legt die Baseline an. Ohne Vergleichsdaten wird nichts unterdrückt.</li>

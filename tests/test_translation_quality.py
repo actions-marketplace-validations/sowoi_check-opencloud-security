@@ -144,9 +144,12 @@ def test_handwritten_guides_and_templates_do_not_use_ai_slop_wording():
     # Release notes and accepted ADRs are historical records. Style guides
     # deliberately quote rejected wording. Check current product prose.
     paths = {REPO_ROOT / name for name in ("README.md", "CONTRIBUTING.md", "ARCHITECTURE.md")}
+    # The operator area's copies of the ADRs are generated from those same
+    # historical records, so they carry the same exemption.
+    decisions = REPO_ROOT / "frontend" / "templates" / "admin-decisions"
     paths.update(
         path for root in roots for path in root.rglob("*")
-        if path.suffix in {".md", ".html"}
+        if path.suffix in {".md", ".html"} and decisions not in path.parents
     )
     findings = []
     for path in sorted(paths):
@@ -421,6 +424,14 @@ def test_a_guide_title_the_manifest_leaves_in_english_is_not_reported():
         ("es", "Introduce tu dirección base.", True),
         ("es", "Sigue leyendo", True),
         ("es", "Sigue siendo válido", False),
+        ("es", "Sin JavaScript, recarga la página.", True),
+        ("es", "Recargue la página para ver el resultado.", False),
+        ("es", "Este enlace da acceso: trátalo como una contraseña.", True),
+        ("es", "Trátelo como una contraseña.", False),
+        ("es", "Llévate este resultado.", True),
+        ("es", "Llévese este resultado.", False),
+        ("es", "Se genera cuando la solicitas.", True),
+        ("es", "Se genera cuando la solicita.", False),
     ],
 )
 def test_each_language_is_checked_against_its_own_form_of_address(
@@ -432,6 +443,34 @@ def test_each_language_is_checked_against_its_own_form_of_address(
     hits = checker._register_hits(text, pattern, exempt_start)
 
     assert bool(hits) is wrong_register
+
+
+@pytest.mark.parametrize("locale", ["en", "de", "es", "fr"])
+def test_guide_link_errors_keep_source_lines_and_ignore_code(tmp_path, locale):
+    """A diagnostic must open the real line, not a line shifted by code removal."""
+    directory = tmp_path / "docs" / locale
+    directory.mkdir(parents=True)
+    path = directory / "guide.md"
+    (directory / "exists.md").write_text("# Example\n", encoding="utf-8")
+    lines = [
+        "# Guide",
+        "```markdown",
+        "[Example only](absent-in-fence.md)",
+        "```",
+        "`[Example only](absent-inline.md)`",
+        "[Existing](exists.md#example)",
+        "[External](https://opencloud.example.com/docs)",
+        "[Section](#guide)",
+        "[Broken](missing.md#section)",
+    ]
+    relative = f"docs/{locale}/guide.md"
+    findings = checker._guide_links(locale, path, relative, "\n".join(lines))
+    assert [(finding.rule, finding.location) for finding in findings] == [
+        ("dead-link", f"{relative}:9")
+    ]
+    assert "missing.md#section" in findings[0].detail
+    (directory / "missing.md").write_text("# Section\n", encoding="utf-8")
+    assert checker._guide_links(locale, path, relative, "\n".join(lines)) == []
 
 
 def test_a_dropped_product_name_is_a_warning_not_an_error(

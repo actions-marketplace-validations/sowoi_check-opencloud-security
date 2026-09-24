@@ -686,6 +686,8 @@ async def plan_remediation(
         "steps": plan.get("steps") or [],
         "blocked": plan.get("blocked") or [],
         "waived": plan.get("waived") or [],
+        "groups": plan.get("groups") or [],
+        "groupSummary": plan.get("groupSummary") or "",
         "untrusted": view.get("untrusted"),
     }
 

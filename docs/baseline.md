@@ -12,6 +12,7 @@ regression, and the rules that keep a baseline from hiding anything.
 * [Reporting only what changed](#reporting-only-what-changed)
   * [Writing and comparing a baseline](#writing-and-comparing-a-baseline)
   * [What counts as a regression](#what-counts-as-a-regression)
+  * [Coverage regressions](#coverage-regressions)
   * [Points worth knowing](#points-worth-knowing)
 <!-- TOC -->
 
@@ -104,6 +105,41 @@ make a run regress, and it never changes the exit code. A baseline written
 before fingerprints existed cannot detect configuration drift because it has
 no fingerprints to compare. It therefore reports no drift; this does not
 establish that the configuration is unchanged.
+
+## Coverage regressions
+
+
+A baseline also remembers which checks the scan **reached a conclusion on**.
+When a check that was measured before is `inconclusive` now - it ran and could
+not tell, for example because a DNS query timed out or the instance returned no
+page to read - the run says so, even when the grade has not moved:
+
+```text
+WARNING: 1 previously measured check(s) are now inconclusive; the rating is unchanged (Server is up to date. No known vulnerabilities.)
+Baseline: No new findings since 2026-09-14T06:00:00Z
+Coverage regressed (1): previously measured, now inconclusive: caaRecord (timeout) - the rating is unaffected.
+```
+
+This is kept apart from the security rating on purpose. The rating, its
+perfdata and the findings stay what the evidence gave; only the alert state
+moves, and only from `OK` to `WARNING` - a run that is already `WARNING` or
+`CRITICAL` keeps its own message and gets the coverage line beside it.
+`--warn-on-new` does not suppress it, because a scan that suddenly sees less
+is news.
+
+- Only `inconclusive` counts. A check that became `not_checked` - a probe
+  you turned off, or one that no longer applies, such as TLS on an instance
+  now served over plain HTTP - is not a regression of the scan.
+- A lost check stays "previously measured" until a later run measures it
+  again, so the warning holds for as long as the gap does rather than for a
+  single interval.
+- The webhook's `baseline_diff` carries the lost checks and their reasons as
+  `coverage_regressed`, and every diff format lists them under `Coverage`.
+  The two-document comparison (`check-opencloud-scanner diff` and `explain`, and the web
+  comparison) reports the same loss as a `coverageRegressed` scanner change.
+- A baseline written before this existed records no coverage, so the first
+  run after an upgrade cannot report a loss; it records what it measured for
+  the next one.
 
 ## Points worth knowing
 

@@ -16,8 +16,22 @@ from tests.webapp_support import (  # noqa: F401 - the fixtures are autouse
 )
 from webapp.documentation import DOCUMENTATION_PAGES, GUIDE_LANGUAGES
 from webapp.locales import CATALOGUES
+from webapp.reports import EXPORT_FORMATS
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+
+
+@pytest.mark.parametrize("locale", ["en", *GUIDE_LANGUAGES])
+def test_every_export_format_is_documented_in_each_language(locale: str):
+    """Translated download instructions must keep up with the service's formats."""
+    path = REPO_ROOT / (
+        "docs/webapp.md" if locale == "en" else f"docs/{locale}/web-service.md"
+    )
+    section = path.read_text(encoding="utf-8").split(
+        "### `GET /api/scans/{uuid}/export/{format}`", 1
+    )[1].split("#### ", 1)[0]
+    documented = set(re.findall(r"`([a-z-]+)`", section))
+    assert set(EXPORT_FORMATS) <= documented, (locale, set(EXPORT_FORMATS) - documented)
 
 
 def _load_generator():

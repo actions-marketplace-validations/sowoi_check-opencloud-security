@@ -15,6 +15,15 @@
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
+<nav class="docs-toc card section-gap" aria-label="{{ t('docs.guide.toc.aria') }}" data-reveal>
+  <p class="kicker">{{ t('docs.guide.toc.heading') }}</p>
+  <a href="#writing-and-comparing-a-baseline" lang="es">Escribir y comparar una línea base</a>
+  <a href="#what-counts-as-a-regression" lang="es">Qué cuenta como regresión</a>
+  <a href="#configuration-drift" lang="es">Cambios de configuración</a>
+  <a href="#coverage-regressions" lang="es">Regresiones de cobertura</a>
+  <a href="#points-worth-knowing" lang="es">Aspectos que conviene conocer</a>
+</nav>
+
 <article class="docs-article card section-gap" data-reveal lang="es">
 <p>Utilice <code>--baseline</code> para guardar los hallazgos de cada análisis y compararlos
 con la siguiente ejecución. Añada <code>--warn-on-new</code> para alertar solo cuando haya
@@ -100,6 +109,31 @@ ejecución empeore y nunca cambia el código de salida. Una referencia escrita
 antes de que existieran las huellas no puede detectar cambios de configuración
 porque carece de huellas para compararlas. Por eso no informa de cambios;
 esto no demuestra que la configuración siga igual.</p>
+<h2 id="coverage-regressions">Regresiones de cobertura</h2>
+<p>Una línea base también recuerda en qué comprobaciones el análisis <strong>llegó a
+una conclusión</strong>. Cuando una comprobación que antes se midió ahora es
+<code>inconclusive</code> - se ejecutó sin poder decidir, por ejemplo porque una consulta
+DNS no respondió a tiempo -, la ejecución lo indica aunque la calificación no
+haya cambiado:</p>
+<pre><code class="language-text">WARNING: 1 previously measured check(s) are now inconclusive; the rating is unchanged (Server is up to date. No known vulnerabilities.)
+Coverage regressed (1): previously measured, now inconclusive: caaRecord (timeout) - the rating is unaffected.
+</code></pre>
+<p>Esto se mantiene separado de la calificación de seguridad a propósito. La
+calificación, los perfdata y los hallazgos siguen siendo los que dieron las
+mediciones; solo cambia el estado de alerta, y solo de <code>OK</code> a <code>WARNING</code>. Una
+ejecución que ya está en <code>WARNING</code> o <code>CRITICAL</code> conserva su mensaje y añade la
+línea. <code>--warn-on-new</code> no la suprime: un análisis que de pronto ve menos es
+una novedad.</p>
+<ul>
+<li>Solo cuenta <code>inconclusive</code>. Una comprobación que pasa a <code>not_checked</code> -
+  desactivada por usted o que ya no aplica - no es una regresión del análisis.</li>
+<li>Una comprobación perdida sigue contando como «medida antes» hasta que una
+  ejecución posterior la vuelva a medir: el aviso dura lo que dura la laguna.</li>
+<li>El webhook incluye la lista en <code>baseline_diff</code> como <code>coverage_regressed</code>; la
+  comparación de dos documentos la indica como <code>coverageRegressed</code>.</li>
+<li>Una línea base anterior sin cobertura no puede indicar ninguna pérdida en la
+  primera ejecución tras actualizar; registra lo medido para la siguiente.</li>
+</ul>
 <h2 id="points-worth-knowing">Aspectos que conviene conocer</h2>
 <ul>
 <li>La primera ejecución no tiene nada con qué compararse, así que informa con

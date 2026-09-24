@@ -30,7 +30,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
-from .coverage import coverage_of
+from .coverage import FAILED, INCONCLUSIVE, PASSED, coverage_of
 from .fingerprint import digests as fingerprint_digests
 from .fingerprint import drift as configuration_drift
 from .fingerprint import incomparable as configuration_incomparable
@@ -425,7 +425,41 @@ def _scanner_changes(
                 {"from": before_measured, "to": after_measured},
             )
         )
+
+    # Counts can stand still while one check goes dark and another comes into
+    # view, so the loss is named check by check, whatever the totals did.
+    lost = _coverage_lost(before_coverage, after_coverage)
+    if lost:
+        changes.append(
+            Change(
+                SCANNER,
+                "coverageRegressed",
+                f"{len(lost)} check(s) the first scan reached a conclusion on "
+                "were inconclusive in the second. That says the scan saw "
+                "less, not that the instance got better or worse, and it "
+                "does not change the grade.",
+                {"checks": dict(sorted(lost.items()))},
+            )
+        )
     return changes
+
+
+def _coverage_lost(
+    before: Mapping[str, Any], after: Mapping[str, Any]
+) -> dict[str, str]:
+    """Checks measured in ``before`` and inconclusive in ``after``, with the reason."""
+    measured = {
+        str(entry.get("id"))
+        for entry in before.get("checks") or ()
+        if isinstance(entry, Mapping) and entry.get("state") in {PASSED, FAILED}
+    }
+    return {
+        str(entry.get("id")): str(entry.get("reason") or "unknown")
+        for entry in after.get("checks") or ()
+        if isinstance(entry, Mapping)
+        and entry.get("state") == INCONCLUSIVE
+        and str(entry.get("id")) in measured
+    }
 
 
 def _policy_changes(

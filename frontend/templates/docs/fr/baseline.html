@@ -15,6 +15,15 @@
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
+<nav class="docs-toc card section-gap" aria-label="{{ t('docs.guide.toc.aria') }}" data-reveal>
+  <p class="kicker">{{ t('docs.guide.toc.heading') }}</p>
+  <a href="#writing-and-comparing-a-baseline" lang="fr">Écrire et comparer une référence</a>
+  <a href="#what-counts-as-a-regression" lang="fr">Ce qui compte comme une régression</a>
+  <a href="#configuration-drift" lang="fr">Dérive de configuration</a>
+  <a href="#coverage-regressions" lang="fr">Régressions de couverture</a>
+  <a href="#points-worth-knowing" lang="fr">Points à connaître</a>
+</nav>
+
 <article class="docs-article card section-gap" data-reveal lang="fr">
 <p>Utilisez <code>--baseline</code> pour enregistrer les constats de chaque scan et les
 comparer à ceux de l'exécution suivante. Ajoutez <code>--warn-on-new</code> pour n'alerter
@@ -103,6 +112,32 @@ régresser une exécution et ne modifie jamais le code de sortie. Une référenc
 écrite avant l'existence des empreintes ne peut pas détecter les changements
 de configuration, faute d'empreintes à comparer. Elle ne signale donc aucun
 changement ; cela ne prouve pas que la configuration est restée identique.</p>
+<h2 id="coverage-regressions">Régressions de couverture</h2>
+<p>Une référence retient aussi les contrôles pour lesquels l'analyse <strong>est
+parvenue à une conclusion</strong>. Lorsqu'un contrôle mesuré auparavant est
+désormais <code>inconclusive</code> - il s'est exécuté sans pouvoir conclure, par exemple
+parce qu'une requête DNS n'a pas répondu à temps -, l'exécution le signale,
+même si la note n'a pas bougé :</p>
+<pre><code class="language-text">WARNING: 1 previously measured check(s) are now inconclusive; the rating is unchanged (Server is up to date. No known vulnerabilities.)
+Coverage regressed (1): previously measured, now inconclusive: caaRecord (timeout) - the rating is unaffected.
+</code></pre>
+<p>Ce signal est volontairement séparé de la note de sécurité. La note, les
+perfdata et les constats restent ceux que les mesures ont donnés ; seul l'état
+d'alerte change, et uniquement de <code>OK</code> à <code>WARNING</code>. Une exécution déjà en
+<code>WARNING</code> ou <code>CRITICAL</code> garde son message et reçoit la ligne en plus.
+<code>--warn-on-new</code> ne la supprime pas : une analyse qui voit soudain moins est
+une nouveauté.</p>
+<ul>
+<li>Seul <code>inconclusive</code> compte. Un contrôle devenu <code>not_checked</code> - désactivé
+  par vous, ou devenu sans objet - n'est pas une régression de l'analyse.</li>
+<li>Un contrôle perdu reste « mesuré auparavant » jusqu'à ce qu'une exécution
+  ultérieure le mesure de nouveau : l'avertissement dure autant que la lacune.</li>
+<li>Le webhook porte la liste dans <code>baseline_diff</code> sous <code>coverage_regressed</code> ;
+  la comparaison de deux documents la signale comme <code>coverageRegressed</code>.</li>
+<li>Une référence plus ancienne sans couverture ne peut signaler aucune perte à
+  la première exécution après la mise à jour ; elle enregistre alors ce qui a
+  été mesuré.</li>
+</ul>
 <h2 id="points-worth-knowing">Points à connaître</h2>
 <ul>
 <li>La première exécution n'a rien à quoi se comparer : elle signale normalement

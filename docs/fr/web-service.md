@@ -1084,49 +1084,43 @@ sinon.
 
 ### `GET /api/scans/{uuid}/export/{format}` {#get-apiscansuuidexportformat}
 
-Une analyse terminée sous forme de fichier : `json`, `csv`, `sarif`, `pdf`,
-`html`, `remediation-md` ou `remediation-html`. Les deux ensembles de correction
-ne contiennent que les constats ouverts et exploitables ainsi que les fragments
-nginx, Caddy, Traefik, Compose et `.env` qui les corrigent - la note, les
-contrôles réussis et les avis de sécurité restent dans le rapport complet.
+Une analyse terminée peut être téléchargée au format `json`, `csv`, `sarif`,
+`pdf` ou `html`. Les kits `remediation-md` et `remediation-html` contiennent
+uniquement les constats encore ouverts pouvant être corrigés et les extraits
+de configuration proposés pour nginx, Caddy, Traefik, Compose et `.env`.
+Utilisez un rapport complet pour consulter la note, les contrôles réussis
+et les avis de sécurité.
 
 ```bash
 curl -sS -OJ http://127.0.0.1:8811/api/scans/0f4a1f22-.../export/pdf
 ```
 
-`html` est le rapport sous forme de **fichier autonome unique**. Un lien de
-résultat est une capacité limitée dans le temps, ce qui convient à une page
-accessible à un inconnu mais pas à la preuve dont quelqu’un a besoin en fin de
-trimestre : c’est donc le même rapport, sans le service derrière lui. La mise en
-forme est incluse dans le document, il n’y a ni script, ni image, ni service de
-polices, ni feuille de style à récupérer, et son ouverture n’effectue aucune
-requête réseau. Les liens de documentation sont les seules adresses qu’il
-contient, et ils ne sont suivis que si le lecteur le choisit. Il contient les
-constats, les constats ignorés avec les raisons de leur exemption, le plan de
-correction, les lacunes de couverture et les données de référence utilisées pour
-juger l’analyse, et il indique clairement qu’il s’agit d’une copie : il continue
-de fonctionner après l’expiration du lien, il n’est pas mis à jour, et effacer
-l’analyse ne l’efface pas. Il ne contient rien à actionner - ni formulaire, ni
-commande de nouvelle analyse, ni interrogation, ni jeton d’effacement.
+Le rapport `html` est **un fichier autonome unique** dont les styles sont
+inclus. Son ouverture ne déclenche aucune requête réseau : il ne contient
+ni scripts, ni images, ni polices ou feuilles de style externes. Les liens
+de documentation s’ouvrent uniquement si vous les suivez. Le rapport comprend
+les constats, les constats exemptés et leurs motifs, le plan de correction,
+les lacunes de couverture et les données de référence utilisées pour évaluer
+l’analyse. Il ne contient ni formulaires, ni commandes de nouvelle analyse,
+ni interrogation périodique, ni jeton d’effacement.
 
-Les cinq contiennent le plan de correction - la liste ordonnée des corrections
-avec la note atteinte à chaque étape - sous forme de lignes de résumé et d’étapes
-dans le CSV, de `runs[0].properties.remediation` dans le SARIF, d’une section
-« What gets you to A+ » dans le PDF et de `remediationPlan` dans le JSON.
+Les rapports complets comprennent le plan de correction : lignes de résumé
+et d’étapes dans le CSV, `runs[0].properties.remediation` dans le SARIF,
+section du plan dans les formats PDF et HTML, et `remediationPlan` dans le
+JSON. Les détails de transport figurent dans le bloc d’en-tête du CSV,
+`runs[0].properties.tls` dans le SARIF, les sections de transport des formats
+PDF et HTML, et `tls` dans le JSON. Ils couvrent le protocole, le chiffrement,
+la validité du certificat et les jours restants, la complétude de la chaîne
+et l’agrafage OCSP. La valeur `null` signifie que la mesure n’a pas pu être
+établie, et non que le contrôle a réussi.
 
-Ils contiennent aux mêmes endroits le détail de la sécurité du transport : le
-bloc d’en-tête du CSV, `runs[0].properties.tls` dans le SARIF, une section
-« Transport security » dans le PDF et le bloc `tls` dans le JSON - protocole,
-suite de chiffrement, validité et jours restants du certificat, complétude de la
-chaîne et agrafage OCSP. Une mesure qui n’a pas pu être effectuée vaut `null`,
-c’est-à-dire « non déterminé » et non « correct ».
-
-Les quatre sont des rendus du même résultat terminé, produits à la demande et
-disparus à l’expiration de l’analyse. Le PDF est écrit par ce service plutôt que
-par une bibliothèque de rapports, pour la même raison que le frontend ne charge
-rien depuis un CDN. La réponse `GET /api/scans/{uuid}` d’une analyse terminée
-annonce les quatre URL sous `exports`, et la page de résultat les propose sous
-forme de boutons de téléchargement.
+Les téléchargements sont générés à la demande à partir du résultat enregistré.
+Leurs liens cessent de fonctionner à l’expiration de l’analyse. Les fichiers
+déjà enregistrés restent disponibles, ne se mettent pas à jour et ne sont pas
+supprimés lors de l’effacement de l’analyse. La réponse de
+`GET /api/scans/{uuid}` pour une analyse terminée indique les URL de
+téléchargement sous `exports` ; la page de résultat propose les mêmes formats
+sous forme de boutons de téléchargement.
 
 #### Exports signés {#signed-exports}
 

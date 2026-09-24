@@ -296,7 +296,8 @@ REGISTER: dict[str, tuple[str, str, re.Pattern[str], bool]] = {
         "polite (usted)",
         "familiar (tú)",
         re.compile(
-            r"\b(?:t[úu]|tus|tuyos?|tuyas?|vosotros|vuestr[oa]s?|sigue\s+leyendo)\b",
+            r"\b(?:t[úu]|tus|tuyos?|tuyas?|vosotros|vuestr[oa]s?|sigue\s+leyendo|"
+            r"trátalo|llévate|solicitas|recarga\s+la\s+página)\b",
             re.IGNORECASE,
         ),
         False,
@@ -522,7 +523,7 @@ def _guide_links(
 ) -> list[Finding]:
     """Every relative link in one guide that leads nowhere."""
     findings = []
-    body = _FENCE.sub("", text)
+    body = _guide_prose(text)
     for number, line in enumerate(body.splitlines(), start=1):
         for match in _LINK.finditer(line):
             target = match.group(1).split("#", 1)[0]

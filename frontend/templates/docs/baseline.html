@@ -15,6 +15,15 @@
 <p class="hint section-gap" lang="{{ locale }}">{{ t('docs.guide.english_notice') }}</p>
 {% endif %}
 
+<nav class="docs-toc card section-gap" aria-label="{{ t('docs.guide.toc.aria') }}" data-reveal>
+  <p class="kicker">{{ t('docs.guide.toc.heading') }}</p>
+  <a href="#writing-and-comparing-a-baseline" lang="en">Writing and comparing a baseline</a>
+  <a href="#what-counts-as-a-regression" lang="en">What counts as a regression</a>
+  <a href="#configuration-drift" lang="en">Configuration drift</a>
+  <a href="#coverage-regressions" lang="en">Coverage regressions</a>
+  <a href="#points-worth-knowing" lang="en">Points worth knowing</a>
+</nav>
+
 <article class="docs-article card section-gap" data-reveal lang="en">
 <p>Use <code>--baseline</code> to save each scan’s findings and compare them with the next run. Add
 <code>--warn-on-new</code> to alert only when findings are new or have become worse. Existing
@@ -27,6 +36,7 @@ regression, and the rules that keep a baseline from hiding anything.</p>
 <li><a href="#reporting-only-what-changed">Reporting only what changed</a></li>
 <li><a href="#writing-and-comparing-a-baseline">Writing and comparing a baseline</a></li>
 <li><a href="#what-counts-as-a-regression">What counts as a regression</a></li>
+<li><a href="#coverage-regressions">Coverage regressions</a></li>
 <li><a href="#points-worth-knowing">Points worth knowing</a></li>
 </ul>
 <!-- TOC -->
@@ -95,6 +105,36 @@ make a run regress, and it never changes the exit code. A baseline written
 before fingerprints existed cannot detect configuration drift because it has
 no fingerprints to compare. It therefore reports no drift; this does not
 establish that the configuration is unchanged.</p>
+<h2 id="coverage-regressions">Coverage regressions</h2>
+<p>A baseline also remembers which checks the scan <strong>reached a conclusion on</strong>.
+When a check that was measured before is <code>inconclusive</code> now - it ran and could
+not tell, for example because a DNS query timed out or the instance returned no
+page to read - the run says so, even when the grade has not moved:</p>
+<pre><code class="language-text">WARNING: 1 previously measured check(s) are now inconclusive; the rating is unchanged (Server is up to date. No known vulnerabilities.)
+Baseline: No new findings since 2026-09-14T06:00:00Z
+Coverage regressed (1): previously measured, now inconclusive: caaRecord (timeout) - the rating is unaffected.
+</code></pre>
+<p>This is kept apart from the security rating on purpose. The rating, its
+perfdata and the findings stay what the evidence gave; only the alert state
+moves, and only from <code>OK</code> to <code>WARNING</code> - a run that is already <code>WARNING</code> or
+<code>CRITICAL</code> keeps its own message and gets the coverage line beside it.
+<code>--warn-on-new</code> does not suppress it, because a scan that suddenly sees less
+is news.</p>
+<ul>
+<li>Only <code>inconclusive</code> counts. A check that became <code>not_checked</code> - a probe
+  you turned off, or one that no longer applies, such as TLS on an instance
+  now served over plain HTTP - is not a regression of the scan.</li>
+<li>A lost check stays "previously measured" until a later run measures it
+  again, so the warning holds for as long as the gap does rather than for a
+  single interval.</li>
+<li>The webhook's <code>baseline_diff</code> carries the lost checks and their reasons as
+  <code>coverage_regressed</code>, and every diff format lists them under <code>Coverage</code>.
+  The two-document comparison (<code>check-opencloud-scanner diff</code> and <code>explain</code>, and the web
+  comparison) reports the same loss as a <code>coverageRegressed</code> scanner change.</li>
+<li>A baseline written before this existed records no coverage, so the first
+  run after an upgrade cannot report a loss; it records what it measured for
+  the next one.</li>
+</ul>
 <h2 id="points-worth-knowing">Points worth knowing</h2>
 <ul>
 <li>The first run has nothing to compare against, so it reports normally and

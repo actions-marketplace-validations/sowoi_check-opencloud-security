@@ -412,6 +412,9 @@ def test_the_planning_tool_tells_the_model_not_to_redo_the_arithmetic():
     # The negative half: the model is warned that a step gaining nothing is
     # still necessary, or it will drop exactly those steps as pointless.
     assert "ratinggain is 0" in description
+    # Grouped by where the change is made, so an agent can answer "what do
+    # I change in the proxy" without regrouping anything itself.
+    assert "groups" in description and "resolvesseveral" in description
 
 
 def test_planning_an_unknown_scan_stops_instead_of_polling_forever():

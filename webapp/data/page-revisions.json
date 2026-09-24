@@ -26,8 +26,8 @@
       "lastmod": "2026-09-17"
     },
     "docs/baseline.html": {
-      "digest": "0afcd69f2c4a84036bcf33e71b6eaf9406a13a9595a0e98e4088f65f831b5df8",
-      "lastmod": "2026-09-23"
+      "digest": "efedfea83702eee845d59c48703b863cf727085f131f1c2b70d1707ce7fc524d",
+      "lastmod": "2026-09-24"
     },
     "docs/checkmk.html": {
       "digest": "b47d9b2f0e8d0750446c0c2251c66aa755f05b8576b1164bd825cea231f1111c",
@@ -94,12 +94,12 @@
       "lastmod": "2026-09-17"
     },
     "docs/many-instances.html": {
-      "digest": "6360c788ef83f2dee420ecf0daa6b324edfd97b4717d79fcf9d05ef705b597df",
-      "lastmod": "2026-09-17"
+      "digest": "27c3e7796f92aff02390c25896093d15d11d0cbd90224bef716527cc13a954ab",
+      "lastmod": "2026-09-24"
     },
     "docs/mcp.html": {
-      "digest": "a1f5366aff580152d8c6d728db1049e96257140caf21c592908d7b5162314f48",
-      "lastmod": "2026-09-22"
+      "digest": "a780b7aedd6d0ce977946218ead1c6175b59ec7b140545a8db967c867ff3d867",
+      "lastmod": "2026-09-24"
     },
     "docs/output-formats.html": {
       "digest": "07c1a40f7aeb2a633a1717e9ce2e798665b277a87a4551d640ab62aeacdcc87a",
@@ -118,8 +118,8 @@
       "lastmod": "2026-09-17"
     },
     "docs/reference.html": {
-      "digest": "8673aa78a95353882ccf144f4d8dcb2a2b1e39306c143e795bd16b3b70d6c614",
-      "lastmod": "2026-09-23"
+      "digest": "805269897ccdbd5384cb178960ea2327fdc76c0362b96800f8046fcf7c274282",
+      "lastmod": "2026-09-24"
     },
     "docs/release-lifecycle.html": {
       "digest": "6b16dc995bf46b86eb440268f4cc6341400f6bf3a2d13fb2708ec2e710ee3246",
@@ -138,12 +138,12 @@
       "lastmod": "2026-09-23"
     },
     "docs/scanner-cli.html": {
-      "digest": "a9f8b723e0015154a135df1aa82c00d6b560014944921f784d32b83a360ed5fd",
-      "lastmod": "2026-09-22"
+      "digest": "077714d32c0774760f7bed51c30d810e2ad006d2a477a62ed0f5ca7d690f0fb9",
+      "lastmod": "2026-09-24"
     },
     "docs/scanner.html": {
-      "digest": "43fce8fcb0594861d3ebb664ba757885e093ef729a8c215824aaa263238c3a36",
-      "lastmod": "2026-09-22"
+      "digest": "cf1545f4c79de27390f46a8841ce694b522b440c43705881e2603d49e8d5576a",
+      "lastmod": "2026-09-24"
     },
     "docs/scheduling.html": {
       "digest": "df2857ca044f0fae3c85d3e7b5173cdabc6c3dc7c9d3ef6d7f3bbaf1a113d10f",
@@ -170,8 +170,8 @@
       "lastmod": "2026-09-17"
     },
     "docs/web-service.html": {
-      "digest": "8c141afd9a14d594427e5069227c0fb5ea81e67908b0fd316823169cb76303ed",
-      "lastmod": "2026-09-23"
+      "digest": "99a02440775cc82e0acb35436bab5d3519c93efe996d581c3a53eca9086d0eb4",
+      "lastmod": "2026-09-24"
     },
     "docs/webhooks.html": {
       "digest": "804588587cbe5a8705a2d9a08b0550eb702b7e6162735b762248759028ad6d65",

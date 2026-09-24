@@ -255,6 +255,19 @@ _FRAGMENT_LEDE = (
 )
 
 
+_GROUPS_LEDE = (
+    "The same findings, grouped by the system the change is made in. Where "
+    "one change resolves several findings, it is listed once with all of "
+    "them; the grade beside it is what that change alone would give."
+)
+
+
+def _groups(summary: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    """The plan's groups, as the dashboard labelled them."""
+    plan = summary.get("remediation") or {}
+    return [group for group in plan.get("groups") or [] if isinstance(group, Mapping)]
+
+
 def remediation_markdown(
     result: dict[str, Any], *, identifier: str | None = None
 ) -> str:
@@ -299,6 +312,26 @@ def remediation_markdown(
             lines += [f"**Fix.** {finding['fix']}", ""]
             if finding["reference"]:
                 lines += [f"Documentation: <{finding['reference']}>", ""]
+
+        groups = _groups(summary)
+        if groups:
+            lines += ["## Changes by where they are made", "", _GROUPS_LEDE, ""]
+            plan = summary.get("remediation") or {}
+            if plan.get("groupSummary"):
+                lines += [str(plan["groupSummary"]), ""]
+            for group in groups:
+                heading = (
+                    f"### {group['title']} ({group['findings']} finding(s), "
+                    f"{group['label']} with every change here)"
+                )
+                lines += [heading, ""]
+                for change in group["changes"]:
+                    resolves = ", ".join(f"`{_md(name)}`" for name in change["findings"])
+                    lines.append(
+                        f"- **{change['title']}** - resolves {resolves}; "
+                        f"this change alone: {change['label']}. {change['action']}"
+                    )
+                lines.append("")
 
         fragments = _fragments(names)
         if fragments:
@@ -395,6 +428,30 @@ def remediation_html(
                 fix += " " + _link(finding["reference"], "Documentation") + "."
             parts.append(fix + "</p>")
             sections.append("".join(parts))
+
+        groups = _groups(summary)
+        if groups:
+            plan = summary.get("remediation") or {}
+            block = [f"<h2>Changes by where they are made</h2><p>{_h(_GROUPS_LEDE)}</p>"]
+            if plan.get("groupSummary"):
+                block.append(f"<p>{_h(plan['groupSummary'])}</p>")
+            for group in groups:
+                block.append(
+                    f"<h3>{_h(group['title'])}</h3>"
+                    f'<p class="muted">{_h(group["findings"])} finding(s), '
+                    f"{_h(group['label'])} with every change here</p><ul>"
+                )
+                for change in group["changes"]:
+                    resolves = ", ".join(
+                        f"<code>{_h(name)}</code>" for name in change["findings"]
+                    )
+                    block.append(
+                        f"<li><strong>{_h(change['title'])}</strong> - resolves "
+                        f"{resolves}; this change alone: {_h(change['label'])}. "
+                        f"{_h(change['action'])}</li>"
+                    )
+                block.append("</ul>")
+            sections.append("".join(block))
 
         fragments = _fragments(names)
         if fragments:

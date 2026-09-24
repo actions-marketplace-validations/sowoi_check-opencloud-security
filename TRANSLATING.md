@@ -149,6 +149,10 @@ long table descriptions separately, so an untranslated settings row cannot
 hide inside an otherwise translated guide. Commands, short labels and quoted
 diagnostics remain verbatim. Catalogue tests also check duplicate keys in the
 source and exercise placeholder formatting and HTML escaping in every language.
+The sharing and error-page tests render all four languages, including email
+drafts, clipboard summaries, rate limits and rejected uploads. Export-format
+checks compare each translated guide with the formats the service supports.
+Link diagnostics ignore code examples and retain the source line numbers.
 
 Add a focused regression case when correcting a recurring wording defect.
 Include an acceptable example when a rule could also match correct technical
