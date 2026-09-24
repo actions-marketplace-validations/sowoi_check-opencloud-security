@@ -1,6 +1,6 @@
 # ADR 0076: A fleet summary is read from saved reports and stores nothing
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-09-24
 - Extends: ADR 0012, ADR 0028, ADR 0064
 
