@@ -80,6 +80,7 @@ project. Read the accepted records that affect an area before changing it.
 | [0071](0071-repository-advisories-are-a-second-advisory-source.md) | OpenCloud's repository advisories are a second advisory source | Proposed |
 | [0072](0072-remediation-verification-re-measures-named-findings-without-a-full-scan.md) | Remediation verification re-measures named findings without a full scan | Proposed |
 | [0073](0073-a-result-fingerprints-the-configuration-it-measured.md) | A result fingerprints the configuration it measured | Accepted |
+| [0074](0074-a-lost-measurement-warns-through-the-baseline-not-the-rating.md) | A lost measurement warns through the baseline, not the rating | Accepted |
 
 ## Writing a new record
 

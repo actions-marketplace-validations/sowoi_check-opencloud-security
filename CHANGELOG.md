@@ -12,6 +12,18 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+### Added
+
+- **Coverage regression alerts.** With `--baseline`, a check that an earlier
+  run reached a conclusion on and that is `inconclusive` now raises an `OK` to
+  `WARNING`, even when the grade has not moved. The rating, its perfdata and
+  the findings are untouched: the scan saw less, the instance did not change.
+  The warning lasts until the check is measured again, `--warn-on-new` does
+  not suppress it, the webhook's `baseline_diff` carries the lost checks as
+  `coverage_regressed`, and the two-document comparison reports a
+  `coverageRegressed` scanner change. See ADR 0074 and
+  [Reporting only what changed](docs/baseline.md#coverage-regressions).
+
 ## [1.30.2] - 2026-09-24
 
 ### Changed

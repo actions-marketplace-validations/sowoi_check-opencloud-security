@@ -1309,6 +1309,12 @@ Baseline: No new findings since 2026-09-14T06:00:00Z, but the configuration chan
 Only the group names are reported; the settings behind them are hashed and
 discarded. Drift never creates a finding and never changes the exit code.
 
+A baseline also remembers which checks reached a conclusion. When a check
+that was measured before is **inconclusive** now, the run warns - `OK` becomes
+`WARNING` - even though the grade has not moved. The rating, its perfdata and
+the findings are left exactly as the evidence gave them; it is the scan that
+saw less, not the instance that changed. `--warn-on-new` does not suppress it.
+
 **[Reporting only what changed](docs/baseline.md)** has the diff formats
 (`text`, `markdown`, `slack`, `json`), what counts as a regression, the
 configuration groups, and the rules that keep a baseline from hiding

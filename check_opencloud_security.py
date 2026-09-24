@@ -1067,7 +1067,9 @@ def _apply_baseline(
     With ``--warn-on-new`` an unchanged picture stops alerting, so that a
     problem someone is already working on does not page anyone a second time.
     Anything new, a worse rating, and a release past its end of life all keep
-    their original status - see opencloud_local_scan.baseline for why.
+    their original status - see opencloud_local_scan.baseline for why. A check
+    that was measured before and is inconclusive now raises an OK to WARNING
+    without touching the rating.
 
     A baseline that cannot be written is reported as a line of output and
     nothing more: it would be absurd for a bookkeeping failure to change the
@@ -1092,7 +1094,24 @@ def _apply_baseline(
             message = f"OK: nothing new since the last run ({exit_code.name} state unchanged)."
             exit_code = NagiosExitCode.OK
 
-        store.record(context.host, current)
+        # A check that stopped being measurable is a warning about the scan,
+        # never about the instance: the rating, its perfdata and the findings
+        # stay exactly what the evidence gave. It only lifts an OK, so a real
+        # WARNING or CRITICAL keeps its own message.
+        coverage_line = comparison.coverage_summary()
+        if coverage_line:
+            lines.append(f"{coverage_line} - the rating is unaffected.")
+            if exit_code is NagiosExitCode.OK:
+                message = (
+                    f"WARNING: {len(comparison.coverage_lost)} previously measured "
+                    "check(s) are now inconclusive; the rating is unchanged "
+                    f"({message.removeprefix('OK: ')})"
+                )
+                exit_code = NagiosExitCode.WARNING
+
+        # The comparison's copy, which carries a lost check forward as
+        # measurable until a later run measures it again.
+        store.record(context.host, comparison.current)
         try:
             store.save()
         except BaselineError as exc:

@@ -1377,6 +1377,11 @@ hashes can identify a configuration change even when no check fails:</p>
 </code></pre>
 <p>Only the group names are reported; the settings behind them are hashed and
 discarded. Drift never creates a finding and never changes the exit code.</p>
+<p>A baseline also remembers which checks reached a conclusion. When a check
+that was measured before is <strong>inconclusive</strong> now, the run warns - <code>OK</code> becomes
+<code>WARNING</code> - even though the grade has not moved. The rating, its perfdata and
+the findings are left exactly as the evidence gave them; it is the scan that
+saw less, not the instance that changed. <code>--warn-on-new</code> does not suppress it.</p>
 <p><strong><a href="/documentation/baseline">Reporting only what changed</a></strong> has the diff formats
 (<code>text</code>, <code>markdown</code>, <code>slack</code>, <code>json</code>), what counts as a regression, the
 configuration groups, and the rules that keep a baseline from hiding

@@ -78,6 +78,36 @@ aus der Zeit vor den Fingerabdrücken kann Konfigurationsänderungen nicht
 erkennen, weil ihr die Vergleichswerte fehlen. Sie meldet daher keine Änderung;
 das belegt jedoch nicht, dass die Konfiguration unverändert ist.
 
+## Verlorene Abdeckung {#coverage-regressions}
+
+
+Eine Baseline merkt sich auch, zu welchen Prüfungen der Scan **ein Ergebnis
+erreicht hat**. Ist eine Prüfung, die früher gemessen wurde, jetzt
+`inconclusive` - sie lief, konnte aber nichts entscheiden, etwa weil eine
+DNS-Abfrage nicht rechtzeitig antwortete -, meldet der Lauf das, auch wenn die
+Note gleich bleibt:
+
+```text
+WARNING: 1 previously measured check(s) are now inconclusive; the rating is unchanged (Server is up to date. No known vulnerabilities.)
+Coverage regressed (1): previously measured, now inconclusive: caaRecord (timeout) - the rating is unaffected.
+```
+
+Das ist bewusst von der Sicherheitsbewertung getrennt. Note, Perfdata und
+Befunde bleiben, was die Messung ergeben hat; nur der Alarmstatus ändert sich,
+und nur von `OK` auf `WARNING`. Ein Lauf, der schon `WARNING` oder `CRITICAL`
+ist, behält seine Meldung und bekommt die Zeile dazu. `--warn-on-new`
+unterdrückt sie nicht, denn ein Scan, der plötzlich weniger sieht, ist neu.
+
+- Nur `inconclusive` zählt. Eine Prüfung, die zu `not_checked` wird - weil du
+  sie abgeschaltet hast oder sie nicht mehr passt -, ist keine Verschlechterung
+  des Scans.
+- Eine verlorene Prüfung gilt so lange als „früher gemessen“, bis ein späterer
+  Lauf sie wieder misst. Die Warnung hält also so lange wie die Lücke.
+- Im Webhook steht die Liste als `coverage_regressed` in `baseline_diff`; der
+  Vergleich zweier Dokumente meldet sie als `coverageRegressed`.
+- Eine ältere Baseline ohne Abdeckung kann beim ersten Lauf nach dem Update
+  keinen Verlust melden; sie speichert dann, was gemessen wurde.
+
 ## Verhalten und Dateirechte {#points-worth-knowing}
 
 - Der erste Durchlauf meldet den regulären Status und legt die Baseline an. Ohne Vergleichsdaten wird nichts unterdrückt.

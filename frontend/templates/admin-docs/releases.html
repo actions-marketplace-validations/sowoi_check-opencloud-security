@@ -45,6 +45,18 @@
 
 <article class="docs-article card section-gap" data-reveal lang="en">
 <h2 id="1310-this-release">[1.31.0] - this release</h2>
+<h3 id="added">Added</h3>
+<ul>
+<li><strong>Coverage regression alerts.</strong> With <code>--baseline</code>, a check that an earlier
+  run reached a conclusion on and that is <code>inconclusive</code> now raises an <code>OK</code> to
+  <code>WARNING</code>, even when the grade has not moved. The rating, its perfdata and
+  the findings are untouched: the scan saw less, the instance did not change.
+  The warning lasts until the check is measured again, <code>--warn-on-new</code> does
+  not suppress it, the webhook's <code>baseline_diff</code> carries the lost checks as
+  <code>coverage_regressed</code>, and the two-document comparison reports a
+  <code>coverageRegressed</code> scanner change. See ADR 0074 and
+  <a href="/documentation/baseline#coverage-regressions">Reporting only what changed</a>.</li>
+</ul>
 <h2 id="1302-2026-09-24">[1.30.2] - 2026-09-24</h2>
 <h3 id="changed">Changed</h3>
 <ul>
@@ -85,7 +97,7 @@
   Before this fix, it named only one waiver but listed the checks of both.</li>
 </ul>
 <h2 id="1301-2026-09-23">[1.30.1] - 2026-09-23</h2>
-<h3 id="added">Added</h3>
+<h3 id="added_1">Added</h3>
 <ul>
 <li><code>--waiver-warning DAYS</code> (<code>COS_WAIVER_WARNING</code>, YAML <code>waiver_warning</code>)
   sets a warning window for <code>--waive-until</code> waivers. If a waiver that hides
@@ -142,7 +154,7 @@
   guides, including severity comparisons and missing measurements. Added
   regression cases for the awkward phrases found during review.</li>
 </ul>
-<h3 id="added_1">Added</h3>
+<h3 id="added_2">Added</h3>
 <ul>
 <li>
 <p><strong>The setup wizard exports the scheduled check, not just the configuration.</strong>
@@ -330,7 +342,7 @@
   is aimed, which still fails - loudly - if a press is ever genuinely lost.</li>
 </ul>
 <h2 id="1290-2026-09-21">[1.29.0] - 2026-09-21</h2>
-<h3 id="added_2">Added</h3>
+<h3 id="added_3">Added</h3>
 <ul>
 <li><strong>A scan fingerprints the configuration it measured, so drift is visible
   without the grade moving.</strong> A rewritten content security policy, a replaced
@@ -385,7 +397,7 @@
   close. Nothing in it changes a grade, an exit code or an alert line.</li>
 </ul>
 <h2 id="1281-2026-09-21">[1.28.1] - 2026-09-21</h2>
-<h3 id="added_3">Added</h3>
+<h3 id="added_4">Added</h3>
 <ul>
 <li><strong><code>--profile</code> judges a scan by a named threshold set.</strong> <code>strict</code>, <code>ops</code> and
   <code>lenient</code> each decide the five settings a team otherwise writes out by hand</li>
@@ -474,7 +486,7 @@
 </li>
 </ul>
 <h2 id="1280-2026-09-20">[1.28.0] - 2026-09-20</h2>
-<h3 id="added_4">Added</h3>
+<h3 id="added_5">Added</h3>
 <ul>
 <li>
 <p><strong>Upgrade rehearsal: what each candidate release would fix, leave and
