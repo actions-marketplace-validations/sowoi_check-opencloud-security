@@ -28,6 +28,9 @@ class DocumentationPage:
 #: language shows the English guide with a notice.
 GUIDE_LANGUAGES: tuple[str, ...] = ("de", "fr", "es")
 
+#: Operator documents with sources in every GUIDE_LANGUAGES language.
+TRANSLATED_OPERATOR_SLUGS = frozenset({"architecture", "operations"})
+
 DOCUMENTATION_PAGES: tuple[DocumentationPage, ...] = (
     DocumentationPage(
         "what-is-opencloud",
@@ -301,9 +304,8 @@ DOCUMENTATION_BY_SLUG = {page.slug: page for page in DOCUMENTATION_PAGES}
 #: have to leave the area to find it - and a reader of ``/documentation``
 #: should not meet internal operations notes filed among the guides.
 #:
-#: English only, and no catalogue keys: these are the repository's own
-#: documents, and a half-translated operations note is worse than an English
-#: one that says so.
+#: Translated documents use build-time sources beside the public guides.
+#: Release notes and decision records retain their original English bodies.
 OPERATOR_DOCUMENTATION_PAGES: tuple[DocumentationPage, ...] = (
     DocumentationPage(
         "architecture",
@@ -352,7 +354,7 @@ class DecisionRecord:
 
 
 #: Every record `adr/README.md` indexes, rendered only inside the operator
-#: area under ``/admin/decisions``. English only, like the operator documents:
+#: area under ``/admin/decisions``. English only:
 #: a decision record is the repository's own history, and a translation would
 #: be a second text that could disagree with it. Read from a generated module
 #: because the web bundle does not ship `adr/`.

@@ -155,13 +155,13 @@ ADMIN_SEARCH_PAGES: tuple[SearchPage, ...] = (
         "admin.rules.lede",
     ),
     *(
-        # English only and no catalogue keys, exactly as the tab strip renders
-        # them: these two are the repository's own documents.
         SearchPage(
             f"/admin/docs/{document.slug}",
             document.title,
             document.description,
             f"admin-docs/{document.slug}.html",
+            f"admin.docs.{document.slug}.title",
+            f"admin.docs.{document.slug}.description",
         )
         for document in OPERATOR_DOCUMENTATION_PAGES
     ),

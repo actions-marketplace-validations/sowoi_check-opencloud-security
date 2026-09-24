@@ -27,7 +27,7 @@
   {% for tab in admin_doc_tabs %}
   <a href="{{ admin_path }}/docs/{{ tab.slug }}"
      {% if admin_tab == tab.slug %}aria-current="page"{% endif %}>
-    {{ tab.title }}
+    {{ t('admin.docs.' ~ tab.slug ~ '.title') }}
   </a>
   {% endfor %}
   <a href="{{ admin_path }}/decisions"

@@ -12,8 +12,24 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+### Fixed
+
+- Aligned the report expiry footer, warning and live countdown to round remaining
+  minutes up consistently in every language.
+
 ### Documentation
 
+- Added German, Spanish and French operator architecture and operations documentation, including
+  localized document navigation and operator search. Section anchors and commands
+  remain aligned with English; ADRs and release-note bodies remain English.
+
+- Clarified grouped remediation, upgrade estimates, report expiry and operator
+  messages in English, German, Spanish and French. A simulated upgrade whose
+  grade is limited by findings no longer implies that the grade cannot improve.
+  Count labels also read correctly for a single finding.
+- Expanded all-language tests for remediation groups, upgrade estimates,
+  escaped version strings, singular and plural expiry warnings, and the
+  translated decision-record interface around English source documents.
 - **Decision records are never translated.** ADR 0077 records that every
   record in `adr/` exists in English only, and once: the operator area shows
   it untranslated in every locale, and translation work leaves `adr/` alone.

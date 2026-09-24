@@ -1112,7 +1112,7 @@
 </section>
 {% endif %}
 
-{% set expiry_minutes = (scan.expiresIn // 60) or 1 %}
+{% set expiry_minutes = ((scan.expiresIn + 59) // 60) or 1 %}
 <p class="expiry" data-expiry-one="{{ t('result.expiry.one') }}"
    data-expiry-many="{{ t.raw('result.expiry.many') }}">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"

@@ -67,8 +67,8 @@ MESSAGES: dict[str, str] = {
     "admin.rules.group.probe.lede": "Limites appliquées aux demandes répétées vers des cibles qui ne peuvent pas être analysées.",
     "admin.rules.group.targets": "Ce qui peut être analysé",
     "admin.rules.group.targets.lede": "Les cibles sont vérifiées avant la connexion et avant chaque redirection.",
-    "admin.rules.group.scanner": "Avec quelle intensité un hôte est sondé",
-    "admin.rules.group.scanner.lede": "Les paramètres utilisés pour chaque analyse de ce déploiement. Aucune requête ne peut les modifier.",
+    "admin.rules.group.scanner": "Limites des analyses",
+    "admin.rules.group.scanner.lede": "Ces réglages encadrent les requêtes de chaque analyse. Ils s’appliquent à toutes les analyses et ne peuvent pas être modifiés lors de leur soumission.",
     "admin.rules.group.operator": "Identifiants et actions de l'opérateur",
     "admin.rules.group.operator.lede": "Limites des requêtes nécessitant des identifiants et des actions de l’opérateur.",
     "admin.rules.rule.client_limit.title": "Limite par client",
@@ -126,14 +126,21 @@ MESSAGES: dict[str, str] = {
     "admin.rules.rule.purge_attempts.title": "Tentatives avec l'identifiant d'effacement",
     "admin.rules.rule.purge_attempts.body": "Après {limit} identifiants erronés reçus d’un client en {window}, les tentatives suivantes sont refusées jusqu’à la fin de cette période. Les identifiants corrects ne comptent pas.",
     "admin.rules.rule.admin_refresh.title": "Boutons d'actualisation",
-    "admin.rules.rule.admin_refresh.body": "Chaque actualisation des données de référence peut être lancée une fois toutes les {cooldown}.",
+    "admin.rules.rule.admin_refresh.body": "Chaque source de données de référence peut être actualisée au maximum une fois toutes les {cooldown}.",
     "admin.docs.kicker": "Documentation d'exploitation",
+    "admin.docs.architecture.title": "Architecture",
+    "admin.docs.architecture.description": "Comment ce dépôt est organisé et pourquoi ses frontières sont définies ainsi.",
+    "admin.docs.operations.title": "Exploitation",
+    "admin.docs.operations.description": "Actualiser les données, reconstruire les fichiers générés et diagnostiquer les problèmes du service.",
+    "admin.docs.releases.title": "Versions",
+    "admin.docs.releases.description": "Les changements des dernières versions de ce service, de la plus récente à la plus ancienne.",
+    "admin.docs.translated_source": "Traduit depuis <code>{file}</code> dans le dépôt.",
     "admin.docs.source": "Depuis <code>{file}</code> dans le dépôt, en anglais.",
     "admin.decisions.title": "Décisions d’architecture",
-    "admin.decisions.lede": "Chaque enregistrement de décision d’architecture de ce dépôt et son statut, en anglais tel qu’il a été rédigé.",
-    "admin.decisions.search.label": "Filtrer les enregistrements de décision",
+    "admin.decisions.lede": "Consultez les décisions d’architecture du dépôt et leur statut actuel. Les documents sont présentés dans leur version originale en anglais.",
+    "admin.decisions.search.label": "Filtrer les décisions d’architecture",
     "admin.decisions.search.placeholder": "Numéro, titre ou statut",
-    "admin.decisions.search.empty": "Aucun enregistrement ne correspond. La recherche du site parcourt aussi le texte de chaque enregistrement.",
+    "admin.decisions.search.empty": "Aucune décision ne correspond à ce filtre. Utilisez la recherche de l’espace opérateur pour rechercher dans le texte intégral des documents.",
     "admin.decisions.back": "Toutes les décisions",
     "admin.band": "Espace d'exploitation - connecté en tant que {user}",
     "admin.band.signout": "Se déconnecter",
@@ -288,9 +295,9 @@ MESSAGES: dict[str, str] = {
     "admin.probe.hint": "Récupère les deux sources et vérifie si leurs données peuvent être acceptées pour une actualisation. Les données récupérées ne sont pas enregistrées.",
     "admin.probe.schedule": "Calendrier des versions : {answer}",
     "admin.probe.advisories": "Avis : {answer}",
-    "admin.probe.usable": "lu, et une mise à jour l'accepterait",
-    "admin.probe.rejected": "lu, mais les contrôles le refuseraient",
-    "admin.probe.unreadable": "illisible - injoignable, ou plus dans la forme attendue",
+    "admin.probe.usable": "données récupérées et utilisables pour une mise à jour",
+    "admin.probe.rejected": "données récupérées mais rejetées lors de la validation",
+    "admin.probe.unreadable": "impossible de récupérer les données ou de les lire au format attendu",
     "admin.probe.disabled": "non vérifié - cette mise à jour est désactivée",
     "admin.search.kicker": "Index de recherche",
     "admin.search.heading": "État de l’index de recherche",
@@ -1437,34 +1444,31 @@ MESSAGES: dict[str, str] = {
         "une note supérieure."
     ),
     "result.groups.kicker": "Regroupé par configuration",
-    "result.groups.heading": "Quoi modifier, et où",
-    "result.groups.lede": "Les mêmes constats ouverts, regroupés selon le système à modifier pour les corriger, y compris ceux qui n’influencent pas la note. Une seule modification en résout souvent plusieurs.",
+    "result.groups.heading": "Où effectuer chaque modification",
+    "result.groups.lede": "Les constats ouverts sont regroupés par zone de configuration où ils peuvent être corrigés. Cela inclut ceux qui n’affectent pas la note. Certaines modifications corrigent plusieurs constats à la fois.",
     "result.groups.target.reverseProxy": "Proxy inverse",
     "result.groups.target.identityProvider": "Fournisseur d’identité",
     "result.groups.target.opencloud": "OpenCloud",
     "result.groups.target.dnsZone": "Zone DNS",
-    "result.groups.count": "{count} constats ouverts, {label} avec toutes les modifications de ce groupe",
-    "result.groups.resolves": "Résout {count} constats à la fois",
-    "result.groups.alone": "cette modification seule : {label}",
+    "result.groups.count": "Constats ouverts : {count}. Note après toutes les modifications de ce groupe : {label}.",
+    "result.groups.resolves": "Constats corrigés par cette modification : {count}",
+    "result.groups.alone": "Note après cette seule modification : {label}",
     "result.rehearsal.kicker": "Simulation de mise à niveau",
     "result.rehearsal.heading": "Ce qu’une mise à niveau corrigerait",
     "result.rehearsal.lede": (
-        "Chaque version pertinente est évaluée avant son installation. Une "
-        "mise à niveau change la version, pas le proxy inverse ; les constats "
-        "de cette page restent donc exactement ceux mesurés par cette analyse."
+        "Le scanner estime la note de chaque version proposée à partir des constats de cette analyse. Seule la version change dans le calcul ; aucune mise à niveau n’est installée et l’instance n’est pas analysée à nouveau."
     ),
     "result.rehearsal.line": "branche {line}",
     "result.rehearsal.recommended": "recommandée",
     "result.rehearsal.eol": "fin de vie",
-    "result.rehearsal.grade": "atteindrait {label}",
+    "result.rehearsal.grade": "Note estimée : {label}",
     "result.rehearsal.fixes": "Corrige",
     "result.rehearsal.still": "Toujours concernée par",
     "result.rehearsal.introduces": "Désormais concernée par",
     "result.rehearsal.clean": "Corrige tous les avis de sécurité qui concernent cette version.",
     "result.rehearsal.nothing": "Ne corrige aucun avis de sécurité concernant cette version.",
     "result.rehearsal.capped": (
-        "La version seule atteindrait {label} ; les constats de cette page "
-        "maintiennent la note à son niveau actuel."
+        "La version seule atteindrait {label}. Les constats restants limitent la note estimée affichée pour cette mise à niveau."
     ),
     "result.rehearsal.note": (
         "Cette simulation utilise uniquement le calendrier des versions et la "
@@ -1712,16 +1716,14 @@ MESSAGES: dict[str, str] = {
     "result.feedback.prompt": "Vous pensez que l'analyse s'est trompée ?",
     "result.feedback.link": "Signaler un faux positif ou un faux négatif",
     "result.expiry.one": (
-        "Cette page expire dans environ 1 minute, après quoi le lien cesse "
-        "de fonctionner et le résultat disparaît."
+        "Ce rapport en ligne expire dans environ 1 minute. Son lien cessera de fonctionner ; les copies téléchargées resteront sur votre appareil."
     ),
     "result.expiry.many": (
-        "Cette page expire dans environ {minutes} minutes, après quoi le "
-        "lien cesse de fonctionner et le résultat disparaît."
+        "Ce rapport en ligne expire dans environ {minutes} minutes. Son lien cessera de fonctionner ; les copies téléchargées resteront sur votre appareil."
     ),
-    "result.expiry.warning.one": "Ce rapport disparaît dans environ 1 minute.",
+    "result.expiry.warning.one": "Ce rapport en ligne expire dans environ 1 minute.",
     "result.expiry.warning.many": (
-        "Ce rapport disparaît dans environ {minutes} minutes."
+        "Ce rapport en ligne expire dans environ {minutes} minutes."
     ),
     "result.expiry.warning.action": "Téléchargez une copie pour le conserver",
     "result.expiry.gone": (

@@ -18,8 +18,10 @@ from __future__ import annotations
 
 import asyncio
 import re
+from html import unescape
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from tests.fake_opencloud import FakeOpenCloud, InstanceBehaviour
@@ -30,17 +32,19 @@ from tests.webapp_support import (  # noqa: F401 - the fixtures are autouse
     settings,
 )
 from webapp.app import create_app
+from webapp.i18n import LANGUAGE_COOKIE, Translator
 from webapp.tasks import run_scan
 
 IDENTIFIER = "0c9e7a51-4d2b-4f6a-8e31-7b5d2c9f1a46"
 STATIC_JS = Path(__file__).resolve().parents[1] / "frontend" / "static" / "js"
 
 
-def _render(state: str, *, advance: int = 0) -> str:
+def _render(state: str, *, advance: int = 0, locale: str = "en") -> str:
     """The result page for one scan in ``state``, optionally near its expiry."""
     configured = settings(allow_private_targets=True, verify_tls=False, scan_timeout=5)
     app = create_app(configured)
     with TestClient(app) as test_client:
+        test_client.cookies.set(LANGUAGE_COOKIE, locale)
         store = app.state.store
         if state == "completed":
             with FakeOpenCloud(InstanceBehaviour(basic_auth=True)) as instance:
@@ -181,13 +185,19 @@ def test_a_report_far_from_its_expiry_renders_the_warning_hidden():
     assert "<script src=\"/static/js/expiry.js\" defer></script>" in page
 
 
-def test_a_report_in_its_last_minutes_is_warned_about_without_any_script():
+@pytest.mark.parametrize("locale", ["en", "de", "es", "fr"])
+@pytest.mark.parametrize("minutes", [1, 2])
+def test_a_report_in_its_last_minutes_is_warned_about_without_any_script(locale, minutes):
     """A reader without scripting must be told too, and offered the way to keep a copy."""
-    page = _render("completed", advance=3600 - 120)
+    page = _render("completed", advance=3600 - minutes * 60, locale=locale)
     warning = _tag(page, "data-expiry-warning")
 
     assert "hidden" not in warning
-    assert "This report disappears in about 2 minutes." in page
+    translator = Translator(locale)
+    suffix = "one" if minutes == 1 else "many"
+    assert translator(f"result.expiry.warning.{suffix}", minutes=minutes) in unescape(page)
+    assert translator(f"result.expiry.{suffix}", minutes=minutes) in unescape(page)
+    assert f'<html lang="{locale}">' in page
     assert 'href="#exports" data-expiry-warning-action' in page
 
 

@@ -38,6 +38,7 @@ them:
 
 ```bash
 python scripts/build_frontend_documentation.py
+python scripts/update_page_revisions.py
 python scripts/build_search_index.py
 ```
 
@@ -163,9 +164,19 @@ The sharing and error-page tests render all four languages, including email
 drafts, clipboard summaries, rate limits and rejected uploads. Export-format
 checks compare each translated guide with the formats the service supports.
 Link diagnostics ignore code examples and retain the source line numbers.
+Result-page tests also cover grouped fixes, upgrade estimates and expiry
+warnings in every language. Test conditional content as well as the landing
+page: a missing panel, a single finding or one minute remaining can expose
+wording problems that a general page-rendering test misses.
 
 Add a focused regression case when correcting a recurring wording defect.
 Include an acceptable example when a rule could also match correct technical
 language. Do not ban ordinary technical terms or change a correct sentence
 only to satisfy a heuristic. Automated checks catch known patterns; a fluent
 reviewer must still assess meaning and natural phrasing.
+
+Operator architecture and operations sources live in
+`docs/<language>/operator/architecture.md` and `operations.md`.
+They use the same build-time pipeline and section anchors as the public guides.
+Regenerate the documentation and operator search index after editing them.
+Release-note bodies and ADRs remain English.

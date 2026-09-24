@@ -415,3 +415,25 @@ def test_a_translated_heading_keeps_the_english_anchor_explicitly():
                 f"docs/{language}/{document.slug}.md must anchor its headings "
                 f"explicitly; missing {{#...}} for: {', '.join(missing)}"
             )
+
+
+@pytest.mark.parametrize("slug", ["architecture", "operations"])
+@pytest.mark.parametrize("locale", GUIDE_LANGUAGES)
+def test_operator_translations_preserve_sections_commands_and_local_links(locale, slug):
+    english = generator.render_operator_page(slug)
+    translated = generator.render_operator_page(slug, locale)
+    headings = r'<h[2-6] id="([^"]+)"'
+    assert re.findall(headings, translated) == re.findall(headings, english)
+    assert re.findall(r'<pre>.*?</pre>', translated, re.DOTALL) == re.findall(
+        r'<pre>.*?</pre>', english, re.DOTALL
+    )
+    assert f'data-reveal lang="{locale}"' in translated
+    decision = "0011-" if slug == "architecture" else "0044-"
+    assert f'href="{{{{ admin_path }}}}/decisions/{decision}' in translated
+    images = r'(?:href|src)="([^"]*img/[^"]+)"'
+    assert re.findall(images, translated) == re.findall(images, english)
+    # A relative link the generator failed to rewrite; `../../healthz` in a
+    # code sample is the document's own subject, not a link.
+    assert not re.search(r'(?:href|src)="\.\./', translated)
+    assert "style=" not in translated
+    assert "<script>" not in translated

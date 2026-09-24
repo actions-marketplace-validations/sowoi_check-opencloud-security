@@ -19,6 +19,7 @@ from webapp.documentation import (
     GUIDE_LANGUAGES,
     OPERATOR_DOCUMENTATION_BY_SLUG,
     OPERATOR_DOCUMENTATION_PAGES,
+    TRANSLATED_OPERATOR_SLUGS,
 )
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -294,23 +295,13 @@ def render_page(slug: str, language: str = "en") -> str:
 """
 
 
-def render_operator_page(slug: str) -> str:
-    """Render one operator document as a template the admin area includes.
-
-    The same Markdown pipeline as :func:`render_page`, and a different wrapper:
-    no catalogue keys for the title, because these documents are the
-    repository's own English and are not translated; no `_page-nav.html`,
-    because that navigates the public guides; and the operator tab strip at
-    the top, so the area reads as one place rather than three.
-
-    The chrome around that strip is the area's, not the guides': `admin.css`
-    is what styles the tabs, the signed-in band and the ruled heading, so a
-    generated document loads it exactly as the hand-written tabs do. Without
-    it the strip renders as bare links and the area stops looking like one
-    place at the two tabs that are generated.
-    """
+def render_operator_page(slug: str, language: str = "en") -> str:
+    """Render an operator document in the requested build-time language."""
+    if language != "en" and language not in GUIDE_LANGUAGES:
+        raise ValueError(f"unsupported operator language: {language}")
     page = OPERATOR_DOCUMENTATION_BY_SLUG[slug]
-    source = (REPO_ROOT / page.source).read_text(encoding="utf-8")
+    source_path = page.source if language == "en" else f"docs/{language}/operator/{slug}.md"
+    source = (REPO_ROOT / source_path).read_text(encoding="utf-8")
     selected = (
         _latest_releases(source, page.latest_releases, _project_version())
         if page.latest_releases
@@ -322,16 +313,17 @@ def render_operator_page(slug: str) -> str:
         output_format="html5",
     )
     body = re.sub(r'\s+style="[^"]*"', "", body)
-    body = _rewrite_relative_links(body, page.source)
-    body = _rewrite_image_sources(body, page.source)
+    body = _rewrite_relative_links(body, source_path)
+    body = _rewrite_image_sources(body, source_path)
     body = _link_decisions_in_area(_escape_jinja(body))
-    toc = _table_of_contents(body)
+    source_key = "admin.docs.translated_source" if language != "en" else "admin.docs.source"
+    toc = _table_of_contents(body, language)
     toc_block = f"{toc}\n" if toc else ""
     return f"""{GENERATED_MARKER}
 {{% extends "base.html" %}}
 
-{{% block title %}}{page.title}{{% endblock %}}
-{{% block description %}}{page.description}{{% endblock %}}
+{{% block title %}}{{{{ t('admin.docs.{slug}.title') }}}}{{% endblock %}}
+{{% block description %}}{{{{ t('admin.docs.{slug}.description') }}}}{{% endblock %}}
 
 {{% block head %}}
 <link rel="stylesheet" href="/static/css/admin.css">
@@ -352,13 +344,13 @@ def render_operator_page(slug: str) -> str:
 
 <section class="page-head admin-head">
   <p class="kicker">{{{{ t('admin.docs.kicker') }}}}</p>
-  <h1>{page.title}</h1>
-  <p class="lede">{page.description}</p>
+  <h1>{{{{ t('admin.docs.{slug}.title') }}}}</h1>
+  <p class="lede">{{{{ t('admin.docs.{slug}.description') }}}}</p>
 </section>
 
-<p class="hint section-gap">{{{{ t.html('admin.docs.source', file=page_source) }}}}</p>
+<p class="hint section-gap">{{{{ t.html('{source_key}', file=page_source) }}}}</p>
 
-{toc_block}<article class="docs-article card section-gap" data-reveal lang="en">
+{toc_block}<article class="docs-article card section-gap" data-reveal lang="{language}">
 {body}
 </article>
 {{% endblock %}}
@@ -634,6 +626,11 @@ def generated_pages() -> dict[Path, str]:
             OPERATOR_OUTPUT_DIR / f"{page.slug}.html": render_operator_page(page.slug)
             for page in OPERATOR_DOCUMENTATION_PAGES
         },
+        **{
+            OPERATOR_OUTPUT_DIR / language / f"{slug}.html": render_operator_page(slug, language)
+            for language in GUIDE_LANGUAGES
+            for slug in sorted(TRANSLATED_OPERATOR_SLUGS)
+        },
     }
 
 
@@ -679,6 +676,7 @@ def write_pages() -> None:
         ):
             path.unlink()
     for path, content in expected.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content, encoding="utf-8")
 
 

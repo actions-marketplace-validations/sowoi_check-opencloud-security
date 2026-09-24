@@ -616,8 +616,8 @@ source that an operator can actually change the setting.
 `config.py` (only for a new default path), `factory.py`, the flag in
 `check_opencloud_security.py`, the subcommand in `opencloud_local_scan/cli.py`,
 the question in `wizard.py`, the option table in `README.md`,
-`config/check-opencloud-security.example.yml`, plus `CHANGELOG.md` and
-`RELEASE.md` under the version in `pyproject.toml`.
+`config/check-opencloud-security.example.yml`, plus `CHANGELOG.md` under `[Unreleased]`. The release workflow generates
+`RELEASE.md`.
 
 **A new `COS_WEB_*` setting** needs a field on `WebSettings` with a docstring
 saying why it is not client-configurable, a line in `from_env`, a row in the

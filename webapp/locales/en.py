@@ -87,8 +87,8 @@ MESSAGES: dict[str, str] = {
     "admin.rules.group.probe.lede": "Limits on repeated requests to targets that cannot be scanned.",
     "admin.rules.group.targets": "What may be scanned",
     "admin.rules.group.targets.lede": "Target checks run before connecting and before following each redirect.",
-    "admin.rules.group.scanner": "How hard a host is probed",
-    "admin.rules.group.scanner.lede": "The flags every scan from this deployment is built with. No request can change them.",
+    "admin.rules.group.scanner": "Scan limits",
+    "admin.rules.group.scanner.lede": "These settings control the requests each scan can make. They apply to every scan and cannot be changed through a submission.",
     "admin.rules.group.operator": "Credentials and operator actions",
     "admin.rules.group.operator.lede": "Limits on requests that require credentials and on operator actions.",
     "admin.rules.rule.client_limit.title": "Per-client limit",
@@ -146,14 +146,21 @@ MESSAGES: dict[str, str] = {
     "admin.rules.rule.purge_attempts.title": "Erasure credential attempts",
     "admin.rules.rule.purge_attempts.body": "After {limit} incorrect credentials from a client within {window}, further attempts are rejected until that period ends. Correct credentials do not count.",
     "admin.rules.rule.admin_refresh.title": "Refresh buttons",
-    "admin.rules.rule.admin_refresh.body": "Each reference-data refresh may be pressed once every {cooldown}.",
+    "admin.rules.rule.admin_refresh.body": "Each reference-data source can be refreshed at most once every {cooldown}.",
     "admin.docs.kicker": "Operator documentation",
+    "admin.docs.architecture.title": "Architecture",
+    "admin.docs.architecture.description": "How this repository is put together, and why the seams are where they are.",
+    "admin.docs.operations.title": "Operations",
+    "admin.docs.operations.description": "Keeping the data current, rebuilding what is generated, and where to look when the service misbehaves.",
+    "admin.docs.releases.title": "Releases",
+    "admin.docs.releases.description": "What the latest releases of this service changed, newest first.",
+    "admin.docs.translated_source": "Translated from <code>{file}</code> in the repository.",
     "admin.docs.source": "Shown from <code>{file}</code> in the repository, in English.",
     "admin.decisions.title": "Architecture decisions",
-    "admin.decisions.lede": "Every architectural decision record in this repository and its status, shown in English as written.",
-    "admin.decisions.search.label": "Filter the decision records",
+    "admin.decisions.lede": "Browse the repository’s architectural decision records and their current status. The records are shown in their original English.",
+    "admin.decisions.search.label": "Filter architectural decisions",
     "admin.decisions.search.placeholder": "Number, title or status",
-    "admin.decisions.search.empty": "No record matches. The site search also looks inside each record's text.",
+    "admin.decisions.search.empty": "No decisions match this filter. Use the operator-area search to search the full text of the records.",
     "admin.decisions.back": "All decisions",
     "admin.band": "Operator area - signed in as {user}",
     # Shown only where COS_WEB_ADMIN_SIGN_OUT_URL named where the provider in
@@ -307,9 +314,9 @@ MESSAGES: dict[str, str] = {
     "admin.probe.hint": "Fetches both sources and checks whether a refresh can accept them. Does not store the fetched data.",
     "admin.probe.schedule": "Release schedule: {answer}",
     "admin.probe.advisories": "Advisories: {answer}",
-    "admin.probe.usable": "read, and a refresh would accept it",
-    "admin.probe.rejected": "read, but the guards would refuse it",
-    "admin.probe.unreadable": "could not be read - unreachable, or no longer in the expected shape",
+    "admin.probe.usable": "data retrieved and suitable for an update",
+    "admin.probe.rejected": "data retrieved but rejected by validation",
+    "admin.probe.unreadable": "data could not be retrieved or parsed in the expected format",
     "admin.probe.disabled": "not checked - this refresh is switched off",
     "admin.search.kicker": "Search index",
     "admin.search.heading": "Search index status",
@@ -1446,34 +1453,31 @@ MESSAGES: dict[str, str] = {
         "configuration. They prevent the plan from reaching a higher grade."
     ),
     "result.groups.kicker": "Grouped by configuration",
-    "result.groups.heading": "What to change where",
-    "result.groups.lede": "The same open findings, grouped by the system you edit to fix them, including findings that do not affect the grade. One change often resolves several findings.",
+    "result.groups.heading": "Where to make each change",
+    "result.groups.lede": "Open findings are grouped by the configuration area where they can be addressed. This includes findings that do not affect the grade. Some changes address several findings at once.",
     "result.groups.target.reverseProxy": "Reverse proxy",
     "result.groups.target.identityProvider": "Identity provider",
     "result.groups.target.opencloud": "OpenCloud",
     "result.groups.target.dnsZone": "DNS zone",
-    "result.groups.count": "{count} open findings, {label} with every change here",
-    "result.groups.resolves": "Resolves {count} findings together",
-    "result.groups.alone": "this change alone: {label}",
+    "result.groups.count": "Open findings: {count}. Grade after all changes in this group: {label}.",
+    "result.groups.resolves": "Findings addressed by this change: {count}",
+    "result.groups.alone": "Grade after this change alone: {label}",
     "result.rehearsal.kicker": "Upgrade rehearsal",
     "result.rehearsal.heading": "What an upgrade would fix",
     "result.rehearsal.lede": (
-        "Each worthwhile release is rated before it is installed. An upgrade "
-        "changes the version, not the reverse proxy, so the findings on this "
-        "page remain exactly as this scan measured them."
+        "The scanner estimates the grade for each candidate release using the findings from this scan. It changes only the version in the calculation; it does not install an upgrade or recheck the instance."
     ),
     "result.rehearsal.line": "release line {line}",
     "result.rehearsal.recommended": "recommended",
     "result.rehearsal.eol": "end of life",
-    "result.rehearsal.grade": "would reach {label}",
+    "result.rehearsal.grade": "Estimated grade: {label}",
     "result.rehearsal.fixes": "Fixes",
     "result.rehearsal.still": "Still affected by",
     "result.rehearsal.introduces": "Newly affected by",
     "result.rehearsal.clean": "Clears every advisory affecting this version.",
     "result.rehearsal.nothing": "Does not clear any advisory affecting this version.",
     "result.rehearsal.capped": (
-        "The version alone would reach {label}; the findings on this page keep "
-        "the upgrade at its current grade."
+        "The version alone would reach {label}. Remaining findings limit the estimated grade shown for this upgrade."
     ),
     "result.rehearsal.note": (
         "This rehearsal uses only the release schedule and advisory database "
@@ -1708,15 +1712,13 @@ MESSAGES: dict[str, str] = {
     "result.feedback.prompt": "Think the scan got something wrong?",
     "result.feedback.link": "Report a false positive or false negative",
     "result.expiry.one": (
-        "This page expires in about 1 minute, after which the link stops working "
-        "and the result is gone."
+        "This online report expires in about 1 minute. Its link will stop working; any copy you have downloaded will remain on your device."
     ),
     "result.expiry.many": (
-        "This page expires in about {minutes} minutes, after which the link stops "
-        "working and the result is gone."
+        "This online report expires in about {minutes} minutes. Its link will stop working; any copy you have downloaded will remain on your device."
     ),
-    "result.expiry.warning.one": "This report disappears in about 1 minute.",
-    "result.expiry.warning.many": "This report disappears in about {minutes} minutes.",
+    "result.expiry.warning.one": "This online report expires in about 1 minute.",
+    "result.expiry.warning.many": "This online report expires in about {minutes} minutes.",
     "result.expiry.warning.action": "Download a copy to keep it",
     "result.expiry.gone": (
         "This report has expired. The link and its downloads no longer work."
