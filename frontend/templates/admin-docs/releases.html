@@ -31,6 +31,7 @@
 
 <nav class="docs-toc card section-gap" aria-label="{{ t('docs.guide.toc.aria') }}" data-reveal>
   <p class="kicker">{{ t('docs.guide.toc.heading') }}</p>
+  <a href="#1302-this-release" lang="en">[1.30.2] - this release</a>
   <a href="#1301-2026-09-23" lang="en">[1.30.1] - 2026-09-23</a>
   <a href="#1300-2026-09-22" lang="en">[1.30.0] - 2026-09-22</a>
   <a href="#1293-2026-09-22" lang="en">[1.29.3] - 2026-09-22</a>
@@ -40,10 +41,48 @@
   <a href="#1281-2026-09-21" lang="en">[1.28.1] - 2026-09-21</a>
   <a href="#1280-2026-09-20" lang="en">[1.28.0] - 2026-09-20</a>
   <a href="#1272-2026-09-19" lang="en">[1.27.2] - 2026-09-19</a>
-  <a href="#1271-2026-09-19" lang="en">[1.27.1] - 2026-09-19</a>
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="en">
+<h2 id="1302-this-release">[1.30.2] - this release</h2>
+<h3 id="changed">Changed</h3>
+<ul>
+<li><strong>Tests now cover code that no test reached before.</strong> The advisory refresh
+  script <code>scripts/update_vulnerability_db.py</code> has tests. They prove that it
+  writes new advisories and that <code>--check</code> writes nothing. If the feed is
+  down, the script keeps the file. <code>scripts/verify_export.py</code> has tests too. They
+  prove that it refuses edited bytes, the wrong key and a missing key. The scan
+  child process in <code>webapp/scan_process.py</code> has tests for a rejected target, a
+  failed scan and a crash. A rejected target stays a rejection in the worker,
+  and a crash sends no exception text. The approval mode in
+  <code>webapp/approval.py</code> has tests that prove DNS never approves an address
+  target, and that a failed TXT lookup is a refusal.
+  <code>tests/test_verify_remediation.py</code> now makes sure that every extra check and
+  hardening flag of a full scan verifies to the same answer, not only three of
+  them.</li>
+</ul>
+<h3 id="documentation">Documentation</h3>
+<ul>
+<li>Clarified operator status, comparison results, monitoring instructions and
+  TLS explanations in English, German, Spanish and French. Corrected Spanish
+  forms of address and translated two overlooked deployment settings rows.</li>
+<li>Expanded translation tests to cover copied English table descriptions,
+  duplicate catalogue keys, repeated placeholders, and formatting and HTML
+  escaping across every language, including messages on conditional pages.</li>
+</ul>
+<h3 id="fixed">Fixed</h3>
+<ul>
+<li><code>--waiver-warning</code> and <code>waiver_days_left</code> no longer count a waiver that
+  only covers a flag OpenCloud hardcodes, such as
+  <code>publicLinkExpirationEnforced</code>. That flag never alerts, so the end of its
+  waiver changes nothing. Before this fix, such a waiver raised a WARNING.</li>
+<li>The plugin output now says "1 day left" instead of "1 days left" in the
+  end-of-life warning, the lifecycle line and the waiver warning. If one
+  waiver covers several checks, the waiver warning now says that they
+  "alert again".</li>
+<li>If two waivers end at the same moment, the waiver warning now names both.
+  Before this fix, it named only one waiver but listed the checks of both.</li>
+</ul>
 <h2 id="1301-2026-09-23">[1.30.1] - 2026-09-23</h2>
 <h3 id="added">Added</h3>
 <ul>
@@ -65,7 +104,7 @@
   <code>opencloud_security_coverage_inconclusive_total</code> and
   <code>opencloud_security_coverage_not_checked_total</code>. The grade does not change.</li>
 </ul>
-<h3 id="documentation">Documentation</h3>
+<h3 id="documentation_1">Documentation</h3>
 <ul>
 <li>Replaced vague and literal wording in the interface, scanner guides and
   README. Aligned English, German, Spanish and French explanations and
@@ -79,7 +118,7 @@
   reviewed plain-language alternatives so they no longer produce warnings.</li>
 </ul>
 <h2 id="1300-2026-09-22">[1.30.0] - 2026-09-22</h2>
-<h3 id="documentation_1">Documentation</h3>
+<h3 id="documentation_2">Documentation</h3>
 <ul>
 <li>
 <p>Listed <code>tests/test_monitoring_export.py</code> in the test index, so the
@@ -182,7 +221,7 @@
   release ends the window.</p>
 </li>
 </ul>
-<h3 id="fixed">Fixed</h3>
+<h3 id="fixed_1">Fixed</h3>
 <ul>
 <li>
 <p><strong>The French scanner CLI guide no longer ships the newly added comparison
@@ -197,7 +236,7 @@
 </li>
 </ul>
 <h2 id="1293-2026-09-22">[1.29.3] - 2026-09-22</h2>
-<h3 id="fixed_1">Fixed</h3>
+<h3 id="fixed_2">Fixed</h3>
 <ul>
 <li><strong>Sloppy generated wording was removed from the English, German and French&lt;
   documentation.</strong> Replaced vague promotional phrases and awkward literal
@@ -206,7 +245,7 @@
   regression cases for these patterns.</li>
 </ul>
 <h2 id="1292-2026-09-22">[1.29.2] - 2026-09-22</h2>
-<h3 id="fixed_2">Fixed</h3>
+<h3 id="fixed_3">Fixed</h3>
 <ul>
 <li>
 <p><strong><code>/llms.txt</code> and <code>/llms-full.txt</code> described an older version of the
@@ -248,7 +287,7 @@
 </li>
 </ul>
 <h2 id="1291-2026-09-21">[1.29.1] - 2026-09-21</h2>
-<h3 id="changed">Changed</h3>
+<h3 id="changed_1">Changed</h3>
 <ul>
 <li>
 <p><strong>The <code>--policy</code> deployment gate is now covered by tests mutation testing
@@ -277,7 +316,7 @@
   dropped rather than raise.</p>
 </li>
 </ul>
-<h3 id="fixed_3">Fixed</h3>
+<h3 id="fixed_4">Fixed</h3>
 <ul>
 <li>The browser test for the severity filter no longer drops its own press in
   WebKit on CI. Pressing a counter hides most of the list and reveals the
@@ -386,7 +425,7 @@
   new verdict is the intended one.</p>
 </li>
 </ul>
-<h3 id="changed_1">Changed</h3>
+<h3 id="changed_2">Changed</h3>
 <ul>
 <li>
 <p><strong>The Icinga check commands offer <code>--profile</code>.</strong> The three CheckCommand
@@ -473,12 +512,12 @@
   ADR 0072.</p>
 </li>
 </ul>
-<h3 id="documentation_2">Documentation</h3>
+<h3 id="documentation_3">Documentation</h3>
 <ul>
 <li><strong>Translated release-lifecycle guides now include the upgrade-rehearsal
   section.</strong> Their section anchors stay aligned with the English guide.</li>
 </ul>
-<h3 id="fixed_4">Fixed</h3>
+<h3 id="fixed_5">Fixed</h3>
 <ul>
 <li><strong>A gateway answer no longer fails the documented link check.</strong> An HTTP
   408, 502, 503 or 504 comes from the machinery in front of a site, not from
@@ -515,7 +554,7 @@
   be read, OSV's answer is kept.
   <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0071-repository-advisories-are-a-second-advisory-source.md">ADR 0071</a>.</li>
 </ul>
-<h3 id="changed_2">Changed</h3>
+<h3 id="changed_3">Changed</h3>
 <ul>
 <li><strong>Polished recent German, Spanish and French web translations.</strong> Fixed mixed
   forms of address and several literal or awkward phrases in the operator
@@ -529,46 +568,6 @@
   every release before 4.0.8, and 5.0.0 up to 7.2.0, was rated as free of
   known advisories. The bundled database now carries it, affecting releases
   from 1.0.0 up to 4.0.8 and from 4.1.0 up to (but not including) 7.2.0.</li>
-</ul>
-<h2 id="1271-2026-09-19">[1.27.1] - 2026-09-19</h2>
-<h3 id="added_6">Added</h3>
-<ul>
-<li>
-<p>Codex can use the repository's Claude Code skills, hooks, subagent roles and
-  Playwright MCP configuration through portable <code>.agents/</code> and <code>.codex/</code>
-  compatibility files. The original <code>.claude/</code> setup remains unchanged.</p>
-</li>
-<li>
-<p>The operator's area shows the running release and whether a newer one is
-  published on GitHub (cached six hours, <code>COS_WEB_UPDATE_CHECK</code>), and a button
-  installs it: the release's web bundle is verified against its Sigstore build
-  attestation from this repository's release workflow, unpacked on a tmpfs
-  (<code>COS_WEB_ADMIN_UPDATE_DIR</code>, mounted by every compose file) and the web and
-  worker processes restart on it - a short downtime, lasting until the
-  containers restart. The Docker setup wizard sets it up whenever it enables
-  the operator's area. The web image now installs the <code>signing</code> extra
-  (<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0070-the-operator-area-installs-attested-releases-in-place.md">ADR 0070</a>).</p>
-</li>
-</ul>
-<h3 id="changed_3">Changed</h3>
-<ul>
-<li>mypy now also checks the bodies of functions without annotations
-  (<code>check_untyped_defs</code> in <code>mypy.ini</code>), so CI type-checks the test suite
-  too. The 98 errors that surfaced - all in <code>tests/</code> - are fixed.</li>
-</ul>
-<h3 id="fixed_5">Fixed</h3>
-<ul>
-<li>
-<p>The Codex scan driver no longer prints the raw scanner document, which could
-  expose TLS inspection data in its JSON output; <code>scan --json</code> now emits only
-  the version, verdict and failed checks.</p>
-</li>
-<li>
-<p>The operator area's <strong>Releases</strong> tab never listed the release it was running
-  on: the image is built from the version-bump commit, before the release
-  workflow renames <code>[Unreleased]</code>. The page is now generated with that section
-  under the <code>pyproject.toml</code> version when the changelog has no heading for it.</p>
-</li>
 </ul>
 </article>
 {% endblock %}

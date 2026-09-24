@@ -253,6 +253,50 @@ def test_the_publish_workflow_regenerates_the_release_notes_after_writing_them()
 #: and up. Nothing sits in between, so the exact number is not delicate.
 MAX_ENGLISH_SHARE = 0.35
 
+
+def _table_descriptions(text: str) -> set[str]:
+    """Find prose cells, excluding code, short labels and quoted diagnostics."""
+    text = re.sub(r"```.*?```", "", text, flags=re.DOTALL)
+    descriptions = set()
+    for line in text.splitlines():
+        if not line.lstrip().startswith("|"):
+            continue
+        for cell in re.split(r"(?<!\\)\|", line.strip())[1:-1]:
+            cell = cell.strip()
+            if cell.startswith('"') and cell.endswith('"'):
+                continue
+            prose = re.sub(r"`[^`]*`", "", cell)
+            if len(re.findall(r"[A-Za-z]{2,}", prose)) >= 8:
+                descriptions.add(cell)
+    return descriptions
+
+
+@pytest.mark.parametrize("locale", GUIDE_LANGUAGES)
+def test_translated_guide_tables_do_not_retain_english_descriptions(locale: str):
+    """A copied settings description must fail even in a mostly translated guide."""
+    copied: list[tuple[str, str]] = []
+    for document in DOCUMENTATION_PAGES:
+        translated = REPO_ROOT / "docs" / locale / f"{document.slug}.md"
+        if translated.exists():
+            source = _table_descriptions(
+                (REPO_ROOT / document.source).read_text(encoding="utf-8")
+            )
+            shared = source & _table_descriptions(translated.read_text(encoding="utf-8"))
+            copied.extend((document.slug, cell) for cell in sorted(shared))
+    assert copied == []
+
+
+def test_table_review_distinguishes_descriptions_from_verbatim_examples():
+    """Technical examples stay English; operator instructions need translation."""
+    description = "Ask GitHub whether a newer release of this service exists."
+    text = (
+        f"| Setting | {description} |\n"
+        '| Error | "This username is not one this invitation was issued for." |\n'
+        "| Command | `check --one --two --three --four --five --six --seven --eight` |\n"
+        "```text\n| Example | This example is a literal command output in English. |\n```"
+    )
+    assert _table_descriptions(text) == {description}
+
 #: Guides that are still an English copy under a translated title.
 #:
 #: This list is debt, not configuration: every entry is a page a reader opens

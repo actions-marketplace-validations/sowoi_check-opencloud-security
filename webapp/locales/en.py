@@ -182,10 +182,8 @@ MESSAGES: dict[str, str] = {
     # stamp cannot tell these apart - and the difference between a source
     # nobody can reach and a document this deployment is right to refuse is
     # the whole of what an operator does next.
-    "admin.state.checked.failed": "checked {when} - the last attempt could not be fetched",
-    "admin.state.checked.rejected": (
-        "checked {when} - the last attempt was refused by the guards"
-    ),
+    "admin.state.checked.failed": "checked {when} - the last fetch failed",
+    "admin.state.checked.rejected": "checked {when} - the fetched data failed validation",
     "admin.state.refresh.off": "the daily refresh is off",
     # Relative, because the question is never "what date does this say" but
     # "how long has this been sitting there". The exact stamp is on the
@@ -214,10 +212,7 @@ MESSAGES: dict[str, str] = {
     "admin.surfaces.off": "Off",
     "admin.surfaces.mcp": "Agent endpoint at /mcp",
     "admin.surfaces.mcp.guarded": "A token from the configured issuer is required.",
-    "admin.surfaces.mcp.open": (
-        "No token is required: any agent that can reach it can spend this "
-        "service's workers."
-    ),
+    "admin.surfaces.mcp.open": "No token is required. Any agent that can reach this endpoint can submit scans.",
     "admin.surfaces.docs": "Browsable API pages at /docs",
     "admin.surfaces.docs.contract": (
         "Off hides the pages, not the contract: /openapi.json, /arazzo.json "
@@ -226,9 +221,7 @@ MESSAGES: dict[str, str] = {
     "admin.surfaces.indexed": "Findable by search engines",
     "admin.surfaces.private": "Scans of private network addresses",
     "admin.surfaces.private.found": "Private targets are allowed and search indexing is enabled. Anyone who finds this service can submit targets on its internal network.",
-    "admin.surfaces.private.estate": (
-        "Allowed, which is what a deployment scanning its own estate is for."
-    ),
+    "admin.surfaces.private.estate": "Allowed, so this deployment can scan instances on its internal network.",
     "admin.surfaces.encrypt": "Results encrypted at rest",
     "admin.surfaces.audit": "Audit trail",
     "admin.surfaces.audit.file": "Written to a file that outlives the container.",
@@ -312,7 +305,7 @@ MESSAGES: dict[str, str] = {
     "admin.probe.unreadable": "could not be read - unreachable, or no longer in the expected shape",
     "admin.probe.disabled": "not checked - this refresh is switched off",
     "admin.search.kicker": "Search index",
-    "admin.search.heading": "Is the shipped index still current",
+    "admin.search.heading": "Search index status",
     "admin.search.lede": "The search index is generated during the build. This view compares its pages, languages and release version with the running service. It does not compare full page text or change the index.",
     "admin.search.fresh": "Current",
     "admin.search.stale": "Out of date",
@@ -811,11 +804,7 @@ MESSAGES: dict[str, str] = {
         "workflows</a> that say how those operations combine into submitting a "
         "scan, waiting for completion and retrieving the result."
     ),
-    "api.schema.docs_on": (
-        'Both are browsable here as <a href="/docs">Swagger UI</a> and '
-        '<a href="/redoc">ReDoc</a>, served from this server like everything else '
-        "- nothing is fetched from anywhere."
-    ),
+    "api.schema.docs_on": "Browse the API with <a href=\"/docs\">Swagger UI</a> or <a href=\"/redoc\">ReDoc</a>. Both viewers load their resources from this server, without third-party requests.",
     "api.schema.docs_off": (
         "The interactive viewers (Swagger UI at <code>/docs</code>, ReDoc at "
         "<code>/redoc</code>) are switched off on this deployment; an operator "
@@ -1015,23 +1004,13 @@ MESSAGES: dict[str, str] = {
         "A file ending in <code>.json</code> is JSON; every other suffix is YAML. "
         "Secrets may live in separate files rather than on the command line."
     ),
-    "docs.index.monitoring.kicker": "Put it to work",
+    "docs.index.monitoring.kicker": "Regular checks",
     "docs.index.monitoring.heading": (
         "Monitoring, automation and several instances"
     ),
-    "docs.index.monitoring.nagios": (
-        "<strong>Nagios or Icinga:</strong> use the plugin output directly; the "
-        "worst configured threshold determines the exit code."
-    ),
-    "docs.index.monitoring.fleet": (
-        "<strong>Several instances:</strong> pass a comma-separated host list, or "
-        "use one configuration file per instance once their settings diverge."
-    ),
-    "docs.index.monitoring.prometheus": (
-        "<strong>Prometheus:</strong> use <code>--format=prometheus</code> once, "
-        "or expose the built-in exporter with "
-        "<code>--prometheus-listen-port</code>."
-    ),
+    "docs.index.monitoring.nagios": "<strong>Nagios or Icinga:</strong> use the plugin output directly. The most severe status triggered by the configured thresholds determines the exit code.",
+    "docs.index.monitoring.fleet": "<strong>Multiple instances:</strong> pass a comma-separated list of hosts. Use a separate configuration file for each instance that needs different settings.",
+    "docs.index.monitoring.prometheus": "<strong>Prometheus:</strong> run <code>--format=prometheus</code> for a single export, or serve metrics with the built-in exporter using <code>--prometheus-listen-port</code>.",
     "docs.index.monitoring.ci": (
         "<strong>CI:</strong> run the same command in a pipeline; the status code "
         "makes a failed policy fail the job without a wrapper."
@@ -1094,9 +1073,9 @@ MESSAGES: dict[str, str] = {
     ),
     "compare.error.different_targets": "The two scans describe different instances, so they are not compared. Compare two scans of the same instance.",
     "compare.verdict.kicker": "Between the two scans",
-    "compare.verdict.improved": "It got better",
+    "compare.verdict.improved": "Scan result improved",
     "compare.verdict.unchanged": "Nothing changed",
-    "compare.verdict.regressed": "It got worse",
+    "compare.verdict.regressed": "Scan result worsened",
     "compare.rating.up": "The grade rose by {points} point(s).",
     "compare.rating.down": "The grade fell by {points} point(s).",
     # Said plainly, because a grade that did not move is the case people
@@ -1113,17 +1092,13 @@ MESSAGES: dict[str, str] = {
     "compare.introduced.heading": "New findings ({count})",
     "compare.introduced.none": "Nothing is new since the earlier scan.",
     "compare.resolved.heading": "Resolved findings ({count})",
-    "compare.resolved.none": "Nothing that was open in the earlier scan is gone.",
+    "compare.resolved.none": "No findings from the earlier scan have been resolved.",
     "compare.unchanged.heading": "Still open ({count})",
     "compare.unchanged.none": "Nothing is open in both scans.",
     "compare.changes.heading": "What the comparison itemises",
     "compare.changes.category": "Category",
     "compare.changes.change": "Change",
-    "compare.nothing_stored": (
-        "This comparison was worked out from the two results and stored "
-        "nowhere. Reload the page and it is worked out again; let either "
-        "result expire and it can no longer be asked for at all."
-    ),
+    "compare.nothing_stored": "This comparison is calculated from the two results each time you open the page. It is not stored separately and becomes unavailable when either result expires.",
     # ------------------------------------------------- comparing against a file
     # The second way onto the page above: the earlier side arrives as a report
     # somebody downloaded, because they kept it or because the scan it came
@@ -1157,10 +1132,7 @@ MESSAGES: dict[str, str] = {
         "The earlier side was read from a CSV report you uploaded. It has no "
         "result page here - the file was read and discarded."
     ),
-    "compare.upload.source.dropped": (
-        "{count} line(s) in the file were not named the way this scanner names "
-        "its findings and were left out of the comparison."
-    ),
+    "compare.upload.source.dropped": "Entries with unknown finding identifiers excluded from the comparison: {count}.",
     "compare.upload.source.missing.httpsEnforced": (
         "The uploaded file does not record whether HTTPS was enforced, so that "
         "measure was left out of both sides rather than guessed at. A CSV "
@@ -1426,7 +1398,7 @@ MESSAGES: dict[str, str] = {
         "generated {generated}, so the schedule is probably out of date. It is not "
         "counted against the instance -"
     ),
-    "result.facts.schedule.link": "check the published lifecycle page",
+    "result.facts.schedule.link": "view the published release lifecycle",
     "result.facts.signin": "Sign-in",
     "result.facts.signin.external": "External provider",
     "result.facts.signin.upstream_tag": "upstream",
@@ -1568,11 +1540,7 @@ MESSAGES: dict[str, str] = {
     ),
     "result.fingerprint.overall": "Across all groups: {digest}",
     "result.fingerprint.unmeasured": "Not measured in this scan",
-    "result.fingerprint.unavailable": (
-        "This report records no configuration fingerprint, so it cannot say "
-        "whether the deployment changed. That is not the same as a "
-        "deployment that stayed the same."
-    ),
+    "result.fingerprint.unavailable": "This report contains no configuration fingerprint. It cannot establish whether the deployment changed.",
     "fingerprint.group.tls": "Transport security",
     "fingerprint.group.headers": "Security headers",
     "fingerprint.group.sharing": "Sharing",
@@ -1595,9 +1563,7 @@ MESSAGES: dict[str, str] = {
     "result.coverage.unavailable": "This older report does not record which checks ran. Its scan coverage is unknown.",
     "coverage.reason.not_applicable": "Does not apply to this instance",
     "coverage.reason.probe_disabled": "The probe was turned off for this scan",
-    "coverage.reason.prerequisite_missing": (
-        "The instance did not publish what this reads"
-    ),
+    "coverage.reason.prerequisite_missing": "The instance did not expose the information needed for this check",
     "coverage.reason.timeout": "Nothing answered in time",
     "coverage.reason.unreadable": "The answer could not be read",
     "coverage.reason.no_route": "This scanner has no route to that address",
@@ -1637,10 +1603,7 @@ MESSAGES: dict[str, str] = {
     ),
     "result.tls.kicker": "Transport",
     "result.tls.heading": "Transport security",
-    "result.tls.lede": (
-        "What the TLS layer said before a single byte of HTTP was exchanged. The "
-        "findings above already judge these; this is the measurement behind them."
-    ),
+    "result.tls.lede": "Protocol and certificate details measured during the TLS handshake. The findings above explain how these measurements affect the grade.",
     "result.tls.protocol": "Protocol",
     "result.tls.bits": "({bits} bit)",
     "result.tls.deprecated": "Deprecated versions",

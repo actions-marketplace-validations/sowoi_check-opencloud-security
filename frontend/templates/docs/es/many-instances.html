@@ -21,7 +21,7 @@
   <a href="#one-configuration-file-per-instance" lang="es">Un archivo de configuración por instancia</a>
   <a href="#a-loop-over-the-files" lang="es">Un bucle sobre los archivos</a>
   <a href="#where-the-checks-should-run-from" lang="es">Desde dónde deben ejecutarse las comprobaciones</a>
-  <a href="#keeping-the-waivers-honest" lang="es">Mantener honestas las exclusiones</a>
+  <a href="#keeping-the-waivers-honest" lang="es">Revisar las exclusiones periódicamente</a>
   <a href="#only-alerting-on-what-changed" lang="es">Alertar solo sobre lo que ha cambiado</a>
   <a href="#scheduling-the-whole-thing" lang="es">Programarlo todo</a>
 </nav>
@@ -38,7 +38,7 @@ comprobaciones resultantes.</p>
 <li><a href="#one-configuration-file-per-instance">Un archivo de configuración por instancia</a></li>
 <li><a href="#a-loop-over-the-files">Un bucle sobre los archivos</a></li>
 <li><a href="#where-the-checks-should-run-from">Desde dónde deben ejecutarse las comprobaciones</a></li>
-<li><a href="#keeping-the-waivers-honest">Mantener honestas las exclusiones</a></li>
+<li><a href="#keeping-the-waivers-honest">Revisar las exclusiones periódicamente</a></li>
 <li><a href="#only-alerting-on-what-changed">Alertar solo sobre lo que ha cambiado</a></li>
 <li><a href="#scheduling-the-whole-thing">Programarlo todo</a></li>
 </ul>
@@ -141,10 +141,9 @@ el <a href="/documentation/reference#running-the-scanner-as-a-service">servicio 
 cerca de las instancias y deje que compartan su caché. El complemento nunca se
 comunica con él (siempre analiza dentro de su propio proceso), así que el
 servicio está pensado para paneles y scripts.</p>
-<h2 id="keeping-the-waivers-honest">Mantener honestas las exclusiones</h2>
-<p>Un conjunto de instancias acumula entradas <code>ignore_hardenings</code>, y una exclusión
-que nunca se revisa es la forma en que una regresión se vuelve invisible. Dos
-cosas las mantienen honestas:</p>
+<h2 id="keeping-the-waivers-honest">Revisar las exclusiones periódicamente</h2>
+<p>Revise periódicamente las entradas <code>ignore_hardenings</code> para que los hallazgos
+aceptados no oculten problemas nuevos. Las exclusiones tienen dos límites:</p>
 <ul>
 <li>Una exclusión solo suprime la alerta. El hallazgo permanece en el documento
   de resultado con <code>"ignored": true</code>, y <code>--debug</code> lo sigue explicando;

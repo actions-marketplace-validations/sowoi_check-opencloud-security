@@ -153,12 +153,8 @@ MESSAGES: dict[str, str] = {
     "admin.state.schedule": "Calendrier des versions",
     "admin.state.advisories": "Avis de sécurité",
     "admin.state.checked": "vérifié {when}",
-    "admin.state.checked.failed": (
-        "vérifié {when} : la dernière récupération a échoué"
-    ),
-    "admin.state.checked.rejected": (
-        "vérifié {when} - la dernière tentative a été refusée par les garde-fous"
-    ),
+    "admin.state.checked.failed": "vérifié {when} : le dernier téléchargement des données a échoué",
+    "admin.state.checked.rejected": "vérifié {when} : les données téléchargées n’ont pas passé la validation",
     "admin.state.refresh.off": "la mise à jour quotidienne est désactivée",
     "admin.state.ago.minutes": "il y a {minutes} min",
     "admin.state.ago.hours": "il y a {hours} h",
@@ -184,10 +180,7 @@ MESSAGES: dict[str, str] = {
     "admin.surfaces.mcp.guarded": (
         "Un jeton de l'émetteur configuré est exigé."
     ),
-    "admin.surfaces.mcp.open": (
-        "Aucun jeton n'est exigé : tout agent capable de l'atteindre peut "
-        "mobiliser les workers de ce service."
-    ),
+    "admin.surfaces.mcp.open": "Aucun jeton n’est requis. Tout agent pouvant accéder à ce point d’accès peut demander des analyses.",
     "admin.surfaces.docs": "Pages d'API navigables sur /docs",
     "admin.surfaces.docs.contract": (
         "Les désactiver masque les pages, pas le contrat : /openapi.json, "
@@ -198,10 +191,7 @@ MESSAGES: dict[str, str] = {
     "admin.surfaces.private.found": (
         "Les cibles privées sont autorisées et l’indexation par les moteurs de recherche est activée. Quiconque trouve ce service peut soumettre des cibles sur son réseau interne."
     ),
-    "admin.surfaces.private.estate": (
-        "Autorisé, ce qui est précisément l'objet d'un déploiement qui "
-        "analyse son propre parc."
-    ),
+    "admin.surfaces.private.estate": "Autorisé pour permettre à ce déploiement d’analyser les instances de son réseau interne.",
     "admin.surfaces.encrypt": "Résultats chiffrés au repos",
     "admin.surfaces.audit": "Journal d'audit",
     "admin.surfaces.audit.file": (
@@ -296,7 +286,7 @@ MESSAGES: dict[str, str] = {
     "admin.probe.unreadable": "illisible - injoignable, ou plus dans la forme attendue",
     "admin.probe.disabled": "non vérifié - cette mise à jour est désactivée",
     "admin.search.kicker": "Index de recherche",
-    "admin.search.heading": "L'index livré est-il encore à jour",
+    "admin.search.heading": "État de l’index de recherche",
     "admin.search.lede": "L’index de recherche est généré lors de la compilation. Cette vue compare ses pages, ses langues et sa version avec le service en cours d’exécution. Elle ne compare pas le texte intégral des pages et ne modifie pas l’index.",
     "admin.search.fresh": "À jour",
     "admin.search.stale": "Périmé",
@@ -794,11 +784,7 @@ MESSAGES: dict[str, str] = {
         "expliquent comment ces opérations s'assemblent pour soumettre une "
         "analyse, l'attendre et en récupérer le résultat."
     ),
-    "api.schema.docs_on": (
-        'Les deux sont consultables ici sous forme de <a href="/docs">'
-        'Swagger UI</a> et de <a href="/redoc">ReDoc</a>, servis depuis ce '
-        "serveur comme tout le reste - rien n'est récupéré ailleurs."
-    ),
+    "api.schema.docs_on": "Consultez l’API avec <a href=\"/docs\">Swagger UI</a> ou <a href=\"/redoc\">ReDoc</a>. Les deux interfaces chargent leurs ressources depuis ce serveur, sans requêtes vers des tiers.",
     "api.schema.docs_off": (
         "Les visionneuses interactives (Swagger UI sur <code>/docs</code>, "
         "ReDoc sur <code>/redoc</code>) sont désactivées sur ce déploiement ; "
@@ -1018,24 +1004,13 @@ MESSAGES: dict[str, str] = {
         "autre suffixe est du YAML. Les secrets peuvent vivre dans des "
         "fichiers séparés plutôt que sur la ligne de commande."
     ),
-    "docs.index.monitoring.kicker": "Mettez-le au travail",
+    "docs.index.monitoring.kicker": "Contrôles réguliers",
     "docs.index.monitoring.heading": (
         "Supervision, automatisation et plusieurs instances"
     ),
-    "docs.index.monitoring.nagios": (
-        "<strong>Nagios ou Icinga :</strong> utilisez directement la sortie "
-        "du plugin ; le pire seuil configuré détermine le code de sortie."
-    ),
-    "docs.index.monitoring.fleet": (
-        "<strong>Plusieurs instances :</strong> transmettez une liste "
-        "d'hôtes séparés par des virgules, ou utilisez un fichier de "
-        "configuration par instance dès que leurs paramètres divergent."
-    ),
-    "docs.index.monitoring.prometheus": (
-        "<strong>Prometheus :</strong> utilisez "
-        "<code>--format=prometheus</code> ponctuellement, ou exposez "
-        "l'exportateur intégré avec <code>--prometheus-listen-port</code>."
-    ),
+    "docs.index.monitoring.nagios": "<strong>Nagios ou Icinga :</strong> utilisez directement la sortie du plugin. Le statut le plus grave déclenché par les seuils configurés détermine le code de sortie.",
+    "docs.index.monitoring.fleet": "<strong>Plusieurs instances :</strong> indiquez une liste d’hôtes séparés par des virgules. Utilisez un fichier de configuration distinct pour chaque instance nécessitant des réglages différents.",
+    "docs.index.monitoring.prometheus": "<strong>Prometheus :</strong> utilisez <code>--format=prometheus</code> pour un export ponctuel, ou servez les métriques avec l’exportateur intégré via <code>--prometheus-listen-port</code>.",
     "docs.index.monitoring.ci": (
         "<strong>CI :</strong> exécutez la même commande dans un pipeline ; "
         "le code de statut fait échouer la tâche en cas de politique non "
@@ -1101,9 +1076,9 @@ MESSAGES: dict[str, str] = {
     ),
     "compare.error.different_targets": "Les deux analyses concernent des instances différentes et ne sont donc pas comparées. Comparez deux analyses de la même instance.",
     "compare.verdict.kicker": "Entre les deux analyses",
-    "compare.verdict.improved": "C'est meilleur",
+    "compare.verdict.improved": "Le résultat de l’analyse s’est amélioré",
     "compare.verdict.unchanged": "Rien n'a changé",
-    "compare.verdict.regressed": "C'est pire",
+    "compare.verdict.regressed": "Le résultat de l’analyse s’est dégradé",
     "compare.rating.up": "La note a augmenté de {points} point(s).",
     "compare.rating.down": "La note a baissé de {points} point(s).",
     "compare.rating.same": "La note est inchangée. Des problèmes peuvent pourtant avoir été corrigés : plusieurs constats peuvent imposer le même plafond. Les listes ci-dessous détaillent les changements.",
@@ -1119,15 +1094,13 @@ MESSAGES: dict[str, str] = {
         "Rien de nouveau depuis l'analyse antérieure."
     ),
     "compare.resolved.heading": "Constats résolus ({count})",
-    "compare.resolved.none": (
-        "Rien de ce qui était ouvert dans l'analyse antérieure n'a disparu."
-    ),
+    "compare.resolved.none": "Aucun constat de l’analyse précédente n’a été résolu.",
     "compare.unchanged.heading": "Toujours ouverts ({count})",
     "compare.unchanged.none": "Rien n'est ouvert dans les deux analyses.",
     "compare.changes.heading": "Ce que la comparaison détaille",
     "compare.changes.category": "Catégorie",
     "compare.changes.change": "Changement",
-    "compare.nothing_stored": "Cette comparaison est calculée à partir des deux résultats à chaque ouverture. Elle n’est pas enregistrée séparément et cesse d’être disponible si l’un des résultats expire.",
+    "compare.nothing_stored": "Cette comparaison est calculée à partir des deux résultats à chaque ouverture de la page. Elle n’est pas enregistrée séparément et cesse d’être disponible dès que l’un des résultats expire.",
     # ----------------------------------------------------------------- search
     # ------------------------------------------ comparaison avec un fichier
     "compare.upload.kicker": "Vous avez déjà un rapport ?",
@@ -1149,7 +1122,7 @@ MESSAGES: dict[str, str] = {
     "compare.upload.source.kicker": "D'où vient le côté antérieur",
     "compare.upload.source.json": "Le rapport précédent provient d’un fichier JSON envoyé. Il n’a pas de page de résultat ici ; le fichier a été supprimé après lecture.",
     "compare.upload.source.csv": "Le rapport précédent provient d’un fichier CSV envoyé. Il n’a pas de page de résultat ici ; le fichier a été supprimé après lecture.",
-    "compare.upload.source.dropped": "{count} entrée(s) avec des identifiants de constat inconnus ont été exclues de la comparaison.",
+    "compare.upload.source.dropped": "Entrées dont l’identifiant de constat est inconnu, exclues de la comparaison : {count}.",
     "compare.upload.source.missing.httpsEnforced": "Le fichier ne précise pas si HTTPS était imposé. Ce point est exclu des deux rapports pour la comparaison, notamment avec les anciens exports CSV.",
     "compare.upload.source.missing.update": "Le fichier ne précise pas si une mise à jour était disponible. Ce point est exclu des deux rapports pour la comparaison, notamment avec les anciens exports CSV.",
     "compare.upload.expires": "La comparaison reste disponible pendant environ {minutes} minutes. Vous aurez ensuite besoin du fichier d’origine pour la refaire.",
@@ -1413,7 +1386,7 @@ MESSAGES: dict[str, str] = {
         "versions OpenCloud, générée le {generated}, ce calendrier est donc "
         "probablement obsolète. Ce n'est pas retenu contre l'instance -"
     ),
-    "result.facts.schedule.link": "consultez la page de cycle de vie publiée",
+    "result.facts.schedule.link": "consultez le cycle de vie des versions publié",
     "result.facts.signin": "Connexion",
     "result.facts.signin.external": "Fournisseur externe",
     "result.facts.signin.upstream_tag": "amont",
@@ -1558,11 +1531,7 @@ MESSAGES: dict[str, str] = {
     ),
     "result.fingerprint.overall": "Tous groupes confondus : {digest}",
     "result.fingerprint.unmeasured": "Non mesuré lors de cette analyse",
-    "result.fingerprint.unavailable": (
-        "Ce rapport n'enregistre aucune empreinte de configuration : il ne "
-        "peut donc pas dire si l'installation a changé. Ce n'est pas la même "
-        "chose qu'une installation restée identique."
-    ),
+    "result.fingerprint.unavailable": "Ce rapport ne contient aucune empreinte de configuration. Il ne permet pas de déterminer si le déploiement a changé.",
     "fingerprint.group.tls": "Sécurité du transport",
     "fingerprint.group.headers": "En-têtes de sécurité",
     "fingerprint.group.sharing": "Partage",
@@ -1590,9 +1559,7 @@ MESSAGES: dict[str, str] = {
     "coverage.reason.probe_disabled": (
         "La vérification était désactivée pour cette analyse"
     ),
-    "coverage.reason.prerequisite_missing": (
-        "L'instance n'a pas publié les données nécessaires à cette vérification"
-    ),
+    "coverage.reason.prerequisite_missing": "L’instance n’a pas exposé les informations nécessaires à ce contrôle",
     "coverage.reason.timeout": "Rien n'a répondu à temps",
     "coverage.reason.unreadable": "La réponse n'a pas pu être lue",
     "coverage.reason.no_route": "Ce scanner n'a aucune route vers cette adresse",
@@ -1636,11 +1603,7 @@ MESSAGES: dict[str, str] = {
     ),
     "result.tls.kicker": "Transport",
     "result.tls.heading": "Sécurité du transport",
-    "result.tls.lede": (
-        "Ce que la couche TLS a indiqué avant qu'un seul octet HTTP ne soit "
-        "échangé. Les constats ci-dessus en tiennent déjà compte ; ceci en "
-        "est la mesure sous-jacente."
-    ),
+    "result.tls.lede": "Détails du protocole et du certificat relevés lors de la négociation TLS. Les constats ci-dessus expliquent leur effet sur la note.",
     "result.tls.protocol": "Protocole",
     "result.tls.bits": "({bits} bit)",
     "result.tls.deprecated": "Versions obsolètes",

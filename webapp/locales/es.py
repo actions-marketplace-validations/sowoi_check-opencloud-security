@@ -153,12 +153,8 @@ MESSAGES: dict[str, str] = {
     "admin.state.schedule": "Calendario de versiones",
     "admin.state.advisories": "Avisos",
     "admin.state.checked": "comprobado {when}",
-    "admin.state.checked.failed": (
-        "comprobado {when}: el último intento no se pudo descargar"
-    ),
-    "admin.state.checked.rejected": (
-        "comprobado {when}: las comprobaciones rechazaron el último intento"
-    ),
+    "admin.state.checked.failed": "comprobado {when}: la última descarga de datos ha fallado",
+    "admin.state.checked.rejected": "comprobado {when}: los datos descargados no han superado la validación",
     "admin.state.refresh.off": "la actualización diaria está desactivada",
     "admin.state.ago.minutes": "hace {minutes} min",
     "admin.state.ago.hours": "hace {hours} h",
@@ -182,10 +178,7 @@ MESSAGES: dict[str, str] = {
     "admin.surfaces.mcp.guarded": (
         "Se exige un token del emisor configurado."
     ),
-    "admin.surfaces.mcp.open": (
-        "No se exige ningún token: cualquier agente que llegue hasta él puede "
-        "ocupar los workers de este servicio."
-    ),
+    "admin.surfaces.mcp.open": "No se exige ningún token. Cualquier agente que pueda acceder a este punto de acceso puede solicitar análisis.",
     "admin.surfaces.docs": "Páginas de API navegables en /docs",
     "admin.surfaces.docs.contract": (
         "Desactivarlas oculta las páginas, no el contrato: /openapi.json, "
@@ -194,10 +187,7 @@ MESSAGES: dict[str, str] = {
     "admin.surfaces.indexed": "Localizable por los buscadores",
     "admin.surfaces.private": "Análisis de direcciones de red privadas",
     "admin.surfaces.private.found": "Se permiten destinos privados y está activada la indexación en buscadores. Cualquiera que encuentre este servicio puede enviar destinos de su red interna.",
-    "admin.surfaces.private.estate": (
-        "Permitido, que es justo para lo que sirve una instalación que "
-        "analiza su propia red."
-    ),
+    "admin.surfaces.private.estate": "Permitido para que este despliegue pueda analizar instancias de su red interna.",
     "admin.surfaces.encrypt": "Resultados cifrados en reposo",
     "admin.surfaces.audit": "Registro de auditoría",
     "admin.surfaces.audit.file": (
@@ -283,7 +273,7 @@ MESSAGES: dict[str, str] = {
     "admin.probe.unreadable": "no se ha podido leer - inalcanzable, o ya no tiene la forma esperada",
     "admin.probe.disabled": "sin comprobar - esa actualización está desactivada",
     "admin.search.kicker": "Índice de búsqueda",
-    "admin.search.heading": "Sigue siendo válido el índice publicado",
+    "admin.search.heading": "Estado del índice de búsqueda",
     "admin.search.lede": "El índice de búsqueda se genera durante la compilación. Esta vista compara sus páginas, idiomas y versión con el servicio en ejecución. No compara el texto completo de las páginas ni modifica el índice.",
     "admin.search.fresh": "Al día",
     "admin.search.stale": "Desactualizado",
@@ -763,11 +753,7 @@ MESSAGES: dict[str, str] = {
         "indican cómo se combinan esas operaciones para enviar un análisis, "
         "esperarlo y recoger el resultado."
     ),
-    "api.schema.docs_on": (
-        'Ambos se pueden explorar aquí como <a href="/docs">Swagger UI</a> y '
-        '<a href="/redoc">ReDoc</a>, servidos desde este servidor como todo '
-        "lo demás; nada se obtiene de ningún otro sitio."
-    ),
+    "api.schema.docs_on": "Consulte la API con <a href=\"/docs\">Swagger UI</a> o <a href=\"/redoc\">ReDoc</a>. Ambos visores cargan sus recursos desde este servidor, sin solicitudes a terceros.",
     "api.schema.docs_off": (
         "Los visores interactivos (Swagger UI en <code>/docs</code>, ReDoc "
         "en <code>/redoc</code>) están desactivados en este despliegue; un "
@@ -959,25 +945,13 @@ MESSAGES: dict[str, str] = {
         "otra extensión es YAML. Los secretos pueden vivir en archivos "
         "separados en lugar de en la línea de comandos."
     ),
-    "docs.index.monitoring.kicker": "Ponlo a trabajar",
+    "docs.index.monitoring.kicker": "Comprobaciones periódicas",
     "docs.index.monitoring.heading": (
         "Monitorización, automatización y varias instancias"
     ),
-    "docs.index.monitoring.nagios": (
-        "<strong>Nagios o Icinga:</strong> usa directamente la salida del "
-        "complemento; el peor umbral configurado determina el código de "
-        "salida."
-    ),
-    "docs.index.monitoring.fleet": (
-        "<strong>Varias instancias:</strong> pasa una lista de hosts "
-        "separados por comas, o usa un archivo de configuración por "
-        "instancia en cuanto sus ajustes diverjan."
-    ),
-    "docs.index.monitoring.prometheus": (
-        "<strong>Prometheus:</strong> usa <code>--format=prometheus</code> "
-        "una vez, o expón el exportador incorporado con "
-        "<code>--prometheus-listen-port</code>."
-    ),
+    "docs.index.monitoring.nagios": "<strong>Nagios o Icinga:</strong> utilice directamente la salida del complemento. El estado más grave activado por los umbrales configurados determina el código de salida.",
+    "docs.index.monitoring.fleet": "<strong>Varias instancias:</strong> indique una lista de hosts separados por comas. Utilice un archivo de configuración propio para cada instancia que necesite ajustes diferentes.",
+    "docs.index.monitoring.prometheus": "<strong>Prometheus:</strong> utilice <code>--format=prometheus</code> para una exportación puntual, o publique las métricas con el exportador integrado mediante <code>--prometheus-listen-port</code>.",
     "docs.index.monitoring.ci": "<strong>CI:</strong> utilice el mismo comando en su flujo de trabajo. El código de salida permite hacer fallar el trabajo según la política configurada.",
     "docs.index.monitoring.scheduled": (
         "<strong>Comprobaciones programadas:</strong> systemd, cron, "
@@ -1039,9 +1013,9 @@ MESSAGES: dict[str, str] = {
     ),
     "compare.error.different_targets": "Los dos análisis corresponden a instancias distintas, por lo que no se comparan. Compare dos análisis de la misma instancia.",
     "compare.verdict.kicker": "Entre los dos análisis",
-    "compare.verdict.improved": "Ha mejorado",
+    "compare.verdict.improved": "El resultado del análisis ha mejorado",
     "compare.verdict.unchanged": "No ha cambiado nada",
-    "compare.verdict.regressed": "Ha empeorado",
+    "compare.verdict.regressed": "El resultado del análisis ha empeorado",
     "compare.rating.up": "La nota ha subido {points} punto(s).",
     "compare.rating.down": "La nota ha bajado {points} punto(s).",
     "compare.rating.same": "La nota no ha cambiado. Aun así, puede haber hallazgos corregidos: varios hallazgos pueden imponer el mismo límite. Las listas siguientes muestran los cambios.",
@@ -1055,20 +1029,13 @@ MESSAGES: dict[str, str] = {
     "compare.introduced.heading": "Hallazgos nuevos ({count})",
     "compare.introduced.none": "No hay nada nuevo desde el análisis anterior.",
     "compare.resolved.heading": "Hallazgos resueltos ({count})",
-    "compare.resolved.none": (
-        "No ha desaparecido nada de lo que estaba abierto en el análisis "
-        "anterior."
-    ),
+    "compare.resolved.none": "No se ha resuelto ningún hallazgo del análisis anterior.",
     "compare.unchanged.heading": "Siguen abiertos ({count})",
     "compare.unchanged.none": "No hay nada abierto en ambos análisis.",
     "compare.changes.heading": "Lo que detalla la comparación",
     "compare.changes.category": "Categoría",
     "compare.changes.change": "Cambio",
-    "compare.nothing_stored": (
-        "Esta comparación se ha calculado a partir de los dos resultados y no "
-        "se ha guardado en ninguna parte. Al recargar se vuelve a calcular; si "
-        "caduca cualquiera de los dos resultados, ya no se podrá pedir."
-    ),
+    "compare.nothing_stored": "Esta comparación se calcula a partir de los dos resultados cada vez que se abre la página. No se guarda por separado y deja de estar disponible cuando caduca cualquiera de los resultados.",
     # ----------------------------------------------------------------- search
     # ---------------------------------------- comparación con un archivo
     "compare.upload.kicker": "Comparar un informe guardado",
@@ -1090,10 +1057,7 @@ MESSAGES: dict[str, str] = {
     "compare.upload.source.kicker": "De dónde viene el lado anterior",
     "compare.upload.source.json": "El informe anterior procede de un archivo JSON subido. No tiene una página de resultados aquí; el archivo se descartó tras leerlo.",
     "compare.upload.source.csv": "El informe anterior procede de un archivo CSV subido. No tiene una página de resultados aquí; el archivo se descartó tras leerlo.",
-    "compare.upload.source.dropped": (
-        "{count} línea(s) del archivo no llevan los nombres con los que este "
-        "escáner nombra sus hallazgos y quedaron fuera de la comparación."
-    ),
+    "compare.upload.source.dropped": "Entradas con identificadores de hallazgo desconocidos excluidas de la comparación: {count}.",
     "compare.upload.source.missing.httpsEnforced": (
         "El archivo subido no registra si se forzaba HTTPS, así que esa medida "
         "quedó fuera de ambos lados en lugar de adivinarse. Un CSV descargado "
@@ -1320,7 +1284,7 @@ MESSAGES: dict[str, str] = {
         "calendario probablemente esté desactualizado. Esto no se cuenta en "
         "contra de la instancia -"
     ),
-    "result.facts.schedule.link": "consulta la página publicada del ciclo de vida",
+    "result.facts.schedule.link": "consulte el ciclo de vida de versiones publicado",
     "result.facts.signin": "Inicio de sesión",
     "result.facts.signin.external": "Proveedor externo",
     "result.facts.signin.upstream_tag": "upstream",
@@ -1466,11 +1430,7 @@ MESSAGES: dict[str, str] = {
     ),
     "result.fingerprint.overall": "En todos los grupos: {digest}",
     "result.fingerprint.unmeasured": "No se midió en este análisis",
-    "result.fingerprint.unavailable": (
-        "Este informe no registra ninguna huella de configuración, así que no "
-        "puede decir si la instalación cambió. Eso no es lo mismo que una "
-        "instalación que siguió igual."
-    ),
+    "result.fingerprint.unavailable": "Este informe no contiene ninguna huella de configuración. No permite determinar si el despliegue ha cambiado.",
     "fingerprint.group.tls": "Seguridad del transporte",
     "fingerprint.group.headers": "Cabeceras de seguridad",
     "fingerprint.group.sharing": "Compartición",
@@ -1499,9 +1459,7 @@ MESSAGES: dict[str, str] = {
     "coverage.reason.probe_disabled": (
         "La comprobación estaba desactivada en este análisis"
     ),
-    "coverage.reason.prerequisite_missing": (
-        "La instancia no publicó lo que esta comprobación lee"
-    ),
+    "coverage.reason.prerequisite_missing": "La instancia no ha publicado la información necesaria para esta comprobación",
     "coverage.reason.timeout": "Nada respondió a tiempo",
     "coverage.reason.unreadable": "No se pudo leer la respuesta",
     "coverage.reason.no_route": "Este escáner no tiene ruta hasta esa dirección",
@@ -1541,11 +1499,7 @@ MESSAGES: dict[str, str] = {
     ),
     "result.tls.kicker": "Transporte",
     "result.tls.heading": "Seguridad del transporte",
-    "result.tls.lede": (
-        "Datos de TLS obtenidos antes de intercambiar datos por HTTP. "
-        "Los hallazgos anteriores ya valoran esto; aquí está la medición que "
-        "hay detrás."
-    ),
+    "result.tls.lede": "Detalles del protocolo y del certificado obtenidos durante la negociación TLS. Los hallazgos anteriores explican cómo afectan estas mediciones a la nota.",
     "result.tls.protocol": "Protocolo",
     "result.tls.bits": "({bits} bits)",
     "result.tls.deprecated": "Versiones obsoletas",

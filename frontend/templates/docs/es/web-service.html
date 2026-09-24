@@ -589,12 +589,12 @@ entender que alguien podría.</p>
 <tr>
 <td><code>COS_WEB_UPDATE_CHECK</code></td>
 <td><code>true</code></td>
-<td>Ask GitHub whether a newer release of this service exists, for the operator's area only and at most every six hours. Set <code>false</code> with no outbound access</td>
+<td>Consulta en GitHub si existe una versión más reciente de este servicio, solo para el área de operación y como máximo cada seis horas. Use <code>false</code> si no hay acceso de red saliente</td>
 </tr>
 <tr>
 <td><code>COS_WEB_ADMIN_UPDATE_DIR</code></td>
-<td><em>(unset)</em></td>
-<td>A writable tmpfs (the compose files mount one at <code>/var/lib/opencloud-scan/update</code>). Set, the operator's area can install a newer release: the web bundle is downloaded from GitHub, verified against its build attestation, unpacked here, and the web and worker processes restart on it - a short downtime, lasting until the containers restart. Unset, the area only says an update exists</td>
+<td><em>(sin definir)</em></td>
+<td>Directorio tmpfs con permisos de escritura; los archivos de Compose lo montan en <code>/var/lib/opencloud-scan/update</code>. Si se define, el área de operación permite instalar una versión más reciente: descarga el paquete web de GitHub, verifica su atestación de compilación, lo extrae aquí y reinicia los procesos web y los workers para usarlo. El servicio se interrumpe brevemente. La actualización permanece activa hasta que se reinician los contenedores. Sin definir, el área solo informa de las actualizaciones disponibles</td>
 </tr>
 <tr>
 <td><code>COS_WEB_AUDIT_LOG</code></td>

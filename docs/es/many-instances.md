@@ -11,7 +11,7 @@ comprobaciones resultantes.
   * [Un archivo de configuración por instancia](#one-configuration-file-per-instance)
   * [Un bucle sobre los archivos](#a-loop-over-the-files)
   * [Desde dónde deben ejecutarse las comprobaciones](#where-the-checks-should-run-from)
-  * [Mantener honestas las exclusiones](#keeping-the-waivers-honest)
+  * [Revisar las exclusiones periódicamente](#keeping-the-waivers-honest)
   * [Alertar solo sobre lo que ha cambiado](#only-alerting-on-what-changed)
   * [Programarlo todo](#scheduling-the-whole-thing)
 <!-- TOC -->
@@ -136,11 +136,10 @@ cerca de las instancias y deje que compartan su caché. El complemento nunca se
 comunica con él (siempre analiza dentro de su propio proceso), así que el
 servicio está pensado para paneles y scripts.
 
-## Mantener honestas las exclusiones {#keeping-the-waivers-honest}
+## Revisar las exclusiones periódicamente {#keeping-the-waivers-honest}
 
-Un conjunto de instancias acumula entradas `ignore_hardenings`, y una exclusión
-que nunca se revisa es la forma en que una regresión se vuelve invisible. Dos
-cosas las mantienen honestas:
+Revise periódicamente las entradas `ignore_hardenings` para que los hallazgos
+aceptados no oculten problemas nuevos. Las exclusiones tienen dos límites:
 
 - Una exclusión solo suprime la alerta. El hallazgo permanece en el documento
   de resultado con `"ignored": true`, y `--debug` lo sigue explicando;

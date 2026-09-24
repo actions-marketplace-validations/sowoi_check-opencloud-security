@@ -84,6 +84,7 @@ is needed.
 | [`test_releases.py`](test_releases.py) | The update check: GitHub feed, pinned version, bundled data, `off`, and awareness of release tracks. |
 | [`test_vulndb.py`](test_vulndb.py) | The advisory database and its three input formats. |
 | [`test_refresh_data.py`](test_refresh_data.py) | The command that refreshes reference data on a monitoring host. |
+| [`test_update_vulnerability_db.py`](test_update_vulnerability_db.py) | `scripts/update_vulnerability_db.py`: the daily refresh writes new advisories, keeps the file on a feed outage, and `--check` writes nothing. |
 | [`test_data_signing.py`](test_data_signing.py) | Sigstore attestation of refreshed reference data, and still working without `sigstore` installed. |
 | [`test_reference_data_limits.py`](test_reference_data_limits.py) | Size limits on the daily reference-data fetches, so an oversized response cannot crash the worker. |
 | [`test_verify_remediation.py`](test_verify_remediation.py) | `--verify-remediation` runs only the probes behind the named findings and agrees with a full scan. |
@@ -133,6 +134,7 @@ is needed.
 | [`test_webapp_api.py`](test_webapp_api.py) | The public API: accepted and refused fields, SSRF refusals, no leaking of other scans, no third parties. |
 | [`test_webapp_workflows.py`](test_webapp_workflows.py) | The workflow layer: async scans, polling, 404 vs 409, not resubmitting refused targets. |
 | [`test_webapp_worker.py`](test_webapp_worker.py) | The worker turns a queued uuid into a scan and a rendered dashboard. |
+| [`test_webapp_scan_process.py`](test_webapp_scan_process.py) | The scan child process: a rejection stays a rejection, a crash sends no detail, and the child is reaped. |
 | [`test_webapp_batch.py`](test_webapp_batch.py) | Batch submissions, with each target still checked against every limit. |
 | [`test_webapp_earlier_result.py`](test_webapp_earlier_result.py) | A cooldown refusal opens the tab's own earlier result, marked as earlier, with the countdown. |
 | [`test_webapp_rescan.py`](test_webapp_rescan.py) | Rescans go through the normal submission path, and reading the cooldown does not use it up. |
@@ -176,6 +178,7 @@ is needed.
 |---|---|
 | [`test_webapp_pages.py`](test_webapp_pages.py) | The informational pages can be reached, describe themselves, and link back. |
 | [`test_webapp_exports.py`](test_webapp_exports.py) | Exporting a scan as a file, and refusing malformed export requests. |
+| [`test_verify_export.py`](test_verify_export.py) | `scripts/verify_export.py` accepts a signed export and refuses edited bytes, the wrong key, or no key. |
 | [`test_webapp_badge.py`](test_webapp_badge.py) | The grade badge: what it draws, what it never carries, and when it 404s. |
 | [`test_webapp_feeds.py`](test_webapp_feeds.py) | The advisory and release-schedule Atom feeds. |
 | [`test_webapp_compare.py`](test_webapp_compare.py) | The comparison page between two scans agrees with `compare_scans`. |

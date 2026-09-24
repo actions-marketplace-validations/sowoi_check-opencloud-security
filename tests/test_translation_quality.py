@@ -104,6 +104,20 @@ def test_the_catalogues_have_no_structural_differences():
     assert checker.structural_findings() == []
 
 
+@pytest.mark.parametrize("locale", ["en", "de", "es", "fr"])
+def test_catalogue_source_does_not_silently_overwrite_a_message(locale: str):
+    """Imported dictionaries hide duplicate keys, so inspect the source too."""
+    path = REPO_ROOT / checker.CATALOGUE_FILES[locale]
+    for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+        if not isinstance(node, ast.Dict):
+            continue
+        seen = set()
+        for key in node.keys:
+            if isinstance(key, ast.Constant) and isinstance(key.value, str):
+                assert key.value not in seen, (locale, key.lineno, key.value)
+                seen.add(key.value)
+
+
 def test_catalogues_do_not_use_ai_slop_wording():
     """Localized copy should describe the product, not sound auto-generated."""
     findings = [
@@ -274,6 +288,13 @@ def _rules(source: str, translated: str) -> set[str]:
 def test_a_lost_placeholder_is_an_error():
     """``{minutes} minutes`` translated without the number says nothing."""
     assert _rules("Kept for {minutes} minutes.", "Wird aufbewahrt.") == {"placeholder"}
+
+
+@pytest.mark.parametrize("translated", ["{count}", "{count} {count} {count}"])
+def test_repeated_placeholders_must_keep_their_occurrence_count(translated: str):
+    """A repeated value must not disappear or be duplicated in translation."""
+    assert _rules("{count} of {count}", translated) == {"placeholder"}
+    assert _compare("{count} of {count}", "{count} von {count}") == []
 
 
 def test_an_invented_placeholder_is_an_error():

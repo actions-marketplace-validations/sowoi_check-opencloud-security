@@ -153,12 +153,8 @@ MESSAGES: dict[str, str] = {
     "admin.state.schedule": "Release-Zeitplan",
     "admin.state.advisories": "Sicherheitsmeldungen",
     "admin.state.checked": "geprüft {when}",
-    "admin.state.checked.failed": (
-        'geprüft {when} - der letzte Abruf ist fehlgeschlagen'
-    ),
-    "admin.state.checked.rejected": (
-        'geprüft {when} - die zuletzt abgerufenen Daten wurden bei der Prüfung abgelehnt'
-    ),
+    "admin.state.checked.failed": "geprüft {when} - der letzte Datenabruf ist fehlgeschlagen",
+    "admin.state.checked.rejected": "geprüft {when} - die abgerufenen Daten haben die Validierung nicht bestanden",
     "admin.state.refresh.off": "die tägliche Aktualisierung ist aus",
     "admin.state.ago.minutes": "vor {minutes} Min.",
     "admin.state.ago.hours": "vor {hours} Std.",
@@ -184,10 +180,7 @@ MESSAGES: dict[str, str] = {
     "admin.surfaces.mcp.guarded": (
         "Ein Token des konfigurierten Ausstellers ist erforderlich."
     ),
-    "admin.surfaces.mcp.open": (
-        "Kein Token erforderlich: Jeder Agent, der ihn erreicht, kann die "
-        "Worker dieses Dienstes belegen."
-    ),
+    "admin.surfaces.mcp.open": "Kein Token erforderlich. Jeder Agent, der diesen Endpunkt erreicht, kann Scans starten.",
     "admin.surfaces.docs": 'API-Dokumentation im Browser unter /docs',
     "admin.surfaces.docs.contract": (
         'Bei ausgeschalteter Anzeige bleiben die Schnittstellenbeschreibungen /openapi.json, /arazzo.json und /.well-known/ai.json öffentlich.'
@@ -197,10 +190,7 @@ MESSAGES: dict[str, str] = {
     "admin.surfaces.private.found": (
         'Private Ziele sind erlaubt, und die Suchmaschinenindexierung ist aktiviert. Wer diesen Dienst findet, kann Ziele in dessen internem Netzwerk einreichen.'
     ),
-    "admin.surfaces.private.estate": (
-        "Erlaubt - genau dafür ist eine Installation da, die das eigene Netz "
-        "prüft."
-    ),
+    "admin.surfaces.private.estate": "Erlaubt, damit dieser Dienst Instanzen im eigenen internen Netz prüfen kann.",
     "admin.surfaces.encrypt": "Ergebnisse verschlüsselt gespeichert",
     "admin.surfaces.audit": "Audit-Log",
     "admin.surfaces.audit.file": (
@@ -294,7 +284,7 @@ MESSAGES: dict[str, str] = {
     "admin.probe.unreadable": "nicht lesbar - nicht erreichbar oder nicht mehr in der erwarteten Form",
     "admin.probe.disabled": "nicht geprüft - diese Aktualisierung ist abgeschaltet",
     "admin.search.kicker": "Suchindex",
-    "admin.search.heading": 'Ist der ausgelieferte Index noch aktuell?',
+    "admin.search.heading": "Status des Suchindexes",
     "admin.search.lede": "Der Suchindex wird beim Build erzeugt. Diese Ansicht vergleicht seine Seiten, Sprachen und Release-Version mit dem laufenden Dienst. Sie vergleicht keine vollständigen Seitentexte und ändert den Index nicht.",
     "admin.search.fresh": "Aktuell",
     "admin.search.stale": "Veraltet",
@@ -765,11 +755,7 @@ MESSAGES: dict[str, str] = {
         "diese Operationen zum Einreichen eines Scans, Warten darauf und "
         "Abholen des Ergebnisses zusammenfügen."
     ),
-    "api.schema.docs_on": (
-        'Beide sind hier durchsuchbar als <a href="/docs">Swagger UI</a> und '
-        '<a href="/redoc">ReDoc</a>, ausgeliefert von diesem Server wie alles '
-        "andere - nichts wird von irgendwo anders geholt."
-    ),
+    "api.schema.docs_on": "Öffne die API-Dokumentation mit <a href=\"/docs\">Swagger UI</a> oder <a href=\"/redoc\">ReDoc</a>. Beide Ansichten laden ihre Ressourcen von diesem Server, ohne Anfragen an Dritte.",
     "api.schema.docs_off": (
         "Die interaktiven Anzeigen (Swagger UI unter <code>/docs</code>, ReDoc "
         "unter <code>/redoc</code>) sind bei diesem Deployment abgeschaltet; ein "
@@ -964,25 +950,13 @@ MESSAGES: dict[str, str] = {
         "Endung ist YAML. Geheimnisse können in separaten Dateien statt auf der "
         "Kommandozeile liegen."
     ),
-    "docs.index.monitoring.kicker": "Einsatzbereit machen",
+    "docs.index.monitoring.kicker": "Regelmäßige Prüfungen",
     "docs.index.monitoring.heading": (
         "Monitoring, Automatisierung und mehrere Instanzen"
     ),
-    "docs.index.monitoring.nagios": (
-        "<strong>Nagios oder Icinga:</strong> die Plugin-Ausgabe direkt "
-        "verwenden; der schlechteste konfigurierte Schwellenwert bestimmt den "
-        "Exit-Code."
-    ),
-    "docs.index.monitoring.fleet": (
-        "<strong>Mehrere Instanzen:</strong> eine durch Komma getrennte "
-        "Host-Liste übergeben, oder eine Konfigurationsdatei pro Instanz "
-        "verwenden, sobald sich ihre Einstellungen unterscheiden."
-    ),
-    "docs.index.monitoring.prometheus": (
-        "<strong>Prometheus:</strong> einmal <code>--format=prometheus</code> "
-        "verwenden, oder den eingebauten Exporter mit "
-        "<code>--prometheus-listen-port</code> freigeben."
-    ),
+    "docs.index.monitoring.nagios": "<strong>Nagios oder Icinga:</strong> Verwende die Plugin-Ausgabe direkt. Der schwerwiegendste Status, den die konfigurierten Schwellenwerte auslösen, bestimmt den Exit-Code.",
+    "docs.index.monitoring.fleet": "<strong>Mehrere Instanzen:</strong> Übergib eine kommagetrennte Liste von Hosts. Verwende für jede Instanz, die andere Einstellungen benötigt, eine eigene Konfigurationsdatei.",
+    "docs.index.monitoring.prometheus": "<strong>Prometheus:</strong> Verwende <code>--format=prometheus</code> für einen einmaligen Export oder stelle Metriken mit dem eingebauten Exporter über <code>--prometheus-listen-port</code> bereit.",
     "docs.index.monitoring.ci": (
         "<strong>CI:</strong> denselben Befehl in einer Pipeline ausführen. "
         "Der Exitcode lässt den Job fehlschlagen, wenn die eingestellten "
@@ -1046,9 +1020,9 @@ MESSAGES: dict[str, str] = {
     ),
     "compare.error.different_targets": "Die beiden Scans betreffen unterschiedliche Instanzen und werden deshalb nicht verglichen. Vergleiche zwei Scans derselben Instanz.",
     "compare.verdict.kicker": "Zwischen den beiden Scans",
-    "compare.verdict.improved": "Es ist besser geworden",
+    "compare.verdict.improved": "Scan-Ergebnis verbessert",
     "compare.verdict.unchanged": "Nichts hat sich geändert",
-    "compare.verdict.regressed": "Es ist schlechter geworden",
+    "compare.verdict.regressed": "Scan-Ergebnis verschlechtert",
     "compare.rating.up": "Die Note ist um {points} Punkt(e) gestiegen.",
     "compare.rating.down": "Die Note ist um {points} Punkt(e) gefallen.",
     "compare.rating.same": "Die Note ist gleich geblieben. Trotzdem können Befunde behoben worden sein: Mehrere Befunde können dieselbe Bewertungsgrenze setzen. Die Listen unten zeigen die einzelnen Änderungen.",
@@ -1062,19 +1036,13 @@ MESSAGES: dict[str, str] = {
     "compare.introduced.heading": "Neue Funde ({count})",
     "compare.introduced.none": "Seit dem früheren Scan ist nichts neu.",
     "compare.resolved.heading": "Behobene Funde ({count})",
-    "compare.resolved.none": (
-        "Nichts, was im früheren Scan offen war, ist verschwunden."
-    ),
+    "compare.resolved.none": "Keine Befunde aus dem früheren Scan wurden behoben.",
     "compare.unchanged.heading": "Weiterhin offen ({count})",
     "compare.unchanged.none": "In beiden Scans ist nichts offen.",
     "compare.changes.heading": "Was der Vergleich einzeln aufführt",
     "compare.changes.category": "Kategorie",
     "compare.changes.change": "Änderung",
-    "compare.nothing_stored": (
-        "Dieser Vergleich wurde aus den beiden Ergebnissen berechnet und "
-        "nirgends gespeichert. Beim Neuladen wird er erneut berechnet; läuft "
-        "eines der Ergebnisse ab, lässt er sich gar nicht mehr erfragen."
-    ),
+    "compare.nothing_stored": "Dieser Vergleich wird bei jedem Aufruf der Seite aus den beiden Ergebnissen berechnet. Er wird nicht separat gespeichert und ist nicht mehr verfügbar, sobald eines der Ergebnisse abläuft.",
     # ----------------------------------------------------------------- search
     # ------------------------------------------- Vergleich mit einer Datei
     "compare.upload.kicker": "Schon einen Bericht zur Hand?",
@@ -1105,7 +1073,7 @@ MESSAGES: dict[str, str] = {
     "compare.upload.source.csv": (
         'Das frühere Ergebnis stammt aus einem hochgeladenen CSV-Bericht. Es hat hier keine eigene Ergebnisseite; die Datei wurde gelesen und verworfen.'
     ),
-    "compare.upload.source.dropped": "{count} Einträge mit unbekannten Befundkennungen wurden beim Vergleich ausgelassen.",
+    "compare.upload.source.dropped": "Einträge mit unbekannten Befundkennungen, die vom Vergleich ausgeschlossen wurden: {count}.",
     "compare.upload.source.missing.httpsEnforced": (
         "Die hochgeladene Datei hält nicht fest, ob HTTPS erzwungen wurde. Diese "
         "Maßnahme blieb deshalb auf beiden Seiten außen vor, statt geraten zu "
@@ -1354,7 +1322,7 @@ MESSAGES: dict[str, str] = {
         "erzeugt am {generated}, der Zeitplan ist also wahrscheinlich veraltet. "
         "Es wird der Instanz nicht angelastet -"
     ),
-    "result.facts.schedule.link": "die veröffentlichte Lebenszyklus-Seite prüfen",
+    "result.facts.schedule.link": "öffne den veröffentlichten Release-Lebenszyklus",
     "result.facts.signin": "Anmeldung",
     "result.facts.signin.external": "Externer Anbieter",
     "result.facts.signin.upstream_tag": "vorgelagert",
@@ -1502,11 +1470,7 @@ MESSAGES: dict[str, str] = {
     ),
     "result.fingerprint.overall": "Über alle Gruppen: {digest}",
     "result.fingerprint.unmeasured": "In diesem Scan nicht gemessen",
-    "result.fingerprint.unavailable": (
-        "Dieser Bericht enthält keinen Konfigurations-Fingerabdruck und kann "
-        "deshalb nicht sagen, ob sich die Installation geändert hat. Das ist "
-        "nicht dasselbe wie eine Installation, die gleich geblieben ist."
-    ),
+    "result.fingerprint.unavailable": "Dieser Bericht enthält keinen Konfigurationsfingerabdruck. Ob sich die Installation geändert hat, lässt sich damit nicht feststellen.",
     "fingerprint.group.tls": "Transportsicherheit",
     "fingerprint.group.headers": "Sicherheits-Header",
     "fingerprint.group.sharing": "Freigaben",
@@ -1532,9 +1496,7 @@ MESSAGES: dict[str, str] = {
     "result.coverage.unavailable": "Dieser ältere Bericht enthält keine Angaben zu den ausgeführten Prüfungen. Der Prüfumfang ist unbekannt.",
     "coverage.reason.not_applicable": "Trifft auf diese Instanz nicht zu",
     "coverage.reason.probe_disabled": "Die Prüfung war für diesen Scan abgeschaltet",
-    "coverage.reason.prerequisite_missing": (
-        "Die Instanz hat die für diese Prüfung nötigen Daten nicht veröffentlicht"
-    ),
+    "coverage.reason.prerequisite_missing": "Die Instanz hat die für diese Prüfung benötigten Informationen nicht bereitgestellt",
     "coverage.reason.timeout": "Nichts hat rechtzeitig geantwortet",
     "coverage.reason.unreadable": "Die Antwort war nicht lesbar",
     "coverage.reason.no_route": "Dieser Scanner hat keine Route zu dieser Adresse",
@@ -1573,10 +1535,7 @@ MESSAGES: dict[str, str] = {
     ),
     "result.tls.kicker": "Transport",
     "result.tls.heading": "Transportsicherheit",
-    "result.tls.lede": (
-        "Beim TLS-Verbindungsaufbau erfasste Messwerte. Die oben aufgeführten "
-        "Befunde enthalten bereits die Bewertung dieser Werte."
-    ),
+    "result.tls.lede": "Protokoll- und Zertifikatsdetails aus dem TLS-Handshake. Die Befunde oben erklären, wie sich diese Messwerte auf die Note auswirken.",
     "result.tls.protocol": "Protokoll",
     "result.tls.bits": "({bits} Bit)",
     "result.tls.deprecated": "Veraltete Versionen",

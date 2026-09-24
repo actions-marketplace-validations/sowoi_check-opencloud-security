@@ -147,6 +147,21 @@ def test_a_waiver_whose_end_changes_nothing_has_no_countdown(waiver):
     assert days_left(result(waiver)) is None
 
 
+def test_a_waiver_on_a_hardcoded_flag_has_no_countdown():
+    """A flag OpenCloud hardcodes never alerts, so its waiver ending changes nothing."""
+    hardcoded = record(
+        "publicLinkExpirationEnforced", "2026-05-09T10:00:00Z", ["publicLinkExpirationEnforced"]
+    )
+
+    assert days_left(result(hardcoded)) is None
+    both = result(
+        record("*", "2026-05-09T10:00:00Z", ["publicLinkExpirationEnforced", "debugPort:9205"])
+    )
+    upcoming = next_expiry(both["waivers"])
+    assert upcoming is not None
+    assert upcoming.checks == ("debugPort:9205",)
+
+
 def test_a_result_without_waivers_has_no_countdown():
     """No waivers block is not a waiver ending today."""
     document = result()
@@ -167,6 +182,52 @@ def test_a_waiver_ending_inside_the_window_warns_and_names_it(capsys):
     assert first.startswith("WARNING: The waiver debugPort:9205 (reason for debugPort:9205)")
     assert "2026-05-09 10:00 UTC (8 days left)" in first
     assert "debugPort:9205 alerts again" in first
+
+
+def test_the_warning_counts_one_day_and_several_checks_in_plain_english(capsys):
+    """One day is "1 day left", and two checks "alert", not "alerts"."""
+    document = result(record("debugPort:*", "2026-05-02T12:00:00Z", ["debugPort:9205", "debugPort:9229"]))
+
+    code, output = run(document, capsys, waiver_warning_days=14)
+    first = output.split("\n", 1)[0]
+
+    assert code is NagiosExitCode.WARNING
+    assert "(1 day left)" in first
+    assert "debugPort:9205, debugPort:9229 alert again." in first
+
+
+def test_two_waivers_ending_together_are_both_named(capsys):
+    """Each check that alerts again is explained by the waiver that covered it."""
+    document = result(
+        record("debugPort:9205", "2026-05-09T10:00:00Z", ["debugPort:9205"]),
+        record("debugPort:9229", "2026-05-09T10:00:00Z", ["debugPort:9229"]),
+    )
+
+    code, output = run(document, capsys, waiver_warning_days=14)
+    first = output.split("\n", 1)[0]
+
+    assert code is NagiosExitCode.WARNING
+    assert first.startswith(
+        "WARNING: The waivers debugPort:9205 (reason for debugPort:9205), "
+        "debugPort:9229 (reason for debugPort:9229) end on 2026-05-09 10:00 UTC"
+    )
+    assert "debugPort:9205, debugPort:9229 alert again." in first
+
+
+def test_a_hardcoded_flag_under_a_waiver_does_not_warn(capsys):
+    """Nothing alerts when a waiver on a flag nobody can change runs out."""
+    document = result(
+        record(
+            "publicLinkExpirationEnforced",
+            "2026-05-09T10:00:00Z",
+            ["publicLinkExpirationEnforced"],
+        )
+    )
+
+    code, output = run(document, capsys, waiver_warning_days=14)
+
+    assert code is NagiosExitCode.OK
+    assert "waiver_days_left" not in perfdata(output)
 
 
 def test_a_waiver_ending_outside_the_window_stays_ok(capsys):

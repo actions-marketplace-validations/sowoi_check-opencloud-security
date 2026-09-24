@@ -386,3 +386,111 @@ def test_txt_character_strings_are_joined_as_one_record():
     rdata = bytes([5]) + b"check" + bytes([20]) + b"-opencloud-security="
 
     assert approval._txt_strings(rdata) == "check-opencloud-security="
+
+
+def test_dns_approval_without_a_public_address_refuses_to_start():
+    """The record names this service by hostname; without one, no record could match."""
+    with pytest.raises(ValueError, match="COS_WEB_APPROVAL_DNS needs COS_WEB_PUBLIC_BASE_URL"):
+        approval.ensure_approval_ready(_approval(public_base_url=None))
+
+    # The negative case: with the DNS proof off, a listed target needs no public address.
+    approval.ensure_approval_ready(
+        _approval(public_base_url=None, approval_dns=False, approved_targets=("ok.example.com",))
+    )
+
+
+def _target(hostname: str, *addresses: str) -> ssrf.Target:
+    return ssrf.Target(hostname, 443, "https", "/", addresses or ("192.0.2.10",))
+
+
+@pytest.mark.parametrize("hostname", ["192.0.2.10", "[2001:db8::1]", "2001:db8::1"])
+def test_an_address_target_is_never_approved_by_dns(monkeypatch, hostname):
+    """Nobody can publish a TXT record under an address, so none may approve one."""
+    looked_up: list[str] = []
+
+    def records(name, timeout=3.0):
+        looked_up.append(name)
+        return ["check-opencloud-security=testserver"]
+
+    monkeypatch.setattr(approval, "txt_records", records)
+
+    assert not approval.approved(_target(hostname), _approval())
+    assert looked_up == []
+    # The positive case: the same record approves a hostname.
+    assert approval.approved(_target("ok.example.com"), _approval())
+
+
+def test_approval_off_approves_every_target(monkeypatch):
+    """The public service scans any public OpenCloud, listed or not."""
+    monkeypatch.setattr(approval, "txt_records", lambda name, timeout=3.0: [])
+
+    assert approval.approved(_target("any.example.com"), settings())
+    assert not approval.approved(_target("any.example.com"), _approval())
+
+
+def test_a_listed_address_approves_only_when_every_address_is_listed():
+    """A name resolving partly outside the list must not ride on the listed part."""
+    entries = ("192.0.2.0/28",)
+
+    assert approval.listed(_target("x.example.com", "192.0.2.5"), entries)
+    assert not approval.listed(_target("x.example.com", "192.0.2.5", "198.51.100.7"), entries)
+    assert not approval.listed(_target("x.example.com", "192.0.2.5"), ())
+
+
+def _txt_answer(*answers: tuple[int, bytes]) -> bytes:
+    """A DNS answer message carrying the given (type, rdata) records."""
+    question = b"".join(bytes([len(label)]) + label for label in (b"_x", b"example", b"com")) + b"\0"
+    message = (
+        (4242).to_bytes(2, "big")
+        + (0x8180).to_bytes(2, "big")  # a response, recursion available, NOERROR
+        + (1).to_bytes(2, "big")
+        + len(answers).to_bytes(2, "big")
+        + bytes(4)
+        + question
+        + (16).to_bytes(2, "big")
+        + (1).to_bytes(2, "big")
+    )
+    for rtype, rdata in answers:
+        message += (
+            b"\xc0\x0c"
+            + rtype.to_bytes(2, "big")
+            + (1).to_bytes(2, "big")
+            + (300).to_bytes(4, "big")
+            + len(rdata).to_bytes(2, "big")
+            + rdata
+        )
+    return message
+
+
+def test_txt_records_reads_only_the_txt_answers(monkeypatch):
+    """A record of another type in the answer must not count as the approval."""
+    value = b"check-opencloud-security=testserver"
+    answer = _txt_answer((16, bytes([len(value)]) + value), (1, bytes([192, 0, 2, 10])))
+    monkeypatch.setattr(approval, "system_nameservers", lambda: ["192.0.2.53"])
+    monkeypatch.setattr(approval, "ask", lambda name, qtype, nameserver, timeout: answer)
+
+    assert approval.txt_records("_x.example.com") == ["check-opencloud-security=testserver"]
+
+
+def test_a_failed_lookup_tries_the_next_resolver_and_then_refuses(monkeypatch):
+    """A lookup that fails is a refusal, never an approval."""
+    value = b"check-opencloud-security=testserver"
+    asked: list[str] = []
+
+    def ask(name, qtype, nameserver, timeout):
+        asked.append(nameserver)
+        if nameserver == "192.0.2.53":
+            raise OSError("timed out")
+        if nameserver == "192.0.2.54":
+            return b"runt"
+        return _txt_answer((16, bytes([len(value)]) + value))
+
+    monkeypatch.setattr(approval, "ask", ask)
+    monkeypatch.setattr(approval, "system_nameservers", lambda: ["192.0.2.53", "192.0.2.54"])
+
+    assert approval.txt_records("_x.example.com") == []
+    assert asked == ["192.0.2.53", "192.0.2.54"]
+
+    # The positive case: a third resolver that answers is used.
+    monkeypatch.setattr(approval, "system_nameservers", lambda: ["192.0.2.53", "192.0.2.55"])
+    assert approval.txt_records("_x.example.com") == ["check-opencloud-security=testserver"]

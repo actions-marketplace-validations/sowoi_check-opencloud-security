@@ -200,8 +200,7 @@ de un intento era correcta.</p>
 <p>En un receptor Flask o FastAPI, use el cuerpo sin procesar en lugar del JSON
 procesado: <code>await request.body()</code> en FastAPI, <code>request.get_data()</code> en Flask.
 Los frameworks que solo entregan un objeto ya procesado no pueden verificar
-esta firma, y la solución honesta es leer el cuerpo usted mismo antes de
-procesarlo.</p>
+esta firma. Lea el cuerpo sin procesar antes de convertirlo en un objeto.</p>
 <p>Tres cosas que conviene saber:</p>
 <ul>
 <li><strong>La firma cubre lo que se haya enviado</strong>, incluidos los documentos de chat
