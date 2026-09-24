@@ -31,6 +31,7 @@
 
 <nav class="docs-toc card section-gap" aria-label="{{ t('docs.guide.toc.aria') }}" data-reveal>
   <p class="kicker">{{ t('docs.guide.toc.heading') }}</p>
+  <a href="#1302-this-release" lang="en">[1.30.2] - this release</a>
   <a href="#1301-2026-09-23" lang="en">[1.30.1] - 2026-09-23</a>
   <a href="#1300-2026-09-22" lang="en">[1.30.0] - 2026-09-22</a>
   <a href="#1293-2026-09-22" lang="en">[1.29.3] - 2026-09-22</a>
@@ -40,10 +41,10 @@
   <a href="#1281-2026-09-21" lang="en">[1.28.1] - 2026-09-21</a>
   <a href="#1280-2026-09-20" lang="en">[1.28.0] - 2026-09-20</a>
   <a href="#1272-2026-09-19" lang="en">[1.27.2] - 2026-09-19</a>
-  <a href="#1271-2026-09-19" lang="en">[1.27.1] - 2026-09-19</a>
 </nav>
 
 <article class="docs-article card section-gap" data-reveal lang="en">
+<h2 id="1302-this-release">[1.30.2] - this release</h2>
 <h2 id="1301-2026-09-23">[1.30.1] - 2026-09-23</h2>
 <h3 id="added">Added</h3>
 <ul>
@@ -529,46 +530,6 @@
   every release before 4.0.8, and 5.0.0 up to 7.2.0, was rated as free of
   known advisories. The bundled database now carries it, affecting releases
   from 1.0.0 up to 4.0.8 and from 4.1.0 up to (but not including) 7.2.0.</li>
-</ul>
-<h2 id="1271-2026-09-19">[1.27.1] - 2026-09-19</h2>
-<h3 id="added_6">Added</h3>
-<ul>
-<li>
-<p>Codex can use the repository's Claude Code skills, hooks, subagent roles and
-  Playwright MCP configuration through portable <code>.agents/</code> and <code>.codex/</code>
-  compatibility files. The original <code>.claude/</code> setup remains unchanged.</p>
-</li>
-<li>
-<p>The operator's area shows the running release and whether a newer one is
-  published on GitHub (cached six hours, <code>COS_WEB_UPDATE_CHECK</code>), and a button
-  installs it: the release's web bundle is verified against its Sigstore build
-  attestation from this repository's release workflow, unpacked on a tmpfs
-  (<code>COS_WEB_ADMIN_UPDATE_DIR</code>, mounted by every compose file) and the web and
-  worker processes restart on it - a short downtime, lasting until the
-  containers restart. The Docker setup wizard sets it up whenever it enables
-  the operator's area. The web image now installs the <code>signing</code> extra
-  (<a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0070-the-operator-area-installs-attested-releases-in-place.md">ADR 0070</a>).</p>
-</li>
-</ul>
-<h3 id="changed_3">Changed</h3>
-<ul>
-<li>mypy now also checks the bodies of functions without annotations
-  (<code>check_untyped_defs</code> in <code>mypy.ini</code>), so CI type-checks the test suite
-  too. The 98 errors that surfaced - all in <code>tests/</code> - are fixed.</li>
-</ul>
-<h3 id="fixed_5">Fixed</h3>
-<ul>
-<li>
-<p>The Codex scan driver no longer prints the raw scanner document, which could
-  expose TLS inspection data in its JSON output; <code>scan --json</code> now emits only
-  the version, verdict and failed checks.</p>
-</li>
-<li>
-<p>The operator area's <strong>Releases</strong> tab never listed the release it was running
-  on: the image is built from the version-bump commit, before the release
-  workflow renames <code>[Unreleased]</code>. The page is now generated with that section
-  under the <code>pyproject.toml</code> version when the changelog has no heading for it.</p>
-</li>
 </ul>
 </article>
 {% endblock %}
