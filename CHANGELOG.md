@@ -12,6 +12,8 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+## [1.31.0] - 2026-09-24
+
 ### Documentation
 
 - Polished scan progress, errors, downloads and sharing text in English,
