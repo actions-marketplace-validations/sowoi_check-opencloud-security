@@ -23,6 +23,19 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
   `ratingExplanation.base` is `null`.** The update step's detail is then left
   empty, instead of `remediation_plan()` raising.
 
+### Security
+
+- **An empty listen address no longer counts as loopback for the scan
+  service.** Binding `""` listens on every interface, but the check that
+  demands a token for anything but loopback let it through. The command line,
+  `COS_SERVICE_LISTEN` and the configuration file all fall back to
+  `127.0.0.1` when empty, so only a program calling `build_server()` or
+  `serve()` with `listen=""` could reach it.
+- **The container images install the dependencies `uv.lock` pins, with their
+  hashes.** Both `docker/Dockerfile` and `docker/Dockerfile.web` resolved
+  their dependencies from PyPI at build time, so an image could ship versions
+  that CI, `pip-audit` and the SBOM never saw.
+
 ## [1.31.0] - 2026-09-24
 
 ### Documentation

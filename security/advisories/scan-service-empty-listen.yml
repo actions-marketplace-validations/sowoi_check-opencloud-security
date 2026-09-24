@@ -1,0 +1,59 @@
+# A security advisory record. See AGENTS.md, "Security advisories".
+#
+# One file per bullet under a `### Security` heading in CHANGELOG.md.
+# `state` is the decision; `verified` is the evidence it rests on.
+
+slug: scan-service-empty-listen
+state: declined
+changelog_version: "1.31.1"
+changelog_entry: "An empty listen address no longer counts as loopback for the scan service."
+shipped: true
+declined_because: |
+  Shipped, but not reachable through any interface an operator configures.
+  The listen address reaches `build_server()` as
+  `args.listen or config.get("SERVICE_LISTEN") or DEFAULT_LISTEN`, so an
+  empty `--listen`, an empty `COS_SERVICE_LISTEN` and an empty
+  `service.listen` in the file all become `127.0.0.1`. Only Python code
+  calling `build_server()` or `serve()` with `listen=""` bound every
+  interface without a token, and that code is written by the operator, not
+  supplied by an attacker. An advisory would alert every installation over a
+  path none of them use.
+package: plugin
+severity: low
+cwe_ids:
+  - CWE-306
+  - CWE-1188
+introduced: "1.17.0"
+fixed: "1.31.1"
+summary: >-
+  The scan service's token requirement treated an empty listen address,
+  which binds every interface, as loopback
+verified: |
+  git log --oneline -S '"localhost", ""' -- opencloud_local_scan/service.py
+  -> 95dd2a8, first contained in v1.17.0 (git tag --contains 95dd2a8).
+  git show v1.31.0:opencloud_local_scan/service.py | grep 'LOOPBACK_LISTEN ='
+  -> LOOPBACK_LISTEN = frozenset({"127.0.0.1", "::1", "localhost", ""}).
+  opencloud_local_scan/cli.py:1237 builds the listen address with `or`
+  fallbacks to DEFAULT_LISTEN, so no empty string reaches it from the CLI,
+  the environment or the configuration file.
+description: |
+  ### Impact
+
+  `ensure_listen_is_safe()` refused to serve anything but loopback without a
+  token, but listed the empty string as loopback. To a socket, binding `""`
+  is `INADDR_ANY`, so a program that called `build_server()` or `serve()`
+  with `listen=""` exposed an unauthenticated scan endpoint on every
+  interface. The Host-header check did not help, because a remote client
+  can send `Host: 127.0.0.1`.
+
+  The command line, `COS_SERVICE_LISTEN` and the configuration file were not
+  affected: each falls back to `127.0.0.1` when empty.
+
+  ### Patches
+
+  Fixed in **1.31.1**. An empty listen address now needs a token, like any
+  other address that is not loopback.
+
+  ### Workarounds
+
+  Pass an explicit `127.0.0.1` to `build_server()` / `serve()`, or a token.

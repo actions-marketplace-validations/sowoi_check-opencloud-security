@@ -53,7 +53,10 @@ MAX_BODY_BYTES = 8192
 
 # Addresses that reach only this machine. Binding anywhere else exposes the
 # service to a network, which is what makes a token mandatory.
-LOOPBACK_LISTEN = frozenset({"127.0.0.1", "::1", "localhost", ""})
+#
+# Never the empty string: to a socket, binding "" is INADDR_ANY - every
+# interface - which is the widest bind there is, not the narrowest.
+LOOPBACK_LISTEN = frozenset({"127.0.0.1", "::1", "localhost"})
 
 
 class ServiceMisconfigured(RuntimeError):
@@ -225,7 +228,7 @@ class _Handler(BaseHTTPRequestHandler):
             hostname = urllib.parse.urlsplit(f"//{header}").hostname or ""
         except ValueError:
             return False
-        # Not empty: an empty name counts as loopback for a *bind* address.
+        # Not empty: a Host header naming nothing names no loopback address.
         return bool(hostname) and _is_loopback_listen(hostname)
 
     def _browser_may_scan(self) -> bool:
