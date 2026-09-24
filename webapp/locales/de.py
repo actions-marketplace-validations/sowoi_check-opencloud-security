@@ -1364,6 +1364,7 @@ MESSAGES: dict[str, str] = {
     "result.explain.title": "Was diese Prüfung bedeutet",
     "result.plan.kicker": "Maßnahmenplan",
     "result.plan.heading": "Schritte zur Note {label}",
+    "result.plan.heading.held": "Noch zu beheben, die Note bleibt {label}",
     "result.plan.then": "dann {label}",
     "result.plan.still": "immer noch {label}",
     "result.plan.note": "Der Plan priorisiert Änderungen, die die Bewertung verbessern. Die Note neben einem Schritt setzt voraus, dass dieser und alle vorherigen Schritte erledigt sind. Befunde gleicher Schwere begrenzen die Note gemeinsam. Deshalb können mehrere Korrekturen nötig sein, bevor sie steigt.",

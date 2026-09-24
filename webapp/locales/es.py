@@ -1327,6 +1327,7 @@ MESSAGES: dict[str, str] = {
     "result.explain.title": "Qué significa esta comprobación",
     "result.plan.kicker": "Plan de corrección",
     "result.plan.heading": "Pasos para alcanzar {label}",
+    "result.plan.heading.held": "Aún por corregir, la nota sigue en {label}",
     "result.plan.then": "luego {label}",
     "result.plan.still": "sigue en {label}",
     "result.plan.note": "El plan prioriza los cambios que mejoran la nota. La nota indicada junto a cada paso supone que se ha completado ese paso y todos los anteriores. Los hallazgos de igual gravedad comparten un límite, por lo que pueden hacer falta varias correcciones antes de que la nota mejore.",

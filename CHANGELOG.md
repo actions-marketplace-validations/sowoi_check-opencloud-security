@@ -23,6 +23,13 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ### Fixed
 
+- **The web report no longer offers "What gets you to A+" under an A+.** When
+  no step in the remediation plan raises the grade, because the instance
+  already has the top grade or something no setting can change holds it down,
+  the plan is headed "Still worth fixing, the grade stays A+" (or whichever
+  grade it holds) instead.
+  This applies to the dashboard, its contents list, and the PDF and HTML
+  exports, in all four languages.
 - **`check-opencloud-scanner fleet` lists waiver deadlines in the order they
   end.** Deadlines were sorted by their text, so a waiver written with a
   `+02:00` offset could be listed after one that ends later in UTC.

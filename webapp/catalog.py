@@ -946,7 +946,18 @@ def _remediation(result: Mapping[str, Any]) -> dict[str, Any]:
         "groups": groups,
         "currentLabel": rating_label(plan.get("currentRating")),
         "achievableLabel": rating_label(plan.get("achievableRating")),
+        # Whether any step lifts the grade at all. When none does - the
+        # instance already holds the top grade, or something no setting can
+        # change holds it down - "what gets you to A+" would promise a grade
+        # the page already shows, so the heading says the grade stays instead.
+        "raisesRating": _rating_number(plan.get("achievableRating"))
+        > _rating_number(plan.get("currentRating")),
     }
+
+
+def _rating_number(value: object) -> int:
+    """A plan rating as a number, anything malformed counting as no rating."""
+    return value if isinstance(value, int) and not isinstance(value, bool) else -1
 
 
 def _flags(mapping: object) -> list[tuple[str, bool]]:

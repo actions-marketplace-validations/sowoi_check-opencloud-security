@@ -493,7 +493,7 @@
 {% set toc = [] %}
 {% if summary.remediation.steps %}
   {% set _ = toc.append({"href": "#remediation",
-                         "label": t('result.plan.heading', label=summary.remediation.achievableLabel), "group": t('toc.group.act')}) %}
+                         "label": t('result.plan.heading' if summary.remediation.raisesRating else 'result.plan.heading.held', label=summary.remediation.achievableLabel), "group": t('toc.group.act')}) %}
 {% endif %}
 {% if summary.remediation.groups %}
   {% set _ = toc.append({"href": "#remediation-groups",
@@ -531,7 +531,7 @@
 {% if summary.remediation.steps %}
 <section class="card" data-reveal="3">
   <p class="kicker">{{ t('result.plan.kicker') }}</p>
-  <h2 id="remediation">{{ t('result.plan.heading', label=summary.remediation.achievableLabel) }}</h2>
+  <h2 id="remediation">{{ t('result.plan.heading' if summary.remediation.raisesRating else 'result.plan.heading.held', label=summary.remediation.achievableLabel) }}</h2>
   <p class="lede">{{ summary.remediation.summary }}</p>
   <ol class="findings plan">
     {% for step in summary.remediation.steps %}
