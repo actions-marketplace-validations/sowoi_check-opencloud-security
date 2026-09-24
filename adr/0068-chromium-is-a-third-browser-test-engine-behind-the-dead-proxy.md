@@ -1,6 +1,6 @@
 # ADR 0068: Chromium is a third browser test engine, behind the dead proxy
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-09-18
 - Supersedes: ADR 0061 (its "never Chromium" engine choice only)
 

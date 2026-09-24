@@ -67,18 +67,18 @@ project. Read the accepted records that affect an area before changing it.
 | [0058](0058-public-guides-have-reviewed-german-sources.md) | Public guides have reviewed German sources | Accepted |
 | [0059](0059-a-comparison-refuses-two-different-instances.md) | A comparison refuses two different instances | Accepted |
 | [0060](0060-a-new-dependency-is-justified-tested-and-reviewed-first.md) | A new dependency is justified, tested and reviewed first | Accepted |
-| [0061](0061-the-frontend-is-tested-in-real-browsers-that-cannot-leave-loopback.md) | The frontend is tested in real browsers that cannot leave loopback | Proposed; engine choice superseded by [0068](0068-chromium-is-a-third-browser-test-engine-behind-the-dead-proxy.md) |
+| [0061](0061-the-frontend-is-tested-in-real-browsers-that-cannot-leave-loopback.md) | The frontend is tested in real browsers that cannot leave loopback | Accepted; engine choice superseded by [0068](0068-chromium-is-a-third-browser-test-engine-behind-the-dead-proxy.md) |
 | [0062](0062-public-guides-have-reviewed-french-sources.md) | Public guides have French source pages | Accepted; its Spanish English-fallback statement superseded by ADR 0063 |
 | [0063](0063-public-guides-have-spanish-sources.md) | Public guides have Spanish sources | Accepted |
 | [0064](0064-a-scan-records-what-it-did-not-measure.md) | A scan records what it did not measure | Accepted |
 | [0065](0065-a-waiver-may-carry-a-reason-and-a-deadline.md) | A waiver may carry a reason and a deadline | Accepted |
 | [0066](0066-a-result-records-the-conditions-it-was-produced-under.md) | A result records the conditions it was produced under | Accepted |
 | [0067](0067-a-release-ends-with-its-github-release-not-its-tag.md) | A release ends with its GitHub release, not its tag | Accepted |
-| [0068](0068-chromium-is-a-third-browser-test-engine-behind-the-dead-proxy.md) | Chromium is a third browser test engine, behind the dead proxy | Proposed |
+| [0068](0068-chromium-is-a-third-browser-test-engine-behind-the-dead-proxy.md) | Chromium is a third browser test engine, behind the dead proxy | Accepted |
 | [0069](0069-login-throttling-is-observed-only-when-the-operator-asks.md) | Login throttling is observed only when the operator asks | Accepted |
-| [0070](0070-the-operator-area-installs-attested-releases-in-place.md) | The operator area installs attested releases in place | Proposed |
-| [0071](0071-repository-advisories-are-a-second-advisory-source.md) | OpenCloud's repository advisories are a second advisory source | Proposed |
-| [0072](0072-remediation-verification-re-measures-named-findings-without-a-full-scan.md) | Remediation verification re-measures named findings without a full scan | Proposed |
+| [0070](0070-the-operator-area-installs-attested-releases-in-place.md) | The operator area installs attested releases in place | Accepted |
+| [0071](0071-repository-advisories-are-a-second-advisory-source.md) | OpenCloud's repository advisories are a second advisory source | Accepted |
+| [0072](0072-remediation-verification-re-measures-named-findings-without-a-full-scan.md) | Remediation verification re-measures named findings without a full scan | Accepted |
 | [0073](0073-a-result-fingerprints-the-configuration-it-measured.md) | A result fingerprints the configuration it measured | Accepted |
 | [0074](0074-a-lost-measurement-warns-through-the-baseline-not-the-rating.md) | A lost measurement warns through the baseline, not the rating | Accepted |
 | [0075](0075-the-remediation-plan-groups-changes-by-where-they-are-made.md) | The remediation plan groups changes by where they are made | Accepted |

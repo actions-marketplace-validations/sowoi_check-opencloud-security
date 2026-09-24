@@ -1,6 +1,6 @@
 # ADR 0071: OpenCloud's repository advisories are a second advisory source
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-09-19
 - Extends: ADR 0017
 
