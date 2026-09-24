@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import copy
 import json
+import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -17,6 +18,7 @@ import pytest
 
 from opencloud_local_scan.cli import main
 from opencloud_local_scan.fleet import (
+    headline,
     host_key,
     load_reports,
     render_html,
@@ -254,6 +256,42 @@ def test_a_stale_report_is_missing_coverage_and_a_fresh_one_is_not(tmp_path, sca
     )
     assert [item["host"] for item in summary["coverage"]["staleReports"]] == [
         "stale.example.com"
+    ]
+
+
+def test_a_host_that_is_both_failed_and_stale_is_not_covered_once(tmp_path):
+    """The headline counts instances nobody knows about, not the rows naming them."""
+    path = _write(
+        tmp_path, "failed.json", [{"host": "gone.example.com", "error": "unreachable"}]
+    )
+    # A failed scan records no time of its own; the file's age is the report's.
+    old = (NOW - timedelta(days=12)).timestamp()
+    os.utime(path, (old, old))
+    reports, skipped = load_reports([tmp_path])
+    summary = summarise(reports, skipped=skipped, now=NOW, schedule=None)
+
+    assert [item["host"] for item in summary["coverage"]["failedScans"]] == ["gone.example.com"]
+    assert [item["host"] for item in summary["coverage"]["staleReports"]] == ["gone.example.com"]
+    assert headline(summary)["notCovered"] == 1
+
+
+def test_waiver_deadlines_are_ordered_by_moment_not_by_their_spelling(tmp_path, scanned):
+    """
+    A waiver keeps the offset it was written with. 10:00 in Berlin is before
+    09:00 UTC on the same day, although its ISO string sorts after it.
+    """
+    berlin = timezone(timedelta(hours=2))
+    first = datetime(2026, 9, 30, 10, 0, tzinfo=berlin)
+    second = datetime(2026, 9, 30, 9, 0, tzinfo=timezone.utc)
+    summary = _summary(
+        tmp_path,
+        _as(scanned, "a.example.com", waivers=[_waiver("exposed:*", second, ["exposed:/.env"])]),
+        _as(scanned, "b.example.com", waivers=[_waiver("exposed:*", first, ["exposed:/.env"])]),
+    )
+
+    assert [item["host"] for item in summary["waiverDeadlines"]] == [
+        "b.example.com",
+        "a.example.com",
     ]
 
 

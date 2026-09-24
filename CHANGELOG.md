@@ -12,6 +12,17 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`check-opencloud-scanner fleet` lists waiver deadlines in the order they
+  end.** Deadlines were sorted by their text, so a waiver written with a
+  `+02:00` offset could be listed after one that ends later in UTC.
+- **The fleet summary's "Not covered" count counts each host once.** A host
+  whose last scan failed long enough ago to be stale was counted twice.
+- **The remediation plan no longer fails on a result document whose
+  `ratingExplanation.base` is `null`.** The update step's detail is then left
+  empty, instead of `remediation_plan()` raising.
+
 ## [1.31.0] - 2026-09-24
 
 ### Documentation

@@ -111,6 +111,10 @@ def _upgrade_step(result: Mapping[str, Any], base_rating: int) -> dict[str, Any]
             "track this instance follows."
         )
 
+    explanation = result.get("ratingExplanation")
+    base = explanation.get("base") if isinstance(explanation, Mapping) else None
+    detail = base.get("reason") if isinstance(base, Mapping) else None
+
     return {
         "id": "versionCurrent",
         "kind": "upgrade",
@@ -118,9 +122,7 @@ def _upgrade_step(result: Mapping[str, Any], base_rating: int) -> dict[str, Any]
         "title": _UPGRADE_TITLES.get(base_rating, "Update the instance"),
         "action": action,
         "reference": DOCS_UPDATE,
-        "detail": str(
-            (result.get("ratingExplanation") or {}).get("base", {}).get("reason", "")
-        ),
+        "detail": str(detail or ""),
         "targetVersion": target,
     }
 
