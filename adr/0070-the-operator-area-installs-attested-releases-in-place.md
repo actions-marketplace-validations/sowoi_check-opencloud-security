@@ -1,6 +1,6 @@
 # ADR 0070: The operator area installs attested releases in place
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-09-19
 
 ## Context

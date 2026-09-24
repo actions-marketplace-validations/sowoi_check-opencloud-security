@@ -1436,6 +1436,7 @@ MESSAGES: dict[str, str] = {
     "result.explain.title": "What this check means",
     "result.plan.kicker": "Remediation plan",
     "result.plan.heading": "What gets you to {label}",
+    "result.plan.heading.held": "Still worth fixing, the grade stays {label}",
     "result.plan.then": "then {label}",
     "result.plan.still": "still {label}",
     "result.plan.note": "The plan prioritises changes that improve the grade. The grade beside each step assumes that you have completed it and all preceding steps. Findings of equal severity share a rating limit, so several fixes may be needed before the grade improves.",

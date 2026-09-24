@@ -732,7 +732,7 @@ def pdf_report(result: dict[str, Any], *, identifier: str | None = None) -> byte
 
     plan = summary.get("remediation") or {}
     if plan.get("steps"):
-        doc.heading(f"What gets you to {plan.get('achievableLabel') or 'the top grade'}")
+        doc.heading(_plan_heading(plan, "the top grade"))
         doc.paragraph(str(plan.get("summary") or ""))
         doc.gap(4)
         for step in plan["steps"]:
@@ -887,6 +887,20 @@ footer { margin-top: 40px; padding-top: 12px; border-top: 1px solid #d8dee4;
 _GRADE_TONES = {"good": "grade-good", "fair": "grade-fair", "poor": "grade-poor"}
 
 
+def _plan_heading(plan: Mapping[str, Any], fallback: str) -> str:
+    """
+    The remediation plan's heading, which only promises a grade it can reach.
+
+    A plan whose steps lift nothing - the instance already holds the top
+    grade, or a fixed value holds it down - would otherwise read "What gets
+    you to A+" under an A+.
+    """
+    label = plan.get("achievableLabel") or fallback
+    if plan.get("raisesRating", True):
+        return f"What gets you to {label}"
+    return f"Still worth fixing, the grade stays {label}"
+
+
 def _h(value: object) -> str:
     """
     One value, safe to put anywhere in the document.
@@ -1006,7 +1020,7 @@ def html_report(result: dict[str, Any], *, identifier: str | None = None) -> str
             for step in plan["steps"]
         ]
         sections.append(
-            f"<h2>What gets you to {_h(plan.get('achievableLabel') or 'a better grade')}</h2>"
+            f"<h2>{_h(_plan_heading(plan, 'a better grade'))}</h2>"
             + _rows(steps, ("Severity", "Check", "What to change", "Grade after"))
         )
 

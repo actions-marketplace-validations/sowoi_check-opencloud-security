@@ -1,6 +1,6 @@
 # ADR 0072: Remediation verification re-measures named findings without a full scan
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-09-19
 
 ## Context

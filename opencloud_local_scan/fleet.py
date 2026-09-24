@@ -586,7 +586,9 @@ def summarise(
 
     unsupported.sort(key=lambda item: (item["endOfLife"] or "", item["host"]))
     ending.sort(key=lambda item: (item["daysRemaining"], item["host"]))
-    deadlines.sort(key=lambda item: (item["expiresAt"], item["host"]))
+    # By the moment, not the string: each deadline keeps the offset its waiver
+    # was written with, and "10:00+02:00" is earlier than "09:00+00:00".
+    deadlines.sort(key=lambda item: (datetime.fromisoformat(item["expiresAt"]), item["host"]))
     stale.sort(key=lambda item: (-item["ageDays"], item["host"]))
     common = sorted(
         findings.values(),
@@ -640,9 +642,15 @@ def headline(summary: Mapping[str, Any]) -> dict[str, int]:
         "hosts": summary["reports"]["hosts"],
         "unsupported": len(summary["unsupported"]),
         "waiversEnding": len(summary["waiverDeadlines"]),
-        "notCovered": len(coverage["missingHosts"])
-        + len(coverage["failedScans"])
-        + len(coverage["staleReports"]),
+        # Hosts, not rows: a host whose last scan failed a fortnight ago is
+        # both a failed scan and a stale report, and still one host.
+        "notCovered": len(
+            {
+                *coverage["missingHosts"],
+                *(item["host"] for item in coverage["failedScans"]),
+                *(item["host"] for item in coverage["staleReports"]),
+            }
+        ),
     }
 
 

@@ -172,6 +172,18 @@ def test_the_update_step_never_names_a_version_the_scan_did_not_report():
     assert "could not name one" in step["action"]
 
 
+def test_an_explanation_without_a_base_reason_still_plans_the_update():
+    """`plan` is public API; a hand-built document with a null base must not crash it."""
+    document = _document(rating=3, base_rating=3, caps=[])
+    document["ratingExplanation"]["base"] = None
+    step = plan(document)["steps"][0]
+    assert step["id"] == "versionCurrent"
+    assert step["detail"] == ""
+
+    step = plan(_document(rating=3, base_rating=3, caps=[]))["steps"][0]
+    assert step["detail"] == "a reason"
+
+
 def test_a_waived_finding_is_listed_but_never_planned_as_a_fix():
     """A waiver hides an alert, not the evidence - and never earns a grade."""
     result = plan(

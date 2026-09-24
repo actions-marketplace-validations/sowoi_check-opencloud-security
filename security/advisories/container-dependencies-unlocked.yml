@@ -1,0 +1,55 @@
+# A security advisory record. See AGENTS.md, "Security advisories".
+#
+# One file per bullet under a `### Security` heading in CHANGELOG.md.
+# `state` is the decision; `verified` is the evidence it rests on.
+
+slug: container-dependencies-unlocked
+state: declined
+changelog_version: "1.31.1"
+changelog_entry: "The container images install the dependencies `uv.lock` pins, with their hashes."
+shipped: true
+declined_because: |
+  Hardening, not a fixed vulnerability. The images installed dependency
+  versions within the ranges `pyproject.toml` allows, exactly as a
+  `pip install check-opencloud-security` does, so no released image carried a
+  known-vulnerable package because of this. What changes is that a
+  compromised or broken upstream release published after the lock was
+  audited can no longer enter an image on its next build. There is nothing an
+  operator running an existing image has to be told to do.
+package: web
+severity: low
+cwe_ids:
+  - CWE-1357
+  - CWE-494
+introduced: "1.0.0"
+fixed: "1.31.1"
+summary: >-
+  The container images resolved their dependencies from PyPI at build time
+  instead of installing the hash-checked set in uv.lock
+verified: |
+  git show v1.31.0:docker/Dockerfile.web | grep 'uv pip install'
+  -> uv pip install --system --no-cache "$(echo /tmp/*.whl)[web,mcp,signing]"
+  (no lock file, no hashes).
+  git show v1.31.0:.dockerignore | grep '^uv.lock' -> uv.lock (excluded from
+  the build context, so no image could have used it).
+description: |
+  ### Impact
+
+  `docker/Dockerfile` and `docker/Dockerfile.web` installed the wheel and let
+  the installer resolve its dependencies from PyPI when the image was built.
+  `uv.lock`, which CI tests against and which `pip-audit` and the SBOM
+  describe, was excluded from the build context. A published image could
+  therefore contain dependency versions nobody audited, including an upstream
+  release that was compromised after the lock was last checked.
+
+  PyPI installations are unaffected by the image change itself.
+
+  ### Patches
+
+  Fixed in **1.31.1**. The builder stage exports the locked set with
+  `uv export --frozen`, and the image installs it with `--require-hashes`
+  before installing the wheel with `--no-deps`.
+
+  ### Workarounds
+
+  Rebuild from a checkout at 1.31.1 or later, or pin the image by digest.

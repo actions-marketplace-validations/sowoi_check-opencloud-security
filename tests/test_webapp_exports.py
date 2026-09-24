@@ -328,6 +328,57 @@ def test_the_dashboard_shows_the_plan_with_the_grade_each_step_reaches(
     assert f"{RATE_MAP[first['ratingAfter']]}" in page
 
 
+def _top_grade_with_leftovers(finished_scan) -> dict:
+    """The same scan, re-rated A+ with the plan's steps all lifting nothing."""
+    plan = finished_scan["remediationPlan"]
+    return {
+        **finished_scan,
+        "rating": 5,
+        "remediationPlan": {
+            **plan,
+            "currentRating": 5,
+            "achievableRating": 5,
+            "steps": [
+                {**step, "ratingAfter": 5, "ratingGain": 0}
+                for step in plan["steps"]
+            ],
+        },
+    }
+
+
+def test_a_plan_that_lifts_nothing_does_not_promise_the_grade_already_held(
+    finished_scan,
+):
+    """"What gets you to A+" under an A+ reads as if the A+ were not there yet."""
+    from webapp.app import build_templates
+
+    scan = _top_grade_with_leftovers(finished_scan)
+    summary = summarise(scan)
+    assert summary["remediation"]["steps"], "the leftovers are what is shown"
+    assert summary["remediation"]["raisesRating"] is False
+
+    request = SimpleNamespace(url=SimpleNamespace(path=f"/scan/{IDENTIFIER}"))
+    page = build_templates().env.get_template("scan.html").render(
+        summary=summary,
+        scan={
+            "outputFormat": "dashboard",
+            "result": scan,
+            "uuid": IDENTIFIER,
+            "expiresIn": 3600,
+            "exports": {},
+        },
+        request=request,
+    )
+
+    assert "Still worth fixing, the grade stays A+" in page
+    assert "What gets you to" not in page
+    pdf = pdf_report(scan)
+    assert b"Still worth fixing" in pdf
+    assert b"What gets you to" not in pdf
+    # The negative half: a plan that does lift the grade keeps its promise.
+    assert summarise(finished_scan)["remediation"]["raisesRating"] is True
+
+
 # ------------------------------------------- the transport block in a report
 
 
