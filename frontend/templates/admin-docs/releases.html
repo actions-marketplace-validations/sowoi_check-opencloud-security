@@ -45,6 +45,15 @@
 
 <article class="docs-article card section-gap" data-reveal lang="en">
 <h2 id="1311-this-release">[1.31.1] - this release</h2>
+<h3 id="changed">Changed</h3>
+<ul>
+<li><strong>The coverage warning's alert line is now covered by mutation testing.</strong>
+  <code>tests/test_coverage_regression.py</code> drives <code>_apply_baseline</code> in process but
+  was missing from the mutmut selection, so eleven mutants of the branch that
+  lifts an OK to WARNING when a measured check turns inconclusive survived.
+  It is now listed, and its test asserts the whole alert line: three of those
+  mutants left <code>OK:</code> inside the WARNING message without a test noticing.</li>
+</ul>
 <h3 id="fixed">Fixed</h3>
 <ul>
 <li><strong><code>check-opencloud-scanner fleet</code> lists waiver deadlines in the order they
@@ -55,6 +64,19 @@
 <li><strong>The remediation plan no longer fails on a result document whose
   <code>ratingExplanation.base</code> is <code>null</code>.</strong> The update step's detail is then left
   empty, instead of <code>remediation_plan()</code> raising.</li>
+</ul>
+<h3 id="security">Security</h3>
+<ul>
+<li><strong>An empty listen address no longer counts as loopback for the scan
+  service.</strong> Binding <code>""</code> listens on every interface, but the check that
+  demands a token for anything but loopback let it through. The command line,
+  <code>COS_SERVICE_LISTEN</code> and the configuration file all fall back to
+  <code>127.0.0.1</code> when empty, so only a program calling <code>build_server()</code> or
+  <code>serve()</code> with <code>listen=""</code> could reach it.</li>
+<li><strong>The container images install the dependencies <code>uv.lock</code> pins, with their
+  hashes.</strong> Both <code>docker/Dockerfile</code> and <code>docker/Dockerfile.web</code> resolved
+  their dependencies from PyPI at build time, so an image could ship versions
+  that CI, <code>pip-audit</code> and the SBOM never saw.</li>
 </ul>
 <h2 id="1310-2026-09-24">[1.31.0] - 2026-09-24</h2>
 <h3 id="documentation">Documentation</h3>
@@ -137,7 +159,7 @@
   tries the install once more before the release dry run fails.</li>
 </ul>
 <h2 id="1302-2026-09-24">[1.30.2] - 2026-09-24</h2>
-<h3 id="changed">Changed</h3>
+<h3 id="changed_1">Changed</h3>
 <ul>
 <li><strong>Tests now cover code that no test reached before.</strong> The advisory refresh
   script <code>scripts/update_vulnerability_db.py</code> has tests. They prove that it
@@ -379,7 +401,7 @@
 </li>
 </ul>
 <h2 id="1291-2026-09-21">[1.29.1] - 2026-09-21</h2>
-<h3 id="changed_1">Changed</h3>
+<h3 id="changed_2">Changed</h3>
 <ul>
 <li>
 <p><strong>The <code>--policy</code> deployment gate is now covered by tests mutation testing
@@ -517,7 +539,7 @@
   new verdict is the intended one.</p>
 </li>
 </ul>
-<h3 id="changed_2">Changed</h3>
+<h3 id="changed_3">Changed</h3>
 <ul>
 <li>
 <p><strong>The Icinga check commands offer <code>--profile</code>.</strong> The three CheckCommand
@@ -537,7 +559,7 @@
   selection, which reported "no tests" for <code>verification.py</code> before.</p>
 </li>
 </ul>
-<h3 id="security">Security</h3>
+<h3 id="security_1">Security</h3>
 <ul>
 <li><strong>The web application sends <code>Strict-Transport-Security</code> over HTTPS.</strong> The
   generated reverse-proxy configuration deliberately adds no security headers</li>
