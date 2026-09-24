@@ -991,10 +991,15 @@ def _apply_eol_warning(
     return (
         (
             f"WARNING: {described} reaches end of life on {end_of_life} "
-            f"({remaining} days left).{upgrade}"
+            f"({_days_left_text(remaining)}).{upgrade}"
         ),
         NagiosExitCode.WARNING,
     )
+
+
+def _days_left_text(days: int) -> str:
+    """``1 day left`` or ``N days left``."""
+    return f"{days} day left" if days == 1 else f"{days} days left"
 
 
 def _within_waiver_window(context: ScanContext, response_scan: dict[str, Any]) -> bool:
@@ -1012,10 +1017,11 @@ def _waiver_expiry_sentence(response_scan: dict[str, Any]) -> str | None:
     if upcoming is None or remaining is None:
         return None
     reason = f" ({upcoming.reason})" if upcoming.reason else ""
+    verb = "alerts" if len(upcoming.checks) == 1 else "alert"
     return (
         f"The waiver {upcoming.pattern}{reason} ends on "
-        f"{upcoming.at.strftime('%Y-%m-%d %H:%M UTC')} ({remaining} days left), "
-        f"after which {', '.join(upcoming.checks)} alerts again."
+        f"{upcoming.at.strftime('%Y-%m-%d %H:%M UTC')} ({_days_left_text(remaining)}), "
+        f"after which {', '.join(upcoming.checks)} {verb} again."
     )
 
 
@@ -2125,7 +2131,7 @@ def _format_lifecycle(response_scan: dict[str, Any]) -> str | None:
         # problem, but it must not be reported as "current" on that track.
         parts.append(reason)
     elif end_of_life and isinstance(remaining, int):
-        parts.append(f"supported until {end_of_life} ({remaining} days left)")
+        parts.append(f"supported until {end_of_life} ({_days_left_text(remaining)})")
     else:
         parts.append("current release")
 

@@ -12,6 +12,17 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+### Fixed
+
+- `--waiver-warning` and `waiver_days_left` no longer count a waiver that
+  only covers a flag OpenCloud hardcodes, such as
+  `publicLinkExpirationEnforced`. That flag never alerts, so the end of its
+  waiver changes nothing. Before this fix, such a waiver raised a WARNING.
+- The plugin output now says "1 day left" instead of "1 days left" in the
+  end-of-life warning, the lifecycle line and the waiver warning. If one
+  waiver covers several checks, the waiver warning now says that they
+  "alert again".
+
 ## [1.30.1] - 2026-09-23
 
 ### Added

@@ -37,6 +37,8 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
+from .hardening import is_actionable
+
 #: What separates the three fields of a temporary waiver. A check identifier
 #: is a name, a path or a port - `exposed:/config/opencloud.yaml`,
 #: `debugPort:9205` - and a pattern is an fnmatch glob over those, so none of
@@ -293,7 +295,8 @@ def next_expiry(block: Any) -> UpcomingExpiry | None:
     permanent wildcard ends without anything changing, and two overlapping
     temporary waivers end at the later of the two. Records that matched
     nothing are ignored for the same reason - their deadline passes
-    unnoticed.
+    unnoticed - and so are flags OpenCloud hardcodes, which never alert
+    whether waived or not.
 
     ``None`` when no failing check is suppressed by a temporary waiver alone.
     """
@@ -313,7 +316,8 @@ def next_expiry(block: Any) -> UpcomingExpiry | None:
             except WaiverError:
                 continue
         for check in record.get("matched") or ():
-            covering.setdefault(str(check), []).append((deadline, record))
+            if is_actionable(str(check)):
+                covering.setdefault(str(check), []).append((deadline, record))
 
     ends: dict[str, tuple[datetime, dict[str, Any]]] = {}
     for check, records in covering.items():
