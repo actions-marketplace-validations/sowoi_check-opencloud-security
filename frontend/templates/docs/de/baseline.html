@@ -21,6 +21,7 @@
   <a href="#what-counts-as-a-regression" lang="de">Was als Verschlechterung zählt</a>
   <a href="#configuration-drift" lang="de">Konfigurationsänderungen</a>
   <a href="#coverage-regressions" lang="de">Verlorene Abdeckung</a>
+  <a href="#checks-only-one-run-made" lang="de">Prüfungen, die nur ein Lauf gemacht hat</a>
   <a href="#points-worth-knowing" lang="de">Verhalten und Dateirechte</a>
 </nav>
 
@@ -102,6 +103,29 @@ unterdrückt sie nicht, denn ein Scan, der plötzlich weniger sieht, ist neu.</p
   Vergleich zweier Dokumente meldet sie als <code>coverageRegressed</code>.</li>
 <li>Eine ältere Baseline ohne Abdeckung kann beim ersten Lauf nach dem Update
   keinen Verlust melden; sie speichert dann, was gemessen wurde.</li>
+</ul>
+<h2 id="checks-only-one-run-made">Prüfungen, die nur ein Lauf gemacht hat</h2>
+<p>Ein Befund gilt nur dann als neu, wenn der vorige Lauf ihn hätte melden
+können. Kommt eine Prüfung dazu - nach einem Update oder weil du die
+zusätzlichen Prüfungen eingeschaltet hast -, war ein Fehler, den sie jetzt
+findet, beim letzten Mal <em>nicht geprüft</em> und nicht bestanden. Der Lauf sagt
+das so:</p>
+<pre><code class="language-text">Baseline: Newly measured (1): hardening:basicAuthDisabled - the last run did not check these
+Hardening: + basicAuthDisabled (not checked before)
+</code></pre>
+<p>Er alarmiert trotzdem, und <code>--warn-on-new</code> unterdrückt ihn nicht: Von diesem
+Fehler hat noch niemand erfahren. Umgekehrt steht ein Fehler, den der
+aktuelle Lauf nicht mehr prüft, als <code>(not checked now)</code> da und nicht als
+behoben.</p>
+<ul>
+<li>Was ein Lauf hätte melden können, kommt aus seinem Abdeckungsblock, nie aus
+  einem fehlenden Schlüssel. Ein Bericht ohne Liste seiner Prüfungen wird wie
+  bisher verglichen, eine echte Verschlechterung wird also nie umbenannt.</li>
+<li>Im Webhook stehen die Listen als <code>newly_measured</code> und <code>no_longer_measured</code>
+  in <code>baseline_diff</code>, im Webvergleich als <code>newlyMeasured</code> und
+  <code>noLongerMeasured</code>.</li>
+<li>Eine ältere Baseline kann nicht sagen, was sie geprüft hat; der erste Lauf
+  nach dem Update vergleicht daher wie bisher.</li>
 </ul>
 <h2 id="points-worth-knowing">Verhalten und Dateirechte</h2>
 <ul>

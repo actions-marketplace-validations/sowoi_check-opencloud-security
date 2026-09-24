@@ -21,6 +21,12 @@ see something is not a scan that found it fine. That is a statement about
 coverage, kept apart from the findings and from the rating - see
 :attr:`Comparison.coverage_lost`.
 
+And a finding is only called new if the previous run could have reported it.
+A check the scanner learned after that run - or one a probe setting kept it
+from making - that fails now was *not measured* before, not passing, and is
+named as such: :attr:`Comparison.newly_measured`. It still alerts, because
+nobody has been told about it yet; it is just not blamed on the instance.
+
 The file is written atomically, because a monitoring plugin is killed by its
 own timeout often enough that a half-written baseline is a question of when,
 not if.
@@ -37,7 +43,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .coverage import FAILED, INCONCLUSIVE, PASSED, coverage_of
+from .coverage import FAILED, INCONCLUSIVE, PASSED, considered, coverage_of
 from .fingerprint import digests as fingerprint_digests
 from .fingerprint import drift as configuration_drift
 from .hardening import is_actionable
@@ -86,6 +92,12 @@ class Snapshot:
     #: The checks this run ran and could not decide, with the reason the
     #: scanner recorded.
     inconclusive: dict[str, str] = field(default_factory=dict)
+    #: Every hardening and check finding this run *could* have reported, as
+    #: finding identifiers, whether it passed, failed or was skipped. It is
+    #: what tells "passed last time" from "not checked last time". ``None``
+    #: when the scan did not list its checks or the snapshot predates this
+    #: field - a snapshot that cannot say, and is then compared as before.
+    considered: tuple[str, ...] | None = None
 
     def as_dict(self) -> dict[str, Any]:
         """Render the snapshot in the shape stored on disk."""
@@ -102,6 +114,8 @@ class Snapshot:
         if self.measured is not None:
             stored["measured"] = list(self.measured)
             stored["inconclusive"] = dict(self.inconclusive)
+        if self.considered is not None:
+            stored["considered"] = list(self.considered)
         return stored
 
     @classmethod
@@ -139,6 +153,9 @@ class Snapshot:
             }
             if isinstance(data.get("inconclusive"), dict)
             else {},
+            considered=tuple(str(item) for item in data["considered"])
+            if isinstance(data.get("considered"), list)
+            else None,
         )
 
 
@@ -159,6 +176,14 @@ class Comparison:
     #: finding and never a change to the rating: it says the evidence behind
     #: an unchanged grade got thinner.
     coverage_lost: dict[str, str] = field(default_factory=dict)
+    #: Failing now, and not something the previous run checked at all - a
+    #: check added to the scanner since, or one a setting kept it from making.
+    #: Kept out of :attr:`new_findings`, which would blame the instance for a
+    #: change in what was measured.
+    newly_measured: tuple[str, ...] = ()
+    #: Failing before, and not something this run checked at all. Kept out of
+    #: :attr:`resolved_findings`, because nobody fixed it: it was not looked at.
+    no_longer_measured: tuple[str, ...] = ()
 
     @property
     def first_run(self) -> bool:
@@ -178,12 +203,16 @@ class Comparison:
         True when this run must still alert.
 
         End of life is included unconditionally: a baseline may record that an
-        instance is unsupported, but it must never make that acceptable.
+        instance is unsupported, but it must never make that acceptable. So is
+        a finding measured for the first time: it is not the instance's doing,
+        but nobody has been told about it yet, and ``--warn-on-new`` must not
+        file a failure nobody has seen under "nothing new".
         """
         if self.first_run:
             return True
         return (
             bool(self.new_findings)
+            or bool(self.newly_measured)
             or self.rating_worsened
             or self.current.eol
             or bool(self.coverage_lost)
@@ -220,6 +249,17 @@ class Comparison:
                 else ""
             )
             return f"New since last run ({len(self.new_findings)}): {listed}{more}"
+        if self.newly_measured:
+            listed = ", ".join(self.newly_measured[:5])
+            more = (
+                f" (+{len(self.newly_measured) - 5} more)"
+                if len(self.newly_measured) > 5
+                else ""
+            )
+            return (
+                f"Newly measured ({len(self.newly_measured)}): {listed}{more} "
+                "- the last run did not check these"
+            )
         if self.rating_worsened:
             assert self.previous is not None
             return (
@@ -264,12 +304,28 @@ class Comparison:
                     "change": f"+ {finding.removeprefix(prefix)}",
                 }
             )
+        for finding in self.newly_measured:
+            prefix = next((key for key in labels if finding.startswith(key)), "")
+            changes.append(
+                {
+                    "category": labels.get(prefix, "Finding"),
+                    "change": f"+ {finding.removeprefix(prefix)} (not checked before)",
+                }
+            )
         for finding in self.resolved_findings:
             prefix = next((key for key in labels if finding.startswith(key)), "")
             changes.append(
                 {
                     "category": labels.get(prefix, "Finding"),
                     "change": f"- {finding.removeprefix(prefix)}",
+                }
+            )
+        for finding in self.no_longer_measured:
+            prefix = next((key for key in labels if finding.startswith(key)), "")
+            changes.append(
+                {
+                    "category": labels.get(prefix, "Finding"),
+                    "change": f"- {finding.removeprefix(prefix)} (not checked now)",
                 }
             )
         if previous.rating != self.current.rating:
@@ -343,6 +399,8 @@ class Comparison:
             "summary": self.summary(),
             "configuration_drift": list(self.configuration_drift),
             "coverage_regressed": dict(sorted(self.coverage_lost.items())),
+            "newly_measured": list(self.newly_measured),
+            "no_longer_measured": list(self.no_longer_measured),
             "changes": self.items(),
         }
 
@@ -398,6 +456,25 @@ class Baseline:
             return Comparison(previous=None, current=current)
         before = set(previous.findings)
         now = set(current.findings)
+        # Only when both sides say what they considered, and only for a
+        # finding the *other* side does list: a finding neither side lists as
+        # a check (an advisory, a pending update, a check the coverage block
+        # does not cover) keeps today's arithmetic, so a gap in the record
+        # can never turn a real regression into a softer word.
+        newly: set[str] = set()
+        dropped: set[str] = set()
+        if previous.considered is not None and current.considered is not None:
+            known_before, known_now = set(previous.considered), set(current.considered)
+            newly = {
+                finding
+                for finding in now - before
+                if finding not in known_before and finding in known_now
+            }
+            dropped = {
+                finding
+                for finding in before - now
+                if finding not in known_now and finding in known_before
+            }
         lost: dict[str, str] = {}
         if previous.measured is not None and current.measured is not None:
             lost = {
@@ -417,8 +494,10 @@ class Baseline:
         return Comparison(
             previous=previous,
             current=current,
-            new_findings=tuple(sorted(now - before)),
-            resolved_findings=tuple(sorted(before - now)),
+            new_findings=tuple(sorted(now - before - newly)),
+            resolved_findings=tuple(sorted(before - now - dropped)),
+            newly_measured=tuple(sorted(newly)),
+            no_longer_measured=tuple(sorted(dropped)),
             configuration_drift=configuration_drift(
                 previous.configuration, current.configuration
             ),
@@ -582,6 +661,29 @@ def _coverage_states(
     return tuple(sorted(measured)), inconclusive
 
 
+#: Which finding prefix a coverage group's checks are reported under - the
+#: same mapping :func:`_hardening_ids` and :func:`_extra_check_ids` apply.
+_FINDING_PREFIX_BY_GROUP: dict[str, str] = {
+    "hardening": "hardening:",
+    "header": "hardening:",
+    "extraCheck": "check:",
+}
+
+
+def _considered_findings(response: dict[str, Any]) -> tuple[str, ...] | None:
+    """Every finding identifier the result could have reported, or ``None``."""
+    checks = considered(response)
+    if checks is None:
+        return None
+    return tuple(
+        sorted(
+            f"{_FINDING_PREFIX_BY_GROUP[group]}{check}"
+            for check, group in checks.items()
+            if group in _FINDING_PREFIX_BY_GROUP
+        )
+    )
+
+
 def snapshot_of(
     response: dict[str, Any],
     waived: Iterable[str] = (),
@@ -634,4 +736,5 @@ def snapshot_of(
         configuration=fingerprint_digests(response),
         measured=measured,
         inconclusive=inconclusive,
+        considered=_considered_findings(response),
     )

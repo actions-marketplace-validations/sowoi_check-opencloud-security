@@ -86,4 +86,5 @@ RECORDS: tuple[tuple[str, str, str, str], ...] = (
     ("0076", "0076-a-fleet-summary-is-read-from-saved-reports-and-stores-nothing", "A fleet summary is read from saved reports and stores nothing", "Accepted"),
     ("0077", "0077-decision-records-are-never-translated", "Decision records are never translated", "Accepted"),
     ("0078", "0078-changelogs-and-release-notes-are-never-translated", "Changelogs and release notes are never translated", "Accepted"),
+    ("0079", "0079-a-finding-is-new-only-if-the-earlier-scan-could-have-reported-it", "A finding is new only if the earlier scan could have reported it", "Accepted"),
 )

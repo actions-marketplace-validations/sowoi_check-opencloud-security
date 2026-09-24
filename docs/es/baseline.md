@@ -140,6 +140,32 @@ una novedad.
 - Una línea base anterior sin cobertura no puede indicar ninguna pérdida en la
   primera ejecución tras actualizar; registra lo medido para la siguiente.
 
+## Comprobaciones que solo hizo una ejecución {#checks-only-one-run-made}
+
+Un hallazgo solo se considera nuevo si la ejecución anterior podía haberlo
+indicado. Cuando el analizador incorpora una comprobación - tras una
+actualización, o porque usted activó las comprobaciones adicionales -, un
+fallo que ahora encuentra *no se comprobó* la vez anterior, no se superó, y
+la ejecución lo dice así:
+
+```text
+Baseline: Newly measured (1): hardening:basicAuthDisabled - the last run did not check these
+Hardening: + basicAuthDisabled (not checked before)
+```
+
+Sigue alertando, y `--warn-on-new` no lo suprime: nadie ha sido informado aún
+de ese fallo. A la inversa, un fallo que la ejecución actual ya no comprueba
+aparece como `(not checked now)` y no como resuelto.
+
+- Lo que una ejecución podía indicar sale de su bloque de cobertura, nunca de
+  una clave ausente. Un informe que no enumera sus comprobaciones se compara
+  como antes, así que una regresión real nunca cambia de nombre.
+- El webhook incluye las listas en `baseline_diff` como `newly_measured` y
+  `no_longer_measured`; la comparación web, como `newlyMeasured` y
+  `noLongerMeasured`.
+- Una línea base anterior no puede decir qué comprobó, así que la primera
+  ejecución tras actualizar compara como antes.
+
 ## Aspectos que conviene conocer {#points-worth-knowing}
 
 

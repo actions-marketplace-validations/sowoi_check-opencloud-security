@@ -141,6 +141,36 @@ is news.
   run after an upgrade cannot report a loss; it records what it measured for
   the next one.
 
+## Checks only one run made
+
+A finding is only called new if the previous run could have reported it. When
+the scanner gains a check - after an upgrade, or because you turned the extra
+checks on - a failure it now finds was *not checked* last time, not passing,
+and the run says so:
+
+```text
+Baseline: Newly measured (1): hardening:basicAuthDisabled - the last run did not check these
+Hardening: + basicAuthDisabled (not checked before)
+```
+
+It still alerts, and `--warn-on-new` does not suppress it: nobody has been
+told about that failure yet. The next run knows the check and treats the
+failure like any other known one. The other way round, a failure the current
+run no longer checks is listed as `(not checked now)` rather than as
+resolved, because nobody fixed it.
+
+- What a run could have reported comes from its coverage block, never from a
+  missing key. A report that does not list its checks - one written before
+  coverage existed, or an uploaded report in the web comparison - is compared
+  as before, so a real regression is never renamed.
+- The webhook's `baseline_diff` carries both lists as `newly_measured` and
+  `no_longer_measured`; the web comparison as `newlyMeasured` and
+  `noLongerMeasured`; and the two-document explanation as the scanner changes
+  `checksNewlyMeasured` and `checksNoLongerMeasured`. See
+  [ADR 0079](../adr/0079-a-finding-is-new-only-if-the-earlier-scan-could-have-reported-it.md).
+- A baseline written before this existed cannot say what it checked, so the
+  first run after an upgrade compares as before.
+
 ## Points worth knowing
 
 
