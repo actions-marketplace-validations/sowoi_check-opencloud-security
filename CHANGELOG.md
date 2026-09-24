@@ -12,6 +12,22 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+### Changed
+
+- **Tests now cover code that no test reached before.** The advisory refresh
+  script `scripts/update_vulnerability_db.py` has tests. They prove that it
+  writes new advisories and that `--check` writes nothing. If the feed is
+  down, the script keeps the file. `scripts/verify_export.py` has tests too. They
+  prove that it refuses edited bytes, the wrong key and a missing key. The scan
+  child process in `webapp/scan_process.py` has tests for a rejected target, a
+  failed scan and a crash. A rejected target stays a rejection in the worker,
+  and a crash sends no exception text. The approval mode in
+  `webapp/approval.py` has tests that prove DNS never approves an address
+  target, and that a failed TXT lookup is a refusal.
+  `tests/test_verify_remediation.py` now makes sure that every extra check and
+  hardening flag of a full scan verifies to the same answer, not only three of
+  them.
+
 ### Documentation
 
 - Clarified operator status, comparison results, monitoring instructions and

@@ -45,6 +45,22 @@
 
 <article class="docs-article card section-gap" data-reveal lang="en">
 <h2 id="1302-this-release">[1.30.2] - this release</h2>
+<h3 id="changed">Changed</h3>
+<ul>
+<li><strong>Tests now cover code that no test reached before.</strong> The advisory refresh
+  script <code>scripts/update_vulnerability_db.py</code> has tests. They prove that it
+  writes new advisories and that <code>--check</code> writes nothing. If the feed is
+  down, the script keeps the file. <code>scripts/verify_export.py</code> has tests too. They
+  prove that it refuses edited bytes, the wrong key and a missing key. The scan
+  child process in <code>webapp/scan_process.py</code> has tests for a rejected target, a
+  failed scan and a crash. A rejected target stays a rejection in the worker,
+  and a crash sends no exception text. The approval mode in
+  <code>webapp/approval.py</code> has tests that prove DNS never approves an address
+  target, and that a failed TXT lookup is a refusal.
+  <code>tests/test_verify_remediation.py</code> now makes sure that every extra check and
+  hardening flag of a full scan verifies to the same answer, not only three of
+  them.</li>
+</ul>
 <h3 id="documentation">Documentation</h3>
 <ul>
 <li>Clarified operator status, comparison results, monitoring instructions and
@@ -271,7 +287,7 @@
 </li>
 </ul>
 <h2 id="1291-2026-09-21">[1.29.1] - 2026-09-21</h2>
-<h3 id="changed">Changed</h3>
+<h3 id="changed_1">Changed</h3>
 <ul>
 <li>
 <p><strong>The <code>--policy</code> deployment gate is now covered by tests mutation testing
@@ -409,7 +425,7 @@
   new verdict is the intended one.</p>
 </li>
 </ul>
-<h3 id="changed_1">Changed</h3>
+<h3 id="changed_2">Changed</h3>
 <ul>
 <li>
 <p><strong>The Icinga check commands offer <code>--profile</code>.</strong> The three CheckCommand
@@ -538,7 +554,7 @@
   be read, OSV's answer is kept.
   <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0071-repository-advisories-are-a-second-advisory-source.md">ADR 0071</a>.</li>
 </ul>
-<h3 id="changed_2">Changed</h3>
+<h3 id="changed_3">Changed</h3>
 <ul>
 <li><strong>Polished recent German, Spanish and French web translations.</strong> Fixed mixed
   forms of address and several literal or awkward phrases in the operator
