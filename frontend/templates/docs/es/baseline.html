@@ -21,6 +21,7 @@
   <a href="#what-counts-as-a-regression" lang="es">Qué cuenta como regresión</a>
   <a href="#configuration-drift" lang="es">Cambios de configuración</a>
   <a href="#coverage-regressions" lang="es">Regresiones de cobertura</a>
+  <a href="#checks-only-one-run-made" lang="es">Comprobaciones que solo hizo una ejecución</a>
   <a href="#points-worth-knowing" lang="es">Aspectos que conviene conocer</a>
 </nav>
 
@@ -133,6 +134,28 @@ una novedad.</p>
   comparación de dos documentos la indica como <code>coverageRegressed</code>.</li>
 <li>Una línea base anterior sin cobertura no puede indicar ninguna pérdida en la
   primera ejecución tras actualizar; registra lo medido para la siguiente.</li>
+</ul>
+<h2 id="checks-only-one-run-made">Comprobaciones que solo hizo una ejecución</h2>
+<p>Un hallazgo solo se considera nuevo si la ejecución anterior podía haberlo
+indicado. Cuando el analizador incorpora una comprobación - tras una
+actualización, o porque usted activó las comprobaciones adicionales -, un
+fallo que ahora encuentra <em>no se comprobó</em> la vez anterior, no se superó, y
+la ejecución lo dice así:</p>
+<pre><code class="language-text">Baseline: Newly measured (1): hardening:basicAuthDisabled - the last run did not check these
+Hardening: + basicAuthDisabled (not checked before)
+</code></pre>
+<p>Sigue alertando, y <code>--warn-on-new</code> no lo suprime: nadie ha sido informado aún
+de ese fallo. A la inversa, un fallo que la ejecución actual ya no comprueba
+aparece como <code>(not checked now)</code> y no como resuelto.</p>
+<ul>
+<li>Lo que una ejecución podía indicar sale de su bloque de cobertura, nunca de
+  una clave ausente. Un informe que no enumera sus comprobaciones se compara
+  como antes, así que una regresión real nunca cambia de nombre.</li>
+<li>El webhook incluye las listas en <code>baseline_diff</code> como <code>newly_measured</code> y
+  <code>no_longer_measured</code>; la comparación web, como <code>newlyMeasured</code> y
+  <code>noLongerMeasured</code>.</li>
+<li>Una línea base anterior no puede decir qué comprobó, así que la primera
+  ejecución tras actualizar compara como antes.</li>
 </ul>
 <h2 id="points-worth-knowing">Aspectos que conviene conocer</h2>
 <ul>

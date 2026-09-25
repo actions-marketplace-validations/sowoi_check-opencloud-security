@@ -1,0 +1,50 @@
+# A security advisory record. See AGENTS.md, "Security advisories".
+#
+# One file per bullet under a `### Security` heading in CHANGELOG.md.
+# `state` is the decision; `verified` is the evidence it rests on.
+
+slug: scan-service-guessable-token
+state: declined
+changelog_version: "1.31.2"
+changelog_entry: "The scan service refuses a guessable token on a wide bind."
+shipped: true
+declined_because: >-
+  Hardening, not a fixed vulnerability. No released version let the service
+  open without the credential ADR 0030 requires; what changes is that an
+  operator's own choice of a weak one is now refused. A deployment that
+  followed any shipped guide used `openssl rand -hex 32` or a Kubernetes
+  secret it chose, and is unaffected. An advisory would alert every PyPI
+  installation about a configuration the project never shipped as default.
+package: plugin
+severity: low
+cwe_ids:
+  - CWE-521
+introduced: "1.17.0"
+fixed: "1.31.2"
+summary: >-
+  Scan service accepted any non-empty token, including the shipped example,
+  on a non-loopback bind
+verified: |
+  git log -S"def ensure_listen_is_safe" -- opencloud_local_scan/service.py ->
+  95dd2a8; git tag --contains 95dd2a8 --sort=creatordate | head -1 -> v1.17.0.
+  git show v1.31.1:opencloud_local_scan/service.py | grep -n
+  "_is_loopback_listen(listen) or auth_token" -> line 95: any truthy token
+  passes the guard, with no length floor and no attempt counting.
+  secrets/scanner_token.example holds a fixed 38-character placeholder.
+description: |
+  ### Impact
+
+  `check-opencloud-scanner serve` refuses a non-loopback bind without a
+  token, but accepted any non-empty one, including the placeholder in
+  `secrets/scanner_token.example`. Failed attempts are not counted. With a
+  guessable token, anybody who can reach the port can have the service scan
+  hosts they name, including hosts inside the network it runs in.
+
+  ### Patches
+
+  Fixed in **1.31.2**: a non-loopback bind needs a token of at least 32
+  characters that is not the shipped placeholder, or startup refuses.
+
+  ### Workarounds
+
+  Use a long random token (`openssl rand -hex 32`), or bind 127.0.0.1.

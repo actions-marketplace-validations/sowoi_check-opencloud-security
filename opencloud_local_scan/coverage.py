@@ -196,6 +196,28 @@ def coverage_of(result: Mapping[str, Any]) -> dict[str, Any] | None:
     return dict(coverage)
 
 
+def considered(result: Mapping[str, Any]) -> dict[str, str] | None:
+    """
+    Every check a result document considered, mapped to its group.
+
+    Considered, whatever became of it: a check the scanner skipped is one it
+    knew about, which is exactly what tells it apart from a check an older
+    scanner never had. ``None`` when the document does not list its checks -
+    no coverage block, or one whose entries were not carried over, as an
+    uploaded report's are not - because an empty list there would read as
+    "this scan looked at nothing" and make every finding on the other side
+    look like one it never checked.
+    """
+    coverage = coverage_of(result)
+    if coverage is None or not coverage["checks"]:
+        return None
+    return {
+        str(entry["id"]): str(entry.get("group") or "")
+        for entry in coverage["checks"]
+        if isinstance(entry, Mapping) and entry.get("id")
+    }
+
+
 def gaps(result: Mapping[str, Any]) -> list[dict[str, Any]]:
     """Every check in a result document that did not reach a conclusion."""
     coverage = coverage_of(result)

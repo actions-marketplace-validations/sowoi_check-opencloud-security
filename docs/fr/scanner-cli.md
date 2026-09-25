@@ -436,6 +436,10 @@ listés dans le [README principal](../../README.md#running-the-scanner-as-a-serv
 et l'exécution en conteneur est traitée dans [Exécuter le scanner comme un
 service](scan-service.md).
 
+Le jeton doit alors compter au moins 32 caractères et ne pas être l'exemple de
+`secrets/scanner_token.example` : rien ne limite le nombre de tentatives, sa
+longueur fait donc toute sa force. `openssl rand -hex 32` en produit un.
+
 Il ne s'agit pas de l'application web publique. Celle-ci est décrite dans
 [le service de scan public](../webapp.md).
 

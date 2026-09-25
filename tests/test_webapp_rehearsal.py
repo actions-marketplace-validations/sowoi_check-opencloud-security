@@ -12,6 +12,7 @@ and that a version string the scanned host chose reaches the page as text.
 from __future__ import annotations
 
 import asyncio
+from html import unescape
 
 import pytest
 from fastapi.testclient import TestClient
@@ -23,6 +24,7 @@ from tests.webapp_support import (  # noqa: F401 - the fixtures are autouse
 )
 from webapp.app import create_app
 from webapp.catalog import _upgrade_rehearsal, summarise
+from webapp.i18n import LANGUAGE_COOKIE, Translator
 
 pytest.importorskip("fastapi", reason="the web extra is not installed")
 
@@ -74,10 +76,11 @@ def _document(**overrides: object) -> dict:
     return document
 
 
-def _page(document: dict) -> str:
+def _page(document: dict, locale: str = "en") -> str:
     """Render the result page for a stored document, without scanning."""
     app = create_app(settings())
     with TestClient(app) as test_client:
+        test_client.cookies.set(LANGUAGE_COOKIE, locale)
         store = app.state.store
         asyncio.run(
             store.create(
@@ -153,29 +156,45 @@ def test_the_summary_carries_the_rehearsal_for_the_page():
 # ---------------------------------------------------------------- the page
 
 
-def test_the_result_page_shows_what_each_candidate_would_do():
+@pytest.mark.parametrize("locale", ["en", "de", "es", "fr"])
+def test_the_result_page_shows_what_each_candidate_would_do(locale):
     """The panel is the point: a reader sees the trade before installing anything."""
-    page = _page(_document())
+    page = _page(_document(), locale)
 
     assert 'id="rehearsal"' in page
     assert "7.2.4" in page
     assert "7.3.0" in page
     assert "CVE-2026-0002" in page
-    assert "would reach C" in page
+    assert f'<html lang="{locale}">' in page
+    assert Translator(locale)("result.rehearsal.grade", label="C") in unescape(page)
 
 
-def test_a_result_without_a_rehearsal_renders_the_page_without_the_panel():
+@pytest.mark.parametrize("locale", ["en", "de", "es", "fr"])
+def test_a_capped_upgrade_can_still_improve_the_current_grade(locale):
+    """A cap below the version-only grade does not mean the upgrade has no benefit."""
+    document = _document(rating=1, upgradeRehearsal=[REHEARSAL[1]])
+    page = unescape(_page(document, locale))
+    translator = Translator(locale)
+    assert translator("result.rehearsal.grade", label="C") in page
+    assert translator("result.rehearsal.capped", label="A+") in page
+    assert translator("result.rehearsal.grade", label="E") not in page
+    assert summarise(document)["label"] == "E"
+
+
+@pytest.mark.parametrize("locale", ["en", "de", "es", "fr"])
+def test_a_result_without_a_rehearsal_renders_the_page_without_the_panel(locale):
     """The negative case: no panel, no contents entry, and no error."""
-    page = _page(_document(upgradeRehearsal=[]))
+    page = _page(_document(upgradeRehearsal=[]), locale)
 
     assert 'id="rehearsal"' not in page
-    assert "What upgrading would buy you" not in page
+    assert 'href="#rehearsal"' not in page
 
 
-def test_a_version_string_the_host_chose_is_text_on_the_page():
+@pytest.mark.parametrize("locale", ["en", "de", "es", "fr"])
+def test_a_version_string_the_host_chose_is_text_on_the_page(locale):
     """Every string in a rehearsal entry came from somebody else's server."""
     hostile = dict(REHEARSAL[0], version='7.2.4"><script>alert(1)</script>')
-    page = _page(_document(upgradeRehearsal=[hostile]))
+    page = _page(_document(upgradeRehearsal=[hostile]), locale)
 
     assert "<script>alert(1)</script>" not in page
     assert "&lt;script&gt;" in page

@@ -83,6 +83,9 @@ project. Read the accepted records that affect an area before changing it.
 | [0074](0074-a-lost-measurement-warns-through-the-baseline-not-the-rating.md) | A lost measurement warns through the baseline, not the rating | Accepted |
 | [0075](0075-the-remediation-plan-groups-changes-by-where-they-are-made.md) | The remediation plan groups changes by where they are made | Accepted |
 | [0076](0076-a-fleet-summary-is-read-from-saved-reports-and-stores-nothing.md) | A fleet summary is read from saved reports and stores nothing | Accepted |
+| [0077](0077-decision-records-are-never-translated.md) | Decision records are never translated | Accepted |
+| [0078](0078-changelogs-and-release-notes-are-never-translated.md) | Changelogs and release notes are never translated | Accepted |
+| [0079](0079-a-finding-is-new-only-if-the-earlier-scan-could-have-reported-it.md) | A finding is new only if the earlier scan could have reported it | Accepted |
 
 ## Writing a new record
 

@@ -108,6 +108,33 @@ unterdrückt sie nicht, denn ein Scan, der plötzlich weniger sieht, ist neu.
 - Eine ältere Baseline ohne Abdeckung kann beim ersten Lauf nach dem Update
   keinen Verlust melden; sie speichert dann, was gemessen wurde.
 
+## Prüfungen, die nur ein Lauf gemacht hat {#checks-only-one-run-made}
+
+Ein Befund gilt nur dann als neu, wenn der vorige Lauf ihn hätte melden
+können. Kommt eine Prüfung dazu - nach einem Update oder weil du die
+zusätzlichen Prüfungen eingeschaltet hast -, war ein Fehler, den sie jetzt
+findet, beim letzten Mal *nicht geprüft* und nicht bestanden. Der Lauf sagt
+das so:
+
+```text
+Baseline: Newly measured (1): hardening:basicAuthDisabled - the last run did not check these
+Hardening: + basicAuthDisabled (not checked before)
+```
+
+Er alarmiert trotzdem, und `--warn-on-new` unterdrückt ihn nicht: Von diesem
+Fehler hat noch niemand erfahren. Umgekehrt steht ein Fehler, den der
+aktuelle Lauf nicht mehr prüft, als `(not checked now)` da und nicht als
+behoben.
+
+- Was ein Lauf hätte melden können, kommt aus seinem Abdeckungsblock, nie aus
+  einem fehlenden Schlüssel. Ein Bericht ohne Liste seiner Prüfungen wird wie
+  bisher verglichen, eine echte Verschlechterung wird also nie umbenannt.
+- Im Webhook stehen die Listen als `newly_measured` und `no_longer_measured`
+  in `baseline_diff`, im Webvergleich als `newlyMeasured` und
+  `noLongerMeasured`.
+- Eine ältere Baseline kann nicht sagen, was sie geprüft hat; der erste Lauf
+  nach dem Update vergleicht daher wie bisher.
+
 ## Verhalten und Dateirechte {#points-worth-knowing}
 
 - Der erste Durchlauf meldet den regulären Status und legt die Baseline an. Ohne Vergleichsdaten wird nichts unterdrückt.

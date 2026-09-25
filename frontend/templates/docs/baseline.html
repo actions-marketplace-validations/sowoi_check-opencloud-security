@@ -21,6 +21,7 @@
   <a href="#what-counts-as-a-regression" lang="en">What counts as a regression</a>
   <a href="#configuration-drift" lang="en">Configuration drift</a>
   <a href="#coverage-regressions" lang="en">Coverage regressions</a>
+  <a href="#checks-only-one-run-made" lang="en">Checks only one run made</a>
   <a href="#points-worth-knowing" lang="en">Points worth knowing</a>
 </nav>
 
@@ -134,6 +135,32 @@ is news.</p>
 <li>A baseline written before this existed records no coverage, so the first
   run after an upgrade cannot report a loss; it records what it measured for
   the next one.</li>
+</ul>
+<h2 id="checks-only-one-run-made">Checks only one run made</h2>
+<p>A finding is only called new if the previous run could have reported it. When
+the scanner gains a check - after an upgrade, or because you turned the extra
+checks on - a failure it now finds was <em>not checked</em> last time, not passing,
+and the run says so:</p>
+<pre><code class="language-text">Baseline: Newly measured (1): hardening:basicAuthDisabled - the last run did not check these
+Hardening: + basicAuthDisabled (not checked before)
+</code></pre>
+<p>It still alerts, and <code>--warn-on-new</code> does not suppress it: nobody has been
+told about that failure yet. The next run knows the check and treats the
+failure like any other known one. The other way round, a failure the current
+run no longer checks is listed as <code>(not checked now)</code> rather than as
+resolved, because nobody fixed it.</p>
+<ul>
+<li>What a run could have reported comes from its coverage block, never from a
+  missing key. A report that does not list its checks - one written before
+  coverage existed, or an uploaded report in the web comparison - is compared
+  as before, so a real regression is never renamed.</li>
+<li>The webhook's <code>baseline_diff</code> carries both lists as <code>newly_measured</code> and
+  <code>no_longer_measured</code>; the web comparison as <code>newlyMeasured</code> and
+  <code>noLongerMeasured</code>; and the two-document explanation as the scanner changes
+  <code>checksNewlyMeasured</code> and <code>checksNoLongerMeasured</code>. See
+  <a href="https://github.com/sowoi/check-opencloud-security/blob/main/adr/0079-a-finding-is-new-only-if-the-earlier-scan-could-have-reported-it.md">ADR 0079</a>.</li>
+<li>A baseline written before this existed cannot say what it checked, so the
+  first run after an upgrade compares as before.</li>
 </ul>
 <h2 id="points-worth-knowing">Points worth knowing</h2>
 <ul>

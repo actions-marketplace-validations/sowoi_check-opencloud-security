@@ -901,6 +901,13 @@ def compare_documents(
         "ratingChange": rating_change,
         "resolved": list(comparison.resolved_findings),
         "introduced": list(comparison.new_findings),
+        # Failing now or failing then, but only one of the two scans made the
+        # check at all - a scanner that learned a check, or a probe that was
+        # switched. Not introduced and not resolved: the instance is not what
+        # moved. Still a reason to call the result "regressed" in the first
+        # direction, because nobody was shown that failure before.
+        "newlyMeasured": list(comparison.newly_measured),
+        "noLongerMeasured": list(comparison.no_longer_measured),
         # Still open. Named because "nothing new" and "nothing wrong" are very
         # different answers, and a comparison that only listed changes would
         # let the second be read out of the first.

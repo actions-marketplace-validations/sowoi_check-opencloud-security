@@ -18,6 +18,16 @@ which is the tool that enforces what can be enforced here.
 | Operator guides | `docs/*.md` (English) and `docs/{de,fr,es}/*.md` |
 | Guide titles and summaries | `webapp/documentation.py`, translated in the catalogues |
 
+Decision records in `adr/` are not on this list and never will be: they stay
+in English, once, in every locale
+([ADR 0077](adr/0077-decision-records-are-never-translated.md)). Only the
+operator area's interface around them is translated.
+
+The same holds for `CHANGELOG.md`, `RELEASE.md` and the operator area's
+Releases tab built from them: English only, in every locale, and never a
+`docs/<language>/operator/releases.md`
+([ADR 0078](adr/0078-changelogs-and-release-notes-are-never-translated.md)).
+
 A guide title a translation has not overridden falls back to English on
 purpose (`webapp/locales/__init__.py`), so a new guide is reachable in every
 language the day it is written. That fallback is a decision, not a gap, and
@@ -28,6 +38,7 @@ them:
 
 ```bash
 python scripts/build_frontend_documentation.py
+python scripts/update_page_revisions.py
 python scripts/build_search_index.py
 ```
 
@@ -153,9 +164,19 @@ The sharing and error-page tests render all four languages, including email
 drafts, clipboard summaries, rate limits and rejected uploads. Export-format
 checks compare each translated guide with the formats the service supports.
 Link diagnostics ignore code examples and retain the source line numbers.
+Result-page tests also cover grouped fixes, upgrade estimates and expiry
+warnings in every language. Test conditional content as well as the landing
+page: a missing panel, a single finding or one minute remaining can expose
+wording problems that a general page-rendering test misses.
 
 Add a focused regression case when correcting a recurring wording defect.
 Include an acceptable example when a rule could also match correct technical
 language. Do not ban ordinary technical terms or change a correct sentence
 only to satisfy a heuristic. Automated checks catch known patterns; a fluent
 reviewer must still assess meaning and natural phrasing.
+
+Operator architecture and operations sources live in
+`docs/<language>/operator/architecture.md` and `operations.md`.
+They use the same build-time pipeline and section anchors as the public guides.
+Regenerate the documentation and operator search index after editing them.
+Release-note bodies and ADRs remain English.

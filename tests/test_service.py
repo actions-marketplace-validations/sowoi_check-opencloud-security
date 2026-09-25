@@ -402,7 +402,36 @@ def test_a_wide_bind_with_a_token_is_allowed(listen):
 
     This is the shipped container's configuration, so it has to keep working.
     """
-    ensure_listen_is_safe(listen, "s3cret")
+    ensure_listen_is_safe(listen, "0123456789abcdef" * 4)
+
+
+@pytest.mark.parametrize("token", ["s3cret", "a", " " * 40, "x" * 31])
+def test_a_wide_bind_with_a_guessable_token_is_refused(token):
+    """
+    Nothing counts failed attempts, so a short token is guessable at line
+    rate - and behind it is a service that scans whatever host it is told to.
+    """
+    with pytest.raises(ServiceMisconfigured, match="shorter than 32"):
+        ensure_listen_is_safe("0.0.0.0", token)
+    # On loopback the token is optional, so its length is not the guard.
+    ensure_listen_is_safe("127.0.0.1", token)
+    ensure_listen_is_safe("0.0.0.0", "x" * 32)
+
+
+def test_the_shipped_example_token_is_refused_on_a_wide_bind():
+    """
+    It is long enough to pass the length rule and printed in the repository,
+    so a copied example that was never replaced would guard nothing.
+    """
+    from pathlib import Path
+
+    example = (
+        Path(__file__).resolve().parent.parent / "secrets" / "scanner_token.example"
+    ).read_text(encoding="utf-8")
+
+    with pytest.raises(ServiceMisconfigured, match="example token"):
+        ensure_listen_is_safe("0.0.0.0", example)
+    ensure_listen_is_safe("127.0.0.1", example)
 
 
 def test_an_empty_bind_address_is_every_interface_not_loopback():

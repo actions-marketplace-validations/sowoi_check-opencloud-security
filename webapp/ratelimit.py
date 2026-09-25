@@ -393,9 +393,10 @@ class RateLimiter:
         Counts nothing itself - only :meth:`record_failed_credential` does, and
         only on a wrong answer. A caller holding the right token is never
         slowed down, and a caller guessing gets five tries per window however
-        fast it sends them.
+        fast it sends them - counted per IPv6 /64 like every other limit, or
+        rotating the interface identifier would buy five more.
         """
-        key = credential_key(client, self.salt)
+        key = credential_key(self.client_identity(client), self.salt)
         raw = await self.backend.get(key)
         try:
             count = int(raw) if raw is not None else 0
@@ -411,7 +412,7 @@ class RateLimiter:
 
     async def record_failed_credential(self, client: str) -> None:
         """Count one wrong credential from this client, for the window."""
-        key = credential_key(client, self.salt)
+        key = credential_key(self.client_identity(client), self.salt)
         count = await self.backend.incr(key)
         if count == 1:
             await self.backend.expire(key, CREDENTIAL_ATTEMPT_WINDOW_SECONDS)

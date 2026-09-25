@@ -286,7 +286,7 @@ Every setting is an environment variable, read once at startup.
 | `COS_WEB_AUDIT_LOG_MAX_BYTES` | `10000000` | Size at which that file is rotated. `0` never rotates |
 | `COS_WEB_AUDIT_LOG_BACKUPS` | `5` | Rotated generations kept beside it. With the size above, the most the trail can occupy |
 | `COS_WEB_AUDIT_LOG_ROTATION` | `service` | Who rotates that file: `service` (this process, by size) or `external` (logrotate on the host; this process only reopens the file it replaces). An unrecognised value refuses to start |
-| `COS_WEB_PURGE_TOKEN` | *(none)* | Enables `DELETE /api/purge` and is the secret it requires. Unset means the endpoint answers 404 like any other path that is not there. At least 32 characters, or startup refuses: it is the whole authorisation for the one call that deletes other people's results. Five wrong answers from one address in five minutes are followed by `429` |
+| `COS_WEB_PURGE_TOKEN` | *(none)* | Enables `DELETE /api/purge` and is the secret it requires. Unset means the endpoint answers 404 like any other path that is not there. At least 32 characters, or startup refuses: it is the whole authorisation for the one call that deletes other people's results. Five wrong answers from one address (one /64 for IPv6) in five minutes are followed by `429` |
 | `COS_WEB_PURGE_SIGNING_KEY` | *(none)* | Signs the proof of deletion. Unset still erases, but the receipt cannot be verified afterwards |
 | `COS_WEB_EXPORT_SIGNING_KEY` | *(none)* | Adds an `X-COS-Signature` HMAC-SHA256 header to every JSON, CSV, SARIF and PDF export |
 | `COS_WEB_ENCRYPT_RESULTS` | `false` | Encrypt the stored result document with AES-256-GCM. Requires a key; a process asked to encrypt without one refuses to start |

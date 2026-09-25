@@ -152,6 +152,7 @@ from .documentation import (
     GUIDE_LANGUAGES,
     OPERATOR_DOCUMENTATION_BY_SLUG,
     OPERATOR_DOCUMENTATION_PAGES,
+    TRANSLATED_OPERATOR_SLUGS,
 )
 from .encryption import ensure_encryption_ready
 from .export_signing import SIGNATURE_HEADER, sign_bytes
@@ -2415,8 +2416,11 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
             {
                 "t": translate,
                 "comparison": comparison,
+                # Rounded up, as the result page's expiry line is: a
+                # comparison with 59 minutes and a few seconds left has not
+                # lost its sixtieth minute yet.
                 "expires_in_minutes": max(
-                    1, await app.state.comparisons.expires_in(token) // 60
+                    1, (await app.state.comparisons.expires_in(token) + 59) // 60
                 ),
             },
         )
@@ -2691,7 +2695,13 @@ def create_app(settings: WebSettings | None = None) -> FastAPI:
             # rather than leaving a reader to guess which document they are
             # reading and where to edit it.
             context["page_source"] = document.source
-            return page(request, f"admin-docs/{slug}.html", context)
+            language = translator_for(request).locale
+            prefix = (
+                f"{language}/"
+                if language in GUIDE_LANGUAGES and slug in TRANSLATED_OPERATOR_SLUGS
+                else ""
+            )
+            return page(request, f"admin-docs/{prefix}{slug}.html", context)
 
         @app.get(f"{ADMIN_PATH}/decisions", response_class=HTMLResponse,
                  include_in_schema=False)

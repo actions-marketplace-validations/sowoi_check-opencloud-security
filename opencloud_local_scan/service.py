@@ -58,6 +58,14 @@ MAX_BODY_BYTES = 8192
 # interface - which is the widest bind there is, not the narrowest.
 LOOPBACK_LISTEN = frozenset({"127.0.0.1", "::1", "localhost"})
 
+# The same floor the web application holds its own secrets to. A token is the
+# whole of what stands between the network and a service that scans any host
+# it is told to, and one short enough to guess is not a credential.
+MIN_SERVICE_TOKEN_LENGTH = 32
+# Long enough, and published: the placeholder `secrets/scanner_token.example`
+# ships with, which a copy that was never overwritten would still carry.
+PLACEHOLDER_SERVICE_TOKENS = frozenset({"replace-me-with-a-random-scanner-token"})
+
 
 class ServiceMisconfigured(RuntimeError):
     """The service was asked to listen somewhere it must not listen openly."""
@@ -90,9 +98,25 @@ def ensure_listen_is_safe(listen: str, auth_token: str | None) -> None:
 
     Failing to start is the right end for that: an operator who published the
     port meant to publish the service, and would otherwise find out what they
-    published from somebody else.
+    published from somebody else. A token too short to resist guessing is
+    refused for the same reason.
     """
-    if _is_loopback_listen(listen) or auth_token:
+    if _is_loopback_listen(listen):
+        return
+    if auth_token and auth_token.strip() in PLACEHOLDER_SERVICE_TOKENS:
+        raise ServiceMisconfigured(
+            f"Refusing to serve on {listen} with the example token from "
+            "secrets/scanner_token.example, which anybody can read. Replace it "
+            "with `openssl rand -hex 32 > secrets/scanner_token`."
+        )
+    if auth_token and len(auth_token.strip()) < MIN_SERVICE_TOKEN_LENGTH:
+        raise ServiceMisconfigured(
+            f"Refusing to serve on {listen} with a token shorter than "
+            f"{MIN_SERVICE_TOKEN_LENGTH} characters. Nothing limits how often a "
+            "token may be guessed, so its length is the whole of its strength. "
+            "Generate one with `openssl rand -hex 32`, or bind 127.0.0.1."
+        )
+    if auth_token:
         return
     raise ServiceMisconfigured(
         f"Refusing to serve on {listen} without a token. This service scans "

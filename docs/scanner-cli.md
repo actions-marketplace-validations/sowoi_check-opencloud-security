@@ -479,6 +479,11 @@ keep restarting through. The endpoints are listed in the
 in a container is covered in
 [Running the scanner as a service](scan-service.md).
 
+On such a bind the token must be at least 32 characters and not the
+placeholder from `secrets/scanner_token.example`: nothing limits how often it
+can be guessed, so its length is the whole of its strength. `openssl rand -hex
+32` gives one.
+
 This is not the public web application. That one is
 [the public scan service](webapp.md).
 

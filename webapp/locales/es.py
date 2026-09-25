@@ -67,8 +67,8 @@ MESSAGES: dict[str, str] = {
     "admin.rules.group.probe.lede": "Límites para solicitudes repetidas a destinos que no se pueden analizar.",
     "admin.rules.group.targets": "Qué se puede analizar",
     "admin.rules.group.targets.lede": "Los destinos se comprueban antes de conectar y antes de seguir cada redirección.",
-    "admin.rules.group.scanner": "Con qué intensidad se sondea un host",
-    "admin.rules.group.scanner.lede": "Los ajustes con los que se ejecuta cada análisis de este despliegue. Ninguna solicitud puede modificarlos.",
+    "admin.rules.group.scanner": "Límites de los análisis",
+    "admin.rules.group.scanner.lede": "Estos ajustes controlan las solicitudes que puede realizar cada análisis. Se aplican a todos los análisis y no se pueden cambiar al enviarlos.",
     "admin.rules.group.operator": "Credenciales y acciones del operador",
     "admin.rules.group.operator.lede": "Límites de las solicitudes que requieren credenciales y de las acciones del operador.",
     "admin.rules.rule.client_limit.title": "Límite por cliente",
@@ -126,14 +126,21 @@ MESSAGES: dict[str, str] = {
     "admin.rules.rule.purge_attempts.title": "Intentos con la credencial de borrado",
     "admin.rules.rule.purge_attempts.body": "Tras {limit} credenciales incorrectas de un cliente en {window}, se rechazan los siguientes intentos hasta que termine ese periodo. Las credenciales correctas no cuentan.",
     "admin.rules.rule.admin_refresh.title": "Botones de actualización",
-    "admin.rules.rule.admin_refresh.body": "Cada actualización de datos de referencia puede pulsarse una vez cada {cooldown}.",
+    "admin.rules.rule.admin_refresh.body": "Cada fuente de datos de referencia se puede actualizar como máximo una vez cada {cooldown}.",
     "admin.docs.kicker": "Documentación de operación",
+    "admin.docs.architecture.title": "Arquitectura",
+    "admin.docs.architecture.description": "Cómo se organiza este repositorio y por qué sus límites están definidos así.",
+    "admin.docs.operations.title": "Operación",
+    "admin.docs.operations.description": "Mantener los datos actualizados, reconstruir los archivos generados y diagnosticar fallos del servicio.",
+    "admin.docs.releases.title": "Versiones",
+    "admin.docs.releases.description": "Los cambios de las últimas versiones del servicio, de la más reciente a la más antigua.",
+    "admin.docs.translated_source": "Traducido de <code>{file}</code> en el repositorio.",
     "admin.docs.source": "Desde <code>{file}</code> en el repositorio, en inglés.",
     "admin.decisions.title": "Decisiones de arquitectura",
-    "admin.decisions.lede": "Cada registro de decisión de arquitectura de este repositorio y su estado, en inglés tal como se escribió.",
-    "admin.decisions.search.label": "Filtrar los registros de decisión",
+    "admin.decisions.lede": "Consulte las decisiones de arquitectura del repositorio y su estado actual. Los documentos se muestran en su versión original en inglés.",
+    "admin.decisions.search.label": "Filtrar decisiones de arquitectura",
     "admin.decisions.search.placeholder": "Número, título o estado",
-    "admin.decisions.search.empty": "Ningún registro coincide. La búsqueda del sitio también busca en el texto de cada registro.",
+    "admin.decisions.search.empty": "Ninguna decisión coincide con este filtro. Utilice la búsqueda del área del operador para buscar en el texto completo de los documentos.",
     "admin.decisions.back": "Todas las decisiones",
     "admin.band": "Área de operación - sesión iniciada como {user}",
     "admin.band.signout": "Cerrar sesión",
@@ -275,9 +282,9 @@ MESSAGES: dict[str, str] = {
     "admin.probe.hint": "Descarga ambas fuentes y comprueba si sus datos se pueden aceptar en una actualización. No guarda los datos descargados.",
     "admin.probe.schedule": "Calendario de versiones: {answer}",
     "admin.probe.advisories": "Avisos: {answer}",
-    "admin.probe.usable": "leído, y una actualización lo aceptaría",
-    "admin.probe.rejected": "leído, pero las comprobaciones lo rechazarían",
-    "admin.probe.unreadable": "no se ha podido leer - inalcanzable, o ya no tiene la forma esperada",
+    "admin.probe.usable": "datos descargados y aptos para una actualización",
+    "admin.probe.rejected": "datos descargados pero rechazados en la validación",
+    "admin.probe.unreadable": "no se han podido descargar los datos o interpretar su formato",
     "admin.probe.disabled": "sin comprobar - esa actualización está desactivada",
     "admin.search.kicker": "Índice de búsqueda",
     "admin.search.heading": "Estado del índice de búsqueda",
@@ -1039,6 +1046,10 @@ MESSAGES: dict[str, str] = {
     "compare.resolved.none": "No se ha resuelto ningún hallazgo del análisis anterior.",
     "compare.unchanged.heading": "Siguen abiertos ({count})",
     "compare.unchanged.none": "No hay nada abierto en ambos análisis.",
+    "compare.newly_measured.heading": "Comprobados por primera vez ({count})",
+    "compare.newly_measured.note": "El análisis anterior no hizo estas comprobaciones, así que entonces tampoco se superaban. Ahora fallan, pero eso no indica que la instancia haya cambiado.",
+    "compare.no_longer_measured.heading": "Ya no comprobados ({count})",
+    "compare.no_longer_measured.note": "Fallaron en el análisis anterior y el análisis posterior no hizo estas comprobaciones. Eso no significa que se hayan corregido.",
     "compare.changes.heading": "Lo que detalla la comparación",
     "compare.changes.category": "Categoría",
     "compare.changes.change": "Cambio",
@@ -1338,34 +1349,31 @@ MESSAGES: dict[str, str] = {
         "detiene donde lo hace."
     ),
     "result.groups.kicker": "Agrupado por configuración",
-    "result.groups.heading": "Qué cambiar y dónde",
-    "result.groups.lede": "Los mismos hallazgos abiertos, agrupados según el sistema que usted edita para corregirlos, incluidos los que no afectan a la calificación. A menudo un solo cambio resuelve varios hallazgos.",
+    "result.groups.heading": "Dónde realizar cada cambio",
+    "result.groups.lede": "Los hallazgos pendientes se agrupan por el área de configuración donde se pueden corregir. Se incluyen los que no afectan a la nota. Algunos cambios corrigen varios hallazgos a la vez.",
     "result.groups.target.reverseProxy": "Proxy inverso",
     "result.groups.target.identityProvider": "Proveedor de identidad",
     "result.groups.target.opencloud": "OpenCloud",
     "result.groups.target.dnsZone": "Zona DNS",
-    "result.groups.count": "{count} hallazgos abiertos, {label} con todos los cambios de este grupo",
-    "result.groups.resolves": "Resuelve {count} hallazgos a la vez",
-    "result.groups.alone": "solo este cambio: {label}",
+    "result.groups.count": "Hallazgos pendientes: {count}. Nota tras todos los cambios de este grupo: {label}.",
+    "result.groups.resolves": "Hallazgos corregidos por este cambio: {count}",
+    "result.groups.alone": "Nota tras este único cambio: {label}",
     "result.rehearsal.kicker": "Simulación de actualización",
     "result.rehearsal.heading": "Qué solucionaría una actualización",
     "result.rehearsal.lede": (
-        "Cada versión recomendable se califica antes de instalarla. Una "
-        "actualización cambia la versión, no el proxy inverso, por lo que los "
-        "hallazgos de esta página siguen siendo los que midió este análisis."
+        "El escáner estima la nota de cada versión propuesta usando los hallazgos de este análisis. Solo cambia la versión en el cálculo; no instala ninguna actualización ni vuelve a analizar la instancia."
     ),
     "result.rehearsal.line": "rama {line}",
     "result.rehearsal.recommended": "recomendada",
     "result.rehearsal.eol": "fin de vida",
-    "result.rehearsal.grade": "alcanzaría {label}",
+    "result.rehearsal.grade": "Nota estimada: {label}",
     "result.rehearsal.fixes": "Corrige",
     "result.rehearsal.still": "Sigue afectada por",
     "result.rehearsal.introduces": "Queda afectada por",
     "result.rehearsal.clean": "Resuelve todos los avisos que afectan a esta versión.",
     "result.rehearsal.nothing": "No resuelve ningún aviso que afecte a esta versión.",
     "result.rehearsal.capped": (
-        "La versión por sí sola alcanzaría {label}; los hallazgos de esta "
-        "página mantienen la calificación en su nivel actual."
+        "La versión por sí sola alcanzaría {label}. Los hallazgos pendientes limitan la nota estimada que se muestra para esta actualización."
     ),
     "result.rehearsal.note": (
         "Esta simulación usa únicamente el calendario de versiones y la base "
@@ -1604,16 +1612,14 @@ MESSAGES: dict[str, str] = {
     "result.feedback.prompt": "¿Crees que el análisis se ha equivocado?",
     "result.feedback.link": "Informa de un falso positivo o un falso negativo",
     "result.expiry.one": (
-        "Esta página caduca en aproximadamente 1 minuto; a partir de "
-        "entonces el enlace deja de funcionar y el resultado desaparece."
+        "Este informe en línea caduca en aproximadamente 1 minuto. Su enlace dejará de funcionar; las copias descargadas permanecerán en su dispositivo."
     ),
     "result.expiry.many": (
-        "Esta página caduca en aproximadamente {minutes} minutos; a partir "
-        "de entonces el enlace deja de funcionar y el resultado desaparece."
+        "Este informe en línea caduca en aproximadamente {minutes} minutos. Su enlace dejará de funcionar; las copias descargadas permanecerán en su dispositivo."
     ),
-    "result.expiry.warning.one": "Este informe desaparece en aproximadamente 1 minuto.",
+    "result.expiry.warning.one": "Este informe en línea caduca en aproximadamente 1 minuto.",
     "result.expiry.warning.many": (
-        "Este informe desaparece en aproximadamente {minutes} minutos."
+        "Este informe en línea caduca en aproximadamente {minutes} minutos."
     ),
     "result.expiry.warning.action": "Descargue una copia para conservar el informe",
     "result.expiry.gone": (

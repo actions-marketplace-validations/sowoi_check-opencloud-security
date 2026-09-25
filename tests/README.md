@@ -118,6 +118,7 @@ is needed.
 | [`test_waiver_warning.py`](test_waiver_warning.py) | `--waiver-warning` and `waiver_days_left`: lead time before a temporary waiver runs out, and which deadline counts. |
 | [`test_coverage_perfdata.py`](test_coverage_perfdata.py) | `coverage_inconclusive` and `coverage_not_checked`: the coverage block as graphable numbers that never move the state. |
 | [`test_coverage_regression.py`](test_coverage_regression.py) | A check measured in the baseline that becomes inconclusive warns without moving the rating, and `--warn-on-new` does not suppress it. |
+| [`test_newly_measured.py`](test_newly_measured.py) | A check only one of two scans made is newly or no longer measured, never introduced or resolved - in the baseline, the explanation and the comparison page - and still alerts. |
 | [`test_upgrade_path.py`](test_upgrade_path.py) | `upgradePath`: what the recommended release fixes and leaves open, and the plugin lines for it and for an advertised HTTP/3 listener. |
 | [`test_webapp_report_facts.py`](test_webapp_report_facts.py) | The report's facts list: an advertised HTTP/3 listener and the upgrade path, rendered from a real scan. |
 | [`test_webapp_rehearsal.py`](test_webapp_rehearsal.py) | The upgrade rehearsal on the result page: every rating comes from the scan document, an older result renders without the panel, and a version string the host chose stays text. |

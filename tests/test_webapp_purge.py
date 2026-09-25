@@ -371,6 +371,29 @@ def test_a_wrong_credential_is_only_guessable_five_times():
     assert seen[5:] == [429, 429]
 
 
+def test_the_credential_throttle_follows_an_ipv6_client_through_its_64():
+    """
+    A subscriber is handed a whole /64, so counting single IPv6 addresses
+    gave a guesser five fresh attempts per interface identifier - an
+    unlimited supply against the one secret this service compares.
+    """
+    test_client = _enabled_client(trust_forwarded_for=True)
+    wrong = {"Authorization": "Bearer not-the-token-but-long-enough-to-try"}
+
+    def attempt(address: str) -> int:
+        return test_client.request(
+            "DELETE",
+            "/api/purge?target=forget.example.com",
+            headers={**wrong, "X-Forwarded-For": address},
+        ).status_code
+
+    seen = [attempt(f"2001:db8:1:2::{index + 1:x}") for index in range(6)]
+
+    assert seen == [401] * 5 + [429]
+    # Another network has its own allowance.
+    assert attempt("2001:db8:9:9::1") == 401
+
+
 def test_the_throttle_counts_wrong_answers_and_not_erasures():
     """
     An operator working through a list of erasure requests must not be locked

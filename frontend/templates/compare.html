@@ -191,6 +191,25 @@
   {% endif %}
 </section>
 
+{#
+  Only when there is something in them: a check one of the two scans never
+  made is neither new nor resolved, and filing it under either would blame
+  the instance for a change in what was measured.
+#}
+{% if comparison.newlyMeasured %}
+<section class="card" data-reveal>
+  <h2>{{ t('compare.newly_measured.heading', count=comparison.newlyMeasured | length) }}</h2>
+  <p>{{ t('compare.newly_measured.note') }}</p>
+  <ul class="findings">
+    {% for finding in comparison.newlyMeasured %}
+    <li class="finding" data-tag="warning">
+      <div class="finding-head">{{ check_code(finding) }}</div>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
 <section class="card" data-reveal>
   <h2>{{ t('compare.resolved.heading', count=comparison.resolved | length) }}</h2>
   {% if comparison.resolved %}
@@ -205,6 +224,20 @@
   <p class="flush">{{ t('compare.resolved.none') }}</p>
   {% endif %}
 </section>
+
+{% if comparison.noLongerMeasured %}
+<section class="card" data-reveal>
+  <h2>{{ t('compare.no_longer_measured.heading', count=comparison.noLongerMeasured | length) }}</h2>
+  <p>{{ t('compare.no_longer_measured.note') }}</p>
+  <ul class="findings">
+    {% for finding in comparison.noLongerMeasured %}
+    <li class="finding" data-tag="info">
+      <div class="finding-head">{{ check_code(finding) }}</div>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
 
 <section class="card" data-reveal>
   <h2>{{ t('compare.unchanged.heading', count=comparison.unchanged | length) }}</h2>

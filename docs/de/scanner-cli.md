@@ -329,6 +329,8 @@ Der HTTP-Dienst stellt mehreren Verbrauchern ein zwischengespeichertes Ergebnis 
 
 Außerhalb von Loopback verlangt der Dienst ein Token. Fehlt es, erscheint `UNKNOWN: ...` auf stderr und der Prozess endet mit `3`. Die Endpunkte stehen im [Haupt-README](../../README.md#running-the-scanner-as-a-service), Containerbeispiele unter [Scan-Dienst](../scan-service.md).
 
+Das Token muss dann mindestens 32 Zeichen lang sein und darf nicht der Platzhalter aus `secrets/scanner_token.example` sein: Nichts begrenzt, wie oft es geraten werden kann, also ist seine Länge seine ganze Stärke. `openssl rand -hex 32` erzeugt dir eins.
+
 Die [öffentliche Webanwendung](../webapp.md) mit Browseroberfläche und Warteschlange ist ein separater Dienst.
 
 ## `configure`: Konfigurationsdatei erstellen {#configure-write-a-configuration-file}
