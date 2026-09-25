@@ -12,6 +12,8 @@ entry to `RELEASE.md` and uses it as the body of the GitHub release.
 
 ## [Unreleased]
 
+## [1.31.2] - 2026-09-25
+
 ### Security
 
 - **The erasure credential throttle counts an IPv6 client by its /64.** Failed
