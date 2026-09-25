@@ -20,6 +20,7 @@ import asyncio
 import json
 import re
 from datetime import datetime, timezone
+from html import unescape
 from pathlib import Path
 from typing import Any
 
@@ -33,7 +34,7 @@ from tests.webapp_support import (  # noqa: F401 - the fixtures are autouse
     settings,
 )
 from webapp.app import create_app
-from webapp.i18n import LANGUAGE_COOKIE, SUPPORTED_LOCALES
+from webapp.i18n import LANGUAGE_COOKIE, SUPPORTED_LOCALES, Translator
 from webapp.search import ADMIN_INDEX_FILES, admin_search_document
 from webapp.settings import ADMIN_PROXY_SECRET_MINIMUM
 
@@ -1620,17 +1621,24 @@ def test_every_indexed_decision_record_is_readable_from_the_area():
         assert 'class="docs-article card section-gap" data-reveal lang="en"' in response.text
 
 
-def test_the_decision_records_stay_english_whatever_the_interface_language():
+@pytest.mark.parametrize("locale", ["en", "de", "es", "fr"])
+def test_the_decision_records_stay_english_whatever_the_interface_language(locale):
     """The frame follows the reader's language; the record is not translated."""
     from webapp.documentation import DECISION_RECORDS
 
     record = DECISION_RECORDS[0]
     with TestClient(create_app(_admin_settings())) as client:
-        client.cookies.set(LANGUAGE_COOKIE, "de")
+        client.cookies.set(LANGUAGE_COOKIE, locale)
         listing = client.get("/admin/decisions", headers=FORWARDED)
         page = client.get(f"/admin/decisions/{record.slug}", headers=FORWARDED)
 
-    assert "Architekturentscheidungen" in listing.text
+    assert listing.status_code == page.status_code == 200
+    assert f'<html lang="{locale}">' in listing.text
+    assert f'<html lang="{locale}">' in page.text
+    translator = Translator(locale)
+    for key in ("title", "lede", "search.label", "search.placeholder", "search.empty"):
+        assert translator("admin.decisions." + key) in unescape(listing.text)
+    assert 'class="docs-article card section-gap" data-reveal lang="en"' in page.text
     assert record.title in listing.text
     assert record.title in page.text
 
@@ -1831,3 +1839,36 @@ def test_the_operator_documents_show_only_images_this_service_serves():
         for body in (architecture, operations):
             assert 'src="img/' not in body
         assert "blob/main/img/admin-area-dark.png" in operations
+
+
+@pytest.mark.parametrize("locale, heading", [
+    ("en", "Three layers"), ("de", "Drei Schichten"),
+    ("es", "Tres capas"), ("fr", "Trois couches"),
+])
+def test_architecture_body_navigation_and_operator_search_follow_the_language(locale, heading):
+    with TestClient(create_app(_admin_settings())) as client:
+        client.cookies.set(LANGUAGE_COOKIE, locale)
+        response = client.get("/admin/docs/architecture", headers=FORWARDED)
+        index = client.get("/admin/search-index.json", headers=FORWARDED).json()
+        denied = client.get("/admin/docs/architecture")
+        releases = client.get("/admin/docs/releases", headers=FORWARDED)
+    assert response.status_code == 200
+    assert f'data-reveal lang="{locale}"' in response.text
+    assert f'<h2 id="three-layers">{heading}</h2>' in response.text
+    title = Translator(locale)("admin.docs.architecture.title")
+    assert f"<h1>{title}</h1>" in response.text
+    entry = next(item for item in index["pages"] if item["path"] == "/admin/docs/architecture")
+    assert entry["title"] == title
+    assert heading in entry["body"]
+    assert denied.status_code == 404
+    assert 'data-reveal lang="en"' in releases.text
+    assert "What the latest releases" not in releases.text if locale != "en" else True
+
+
+def test_switching_language_changes_architecture_without_changing_its_address():
+    with TestClient(create_app(_admin_settings())) as client:
+        for locale, heading in (("de", "Drei Schichten"), ("fr", "Trois couches")):
+            client.cookies.set(LANGUAGE_COOKIE, locale)
+            response = client.get("/admin/docs/architecture", headers=FORWARDED)
+            assert f'<h2 id="three-layers">{heading}</h2>' in response.text
+            assert "Cookie" in response.headers["vary"]

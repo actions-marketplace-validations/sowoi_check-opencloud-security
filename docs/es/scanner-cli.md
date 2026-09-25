@@ -419,6 +419,10 @@ en el [README principal](../../README.md#running-the-scanner-as-a-service), y
 su ejecución en un contenedor se explica en
 [Ejecutar el escáner como servicio](../scan-service.md).
 
+El token debe tener entonces al menos 32 caracteres y no ser el ejemplo de
+`secrets/scanner_token.example`: nada limita cuántas veces puede adivinarse,
+así que su longitud es toda su fuerza. `openssl rand -hex 32` genera uno.
+
 No es la aplicación web pública. Esa es
 [el servicio público de análisis](../webapp.md).
 

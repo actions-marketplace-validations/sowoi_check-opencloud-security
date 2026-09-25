@@ -21,6 +21,7 @@
   <a href="#what-counts-as-a-regression" lang="fr">Ce qui compte comme une régression</a>
   <a href="#configuration-drift" lang="fr">Dérive de configuration</a>
   <a href="#coverage-regressions" lang="fr">Régressions de couverture</a>
+  <a href="#checks-only-one-run-made" lang="fr">Contrôles qu'une seule exécution a effectués</a>
   <a href="#points-worth-knowing" lang="fr">Points à connaître</a>
 </nav>
 
@@ -137,6 +138,29 @@ une nouveauté.</p>
 <li>Une référence plus ancienne sans couverture ne peut signaler aucune perte à
   la première exécution après la mise à jour ; elle enregistre alors ce qui a
   été mesuré.</li>
+</ul>
+<h2 id="checks-only-one-run-made">Contrôles qu'une seule exécution a effectués</h2>
+<p>Un constat n'est nouveau que si l'exécution précédente aurait pu le signaler.
+Quand l'analyseur gagne un contrôle - après une mise à jour, ou parce que vous
+avez activé les contrôles supplémentaires -, un échec qu'il trouve maintenant
+n'était <em>pas contrôlé</em> la fois précédente, pas réussi, et l'exécution le dit
+ainsi :</p>
+<pre><code class="language-text">Baseline: Newly measured (1): hardening:basicAuthDisabled - the last run did not check these
+Hardening: + basicAuthDisabled (not checked before)
+</code></pre>
+<p>Il alerte quand même, et <code>--warn-on-new</code> ne le supprime pas : personne n'a
+encore été informé de cet échec. À l'inverse, un échec que l'exécution
+actuelle ne contrôle plus apparaît comme <code>(not checked now)</code> et non comme
+résolu.</p>
+<ul>
+<li>Ce qu'une exécution aurait pu signaler vient de son bloc de couverture,
+  jamais d'une clé absente. Un rapport qui n'énumère pas ses contrôles est
+  comparé comme avant : une vraie régression n'est jamais renommée.</li>
+<li>Le webhook porte les listes dans <code>baseline_diff</code> sous <code>newly_measured</code> et
+  <code>no_longer_measured</code> ; la comparaison web sous <code>newlyMeasured</code> et
+  <code>noLongerMeasured</code>.</li>
+<li>Une référence plus ancienne ne peut pas dire ce qu'elle a contrôlé : la
+  première exécution après la mise à jour compare donc comme avant.</li>
 </ul>
 <h2 id="points-worth-knowing">Points à connaître</h2>
 <ul>

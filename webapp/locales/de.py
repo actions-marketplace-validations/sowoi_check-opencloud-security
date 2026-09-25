@@ -67,8 +67,8 @@ MESSAGES: dict[str, str] = {
     "admin.rules.group.probe.lede": "Grenzen für wiederholte Anfragen an Ziele, die sich nicht scannen lassen.",
     "admin.rules.group.targets": "Was gescannt werden darf",
     "admin.rules.group.targets.lede": "Ziele werden vor dem Verbindungsaufbau und vor jeder Weiterleitung geprüft.",
-    "admin.rules.group.scanner": "Wie intensiv ein Host geprüft wird",
-    "admin.rules.group.scanner.lede": "Die Einstellungen, mit denen jeder Scan dieser Bereitstellung ausgeführt wird. Anfragen können sie nicht ändern.",
+    "admin.rules.group.scanner": "Grenzen eines Scans",
+    "admin.rules.group.scanner.lede": "Diese Einstellungen begrenzen die Anfragen eines Scans. Sie gelten für jeden Scan und lassen sich beim Einreichen nicht ändern.",
     "admin.rules.group.operator": "Zugangsdaten und Betreiberaktionen",
     "admin.rules.group.operator.lede": "Grenzen für Anfragen mit Zugangsdaten und für Aktionen im Betreiberbereich.",
     "admin.rules.rule.client_limit.title": "Limit pro Client",
@@ -126,14 +126,21 @@ MESSAGES: dict[str, str] = {
     "admin.rules.rule.purge_attempts.title": "Versuche mit dem Löschzugang",
     "admin.rules.rule.purge_attempts.body": 'Nach {limit} Versuchen mit falschen Zugangsdaten pro Client innerhalb von {window} werden weitere Versuche bis zum Ende dieses Zeitraums abgelehnt. Richtige Zugangsdaten werden nicht mitgezählt.',
     "admin.rules.rule.admin_refresh.title": "Aktualisierungsknöpfe",
-    "admin.rules.rule.admin_refresh.body": "Jede Aktualisierung der Referenzdaten kann einmal alle {cooldown} ausgelöst werden.",
+    "admin.rules.rule.admin_refresh.body": "Jede Referenzdatenquelle kann höchstens einmal innerhalb von {cooldown} aktualisiert werden.",
     "admin.docs.kicker": "Betreiberdokumentation",
+    "admin.docs.architecture.title": "Architektur",
+    "admin.docs.architecture.description": "Wie dieses Repository aufgebaut ist und warum seine Grenzen so verlaufen.",
+    "admin.docs.operations.title": "Betrieb",
+    "admin.docs.operations.description": "Daten aktuell halten, generierte Dateien erneuern und Fehler im Dienst eingrenzen.",
+    "admin.docs.releases.title": "Releases",
+    "admin.docs.releases.description": "Die Änderungen der neuesten Releases dieses Dienstes, neueste zuerst.",
+    "admin.docs.translated_source": "Übersetzt aus <code>{file}</code> im Repository.",
     "admin.docs.source": "Aus <code>{file}</code> im Repository, auf Englisch.",
     "admin.decisions.title": "Architekturentscheidungen",
-    "admin.decisions.lede": "Jeder Architekturentscheidungseintrag dieses Repositorys mit seinem Status, auf Englisch wie geschrieben.",
-    "admin.decisions.search.label": "Entscheidungseinträge filtern",
+    "admin.decisions.lede": "Hier findest du die Architekturentscheidungen des Repositorys mit ihrem aktuellen Status. Die Dokumente werden im englischen Original angezeigt.",
+    "admin.decisions.search.label": "Architekturentscheidungen filtern",
     "admin.decisions.search.placeholder": "Nummer, Titel oder Status",
-    "admin.decisions.search.empty": "Kein Eintrag passt. Die Seitensuche durchsucht auch den Text jedes Eintrags.",
+    "admin.decisions.search.empty": "Keine Architekturentscheidung passt zu diesem Filter. Mit der Suche im Operator-Bereich kannst du auch den vollständigen Text der Dokumente durchsuchen.",
     "admin.decisions.back": "Alle Entscheidungen",
     "admin.band": "Betriebsbereich - angemeldet als {user}",
     "admin.band.signout": "Abmelden",
@@ -286,9 +293,9 @@ MESSAGES: dict[str, str] = {
     "admin.probe.hint": "Ruft beide Quellen ab und prüft, ob die Daten für eine Aktualisierung geeignet sind. Die abgerufenen Daten werden nicht gespeichert.",
     "admin.probe.schedule": "Release-Zeitplan: {answer}",
     "admin.probe.advisories": "Sicherheitsmeldungen: {answer}",
-    "admin.probe.usable": 'gelesen; die Daten würden bei einer Aktualisierung übernommen',
-    "admin.probe.rejected": 'gelesen; die Daten würden bei der Prüfung abgelehnt',
-    "admin.probe.unreadable": "nicht lesbar - nicht erreichbar oder nicht mehr in der erwarteten Form",
+    "admin.probe.usable": "Daten abgerufen und für eine Aktualisierung geeignet",
+    "admin.probe.rejected": "Daten abgerufen, aber bei der Validierung abgelehnt",
+    "admin.probe.unreadable": "Daten konnten nicht abgerufen oder im erwarteten Format gelesen werden",
     "admin.probe.disabled": "nicht geprüft - diese Aktualisierung ist abgeschaltet",
     "admin.search.kicker": "Suchindex",
     "admin.search.heading": "Status des Suchindexes",
@@ -1046,6 +1053,10 @@ MESSAGES: dict[str, str] = {
     "compare.resolved.none": "Keine Befunde aus dem früheren Scan wurden behoben.",
     "compare.unchanged.heading": "Weiterhin offen ({count})",
     "compare.unchanged.none": "In beiden Scans ist nichts offen.",
+    "compare.newly_measured.heading": "Zum ersten Mal geprüft ({count})",
+    "compare.newly_measured.note": "Der frühere Scan hat diese Prüfungen nicht gemacht, sie waren damals also auch nicht bestanden. Sie schlagen jetzt fehl, aber das sagt nichts darüber, ob sich die Instanz verändert hat.",
+    "compare.no_longer_measured.heading": "Nicht mehr geprüft ({count})",
+    "compare.no_longer_measured.note": "Diese Prüfungen sind im früheren Scan fehlgeschlagen, und der spätere Scan hat sie nicht gemacht. Das heißt nicht, dass sie behoben sind.",
     "compare.changes.heading": "Was der Vergleich einzeln aufführt",
     "compare.changes.category": "Kategorie",
     "compare.changes.change": "Änderung",
@@ -1377,34 +1388,31 @@ MESSAGES: dict[str, str] = {
         "keine bessere Note erreichen."
     ),
     "result.groups.kicker": "Nach Konfiguration gruppiert",
-    "result.groups.heading": "Was du wo ändern musst",
-    "result.groups.lede": "Dieselben offenen Befunde, gruppiert nach dem System, das du zur Behebung bearbeitest – auch Befunde, die die Note nicht beeinflussen. Oft behebt eine Änderung mehrere Befunde.",
+    "result.groups.heading": "Wo du die Änderungen vornehmen kannst",
+    "result.groups.lede": "Offene Befunde sind nach dem Konfigurationsbereich gruppiert, in dem du sie beheben kannst. Dazu gehören auch Befunde ohne Einfluss auf die Note. Manche Änderungen beheben mehrere Befunde zugleich.",
     "result.groups.target.reverseProxy": "Reverse Proxy",
     "result.groups.target.identityProvider": "Identitätsanbieter",
     "result.groups.target.opencloud": "OpenCloud",
     "result.groups.target.dnsZone": "DNS-Zone",
-    "result.groups.count": "{count} offene Befunde, {label} mit allen Änderungen hier",
-    "result.groups.resolves": "Behebt {count} Befunde auf einmal",
-    "result.groups.alone": "nur diese Änderung: {label}",
+    "result.groups.count": "Offene Befunde: {count}. Note nach allen Änderungen in dieser Gruppe: {label}.",
+    "result.groups.resolves": "Durch diese Änderung behobene Befunde: {count}",
+    "result.groups.alone": "Note nach dieser einzelnen Änderung: {label}",
     "result.rehearsal.kicker": "Upgrade-Simulation",
     "result.rehearsal.heading": "Was ein Upgrade beheben würde",
     "result.rehearsal.lede": (
-        "Jede sinnvolle Zielversion wird bewertet, bevor sie jemand installiert. "
-        "Ein Upgrade ändert die Version, nicht den Reverse Proxy. Die Befunde "
-        "auf dieser Seite bleiben daher unverändert."
+        "Der Scanner schätzt die Note jeder vorgeschlagenen Version anhand der Befunde dieses Scans. In der Berechnung ändert sich nur die Version. Es wird kein Upgrade installiert und die Instanz wird nicht erneut geprüft."
     ),
     "result.rehearsal.line": "Versionslinie {line}",
     "result.rehearsal.recommended": "empfohlen",
     "result.rehearsal.eol": "Ende des Supports",
-    "result.rehearsal.grade": "erreicht {label}",
+    "result.rehearsal.grade": "Geschätzte Note: {label}",
     "result.rehearsal.fixes": "Behebt",
     "result.rehearsal.still": "Weiterhin betroffen:",
     "result.rehearsal.introduces": "Neu betroffen:",
     "result.rehearsal.clean": 'Behebt alle bekannten Schwachstellen dieser Version.',
     "result.rehearsal.nothing": 'Behebt keine der bekannten Schwachstellen dieser Version.',
     "result.rehearsal.capped": (
-        "Die Version allein würde {label} erreichen; die Befunde auf dieser "
-        "Seite halten die Bewertung auf ihrem aktuellen Stand."
+        "Die Version allein würde {label} erreichen. Verbleibende Befunde begrenzen die für dieses Upgrade angezeigte geschätzte Note."
     ),
     "result.rehearsal.note": (
         'Diese Simulation nutzt nur den Release-Zeitplan und die Schwachstellendatenbank, die diesem Scan vorlagen. Später veröffentlichte Versionen oder Sicherheitsmeldungen sind nicht enthalten.'
@@ -1639,16 +1647,14 @@ MESSAGES: dict[str, str] = {
     "result.feedback.prompt": "Wurde ein Befund deiner Ansicht nach falsch bewertet?",
     "result.feedback.link": "Falsch positives oder falsch negatives Ergebnis melden",
     "result.expiry.one": (
-        "Diese Seite läuft in etwa 1 Minute ab, danach funktioniert der Link "
-        "nicht mehr und das Ergebnis ist weg."
+        "Dieser Onlinebericht läuft in etwa 1 Minute ab. Sein Link funktioniert danach nicht mehr; eine heruntergeladene Kopie bleibt auf deinem Gerät."
     ),
     "result.expiry.many": (
-        "Diese Seite läuft in etwa {minutes} Minuten ab, danach funktioniert "
-        "der Link nicht mehr und das Ergebnis ist weg."
+        "Dieser Onlinebericht läuft in etwa {minutes} Minuten ab. Sein Link funktioniert danach nicht mehr; eine heruntergeladene Kopie bleibt auf deinem Gerät."
     ),
-    "result.expiry.warning.one": "Dieser Bericht verschwindet in etwa 1 Minute.",
+    "result.expiry.warning.one": "Dieser Onlinebericht läuft in etwa 1 Minute ab.",
     "result.expiry.warning.many": (
-        "Dieser Bericht verschwindet in etwa {minutes} Minuten."
+        "Dieser Onlinebericht läuft in etwa {minutes} Minuten ab."
     ),
     "result.expiry.warning.action": "Lade eine Kopie herunter, um ihn zu behalten",
     "result.expiry.gone": (

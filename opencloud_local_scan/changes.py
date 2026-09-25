@@ -30,7 +30,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
-from .coverage import FAILED, INCONCLUSIVE, PASSED, coverage_of
+from .coverage import FAILED, INCONCLUSIVE, PASSED, considered, coverage_of
 from .fingerprint import digests as fingerprint_digests
 from .fingerprint import drift as configuration_drift
 from .fingerprint import incomparable as configuration_incomparable
@@ -257,8 +257,13 @@ def _instance_changes(
             )
         )
 
-    appeared = _findings(current) - _findings(previous)
-    resolved = _findings(previous) - _findings(current)
+    # A check only one side considered did not start or stop failing on the
+    # instance; the scanner started or stopped making it, which
+    # `_scanner_changes` reports. Taken out only where both sides list their
+    # checks, so a report that cannot say is read as it always was.
+    only_after, only_before = _one_sided_checks(previous, current)
+    appeared = _findings(current) - _findings(previous) - only_after
+    resolved = _findings(previous) - _findings(current) - only_before
     if appeared:
         changes.append(
             Change(
@@ -409,6 +414,39 @@ def _scanner_changes(
         )
         return changes
 
+    only_after, only_before = _one_sided_checks(previous, current)
+    if only_after:
+        failing = sorted(only_after & _findings(current))
+        changes.append(
+            Change(
+                SCANNER,
+                "checksNewlyMeasured",
+                f"The second scan made {len(only_after)} check(s) the first "
+                f"did not, {len(failing)} of them failing. A check that was "
+                "not made before was not passing before, so these say "
+                "nothing about the instance having changed.",
+                {"checks": sorted(only_after), "failing": failing},
+            )
+        )
+    if only_before:
+        failing = sorted(only_before & _findings(previous))
+        changes.append(
+            Change(
+                SCANNER,
+                "checksNoLongerMeasured",
+                f"The first scan made {len(only_before)} check(s) the second "
+                f"did not, {len(failing)} of them failing then. Nothing says "
+                "those failures were fixed - the second scan did not look.",
+                {"checks": sorted(only_before), "failing": failing},
+            )
+        )
+    if considered(previous) is None or considered(current) is None:
+        limitations.append(
+            "At least one report does not list the individual checks it made, "
+            "so a check that started or stopped failing cannot be told from "
+            "one that only one of the two scans made."
+        )
+
     before_counts = _block(before_coverage.get("counts"))
     after_counts = _block(after_coverage.get("counts"))
     before_measured = _count(before_counts.get("passed")) + _count(before_counts.get("failed"))
@@ -442,6 +480,21 @@ def _scanner_changes(
             )
         )
     return changes
+
+
+def _one_sided_checks(
+    previous: Mapping[str, Any], current: Mapping[str, Any]
+) -> tuple[set[str], set[str]]:
+    """
+    The checks only the later scan considered, and those only the earlier did.
+
+    Both empty unless both documents list their checks: a side that does not
+    say cannot be shown to have lacked anything.
+    """
+    before, after = considered(previous), considered(current)
+    if before is None or after is None:
+        return set(), set()
+    return set(after) - set(before), set(before) - set(after)
 
 
 def _coverage_lost(

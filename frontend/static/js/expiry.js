@@ -81,16 +81,13 @@
             return;
         }
 
-        // The foot line counts in whole minutes the way the server rendered
-        // it; the warning rounds up, so it never says "0 minutes".
-        var floor = Math.max(1, Math.floor(remaining / 60));
-        var ceil = Math.max(1, Math.ceil(remaining / 60));
-        write(line, minutesPhrase(lineBox, "expiry", floor));
+        var minutes = Math.max(1, Math.ceil(remaining / 60));
+        write(line, minutesPhrase(lineBox, "expiry", minutes));
 
         if (warning && warnAfter > 0 && remaining <= warnAfter) {
-            if (shown !== ceil) {
-                write(warningText, minutesPhrase(warning, "expiry-warning", ceil));
-                shown = ceil;
+            if (shown !== minutes) {
+                write(warningText, minutesPhrase(warning, "expiry-warning", minutes));
+                shown = minutes;
             }
             warning.hidden = false;
         }

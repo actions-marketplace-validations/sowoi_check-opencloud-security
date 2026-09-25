@@ -695,6 +695,10 @@ keep restarting through. The endpoints are listed in the
 <a href="/documentation/reference#running-the-scanner-as-a-service">main README</a>, and running it
 in a container is covered in
 <a href="/documentation/scan-service">Running the scanner as a service</a>.</p>
+<p>On such a bind the token must be at least 32 characters and not the
+placeholder from <code>secrets/scanner_token.example</code>: nothing limits how often it
+can be guessed, so its length is the whole of its strength. <code>openssl rand -hex
+32</code> gives one.</p>
 <p>This is not the public web application. That one is
 <a href="/documentation/web-service">the public scan service</a>.</p>
 <h2 id="configure-write-a-configuration-file"><code>configure</code> - write a configuration file</h2>

@@ -639,6 +639,9 @@ un supervisor no reiniciará una y otra vez. Los puntos de acceso se enumeran
 en el <a href="/documentation/reference#running-the-scanner-as-a-service">README principal</a>, y
 su ejecución en un contenedor se explica en
 <a href="/documentation/scan-service">Ejecutar el escáner como servicio</a>.</p>
+<p>El token debe tener entonces al menos 32 caracteres y no ser el ejemplo de
+<code>secrets/scanner_token.example</code>: nada limita cuántas veces puede adivinarse,
+así que su longitud es toda su fuerza. <code>openssl rand -hex 32</code> genera uno.</p>
 <p>No es la aplicación web pública. Esa es
 <a href="/documentation/web-service">el servicio público de análisis</a>.</p>
 <h2 id="configure-write-a-configuration-file"><code>configure</code>: escribir un archivo de configuración</h2>

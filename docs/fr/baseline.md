@@ -144,6 +144,33 @@ une nouveauté.
   la première exécution après la mise à jour ; elle enregistre alors ce qui a
   été mesuré.
 
+## Contrôles qu'une seule exécution a effectués {#checks-only-one-run-made}
+
+Un constat n'est nouveau que si l'exécution précédente aurait pu le signaler.
+Quand l'analyseur gagne un contrôle - après une mise à jour, ou parce que vous
+avez activé les contrôles supplémentaires -, un échec qu'il trouve maintenant
+n'était *pas contrôlé* la fois précédente, pas réussi, et l'exécution le dit
+ainsi :
+
+```text
+Baseline: Newly measured (1): hardening:basicAuthDisabled - the last run did not check these
+Hardening: + basicAuthDisabled (not checked before)
+```
+
+Il alerte quand même, et `--warn-on-new` ne le supprime pas : personne n'a
+encore été informé de cet échec. À l'inverse, un échec que l'exécution
+actuelle ne contrôle plus apparaît comme `(not checked now)` et non comme
+résolu.
+
+- Ce qu'une exécution aurait pu signaler vient de son bloc de couverture,
+  jamais d'une clé absente. Un rapport qui n'énumère pas ses contrôles est
+  comparé comme avant : une vraie régression n'est jamais renommée.
+- Le webhook porte les listes dans `baseline_diff` sous `newly_measured` et
+  `no_longer_measured` ; la comparaison web sous `newlyMeasured` et
+  `noLongerMeasured`.
+- Une référence plus ancienne ne peut pas dire ce qu'elle a contrôlé : la
+  première exécution après la mise à jour compare donc comme avant.
+
 ## Points à connaître {#points-worth-knowing}
 
 

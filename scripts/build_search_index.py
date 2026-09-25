@@ -34,7 +34,7 @@ ADMIN_OUTPUT_DIR = ROOT / "webapp" / "data"
 
 sys.path.insert(0, str(ROOT))
 from opencloud_local_scan import __version__
-from webapp.documentation import GUIDE_LANGUAGES
+from webapp.documentation import GUIDE_LANGUAGES, TRANSLATED_OPERATOR_SLUGS
 from webapp.i18n import DEFAULT_LOCALE, SUPPORTED_LOCALES, Translator
 from webapp.search import ADMIN_INDEX_FILES, ADMIN_SEARCH_PAGES, SEARCH_PAGES
 
@@ -50,6 +50,12 @@ def _localised_source(template: str, translate: Translator) -> str:
     """The template with every literal catalogue lookup already resolved."""
     if translate.locale in GUIDE_LANGUAGES and template.startswith("docs/"):
         template = template.replace("docs/", f"docs/{translate.locale}/", 1)
+    if (
+        translate.locale in GUIDE_LANGUAGES
+        and template.startswith("admin-docs/")
+        and Path(template).stem in TRANSLATED_OPERATOR_SLUGS
+    ):
+        template = template.replace("admin-docs/", f"admin-docs/{translate.locale}/", 1)
     source = (ROOT / "frontend" / "templates" / template).read_text(encoding="utf-8")
 
     def replace(match: re.Match[str]) -> str:
@@ -137,7 +143,7 @@ def render_admin(locale: str = DEFAULT_LOCALE) -> str:
 
     Complete because it is read by one authorised request on a page that has
     already fetched the public index: a second round trip for an overlay would
-    buy nothing, and the operator documents have no translation to overlay.
+    buy nothing. Each index already contains the selected document translations.
     """
     translate = Translator(locale)
     pages = [

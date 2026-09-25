@@ -559,10 +559,12 @@ the top of every page in the area:
 The three documents are generated into `frontend/templates/admin-docs/` at build time by
 `scripts/build_frontend_documentation.py`, from
 `OPERATOR_DOCUMENTATION_PAGES` rather than the public manifest, so no
-Markdown is parsed at runtime and neither document reaches `/documentation`,
-the sitemap or the search index. They are English only: a half-translated
-operations note is worse than an English one that says which file it came
-from, which the line above each of them does. The configuration tab's
+Markdown is parsed at runtime and no document reaches `/documentation`,
+the sitemap or the public search index. Architecture and Operations are also
+generated in German, Spanish and French from `docs/<language>/operator/`,
+keeping the English section anchors and commands; the line above each page
+names the English file it came from. Release-note bodies stay English in
+every locale (ADR 0078). The configuration tab's
 descriptions come from the same script, which extracts the `docs/webapp.md`
 table into `webapp/environment_reference.py`; its `--check` in CI fails when
 the two disagree, and `tests/test_webapp_admin_configuration.py` fails when
@@ -573,7 +575,7 @@ from the index table in `adr/README.md` rather than the directory listing,
 so a record reaches the area when it reaches the index. Because the web
 bundle does not ship `adr/`, the same script writes the list of records into
 `webapp/decision_records.py`, which the routes and the operator search index
-read. Like the documents above they are English only. The interface around
+read. They are English only (ADR 0077). The interface around
 them follows the reader's language. After adding or editing a record, run
 `scripts/build_frontend_documentation.py` and `scripts/build_search_index.py`;
 CI's `--check` of both fails until you do.

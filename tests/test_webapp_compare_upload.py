@@ -562,6 +562,23 @@ def test_a_comparison_carries_that_ttl_into_redis(improved_pair):
     assert 0 < remaining <= MAX_COMPARISON_TTL_SECONDS
 
 
+def test_the_comparison_expiry_rounds_the_minutes_up(improved_pair):
+    """
+    The result page rounds its expiry up; a comparison page rounding down
+    announced one minute less than was left, and the two disagreed.
+    """
+    earlier, _later = improved_pair
+    test_client = client()
+    posted = _upload(test_client, json.dumps(earlier).encode())
+    location = posted.headers["location"]
+    key = comparison_key(location.removeprefix("/compare/"))
+
+    asyncio.run(backend().expire(key, 150))
+    page = test_client.get(location).text
+    assert "about 3 minutes" in page
+    assert "about 2 minutes" not in page
+
+
 def test_the_sentences_about_a_refused_upload_name_their_own_numbers(
     improved_pair,
 ):

@@ -191,7 +191,7 @@
         if (!expiry || typeof seconds !== "number" || seconds <= 0) {
             return;
         }
-        var minutes = Math.max(1, Math.round(seconds / 60));
+        var minutes = Math.max(1, Math.ceil(seconds / 60));
         expiry.textContent = minutes === 1
             ? phrase(expiryBox, "expiry-one")
             : fill(phrase(expiryBox, "expiry-many"), { minutes: minutes });

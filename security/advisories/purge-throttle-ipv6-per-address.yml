@@ -1,0 +1,54 @@
+# A security advisory record. See AGENTS.md, "Security advisories".
+#
+# One file per bullet under a `### Security` heading in CHANGELOG.md.
+# `state` is the decision; `verified` is the evidence it rests on.
+
+slug: purge-throttle-ipv6-per-address
+state: declined
+changelog_version: "1.31.2"
+changelog_entry: "The erasure credential throttle counts an IPv6 client by its /64."
+shipped: true
+declined_because: >-
+  Hardening, not a fixed vulnerability. The throttle is defence in depth in
+  front of a credential that ensure_purge_token_ready has required to be at
+  least 32 characters since the throttle shipped, so an unlimited supply of
+  guesses from one /64 never made the token guessable in practice. Narrowing
+  that residual gap is worth doing and not worth alerting operators about.
+package: web
+severity: low
+cwe_ids:
+  - CWE-307
+introduced: "1.16.0"
+fixed: "1.31.2"
+summary: >-
+  Erasure credential throttle counted IPv6 clients per address instead of per /64
+verified: |
+  git log -S"def record_failed_credential" -- webapp/ratelimit.py -> 8559d35;
+  git tag --contains 8559d35 --sort=creatordate | head -1 -> v1.16.0.
+  git show v1.31.1:webapp/ratelimit.py | grep -n "credential_key(client" ->
+  lines 398 and 414 key the counter on the raw address, not client_identity().
+  git show v1.16.0:webapp/purge.py | grep MIN_TOKEN_LENGTH -> 32, the same
+  minimum as today, so the token was never short enough to guess.
+description: |
+  ### Impact
+
+  `DELETE /api/purge` allows five wrong credentials per client per five
+  minutes. The counter was keyed on the single client address, while every
+  other limit counts an IPv6 client by its /64. A client holding a /64 could
+  rotate addresses for fresh attempts. The token must be at least 32
+  characters, so this did not make it guessable in practice.
+
+  ### Patches
+
+  Fixed in **1.31.2**: failed attempts are counted per IPv6 /64.
+
+  ### Workarounds
+
+  None needed; use a long random purge token, which the service already
+  requires.
+
+  ### Note on distribution
+
+  The web application is **not** published to PyPI - the wheel and the sdist
+  exclude `webapp/` and `frontend/`. Installations of the
+  `check-opencloud-security` PyPI package are unaffected.
